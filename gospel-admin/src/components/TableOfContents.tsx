@@ -1,7 +1,7 @@
-import { GospelSectionType } from '@/lib/data'
+import { GospelSection } from '@/lib/types'
 
 interface TableOfContentsProps {
-  sections: GospelSectionType[]
+  sections: GospelSection[]
 }
 
 export default function TableOfContents({ sections }: TableOfContentsProps) {

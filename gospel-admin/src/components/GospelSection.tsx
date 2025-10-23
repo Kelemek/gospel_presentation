@@ -1,4 +1,4 @@
-import { GospelSectionType, Subsection, NestedSubsection, ScriptureReference } from '@/lib/data'
+import { GospelSection as GospelSectionType, Subsection, NestedSubsection, ScriptureReference } from '@/lib/types'
 
 interface GospelSectionProps {
   section: GospelSectionType
