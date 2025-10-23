@@ -7,7 +7,7 @@
   
   # Environment variables for build process
   [build.environment]
-    NODE_VERSION = "18"
+    NODE_VERSION = "20"
     NEXT_PUBLIC_APP_NAME = "Gospel Presentation"
     NEXT_PUBLIC_APP_DESCRIPTION = "Presenting the Gospel in its Context"
 
