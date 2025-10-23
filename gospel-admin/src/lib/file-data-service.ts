@@ -9,10 +9,25 @@ import {
 } from './types'
 import { createProfileFromRequest } from './profile-service'
 
-// Paths relative to the repository root
-const DATA_DIR = path.join(process.cwd(), '..', 'data')
+// Determine if we're in production (read-only) or development
+const isProduction = process.env.NODE_ENV === 'production' || process.env.NETLIFY === 'true'
+
+// In production (Netlify), files are in the deployment root
+// In development, files are in the parent 'data' directory
+const DATA_DIR = isProduction 
+  ? path.join(process.cwd(), 'data')  // Netlify: files at /var/task/data
+  : path.join(process.cwd(), '..', 'data')  // Dev: gospel-admin/../data
+
 const PROFILES_FILE = path.join(DATA_DIR, 'profiles.json')
 const GOSPEL_DATA_FILE = path.join(DATA_DIR, 'gospel-presentation.json')
+
+console.log('[file-data-service] Environment:', { 
+  isProduction, 
+  cwd: process.cwd(), 
+  DATA_DIR,
+  PROFILES_FILE,
+  GOSPEL_DATA_FILE 
+})
 
 // Profile storage interface
 interface ProfileStorage {
@@ -71,58 +86,45 @@ export async function loadGospelData(): Promise<GospelPresentationData> {
  */
 export async function loadProfiles(): Promise<ProfileStorage> {
   try {
+    console.log('[file-data-service] Loading profiles from:', PROFILES_FILE)
     const fileContent = await readFile(PROFILES_FILE, 'utf-8')
-    const data = JSON.parse(fileContent) as ProfileStorage
+    const storage = JSON.parse(fileContent) as ProfileStorage
     
     // Convert date strings back to Date objects
-    data.profiles = data.profiles.map(profile => ({
+    storage.profiles = storage.profiles.map(profile => ({
       ...profile,
       createdAt: new Date(profile.createdAt),
       updatedAt: new Date(profile.updatedAt)
     }))
     
-    // Check if profiles array is empty and create default profile
-    if (data.profiles.length === 0) {
-      console.log('No profiles found, creating default profile...')
-      const gospelData = await loadGospelData()
-      const defaultProfile: GospelProfile = {
-        id: '1',
-        slug: 'default',
-        title: 'Default Gospel Presentation',
-        description: 'The original gospel presentation',
-        gospelData,
-        isDefault: true,
-        visitCount: 0,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }
-      
-      const updatedStorage: ProfileStorage = {
-        profiles: [defaultProfile],
-        nextId: 2,
+    console.log('[file-data-service] Loaded', storage.profiles.length, 'profiles')
+    return storage
+  } catch (error) {
+    console.error('[file-data-service] Error loading profiles:', error)
+    
+    // In production, we cannot create files - return empty storage
+    if (isProduction) {
+      console.error('[file-data-service] Production mode - cannot create profiles file. Using empty storage.')
+      return {
+        profiles: [],
+        nextId: 1,
         lastModified: new Date().toISOString()
       }
-      
-      await saveProfiles(updatedStorage)
-      return updatedStorage
     }
     
-    return data
-  } catch (error) {
-    console.error('Error loading profiles from file:', error)
-    
-    // Create initial profiles file with default profile
+    // In development, create default profile
+    console.log('[file-data-service] Creating default profile...')
     const gospelData = await loadGospelData()
     const defaultProfile: GospelProfile = {
-      id: '1',
-      slug: 'default',
-      title: 'Default Gospel Presentation',
-      description: 'The original gospel presentation',
-      gospelData,
+      id: "1",
+      slug: "default",
+      title: "Default Gospel Presentation",
+      description: "The original gospel presentation",
       isDefault: true,
       visitCount: 0,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      gospelData: gospelData
     }
     
     const initialStorage: ProfileStorage = {
@@ -138,8 +140,14 @@ export async function loadProfiles(): Promise<ProfileStorage> {
 
 /**
  * Saves profiles to the profiles.json file
+ * In production (read-only), this will throw an error - which is expected
  */
 export async function saveProfiles(storage: ProfileStorage): Promise<void> {
+  if (isProduction) {
+    console.warn('[file-data-service] Skipping save in production - file system is read-only')
+    throw new Error('Cannot modify profiles in production - file system is read-only')
+  }
+  
   try {
     await ensureDataDirectory()
     
