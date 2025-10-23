@@ -155,7 +155,7 @@ export const gospelPresentationData: GospelSection[] = ${JSON.stringify(editData
                   type="text"
                   value={section.title}
                   onChange={(e) => handleSectionEdit(sectionIndex, 'title', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white font-medium"
                 />
               </div>
 
@@ -170,7 +170,7 @@ export const gospelPresentationData: GospelSection[] = ${JSON.stringify(editData
                         type="text"
                         value={subsection.title}
                         onChange={(e) => handleSubsectionEdit(sectionIndex, subsectionIndex, 'title', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white font-medium"
                       />
                     </div>
                     
@@ -182,7 +182,7 @@ export const gospelPresentationData: GospelSection[] = ${JSON.stringify(editData
                         value={subsection.content}
                         onChange={(e) => handleSubsectionEdit(sectionIndex, subsectionIndex, 'content', e.target.value)}
                         rows={4}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white font-normal leading-relaxed"
                       />
                     </div>
 
