@@ -32,7 +32,11 @@ function ScriptureReferences({ references, onScriptureClick }: ScriptureReferenc
           <button
             key={index}
             onClick={() => onScriptureClick(ref.reference)}
-            className="inline-block px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 text-sm rounded-md transition-colors cursor-pointer border border-blue-200 hover:border-blue-300"
+            className={`inline-block px-3 py-1 text-sm rounded-md transition-colors cursor-pointer ${
+              ref.favorite 
+                ? 'bg-blue-200 hover:bg-blue-300 text-blue-900 border-2 border-blue-400 hover:border-blue-500 font-medium' 
+                : 'bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-200 hover:border-blue-300'
+            }`}
           >
             {ref.reference}
           </button>

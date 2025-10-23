@@ -3,6 +3,7 @@
 export interface ScriptureReference {
   reference: string
   text?: string
+  favorite?: boolean
 }
 
 export interface NestedSubsection {

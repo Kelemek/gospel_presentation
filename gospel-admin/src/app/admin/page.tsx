@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import AdminLogin from '@/components/AdminLogin'
-import { isAuthenticated, logout } from '@/lib/auth'
+import { isAuthenticated, logout, getSessionToken } from '@/lib/auth'
 import { GospelSection } from '@/lib/types'
 
 export default function AdminPage() {
@@ -135,6 +135,36 @@ export default function AdminPage() {
     setHasChanges(true)
   }
 
+  // Functions for toggling favorites
+  const toggleScriptureFavorite = (sectionIndex: number, subsectionIndex: number, refIndex: number) => {
+    const newData = JSON.parse(JSON.stringify(editData)) // Deep clone to ensure React detects changes
+    if (newData[sectionIndex].subsections[subsectionIndex].scriptureReferences) {
+      const ref = newData[sectionIndex].subsections[subsectionIndex].scriptureReferences[refIndex]
+      // Initialize favorite property if it doesn't exist
+      if (ref.favorite === undefined) {
+        ref.favorite = false
+      }
+      ref.favorite = !ref.favorite
+    }
+    setEditData(newData)
+    setHasChanges(true)
+  }
+
+  const toggleNestedScriptureFavorite = (sectionIndex: number, subsectionIndex: number, nestedIndex: number, refIndex: number) => {
+    const newData = JSON.parse(JSON.stringify(editData)) // Deep clone to ensure React detects changes
+    const nested = newData[sectionIndex].subsections[subsectionIndex].nestedSubsections?.[nestedIndex]
+    if (nested?.scriptureReferences) {
+      const ref = nested.scriptureReferences[refIndex]
+      // Initialize favorite property if it doesn't exist
+      if (ref.favorite === undefined) {
+        ref.favorite = false
+      }
+      ref.favorite = !ref.favorite
+    }
+    setEditData(newData)
+    setHasChanges(true)
+  }
+
   const saveChanges = async () => {
     setSaveStatus('saving')
     
@@ -146,7 +176,7 @@ export default function AdminPage() {
         },
         body: JSON.stringify({
           data: editData,
-          password: 'gospel2024', // In production, get from auth context
+          sessionToken: getSessionToken(),
           commitMessage: `Update all gospel presentation data - ${new Date().toISOString()}`
         }),
       })
@@ -155,6 +185,11 @@ export default function AdminPage() {
         setSaveStatus('saved')
         setHasChanges(false)
         setTimeout(() => setSaveStatus('idle'), 3000)
+      } else if (response.status === 401) {
+        // Session expired, logout and redirect to login
+        logout()
+        setIsAuth(false)
+        setSaveStatus('error')
       } else {
         setSaveStatus('error')
         setTimeout(() => setSaveStatus('idle'), 3000)
@@ -178,7 +213,7 @@ export default function AdminPage() {
         },
         body: JSON.stringify({
           data: editData,
-          password: 'gospel2024', // In production, get from auth context
+          sessionToken: getSessionToken(),
           commitMessage: `Update Section ${section.section}: ${section.title} - ${new Date().toISOString()}`
         }),
       })
@@ -187,6 +222,11 @@ export default function AdminPage() {
         setSaveStatus('saved')
         setHasChanges(false)
         setTimeout(() => setSaveStatus('idle'), 3000)
+      } else if (response.status === 401) {
+        // Session expired, logout and redirect to login
+        logout()
+        setIsAuth(false)
+        setSaveStatus('error')
       } else {
         setSaveStatus('error')
         setTimeout(() => setSaveStatus('idle'), 3000)
@@ -211,7 +251,7 @@ export default function AdminPage() {
         },
         body: JSON.stringify({
           data: editData,
-          password: 'gospel2024', // In production, get from auth context
+          sessionToken: getSessionToken(),
           commitMessage: `Update ${section.title} - ${subsection.title} - ${new Date().toISOString()}`
         }),
       })
@@ -220,6 +260,11 @@ export default function AdminPage() {
         setSaveStatus('saved')
         setHasChanges(false)
         setTimeout(() => setSaveStatus('idle'), 3000)
+      } else if (response.status === 401) {
+        // Session expired, logout and redirect to login
+        logout()
+        setIsAuth(false)
+        setSaveStatus('error')
       } else {
         setSaveStatus('error')
         setTimeout(() => setSaveStatus('idle'), 3000)
@@ -262,9 +307,20 @@ export default function AdminPage() {
                 <button
                   onClick={saveChanges}
                   disabled={saveStatus === 'saving'}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm disabled:opacity-50"
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm disabled:opacity-50 whitespace-nowrap flex items-center gap-1.5 shrink-0"
                 >
-                  {saveStatus === 'saving' ? 'Saving...' : 'Save All Changes'}
+                  {saveStatus === 'saving' ? (
+                    <>
+                      <span className="animate-spin">⚪</span>
+                      <span className="hidden sm:inline">Saving...</span>
+                      <span className="sm:hidden">Save</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="hidden sm:inline">Save All Changes</span>
+                      <span className="sm:hidden">Save All</span>
+                    </>
+                  )}
                 </button>
               )}
               {saveStatus === 'saved' && (
@@ -275,15 +331,17 @@ export default function AdminPage() {
               )}
               <Link
                 href="/"
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm"
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm whitespace-nowrap shrink-0"
               >
-                View Site
+                <span className="hidden sm:inline">View Site</span>
+                <span className="sm:hidden">Site</span>
               </Link>
               <button
                 onClick={handleLogout}
-                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm"
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm whitespace-nowrap shrink-0"
               >
-                Logout
+                <span className="hidden sm:inline">Logout</span>
+                <span className="sm:hidden">Exit</span>
               </button>
             </div>
           </div>
@@ -339,16 +397,18 @@ export default function AdminPage() {
                         </label>
                         <button
                           onClick={() => addScriptureReference(sectionIndex, subsectionIndex)}
-                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm"
+                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm whitespace-nowrap flex items-center gap-1.5 shrink-0"
                         >
-                          + Add Reference
+                          <span className="text-base">+</span>
+                          <span className="hidden sm:inline">Add Reference</span>
+                          <span className="sm:hidden">Add</span>
                         </button>
                       </div>
                       
                       {subsection.scriptureReferences && subsection.scriptureReferences.length > 0 ? (
                         <div className="space-y-3">
                           {subsection.scriptureReferences.map((ref, refIndex) => (
-                            <div key={refIndex} className="flex gap-2 items-center p-3 bg-slate-50 border border-slate-200 rounded-md">
+                            <div key={`${refIndex}-${ref.favorite || false}`} className="flex gap-2 items-center p-3 bg-slate-50 border border-slate-200 rounded-md">
                               <span className="text-slate-500 text-sm">📖</span>
                               <input
                                 type="text"
@@ -357,6 +417,15 @@ export default function AdminPage() {
                                 className="flex-1 px-3 py-1 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400 text-gray-900 bg-white font-medium text-sm"
                                 placeholder="e.g., John 3:16"
                               />
+                              <button
+                                onClick={() => toggleScriptureFavorite(sectionIndex, subsectionIndex, refIndex)}
+                                className="p-1.5 text-yellow-500 hover:text-yellow-600 hover:bg-yellow-50 rounded-md transition-colors"
+                                title={ref.favorite ? "Remove from favorites" : "Add to favorites"}
+                              >
+                                <svg className="w-4 h-4" fill={ref.favorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.563.563 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                                </svg>
+                              </button>
                               <button
                                 onClick={() => removeScriptureReference(sectionIndex, subsectionIndex, refIndex)}
                                 className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors group"
@@ -424,16 +493,17 @@ export default function AdminPage() {
                                 </label>
                                 <button
                                   onClick={() => addNestedScriptureReference(sectionIndex, subsectionIndex, nestedIndex)}
-                                  className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-md text-xs font-medium transition-all hover:shadow-sm"
+                                  className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-md text-xs font-medium transition-all hover:shadow-sm whitespace-nowrap flex items-center gap-1 shrink-0"
                                 >
-                                  + Add
+                                  <span className="text-sm">+</span>
+                                  <span>Add</span>
                                 </button>
                               </div>
                               
                               {nested.scriptureReferences && nested.scriptureReferences.length > 0 ? (
                                 <div className="space-y-2">
                                   {nested.scriptureReferences.map((ref, refIndex) => (
-                                    <div key={refIndex} className="flex gap-2 items-center p-2 bg-slate-50 border border-slate-200 rounded-md">
+                                    <div key={`nested-${refIndex}-${ref.favorite || false}`} className="flex gap-2 items-center p-2 bg-slate-50 border border-slate-200 rounded-md">
                                       <span className="text-slate-500 text-xs">📖</span>
                                       <input
                                         type="text"
@@ -442,6 +512,15 @@ export default function AdminPage() {
                                         className="flex-1 px-2 py-1 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400 text-gray-900 bg-white font-medium text-xs"
                                         placeholder="e.g., Romans 3:23"
                                       />
+                                      <button
+                                        onClick={() => toggleNestedScriptureFavorite(sectionIndex, subsectionIndex, nestedIndex, refIndex)}
+                                        className="p-1 text-yellow-500 hover:text-yellow-600 hover:bg-yellow-50 rounded-md transition-colors"
+                                        title={ref.favorite ? "Remove from favorites" : "Add to favorites"}
+                                      >
+                                        <svg className="w-3 h-3" fill={ref.favorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.563.563 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
+                                        </svg>
+                                      </button>
                                       <button
                                         onClick={() => removeNestedScriptureReference(sectionIndex, subsectionIndex, nestedIndex, refIndex)}
                                         className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors group"

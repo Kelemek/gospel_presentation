@@ -4,6 +4,7 @@
 export interface AuthState {
   isAuthenticated: boolean
   timestamp?: number
+  sessionToken?: string
 }
 
 // Check if user is authenticated (valid for 24 hours)
@@ -44,9 +45,11 @@ export async function authenticate(password: string): Promise<boolean> {
     })
 
     if (response.ok) {
+      const { sessionToken } = await response.json()
       const authData: AuthState = {
         isAuthenticated: true,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        sessionToken: sessionToken
       }
       localStorage.setItem('gospel-admin-auth', JSON.stringify(authData))
       return true
@@ -69,5 +72,20 @@ export function logout(): void {
 export function getAuthStatus(): AuthState {
   return {
     isAuthenticated: isAuthenticated()
+  }
+}
+
+// Get session token for authenticated requests
+export function getSessionToken(): string | null {
+  if (typeof window === 'undefined') return null
+  
+  try {
+    const authData = localStorage.getItem('gospel-admin-auth')
+    if (!authData) return null
+    
+    const parsed: AuthState = JSON.parse(authData)
+    return parsed.sessionToken || null
+  } catch {
+    return null
   }
 }

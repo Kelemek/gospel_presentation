@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { githubDataService } from '@/lib/github-data-service'
+import { validateSession } from '../auth/route'
 
 export async function GET() {
   try {
@@ -16,10 +17,10 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const { data, password, commitMessage } = await request.json()
+    const { data, sessionToken, commitMessage } = await request.json()
     
-    // Validate password
-    if (password !== process.env.ADMIN_PASSWORD) {
+    // Validate session token
+    if (!sessionToken || !validateSession(sessionToken)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

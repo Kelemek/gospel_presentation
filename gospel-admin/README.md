@@ -1,8 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Gospel Presentation Admin Panel
 
-## Getting Started
+This is a [Next.js](https://nextjs.org) admin interface for managing the Gospel Presentation content, built with TypeScript and Tailwind CSS.
 
-First, run the development server:
+## Features
+
+- ✅ **Secure Authentication**: Session-based auth with environment variable passwords
+- ✅ **Content Management**: Edit sections, subsections, and scripture references
+- ✅ **Scripture Favorites**: Mark important scripture references for visual emphasis
+- ✅ **GitHub Integration**: Automatic saving to GitHub repository
+- ✅ **Responsive Design**: Works on desktop and mobile devices
+- ✅ **Live Preview**: Changes are reflected immediately in the presentation
+
+## Security
+
+The admin panel uses secure session-based authentication:
+- Passwords are stored in environment variables, never hardcoded
+- Session tokens expire after 24 hours
+- Unauthorized requests automatically log out users
+- API routes validate session tokens for all mutations
+
+## Setup
+
+1. **Environment Configuration**: Copy `.env.example` to `.env.local` and set your passwords:
+
+```bash
+cp .env.example .env.local
+```
+
+Update the following in `.env.local`:
+- `ADMIN_PASSWORD`: Set a secure password for admin access
+- `GITHUB_TOKEN`: Your GitHub personal access token
+- Other configuration as needed
+
+2. **Install Dependencies**:
+
+```bash
+npm install
+```
+
+3. **Run Development Server**:
 
 ```bash
 npm run dev
