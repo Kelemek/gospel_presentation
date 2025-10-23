@@ -21,6 +21,42 @@ export default function GospelPresentation() {
   }>({ reference: '', isOpen: false })
   
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [favoriteReferences, setFavoriteReferences] = useState<string[]>([])
+  const [currentReferenceIndex, setCurrentReferenceIndex] = useState(0)
+
+  // Collect favorite references from gospel data
+  const collectFavoriteReferences = (data: GospelSectionType[]) => {
+    const favorites: string[] = []
+    
+    data.forEach(section => {
+      section.subsections.forEach(subsection => {
+        // Check main subsection scripture references
+        if (subsection.scriptureReferences) {
+          subsection.scriptureReferences.forEach(ref => {
+            if (ref.favorite) {
+              favorites.push(ref.reference)
+            }
+          })
+        }
+        
+        // Check nested subsections
+        if (subsection.nestedSubsections) {
+          subsection.nestedSubsections.forEach(nested => {
+            if (nested.scriptureReferences) {
+              nested.scriptureReferences.forEach(ref => {
+                if (ref.favorite) {
+                  favorites.push(ref.reference)
+                }
+              })
+            }
+          })
+        }
+      })
+    })
+    
+    setFavoriteReferences(favorites)
+    console.log('📖 Found', favorites.length, 'favorite scripture references:', favorites)
+  }
 
   // Load data on mount
   useEffect(() => {
@@ -30,6 +66,7 @@ export default function GospelPresentation() {
         if (response.ok) {
           const data = await response.json()
           setGospelData(data)
+          collectFavoriteReferences(data)
         }
       } catch (error) {
         console.error('Error loading data:', error)
@@ -40,6 +77,24 @@ export default function GospelPresentation() {
     
     loadData()
   }, [])
+
+  // Add keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (selectedScripture.isOpen) {
+        if (event.key === 'ArrowLeft') {
+          event.preventDefault()
+          navigateToPrevious()
+        } else if (event.key === 'ArrowRight') {
+          event.preventDefault()
+          navigateToNext()
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [selectedScripture.isOpen, favoriteReferences, currentReferenceIndex])
 
   if (isLoading) {
     return (
@@ -76,19 +131,57 @@ export default function GospelPresentation() {
     ])
   )
 
-  const currentIndex = allScriptureRefs.findIndex(ref => ref.reference === selectedScripture.reference)
-  const hasPrevious = currentIndex > 0
-  const hasNext = currentIndex < allScriptureRefs.length - 1
-
   const handleScriptureClick = (reference: string) => {
     // Find the context for this reference
     const refWithContext = allScriptureRefs.find(ref => ref.reference === reference)
+    
+    // Update current reference index if this is a favorite
+    const favoriteIndex = favoriteReferences.indexOf(reference)
+    if (favoriteIndex !== -1) {
+      setCurrentReferenceIndex(favoriteIndex)
+    }
+    
     setSelectedScripture({ 
       reference, 
       isOpen: true,
       context: refWithContext?.context
     })
   }
+
+  // Navigation functions for favorite references only
+  const navigateToPrevious = () => {
+    if (favoriteReferences.length === 0) return
+    
+    const newIndex = (currentReferenceIndex - 1 + favoriteReferences.length) % favoriteReferences.length
+    setCurrentReferenceIndex(newIndex)
+    const reference = favoriteReferences[newIndex]
+    const refWithContext = allScriptureRefs.find(ref => ref.reference === reference)
+    
+    setSelectedScripture({ 
+      reference, 
+      isOpen: true,
+      context: refWithContext?.context
+    })
+  }
+
+  const navigateToNext = () => {
+    if (favoriteReferences.length === 0) return
+    
+    const newIndex = (currentReferenceIndex + 1) % favoriteReferences.length
+    setCurrentReferenceIndex(newIndex)
+    const reference = favoriteReferences[newIndex]
+    const refWithContext = allScriptureRefs.find(ref => ref.reference === reference)
+    
+    setSelectedScripture({ 
+      reference, 
+      isOpen: true,
+      context: refWithContext?.context
+    })
+  }
+
+  // Navigation state for favorites only
+  const hasPrevious = favoriteReferences.length > 1
+  const hasNext = favoriteReferences.length > 1
 
   const closeModal = () => {
     setSelectedScripture({ reference: '', isOpen: false })
@@ -102,27 +195,7 @@ export default function GospelPresentation() {
     setIsMenuOpen(false)
   }
 
-  const goToPreviousScripture = () => {
-    if (hasPrevious) {
-      const previousRef = allScriptureRefs[currentIndex - 1]
-      setSelectedScripture({ 
-        reference: previousRef.reference, 
-        isOpen: true,
-        context: previousRef.context
-      })
-    }
-  }
 
-  const goToNextScripture = () => {
-    if (hasNext) {
-      const nextRef = allScriptureRefs[currentIndex + 1]
-      setSelectedScripture({ 
-        reference: nextRef.reference, 
-        isOpen: true,
-        context: nextRef.context
-      })
-    }
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -223,10 +296,12 @@ export default function GospelPresentation() {
         reference={selectedScripture.reference}
         isOpen={selectedScripture.isOpen}
         onClose={closeModal}
-        onPrevious={goToPreviousScripture}
-        onNext={goToNextScripture}
-        hasPrevious={currentIndex > 0}
-        hasNext={currentIndex < allScriptureRefs.length - 1}
+        onPrevious={navigateToPrevious}
+        onNext={navigateToNext}
+        hasPrevious={hasPrevious}
+        hasNext={hasNext}
+        currentIndex={currentReferenceIndex}
+        totalFavorites={favoriteReferences.length}
         context={selectedScripture.context}
       />
     </div>

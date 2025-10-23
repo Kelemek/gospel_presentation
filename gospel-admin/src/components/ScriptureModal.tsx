@@ -10,6 +10,8 @@ interface ScriptureModalProps {
   onNext?: () => void
   hasPrevious?: boolean
   hasNext?: boolean
+  currentIndex?: number
+  totalFavorites?: number
   context?: {
     sectionTitle: string
     subsectionTitle: string
@@ -25,6 +27,8 @@ export default function ScriptureModal({
   onNext, 
   hasPrevious = false, 
   hasNext = false,
+  currentIndex = 0,
+  totalFavorites = 0,
   context
 }: ScriptureModalProps) {
   const [scriptureText, setScriptureText] = useState<string>('')
@@ -188,7 +192,14 @@ export default function ScriptureModal({
               >
                 ◀
               </button>
-              <h3 className="text-sm md:text-base font-semibold text-slate-800 text-center flex-1 px-2 leading-tight">{reference}</h3>
+              <div className="text-center flex-1 px-2">
+                <h3 className="text-sm md:text-base font-semibold text-slate-800 leading-tight">{reference}</h3>
+                {totalFavorites > 0 && (
+                  <div className="text-xs text-slate-500 mt-1">
+                    {currentIndex + 1} of {totalFavorites} favorites
+                  </div>
+                )}
+              </div>
               <button
                 onClick={onNext}
                 disabled={!hasNext}
