@@ -7,9 +7,8 @@ import { sanitizeProfileForPublic } from '@/lib/profile-service'
 import {
   getProfileBySlug,
   updateProfile,
-  deleteProfile,
-  incrementVisitCount
-} from '@/lib/new-file-data-service'
+  deleteProfile
+} from '@/lib/file-data-service'
 
 interface RouteContext {
   params: Promise<{
@@ -36,14 +35,8 @@ export async function GET(
       )
     }
 
-    // Increment visit count for public access
+    // Check if this is an admin request
     const isAdminRequest = request.headers.get('x-admin-request') === 'true'
-    if (!isAdminRequest) {
-      await incrementVisitCount(targetSlug)
-    }
-
-    // For public access, return full profile with gospel data
-    // For admin access, you might want different data
     
     if (isAdminRequest) {
       // Return full profile for admin editing
