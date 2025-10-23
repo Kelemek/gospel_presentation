@@ -8,16 +8,20 @@
         "content": "God is separate from and exalted above His creation. He is morally pure, perfect, and untainted by sin.",
         "scriptureReferences": [
           {
-            "reference": "Exodus 15:11"
+            "reference": "Exodus 15:11",
+            "favorite": true
           },
           {
-            "reference": "1 Samuel 2:2"
+            "reference": "1 Samuel 2:2",
+            "favorite": true
           },
           {
-            "reference": "Isaiah 6:3"
+            "reference": "Isaiah 6:3",
+            "favorite": false
           },
           {
-            "reference": "Isaiah 57:15"
+            "reference": "Isaiah 57:15",
+            "favorite": false
           },
           {
             "reference": "Habakkuk 1:13"
