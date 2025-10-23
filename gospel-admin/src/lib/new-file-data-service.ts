@@ -235,39 +235,116 @@ async function deleteProfileFile(slug: string): Promise<void> {
   }
 }
 
-// Create default profile
-async function createDefaultProfile(): Promise<GospelProfile> {
+// Create default profile with specific slug
+async function createDefaultProfileWithSlug(slug: string): Promise<GospelProfile> {
   await initializePaths()
-  // Load gospel data from the original data file
-  const gospelDataPath = join(DATA_DIR, 'gospel-presentation.json')
+  // Try to load gospel data from multiple possible locations
+  const possibleGospelDataPaths = [
+    join(DATA_DIR, 'gospel-presentation.json'),           // Current data directory
+    join(process.cwd(), '..', 'data', 'gospel-presentation.json'), // Repository structure
+    join(dirname(process.cwd()), 'data', 'gospel-presentation.json'), // Alternative repo structure
+    join(process.cwd(), 'data', 'gospel-presentation.json'), // Same directory
+  ]
+  
   let gospelData = []
   
-  try {
-    const gospelContent = await readFile(gospelDataPath, 'utf-8')
-    gospelData = JSON.parse(gospelContent)
-  } catch (error) {
-    console.error('Could not load gospel data:', error)
-    // Fallback to basic structure
+  for (const gospelDataPath of possibleGospelDataPaths) {
+    try {
+      console.log(`[Profile Service] Trying to load gospel data from: ${gospelDataPath}`)
+      const gospelContent = await readFile(gospelDataPath, 'utf-8')
+      gospelData = JSON.parse(gospelContent)
+      console.log(`[Profile Service] Successfully loaded gospel data from: ${gospelDataPath}`)
+      
+      // Copy the data to our working directory for future use
+      try {
+        const targetPath = join(DATA_DIR, 'gospel-presentation.json')
+        await writeFile(targetPath, gospelContent, 'utf-8')
+        console.log(`[Profile Service] Copied gospel data to: ${targetPath}`)
+      } catch (copyError) {
+        console.warn(`[Profile Service] Could not copy gospel data: ${copyError}`)
+      }
+      
+      break // Successfully loaded, exit loop
+    } catch (error) {
+      console.log(`[Profile Service] Could not load gospel data from ${gospelDataPath}: ${error}`)
+      // Continue to next path
+    }
+  }
+  
+  // If no data found, use fallback
+  if (gospelData.length === 0) {
+    console.log('[Profile Service] Using fallback gospel data structure')
     gospelData = [
       {
         section: "1",
         title: "God",
-        subsections: []
+        subsections: [
+          {
+            title: "God's Character",
+            content: "God is holy, just, and loving.",
+            scriptures: ["Romans 3:23", "1 John 4:8"]
+          }
+        ]
+      },
+      {
+        section: "2", 
+        title: "Man",
+        subsections: [
+          {
+            title: "Man's Condition",
+            content: "All have sinned and fall short of the glory of God.",
+            scriptures: ["Romans 3:23", "Isaiah 59:2"]
+          }
+        ]
+      },
+      {
+        section: "3",
+        title: "Christ", 
+        subsections: [
+          {
+            title: "Christ's Work",
+            content: "Jesus died for our sins and rose again.",
+            scriptures: ["Romans 5:8", "1 Corinthians 15:3-4"]
+          }
+        ]
+      },
+      {
+        section: "4",
+        title: "Response",
+        subsections: [
+          {
+            title: "Our Response",
+            content: "We must believe and receive Christ as Lord and Savior.",
+            scriptures: ["John 1:12", "Romans 10:9"]
+          }
+        ]
       }
     ]
   }
   
+  // Get next available ID
+  const index = await loadProfileIndex().catch(() => ({ 
+    profiles: [], 
+    lastUpdated: new Date().toISOString() 
+  } as ProfileIndex))
+  const nextId = generateNextId(index.profiles)
+  
   return {
-    id: "1",
-    slug: "default",
-    title: "Default Gospel Presentation",
-    description: "The original gospel presentation",
-    isDefault: true,
+    id: nextId,
+    slug: slug,
+    title: `${slug.charAt(0).toUpperCase() + slug.slice(1)}'s Gospel Presentation`,
+    description: "A personalized gospel presentation",
+    isDefault: slug === 'default',
     visitCount: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
     gospelData: gospelData
   }
+}
+
+// Create default profile
+async function createDefaultProfile(): Promise<GospelProfile> {
+  return await createDefaultProfileWithSlug('default')
 }
 
 // Generate next ID
@@ -296,7 +373,42 @@ export async function getProfiles(): Promise<ProfileMetadata[]> {
 }
 
 export async function getProfileBySlug(slug: string): Promise<GospelProfile | null> {
-  return await loadProfile(slug)
+  // First try to load existing profile
+  let profile = await loadProfile(slug)
+  
+  if (!profile) {
+    console.log(`[Profile Service] Profile '${slug}' not found, creating default profile for this slug`)
+    
+    try {
+      // Create a new profile with the requested slug
+      profile = await createDefaultProfileWithSlug(slug)
+      
+      // Save it to the system
+      await saveProfile(profile)
+      
+      // Update the index
+      const index = await loadProfileIndex()
+      index.profiles.push({
+        id: profile.id,
+        slug: profile.slug,
+        title: profile.title,
+        description: profile.description,
+        isDefault: false,
+        visitCount: 0,
+        createdAt: profile.createdAt,
+        updatedAt: profile.updatedAt
+      })
+      
+      await saveProfileIndex(index)
+      
+      console.log(`[Profile Service] Created new profile '${slug}' successfully`)
+    } catch (error) {
+      console.error(`[Profile Service] Failed to create profile '${slug}':`, error)
+      return null
+    }
+  }
+  
+  return profile
 }
 
 export async function createProfile(
