@@ -1,0 +1,31 @@
+<svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="180" height="180" fill="#f5f5f5" rx="20"/>
+  
+  <!-- Bible cover (dark brown/black book) -->
+  <rect x="30" y="25" width="90" height="130" rx="5" fill="#1a1a1a" stroke="#333" stroke-width="2"/>
+  
+  <!-- Bible spine shadow -->
+  <rect x="30" y="25" width="12" height="130" rx="5" fill="#000"/>
+  
+  <!-- Pages -->
+  <rect x="42" y="35" width="70" height="110" fill="#f8f8f8"/>
+  
+  <!-- Cross symbol (larger and centered) -->
+  <rect x="72" y="60" width="8" height="40" fill="#d4af37"/>
+  <rect x="60" y="76" width="32" height="8" fill="#d4af37"/>
+  
+  <!-- Text lines -->
+  <rect x="50" y="110" width="50" height="3" fill="#666"/>
+  <rect x="50" y="118" width="45" height="3" fill="#666"/>
+  <rect x="50" y="126" width="40" height="3" fill="#666"/>
+  
+  <!-- Page edge highlight -->
+  <rect x="108" y="35" width="4" height="110" fill="#e0e0e0"/>
+  
+  <!-- Red bookmark -->
+  <rect x="84" y="25" width="4" height="40" fill="#c41e3a"/>
+  
+  <!-- Title text -->
+  <text x="90" y="175" font-family="serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#333">GOSPEL</text>
+</svg>
