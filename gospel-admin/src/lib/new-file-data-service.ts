@@ -4,31 +4,44 @@ import { GospelProfile, ProfileMetadata } from './types'
 
 // File paths - more robust path resolution for production
 async function findDataDir(): Promise<string> {
-  const fs = await import('fs/promises')
-  
-  // Try multiple possible paths for data directory
-  const possiblePaths = [
-    join(process.cwd(), '..', 'data'),           // Development: gospel-admin/../data
-    join(process.cwd(), 'data'),                 // Production: if data is in same dir  
-    join(dirname(process.cwd()), 'data'),        // Alternative parent directory
-    join(process.cwd(), '..', '..', 'data'),     // If deeply nested
-    join(process.env.VERCEL_ROOT || process.cwd(), 'data'), // Vercel specific
-    '/tmp/data'                                   // Fallback for serverless
-  ]
-  
-  for (const path of possiblePaths) {
-    try {
-      await fs.access(path)
-      console.log(`[Profile Service] Found data directory at: ${path}`)
-      return path
-    } catch {
-      // Continue to next path
+  try {
+    console.log(`[Profile Service] Starting findDataDir, cwd: ${process.cwd()}`)
+    
+    const fs = await import('fs/promises')
+    
+    // Try multiple possible paths for data directory
+    const possiblePaths = [
+      join(process.cwd(), '..', 'data'),           // Development: gospel-admin/../data
+      join(process.cwd(), 'data'),                 // Production: if data is in same dir  
+      join(dirname(process.cwd()), 'data'),        // Alternative parent directory
+      join(process.cwd(), '..', '..', 'data'),     // If deeply nested
+      join(process.env.VERCEL_ROOT || process.cwd(), 'data'), // Vercel specific
+      '/tmp/data'                                   // Fallback for serverless
+    ]
+    
+    console.log(`[Profile Service] Trying paths: ${possiblePaths.join(', ')}`)
+    
+    for (const path of possiblePaths) {
+      try {
+        await fs.access(path)
+        console.log(`[Profile Service] Found data directory at: ${path}`)
+        return path
+      } catch (error) {
+        console.log(`[Profile Service] Path ${path} not accessible: ${error}`)
+        // Continue to next path
+      }
     }
+    
+    // If no existing data directory found, use the first option as default
+    console.log(`[Profile Service] No existing data directory found, using: ${possiblePaths[0]}`)
+    return possiblePaths[0]
+  } catch (error) {
+    console.error(`[Profile Service] Error in findDataDir: ${error}`)
+    // Fallback to a safe default
+    const fallbackPath = join(process.cwd(), 'data')
+    console.log(`[Profile Service] Using fallback path: ${fallbackPath}`)
+    return fallbackPath
   }
-  
-  // If no existing data directory found, use the first option as default
-  console.log(`[Profile Service] No existing data directory found, using: ${possiblePaths[0]}`)
-  return possiblePaths[0]
 }
 
 // Initialize paths (will be set dynamically)
@@ -38,9 +51,16 @@ let INDEX_FILE: string
 
 async function initializePaths() {
   if (!DATA_DIR) {
-    DATA_DIR = await findDataDir()
-    PROFILES_DIR = join(DATA_DIR, 'profiles')
-    INDEX_FILE = join(PROFILES_DIR, 'index.json')
+    try {
+      console.log(`[Profile Service] Initializing paths...`)
+      DATA_DIR = await findDataDir()
+      PROFILES_DIR = join(DATA_DIR, 'profiles')
+      INDEX_FILE = join(PROFILES_DIR, 'index.json')
+      console.log(`[Profile Service] Paths initialized - DATA_DIR: ${DATA_DIR}, PROFILES_DIR: ${PROFILES_DIR}`)
+    } catch (error) {
+      console.error(`[Profile Service] Fatal error initializing paths: ${error}`)
+      throw new Error(`Failed to initialize file paths: ${error}`)
+    }
   }
 }
 
@@ -244,11 +264,14 @@ function generateNextId(profiles: ProfileMetadata[]): string {
 export async function getProfiles(): Promise<ProfileMetadata[]> {
   try {
     console.log('[Profile Service] getProfiles() called')
+    await initializePaths()
+    console.log('[Profile Service] Paths initialized, loading index...')
     const index = await loadProfileIndex()
     console.log(`[Profile Service] Loaded ${index.profiles.length} profiles from index`)
     return index.profiles
   } catch (error) {
     console.error('[Profile Service] Error in getProfiles():', error)
+    console.error('[Profile Service] Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     throw error
   }
 }

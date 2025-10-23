@@ -15,7 +15,9 @@ import {
 
 export async function GET() {
   try {
+    console.log('[API] GET /api/profiles - Starting request')
     const profiles = await getProfiles()
+    console.log(`[API] GET /api/profiles - Got ${profiles.length} profiles`)
     
     // Return profiles without sensitive data for admin list view
     const profileList = profiles.map(profile => ({
@@ -29,11 +31,13 @@ export async function GET() {
       updatedAt: profile.updatedAt
     }))
 
+    console.log('[API] GET /api/profiles - Returning success response')
     return NextResponse.json({ profiles: profileList })
   } catch (error) {
-    console.error('Error fetching profiles:', error)
+    console.error('[API] GET /api/profiles - Error fetching profiles:', error)
+    console.error('[API] GET /api/profiles - Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     return NextResponse.json(
-      { error: 'Failed to fetch profiles' },
+      { error: 'Failed to fetch profiles', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
