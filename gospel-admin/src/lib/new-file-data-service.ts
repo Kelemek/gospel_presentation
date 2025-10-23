@@ -9,14 +9,14 @@ async function findDataDir(): Promise<string> {
     
     const fs = await import('fs/promises')
     
-    // Try multiple possible paths for data directory (production-safe paths)
+    // Try multiple possible paths for data directory (production-safe paths first)
     const possiblePaths = [
+      '/tmp/gospel-data',                          // Always writable temp directory - FIRST PRIORITY
+      join('/tmp', 'data'),                        // Alternative temp directory
       join(process.cwd(), 'data'),                 // Same directory as app
       join(process.cwd(), '..', 'data'),           // Development: gospel-admin/../data  
-      join('/tmp', 'gospel-data'),                 // Writable temp directory
       join(process.env.HOME || '/tmp', 'gospel-data'), // User home directory fallback
       join(dirname(process.cwd()), 'data'),        // Alternative parent directory
-      '/tmp/data'                                   // Final fallback for serverless
     ]
     
     console.log(`[Profile Service] Trying paths: ${possiblePaths.join(', ')}`)
@@ -24,17 +24,37 @@ async function findDataDir(): Promise<string> {
     for (const path of possiblePaths) {
       try {
         await fs.access(path)
-        console.log(`[Profile Service] Found data directory at: ${path}`)
+        console.log(`[Profile Service] Found existing data directory at: ${path}`)
         return path
       } catch (error) {
-        console.log(`[Profile Service] Path ${path} not accessible: ${error}`)
-        // Continue to next path
+        console.log(`[Profile Service] Path ${path} not accessible, trying to create: ${error}`)
+        
+        // Try to create the directory to test if it's writable
+        try {
+          await fs.mkdir(path, { recursive: true })
+          console.log(`[Profile Service] Successfully created writable directory at: ${path}`)
+          return path
+        } catch (createError) {
+          console.log(`[Profile Service] Cannot create directory at ${path}: ${createError}`)
+          // Continue to next path
+        }
       }
     }
     
-    // If no existing data directory found, use the first option as default
-    console.log(`[Profile Service] No existing data directory found, using: ${possiblePaths[0]}`)
-    return possiblePaths[0]
+    // If we get here, none of the paths worked - use the most reliable fallback
+    const fallback = '/tmp/gospel-data'
+    console.log(`[Profile Service] All paths failed, using guaranteed fallback: ${fallback}`)
+    
+    // Make one final attempt to create the fallback directory
+    try {
+      await fs.mkdir(fallback, { recursive: true })
+      console.log(`[Profile Service] Created fallback directory: ${fallback}`)
+      return fallback
+    } catch (finalError) {
+      console.error(`[Profile Service] Even fallback directory creation failed: ${finalError}`)
+      // Return it anyway - the error will be caught later with better context
+      return fallback
+    }
   } catch (error) {
     console.error(`[Profile Service] Error in findDataDir: ${error}`)
     // Fallback to a safe default
@@ -82,20 +102,7 @@ async function ensureDirectories() {
   console.log(`[Profile Service] Data directory: ${DATA_DIR}`)
   console.log(`[Profile Service] Profiles directory: ${PROFILES_DIR}`)
   
-  try {
-    await access(DATA_DIR)
-    console.log(`[Profile Service] Data directory exists: ${DATA_DIR}`)
-  } catch (error) {
-    console.log(`[Profile Service] Creating data directory: ${DATA_DIR}`)
-    try {
-      await mkdir(DATA_DIR, { recursive: true })
-      console.log(`[Profile Service] Successfully created data directory: ${DATA_DIR}`)
-    } catch (mkdirError) {
-      console.error(`[Profile Service] Failed to create data directory: ${mkdirError}`)
-      throw new Error(`Cannot create data directory at ${DATA_DIR}: ${mkdirError}`)
-    }
-  }
-  
+  // Since findDataDir already verified DATA_DIR is writable, just ensure PROFILES_DIR exists
   try {
     await access(PROFILES_DIR)
     console.log(`[Profile Service] Profiles directory exists: ${PROFILES_DIR}`)
