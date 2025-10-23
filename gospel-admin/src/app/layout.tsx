@@ -19,10 +19,10 @@ export const metadata: Metadata = {
   authors: [{ name: "Dr. Stuart Scott" }],
   icons: {
     icon: [
-      { url: '/icon.svg', type: 'image/svg+xml' },
-      { url: '/favicon.ico', type: 'image/x-icon' }
+      { url: '/icon.svg?v=3', type: 'image/svg+xml' },
+      { url: '/icon?v=3', type: 'image/png' }
     ],
-    shortcut: '/icon.svg',
+    shortcut: '/icon.svg?v=3',
     apple: '/apple-touch-icon.svg',
   },
 };
