@@ -40,6 +40,18 @@ export interface GospelProfile {
   updatedAt: Date
 }
 
+// Lightweight profile metadata for index operations
+export interface ProfileMetadata {
+  id: string
+  slug: string
+  title: string
+  description?: string
+  isDefault: boolean
+  visitCount: number
+  createdAt: Date
+  updatedAt: Date
+}
+
 export interface ProfileValidation {
   slug: {
     isValid: boolean

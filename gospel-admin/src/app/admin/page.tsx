@@ -3,40 +3,67 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import AdminLogin from '@/components/AdminLogin'
-import { isAuthenticated, logout, getSessionToken } from '@/lib/auth'
-import { GospelSection } from '@/lib/types'
+import AdminHeader from '@/components/AdminHeader'
+import { isAuthenticated, logout } from '@/lib/auth'
+import { CreateProfileRequest } from '@/lib/types'
+import { generateSlugSuggestion } from '@/lib/profile-service'
+
+interface ProfileListItem {
+  id: string
+  slug: string
+  title: string
+  description?: string
+  isDefault: boolean
+  visitCount: number
+  createdAt: Date
+  updatedAt: Date
+}
 
 export default function AdminPage() {
   const [isAuth, setIsAuth] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [editingSection, setEditingSection] = useState<number | null>(null)
-  const [editData, setEditData] = useState<GospelSection[]>([])
-  const [hasChanges, setHasChanges] = useState(false)
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [profiles, setProfiles] = useState<ProfileListItem[]>([])
+  const [error, setError] = useState('')
+  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
+  const [createForm, setCreateForm] = useState({
+    title: '',
+    slug: '',
+    description: '',
+    cloneFromSlug: 'default'
+  })
+  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false)
 
-  // Check authentication on mount and load data
   useEffect(() => {
     setIsAuth(isAuthenticated())
-    setIsLoading(false)
-    
-    // Load data from GitHub API
-    const loadData = async () => {
-      try {
-        const response = await fetch('/api/data')
-        if (response.ok) {
-          const data = await response.json()
-          setEditData(data)
-        }
-      } catch (error) {
-        console.error('Error loading data:', error)
-      }
+    if (isAuthenticated()) {
+      fetchProfiles()
+    } else {
+      setIsLoading(false)
     }
-    
-    loadData()
   }, [])
+
+  const fetchProfiles = async () => {
+    try {
+      setIsLoading(true)
+      const response = await fetch('/api/profiles')
+      if (response.ok) {
+        const data = await response.json()
+        setProfiles(data.profiles)
+      } else {
+        setError('Failed to fetch profiles')
+      }
+    } catch (error) {
+      console.error('Error fetching profiles:', error)
+      setError('Error loading profiles')
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   const handleLogin = () => {
     setIsAuth(true)
+    fetchProfiles()
   }
 
   const handleLogout = () => {
@@ -44,242 +71,85 @@ export default function AdminPage() {
     setIsAuth(false)
   }
 
-  const handleSectionEdit = (sectionIndex: number, field: string, value: string) => {
-    const newData = [...editData]
-    if (field === 'title') {
-      newData[sectionIndex].title = value
-    }
-    setEditData(newData)
-    setHasChanges(true)
-  }
+  const handleCreateProfile = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsCreating(true)
+    setError('')
 
-  const handleSubsectionEdit = (sectionIndex: number, subsectionIndex: number, field: string, value: string) => {
-    const newData = [...editData]
-    if (field === 'title') {
-      newData[sectionIndex].subsections[subsectionIndex].title = value
-    } else if (field === 'content') {
-      newData[sectionIndex].subsections[subsectionIndex].content = value
-    }
-    setEditData(newData)
-    setHasChanges(true)
-  }
-
-  const addScriptureReference = (sectionIndex: number, subsectionIndex: number) => {
-    const newData = [...editData]
-    if (!newData[sectionIndex].subsections[subsectionIndex].scriptureReferences) {
-      newData[sectionIndex].subsections[subsectionIndex].scriptureReferences = []
-    }
-    newData[sectionIndex].subsections[subsectionIndex].scriptureReferences!.push({
-      reference: 'New Reference'
-    })
-    setEditData(newData)
-    setHasChanges(true)
-  }
-
-  const editScriptureReference = (sectionIndex: number, subsectionIndex: number, refIndex: number, newReference: string) => {
-    const newData = [...editData]
-    if (newData[sectionIndex].subsections[subsectionIndex].scriptureReferences) {
-      newData[sectionIndex].subsections[subsectionIndex].scriptureReferences![refIndex].reference = newReference
-    }
-    setEditData(newData)
-    setHasChanges(true)
-  }
-
-  const removeScriptureReference = (sectionIndex: number, subsectionIndex: number, refIndex: number) => {
-    const newData = [...editData]
-    if (newData[sectionIndex].subsections[subsectionIndex].scriptureReferences) {
-      newData[sectionIndex].subsections[subsectionIndex].scriptureReferences!.splice(refIndex, 1)
-      // Clean up empty array
-      if (newData[sectionIndex].subsections[subsectionIndex].scriptureReferences!.length === 0) {
-        delete newData[sectionIndex].subsections[subsectionIndex].scriptureReferences
-      }
-    }
-    setEditData(newData)
-    setHasChanges(true)
-  }
-
-  // Functions for nested subsections
-  const addNestedScriptureReference = (sectionIndex: number, subsectionIndex: number, nestedIndex: number) => {
-    const newData = [...editData]
-    const nested = newData[sectionIndex].subsections[subsectionIndex].nestedSubsections?.[nestedIndex]
-    if (nested) {
-      if (!nested.scriptureReferences) {
-        nested.scriptureReferences = []
-      }
-      nested.scriptureReferences.push({ reference: 'New Reference' })
-    }
-    setEditData(newData)
-    setHasChanges(true)
-  }
-
-  const editNestedScriptureReference = (sectionIndex: number, subsectionIndex: number, nestedIndex: number, refIndex: number, newReference: string) => {
-    const newData = [...editData]
-    const nested = newData[sectionIndex].subsections[subsectionIndex].nestedSubsections?.[nestedIndex]
-    if (nested?.scriptureReferences) {
-      nested.scriptureReferences[refIndex].reference = newReference
-    }
-    setEditData(newData)
-    setHasChanges(true)
-  }
-
-  const removeNestedScriptureReference = (sectionIndex: number, subsectionIndex: number, nestedIndex: number, refIndex: number) => {
-    const newData = [...editData]
-    const nested = newData[sectionIndex].subsections[subsectionIndex].nestedSubsections?.[nestedIndex]
-    if (nested?.scriptureReferences) {
-      nested.scriptureReferences.splice(refIndex, 1)
-      if (nested.scriptureReferences.length === 0) {
-        delete nested.scriptureReferences
-      }
-    }
-    setEditData(newData)
-    setHasChanges(true)
-  }
-
-  // Functions for toggling favorites
-  const toggleScriptureFavorite = (sectionIndex: number, subsectionIndex: number, refIndex: number) => {
-    const newData = JSON.parse(JSON.stringify(editData)) // Deep clone to ensure React detects changes
-    if (newData[sectionIndex].subsections[subsectionIndex].scriptureReferences) {
-      const ref = newData[sectionIndex].subsections[subsectionIndex].scriptureReferences[refIndex]
-      // Initialize favorite property if it doesn't exist
-      if (ref.favorite === undefined) {
-        ref.favorite = false
-      }
-      ref.favorite = !ref.favorite
-    }
-    setEditData(newData)
-    setHasChanges(true)
-  }
-
-  const toggleNestedScriptureFavorite = (sectionIndex: number, subsectionIndex: number, nestedIndex: number, refIndex: number) => {
-    const newData = JSON.parse(JSON.stringify(editData)) // Deep clone to ensure React detects changes
-    const nested = newData[sectionIndex].subsections[subsectionIndex].nestedSubsections?.[nestedIndex]
-    if (nested?.scriptureReferences) {
-      const ref = nested.scriptureReferences[refIndex]
-      // Initialize favorite property if it doesn't exist
-      if (ref.favorite === undefined) {
-        ref.favorite = false
-      }
-      ref.favorite = !ref.favorite
-    }
-    setEditData(newData)
-    setHasChanges(true)
-  }
-
-  const saveChanges = async () => {
-    setSaveStatus('saving')
-    
     try {
-      const response = await fetch('/api/data', {
+      const request: CreateProfileRequest = {
+        slug: createForm.slug.toLowerCase().trim(),
+        title: createForm.title.trim(),
+        description: createForm.description.trim() || undefined,
+        cloneFromSlug: createForm.cloneFromSlug || 'default'
+      }
+
+      const response = await fetch('/api/profiles', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          data: editData,
-          sessionToken: getSessionToken(),
-          commitMessage: `Update all gospel presentation data - ${new Date().toISOString()}`
-        }),
+        body: JSON.stringify(request)
       })
 
       if (response.ok) {
-        setSaveStatus('saved')
-        setHasChanges(false)
-        setTimeout(() => setSaveStatus('idle'), 3000)
-      } else if (response.status === 401) {
-        // Session expired, logout and redirect to login
-        logout()
-        setIsAuth(false)
-        setSaveStatus('error')
+        await fetchProfiles()
+        setShowCreateForm(false)
+        setCreateForm({ title: '', slug: '', description: '', cloneFromSlug: 'default' })
+        setIsSlugManuallyEdited(false)
       } else {
-        setSaveStatus('error')
-        setTimeout(() => setSaveStatus('idle'), 3000)
+        const errorData = await response.json()
+        setError(errorData.error || 'Failed to create profile')
       }
-    } catch (error) {
-      console.error('Save error:', error)
-      setSaveStatus('error')
-      setTimeout(() => setSaveStatus('idle'), 3000)
+    } catch (err) {
+      setError('Failed to create profile')
+    } finally {
+      setIsCreating(false)
     }
   }
 
-  const saveSectionChanges = async (sectionIndex: number) => {
-    setSaveStatus('saving')
-    
+  const handleDeleteProfile = async (slug: string, title: string) => {
+    if (!confirm(`Are you sure you want to delete the profile "${title}"? This action cannot be undone.`)) {
+      return
+    }
+
     try {
-      const section = editData[sectionIndex]
-      const response = await fetch('/api/data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          data: editData,
-          sessionToken: getSessionToken(),
-          commitMessage: `Update Section ${section.section}: ${section.title} - ${new Date().toISOString()}`
-        }),
+      const response = await fetch(`/api/profiles/${slug}`, {
+        method: 'DELETE'
       })
 
       if (response.ok) {
-        setSaveStatus('saved')
-        setHasChanges(false)
-        setTimeout(() => setSaveStatus('idle'), 3000)
-      } else if (response.status === 401) {
-        // Session expired, logout and redirect to login
-        logout()
-        setIsAuth(false)
-        setSaveStatus('error')
+        await fetchProfiles()
       } else {
-        setSaveStatus('error')
-        setTimeout(() => setSaveStatus('idle'), 3000)
+        const errorData = await response.json()
+        setError(errorData.error || 'Failed to delete profile')
       }
-    } catch (error) {
-      console.error('Save error:', error)
-      setSaveStatus('error')
-      setTimeout(() => setSaveStatus('idle'), 3000)
+    } catch (err) {
+      setError('Failed to delete profile')
     }
   }
 
-  const saveSubsectionChanges = async (sectionIndex: number, subsectionIndex: number) => {
-    setSaveStatus('saving')
-    
-    try {
-      const section = editData[sectionIndex]
-      const subsection = section.subsections[subsectionIndex]
-      const response = await fetch('/api/data', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          data: editData,
-          sessionToken: getSessionToken(),
-          commitMessage: `Update ${section.title} - ${subsection.title} - ${new Date().toISOString()}`
-        }),
-      })
+  const handleTitleChange = (title: string) => {
+    setCreateForm(prev => ({
+      ...prev,
+      title,
+      slug: isSlugManuallyEdited ? prev.slug : generateSlugSuggestion(title, profiles.map(p => p.slug))
+    }))
+  }
 
-      if (response.ok) {
-        setSaveStatus('saved')
-        setHasChanges(false)
-        setTimeout(() => setSaveStatus('idle'), 3000)
-      } else if (response.status === 401) {
-        // Session expired, logout and redirect to login
-        logout()
-        setIsAuth(false)
-        setSaveStatus('error')
-      } else {
-        setSaveStatus('error')
-        setTimeout(() => setSaveStatus('idle'), 3000)
-      }
-    } catch (error) {
-      console.error('Save error:', error)
-      setSaveStatus('error')
-      setTimeout(() => setSaveStatus('idle'), 3000)
-    }
+  const handleSlugChange = (slug: string) => {
+    const cleanSlug = slug.toLowerCase().replace(/[^a-z0-9]/g, '')
+    setCreateForm(prev => ({ ...prev, slug: cleanSlug }))
+    setIsSlugManuallyEdited(true)
   }
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading admin dashboard...</p>
+        </div>
       </div>
     )
   }
@@ -289,46 +159,14 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-6">
-      <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-slate-800">
-                📝 Gospel Presentation Editor
-              </h1>
-              <p className="text-slate-600 mt-1">
-                Edit content, scripture references, and presentation structure
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              {hasChanges && (
-                <button
-                  onClick={saveChanges}
-                  disabled={saveStatus === 'saving'}
-                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm disabled:opacity-50 whitespace-nowrap flex items-center gap-1.5 shrink-0"
-                >
-                  {saveStatus === 'saving' ? (
-                    <>
-                      <span className="animate-spin">⚪</span>
-                      <span className="hidden sm:inline">Saving...</span>
-                      <span className="sm:hidden">Save</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="hidden sm:inline">Save All Changes</span>
-                      <span className="sm:hidden">Save All</span>
-                    </>
-                  )}
-                </button>
-              )}
-              {saveStatus === 'saved' && (
-                <span className="text-emerald-600 text-sm font-medium">✓ Saved</span>
-              )}
-              {saveStatus === 'error' && (
-                <span className="text-red-500 text-sm font-medium">✗ Save failed</span>
-              )}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="container mx-auto px-5 py-8">
+        <AdminHeader
+          title="🏠 Admin Dashboard"
+          description="Manage gospel presentation profiles, content, and settings"
+          showProfileSwitcher={false}
+          actions={
+            <>
               <Link
                 href="/"
                 className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm whitespace-nowrap shrink-0"
@@ -343,241 +181,236 @@ export default function AdminPage() {
                 <span className="hidden sm:inline">Logout</span>
                 <span className="sm:hidden">Exit</span>
               </button>
-            </div>
+            </>
+          }
+        />
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="text-red-800">{error}</div>
           </div>
-        </div>
+        )}
 
-        {/* Editing Interface */}
-        <div className="space-y-6">
-          {editData.map((section, sectionIndex) => (
-            <div key={sectionIndex} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Section {section.section} Title
-                </label>
-                <input
-                  type="text"
-                  value={section.title}
-                  onChange={(e) => handleSectionEdit(sectionIndex, 'title', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white font-medium"
-                />
-              </div>
+        <div className="bg-white rounded-lg shadow-lg border border-slate-200 p-6 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-slate-800">Profile Management</h2>
+            <button
+              onClick={() => {
+                setShowCreateForm(true)
+                setIsSlugManuallyEdited(false)
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            >
+              + Create New Profile
+            </button>
+          </div>
 
-              <div className="space-y-4">
-                {section.subsections.map((subsection, subsectionIndex) => (
-                  <div key={subsectionIndex} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                    <div className="mb-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Subsection Title
-                      </label>
-                      <input
-                        type="text"
-                        value={subsection.title}
-                        onChange={(e) => handleSubsectionEdit(sectionIndex, subsectionIndex, 'title', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white font-medium"
-                      />
-                    </div>
-                    
-                    <div className="mb-3">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Content
-                      </label>
-                      <textarea
-                        value={subsection.content}
-                        onChange={(e) => handleSubsectionEdit(sectionIndex, subsectionIndex, 'content', e.target.value)}
-                        rows={4}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white font-normal leading-relaxed"
-                      />
-                    </div>
+          {showCreateForm && (
+            <div className="mb-6 border border-slate-200 rounded-lg p-6 bg-gradient-to-br from-slate-50 to-blue-50">
+              <h3 className="text-xl font-bold text-slate-800 mb-4">Create New Profile</h3>
+              
+              <form onSubmit={handleCreateProfile} className="space-y-4">
+                <div>
+                  <label htmlFor="title" className="block text-sm font-medium text-slate-700 mb-1">
+                    Profile Title *
+                  </label>
+                  <input
+                    type="text"
+                    id="title"
+                    value={createForm.title}
+                    onChange={(e) => handleTitleChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 bg-white shadow-sm"
+                    placeholder="e.g., Youth Group Presentation"
+                    required
+                    maxLength={50}
+                  />
+                </div>
 
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <label className="block text-sm font-medium text-gray-700">
-                          Scripture References
-                        </label>
-                        <button
-                          onClick={() => addScriptureReference(sectionIndex, subsectionIndex)}
-                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm whitespace-nowrap flex items-center gap-1.5 shrink-0"
-                        >
-                          <span className="text-base">+</span>
-                          <span className="hidden sm:inline">Add Reference</span>
-                          <span className="sm:hidden">Add</span>
-                        </button>
+                <div>
+                  <label htmlFor="slug" className="block text-sm font-medium text-gray-700 mb-1">
+                    URL Slug *
+                  </label>
+                  <div className="flex">
+                    <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                      yoursite.com/
+                    </span>
+                    <input
+                      type="text"
+                      id="slug"
+                      value={createForm.slug}
+                      onChange={(e) => handleSlugChange(e.target.value)}
+                      className="flex-1 px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                      placeholder="youthgroup"
+                      pattern="[a-z][a-z0-9]*"
+                      title="Must start with a letter and contain only lowercase letters and numbers"
+                      required
+                      minLength={3}
+                      maxLength={20}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSlugManuallyEdited(false)
+                        setCreateForm(prev => ({
+                          ...prev,
+                          slug: generateSlugSuggestion(prev.title, profiles.map(p => p.slug))
+                        }))
+                      }}
+                      className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-lg bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors text-sm"
+                      title="Regenerate slug from title"
+                    >
+                      ↻
+                    </button>
+                  </div>
+                  <div className="flex justify-between items-center mt-1">
+                    <p className="text-xs text-gray-500">
+                      Auto-generated from title • Lowercase letters and numbers only
+                    </p>
+                    {isSlugManuallyEdited && (
+                      <p className="text-xs text-blue-600">
+                        Manual edit mode (click ↻ to regenerate)
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    id="description"
+                    value={createForm.description}
+                    onChange={(e) => setCreateForm(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                    placeholder="Optional description of this profile..."
+                    rows={3}
+                    maxLength={200}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="cloneFrom" className="block text-sm font-medium text-gray-700 mb-1">
+                    Clone From
+                  </label>
+                  <select
+                    id="cloneFrom"
+                    value={createForm.cloneFromSlug}
+                    onChange={(e) => setCreateForm(prev => ({ ...prev, cloneFromSlug: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
+                  >
+                    {profiles.map(profile => (
+                      <option key={profile.slug} value={profile.slug}>
+                        {profile.title} ({profile.slug})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    The new profile will start with a copy of the selected profile's content
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="submit"
+                    disabled={isCreating}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
+                  >
+                    {isCreating ? 'Creating...' : 'Create Profile'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateForm(false)
+                      setIsSlugManuallyEdited(false)
+                      setCreateForm({ title: '', slug: '', description: '', cloneFromSlug: 'default' })
+                    }}
+                    className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {profiles.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-gray-400 text-4xl mb-4">📋</div>
+              <p className="text-gray-600 mb-4">No profiles found</p>
+              <p className="text-sm text-gray-500">Create your first profile above to get started.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {profiles.map(profile => (
+                <div key={profile.id} className="p-6 hover:bg-gray-50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {profile.title}
+                        </h3>
+                        {profile.isDefault && (
+                          <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
+                            Default
+                          </span>
+                        )}
                       </div>
                       
-                      {subsection.scriptureReferences && subsection.scriptureReferences.length > 0 ? (
-                        <div className="space-y-3">
-                          {subsection.scriptureReferences.map((ref, refIndex) => (
-                            <div key={`${refIndex}-${ref.favorite || false}`} className="flex gap-2 items-center p-3 bg-slate-50 border border-slate-200 rounded-md">
-                              <span className="text-slate-500 text-sm">📖</span>
-                              <input
-                                type="text"
-                                value={ref.reference}
-                                onChange={(e) => editScriptureReference(sectionIndex, subsectionIndex, refIndex, e.target.value)}
-                                className="flex-1 px-3 py-1 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400 text-gray-900 bg-white font-medium text-sm"
-                                placeholder="e.g., John 3:16"
-                              />
-                              <button
-                                onClick={() => toggleScriptureFavorite(sectionIndex, subsectionIndex, refIndex)}
-                                className="p-1.5 text-yellow-500 hover:text-yellow-600 hover:bg-yellow-50 rounded-md transition-colors"
-                                title={ref.favorite ? "Remove from favorites" : "Add to favorites"}
-                              >
-                                <svg className="w-4 h-4" fill={ref.favorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.563.563 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => removeScriptureReference(sectionIndex, subsectionIndex, refIndex)}
-                                className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors group"
-                                title="Remove reference"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-sm text-gray-500 italic border border-gray-200 rounded-md p-3 bg-gray-50">
-                          No scripture references yet. Click "Add Reference" to add one.
-                        </div>
+                      <p className="text-sm text-gray-600 mt-1">
+                        <span className="font-medium">URL:</span> yoursite.com/{profile.slug}
+                      </p>
+                      
+                      {profile.description && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          {profile.description}
+                        </p>
+                      )}
+                      
+                      <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                        <span>{profile.visitCount} visits</span>
+                        <span>Created {new Date(profile.createdAt).toLocaleDateString()}</span>
+                        <span>Updated {new Date(profile.updatedAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Link
+                        href={`/${profile.slug}`}
+                        target="_blank"
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        👁️ View
+                      </Link>
+                      
+                      <Link
+                        href={`/admin/profiles/${profile.slug}`}
+                        className="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-200 transition-colors font-medium"
+                      >
+                        ⚙️ Settings
+                      </Link>
+                      
+                      <Link
+                        href={`/admin/profiles/${profile.slug}/content`}
+                        className="bg-green-100 text-green-700 px-3 py-1 rounded text-sm hover:bg-green-200 transition-colors font-medium"
+                      >
+                        📝 Content
+                      </Link>
+                      
+                      {!profile.isDefault && (
+                        <button
+                          onClick={() => handleDeleteProfile(profile.slug, profile.title)}
+                          className="text-red-600 hover:text-red-800 text-sm font-medium"
+                        >
+                          🗑️ Delete
+                        </button>
                       )}
                     </div>
-
-                    {/* Nested Subsections */}
-                    {subsection.nestedSubsections && subsection.nestedSubsections.length > 0 && (
-                      <div className="mt-4 pl-4 border-l-2 border-gray-300">
-                        <h4 className="text-sm font-medium text-gray-700 mb-3">Nested Subsections</h4>
-                        {subsection.nestedSubsections.map((nested, nestedIndex) => (
-                          <div key={nestedIndex} className="mb-4 p-3 bg-white border border-gray-300 rounded-md">
-                            <div className="mb-2">
-                              <label className="block text-xs font-medium text-gray-600 mb-1">
-                                Nested Title
-                              </label>
-                              <input
-                                type="text"
-                                value={nested.title}
-                                onChange={(e) => {
-                                  const newData = [...editData]
-                                  newData[sectionIndex].subsections[subsectionIndex].nestedSubsections![nestedIndex].title = e.target.value
-                                  setEditData(newData)
-                                  setHasChanges(true)
-                                }}
-                                className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white font-medium text-sm"
-                              />
-                            </div>
-                            
-                            <div className="mb-2">
-                              <label className="block text-xs font-medium text-gray-600 mb-1">
-                                Nested Content
-                              </label>
-                              <textarea
-                                value={nested.content}
-                                onChange={(e) => {
-                                  const newData = [...editData]
-                                  newData[sectionIndex].subsections[subsectionIndex].nestedSubsections![nestedIndex].content = e.target.value
-                                  setEditData(newData)
-                                  setHasChanges(true)
-                                }}
-                                rows={2}
-                                className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white font-normal text-sm"
-                              />
-                            </div>
-
-                            {/* Nested Scripture References */}
-                            <div>
-                              <div className="flex justify-between items-center mb-2">
-                                <label className="block text-xs font-medium text-gray-600">
-                                  Scripture References
-                                </label>
-                                <button
-                                  onClick={() => addNestedScriptureReference(sectionIndex, subsectionIndex, nestedIndex)}
-                                  className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-md text-xs font-medium transition-all hover:shadow-sm whitespace-nowrap flex items-center gap-1 shrink-0"
-                                >
-                                  <span className="text-sm">+</span>
-                                  <span>Add</span>
-                                </button>
-                              </div>
-                              
-                              {nested.scriptureReferences && nested.scriptureReferences.length > 0 ? (
-                                <div className="space-y-2">
-                                  {nested.scriptureReferences.map((ref, refIndex) => (
-                                    <div key={`nested-${refIndex}-${ref.favorite || false}`} className="flex gap-2 items-center p-2 bg-slate-50 border border-slate-200 rounded-md">
-                                      <span className="text-slate-500 text-xs">📖</span>
-                                      <input
-                                        type="text"
-                                        value={ref.reference}
-                                        onChange={(e) => editNestedScriptureReference(sectionIndex, subsectionIndex, nestedIndex, refIndex, e.target.value)}
-                                        className="flex-1 px-2 py-1 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400 text-gray-900 bg-white font-medium text-xs"
-                                        placeholder="e.g., Romans 3:23"
-                                      />
-                                      <button
-                                        onClick={() => toggleNestedScriptureFavorite(sectionIndex, subsectionIndex, nestedIndex, refIndex)}
-                                        className="p-1 text-yellow-500 hover:text-yellow-600 hover:bg-yellow-50 rounded-md transition-colors"
-                                        title={ref.favorite ? "Remove from favorites" : "Add to favorites"}
-                                      >
-                                        <svg className="w-3 h-3" fill={ref.favorite ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.563.563 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z" />
-                                        </svg>
-                                      </button>
-                                      <button
-                                        onClick={() => removeNestedScriptureReference(sectionIndex, subsectionIndex, nestedIndex, refIndex)}
-                                        className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors group"
-                                        title="Remove reference"
-                                      >
-                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                      </button>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="text-xs text-gray-500 italic border border-gray-200 rounded-md p-2 bg-gray-50">
-                                  No references yet.
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {/* Subsection Save Button */}
-                    <div className="mt-4 pt-3 border-t border-slate-150 flex justify-end">
-                      <button
-                        onClick={() => saveSubsectionChanges(sectionIndex, subsectionIndex)}
-                        disabled={saveStatus === 'saving'}
-                        className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-md text-xs font-medium transition-all hover:shadow-sm disabled:opacity-50"
-                      >
-                        {saveStatus === 'saving' ? 'Saving...' : 'Save'}
-                      </button>
-                    </div>
                   </div>
-                ))}
-              </div>
-              
-              {/* Section Save Button */}
-              <div className="mt-6 pt-4 border-t border-slate-200 flex justify-end">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => saveSectionChanges(sectionIndex)}
-                    disabled={saveStatus === 'saving'}
-                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm disabled:opacity-50"
-                  >
-                    {saveStatus === 'saving' ? 'Saving...' : `Save Section ${section.section}`}
-                  </button>
-                  {saveStatus === 'saved' && (
-                    <span className="text-emerald-600 text-sm font-medium">✓ Saved</span>
-                  )}
-                  {saveStatus === 'error' && (
-                    <span className="text-red-500 text-sm font-medium">✗ Save failed</span>
-                  )}
                 </div>
-              </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>
