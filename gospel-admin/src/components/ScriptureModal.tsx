@@ -150,11 +150,11 @@ export default function ScriptureModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-lg max-w-2xl w-full my-4 shadow-xl flex flex-col min-h-0 max-h-[calc(100vh-2rem)]">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex">
+      <div className="bg-white w-full max-w-2xl mx-auto shadow-xl flex flex-col h-full md:h-auto md:max-h-[90vh] md:my-auto md:rounded-lg">
         
         {/* Fixed Header with Controls - Always Visible */}
-        <div className="bg-slate-100 px-4 py-3 border-b flex-shrink-0 sticky top-0 z-10">
+        <div className="bg-slate-100 px-4 pt-safe-or-3 pb-3 border-b flex-shrink-0 relative z-10 md:rounded-t-lg" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}>
           {/* Navigation Controls - Always at Top */}
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-1 flex-1">
@@ -300,7 +300,7 @@ export default function ScriptureModal({
         </div>
         
         {/* Fixed Footer */}
-        <div className="bg-slate-50 px-4 py-2 border-t flex-shrink-0">
+        <div className="bg-slate-50 px-4 pt-2 border-t flex-shrink-0 md:rounded-b-lg" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
           <p className="text-xs text-slate-500 text-center">
             Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®)
           </p>
