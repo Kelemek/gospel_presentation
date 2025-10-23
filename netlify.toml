@@ -2,8 +2,8 @@
   # Build command for Next.js application
   command = "cd gospel-admin && npm ci && npm run build"
   
-  # Directory to publish - let Netlify plugin handle this
-  publish = "gospel-admin"
+  # Let Netlify auto-detect the publish directory for Next.js
+  publish = ""
   
   # Environment variables for build process
   [build.environment]
@@ -11,9 +11,8 @@
     NEXT_PUBLIC_APP_NAME = "Gospel Presentation"
     NEXT_PUBLIC_APP_DESCRIPTION = "Presenting the Gospel in its Context"
 
-# Netlify Next.js plugin
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
+# Modern Netlify automatically detects and handles Next.js projects
+# API routes will work as Edge Functions automatically
 
 [context.production]
   command = "cd gospel-admin && npm ci && npm run build"
