@@ -1,31 +1,70 @@
-# Gospel Presentation Website with ESV API Integration
+# Gospel Presentation - Next.js Application
 
-This website displays "Presenting the Gospel in its Context" by Dr. Stuart Scott with integrated ESV API functionality for scripture references.
+This is a Next.js application that displays "Presenting the Gospel in its Context" by Dr. Stuart Scott with integrated ESV API functionality and a powerful admin interface for content management.
 
 ## Features
 
-- **Dynamic Content Loading**: All content is loaded from `data.js` array
+### 📖 **Presentation Features**
+- **Dynamic Content Management**: Content managed through secure admin interface
 - **ESV API Integration**: Click any scripture reference to view the full text
+- **Favorite Navigation**: Mark important scriptures as favorites and navigate between them
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
-- **Accessible Navigation**: Keyboard navigation and screen reader friendly
-- **Print Friendly**: Optimized print styles
-- **Search Functionality**: Basic text search capability
+- **Keyboard Navigation**: Arrow keys to navigate between favorite scriptures
+- **Print Friendly**: Optimized for presentation and printing
 
-## Files Structure
+### 🔐 **Admin Features**
+- **Secure Authentication**: Session-based authentication with environment variables
+- **Content Editing**: Edit sections, subsections, and scripture references
+- **Scripture Favorites**: Mark important references for easy navigation during presentations
+- **GitHub Integration**: Automatic saving to GitHub repository
+- **Live Preview**: Changes reflected immediately in presentation
 
-- `index.html` - Main HTML structure
-- `styles.css` - Complete styling including modal and responsive design
-- `script.js` - JavaScript functionality including ESV API integration
-- `data.js` - Gospel presentation data as array of objects
+## Project Structure
+
+- `gospel-admin/` - Next.js admin interface and presentation application
+  - `src/app/` - Next.js app router pages
+  - `src/components/` - React components
+  - `src/lib/` - Utilities and data management
+- `data/` - Gospel presentation data storage
+- `scripts/` - Utility scripts
+
+## Getting Started
+
+### 1. **Install Dependencies**
+```bash
+cd gospel-admin
+npm install
+```
+
+### 2. **Environment Setup**
+Copy the environment template and configure your settings:
+```bash
+cd gospel-admin
+cp .env.example .env.local
+```
+
+Edit `.env.local` with your configuration:
+- `ADMIN_PASSWORD`: Secure password for admin access
+- `ESV_API_TOKEN`: Your ESV API key from https://api.esv.org/
+- `GITHUB_TOKEN`: Personal access token for GitHub integration
+
+### 3. **Run the Application**
+```bash
+npm run dev
+```
+
+The application will be available at:
+- **Presentation**: http://localhost:3000
+- **Admin Interface**: http://localhost:3000/admin
 
 ## ESV API Integration
 
-The website uses the ESV API (api.esv.org) to fetch scripture text when users click on scripture references. Features include:
+The application uses the ESV API (api.esv.org) to fetch scripture text when users click on scripture references:
 
-- **Click to Read**: Click any green scripture reference badge to view the full text
-- **Modal Display**: Scripture appears in an elegant modal overlay
+- **Click to Read**: Click any scripture reference to view the full text in a modal
+- **Favorite Navigation**: Use ← → buttons or arrow keys to navigate between favorite scriptures
 - **Loading States**: Shows spinner while fetching data
-- **Error Handling**: Graceful error handling with retry option
+- **Error Handling**: Graceful error handling with retry options
 - **Formatted Text**: Proper verse numbering and paragraph formatting
 
 ### API Configuration
