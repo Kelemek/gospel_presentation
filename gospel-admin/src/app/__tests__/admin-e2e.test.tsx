@@ -56,21 +56,20 @@ describe('Admin Authentication E2E Tests', () => {
     
     render(<AdminPage />)
     
-    expect(screen.getByText('� Gospel Presentation Editor')).toBeInTheDocument()
+    expect(screen.getByText(/Gospel Presentation Editor/)).toBeInTheDocument()
     expect(screen.queryByText('🔐 Admin Access')).not.toBeInTheDocument()
   })
 
   it('should handle authentication state changes', async () => {
-    const user = userEvent.setup()
-    
     // Start unauthenticated
     mockIsAuthenticated.mockReturnValue(false)
     
-    const { rerender } = render(<AdminPage />)
+    const { unmount } = render(<AdminPage />)
     
     expect(screen.getByText('🔐 Admin Access')).toBeInTheDocument()
     
-    // Simulate successful authentication
+    // Unmount and simulate successful authentication
+    unmount()
     mockIsAuthenticated.mockReturnValue(true)
     mockFetch.mockImplementation((url) => {
       if (typeof url === 'string') {
@@ -90,10 +89,11 @@ describe('Admin Authentication E2E Tests', () => {
       return Promise.reject(new Error('Unknown URL'))
     })
     
-    rerender(<AdminPage />)
+    // Re-render with new auth state
+    render(<AdminPage />)
     
     await waitFor(() => {
-      expect(screen.getByText('📖 Gospel Presentation Admin')).toBeInTheDocument()
+      expect(screen.getByText(/Gospel Presentation Editor/)).toBeInTheDocument()
     })
   })
 
@@ -116,7 +116,7 @@ describe('Admin Authentication E2E Tests', () => {
     
     render(<AdminPage />)
     
-    expect(screen.getByText('📖 Gospel Presentation Admin')).toBeInTheDocument()
+    expect(screen.getByText(/Gospel Presentation Editor/)).toBeInTheDocument()
   })
 
   it('should handle expired authentication sessions', () => {
@@ -133,7 +133,7 @@ describe('Admin Authentication E2E Tests', () => {
     render(<AdminPage />)
     
     expect(screen.getByText('🔐 Admin Access')).toBeInTheDocument()
-    expect(screen.queryByText('📖 Gospel Presentation Admin')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Gospel Presentation Editor/)).not.toBeInTheDocument()
   })
 })
 
@@ -161,7 +161,7 @@ describe('Admin Session Management', () => {
     render(<AdminPage />)
     
     await waitFor(() => {
-      expect(screen.getByText('📖 Gospel Presentation Admin')).toBeInTheDocument()
+      expect(screen.getByText(/Gospel Presentation Editor/)).toBeInTheDocument()
     })
 
     // Verify that API calls include the session token
@@ -182,7 +182,7 @@ describe('Admin Session Management', () => {
     
     // Should handle the auth failure gracefully
     await waitFor(() => {
-      expect(screen.getByText('📖 Gospel Presentation Admin')).toBeInTheDocument()
+      expect(screen.getByText(/Gospel Presentation Editor/)).toBeInTheDocument()
     })
   })
 
@@ -225,7 +225,7 @@ describe('Admin Session Management', () => {
     render(<AdminPage />)
     
     await waitFor(() => {
-      expect(screen.getByText('📖 Gospel Presentation Admin')).toBeInTheDocument()
+      expect(screen.getByText(/Gospel Presentation Editor/)).toBeInTheDocument()
     })
 
     // Authentication should remain valid during admin operations
@@ -272,11 +272,11 @@ describe('Admin Access Control', () => {
     render(<AdminPage />)
     
     await waitFor(() => {
-      expect(screen.getByText('📖 Gospel Presentation Admin')).toBeInTheDocument()
+      expect(screen.getByText(/Gospel Presentation Editor/)).toBeInTheDocument()
     })
 
     // Should show admin interface elements
-    expect(screen.getByText('Gospel Sections')).toBeInTheDocument()
+    expect(screen.getByText('Edit content, scripture references, and presentation structure')).toBeInTheDocument()
   })
 
   it('should handle logout functionality', async () => {
@@ -304,7 +304,7 @@ describe('Admin Access Control', () => {
     render(<AdminPage />)
     
     await waitFor(() => {
-      expect(screen.getByText('📖 Gospel Presentation Admin')).toBeInTheDocument()
+      expect(screen.getByText(/Gospel Presentation Editor/)).toBeInTheDocument()
     })
 
     // Find and click logout button if it exists
