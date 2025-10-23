@@ -150,8 +150,8 @@ export default function ScriptureModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start md:items-center justify-center p-0 md:p-4">
-      <div className="bg-white w-full max-w-2xl shadow-xl flex flex-col h-full md:h-auto md:max-h-[95vh] md:rounded-lg">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start md:items-center justify-center p-0 md:p-4 h-screen">
+      <div className="bg-white w-full max-w-2xl shadow-xl flex flex-col h-screen md:h-auto md:max-h-[95vh] md:rounded-lg">
         
         {/* Fixed Header with Controls - Always Visible */}
         <div className="bg-slate-100 px-4 pt-safe-or-3 pb-3 border-b flex-shrink-0 relative z-10 md:rounded-t-lg" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}>
