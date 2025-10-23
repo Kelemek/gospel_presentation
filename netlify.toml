@@ -1,9 +1,8 @@
 [build]
-  # Build command for Next.js application
-  command = "cd gospel-admin && npm ci && npm run build"
-  
-  # Let Netlify auto-detect the publish directory for Next.js
-  publish = ""
+  # Build from the Next.js subdirectory
+  base = "gospel-admin"
+  command = "npm run build"
+  publish = ".next"
   
   # Environment variables for build process
   [build.environment]
@@ -11,26 +10,11 @@
     NEXT_PUBLIC_APP_NAME = "Gospel Presentation"
     NEXT_PUBLIC_APP_DESCRIPTION = "Presenting the Gospel in its Context"
 
-# Modern Netlify automatically detects and handles Next.js projects
-# API routes will work as Edge Functions automatically
+# Essential Next.js Plugin
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
-[context.production]
-  command = "cd gospel-admin && npm ci && npm run build"
-
-[context.deploy-preview]
-  command = "cd gospel-admin && npm ci && npm run build"
-
-[context.branch-deploy]
-  command = "cd gospel-admin && npm ci && npm run build"
-
-# Redirect rules (optional)
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  conditions = {Role = ["admin"]}
-
-# Headers for security (optional but recommended)
+# Security headers
 [[headers]]
   for = "/*"
   [headers.values]
@@ -38,19 +22,3 @@
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-
-# Cache static assets
-[[headers]]
-  for = "/styles.css"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000"
-
-[[headers]]
-  for = "/script.js"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000"
-
-[[headers]]
-  for = "/data.js"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000"
