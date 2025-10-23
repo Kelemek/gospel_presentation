@@ -146,6 +146,16 @@ See [NETLIFY_DEPLOY.md](NETLIFY_DEPLOY.md) for detailed instructions.
 
 ## Credits
 
-- Content by Dr. Stuart Scott
+- Content by Dr. Stuart Scott (www.oneeightycounseling.com)
 - ESV API by Crossway
-- Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®)
+- Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. All rights reserved.
+
+## Copyright & Attribution
+
+For complete copyright information and usage terms, visit `/copyright` on your deployed site.
+
+**ESV API Compliance:**
+- Non-commercial ministry use only
+- Dynamic scripture fetching (no local storage)
+- Proper attribution and ESV.org linking
+- Verse-by-verse requests within API limits

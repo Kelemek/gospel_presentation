@@ -286,8 +286,16 @@ export default function GospelPresentation() {
               www.oneeightycounseling.com
             </a>
           </p>
+          <p className="text-sm opacity-80 mb-2">
+            Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission.
+          </p>
           <p className="text-sm opacity-80">
-            Scripture quotations are from the ESV® Bible.
+            <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline mr-4">
+              www.esv.org
+            </a>
+            <a href="/copyright" className="text-blue-400 hover:text-blue-300 underline">
+              Copyright & Attribution
+            </a>
           </p>
         </div>
       </footer>

@@ -329,8 +329,13 @@ export default function ScriptureModal({
         
         {/* Fixed Footer */}
         <div className="bg-slate-50 px-4 pt-2 border-t flex-shrink-0 md:rounded-b-lg" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
+          <p className="text-xs text-slate-500 text-center mb-1">
+            Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission.
+          </p>
           <p className="text-xs text-slate-500 text-center">
-            Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®)
+            <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
+              www.esv.org
+            </a>
           </p>
         </div>
       </div>
