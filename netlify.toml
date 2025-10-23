@@ -1,22 +1,28 @@
 [build]
-  # Build command - generates config.js from environment variables
-  command = "node build-config.js"
+  # Build command for Next.js application
+  command = "cd gospel-admin && npm ci && npm run build"
   
-  # Directory to publish (current directory since it's a static site)
-  publish = "."
+  # Directory to publish - let Netlify plugin handle this
+  publish = "gospel-admin"
   
   # Environment variables for build process
   [build.environment]
     NODE_VERSION = "18"
+    NEXT_PUBLIC_APP_NAME = "Gospel Presentation"
+    NEXT_PUBLIC_APP_DESCRIPTION = "Presenting the Gospel in its Context"
+
+# Netlify Next.js plugin
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
 [context.production]
-  command = "node build-config.js"
+  command = "cd gospel-admin && npm ci && npm run build"
 
 [context.deploy-preview]
-  command = "node build-config.js"
+  command = "cd gospel-admin && npm ci && npm run build"
 
 [context.branch-deploy]
-  command = "node build-config.js"
+  command = "cd gospel-admin && npm ci && npm run build"
 
 # Redirect rules (optional)
 [[redirects]]
