@@ -150,31 +150,18 @@ export default function ScriptureModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-xl">
-        <div className="bg-slate-100 px-4 py-4 border-b">
-          {context && (
-            <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 text-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-blue-600">📚</span>
-                <strong className="text-slate-800">Section:</strong> 
-                <span className="font-medium text-slate-600">{context.sectionTitle}</span>
-              </div>
-              <div className="flex items-center gap-2 mb-2 text-slate-600">
-                <span className="text-blue-500">📖</span>
-                <span className="font-medium">{context.subsectionTitle}</span>
-              </div>
-              <div className="text-slate-600 text-sm leading-relaxed">
-                {context.content}
-              </div>
-            </div>
-          )}
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-2 flex-1">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-4 z-50 overflow-y-auto">
+      <div className="bg-white rounded-lg max-w-2xl w-full my-4 shadow-xl flex flex-col min-h-0 max-h-[calc(100vh-2rem)]">
+        
+        {/* Fixed Header with Controls - Always Visible */}
+        <div className="bg-slate-100 px-4 py-3 border-b flex-shrink-0 sticky top-0 z-10">
+          {/* Navigation Controls - Always at Top */}
+          <div className="flex justify-between items-center mb-3">
+            <div className="flex items-center gap-1 flex-1">
               <button
                 onClick={onPrevious}
                 disabled={!hasPrevious}
-                className={`min-h-[44px] min-w-[44px] p-2 rounded-md transition-colors flex items-center justify-center text-lg ${
+                className={`min-h-[48px] min-w-[48px] p-2 rounded-lg transition-colors flex items-center justify-center text-xl font-bold ${
                   hasPrevious 
                     ? 'text-slate-600 hover:text-slate-800 hover:bg-slate-200 active:bg-slate-300' 
                     : 'text-slate-300 cursor-not-allowed'
@@ -184,11 +171,11 @@ export default function ScriptureModal({
               >
                 ◀
               </button>
-              <h3 className="text-base md:text-lg font-semibold text-slate-800 text-center flex-1 px-2">{reference}</h3>
+              <h3 className="text-sm md:text-base font-semibold text-slate-800 text-center flex-1 px-2 leading-tight">{reference}</h3>
               <button
                 onClick={onNext}
                 disabled={!hasNext}
-                className={`min-h-[44px] min-w-[44px] p-2 rounded-md transition-colors flex items-center justify-center text-lg ${
+                className={`min-h-[48px] min-w-[48px] p-2 rounded-lg transition-colors flex items-center justify-center text-xl font-bold ${
                   hasNext 
                     ? 'text-slate-600 hover:text-slate-800 hover:bg-slate-200 active:bg-slate-300' 
                     : 'text-slate-300 cursor-not-allowed'
@@ -201,42 +188,60 @@ export default function ScriptureModal({
             </div>
             <button
               onClick={onClose}
-              className="text-slate-500 hover:text-slate-700 text-xl font-bold min-h-[44px] min-w-[44px] p-2 rounded-md hover:bg-slate-200 active:bg-slate-300 flex items-center justify-center ml-2"
+              className="text-slate-500 hover:text-slate-700 text-2xl font-bold min-h-[48px] min-w-[48px] rounded-lg hover:bg-slate-200 active:bg-slate-300 flex items-center justify-center ml-2"
               aria-label="Close modal"
             >
               ×
             </button>
           </div>
           
-          {/* Context Toggle Button */}
-          <div className="mt-3 pt-3 border-t border-slate-200">
-            <div className="flex gap-2 justify-center">
-              <button
-                onClick={() => setShowingContext(false)}
-                className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                  !showingContext 
-                    ? 'bg-blue-100 text-blue-700 border border-blue-300' 
-                    : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100'
-                }`}
-              >
-                📖 Verse
-              </button>
-              <button
-                onClick={fetchChapterContext}
-                disabled={contextLoading}
-                className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                  showingContext 
-                    ? 'bg-blue-100 text-blue-700 border border-blue-300' 
-                    : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100'
-                } ${contextLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {contextLoading ? '⏳' : '📚'} Chapter Context
-              </button>
-            </div>
+          {/* Context Toggle Buttons - Always Visible */}
+          <div className="flex gap-2 justify-center">
+            <button
+              onClick={() => setShowingContext(false)}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors min-h-[44px] ${
+                !showingContext 
+                  ? 'bg-blue-100 text-blue-700 border border-blue-300' 
+                  : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              📖 Verse
+            </button>
+            <button
+              onClick={fetchChapterContext}
+              disabled={contextLoading}
+              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors min-h-[44px] border ${
+                showingContext 
+                  ? 'bg-blue-100 text-blue-700 border-blue-300' 
+                  : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100 border-slate-200'
+              } ${contextLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              {contextLoading ? '⏳' : '📚'} Chapter Context
+            </button>
           </div>
         </div>
-        
-        <div className="p-6 overflow-y-auto max-h-[60vh]">
+
+        {/* Context Information - Only show when available */}
+        {context && (
+          <div className="px-4 py-3 bg-slate-50 border-b flex-shrink-0">
+            <div className="text-slate-700 text-sm">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-blue-600">📚</span>
+                <strong className="text-slate-800">Section:</strong> 
+                <span className="font-medium text-slate-600">{context.sectionTitle}</span>
+              </div>
+              <div className="flex items-center gap-2 mb-2 text-slate-600">
+                <span className="text-blue-500">📖</span>
+                <span className="font-medium">{context.subsectionTitle}</span>
+              </div>
+              <div className="text-slate-600 text-xs leading-relaxed">
+                {context.content}
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Scrollable Content Area */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 min-h-0">
           {(loading || contextLoading) && (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -259,7 +264,7 @@ export default function ScriptureModal({
           {!showingContext && scriptureText && (
             <div className="prose max-w-none">
               <div 
-                className="text-slate-700 leading-relaxed"
+                className="text-slate-700 leading-relaxed text-base"
                 dangerouslySetInnerHTML={{
                   __html: scriptureText
                     .replace(/\[(\d+)\]/g, '<sup class="text-blue-600 font-medium">$1</sup>')
@@ -272,8 +277,8 @@ export default function ScriptureModal({
           {/* Display chapter context with highlighted verse */}
           {showingContext && chapterText && (
             <div className="prose max-w-none">
-              <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 text-sm">
-                <div className="flex items-center gap-2 mb-2">
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-slate-700 text-sm">
+                <div className="flex items-center gap-2 mb-1">
                   <span className="text-blue-600">📚</span>
                   <strong className="text-slate-800">Chapter Context:</strong> 
                   <span className="font-medium text-slate-600">{getChapterReference(reference)}</span>
@@ -294,7 +299,8 @@ export default function ScriptureModal({
           )}
         </div>
         
-        <div className="bg-slate-50 px-6 py-3 border-t">
+        {/* Fixed Footer */}
+        <div className="bg-slate-50 px-4 py-2 border-t flex-shrink-0">
           <p className="text-xs text-slate-500 text-center">
             Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®)
           </p>
