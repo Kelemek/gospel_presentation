@@ -49,6 +49,77 @@ export default function AdminPage() {
     setHasChanges(true)
   }
 
+  const addScriptureReference = (sectionIndex: number, subsectionIndex: number) => {
+    const newData = [...editData]
+    if (!newData[sectionIndex].subsections[subsectionIndex].scriptureReferences) {
+      newData[sectionIndex].subsections[subsectionIndex].scriptureReferences = []
+    }
+    newData[sectionIndex].subsections[subsectionIndex].scriptureReferences!.push({
+      reference: 'New Reference'
+    })
+    setEditData(newData)
+    setHasChanges(true)
+  }
+
+  const editScriptureReference = (sectionIndex: number, subsectionIndex: number, refIndex: number, newReference: string) => {
+    const newData = [...editData]
+    if (newData[sectionIndex].subsections[subsectionIndex].scriptureReferences) {
+      newData[sectionIndex].subsections[subsectionIndex].scriptureReferences![refIndex].reference = newReference
+    }
+    setEditData(newData)
+    setHasChanges(true)
+  }
+
+  const removeScriptureReference = (sectionIndex: number, subsectionIndex: number, refIndex: number) => {
+    const newData = [...editData]
+    if (newData[sectionIndex].subsections[subsectionIndex].scriptureReferences) {
+      newData[sectionIndex].subsections[subsectionIndex].scriptureReferences!.splice(refIndex, 1)
+      // Clean up empty array
+      if (newData[sectionIndex].subsections[subsectionIndex].scriptureReferences!.length === 0) {
+        delete newData[sectionIndex].subsections[subsectionIndex].scriptureReferences
+      }
+    }
+    setEditData(newData)
+    setHasChanges(true)
+  }
+
+  // Functions for nested subsections
+  const addNestedScriptureReference = (sectionIndex: number, subsectionIndex: number, nestedIndex: number) => {
+    const newData = [...editData]
+    const nested = newData[sectionIndex].subsections[subsectionIndex].nestedSubsections?.[nestedIndex]
+    if (nested) {
+      if (!nested.scriptureReferences) {
+        nested.scriptureReferences = []
+      }
+      nested.scriptureReferences.push({ reference: 'New Reference' })
+    }
+    setEditData(newData)
+    setHasChanges(true)
+  }
+
+  const editNestedScriptureReference = (sectionIndex: number, subsectionIndex: number, nestedIndex: number, refIndex: number, newReference: string) => {
+    const newData = [...editData]
+    const nested = newData[sectionIndex].subsections[subsectionIndex].nestedSubsections?.[nestedIndex]
+    if (nested?.scriptureReferences) {
+      nested.scriptureReferences[refIndex].reference = newReference
+    }
+    setEditData(newData)
+    setHasChanges(true)
+  }
+
+  const removeNestedScriptureReference = (sectionIndex: number, subsectionIndex: number, nestedIndex: number, refIndex: number) => {
+    const newData = [...editData]
+    const nested = newData[sectionIndex].subsections[subsectionIndex].nestedSubsections?.[nestedIndex]
+    if (nested?.scriptureReferences) {
+      nested.scriptureReferences.splice(refIndex, 1)
+      if (nested.scriptureReferences.length === 0) {
+        delete nested.scriptureReferences
+      }
+    }
+    setEditData(newData)
+    setHasChanges(true)
+  }
+
   const saveChanges = async () => {
     setSaveStatus('saving')
     
@@ -186,18 +257,132 @@ export const gospelPresentationData: GospelSection[] = ${JSON.stringify(editData
                       />
                     </div>
 
-                    {subsection.scriptureReferences && subsection.scriptureReferences.length > 0 && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="block text-sm font-medium text-gray-700">
                           Scripture References
                         </label>
-                        <div className="space-y-2">
+                        <button
+                          onClick={() => addScriptureReference(sectionIndex, subsectionIndex)}
+                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md transition-colors"
+                        >
+                          ➕ Add Reference
+                        </button>
+                      </div>
+                      
+                      {subsection.scriptureReferences && subsection.scriptureReferences.length > 0 ? (
+                        <div className="space-y-3">
                           {subsection.scriptureReferences.map((ref, refIndex) => (
-                            <div key={refIndex} className="text-sm text-blue-600 bg-blue-50 px-3 py-2 rounded-md">
-                              📖 {ref.reference}
+                            <div key={refIndex} className="flex gap-2 items-center p-3 bg-blue-50 border border-blue-200 rounded-md">
+                              <span className="text-blue-600 text-sm">📖</span>
+                              <input
+                                type="text"
+                                value={ref.reference}
+                                onChange={(e) => editScriptureReference(sectionIndex, subsectionIndex, refIndex, e.target.value)}
+                                className="flex-1 px-3 py-1 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white font-medium text-sm"
+                                placeholder="e.g., John 3:16"
+                              />
+                              <button
+                                onClick={() => removeScriptureReference(sectionIndex, subsectionIndex, refIndex)}
+                                className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded-md transition-colors"
+                                title="Remove reference"
+                              >
+                                🗑️
+                              </button>
                             </div>
                           ))}
                         </div>
+                      ) : (
+                        <div className="text-sm text-gray-500 italic border border-gray-200 rounded-md p-3 bg-gray-50">
+                          No scripture references yet. Click "Add Reference" to add one.
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Nested Subsections */}
+                    {subsection.nestedSubsections && subsection.nestedSubsections.length > 0 && (
+                      <div className="mt-4 pl-4 border-l-2 border-gray-300">
+                        <h4 className="text-sm font-medium text-gray-700 mb-3">Nested Subsections</h4>
+                        {subsection.nestedSubsections.map((nested, nestedIndex) => (
+                          <div key={nestedIndex} className="mb-4 p-3 bg-white border border-gray-300 rounded-md">
+                            <div className="mb-2">
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Nested Title
+                              </label>
+                              <input
+                                type="text"
+                                value={nested.title}
+                                onChange={(e) => {
+                                  const newData = [...editData]
+                                  newData[sectionIndex].subsections[subsectionIndex].nestedSubsections![nestedIndex].title = e.target.value
+                                  setEditData(newData)
+                                  setHasChanges(true)
+                                }}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white font-medium text-sm"
+                              />
+                            </div>
+                            
+                            <div className="mb-2">
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Nested Content
+                              </label>
+                              <textarea
+                                value={nested.content}
+                                onChange={(e) => {
+                                  const newData = [...editData]
+                                  newData[sectionIndex].subsections[subsectionIndex].nestedSubsections![nestedIndex].content = e.target.value
+                                  setEditData(newData)
+                                  setHasChanges(true)
+                                }}
+                                rows={2}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white font-normal text-sm"
+                              />
+                            </div>
+
+                            {/* Nested Scripture References */}
+                            <div>
+                              <div className="flex justify-between items-center mb-2">
+                                <label className="block text-xs font-medium text-gray-600">
+                                  Scripture References
+                                </label>
+                                <button
+                                  onClick={() => addNestedScriptureReference(sectionIndex, subsectionIndex, nestedIndex)}
+                                  className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-md transition-colors"
+                                >
+                                  ➕ Add
+                                </button>
+                              </div>
+                              
+                              {nested.scriptureReferences && nested.scriptureReferences.length > 0 ? (
+                                <div className="space-y-2">
+                                  {nested.scriptureReferences.map((ref, refIndex) => (
+                                    <div key={refIndex} className="flex gap-2 items-center p-2 bg-blue-50 border border-blue-200 rounded-md">
+                                      <span className="text-blue-600 text-xs">📖</span>
+                                      <input
+                                        type="text"
+                                        value={ref.reference}
+                                        onChange={(e) => editNestedScriptureReference(sectionIndex, subsectionIndex, nestedIndex, refIndex, e.target.value)}
+                                        className="flex-1 px-2 py-1 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white font-medium text-xs"
+                                        placeholder="e.g., Romans 3:23"
+                                      />
+                                      <button
+                                        onClick={() => removeNestedScriptureReference(sectionIndex, subsectionIndex, nestedIndex, refIndex)}
+                                        className="px-1 py-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded-md transition-colors"
+                                        title="Remove reference"
+                                      >
+                                        🗑️
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-xs text-gray-500 italic border border-gray-200 rounded-md p-2 bg-gray-50">
+                                  No references yet.
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
