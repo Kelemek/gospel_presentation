@@ -1,0 +1,14 @@
+{
+  "name": "gospel-presentation",
+  "version": "1.0.0",
+  "description": "Gospel Presentation with Next.js Admin Interface",
+  "scripts": {
+    "dev": "cd gospel-admin && npm run dev",
+    "build": "cd gospel-admin && npm run build",
+    "start": "cd gospel-admin && npm run start",
+    "install-deps": "cd gospel-admin && npm install"
+  },
+  "keywords": ["gospel", "presentation", "nextjs", "admin"],
+  "author": "Dr. Stuart Scott",
+  "license": "MIT"
+}
