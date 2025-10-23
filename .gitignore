@@ -1,0 +1,36 @@
+# Environment and configuration files
+.env
+config.js
+
+# Keep the build script and template
+!build-config.js
+!config.template.js
+
+# Node modules (if using any build tools)
+node_modules/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Optional npm cache directory
+.npm
+
+# Optional REPL history
+.node_repl_history

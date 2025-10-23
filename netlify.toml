@@ -1,0 +1,51 @@
+[build]
+  # Build command - generates config.js from environment variables
+  command = "node build-config.js"
+  
+  # Directory to publish (current directory since it's a static site)
+  publish = "."
+  
+  # Environment variables for build process
+  [build.environment]
+    NODE_VERSION = "18"
+
+[context.production]
+  command = "node build-config.js"
+
+[context.deploy-preview]
+  command = "node build-config.js"
+
+[context.branch-deploy]
+  command = "node build-config.js"
+
+# Redirect rules (optional)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  conditions = {Role = ["admin"]}
+
+# Headers for security (optional but recommended)
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Cache static assets
+[[headers]]
+  for = "/styles.css"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
+
+[[headers]]
+  for = "/script.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
+
+[[headers]]
+  for = "/data.js"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000"
