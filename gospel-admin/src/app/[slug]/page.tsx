@@ -2,14 +2,13 @@
 // This handles routes like /myprofile, /youthgroup, etc.
 import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
-import GospelSection from '@/components/GospelSection'
-import TableOfContents from '@/components/TableOfContents'
+import ProfileContent from './ProfileContent'
 import { GospelProfile } from '@/lib/types'
 
 interface ProfilePageProps {
-  params: {
+  params: Promise<{
     slug: string
-  }
+  }>
 }
 
 // Fetch profile data
@@ -37,7 +36,8 @@ async function getProfile(slug: string): Promise<GospelProfile | null> {
 
 // Generate metadata for SEO
 export async function generateMetadata({ params }: ProfilePageProps): Promise<Metadata> {
-  const profile = await getProfile(params.slug)
+  const { slug } = await params
+  const profile = await getProfile(slug)
   
   if (!profile) {
     return {
@@ -63,7 +63,8 @@ export async function generateMetadata({ params }: ProfilePageProps): Promise<Me
 }
 
 export default async function ProfilePage({ params }: ProfilePageProps) {
-  const profile = await getProfile(params.slug)
+  const { slug } = await params
+  const profile = await getProfile(slug)
 
   // If profile doesn't exist, show 404
   if (!profile) {
@@ -95,57 +96,34 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   })
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Profile Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {profile.title}
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-gradient-to-br from-slate-700 to-slate-800 text-white text-center py-10 shadow-lg">
+        <div className="container mx-auto px-5">
+          <h1 className="text-4xl md:text-5xl font-bold mb-3">
+            Presenting the Gospel in its Context
           </h1>
-          {profile.description && (
-            <p className="text-lg text-gray-600">
-              {profile.description}
-            </p>
-          )}
-          {favoriteScriptures.length > 0 && (
-            <p className="text-sm text-blue-600 mt-2">
-              📖 {favoriteScriptures.length} favorite scripture{favoriteScriptures.length !== 1 ? 's' : ''} highlighted
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Table of Contents */}
-        <div className="mb-8">
-          <TableOfContents sections={gospelData} />
-        </div>
-
-        {/* Gospel Sections */}
-        <div className="space-y-8">
-          {gospelData.map((section) => (
-            <GospelSection 
-              key={section.section} 
-              section={section}
-              onScriptureClick={(reference: string) => {
-                // For now, just log the scripture click
-                // Later we can add modal functionality or other interactions
-                console.log('Scripture clicked:', reference)
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Profile Footer */}
-        <div className="mt-16 text-center border-t pt-8">
-          <p className="text-gray-500 text-sm">
-            This is a personalized gospel presentation
+          <h2 className="text-xl md:text-2xl mb-4 opacity-90">
+            Faithfully Sowing the Seed According to the Scriptures
+          </h2>
+          <p className="text-lg italic opacity-80 mb-2">
+            "The Gospel Presentation" with Highlighted Scriptures for Easy Reference
           </p>
-          <p className="text-gray-400 text-xs mt-2">
-            Profile: {params.slug} • Last updated: {new Date(profile.updatedAt).toLocaleDateString()}
+          <p className="text-base opacity-70">
+            By Dr. Stuart Scott
           </p>
         </div>
-      </div>
+      </header>
+
+      {/* Gospel Sections with Hamburger Menu */}
+      <ProfileContent 
+        sections={gospelData} 
+        profileInfo={{
+          title: profile.title,
+          description: profile.description,
+          slug: slug,
+          favoriteScriptures: favoriteScriptures
+        }}
+      />
     </div>
   )
 }

@@ -164,19 +164,38 @@ export function sanitizeProfileForPublic(profile: GospelProfile): Omit<GospelPro
  * Generates a unique slug suggestion based on title
  */
 export function generateSlugSuggestion(title: string, existingSlugs: string[] = []): string {
-  // Convert title to slug format
-  let baseSlug = title
-    .toLowerCase()
-    .replace(/[^a-z0-9]/g, '') // Remove non-alphanumeric
-    .substring(0, PROFILE_VALIDATION.SLUG_MAX_LENGTH)
-
-  // Ensure it starts with a letter
-  if (!/^[a-z]/.test(baseSlug)) {
-    baseSlug = 'profile' + baseSlug
+  if (!title.trim()) {
+    return ''
   }
 
+  // Convert title to slug format with enhanced processing
+  let baseSlug = title
+    .toLowerCase()                           // Convert to lowercase
+    .trim()                                 // Remove leading/trailing spaces
+    .replace(/[^\w\s-]/g, '')              // Remove special characters except spaces and hyphens
+    .replace(/[\s_-]+/g, '')               // Remove spaces, underscores, and hyphens
+    .replace(/[^a-z0-9]/g, '')             // Ensure only alphanumeric characters remain
+    .substring(0, PROFILE_VALIDATION.SLUG_MAX_LENGTH) // Truncate to max length
+
+  // Ensure it starts with a letter (prepend 'profile' if it starts with number)
+  if (!/^[a-z]/.test(baseSlug)) {
+    if (baseSlug.length > 0 && /^[0-9]/.test(baseSlug)) {
+      baseSlug = 'profile' + baseSlug
+    } else {
+      baseSlug = 'profile'
+    }
+  }
+
+  // Ensure minimum length
+  if (baseSlug.length < PROFILE_VALIDATION.SLUG_MIN_LENGTH) {
+    baseSlug = baseSlug.padEnd(PROFILE_VALIDATION.SLUG_MIN_LENGTH, '0')
+  }
+
+  // Truncate again if padding made it too long
+  baseSlug = baseSlug.substring(0, PROFILE_VALIDATION.SLUG_MAX_LENGTH)
+
   // If unique, return as-is
-  if (!existingSlugs.includes(baseSlug) && baseSlug.length >= PROFILE_VALIDATION.SLUG_MIN_LENGTH) {
+  if (!existingSlugs.includes(baseSlug)) {
     return baseSlug
   }
 

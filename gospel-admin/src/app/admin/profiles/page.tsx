@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { GospelProfile, CreateProfileRequest } from '@/lib/types'
 import { generateSlugSuggestion } from '@/lib/profile-service'
+import AdminLogin from '@/components/AdminLogin'
+import { isAuthenticated } from '@/lib/auth'
 
 interface ProfileListItem {
   id: string
@@ -28,9 +30,15 @@ export default function ProfilesAdminPage() {
     cloneFromSlug: 'default'
   })
   const [error, setError] = useState('')
+  const [isAuth, setIsAuth] = useState(false)
 
   useEffect(() => {
-    fetchProfiles()
+    setIsAuth(isAuthenticated())
+    if (isAuthenticated()) {
+      fetchProfiles()
+    } else {
+      setIsLoading(false)
+    }
   }, [])
 
   const fetchProfiles = async () => {
@@ -74,6 +82,7 @@ export default function ProfilesAdminPage() {
         await fetchProfiles() // Refresh the list
         setShowCreateForm(false)
         setCreateForm({ title: '', slug: '', description: '', cloneFromSlug: 'default' })
+        setIsSlugManuallyEdited(false)
       } else {
         const errorData = await response.json()
         setError(errorData.error || 'Failed to create profile')
@@ -106,25 +115,42 @@ export default function ProfilesAdminPage() {
     }
   }
 
+  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false)
+
   const handleTitleChange = (title: string) => {
     setCreateForm(prev => ({
       ...prev,
       title,
-      // Auto-generate slug suggestion when title changes
-      slug: prev.slug === '' ? generateSlugSuggestion(title, profiles.map(p => p.slug)) : prev.slug
+      // Auto-generate slug suggestion when title changes (only if not manually edited)
+      slug: isSlugManuallyEdited ? prev.slug : generateSlugSuggestion(title, profiles.map(p => p.slug))
     }))
+  }
+
+  const handleSlugChange = (slug: string) => {
+    const cleanSlug = slug.toLowerCase().replace(/[^a-z0-9]/g, '')
+    setCreateForm(prev => ({ ...prev, slug: cleanSlug }))
+    setIsSlugManuallyEdited(true)
+  }
+
+  const handleLogin = () => {
+    setIsAuth(true)
+    fetchProfiles()
+  }
+
+  if (!isAuth) {
+    return <AdminLogin onLogin={handleLogin} />
   }
 
   if (isLoading) {
     return (
-      <div className="p-8">
+      <div className="min-h-screen bg-gray-50 p-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
       </div>
     )
   }
 
   return (
-    <div className="p-6">
+    <div className="min-h-screen bg-gray-50 p-6">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Profile Management</h1>
@@ -143,7 +169,10 @@ export default function ProfilesAdminPage() {
       {/* Create Profile Button */}
       <div className="mb-6">
         <button
-          onClick={() => setShowCreateForm(true)}
+          onClick={() => {
+            setShowCreateForm(true)
+            setIsSlugManuallyEdited(false)
+          }}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
         >
           + Create New Profile
@@ -165,7 +194,7 @@ export default function ProfilesAdminPage() {
                 id="title"
                 value={createForm.title}
                 onChange={(e) => handleTitleChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                 placeholder="e.g., Youth Group Presentation"
                 required
                 maxLength={50}
@@ -184,8 +213,8 @@ export default function ProfilesAdminPage() {
                   type="text"
                   id="slug"
                   value={createForm.slug}
-                  onChange={(e) => setCreateForm(prev => ({ ...prev, slug: e.target.value.toLowerCase() }))}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => handleSlugChange(e.target.value)}
+                  className="flex-1 px-3 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                   placeholder="youthgroup"
                   pattern="[a-z][a-z0-9]*"
                   title="Must start with a letter and contain only lowercase letters and numbers"
@@ -193,10 +222,31 @@ export default function ProfilesAdminPage() {
                   minLength={3}
                   maxLength={20}
                 />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSlugManuallyEdited(false)
+                    setCreateForm(prev => ({
+                      ...prev,
+                      slug: generateSlugSuggestion(prev.title, profiles.map(p => p.slug))
+                    }))
+                  }}
+                  className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-lg bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors text-sm"
+                  title="Regenerate slug from title"
+                >
+                  ↻
+                </button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                Lowercase letters and numbers only, must start with a letter
-              </p>
+              <div className="flex justify-between items-center mt-1">
+                <p className="text-xs text-gray-500">
+                  Auto-generated from title • Lowercase letters and numbers only
+                </p>
+                {isSlugManuallyEdited && (
+                  <p className="text-xs text-blue-600">
+                    Manual edit mode (click ↻ to regenerate)
+                  </p>
+                )}
+              </div>
             </div>
 
             <div>
@@ -207,7 +257,7 @@ export default function ProfilesAdminPage() {
                 id="description"
                 value={createForm.description}
                 onChange={(e) => setCreateForm(prev => ({ ...prev, description: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
                 placeholder="Optional description of this profile..."
                 rows={3}
                 maxLength={200}
@@ -222,7 +272,7 @@ export default function ProfilesAdminPage() {
                 id="cloneFrom"
                 value={createForm.cloneFromSlug}
                 onChange={(e) => setCreateForm(prev => ({ ...prev, cloneFromSlug: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 bg-white"
               >
                 {profiles.map(profile => (
                   <option key={profile.slug} value={profile.slug}>
@@ -245,7 +295,11 @@ export default function ProfilesAdminPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setShowCreateForm(false)}
+                onClick={() => {
+                  setShowCreateForm(false)
+                  setIsSlugManuallyEdited(false)
+                  setCreateForm({ title: '', slug: '', description: '', cloneFromSlug: 'default' })
+                }}
                 className="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
               >
                 Cancel

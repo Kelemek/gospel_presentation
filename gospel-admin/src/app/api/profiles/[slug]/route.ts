@@ -8,9 +8,9 @@ import { sanitizeProfileForPublic } from '@/lib/profile-service'
 // Import the profiles array from the main route (temporary solution)
 // In a real app, this would use a database
 interface RouteContext {
-  params: {
+  params: Promise<{
     slug: string
-  }
+  }>
 }
 
 // Temporary storage reference (same as in route.ts)
@@ -35,7 +35,7 @@ export async function GET(
   { params }: RouteContext
 ) {
   try {
-    const { slug } = params
+    const { slug } = await params
     const profiles = getProfiles()
     
     // Handle default profile route
@@ -83,7 +83,7 @@ export async function PUT(
   { params }: RouteContext
 ) {
   try {
-    const { slug } = params
+    const { slug } = await params
     const profiles = getProfiles()
     
     const profileIndex = profiles.findIndex(p => p.slug === slug)
@@ -129,7 +129,7 @@ export async function DELETE(
   { params }: RouteContext
 ) {
   try {
-    const { slug } = params
+    const { slug } = await params
     const profiles = getProfiles()
     
     const profileIndex = profiles.findIndex(p => p.slug === slug)

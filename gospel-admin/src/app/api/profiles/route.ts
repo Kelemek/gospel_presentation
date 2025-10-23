@@ -11,7 +11,8 @@ import {
   createProfileFromRequest,
   ProfileValidationError 
 } from '@/lib/profile-service'
-import { getGospelPresentationData } from '@/lib/data'
+import { readFile } from 'fs/promises'
+import path from 'path'
 
 // Temporary storage using global reference (replace with database later)
 const getProfiles = (): GospelProfile[] => {
@@ -38,12 +39,41 @@ const getNextId = (): number => {
   return globalRef.nextId++
 }
 
+// Load gospel data from JSON file
+async function loadGospelData(): Promise<GospelPresentationData> {
+  try {
+    const filePath = path.join(process.cwd(), '..', 'data', 'gospel-presentation.json')
+    const fileContent = await readFile(filePath, 'utf-8')
+    return JSON.parse(fileContent)
+  } catch (error) {
+    console.error('Error loading gospel data from file:', error)
+    // Return minimal fallback data
+    return [
+      {
+        "section": "1",
+        "title": "God",
+        "subsections": [
+          {
+            "title": "A. God is Holy",
+            "content": "God is separate from and exalted above His creation. He is morally pure, perfect, and untainted by sin.",
+            "scriptureReferences": [
+              { "reference": "Isaiah 6:3", "favorite": true },
+              { "reference": "1 Peter 1:15-16" }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+
 // Initialize with default profile if empty
 async function ensureDefaultProfile() {
   const profiles = getProfiles()
   if (profiles.length === 0) {
     try {
-      const gospelData = await getGospelPresentationData()
+      // Load gospel data from JSON file
+      const gospelData = await loadGospelData()
       const defaultProfile: GospelProfile = {
         id: '1',
         slug: 'default',
@@ -133,7 +163,7 @@ export async function POST(request: NextRequest) {
       // Clone from default profile
       const defaultProfile = profiles.find((p: GospelProfile) => p.isDefault)
       if (!defaultProfile) {
-        sourceGospelData = await getGospelPresentationData()
+        sourceGospelData = await loadGospelData()
       } else {
         sourceGospelData = defaultProfile.gospelData
       }
