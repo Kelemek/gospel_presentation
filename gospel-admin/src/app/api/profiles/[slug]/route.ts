@@ -2,32 +2,19 @@
 // API Route: PUT /api/profiles/[slug] - Update specific profile
 // API Route: DELETE /api/profiles/[slug] - Delete specific profile
 import { NextRequest, NextResponse } from 'next/server'
-import { GospelProfile, GospelPresentationData } from '@/lib/types'
+import { GospelPresentationData, GospelProfile } from '@/lib/types'
 import { sanitizeProfileForPublic } from '@/lib/profile-service'
+import {
+  getProfileBySlug,
+  updateProfile,
+  deleteProfile,
+  incrementProfileVisitCount
+} from '@/lib/file-data-service'
 
-// Import the profiles array from the main route (temporary solution)
-// In a real app, this would use a database
 interface RouteContext {
   params: Promise<{
     slug: string
   }>
-}
-
-// Temporary storage reference (same as in route.ts)
-// This is a simplified approach - in production use a proper database
-const getProfiles = (): GospelProfile[] => {
-  // This is a hack to share state between API routes
-  // In production, use a proper database
-  const globalRef = global as any
-  if (!globalRef.profiles) {
-    globalRef.profiles = []
-  }
-  return globalRef.profiles
-}
-
-const setProfiles = (profiles: GospelProfile[]) => {
-  const globalRef = global as any
-  globalRef.profiles = profiles
 }
 
 export async function GET(
@@ -36,12 +23,11 @@ export async function GET(
 ) {
   try {
     const { slug } = await params
-    const profiles = getProfiles()
     
     // Handle default profile route
     const targetSlug = slug === 'default' ? 'default' : slug
     
-    const profile = profiles.find(p => p.slug === targetSlug)
+    const profile = await getProfileBySlug(targetSlug)
     
     if (!profile) {
       return NextResponse.json(
@@ -50,14 +36,14 @@ export async function GET(
       )
     }
 
-    // Increment visit count
-    profile.visitCount++
-    profile.updatedAt = new Date()
-    setProfiles(profiles)
+    // Increment visit count for public access
+    const isAdminRequest = request.headers.get('x-admin-request') === 'true'
+    if (!isAdminRequest) {
+      await incrementProfileVisitCount(targetSlug)
+    }
 
     // For public access, return full profile with gospel data
     // For admin access, you might want different data
-    const isAdminRequest = request.headers.get('x-admin-request') === 'true'
     
     if (isAdminRequest) {
       // Return full profile for admin editing
@@ -79,44 +65,44 @@ export async function GET(
 }
 
 export async function PUT(
-  request: NextRequest,
-  { params }: RouteContext
+  request: Request,
+  context: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const { slug } = await params
-    const profiles = getProfiles()
+    const { slug } = await context.params
+    const body = await request.json()
     
-    const profileIndex = profiles.findIndex(p => p.slug === slug)
+    console.log(`[API] PUT /api/profiles/${slug}`, { 
+      bodyKeys: Object.keys(body),
+      title: body.title,
+      description: body.description,
+      hasGospelData: !!body.gospelData 
+    })
+
+    // Only include fields that are actually provided in the request
+    const updates: Partial<Omit<GospelProfile, 'id' | 'slug' | 'createdAt'>> = {}
+    if (body.title !== undefined) updates.title = body.title
+    if (body.description !== undefined) updates.description = body.description
+    if (body.gospelData !== undefined) updates.gospelData = body.gospelData
+
+    const updatedProfile = await updateProfile(slug, updates)
+
+    console.log(`[API] Profile updated successfully:`, { 
+      slug: updatedProfile.slug,
+      title: updatedProfile.title 
+    })
+
+    return NextResponse.json(updatedProfile)
+  } catch (error) {
+    console.error('Error updating profile:', error)
     
-    if (profileIndex === -1) {
+    if (error instanceof Error && error.message.includes('not found')) {
       return NextResponse.json(
-        { error: `Profile '${slug}' not found` },
+        { error: error.message },
         { status: 404 }
       )
     }
-
-    const body = await request.json()
-    const existingProfile = profiles[profileIndex]
-
-    // Prevent changing slug or isDefault flag
-    const updatedProfile: GospelProfile = {
-      ...existingProfile,
-      title: body.title || existingProfile.title,
-      description: body.description !== undefined ? body.description : existingProfile.description,
-      gospelData: body.gospelData || existingProfile.gospelData,
-      updatedAt: new Date()
-    }
-
-    profiles[profileIndex] = updatedProfile
-    setProfiles(profiles)
-
-    return NextResponse.json({ 
-      profile: updatedProfile,
-      message: 'Profile updated successfully'
-    })
-
-  } catch (error) {
-    console.error('Error updating profile:', error)
+    
     return NextResponse.json(
       { error: 'Failed to update profile' },
       { status: 500 }
@@ -130,29 +116,9 @@ export async function DELETE(
 ) {
   try {
     const { slug } = await params
-    const profiles = getProfiles()
-    
-    const profileIndex = profiles.findIndex(p => p.slug === slug)
-    
-    if (profileIndex === -1) {
-      return NextResponse.json(
-        { error: `Profile '${slug}' not found` },
-        { status: 404 }
-      )
-    }
 
-    const profile = profiles[profileIndex]
-
-    // Prevent deletion of default profile
-    if (profile.isDefault) {
-      return NextResponse.json(
-        { error: 'Cannot delete the default profile' },
-        { status: 403 }
-      )
-    }
-
-    profiles.splice(profileIndex, 1)
-    setProfiles(profiles)
+    // Delete the profile using the file-based service
+    await deleteProfile(slug)
 
     return NextResponse.json({ 
       message: `Profile '${slug}' deleted successfully`
@@ -160,6 +126,22 @@ export async function DELETE(
 
   } catch (error) {
     console.error('Error deleting profile:', error)
+    
+    if (error instanceof Error) {
+      if (error.message.includes('not found')) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 404 }
+        )
+      }
+      if (error.message.includes('Cannot delete the default profile')) {
+        return NextResponse.json(
+          { error: error.message },
+          { status: 403 }
+        )
+      }
+    }
+    
     return NextResponse.json(
       { error: 'Failed to delete profile' },
       { status: 500 }
