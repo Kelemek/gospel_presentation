@@ -254,11 +254,19 @@ async function createDefaultProfileWithSlug(slug: string): Promise<GospelProfile
     console.log(`[Profile Service] /var/task contents: ${taskContents.join(', ')}`)
     
     if (fs.existsSync('/var/task/data')) {
-      console.log(`[Profile Service] /var/task/data exists!`)
+      console.log(`[Profile Service] ✅ /var/task/data exists!`)
       const dataContents = fs.readdirSync('/var/task/data').slice(0, 5)
       console.log(`[Profile Service] /var/task/data contents: ${dataContents.join(', ')}`)
+      
+      // Check for the specific file we need
+      if (fs.existsSync('/var/task/data/gospel-presentation.json')) {
+        const stats = fs.statSync('/var/task/data/gospel-presentation.json')
+        console.log(`[Profile Service] ✅ gospel-presentation.json found! Size: ${stats.size} bytes`)
+      } else {
+        console.log(`[Profile Service] ❌ gospel-presentation.json NOT found in data directory`)
+      }
     } else {
-      console.log(`[Profile Service] /var/task/data does NOT exist`)
+      console.log(`[Profile Service] ❌ /var/task/data does NOT exist`)
     }
   } catch (err) {
     console.log(`[Profile Service] Error checking directory structure: ${err}`)
