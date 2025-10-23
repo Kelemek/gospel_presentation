@@ -5,6 +5,10 @@ import { Metadata } from 'next'
 import ProfileContent from './ProfileContent'
 import { GospelProfile } from '@/lib/types'
 
+// Configure dynamic routes
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 interface ProfilePageProps {
   params: Promise<{
     slug: string
@@ -14,8 +18,15 @@ interface ProfilePageProps {
 // Fetch profile data
 async function getProfile(slug: string): Promise<GospelProfile | null> {
   try {
+    // For server-side rendering, import the data service directly
+    if (typeof window === 'undefined') {
+      const { getProfileBySlug } = await import('@/lib/new-file-data-service')
+      return await getProfileBySlug(slug)
+    }
+    
+    // For client-side, use fetch with proper URL handling
     const baseUrl = process.env.NODE_ENV === 'production' 
-      ? process.env.NEXT_PUBLIC_BASE_URL 
+      ? (process.env.NEXT_PUBLIC_BASE_URL || 'https://your-domain.com')
       : 'http://localhost:3000'
     
     const response = await fetch(`${baseUrl}/api/profiles/${slug}`, {
