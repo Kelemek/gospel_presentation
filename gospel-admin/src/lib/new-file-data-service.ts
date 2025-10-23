@@ -238,12 +238,44 @@ async function deleteProfileFile(slug: string): Promise<void> {
 // Create default profile with specific slug
 async function createDefaultProfileWithSlug(slug: string): Promise<GospelProfile> {
   await initializePaths()
+  
+  // Log environment details for debugging
+  console.log(`[Profile Service] Environment details for slug '${slug}':`)
+  console.log(`[Profile Service] process.cwd(): ${process.cwd()}`)
+  console.log(`[Profile Service] __dirname: ${__dirname}`)
+  console.log(`[Profile Service] process.env.NODE_ENV: ${process.env.NODE_ENV}`)
+  console.log(`[Profile Service] Netlify deployment: ${process.env.NETLIFY ? 'Yes' : 'No'}`)
+  
+  // Check what files exist in the deployment
+  try {
+    const fs = await import('fs')
+    console.log(`[Profile Service] Contents of /var/task:`)
+    const taskContents = fs.readdirSync('/var/task').slice(0, 10) // Limit output
+    console.log(`[Profile Service] /var/task contents: ${taskContents.join(', ')}`)
+    
+    if (fs.existsSync('/var/task/data')) {
+      console.log(`[Profile Service] /var/task/data exists!`)
+      const dataContents = fs.readdirSync('/var/task/data').slice(0, 5)
+      console.log(`[Profile Service] /var/task/data contents: ${dataContents.join(', ')}`)
+    } else {
+      console.log(`[Profile Service] /var/task/data does NOT exist`)
+    }
+  } catch (err) {
+    console.log(`[Profile Service] Error checking directory structure: ${err}`)
+  }
+  
   // Try to load gospel data from multiple possible locations
   const possibleGospelDataPaths = [
-    join(DATA_DIR, 'gospel-presentation.json'),           // Current data directory
+    join(DATA_DIR, 'gospel-presentation.json'),           // Current working data directory
+    join('/var/task', 'data', 'gospel-presentation.json'), // Netlify: repository root/data 
+    join('/var/task', 'gospel-admin', 'data', 'gospel-presentation.json'), // Netlify: nested structure
+    join(dirname(dirname(__dirname)), 'data', 'gospel-presentation.json'), // Go up from src/lib to repo root
+    join(dirname(dirname(dirname(__dirname))), 'data', 'gospel-presentation.json'), // From nested structure
+    join(process.cwd(), 'data', 'gospel-presentation.json'), // Same level as process
+    join(dirname(process.cwd()), 'data', 'gospel-presentation.json'), // Parent of process
     join(process.cwd(), '..', 'data', 'gospel-presentation.json'), // Repository structure
-    join(dirname(process.cwd()), 'data', 'gospel-presentation.json'), // Alternative repo structure
-    join(process.cwd(), 'data', 'gospel-presentation.json'), // Same directory
+    join('/opt', 'build', 'repo', 'data', 'gospel-presentation.json'), // Netlify build directory
+    join('/opt', 'buildhome', 'repo', 'data', 'gospel-presentation.json'), // Alternative build path
   ]
   
   let gospelData = []
