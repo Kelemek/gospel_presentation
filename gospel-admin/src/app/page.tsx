@@ -1,13 +1,15 @@
 'use client'
 
-import { useState } from 'react'
-import { gospelPresentationData } from '@/lib/data'
+import { useState, useEffect } from 'react'
+import { GospelSection as GospelSectionType } from '@/lib/types'
 import ScriptureModal from '@/components/ScriptureModal'
 import TableOfContents from '@/components/TableOfContents'
 import GospelSection from '@/components/GospelSection'
 import Link from 'next/link'
 
 export default function GospelPresentation() {
+  const [gospelData, setGospelData] = useState<GospelSectionType[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [selectedScripture, setSelectedScripture] = useState<{
     reference: string
     isOpen: boolean
@@ -20,8 +22,38 @@ export default function GospelPresentation() {
   
   const [isMenuOpen, setIsMenuOpen] = useState(false)
 
+  // Load data on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const response = await fetch('/api/data')
+        if (response.ok) {
+          const data = await response.json()
+          setGospelData(data)
+        }
+      } catch (error) {
+        console.error('Error loading data:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    loadData()
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading Gospel Presentation...</p>
+        </div>
+      </div>
+    )
+  }
+
   // Collect all scripture references with context in order
-  const allScriptureRefs = gospelPresentationData.flatMap(section => 
+  const allScriptureRefs = gospelData.flatMap(section => 
     section.subsections.flatMap(subsection => [
       ...(subsection.scriptureReferences || []).map(ref => ({
         reference: ref.reference,
@@ -157,7 +189,7 @@ export default function GospelPresentation() {
                 </button>
               </div>
               <div onClick={closeMenu}>
-                <TableOfContents sections={gospelPresentationData} />
+                <TableOfContents sections={gospelData} />
               </div>
             </div>
           </div>
@@ -166,7 +198,7 @@ export default function GospelPresentation() {
 
       <main className="container mx-auto px-5 py-10">
         <div className="space-y-12">
-          {gospelPresentationData.map((section) => (
+          {gospelData.map((section) => (
             <GospelSection 
               key={section.section}
               section={section}

@@ -4,20 +4,35 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import AdminLogin from '@/components/AdminLogin'
 import { isAuthenticated, logout } from '@/lib/auth'
-import { gospelPresentationData } from '@/lib/data'
+import { GospelSection } from '@/lib/types'
 
 export default function AdminPage() {
   const [isAuth, setIsAuth] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [editingSection, setEditingSection] = useState<number | null>(null)
-  const [editData, setEditData] = useState(gospelPresentationData)
+  const [editData, setEditData] = useState<GospelSection[]>([])
   const [hasChanges, setHasChanges] = useState(false)
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
 
-  // Check authentication on mount
+  // Check authentication on mount and load data
   useEffect(() => {
     setIsAuth(isAuthenticated())
     setIsLoading(false)
+    
+    // Load data from GitHub API
+    const loadData = async () => {
+      try {
+        const response = await fetch('/api/data')
+        if (response.ok) {
+          const data = await response.json()
+          setEditData(data)
+        }
+      } catch (error) {
+        console.error('Error loading data:', error)
+      }
+    }
+    
+    loadData()
   }, [])
 
   const handleLogin = () => {
@@ -124,20 +139,80 @@ export default function AdminPage() {
     setSaveStatus('saving')
     
     try {
-      // Create the updated data file content
-      const dataContent = `// Gospel Presentation Data - Updated ${new Date().toISOString()}
-import { GospelSection } from './types'
-
-export const gospelPresentationData: GospelSection[] = ${JSON.stringify(editData, null, 2)}`
-
       const response = await fetch('/api/data', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          content: dataContent,
-          password: 'gospel2024' // In production, get from auth context
+          data: editData,
+          password: 'gospel2024', // In production, get from auth context
+          commitMessage: `Update all gospel presentation data - ${new Date().toISOString()}`
+        }),
+      })
+
+      if (response.ok) {
+        setSaveStatus('saved')
+        setHasChanges(false)
+        setTimeout(() => setSaveStatus('idle'), 3000)
+      } else {
+        setSaveStatus('error')
+        setTimeout(() => setSaveStatus('idle'), 3000)
+      }
+    } catch (error) {
+      console.error('Save error:', error)
+      setSaveStatus('error')
+      setTimeout(() => setSaveStatus('idle'), 3000)
+    }
+  }
+
+  const saveSectionChanges = async (sectionIndex: number) => {
+    setSaveStatus('saving')
+    
+    try {
+      const section = editData[sectionIndex]
+      const response = await fetch('/api/data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: editData,
+          password: 'gospel2024', // In production, get from auth context
+          commitMessage: `Update Section ${section.section}: ${section.title} - ${new Date().toISOString()}`
+        }),
+      })
+
+      if (response.ok) {
+        setSaveStatus('saved')
+        setHasChanges(false)
+        setTimeout(() => setSaveStatus('idle'), 3000)
+      } else {
+        setSaveStatus('error')
+        setTimeout(() => setSaveStatus('idle'), 3000)
+      }
+    } catch (error) {
+      console.error('Save error:', error)
+      setSaveStatus('error')
+      setTimeout(() => setSaveStatus('idle'), 3000)
+    }
+  }
+
+  const saveSubsectionChanges = async (sectionIndex: number, subsectionIndex: number) => {
+    setSaveStatus('saving')
+    
+    try {
+      const section = editData[sectionIndex]
+      const subsection = section.subsections[subsectionIndex]
+      const response = await fetch('/api/data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: editData,
+          password: 'gospel2024', // In production, get from auth context
+          commitMessage: `Update ${section.title} - ${subsection.title} - ${new Date().toISOString()}`
         }),
       })
 
@@ -187,28 +262,28 @@ export const gospelPresentationData: GospelSection[] = ${JSON.stringify(editData
                 <button
                   onClick={saveChanges}
                   disabled={saveStatus === 'saving'}
-                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md font-medium transition-colors disabled:opacity-50"
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm disabled:opacity-50"
                 >
-                  {saveStatus === 'saving' ? '💾 Saving...' : '💾 Save Changes'}
+                  {saveStatus === 'saving' ? 'Saving...' : 'Save All Changes'}
                 </button>
               )}
               {saveStatus === 'saved' && (
-                <span className="text-green-600 text-sm">✅ Saved</span>
+                <span className="text-emerald-600 text-sm font-medium">✓ Saved</span>
               )}
               {saveStatus === 'error' && (
-                <span className="text-red-600 text-sm">❌ Save failed</span>
+                <span className="text-red-500 text-sm font-medium">✗ Save failed</span>
               )}
-              <Link 
+              <Link
                 href="/"
-                className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-md font-medium transition-colors"
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm"
               >
-                �️ View Site
+                View Site
               </Link>
               <button
                 onClick={handleLogout}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md font-medium transition-colors"
+                className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm"
               >
-                🔓 Logout
+                Logout
               </button>
             </div>
           </div>
@@ -264,30 +339,32 @@ export const gospelPresentationData: GospelSection[] = ${JSON.stringify(editData
                         </label>
                         <button
                           onClick={() => addScriptureReference(sectionIndex, subsectionIndex)}
-                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-md transition-colors"
+                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm"
                         >
-                          ➕ Add Reference
+                          + Add Reference
                         </button>
                       </div>
                       
                       {subsection.scriptureReferences && subsection.scriptureReferences.length > 0 ? (
                         <div className="space-y-3">
                           {subsection.scriptureReferences.map((ref, refIndex) => (
-                            <div key={refIndex} className="flex gap-2 items-center p-3 bg-blue-50 border border-blue-200 rounded-md">
-                              <span className="text-blue-600 text-sm">📖</span>
+                            <div key={refIndex} className="flex gap-2 items-center p-3 bg-slate-50 border border-slate-200 rounded-md">
+                              <span className="text-slate-500 text-sm">📖</span>
                               <input
                                 type="text"
                                 value={ref.reference}
                                 onChange={(e) => editScriptureReference(sectionIndex, subsectionIndex, refIndex, e.target.value)}
-                                className="flex-1 px-3 py-1 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white font-medium text-sm"
+                                className="flex-1 px-3 py-1 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400 text-gray-900 bg-white font-medium text-sm"
                                 placeholder="e.g., John 3:16"
                               />
                               <button
                                 onClick={() => removeScriptureReference(sectionIndex, subsectionIndex, refIndex)}
-                                className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded-md transition-colors"
+                                className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors group"
                                 title="Remove reference"
                               >
-                                🗑️
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
                               </button>
                             </div>
                           ))}
@@ -347,30 +424,32 @@ export const gospelPresentationData: GospelSection[] = ${JSON.stringify(editData
                                 </label>
                                 <button
                                   onClick={() => addNestedScriptureReference(sectionIndex, subsectionIndex, nestedIndex)}
-                                  className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-md transition-colors"
+                                  className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-md text-xs font-medium transition-all hover:shadow-sm"
                                 >
-                                  ➕ Add
+                                  + Add
                                 </button>
                               </div>
                               
                               {nested.scriptureReferences && nested.scriptureReferences.length > 0 ? (
                                 <div className="space-y-2">
                                   {nested.scriptureReferences.map((ref, refIndex) => (
-                                    <div key={refIndex} className="flex gap-2 items-center p-2 bg-blue-50 border border-blue-200 rounded-md">
-                                      <span className="text-blue-600 text-xs">📖</span>
+                                    <div key={refIndex} className="flex gap-2 items-center p-2 bg-slate-50 border border-slate-200 rounded-md">
+                                      <span className="text-slate-500 text-xs">📖</span>
                                       <input
                                         type="text"
                                         value={ref.reference}
                                         onChange={(e) => editNestedScriptureReference(sectionIndex, subsectionIndex, nestedIndex, refIndex, e.target.value)}
-                                        className="flex-1 px-2 py-1 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white font-medium text-xs"
+                                        className="flex-1 px-2 py-1 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400 text-gray-900 bg-white font-medium text-xs"
                                         placeholder="e.g., Romans 3:23"
                                       />
                                       <button
                                         onClick={() => removeNestedScriptureReference(sectionIndex, subsectionIndex, nestedIndex, refIndex)}
-                                        className="px-1 py-1 bg-red-500 hover:bg-red-600 text-white text-xs rounded-md transition-colors"
+                                        className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors group"
                                         title="Remove reference"
                                       >
-                                        🗑️
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
                                       </button>
                                     </div>
                                   ))}
@@ -385,8 +464,38 @@ export const gospelPresentationData: GospelSection[] = ${JSON.stringify(editData
                         ))}
                       </div>
                     )}
+                    
+                    {/* Subsection Save Button */}
+                    <div className="mt-4 pt-3 border-t border-slate-150 flex justify-end">
+                      <button
+                        onClick={() => saveSubsectionChanges(sectionIndex, subsectionIndex)}
+                        disabled={saveStatus === 'saving'}
+                        className="px-2.5 py-1 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-md text-xs font-medium transition-all hover:shadow-sm disabled:opacity-50"
+                      >
+                        {saveStatus === 'saving' ? 'Saving...' : 'Save'}
+                      </button>
+                    </div>
                   </div>
                 ))}
+              </div>
+              
+              {/* Section Save Button */}
+              <div className="mt-6 pt-4 border-t border-slate-200 flex justify-end">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => saveSectionChanges(sectionIndex)}
+                    disabled={saveStatus === 'saving'}
+                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-lg text-sm font-medium transition-all hover:shadow-sm disabled:opacity-50"
+                  >
+                    {saveStatus === 'saving' ? 'Saving...' : `Save Section ${section.section}`}
+                  </button>
+                  {saveStatus === 'saved' && (
+                    <span className="text-emerald-600 text-sm font-medium">✓ Saved</span>
+                  )}
+                  {saveStatus === 'error' && (
+                    <span className="text-red-500 text-sm font-medium">✗ Save failed</span>
+                  )}
+                </div>
               </div>
             </div>
           ))}
