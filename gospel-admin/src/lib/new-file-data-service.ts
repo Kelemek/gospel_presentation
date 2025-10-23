@@ -9,14 +9,14 @@ async function findDataDir(): Promise<string> {
     
     const fs = await import('fs/promises')
     
-    // Try multiple possible paths for data directory
+    // Try multiple possible paths for data directory (production-safe paths)
     const possiblePaths = [
-      join(process.cwd(), '..', 'data'),           // Development: gospel-admin/../data
-      join(process.cwd(), 'data'),                 // Production: if data is in same dir  
+      join(process.cwd(), 'data'),                 // Same directory as app
+      join(process.cwd(), '..', 'data'),           // Development: gospel-admin/../data  
+      join('/tmp', 'gospel-data'),                 // Writable temp directory
+      join(process.env.HOME || '/tmp', 'gospel-data'), // User home directory fallback
       join(dirname(process.cwd()), 'data'),        // Alternative parent directory
-      join(process.cwd(), '..', '..', 'data'),     // If deeply nested
-      join(process.env.VERCEL_ROOT || process.cwd(), 'data'), // Vercel specific
-      '/tmp/data'                                   // Fallback for serverless
+      '/tmp/data'                                   // Final fallback for serverless
     ]
     
     console.log(`[Profile Service] Trying paths: ${possiblePaths.join(', ')}`)
@@ -87,7 +87,13 @@ async function ensureDirectories() {
     console.log(`[Profile Service] Data directory exists: ${DATA_DIR}`)
   } catch (error) {
     console.log(`[Profile Service] Creating data directory: ${DATA_DIR}`)
-    await mkdir(DATA_DIR, { recursive: true })
+    try {
+      await mkdir(DATA_DIR, { recursive: true })
+      console.log(`[Profile Service] Successfully created data directory: ${DATA_DIR}`)
+    } catch (mkdirError) {
+      console.error(`[Profile Service] Failed to create data directory: ${mkdirError}`)
+      throw new Error(`Cannot create data directory at ${DATA_DIR}: ${mkdirError}`)
+    }
   }
   
   try {
@@ -95,7 +101,13 @@ async function ensureDirectories() {
     console.log(`[Profile Service] Profiles directory exists: ${PROFILES_DIR}`)
   } catch (error) {
     console.log(`[Profile Service] Creating profiles directory: ${PROFILES_DIR}`)
-    await mkdir(PROFILES_DIR, { recursive: true })
+    try {
+      await mkdir(PROFILES_DIR, { recursive: true })
+      console.log(`[Profile Service] Successfully created profiles directory: ${PROFILES_DIR}`)
+    } catch (mkdirError) {
+      console.error(`[Profile Service] Failed to create profiles directory: ${mkdirError}`)
+      throw new Error(`Cannot create profiles directory at ${PROFILES_DIR}: ${mkdirError}`)
+    }
   }
 }
 
