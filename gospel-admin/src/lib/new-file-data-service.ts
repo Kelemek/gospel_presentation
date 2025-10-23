@@ -264,16 +264,15 @@ async function createDefaultProfileWithSlug(slug: string): Promise<GospelProfile
     console.log(`[Profile Service] Error checking directory structure: ${err}`)
   }
   
-  // Try to load gospel data from multiple possible locations
+  // Try to load gospel data from GitHub repository data directory
   const possibleGospelDataPaths = [
-    join(DATA_DIR, 'gospel-presentation.json'),           // Current working data directory
-    join('/var/task', 'data', 'gospel-presentation.json'), // Netlify: repository root/data 
-    join('/var/task', 'gospel-admin', 'data', 'gospel-presentation.json'), // Netlify: nested structure
-    join(dirname(dirname(__dirname)), 'data', 'gospel-presentation.json'), // Go up from src/lib to repo root
+    join(DATA_DIR, 'gospel-presentation.json'),           // Current working data directory (if copied)
+    join(process.cwd(), '..', 'data', 'gospel-presentation.json'), // Repository structure (most likely)
+    join('/var/task', 'data', 'gospel-presentation.json'), // Netlify: repository root is /var/task
+    join(dirname(process.cwd()), 'data', 'gospel-presentation.json'), // Parent of current directory
+    join(dirname(dirname(__dirname)), 'data', 'gospel-presentation.json'), // From src/lib up to repo root
     join(dirname(dirname(dirname(__dirname))), 'data', 'gospel-presentation.json'), // From nested structure
-    join(process.cwd(), 'data', 'gospel-presentation.json'), // Same level as process
-    join(dirname(process.cwd()), 'data', 'gospel-presentation.json'), // Parent of process
-    join(process.cwd(), '..', 'data', 'gospel-presentation.json'), // Repository structure
+    join(process.cwd(), 'data', 'gospel-presentation.json'), // Same level as process (if cwd is repo root)
     join('/opt', 'build', 'repo', 'data', 'gospel-presentation.json'), // Netlify build directory
     join('/opt', 'buildhome', 'repo', 'data', 'gospel-presentation.json'), // Alternative build path
   ]
@@ -282,24 +281,24 @@ async function createDefaultProfileWithSlug(slug: string): Promise<GospelProfile
   
   for (const gospelDataPath of possibleGospelDataPaths) {
     try {
-      console.log(`[Profile Service] Trying to load gospel data from: ${gospelDataPath}`)
+      console.log(`[Profile Service] Trying to load gospel data from GitHub repo: ${gospelDataPath}`)
       const gospelContent = await readFile(gospelDataPath, 'utf-8')
       gospelData = JSON.parse(gospelContent)
-      console.log(`[Profile Service] Successfully loaded gospel data from: ${gospelDataPath}`)
+      console.log(`[Profile Service] ✅ Successfully loaded gospel data from GitHub repo: ${gospelDataPath}`)
       
-      // Copy the data to our working directory for future use
+      // Copy the source data to our working directory for future quick access
       try {
         const targetPath = join(DATA_DIR, 'gospel-presentation.json')
         await writeFile(targetPath, gospelContent, 'utf-8')
-        console.log(`[Profile Service] Copied gospel data to: ${targetPath}`)
+        console.log(`[Profile Service] ✅ Cached gospel data to working directory: ${targetPath}`)
       } catch (copyError) {
-        console.warn(`[Profile Service] Could not copy gospel data: ${copyError}`)
+        console.warn(`[Profile Service] ⚠️  Could not cache gospel data (not critical): ${copyError}`)
       }
       
-      break // Successfully loaded, exit loop
+      break // Successfully loaded from GitHub repo, exit loop
     } catch (error) {
-      console.log(`[Profile Service] Could not load gospel data from ${gospelDataPath}: ${error}`)
-      // Continue to next path
+      console.log(`[Profile Service] ❌ Could not load from ${gospelDataPath}: ${String(error)}`)
+      // Continue trying next path
     }
   }
   
