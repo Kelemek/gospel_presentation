@@ -8,8 +8,8 @@ import {
   getProfileBySlug,
   updateProfile,
   deleteProfile,
-  incrementProfileVisitCount
-} from '@/lib/file-data-service'
+  incrementVisitCount
+} from '@/lib/new-file-data-service'
 
 interface RouteContext {
   params: Promise<{
@@ -39,7 +39,7 @@ export async function GET(
     // Increment visit count for public access
     const isAdminRequest = request.headers.get('x-admin-request') === 'true'
     if (!isAdminRequest) {
-      await incrementProfileVisitCount(targetSlug)
+      await incrementVisitCount(targetSlug)
     }
 
     // For public access, return full profile with gospel data

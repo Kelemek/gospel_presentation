@@ -10,9 +10,8 @@ import {
 } from '@/lib/profile-service'
 import {
   getProfiles,
-  createProfile,
-  getExistingSlugs
-} from '@/lib/file-data-service'
+  createProfile
+} from '@/lib/new-file-data-service'
 
 export async function GET() {
   try {
@@ -45,7 +44,8 @@ export async function POST(request: NextRequest) {
     const body: CreateProfileRequest = await request.json()
     
     // Get existing slugs for validation
-    const existingSlugs = await getExistingSlugs()
+    const allProfiles = await getProfiles()
+    const existingSlugs = allProfiles.map(p => p.slug)
     
     // Validate the request
     const validation = validateCreateProfileRequest(body, existingSlugs)
@@ -64,8 +64,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create the new profile using the file-based service
-    const newProfile = await createProfile(body)
+    // Create the new profile using the new multi-file service
+    const newProfile = await createProfile(
+      body.slug,
+      body.title,
+      body.description,
+      body.cloneFromSlug
+    )
 
     // Return the created profile (without full gospel data to save bandwidth)
     const responseProfile = {
