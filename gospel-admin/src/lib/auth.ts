@@ -1,8 +1,6 @@
 // Simple admin authentication for gospel presentation editor
 'use client'
 
-const ADMIN_PASSWORD = 'gospel2024' // In production, this should be environment variable
-
 export interface AuthState {
   isAuthenticated: boolean
   timestamp?: number
@@ -35,16 +33,29 @@ export function isAuthenticated(): boolean {
 }
 
 // Authenticate with password
-export function authenticate(password: string): boolean {
-  if (password === ADMIN_PASSWORD) {
-    const authData: AuthState = {
-      isAuthenticated: true,
-      timestamp: Date.now()
+export async function authenticate(password: string): Promise<boolean> {
+  try {
+    const response = await fetch('/api/auth', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ password }),
+    })
+
+    if (response.ok) {
+      const authData: AuthState = {
+        isAuthenticated: true,
+        timestamp: Date.now()
+      }
+      localStorage.setItem('gospel-admin-auth', JSON.stringify(authData))
+      return true
     }
-    localStorage.setItem('gospel-admin-auth', JSON.stringify(authData))
-    return true
+    return false
+  } catch (error) {
+    console.error('Authentication error:', error)
+    return false
   }
-  return false
 }
 
 // Logout and clear authentication

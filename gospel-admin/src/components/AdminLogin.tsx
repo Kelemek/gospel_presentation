@@ -18,7 +18,7 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
     setError('')
     
     try {
-      if (authenticate(password)) {
+      if (await authenticate(password)) {
         onLogin()
       } else {
         setError('Invalid password. Please try again.')

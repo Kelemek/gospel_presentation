@@ -1,4 +1,5 @@
 import { GospelSection } from '@/lib/types'
+import Link from 'next/link'
 
 interface TableOfContentsProps {
   sections: GospelSection[]
@@ -29,6 +30,19 @@ export default function TableOfContents({ sections }: TableOfContentsProps) {
           </ul>
         </div>
       ))}
+      
+      {/* Admin Edit Button */}
+      <div className="mt-8 pt-4 border-t border-slate-200">
+        <Link 
+          href="/admin"
+          className="inline-flex items-center px-3 py-2 text-sm font-medium text-slate-600 bg-slate-50 hover:bg-slate-100 hover:text-slate-700 rounded-md transition-colors duration-200 border border-slate-200 shadow-sm"
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+          Edit Content
+        </Link>
+      </div>
     </div>
   )
 }

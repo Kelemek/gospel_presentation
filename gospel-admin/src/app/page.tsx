@@ -137,17 +137,9 @@ export default function GospelPresentation() {
           <p className="text-lg italic opacity-80 mb-2">
             "The Gospel Presentation" with Highlighted Scriptures for Easy Reference
           </p>
-          <p className="text-base opacity-70 mb-4">
+          <p className="text-base opacity-70">
             By Dr. Stuart Scott
           </p>
-          <div className="mt-6">
-            <Link 
-              href="/admin"
-              className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm font-medium transition-colors"
-            >
-              📝 Edit Content (Admin)
-            </Link>
-          </div>
         </div>
       </header>
 
