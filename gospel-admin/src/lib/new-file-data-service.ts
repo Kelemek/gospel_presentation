@@ -2,10 +2,47 @@ import { readFile, writeFile, mkdir, access, readdir } from 'fs/promises'
 import { join, dirname } from 'path'
 import { GospelProfile, ProfileMetadata } from './types'
 
-// File paths
-const DATA_DIR = join(process.cwd(), '..', 'data')
-const PROFILES_DIR = join(DATA_DIR, 'profiles')
-const INDEX_FILE = join(PROFILES_DIR, 'index.json')
+// File paths - more robust path resolution for production
+async function findDataDir(): Promise<string> {
+  const fs = await import('fs/promises')
+  
+  // Try multiple possible paths for data directory
+  const possiblePaths = [
+    join(process.cwd(), '..', 'data'),           // Development: gospel-admin/../data
+    join(process.cwd(), 'data'),                 // Production: if data is in same dir  
+    join(dirname(process.cwd()), 'data'),        // Alternative parent directory
+    join(process.cwd(), '..', '..', 'data'),     // If deeply nested
+    join(process.env.VERCEL_ROOT || process.cwd(), 'data'), // Vercel specific
+    '/tmp/data'                                   // Fallback for serverless
+  ]
+  
+  for (const path of possiblePaths) {
+    try {
+      await fs.access(path)
+      console.log(`[Profile Service] Found data directory at: ${path}`)
+      return path
+    } catch {
+      // Continue to next path
+    }
+  }
+  
+  // If no existing data directory found, use the first option as default
+  console.log(`[Profile Service] No existing data directory found, using: ${possiblePaths[0]}`)
+  return possiblePaths[0]
+}
+
+// Initialize paths (will be set dynamically)
+let DATA_DIR: string
+let PROFILES_DIR: string  
+let INDEX_FILE: string
+
+async function initializePaths() {
+  if (!DATA_DIR) {
+    DATA_DIR = await findDataDir()
+    PROFILES_DIR = join(DATA_DIR, 'profiles')
+    INDEX_FILE = join(PROFILES_DIR, 'index.json')
+  }
+}
 
 interface ProfileIndex {
   profiles: ProfileMetadata[]
@@ -19,21 +56,32 @@ interface ProfileFile {
 
 // Ensure directories exist
 async function ensureDirectories() {
+  await initializePaths()
+  
+  console.log(`[Profile Service] Working directory: ${process.cwd()}`)
+  console.log(`[Profile Service] Data directory: ${DATA_DIR}`)
+  console.log(`[Profile Service] Profiles directory: ${PROFILES_DIR}`)
+  
   try {
     await access(DATA_DIR)
-  } catch {
+    console.log(`[Profile Service] Data directory exists: ${DATA_DIR}`)
+  } catch (error) {
+    console.log(`[Profile Service] Creating data directory: ${DATA_DIR}`)
     await mkdir(DATA_DIR, { recursive: true })
   }
   
   try {
     await access(PROFILES_DIR)
-  } catch {
+    console.log(`[Profile Service] Profiles directory exists: ${PROFILES_DIR}`)
+  } catch (error) {
+    console.log(`[Profile Service] Creating profiles directory: ${PROFILES_DIR}`)
     await mkdir(PROFILES_DIR, { recursive: true })
   }
 }
 
 // Load profile index (metadata only)
 async function loadProfileIndex(): Promise<ProfileIndex> {
+  await initializePaths()
   await ensureDirectories()
   
   try {
@@ -76,6 +124,7 @@ async function loadProfileIndex(): Promise<ProfileIndex> {
 
 // Save profile index
 async function saveProfileIndex(index: ProfileIndex): Promise<void> {
+  await initializePaths()
   await ensureDirectories()
   
   const indexToSave = {
@@ -89,6 +138,7 @@ async function saveProfileIndex(index: ProfileIndex): Promise<void> {
 
 // Load individual profile
 async function loadProfile(slug: string): Promise<GospelProfile | null> {
+  await initializePaths()
   await ensureDirectories()
   
   const profileFile = join(PROFILES_DIR, `${slug}.json`)
@@ -113,6 +163,7 @@ async function loadProfile(slug: string): Promise<GospelProfile | null> {
 
 // Save individual profile
 async function saveProfile(profile: GospelProfile): Promise<void> {
+  await initializePaths()
   await ensureDirectories()
   
   const profileFile = join(PROFILES_DIR, `${profile.slug}.json`)
@@ -130,6 +181,7 @@ async function saveProfile(profile: GospelProfile): Promise<void> {
 
 // Delete profile file
 async function deleteProfileFile(slug: string): Promise<void> {
+  await initializePaths()
   await ensureDirectories()
   
   const profileFile = join(PROFILES_DIR, `${slug}.json`)
@@ -146,6 +198,7 @@ async function deleteProfileFile(slug: string): Promise<void> {
 
 // Create default profile
 async function createDefaultProfile(): Promise<GospelProfile> {
+  await initializePaths()
   // Load gospel data from the original data file
   const gospelDataPath = join(DATA_DIR, 'gospel-presentation.json')
   let gospelData = []
@@ -189,8 +242,15 @@ function generateNextId(profiles: ProfileMetadata[]): string {
 // Atomic operations with index updates
 
 export async function getProfiles(): Promise<ProfileMetadata[]> {
-  const index = await loadProfileIndex()
-  return index.profiles
+  try {
+    console.log('[Profile Service] getProfiles() called')
+    const index = await loadProfileIndex()
+    console.log(`[Profile Service] Loaded ${index.profiles.length} profiles from index`)
+    return index.profiles
+  } catch (error) {
+    console.error('[Profile Service] Error in getProfiles():', error)
+    throw error
+  }
 }
 
 export async function getProfileBySlug(slug: string): Promise<GospelProfile | null> {
@@ -323,6 +383,7 @@ export async function incrementVisitCount(slug: string): Promise<void> {
 
 // Migration function to convert from old single-file format
 export async function migrateFromSingleFile(): Promise<void> {
+  await initializePaths()
   const oldFilePath = join(DATA_DIR, 'profiles.json')
   
   try {
