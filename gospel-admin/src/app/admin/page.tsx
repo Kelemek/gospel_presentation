@@ -126,18 +126,25 @@ export default function AdminPage() {
 
     try {
       setError('')
+      setIsLoading(true) // Show loading state during delete
+      
       const response = await fetch(`/api/profiles/${slug}`, {
         method: 'DELETE'
       })
 
       if (response.ok) {
-        await fetchProfiles() // Refresh the profile list
+        // Immediately update the UI by filtering out the deleted profile
+        setProfiles(prev => prev.filter(p => p.slug !== slug))
+        // Also refresh from server to ensure consistency
+        await fetchProfiles()
       } else {
         const errorData = await response.json()
         setError(errorData.error || 'Failed to delete profile')
+        setIsLoading(false)
       }
     } catch (err: any) {
       setError('Failed to delete profile: ' + (err.message || 'Unknown error'))
+      setIsLoading(false)
     }
   }
 
