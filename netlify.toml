@@ -1,7 +1,7 @@
 [build]
   # Build from the Next.js subdirectory
   base = "gospel-admin"
-  command = "npm run build"
+  command = "npm ci && npm run build"
   publish = ".next"
   
   # Environment variables for build process
