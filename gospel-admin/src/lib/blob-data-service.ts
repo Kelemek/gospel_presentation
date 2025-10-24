@@ -90,25 +90,32 @@ export async function loadGospelData(): Promise<GospelPresentationData> {
  * Loads profiles from blob storage
  */
 export async function loadProfiles(): Promise<ProfileStorage> {
-  try {
-    const store = getProfilesStore()
-    const data = await store.get('profiles.json', { type: 'json' })
-    
-    if (data) {
-      const storage = data as ProfileStorage
+  // In development, skip blob storage and go directly to file system
+  const isDevelopment = process.env.NODE_ENV !== 'production' || !process.env.NETLIFY_SITE_ID
+  
+  if (!isDevelopment) {
+    try {
+      const store = getProfilesStore()
+      const data = await store.get('profiles.json', { type: 'json' })
       
-      // Convert date strings back to Date objects
-      storage.profiles = storage.profiles.map(profile => ({
-        ...profile,
-        createdAt: new Date(profile.createdAt),
-        updatedAt: new Date(profile.updatedAt)
-      }))
-      
-      console.log('[blob-data-service] Loaded', storage.profiles.length, 'profiles from blob storage')
-      return storage
+      if (data) {
+        const storage = data as ProfileStorage
+        
+        // Convert date strings back to Date objects
+        storage.profiles = storage.profiles.map(profile => ({
+          ...profile,
+          createdAt: new Date(profile.createdAt),
+          updatedAt: new Date(profile.updatedAt)
+        }))
+        
+        console.log('[blob-data-service] Loaded', storage.profiles.length, 'profiles from blob storage')
+        return storage
+      }
+    } catch (error) {
+      console.log('[blob-data-service] No profiles in blob storage, checking file system')
     }
-  } catch (error) {
-    console.log('[blob-data-service] No profiles in blob storage, checking file system')
+  } else {
+    console.log('[blob-data-service] Development mode - using file system directly')
   }
   
   // Try to load from file system and migrate to blob storage
@@ -167,25 +174,28 @@ export async function loadProfiles(): Promise<ProfileStorage> {
  * Saves profiles to blob storage (with file system fallback)
  */
 export async function saveProfiles(storage: ProfileStorage): Promise<void> {
+  const isDevelopment = process.env.NODE_ENV !== 'production' || !process.env.NETLIFY_SITE_ID
   let blobSaved = false
   
-  // Try to save to blob storage first
-  try {
-    const store = getProfilesStore()
-    
-    const dataToSave = {
-      ...storage,
-      lastModified: new Date().toISOString()
+  // In production, try to save to blob storage first
+  if (!isDevelopment) {
+    try {
+      const store = getProfilesStore()
+      
+      const dataToSave = {
+        ...storage,
+        lastModified: new Date().toISOString()
+      }
+      
+      await store.setJSON('profiles.json', dataToSave)
+      console.log('[blob-data-service] Saved', storage.profiles.length, 'profiles to blob storage')
+      blobSaved = true
+    } catch (error) {
+      console.log('[blob-data-service] Blob storage not available, will save to file system')
     }
-    
-    await store.setJSON('profiles.json', dataToSave)
-    console.log('[blob-data-service] Saved', storage.profiles.length, 'profiles to blob storage')
-    blobSaved = true
-  } catch (error) {
-    console.log('[blob-data-service] Blob storage not available, will save to file system')
   }
   
-  // If blob storage failed, save to file system (important for development)
+  // If blob storage failed or we're in development, save to file system
   if (!blobSaved) {
     try {
       const fs = await import('fs/promises')

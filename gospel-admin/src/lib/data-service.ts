@@ -8,8 +8,8 @@ const isProduction = process.env.NODE_ENV === 'production'
 const isNetlifyEnvironment = process.env.NETLIFY === 'true'
 const hasNetlifyCredentials = !!(process.env.NETLIFY_SITE_ID && process.env.NETLIFY_TOKEN)
 
-// Use blob storage whenever credentials are available (development or production)
-const useBlobs = hasNetlifyCredentials
+// Use blob storage only in production with Netlify environment
+const useBlobs = hasNetlifyCredentials && isNetlifyEnvironment
 
 console.log(`[data-service] Environment: ${process.env.NODE_ENV}, Netlify: ${process.env.NETLIFY}, Credentials: ${hasNetlifyCredentials}, Using: ${useBlobs ? 'blob-storage' : 'file-storage'}`)
 
