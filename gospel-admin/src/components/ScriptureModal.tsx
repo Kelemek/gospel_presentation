@@ -172,7 +172,7 @@ export default function ScriptureModal({
 
   return (
     <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 z-50 flex items-start md:items-center justify-center p-0 md:p-4" style={{ minHeight: '100vh', minWidth: '100vw' }}>
-      <div className="bg-white w-full max-w-[95vw] shadow-xl flex flex-col min-h-screen md:h-auto md:max-h-[80vh] md:rounded-lg border-8 border-blue-500">
+      <div className="bg-white w-full max-w-sm sm:max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-5xl shadow-xl flex flex-col min-h-screen md:h-auto md:max-h-[80vh] md:rounded-lg">
         
         {/* Fixed Header with Controls - Always Visible */}
         <div className="bg-slate-100 px-4 pt-safe-or-3 pb-3 border-b flex-shrink-0 relative z-10 md:rounded-t-lg" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}>

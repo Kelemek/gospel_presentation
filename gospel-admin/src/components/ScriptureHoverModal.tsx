@@ -133,7 +133,7 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
       {/* Modal */}
       {isVisible && (
         <div
-          className="fixed z-50 bg-white border border-slate-300 rounded-lg shadow-xl p-6 max-w-4xl w-96 max-w-[calc(100vw-40px)]"
+          className="fixed z-50 bg-white border border-slate-300 rounded-lg shadow-xl p-6 max-w-6xl w-96 max-w-[calc(100vw-40px)]"
           style={{
             left: `${position.x}px`,
             top: `${position.y}px`,
