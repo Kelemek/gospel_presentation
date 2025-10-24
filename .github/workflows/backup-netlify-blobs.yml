@@ -74,7 +74,12 @@ jobs:
             console.log('Site ID:', process.env.NETLIFY_SITE_ID ? 'Set' : 'Missing');
             console.log('Token:', process.env.NETLIFY_TOKEN ? 'Set' : 'Missing');
 
-            const store = getStore('gospel-data');
+            // Explicitly pass siteID and token to getStore
+            const store = getStore({
+              name: 'gospel-data',
+              siteID: process.env.NETLIFY_SITE_ID,
+              token: process.env.NETLIFY_TOKEN
+            });
             
             // Create backup directory
             const backupDir = '../backup';

@@ -63,7 +63,12 @@ async function testBackup() {
   try {
     console.log('🔄 Testing Netlify Blobs connection...');
     
-    const store = getStore('gospel-data');
+    // Explicitly pass siteID and token to getStore
+    const store = getStore({
+      name: 'gospel-data',
+      siteID: process.env.NETLIFY_SITE_ID,
+      token: process.env.NETLIFY_TOKEN
+    });
     
     // Test connection by listing blobs
     console.log('📋 Fetching blob list...');
