@@ -220,19 +220,30 @@ export default function ProfileEditPage({ params }: ProfileEditPageProps) {
               />
             </div>
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex flex-col sm:flex-row gap-3 pt-4">
               <button
                 type="submit"
                 disabled={isSaving}
-                className="border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50"
+                className="border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 sm:px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 flex-1 sm:flex-none"
               >
-                {isSaving ? 'Saving...' : 'Save Changes'}
+                {isSaving ? (
+                  <>
+                    <span className="hidden sm:inline">Saving...</span>
+                    <span className="sm:hidden">Saving</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="hidden sm:inline">Save Changes</span>
+                    <span className="sm:hidden">Save</span>
+                  </>
+                )}
               </button>
               <Link
                 href="/admin"
-                className="border border-slate-300 text-slate-600 bg-slate-50 hover:bg-slate-100 px-6 py-2 rounded-lg transition-colors text-center"
+                className="border border-slate-300 text-slate-600 bg-slate-50 hover:bg-slate-100 px-4 sm:px-6 py-2 rounded-lg transition-colors text-center flex-1 sm:flex-none"
               >
-                Cancel
+                <span className="hidden sm:inline">Cancel</span>
+                <span className="sm:hidden">✕</span>
               </Link>
             </div>
           </form>

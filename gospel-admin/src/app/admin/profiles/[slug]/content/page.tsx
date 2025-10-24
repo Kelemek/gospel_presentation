@@ -620,9 +620,24 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
               <button
                 onClick={handleSaveContent}
                 disabled={isSaving || !hasChanges}
-                className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-green-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex-1 sm:flex-none"
               >
-                {isSaving ? 'Saving...' : hasChanges ? 'Save Changes' : 'No Changes'}
+                {isSaving ? (
+                  <>
+                    <span className="hidden sm:inline">Saving...</span>
+                    <span className="sm:hidden">Saving</span>
+                  </>
+                ) : hasChanges ? (
+                  <>
+                    <span className="hidden sm:inline">Save Changes</span>
+                    <span className="sm:hidden">Save</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="hidden sm:inline">No Changes</span>
+                    <span className="sm:hidden">✓</span>
+                  </>
+                )}
               </button>
             </>
           }
