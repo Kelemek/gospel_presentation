@@ -280,3 +280,26 @@ export async function deleteProfile(slug: string): Promise<void> {
   
   console.log('[blob-data-service] Deleted profile:', slug)
 }
+
+/**
+ * Increments the visit count for a profile
+ */
+export async function incrementProfileVisitCount(slug: string): Promise<void> {
+  try {
+    const storage = await loadProfiles()
+    
+    const profile = storage.profiles.find(p => p.slug === slug)
+    if (profile) {
+      profile.visitCount = (profile.visitCount || 0) + 1
+      profile.updatedAt = new Date()
+      
+      // Save to blob storage
+      await saveProfiles(storage)
+      
+      console.log(`[blob-data-service] Incremented visit count for '${slug}' to ${profile.visitCount}`)
+    }
+  } catch (error) {
+    // Don't throw errors for visit counting - it shouldn't break the page
+    console.warn('[blob-data-service] Failed to increment visit count:', error)
+  }
+}

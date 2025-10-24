@@ -77,6 +77,28 @@ export default function ProfileContent({ sections, profileInfo }: ProfileContent
     collectFavoriteReferences(sections)
   }, [sections])
 
+  // Track visit count when profile is viewed
+  useEffect(() => {
+    const trackVisit = async () => {
+      try {
+        await fetch(`/api/profiles/${profileInfo.slug}/visit`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+      } catch (error) {
+        // Don't break the page if visit tracking fails
+        console.warn('Visit tracking failed:', error)
+      }
+    }
+
+    // Only track visits for actual profile slugs (not admin pages)
+    if (profileInfo.slug && profileInfo.slug !== 'admin') {
+      trackVisit()
+    }
+  }, [profileInfo.slug])
+
   // Add keyboard navigation
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
