@@ -46,11 +46,18 @@ echo "🔄 Creating test backup..."
 # Create backup directory
 mkdir -p ../test-backup
 
-# Create the backup script
-cat > test-backup.js << 'EOF'
-const { getStore } = require('@netlify/blobs');
-const fs = require('fs').promises;
-const path = require('path');
+# Create package.json for ES module support
+cat > package.json << 'EOF'
+{
+  "type": "module"
+}
+EOF
+
+# Create the backup script with ES modules
+cat > test-backup.mjs << 'EOF'
+import { getStore } from '@netlify/blobs';
+import { promises as fs } from 'fs';
+import { join } from 'path';
 
 async function testBackup() {
   try {
@@ -98,7 +105,7 @@ async function testBackup() {
         // Save test file
         const filename = `test_${blob.key.replace(/[\/\\:*?"<>|]/g, '_')}.json`;
         await fs.writeFile(
-          path.join(backupDir, filename), 
+          join(backupDir, filename), 
           JSON.stringify(data, null, 2)
         );
         
@@ -110,7 +117,7 @@ async function testBackup() {
 
     // Save test manifest
     await fs.writeFile(
-      path.join(backupDir, 'test-manifest.json'),
+      join(backupDir, 'test-manifest.json'),
       JSON.stringify(backupData, null, 2)
     );
 
@@ -148,8 +155,8 @@ async function testBackup() {
 testBackup();
 EOF
 
-# Run the test
-node test-backup.js
+# Run the test with ES module support
+node test-backup.mjs
 
 echo ""
 echo "🔍 Test backup contents:"

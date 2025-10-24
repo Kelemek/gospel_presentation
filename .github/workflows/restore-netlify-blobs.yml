@@ -58,10 +58,18 @@ jobs:
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         NETLIFY_TOKEN: ${{ secrets.NETLIFY_TOKEN }}
       run: |
-        cat > restore-blobs.js << 'EOF'
-        const { getStore } = require('@netlify/blobs');
-        const fs = require('fs').promises;
-        const path = require('path');
+        # Create package.json for ES module support
+        cat > restore-package.json << 'EOF'
+        {
+          "type": "module"
+        }
+        EOF
+
+        # Create restore script with ES module imports
+        cat > restore-blobs.mjs << 'EOF'
+        import { getStore } from '@netlify/blobs';
+        import { promises as fs } from 'fs';
+        import { join } from 'path';
 
         async function restoreBlobs() {
           try {
@@ -71,7 +79,7 @@ jobs:
             const restoreDir = '../restore-data';
             
             // Read backup manifest
-            const manifestPath = path.join(restoreDir, 'backup-manifest.json');
+            const manifestPath = join(restoreDir, 'backup-manifest.json');
             const manifestExists = await fs.access(manifestPath).then(() => true).catch(() => false);
             
             if (!manifestExists) {
@@ -116,7 +124,7 @@ jobs:
             };
 
             await fs.writeFile(
-              path.join(restoreDir, 'restore-report.json'),
+              join(restoreDir, 'restore-report.json'),
               JSON.stringify(report, null, 2)
             );
 
@@ -129,7 +137,11 @@ jobs:
         restoreBlobs();
         EOF
 
-        node restore-blobs.js
+        # Copy package.json to enable ES modules
+        cp restore-package.json package.json
+
+        # Run the restore script with ES module support
+        node restore-blobs.mjs
 
     - name: Create restore summary
       run: |

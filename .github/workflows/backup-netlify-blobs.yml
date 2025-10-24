@@ -55,11 +55,18 @@ jobs:
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         NETLIFY_TOKEN: ${{ secrets.NETLIFY_TOKEN }}
       run: |
-        # Create backup script
-        cat > backup-blobs.js << 'EOF'
-        const { getStore } = require('@netlify/blobs');
-        const fs = require('fs').promises;
-        const path = require('path');
+        # Create package.json for ES module support
+        cat > backup-package.json << 'EOF'
+        {
+          "type": "module"
+        }
+        EOF
+
+        # Create backup script with ES module imports
+        cat > backup-blobs.mjs << 'EOF'
+        import { getStore } from '@netlify/blobs';
+        import { promises as fs } from 'fs';
+        import { join } from 'path';
 
         async function backupBlobs() {
           try {
@@ -101,7 +108,7 @@ jobs:
                 // Also save individual files for easier inspection
                 const filename = `${blob.key.replace(/[\/\\:*?"<>|]/g, '_')}.json`;
                 await fs.writeFile(
-                  path.join(backupDir, filename), 
+                  join(backupDir, filename), 
                   JSON.stringify(data, null, 2)
                 );
 
@@ -116,7 +123,7 @@ jobs:
 
             // Save complete backup manifest
             await fs.writeFile(
-              path.join(backupDir, 'backup-manifest.json'),
+              join(backupDir, 'backup-manifest.json'),
               JSON.stringify(backupData, null, 2)
             );
 
@@ -131,7 +138,7 @@ jobs:
             };
 
             await fs.writeFile(
-              path.join(backupDir, 'backup-metadata.json'),
+              join(backupDir, 'backup-metadata.json'),
               JSON.stringify(metadata, null, 2)
             );
 
@@ -147,16 +154,20 @@ jobs:
         backupBlobs();
         EOF
 
-        # Run the backup script
-        node backup-blobs.js
+        # Copy package.json to enable ES modules
+        cp backup-package.json package.json
+
+        # Run the backup script with ES module support
+        node backup-blobs.mjs
 
     - name: Create backup archive
+      id: archive
       run: |
         cd backup
         BACKUP_NAME="${{ inputs.backup_name || format('netlify-blobs-{0}', steps.timestamp.outputs.timestamp) }}"
         tar -czf "../${BACKUP_NAME}.tar.gz" .
         cd ..
-        echo "BACKUP_FILENAME=${BACKUP_NAME}.tar.gz" >> $GITHUB_ENV
+        echo "filename=${BACKUP_NAME}.tar.gz" >> $GITHUB_OUTPUT
 
     - name: Upload backup as artifact
       uses: actions/upload-artifact@v4
@@ -170,7 +181,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.backup_name || format('netlify-blobs-{0}-compressed', steps.timestamp.outputs.timestamp) }}
-        path: ${{ env.BACKUP_FILENAME }}
+        path: ${{ steps.archive.outputs.filename }}
         retention-days: 90
 
     - name: Create backup summary
