@@ -32,6 +32,8 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
   const [newNestedScriptureRef, setNewNestedScriptureRef] = useState('')
   const [addingScriptureToNested, setAddingScriptureToNested] = useState<string | null>(null)
   const [isRestoring, setIsRestoring] = useState(false)
+  const [editingScriptureId, setEditingScriptureId] = useState<string | null>(null)
+  const [editingScriptureValue, setEditingScriptureValue] = useState('')
 
   // Bible book abbreviations mapping
   const bibleBookAbbreviations: { [key: string]: string } = {
@@ -334,6 +336,80 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
       
       updateSubsection(sectionIndex, subsectionIndex, 'nestedSubsections', newNestedSubsections)
     }
+  }
+
+  // Functions for editing scripture references
+  const startEditingScripture = (sectionIndex: number, subsectionIndex: number, scriptureIndex: number, nestedIndex?: number) => {
+    const id = nestedIndex !== undefined 
+      ? `${sectionIndex}-${subsectionIndex}-${nestedIndex}-${scriptureIndex}`
+      : `${sectionIndex}-${subsectionIndex}-${scriptureIndex}`
+    
+    // Get current scripture reference value
+    const section = profile?.gospelData[sectionIndex]
+    if (!section) return
+    
+    let currentReference = ''
+    if (nestedIndex !== undefined) {
+      // Nested scripture reference
+      const nested = section.subsections[subsectionIndex]?.nestedSubsections?.[nestedIndex]
+      currentReference = nested?.scriptureReferences?.[scriptureIndex]?.reference || ''
+    } else {
+      // Regular scripture reference
+      currentReference = section.subsections[subsectionIndex]?.scriptureReferences?.[scriptureIndex]?.reference || ''
+    }
+    
+    setEditingScriptureId(id)
+    setEditingScriptureValue(currentReference)
+  }
+
+  const cancelEditingScripture = () => {
+    setEditingScriptureId(null)
+    setEditingScriptureValue('')
+  }
+
+  const saveEditedScripture = (sectionIndex: number, subsectionIndex: number, scriptureIndex: number, nestedIndex?: number) => {
+    if (!profile || !editingScriptureValue.trim()) return
+
+    const resolvedReference = resolveBibleReference(editingScriptureValue.trim())
+    
+    if (nestedIndex !== undefined) {
+      // Edit nested scripture reference
+      const newGospelData = [...profile.gospelData]
+      const subsection = newGospelData[sectionIndex].subsections[subsectionIndex]
+      
+      if (subsection.nestedSubsections && subsection.nestedSubsections[nestedIndex].scriptureReferences) {
+        const newNestedSubsections = [...subsection.nestedSubsections]
+        const newScriptures = [...newNestedSubsections[nestedIndex].scriptureReferences!]
+        
+        newScriptures[scriptureIndex] = {
+          ...newScriptures[scriptureIndex],
+          reference: resolvedReference
+        }
+        
+        newNestedSubsections[nestedIndex] = {
+          ...newNestedSubsections[nestedIndex],
+          scriptureReferences: newScriptures
+        }
+        
+        updateSubsection(sectionIndex, subsectionIndex, 'nestedSubsections', newNestedSubsections)
+      }
+    } else {
+      // Edit regular scripture reference
+      const newGospelData = [...profile.gospelData]
+      const subsection = newGospelData[sectionIndex].subsections[subsectionIndex]
+      
+      if (subsection.scriptureReferences) {
+        const newScriptures = [...subsection.scriptureReferences]
+        newScriptures[scriptureIndex] = {
+          ...newScriptures[scriptureIndex],
+          reference: resolvedReference
+        }
+        updateSubsection(sectionIndex, subsectionIndex, 'scriptureReferences', newScriptures)
+      }
+    }
+    
+    setHasChanges(true)
+    cancelEditingScripture()
   }
 
   // Backup and Restore Functions
@@ -821,36 +897,85 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
 
                     {subsection.scriptureReferences && subsection.scriptureReferences.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
-                        {subsection.scriptureReferences.map((scripture, scriptureIndex) => (
-                          <div key={scriptureIndex} className="relative group">
-                            <ScriptureHoverModal reference={scripture.reference}>
-                              <button
-                                onClick={() => toggleScriptureFavorite(sectionIndex, subsectionIndex, scriptureIndex)}
-                                className={`inline-block px-3 py-1 text-sm rounded-md transition-colors cursor-pointer ${
-                                  scripture.favorite
-                                    ? 'bg-blue-200 hover:bg-blue-300 text-blue-900 border-2 border-blue-400 hover:border-blue-500 font-medium'
-                                    : 'bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-200 hover:border-blue-300'
-                                }`}
-                              >
-                                {scripture.favorite ? '⭐' : '☆'} {scripture.reference}
-                              </button>
-                            </ScriptureHoverModal>
-                            <button
-                              onClick={() => removeScriptureReference(sectionIndex, subsectionIndex, scriptureIndex)}
-                              className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                              title="Remove scripture"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
+                        {subsection.scriptureReferences.map((scripture, scriptureIndex) => {
+                          const editId = `${sectionIndex}-${subsectionIndex}-${scriptureIndex}`
+                          const isEditing = editingScriptureId === editId
+                          
+                          return (
+                            <div key={scriptureIndex} className="relative group">
+                              {isEditing ? (
+                                <div className="flex items-center gap-1 bg-yellow-50 border border-yellow-300 rounded-md p-1">
+                                  <input
+                                    type="text"
+                                    value={editingScriptureValue}
+                                    onChange={(e) => setEditingScriptureValue(e.target.value)}
+                                    onKeyPress={(e) => {
+                                      if (e.key === 'Enter') {
+                                        saveEditedScripture(sectionIndex, subsectionIndex, scriptureIndex)
+                                      } else if (e.key === 'Escape') {
+                                        cancelEditingScripture()
+                                      }
+                                    }}
+                                    className="text-xs px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    placeholder="e.g., John 3:16"
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={() => saveEditedScripture(sectionIndex, subsectionIndex, scriptureIndex)}
+                                    disabled={!editingScriptureValue.trim()}
+                                    className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700 transition-colors disabled:opacity-50"
+                                    title="Save changes"
+                                  >
+                                    ✓
+                                  </button>
+                                  <button
+                                    onClick={cancelEditingScripture}
+                                    className="bg-gray-600 text-white px-2 py-1 rounded text-xs hover:bg-gray-700 transition-colors"
+                                    title="Cancel editing"
+                                  >
+                                    ✗
+                                  </button>
+                                </div>
+                              ) : (
+                                <>
+                                  <ScriptureHoverModal reference={scripture.reference}>
+                                    <button
+                                      onClick={() => toggleScriptureFavorite(sectionIndex, subsectionIndex, scriptureIndex)}
+                                      className={`inline-block px-3 py-1 text-sm rounded-md transition-colors cursor-pointer ${
+                                        scripture.favorite
+                                          ? 'bg-blue-200 hover:bg-blue-300 text-blue-900 border-2 border-blue-400 hover:border-blue-500 font-medium'
+                                          : 'bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-200 hover:border-blue-300'
+                                      }`}
+                                    >
+                                      {scripture.favorite ? '⭐' : '☆'} {scripture.reference}
+                                    </button>
+                                  </ScriptureHoverModal>
+                                  <button
+                                    onClick={() => removeScriptureReference(sectionIndex, subsectionIndex, scriptureIndex)}
+                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                    title="Remove scripture"
+                                  >
+                                    ×
+                                  </button>
+                                  <button
+                                    onClick={() => startEditingScripture(sectionIndex, subsectionIndex, scriptureIndex)}
+                                    className="absolute -bottom-1 -right-1 bg-orange-500 text-white rounded-full w-4 h-4 text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-orange-600"
+                                    title="Edit scripture reference"
+                                  >
+                                    ✏️
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          )
+                        })}
                       </div>
                     ) : (
                       <p className="text-slate-500 text-sm italic">No scripture references yet. Click "Add Scripture" to add some.</p>
                     )}
                     
                     <p className="text-xs text-slate-500 mt-2">
-                      Click scripture to toggle favorite (⭐), hover for 1 sec to preview verse text, hover and click × to remove
+                      Click scripture to toggle favorite (⭐), hover for 1 sec to preview verse text, hover and click × to remove, ✏️ to edit
                     </p>
                   </div>
 
@@ -950,30 +1075,79 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
 
                         {nested.scriptureReferences && nested.scriptureReferences.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
-                            {nested.scriptureReferences.map((scripture, scriptureIndex) => (
-                              <div key={scriptureIndex} className="relative group">
-                                <ScriptureHoverModal reference={scripture.reference}>
-                                  <button
-                                    onClick={() => toggleNestedScriptureFavorite(sectionIndex, subsectionIndex, nestedIndex, scriptureIndex)}
-                                    className={`inline-block px-2 py-1 text-xs rounded transition-colors cursor-pointer ${
-                                      scripture.favorite
-                                        ? 'bg-blue-200 hover:bg-blue-300 text-blue-900 border border-blue-400 font-medium'
-                                        : 'bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-200'
-                                    }`}
-                                    title={scripture.favorite ? 'Click to unfavorite' : 'Click to favorite'}
-                                  >
-                                    {scripture.favorite ? '⭐' : '☆'} {scripture.reference}
-                                  </button>
-                                </ScriptureHoverModal>
-                                <button
-                                  onClick={() => removeNestedScriptureReference(sectionIndex, subsectionIndex, nestedIndex, scriptureIndex)}
-                                  className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                                  title="Remove scripture"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            ))}
+                            {nested.scriptureReferences.map((scripture, scriptureIndex) => {
+                              const editId = `${sectionIndex}-${subsectionIndex}-${nestedIndex}-${scriptureIndex}`
+                              const isEditing = editingScriptureId === editId
+                              
+                              return (
+                                <div key={scriptureIndex} className="relative group">
+                                  {isEditing ? (
+                                    <div className="flex items-center gap-1 bg-yellow-50 border border-yellow-300 rounded p-1">
+                                      <input
+                                        type="text"
+                                        value={editingScriptureValue}
+                                        onChange={(e) => setEditingScriptureValue(e.target.value)}
+                                        onKeyPress={(e) => {
+                                          if (e.key === 'Enter') {
+                                            saveEditedScripture(sectionIndex, subsectionIndex, scriptureIndex, nestedIndex)
+                                          } else if (e.key === 'Escape') {
+                                            cancelEditingScripture()
+                                          }
+                                        }}
+                                        className="text-xs px-1 py-0.5 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        placeholder="e.g., John 3:16"
+                                        autoFocus
+                                      />
+                                      <button
+                                        onClick={() => saveEditedScripture(sectionIndex, subsectionIndex, scriptureIndex, nestedIndex)}
+                                        disabled={!editingScriptureValue.trim()}
+                                        className="bg-green-600 text-white px-1 py-0.5 rounded text-xs hover:bg-green-700 transition-colors disabled:opacity-50"
+                                        title="Save changes"
+                                      >
+                                        ✓
+                                      </button>
+                                      <button
+                                        onClick={cancelEditingScripture}
+                                        className="bg-gray-600 text-white px-1 py-0.5 rounded text-xs hover:bg-gray-700 transition-colors"
+                                        title="Cancel editing"
+                                      >
+                                        ✗
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <ScriptureHoverModal reference={scripture.reference}>
+                                        <button
+                                          onClick={() => toggleNestedScriptureFavorite(sectionIndex, subsectionIndex, nestedIndex, scriptureIndex)}
+                                          className={`inline-block px-2 py-1 text-xs rounded transition-colors cursor-pointer ${
+                                            scripture.favorite
+                                              ? 'bg-blue-200 hover:bg-blue-300 text-blue-900 border border-blue-400 font-medium'
+                                              : 'bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-200'
+                                          }`}
+                                          title={scripture.favorite ? 'Click to unfavorite' : 'Click to favorite'}
+                                        >
+                                          {scripture.favorite ? '⭐' : '☆'} {scripture.reference}
+                                        </button>
+                                      </ScriptureHoverModal>
+                                      <button
+                                        onClick={() => removeNestedScriptureReference(sectionIndex, subsectionIndex, nestedIndex, scriptureIndex)}
+                                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                                        title="Remove scripture"
+                                      >
+                                        ×
+                                      </button>
+                                      <button
+                                        onClick={() => startEditingScripture(sectionIndex, subsectionIndex, scriptureIndex, nestedIndex)}
+                                        className="absolute -bottom-1 -right-1 bg-orange-500 text-white rounded-full w-4 h-4 text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-orange-600"
+                                        title="Edit scripture reference"
+                                      >
+                                        ✏️
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              )
+                            })}
                           </div>
                         ) : (
                           <p className="text-slate-400 text-xs italic">No scripture references yet.</p>
