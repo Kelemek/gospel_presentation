@@ -16,7 +16,7 @@ export async function GET() {
       description: p.description,
       isDefault: p.isDefault,
       visitCount: p.visitCount,
-      lastVisited: p.lastVisited ? p.lastVisited.toISOString() : undefined,
+      lastVisited: p.lastVisited ? (p.lastVisited instanceof Date ? p.lastVisited.toISOString() : p.lastVisited) : undefined,
       createdAt: p.createdAt.toISOString(),
       updatedAt: p.updatedAt.toISOString()
     }))
