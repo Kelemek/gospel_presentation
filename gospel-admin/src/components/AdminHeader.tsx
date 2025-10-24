@@ -85,11 +85,11 @@ export default function AdminHeader({
   const currentProfile = getCurrentProfile()
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-      <div className="flex justify-between items-start">
+    <div className="bg-white rounded-xl shadow-md border border-slate-100 p-4 sm:p-6 mb-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
         <div className="flex-1">
-          <div className="flex items-center gap-4 mb-2">
-            <h1 className="text-2xl font-bold text-slate-800">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-2">
+            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-br from-slate-700 to-slate-800 bg-clip-text text-transparent">
               {title}
             </h1>
             
@@ -98,7 +98,7 @@ export default function AdminHeader({
               <div className="relative">
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg text-sm font-medium transition-colors"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-800 border border-slate-200 hover:border-slate-300 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md"
                   disabled={isLoading}
                 >
                   <span className="text-xs">👤</span>
@@ -121,31 +121,31 @@ export default function AdminHeader({
                     />
                     
                     {/* Dropdown */}
-                    <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                    <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-lg z-20">
                       <div className="p-2">
-                        <div className="text-xs font-medium text-gray-500 px-2 py-1 mb-1">
+                        <div className="text-xs font-medium text-slate-500 px-2 py-1 mb-1">
                           Switch Profile
                         </div>
                         {profiles.map((profile) => (
                           <button
                             key={profile.slug}
                             onClick={() => handleProfileSwitch(profile.slug)}
-                            className={`w-full text-left px-2 py-2 rounded text-sm transition-colors ${
+                            className={`w-full text-left px-2 py-2 rounded-lg text-sm transition-all duration-200 ${
                               profile.slug === currentProfileSlug
-                                ? 'bg-blue-50 text-blue-700 font-medium'
-                                : 'hover:bg-gray-50 text-gray-700'
+                                ? 'bg-slate-100 text-slate-800 font-medium shadow-sm'
+                                : 'hover:bg-slate-50 text-slate-700'
                             }`}
                           >
                             <div className="flex items-center justify-between">
                               <span>{profile.title}</span>
                               <div className="flex items-center gap-1">
                                 {profile.isDefault && (
-                                  <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                                  <span className="text-xs bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
                                     Default
                                   </span>
                                 )}
                                 {profile.slug === currentProfileSlug && (
-                                  <span className="text-blue-600">✓</span>
+                                  <span className="text-slate-600">✓</span>
                                 )}
                               </div>
                             </div>
@@ -173,31 +173,31 @@ export default function AdminHeader({
             )}
           </div>
           
-          <p className="text-slate-600">
+          <p className="text-slate-600 text-sm sm:text-base">
             {description}
           </p>
           
           {/* Profile Context Info */}
           {currentProfile && (
-            <div className="mt-3 flex items-center gap-4 text-sm">
-              <span className="text-gray-500">Editing:</span>
+            <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm">
+              <span className="text-slate-500">Editing:</span>
               <Link
                 href={`/${currentProfile.slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 underline"
+                className="text-slate-600 hover:text-slate-800 underline break-all"
               >
                 /{currentProfile.slug} ↗
               </Link>
               <Link
                 href={`/admin/profiles/${currentProfile.slug}`}
-                className="text-gray-600 hover:text-gray-800"
+                className="text-slate-600 hover:text-slate-800 hover:underline"
               >
                 Profile Settings
               </Link>
               <Link
                 href={`/admin/profiles/${currentProfile.slug}/content`}
-                className="text-gray-600 hover:text-gray-800"
+                className="text-slate-600 hover:text-slate-800 hover:underline"
               >
                 Edit Content
               </Link>
@@ -207,7 +207,7 @@ export default function AdminHeader({
 
         {/* Actions */}
         {actions && (
-          <div className="flex items-center gap-3 ml-4">
+          <div className="flex flex-row items-center gap-2 sm:gap-3 w-full sm:w-auto sm:ml-4">
             {actions}
           </div>
         )}
