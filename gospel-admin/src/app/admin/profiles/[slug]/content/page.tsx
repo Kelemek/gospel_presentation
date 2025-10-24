@@ -64,7 +64,7 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
     'zeph': 'Zephaniah', 'hag': 'Haggai', 'zech': 'Zechariah', 'mal': 'Malachi', 'matt': 'Matthew',
     'rom': 'Romans', '1cor': '1 Corinthians', '2cor': '2 Corinthians', 'gal': 'Galatians',
     'eph': 'Ephesians', 'phil': 'Philippians', 'col': 'Colossians', '1thess': '1 Thessalonians',
-    '2thess': '2 Thessalonians', '1tim': '1 Timothy', '2tim': '2 Timothy', 'titus': 'Titus',
+    '2thess': '2 Thessalonians', '1tim': '1 Timothy', '2tim': '2 Timothy',
     'heb': 'Hebrews', 'jas': 'James', '1pet': '1 Peter', '2pet': '2 Peter', 'rev': 'Revelation',
     
     // Common abbreviations with spaces (like "1 Thess.")
