@@ -207,8 +207,52 @@ export default function ProfileContent({ sections, profileInfo }: ProfileContent
 
   return (
     <>
-      {/* Hamburger Menu Button */}
-      <div className="sticky top-0 z-40 bg-white shadow-md print-hide">
+      {/* Desktop Layout - Two columns for large screens */}
+      <div className="hidden lg:flex min-h-screen">
+        {/* Persistent Sidebar for Table of Contents */}
+        <aside className="w-80 bg-white shadow-lg border-r border-gray-200 print-hide">
+          <div className="sticky top-0 h-screen overflow-y-auto">
+            <div className="p-6">
+              <h3 className="text-xl font-semibold text-slate-700 mb-6 border-b border-gray-200 pb-3">
+                Table of Contents
+              </h3>
+              <TableOfContents sections={sections} />
+              
+              {/* Profile Info in Sidebar */}
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <div className="text-sm font-medium text-slate-700 mb-2">{profileInfo?.title || 'Gospel Profile'}</div>
+                {profileInfo?.description && (
+                  <div className="text-xs text-slate-500 mb-2">{profileInfo.description}</div>
+                )}
+                {profileInfo?.favoriteScriptures && profileInfo.favoriteScriptures.length > 0 && (
+                  <div className="text-xs text-blue-600">
+                    📖 {profileInfo.favoriteScriptures.length} favorite{profileInfo.favoriteScriptures.length !== 1 ? 's' : ''}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main Content Area */}
+        <div className="flex-1 bg-gray-50">
+          <main className="container mx-auto px-5 py-10">
+            <div className="space-y-12">
+              {sections.map((section) => (
+                <div key={section.section} className="print-section">
+                  <GospelSection 
+                    section={section}
+                    onScriptureClick={handleScriptureClick}
+                  />
+                </div>
+              ))}
+            </div>
+          </main>
+        </div>
+      </div>
+
+      {/* Mobile/Tablet Layout - Hamburger Menu Button */}
+      <div className="lg:hidden sticky top-0 z-40 bg-white shadow-md print-hide">
         <div className="container mx-auto px-5 py-3">
           <div className="flex justify-between items-center">
             <button
@@ -239,14 +283,14 @@ export default function ProfileContent({ sections, profileInfo }: ProfileContent
         </div>
       </div>
 
-      {/* Collapsible Menu Overlay */}
+      {/* Mobile Collapsible Menu Overlay */}
       {isMenuOpen && (
         <>
           {/* Invisible click area to close menu */}
-          <div className="fixed inset-0 z-40 print-hide" onClick={closeMenu}></div>
+          <div className="lg:hidden fixed inset-0 z-40 print-hide" onClick={closeMenu}></div>
           
           {/* Menu Panel */}
-          <div className="fixed top-0 left-0 z-50 bg-white w-64 h-full shadow-2xl overflow-y-auto border-r border-gray-200 transform transition-transform duration-300 ease-in-out print-hide">
+          <div className="lg:hidden fixed top-0 left-0 z-50 bg-white w-64 h-full shadow-2xl overflow-y-auto border-r border-gray-200 transform transition-transform duration-300 ease-in-out print-hide">
             <div className="p-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-slate-700">
@@ -267,24 +311,27 @@ export default function ProfileContent({ sections, profileInfo }: ProfileContent
         </>
       )}
 
+      {/* Mobile Content - Only visible on smaller screens */}
+      <div className="lg:hidden">
+        <main className="container mx-auto px-5 py-10">
+          <div className="space-y-12">
+            {sections.map((section) => (
+              <div key={section.section} className="print-section">
+                <GospelSection 
+                  section={section}
+                  onScriptureClick={handleScriptureClick}
+                />
+              </div>
+            ))}
+          </div>
+        </main>
+      </div>
+
       {/* Print-only header */}
       <div className="print-header" style={{ display: 'none' }}>
         <h1 className="print-title">Presenting the Gospel in its Context</h1>
         <p className="print-subtitle">Faithfully Sowing the Seed According to the Scriptures - By Dr. Stuart Scott</p>
       </div>
-
-      <main className="container mx-auto px-5 py-10">
-        <div className="space-y-12">
-          {sections.map((section) => (
-            <div key={section.section} className="print-section">
-              <GospelSection 
-                section={section}
-                onScriptureClick={handleScriptureClick}
-              />
-            </div>
-          ))}
-        </div>
-      </main>
 
       <footer className="bg-slate-700 text-white text-center py-8 mt-16 print-hide">
         <div className="container mx-auto px-5">
