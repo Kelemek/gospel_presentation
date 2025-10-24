@@ -187,7 +187,7 @@ export default function AdminHeader({
                 rel="noopener noreferrer"
                 className="text-slate-600 hover:text-slate-800 underline break-all"
               >
-                /{currentProfile.slug} ↗
+                /{currentProfile.slug}
               </Link>
               <Link
                 href={`/admin/profiles/${currentProfile.slug}`}

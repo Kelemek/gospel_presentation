@@ -38,6 +38,26 @@
                 {
                   "reference": "1 John 1:5",
                   "favorite": true
+                },
+                {
+                  "reference": "Deuteronomy 4:35",
+                  "favorite": false
+                },
+                {
+                  "reference": "Psalms 86:8, 10",
+                  "favorite": false
+                },
+                {
+                  "reference": "Isaiah 40:18, 25–26",
+                  "favorite": false
+                },
+                {
+                  "reference": "Isaiah 44:6–7a",
+                  "favorite": false
+                },
+                {
+                  "reference": "Isaiah 46:5, 9",
+                  "favorite": false
                 }
               ]
             },
@@ -1248,7 +1268,7 @@
       "isDefault": true,
       "visitCount": 8,
       "createdAt": "2025-10-23T16:25:01.874Z",
-      "updatedAt": "2025-10-23T16:51:49.782Z"
+      "updatedAt": "2025-10-24T03:06:34.006Z"
     },
     {
       "id": "4",
@@ -5003,5 +5023,5 @@
     }
   ],
   "nextId": 11,
-  "lastModified": "2025-10-24T01:25:47.813Z"
+  "lastModified": "2025-10-24T03:31:43.875Z"
 }

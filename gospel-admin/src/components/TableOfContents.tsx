@@ -6,8 +6,24 @@ interface TableOfContentsProps {
 }
 
 export default function TableOfContents({ sections }: TableOfContentsProps) {
+  const handlePrint = () => {
+    window.print()
+  }
+
   return (
     <div className="space-y-4 md:space-y-3">
+      {/* Print Button */}
+      <div className="mb-6 pb-4 border-b border-slate-200">
+        <button
+          onClick={handlePrint}
+          className="inline-flex items-center w-full px-4 py-3 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 border border-slate-300 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          Print Condensed Version
+        </button>
+      </div>
       {sections.map((section) => (
         <div key={section.section} className="mb-4 md:mb-3">
           <a 
