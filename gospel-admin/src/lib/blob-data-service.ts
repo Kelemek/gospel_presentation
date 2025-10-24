@@ -108,43 +108,20 @@ export async function loadProfiles(): Promise<ProfileStorage> {
           updatedAt: new Date(profile.updatedAt)
         }))
         
-        console.log('[blob-data-service] Loaded', storage.profiles.length, 'profiles from blob storage')
+        console.log('[blob-data-service] ✅ Successfully loaded', storage.profiles.length, 'profiles from blob storage - returning immediately')
         return storage
+      } else {
+        console.log('[blob-data-service] No existing data in blob storage')
       }
     } catch (error) {
-      console.log('[blob-data-service] No profiles in blob storage, checking file system')
+      console.log('[blob-data-service] Error accessing blob storage:', error instanceof Error ? error.message : String(error))
     }
   } else {
-    console.log('[blob-data-service] No Netlify credentials - falling back to file system')
+    console.log('[blob-data-service] No Netlify credentials available')
   }
   
-  // Try to load from file system and migrate to blob storage
-  try {
-    const fs = await import('fs/promises')
-    const path = await import('path')
-    
-    const profilesPath = process.env.NODE_ENV === 'production'
-      ? path.join(process.cwd(), 'data', 'profiles.json')
-      : path.join(process.cwd(), '..', 'data', 'profiles.json')
-    
-    const fileContent = await fs.readFile(profilesPath, 'utf-8')
-    const storage = JSON.parse(fileContent) as ProfileStorage
-    
-    // Convert date strings back to Date objects
-    storage.profiles = storage.profiles.map(profile => ({
-      ...profile,
-      createdAt: new Date(profile.createdAt),
-      updatedAt: new Date(profile.updatedAt)
-    }))
-    
-    // Migrate to blob storage
-    await saveProfiles(storage)
-    console.log('[blob-data-service] Migrated profiles from file to blob storage')
-    
-    return storage
-  } catch (error) {
-    console.log('[blob-data-service] No existing profiles, creating default')
-  }
+  // Create default profile if no data exists anywhere
+  console.log('[blob-data-service] 🆕 No existing profiles found, creating default profile...')
   
   // Create default profile
   const gospelData = await loadGospelData()
@@ -171,51 +148,28 @@ export async function loadProfiles(): Promise<ProfileStorage> {
 }
 
 /**
- * Saves profiles to blob storage (with file system fallback)
+ * Saves profiles to blob storage exclusively
  */
 export async function saveProfiles(storage: ProfileStorage): Promise<void> {
   const hasCredentials = !!(process.env.NETLIFY_SITE_ID && process.env.NETLIFY_TOKEN)
-  let blobSaved = false
   
-  // Try to save to blob storage first when credentials are available
-  if (hasCredentials) {
-    try {
-      const store = getProfilesStore()
-      
-      const dataToSave = {
-        ...storage,
-        lastModified: new Date().toISOString()
-      }
-      
-      await store.setJSON('profiles.json', dataToSave)
-      console.log('[blob-data-service] Saved', storage.profiles.length, 'profiles to blob storage')
-      blobSaved = true
-    } catch (error) {
-      console.log('[blob-data-service] Failed to save to blob storage, will save to file system')
-    }
+  if (!hasCredentials) {
+    throw new Error('Netlify credentials required for saving profiles')
   }
   
-  // If blob storage failed or we're in development, save to file system
-  if (!blobSaved) {
-    try {
-      const fs = await import('fs/promises')
-      const path = await import('path')
-      
-      const profilesPath = process.env.NODE_ENV === 'production'
-        ? path.join(process.cwd(), 'data', 'profiles.json')
-        : path.join(process.cwd(), '..', 'data', 'profiles.json')
-      
-      const dataToSave = {
-        ...storage,
-        lastModified: new Date().toISOString()
-      }
-      
-      await fs.writeFile(profilesPath, JSON.stringify(dataToSave, null, 2), 'utf-8')
-      console.log('[blob-data-service] Saved', storage.profiles.length, 'profiles to file system')
-    } catch (fileError) {
-      console.error('[blob-data-service] Error saving to file system:', fileError)
-      throw new Error('Failed to save profiles')
+  try {
+    const store = getProfilesStore()
+    
+    const dataToSave = {
+      ...storage,
+      lastModified: new Date().toISOString()
     }
+    
+    await store.setJSON('profiles.json', dataToSave)
+    console.log('[blob-data-service] ✅ Saved', storage.profiles.length, 'profiles to blob storage')
+  } catch (error) {
+    console.error('[blob-data-service] ❌ Failed to save to blob storage:', error)
+    throw new Error('Failed to save profiles to blob storage')
   }
 }
 
