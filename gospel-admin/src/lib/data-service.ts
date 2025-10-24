@@ -1,5 +1,5 @@
 // Universal data service - automatically chooses between blob and file storage
-// Uses blob storage in production (Netlify) and file storage in development
+// Uses blob storage when NETLIFY_SITE_ID and NETLIFY_TOKEN are available, otherwise file storage
 
 import type { GospelProfile, CreateProfileRequest, GospelPresentationData } from './types'
 
@@ -8,17 +8,17 @@ const isProduction = process.env.NODE_ENV === 'production'
 const isNetlifyEnvironment = process.env.NETLIFY === 'true'
 const hasNetlifyCredentials = !!(process.env.NETLIFY_SITE_ID && process.env.NETLIFY_TOKEN)
 
-// Use blob storage only if in production on Netlify with proper credentials
-const useBlobs = isProduction && isNetlifyEnvironment && hasNetlifyCredentials
+// Use blob storage whenever credentials are available (development or production)
+const useBlobs = hasNetlifyCredentials
 
 console.log(`[data-service] Environment: ${process.env.NODE_ENV}, Netlify: ${process.env.NETLIFY}, Credentials: ${hasNetlifyCredentials}, Using: ${useBlobs ? 'blob-storage' : 'file-storage'}`)
 
-// Import the appropriate service based on environment
+// Import the appropriate service based on credentials
 let dataService: any
 
 if (useBlobs) {
   try {
-    // Production: Use blob storage
+    // Use blob storage when credentials are available
     dataService = require('./blob-data-service')
     console.log('[data-service] Successfully loaded blob-data-service')
   } catch (error) {
@@ -26,9 +26,9 @@ if (useBlobs) {
     dataService = require('./file-data-service')
   }
 } else {
-  // Development: Use file storage
+  // Fallback: Use file storage when no credentials
   dataService = require('./file-data-service')
-  console.log('[data-service] Successfully loaded file-data-service')
+  console.log('[data-service] Successfully loaded file-data-service (no Netlify credentials)')
 }
 
 // Re-export all functions from the chosen service
