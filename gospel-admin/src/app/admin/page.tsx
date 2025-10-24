@@ -13,6 +13,7 @@ export default function AdminPage() {
   const [error, setError] = useState('')
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [siteUrl, setSiteUrl] = useState('yoursite.com')
   const [createForm, setCreateForm] = useState({
     title: '',
     slug: '',
@@ -27,6 +28,13 @@ export default function AdminPage() {
       fetchProfiles()
     } else {
       setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    // Set the actual site URL from the browser
+    if (typeof window !== 'undefined') {
+      setSiteUrl(`${window.location.protocol}//${window.location.host}`)
     }
   }, [])
 
@@ -50,7 +58,7 @@ export default function AdminPage() {
 
   const handleLogin = () => {
     setIsAuth(true)
-    // Don't auto-fetch profiles - user can manually load them with button
+    fetchProfiles()
   }
 
   const handleLogout = () => {
@@ -212,7 +220,7 @@ export default function AdminPage() {
               </div>
               <button
                 onClick={() => setShowCreateForm(true)}
-                className="px-3 sm:px-4 py-2 bg-gradient-to-br from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 shadow-sm hover:shadow-md"
+                className="px-3 sm:px-4 py-2 border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
               >
                 <span className="text-sm sm:text-lg">+</span>
                 <span className="hidden sm:inline">New Profile</span>
@@ -247,7 +255,7 @@ export default function AdminPage() {
                   </label>
                   <div className="flex">
                     <span className="inline-flex items-center px-2 sm:px-3 rounded-l-lg border border-r-0 border-slate-200 bg-slate-50 text-slate-500 text-xs sm:text-sm">
-                      yoursite.com/
+                      {siteUrl}/
                     </span>
                     <input
                       type="text"
@@ -325,18 +333,16 @@ export default function AdminPage() {
             </div>
           )}
 
-          {profiles.length === 0 ? (
+          {isLoading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600 mx-auto mb-4"></div>
+              <p className="text-slate-600">Loading profiles...</p>
+            </div>
+          ) : profiles.length === 0 ? (
             <div className="text-center py-8">
               <div className="text-slate-400 text-3xl sm:text-4xl mb-4">📋</div>
-              <p className="text-slate-600 mb-4 text-sm sm:text-base">No profiles loaded</p>
-              <p className="text-xs sm:text-sm text-slate-500 mb-4">Click the button below to load your profiles.</p>
-              <button
-                onClick={fetchProfiles}
-                disabled={isLoading}
-                className="bg-gradient-to-br from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white px-4 py-2 rounded-lg transition-all duration-200 font-medium disabled:opacity-50 shadow-sm hover:shadow-md text-sm sm:text-base"
-              >
-                {isLoading ? 'Loading Profiles...' : 'Load Profiles'}
-              </button>
+              <p className="text-slate-600 mb-4 text-sm sm:text-base">No profiles found</p>
+              <p className="text-xs sm:text-sm text-slate-500">Create your first profile using the button above to get started.</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-200">
@@ -356,7 +362,7 @@ export default function AdminPage() {
                         </div>
                         
                         <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                          <span className="font-medium">URL:</span> <span className="break-all">yoursite.com/{profile.slug}</span>
+                          <span className="font-medium">URL:</span> <span className="break-all">{siteUrl}/{profile.slug}</span>
                         </p>
                         
                         {profile.description && (
@@ -378,24 +384,21 @@ export default function AdminPage() {
                           target="_blank"
                           className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 py-1 rounded border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                         >
-                          <span className="sm:hidden">👁️</span>
-                          <span className="hidden sm:inline">👁️ View</span>
+                          View
                         </Link>
                         
                         <Link
                           href={`/admin/profiles/${profile.slug}`}
                           className="bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-800 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-slate-200"
                         >
-                          <span className="sm:hidden">⚙️</span>
-                          <span className="hidden sm:inline">⚙️ Settings</span>
+                          Settings
                         </Link>
                         
                         <Link
                           href={`/admin/profiles/${profile.slug}/content`}
                           className="bg-gradient-to-br from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 text-emerald-700 hover:text-emerald-800 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-emerald-200"
                         >
-                          <span className="sm:hidden">📝</span>
-                          <span className="hidden sm:inline">📝 Content</span>
+                          Content
                         </Link>
                         
                         {!profile.isDefault && (
@@ -403,8 +406,7 @@ export default function AdminPage() {
                             onClick={() => handleDeleteProfile(profile.slug, profile.title)}
                             className="text-red-600 hover:text-red-800 text-xs sm:text-sm font-medium bg-red-50 hover:bg-red-100 px-2 py-1 rounded border border-red-200 hover:border-red-300 transition-all duration-200 shadow-sm hover:shadow-md"
                           >
-                            <span className="sm:hidden">🗑️</span>
-                            <span className="hidden sm:inline">🗑️ Delete</span>
+                            Delete
                           </button>
                         )}
                       </div>

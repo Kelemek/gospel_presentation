@@ -145,7 +145,7 @@ export default function ProfileEditPage({ params }: ProfileEditPageProps) {
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <AdminHeader
-          title={profile ? `⚙️ ${profile.title}` : "⚙️ Profile Settings"}
+          title={profile ? `${profile.title}` : "Profile Settings"}
           description={profile?.description || "Configure profile settings and information"}
           currentProfileSlug={slug}
           showProfileSwitcher={true}
@@ -224,13 +224,13 @@ export default function ProfileEditPage({ params }: ProfileEditPageProps) {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
+                className="border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50"
               >
                 {isSaving ? 'Saving...' : 'Save Changes'}
               </button>
               <Link
                 href="/admin"
-                className="bg-slate-300 text-slate-700 px-6 py-2 rounded-lg hover:bg-slate-400 transition-colors text-center"
+                className="border border-slate-300 text-slate-600 bg-slate-50 hover:bg-slate-100 px-6 py-2 rounded-lg transition-colors text-center"
               >
                 Cancel
               </Link>
@@ -268,7 +268,7 @@ export default function ProfileEditPage({ params }: ProfileEditPageProps) {
               
               <Link
                 href={`/admin/profiles/${slug}/content`}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                className="border border-green-300 text-green-700 bg-green-50 hover:bg-green-100 px-4 py-2 rounded-lg transition-colors text-sm font-medium"
               >
                 Edit Content
               </Link>

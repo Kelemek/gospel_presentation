@@ -767,9 +767,14 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
                           setAddingScriptureToSection(addingScriptureToSection === sectionKey ? null : sectionKey)
                           setNewScriptureRef('')
                         }}
-                        className="text-green-600 hover:text-green-800 text-xs font-medium border border-green-200 hover:border-green-300 px-2 py-1 rounded bg-green-50 hover:bg-green-100 transition-colors"
-                      >
-                        {addingScriptureToSection === `${sectionIndex}-${subsectionIndex}` ? 'Cancel' : '+ Add'}
+                          className="text-green-600 hover:text-green-800 text-xs font-medium border border-green-200 hover:border-green-300 px-2 py-1 rounded bg-green-50 hover:bg-green-100 transition-colors"
+                        >
+                          {addingScriptureToSection === `${sectionIndex}-${subsectionIndex}` ? 'Cancel' : (
+                            <>
+                              <span className="hidden sm:inline">+ Add Scripture</span>
+                              <span className="sm:hidden">+ Add</span>
+                            </>
+                          )}
                       </button>
                     </div>
 
@@ -893,7 +898,12 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
                             }}
                             className="text-green-600 hover:text-green-800 text-xs font-medium border border-green-200 hover:border-green-300 px-1.5 py-0.5 rounded bg-green-50 hover:bg-green-100 transition-colors"
                           >
-                            {addingScriptureToNested === `${sectionIndex}-${subsectionIndex}-${nestedIndex}` ? 'Cancel' : '+ Add'}
+                            {addingScriptureToNested === `${sectionIndex}-${subsectionIndex}-${nestedIndex}` ? 'Cancel' : (
+                              <>
+                                <span className="hidden sm:inline">+ Add Scripture</span>
+                                <span className="sm:hidden">+ Add</span>
+                              </>
+                            )}
                           </button>
                         </div>
 
@@ -961,7 +971,7 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
                   <div className="ml-6 mt-4 mb-2 mr-4">
                     <button
                       onClick={() => createNewNestedSubsection(sectionIndex, subsectionIndex)}
-                      className="text-purple-600 hover:text-purple-800 text-xs font-medium border border-purple-200 hover:border-purple-300 px-2 py-1 rounded bg-purple-50 hover:bg-purple-100 transition-colors"
+                      className="text-green-600 hover:text-green-800 text-xs font-medium border border-green-200 hover:border-green-300 px-2 py-1 rounded bg-green-50 hover:bg-green-100 transition-colors"
                     >
                       + Add Sub-subsection
                     </button>
@@ -987,7 +997,7 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
           <div className="text-center mt-8 mb-4 px-4">
             <button
               onClick={createNewSection}
-              className="text-blue-600 hover:text-blue-800 text-sm font-medium border border-blue-200 hover:border-blue-300 px-3 py-1.5 rounded bg-blue-50 hover:bg-blue-100 transition-colors"
+              className="text-green-600 hover:text-green-800 text-sm font-medium border border-green-200 hover:border-green-300 px-3 py-1.5 rounded bg-green-50 hover:bg-green-100 transition-colors"
             >
               + Add Section
             </button>
