@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getProfiles, createProfile } from '@/lib/blob-data-service'
+import { getProfiles, createProfile } from '@/lib/file-data-service'
 import type { CreateProfileRequest, GospelProfile } from '@/lib/types'
 
 export async function GET() {

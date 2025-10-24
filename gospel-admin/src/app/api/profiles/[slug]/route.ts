@@ -8,7 +8,7 @@ import {
   getProfileBySlug,
   updateProfile,
   deleteProfile
-} from '@/lib/blob-data-service'
+} from '@/lib/file-data-service'
 
 interface RouteContext {
   params: Promise<{
