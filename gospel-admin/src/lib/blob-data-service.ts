@@ -90,10 +90,10 @@ export async function loadGospelData(): Promise<GospelPresentationData> {
  * Loads profiles from blob storage
  */
 export async function loadProfiles(): Promise<ProfileStorage> {
-  // In development, skip blob storage and go directly to file system
-  const isDevelopment = process.env.NODE_ENV !== 'production' || !process.env.NETLIFY_SITE_ID
+  // Always use blob storage when credentials are available, regardless of environment
+  const hasCredentials = !!(process.env.NETLIFY_SITE_ID && process.env.NETLIFY_TOKEN)
   
-  if (!isDevelopment) {
+  if (hasCredentials) {
     try {
       const store = getProfilesStore()
       const data = await store.get('profiles.json', { type: 'json' })
@@ -115,7 +115,7 @@ export async function loadProfiles(): Promise<ProfileStorage> {
       console.log('[blob-data-service] No profiles in blob storage, checking file system')
     }
   } else {
-    console.log('[blob-data-service] Development mode - using file system directly')
+    console.log('[blob-data-service] No Netlify credentials - falling back to file system')
   }
   
   // Try to load from file system and migrate to blob storage
@@ -174,11 +174,11 @@ export async function loadProfiles(): Promise<ProfileStorage> {
  * Saves profiles to blob storage (with file system fallback)
  */
 export async function saveProfiles(storage: ProfileStorage): Promise<void> {
-  const isDevelopment = process.env.NODE_ENV !== 'production' || !process.env.NETLIFY_SITE_ID
+  const hasCredentials = !!(process.env.NETLIFY_SITE_ID && process.env.NETLIFY_TOKEN)
   let blobSaved = false
   
-  // In production, try to save to blob storage first
-  if (!isDevelopment) {
+  // Try to save to blob storage first when credentials are available
+  if (hasCredentials) {
     try {
       const store = getProfilesStore()
       
@@ -191,7 +191,7 @@ export async function saveProfiles(storage: ProfileStorage): Promise<void> {
       console.log('[blob-data-service] Saved', storage.profiles.length, 'profiles to blob storage')
       blobSaved = true
     } catch (error) {
-      console.log('[blob-data-service] Blob storage not available, will save to file system')
+      console.log('[blob-data-service] Failed to save to blob storage, will save to file system')
     }
   }
   
