@@ -377,9 +377,11 @@ export default function AdminPage() {
                           <span>{profile.visitCount} visits</span>
                           <span className="hidden sm:inline">Created {new Date(profile.createdAt).toLocaleDateString()}</span>
                           <span>Updated {new Date(profile.updatedAt).toLocaleDateString()}</span>
-                          {profile.lastVisited && (
+                          {profile.lastVisited ? (
                             <span>Last visited {new Date(profile.lastVisited).toLocaleDateString()}</span>
-                          )}
+                          ) : profile.visitCount === 0 ? (
+                            <span className="text-orange-500">Never visited</span>
+                          ) : null}
                         </div>
                       </div>
 
