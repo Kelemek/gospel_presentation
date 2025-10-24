@@ -1,0 +1,220 @@
+name: Backup Netlify Blobs
+
+on:
+  # Run automatically every day at 2 AM UTC
+  schedule:
+    - cron: '0 2 * * *'
+  
+  # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      backup_name:
+        description: 'Custom backup name (optional)'
+        required: false
+        type: string
+  
+  # Run on pushes to main branch (optional - remove if too frequent)
+  push:
+    branches: [ main ]
+    paths:
+      - 'gospel-admin/src/**'
+      - 'data/**'
+
+jobs:
+  backup-blobs:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: gospel-admin/package-lock.json
+
+    - name: Install dependencies
+      working-directory: ./gospel-admin
+      run: npm ci
+
+    - name: Create backup directory
+      run: mkdir -p backup
+
+    - name: Generate backup timestamp
+      id: timestamp
+      run: |
+        TIMESTAMP=$(date -u +"%Y%m%d_%H%M%S")
+        echo "timestamp=$TIMESTAMP" >> $GITHUB_OUTPUT
+        echo "date=$(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_OUTPUT
+
+    - name: Backup Netlify Blobs
+      working-directory: ./gospel-admin
+      env:
+        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        NETLIFY_TOKEN: ${{ secrets.NETLIFY_TOKEN }}
+      run: |
+        # Create backup script
+        cat > backup-blobs.js << 'EOF'
+        const { getStore } = require('@netlify/blobs');
+        const fs = require('fs').promises;
+        const path = require('path');
+
+        async function backupBlobs() {
+          try {
+            console.log('🔄 Starting Netlify Blobs backup...');
+            console.log('Site ID:', process.env.NETLIFY_SITE_ID ? 'Set' : 'Missing');
+            console.log('Token:', process.env.NETLIFY_TOKEN ? 'Set' : 'Missing');
+
+            const store = getStore('gospel-data');
+            
+            // Create backup directory
+            const backupDir = '../backup';
+            await fs.mkdir(backupDir, { recursive: true });
+            
+            // Get list of all blobs
+            console.log('📋 Fetching blob list...');
+            const { blobs } = await store.list();
+            console.log(`Found ${blobs.length} blobs to backup`);
+
+            const backupData = {
+              timestamp: new Date().toISOString(),
+              site_id: process.env.NETLIFY_SITE_ID,
+              blob_count: blobs.length,
+              blobs: {}
+            };
+
+            // Backup each blob
+            for (const blob of blobs) {
+              try {
+                console.log(`📦 Backing up: ${blob.key}`);
+                const data = await store.get(blob.key, { type: 'json' });
+                
+                backupData.blobs[blob.key] = {
+                  key: blob.key,
+                  etag: blob.etag,
+                  size: blob.size,
+                  data: data
+                };
+
+                // Also save individual files for easier inspection
+                const filename = `${blob.key.replace(/[\/\\:*?"<>|]/g, '_')}.json`;
+                await fs.writeFile(
+                  path.join(backupDir, filename), 
+                  JSON.stringify(data, null, 2)
+                );
+
+              } catch (error) {
+                console.error(`❌ Error backing up ${blob.key}:`, error.message);
+                backupData.blobs[blob.key] = {
+                  key: blob.key,
+                  error: error.message
+                };
+              }
+            }
+
+            // Save complete backup manifest
+            await fs.writeFile(
+              path.join(backupDir, 'backup-manifest.json'),
+              JSON.stringify(backupData, null, 2)
+            );
+
+            // Save metadata
+            const metadata = {
+              backup_date: new Date().toISOString(),
+              github_run_id: process.env.GITHUB_RUN_ID,
+              github_sha: process.env.GITHUB_SHA,
+              total_blobs: blobs.length,
+              successful_backups: Object.values(backupData.blobs).filter(b => !b.error).length,
+              failed_backups: Object.values(backupData.blobs).filter(b => b.error).length
+            };
+
+            await fs.writeFile(
+              path.join(backupDir, 'backup-metadata.json'),
+              JSON.stringify(metadata, null, 2)
+            );
+
+            console.log('✅ Backup completed successfully!');
+            console.log(`📊 Stats: ${metadata.successful_backups} successful, ${metadata.failed_backups} failed`);
+
+          } catch (error) {
+            console.error('💥 Backup failed:', error);
+            process.exit(1);
+          }
+        }
+
+        backupBlobs();
+        EOF
+
+        # Run the backup script
+        node backup-blobs.js
+
+    - name: Create backup archive
+      run: |
+        cd backup
+        BACKUP_NAME="${{ inputs.backup_name || format('netlify-blobs-{0}', steps.timestamp.outputs.timestamp) }}"
+        tar -czf "../${BACKUP_NAME}.tar.gz" .
+        cd ..
+        echo "BACKUP_FILENAME=${BACKUP_NAME}.tar.gz" >> $GITHUB_ENV
+
+    - name: Upload backup as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.backup_name || format('netlify-blobs-{0}', steps.timestamp.outputs.timestamp) }}
+        path: backup/
+        retention-days: 90  # Keep backups for 90 days
+        compression-level: 9
+
+    - name: Upload compressed backup
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.backup_name || format('netlify-blobs-{0}-compressed', steps.timestamp.outputs.timestamp) }}
+        path: ${{ env.BACKUP_FILENAME }}
+        retention-days: 90
+
+    - name: Create backup summary
+      run: |
+        echo "# 📦 Netlify Blobs Backup Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Backup Date:** ${{ steps.timestamp.outputs.date }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Backup Name:** ${{ inputs.backup_name || format('netlify-blobs-{0}', steps.timestamp.outputs.timestamp) }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f backup/backup-metadata.json ]; then
+          TOTAL=$(jq -r '.total_blobs' backup/backup-metadata.json)
+          SUCCESS=$(jq -r '.successful_backups' backup/backup-metadata.json)
+          FAILED=$(jq -r '.failed_backups' backup/backup-metadata.json)
+          
+          echo "**Statistics:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Total Blobs: $TOTAL" >> $GITHUB_STEP_SUMMARY
+          echo "- Successful: $SUCCESS ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- Failed: $FAILED ❌" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Files Created:**" >> $GITHUB_STEP_SUMMARY
+        echo "- Individual JSON files for each blob" >> $GITHUB_STEP_SUMMARY
+        echo "- backup-manifest.json (complete backup data)" >> $GITHUB_STEP_SUMMARY
+        echo "- backup-metadata.json (backup statistics)" >> $GITHUB_STEP_SUMMARY
+        echo "- Compressed tar.gz archive" >> $GITHUB_STEP_SUMMARY
+
+    # Optional: Commit backup metadata to repository
+    - name: Commit backup metadata (optional)
+      if: github.event_name != 'pull_request'
+      run: |
+        if [ -f backup/backup-metadata.json ]; then
+          mkdir -p .backup-logs
+          cp backup/backup-metadata.json ".backup-logs/backup-${{ steps.timestamp.outputs.timestamp }}.json"
+          
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          if git diff --quiet; then
+            echo "No changes to commit"
+          else
+            git add .backup-logs/
+            git commit -m "📦 Backup metadata: ${{ steps.timestamp.outputs.date }}" || echo "Nothing to commit"
+            git push || echo "Nothing to push"
+          fi
+        fi

@@ -1,0 +1,157 @@
+name: Restore Netlify Blobs from Backup
+
+on:
+  workflow_dispatch:
+    inputs:
+      backup_run_id:
+        description: 'GitHub Run ID of the backup to restore from'
+        required: true
+        type: string
+      backup_name:
+        description: 'Name of the backup artifact'
+        required: true
+        type: string
+      confirm_restore:
+        description: 'Type "RESTORE" to confirm (this will overwrite current data!)'
+        required: true
+        type: string
+
+jobs:
+  restore-blobs:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Validate confirmation
+      run: |
+        if [ "${{ inputs.confirm_restore }}" != "RESTORE" ]; then
+          echo "❌ Confirmation failed. You must type 'RESTORE' to proceed."
+          echo "This is a safety measure to prevent accidental data loss."
+          exit 1
+        fi
+        echo "✅ Confirmation validated. Proceeding with restore..."
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: gospel-admin/package-lock.json
+
+    - name: Install dependencies
+      working-directory: ./gospel-admin
+      run: npm ci
+
+    - name: Download backup artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.backup_name }}
+        path: ./restore-data
+        run-id: ${{ inputs.backup_run_id }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Restore Netlify Blobs
+      working-directory: ./gospel-admin
+      env:
+        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        NETLIFY_TOKEN: ${{ secrets.NETLIFY_TOKEN }}
+      run: |
+        cat > restore-blobs.js << 'EOF'
+        const { getStore } = require('@netlify/blobs');
+        const fs = require('fs').promises;
+        const path = require('path');
+
+        async function restoreBlobs() {
+          try {
+            console.log('🔄 Starting Netlify Blobs restore...');
+            
+            const store = getStore('gospel-data');
+            const restoreDir = '../restore-data';
+            
+            // Read backup manifest
+            const manifestPath = path.join(restoreDir, 'backup-manifest.json');
+            const manifestExists = await fs.access(manifestPath).then(() => true).catch(() => false);
+            
+            if (!manifestExists) {
+              throw new Error('backup-manifest.json not found in backup data');
+            }
+
+            const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
+            console.log(`📋 Found backup from ${manifest.timestamp}`);
+            console.log(`📦 ${manifest.blob_count} blobs to restore`);
+
+            let restored = 0;
+            let failed = 0;
+
+            // Restore each blob
+            for (const [key, blobData] of Object.entries(manifest.blobs)) {
+              if (blobData.error) {
+                console.log(`⏭️  Skipping ${key} (was not backed up due to error)`);
+                continue;
+              }
+
+              try {
+                console.log(`📥 Restoring: ${key}`);
+                await store.set(key, JSON.stringify(blobData.data));
+                restored++;
+              } catch (error) {
+                console.error(`❌ Failed to restore ${key}:`, error.message);
+                failed++;
+              }
+            }
+
+            console.log('✅ Restore completed!');
+            console.log(`📊 Stats: ${restored} restored, ${failed} failed`);
+
+            // Create restore report
+            const report = {
+              restore_date: new Date().toISOString(),
+              backup_date: manifest.timestamp,
+              github_run_id: process.env.GITHUB_RUN_ID,
+              original_blob_count: manifest.blob_count,
+              restored_count: restored,
+              failed_count: failed
+            };
+
+            await fs.writeFile(
+              path.join(restoreDir, 'restore-report.json'),
+              JSON.stringify(report, null, 2)
+            );
+
+          } catch (error) {
+            console.error('💥 Restore failed:', error);
+            process.exit(1);
+          }
+        }
+
+        restoreBlobs();
+        EOF
+
+        node restore-blobs.js
+
+    - name: Create restore summary
+      run: |
+        echo "# 🔄 Netlify Blobs Restore Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Restore Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
+        echo "**Backup Source:** ${{ inputs.backup_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Source Run ID:** ${{ inputs.backup_run_id }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f restore-data/restore-report.json ]; then
+          ORIGINAL=$(jq -r '.original_blob_count' restore-data/restore-report.json)
+          RESTORED=$(jq -r '.restored_count' restore-data/restore-report.json)
+          FAILED=$(jq -r '.failed_count' restore-data/restore-report.json)
+          BACKUP_DATE=$(jq -r '.backup_date' restore-data/restore-report.json)
+          
+          echo "**Restore Statistics:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Original Backup Date: $BACKUP_DATE" >> $GITHUB_STEP_SUMMARY
+          echo "- Original Blob Count: $ORIGINAL" >> $GITHUB_STEP_SUMMARY
+          echo "- Successfully Restored: $RESTORED ✅" >> $GITHUB_STEP_SUMMARY
+          echo "- Failed Restores: $FAILED ❌" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "⚠️ **Important:** This restore operation has overwritten your current Netlify Blob data!" >> $GITHUB_STEP_SUMMARY
