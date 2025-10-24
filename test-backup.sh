@@ -63,19 +63,47 @@ async function testBackup() {
   try {
     console.log('🔄 Testing Netlify Blobs connection...');
     
-    // Explicitly pass siteID and token to getStore
-    const store = getStore({
-      name: 'gospel-data',
-      siteID: process.env.NETLIFY_SITE_ID,
-      token: process.env.NETLIFY_TOKEN
-    });
+    // Check both stores used by your application
+    const stores = [
+      { name: 'profiles', description: 'Profile metadata' },
+      { name: 'gospel-data', description: 'Gospel presentation data' }
+    ];
     
-    // Test connection by listing blobs
-    console.log('📋 Fetching blob list...');
-    const { blobs } = await store.list();
-    console.log(`✅ Connection successful! Found ${blobs.length} blobs`);
+    let allBlobs = [];
+    let totalCount = 0;
     
-    if (blobs.length === 0) {
+    for (const storeConfig of stores) {
+      console.log(`📋 Checking ${storeConfig.description} store: "${storeConfig.name}"`);
+      
+      const store = getStore({
+        name: storeConfig.name,
+        siteID: process.env.NETLIFY_SITE_ID,
+        token: process.env.NETLIFY_TOKEN
+      });
+      
+      const { blobs } = await store.list();
+      console.log(`   Found ${blobs.length} blobs`);
+      
+      if (blobs.length > 0) {
+        // Add store info to each blob
+        const storeBlobs = blobs.map(blob => ({
+          ...blob,
+          store: storeConfig.name,
+          storeDescription: storeConfig.description
+        }));
+        allBlobs.push(...storeBlobs);
+        totalCount += blobs.length;
+        
+        console.log('   📄 Blob keys:');
+        blobs.forEach(blob => {
+          console.log(`      - ${blob.key}`);
+        });
+      }
+    }
+    
+    console.log(`✅ Connection successful! Found ${totalCount} total blobs across all stores`);
+    
+    if (totalCount === 0) {
       console.log('ℹ️  No blobs found - this is normal if you haven\'t created profiles yet');
       return;
     }
@@ -85,34 +113,51 @@ async function testBackup() {
     const backupData = {
       test_timestamp: new Date().toISOString(),
       site_id: process.env.NETLIFY_SITE_ID,
-      blob_count: blobs.length,
+      blob_count: totalCount,
+      stores: {},
       blobs: {}
     };
 
     console.log('\n📦 Testing blob backup...');
     let successCount = 0;
     
-    // Backup first few blobs as test
-    const testBlobs = blobs.slice(0, Math.min(3, blobs.length));
+    // Backup first few blobs as test (limit to 5 total)
+    const testBlobs = allBlobs.slice(0, Math.min(5, allBlobs.length));
     
     for (const blob of testBlobs) {
       try {
-        console.log(`  📥 Testing: ${blob.key}`);
+        console.log(`  📥 Testing: ${blob.key} (from ${blob.store} store)`);
+        
+        // Get the appropriate store for this blob
+        const store = getStore({
+          name: blob.store,
+          siteID: process.env.NETLIFY_SITE_ID,
+          token: process.env.NETLIFY_TOKEN
+        });
+        
         const data = await store.get(blob.key, { type: 'json' });
         
         backupData.blobs[blob.key] = {
           key: blob.key,
+          store: blob.store,
+          storeDescription: blob.storeDescription,
           etag: blob.etag,
           size: blob.size,
           data: data
         };
 
-        // Save test file
-        const filename = `test_${blob.key.replace(/[\/\\:*?"<>|]/g, '_')}.json`;
+        // Save test file with store prefix
+        const filename = `test_${blob.store}_${blob.key.replace(/[\/\\:*?"<>|]/g, '_')}.json`;
         await fs.writeFile(
           join(backupDir, filename), 
           JSON.stringify(data, null, 2)
         );
+        
+        // Track per-store stats
+        if (!backupData.stores[blob.store]) {
+          backupData.stores[blob.store] = { count: 0, description: blob.storeDescription };
+        }
+        backupData.stores[blob.store].count++;
         
         successCount++;
       } catch (error) {
@@ -129,10 +174,15 @@ async function testBackup() {
     console.log('\n✅ Test backup completed!');
     console.log(`📊 Results: ${successCount}/${testBlobs.length} blobs backed up successfully`);
     
+    console.log('\n📂 Store breakdown:');
+    for (const [storeName, storeInfo] of Object.entries(backupData.stores)) {
+      console.log(`   ${storeName}: ${storeInfo.count} blobs (${storeInfo.description})`);
+    }
+    
     if (successCount === testBlobs.length) {
-      console.log('🎉 All tests passed! Your backup system should work correctly.');
+      console.log('\n🎉 All tests passed! Your backup system should work correctly.');
     } else {
-      console.log('⚠️  Some issues detected - check the error messages above.');
+      console.log('\n⚠️  Some issues detected - check the error messages above.');
     }
     
     console.log(`\n📁 Test files created in: test-backup/`);

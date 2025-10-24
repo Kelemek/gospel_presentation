@@ -74,13 +74,6 @@ jobs:
         async function restoreBlobs() {
           try {
             console.log('🔄 Starting Netlify Blobs restore...');
-            
-            // Explicitly pass siteID and token to getStore
-            const store = getStore({
-              name: 'gospel-data',
-              siteID: process.env.NETLIFY_SITE_ID,
-              token: process.env.NETLIFY_TOKEN
-            });
             const restoreDir = '../restore-data';
             
             // Read backup manifest
@@ -98,25 +91,43 @@ jobs:
             let restored = 0;
             let failed = 0;
 
-            // Restore each blob
+            // Restore blobs to appropriate stores
+            console.log(`📦 Restoring ${Object.keys(manifest.blobs).length} blobs...`);
+            let restored = 0;
+            let failed = 0;
+            let storeStats = {};
+            
             for (const [key, blobData] of Object.entries(manifest.blobs)) {
-              if (blobData.error) {
-                console.log(`⏭️  Skipping ${key} (was not backed up due to error)`);
-                continue;
-              }
-
               try {
-                console.log(`📥 Restoring: ${key}`);
+                console.log(`📥 Restoring: ${key} (to ${blobData.store || 'gospel-data'} store)`);
+                
+                // Get the appropriate store for this blob
+                const storeName = blobData.store || 'gospel-data'; // fallback for old backups
+                const store = getStore({
+                  name: storeName,
+                  siteID: process.env.NETLIFY_SITE_ID,
+                  token: process.env.NETLIFY_TOKEN
+                });
+                
                 await store.set(key, JSON.stringify(blobData.data));
                 restored++;
+                
+                // Track per-store stats
+                if (!storeStats[storeName]) {
+                  storeStats[storeName] = 0;
+                }
+                storeStats[storeName]++;
+                
               } catch (error) {
                 console.error(`❌ Failed to restore ${key}:`, error.message);
                 failed++;
               }
-            }
-
-            console.log('✅ Restore completed!');
+            }            console.log('✅ Restore completed!');
             console.log(`📊 Stats: ${restored} restored, ${failed} failed`);
+            console.log('📂 Restored by store:');
+            for (const [store, count] of Object.entries(storeStats)) {
+              console.log(`   ${store}: ${count} blobs`);
+            }
 
             // Create restore report
             const report = {

@@ -74,44 +74,85 @@ jobs:
             console.log('Site ID:', process.env.NETLIFY_SITE_ID ? 'Set' : 'Missing');
             console.log('Token:', process.env.NETLIFY_TOKEN ? 'Set' : 'Missing');
 
-            // Explicitly pass siteID and token to getStore
-            const store = getStore({
-              name: 'gospel-data',
-              siteID: process.env.NETLIFY_SITE_ID,
-              token: process.env.NETLIFY_TOKEN
-            });
+            // Check both stores used by the application
+            const stores = [
+              { name: 'profiles', description: 'Profile metadata' },
+              { name: 'gospel-data', description: 'Gospel presentation data' }
+            ];
             
             // Create backup directory
             const backupDir = '../backup';
             await fs.mkdir(backupDir, { recursive: true });
             
-            // Get list of all blobs
-            console.log('📋 Fetching blob list...');
-            const { blobs } = await store.list();
-            console.log(`Found ${blobs.length} blobs to backup`);
+            let allBlobs = [];
+            let totalCount = 0;
+            
+            // Get blobs from all stores
+            for (const storeConfig of stores) {
+              console.log(`📋 Checking ${storeConfig.description} store: "${storeConfig.name}"`);
+              
+              const store = getStore({
+                name: storeConfig.name,
+                siteID: process.env.NETLIFY_SITE_ID,
+                token: process.env.NETLIFY_TOKEN
+              });
+              
+              const { blobs } = await store.list();
+              console.log(`   Found ${blobs.length} blobs`);
+              
+              if (blobs.length > 0) {
+                // Add store info to each blob
+                const storeBlobs = blobs.map(blob => ({
+                  ...blob,
+                  store: storeConfig.name,
+                  storeDescription: storeConfig.description
+                }));
+                allBlobs.push(...storeBlobs);
+                totalCount += blobs.length;
+              }
+            }
+            
+            console.log(`📊 Total: ${totalCount} blobs across all stores`);
 
             const backupData = {
               timestamp: new Date().toISOString(),
               site_id: process.env.NETLIFY_SITE_ID,
-              blob_count: blobs.length,
+              blob_count: totalCount,
+              stores: {},
               blobs: {}
             };
 
-            // Backup each blob
-            for (const blob of blobs) {
+            // Backup each blob from all stores
+            for (const blob of allBlobs) {
               try {
-                console.log(`📦 Backing up: ${blob.key}`);
+                console.log(`📦 Backing up: ${blob.key} (from ${blob.store} store)`);
+                
+                // Get the appropriate store for this blob
+                const store = getStore({
+                  name: blob.store,
+                  siteID: process.env.NETLIFY_SITE_ID,
+                  token: process.env.NETLIFY_TOKEN
+                });
+                
                 const data = await store.get(blob.key, { type: 'json' });
                 
                 backupData.blobs[blob.key] = {
                   key: blob.key,
+                  store: blob.store,
+                  storeDescription: blob.storeDescription,
                   etag: blob.etag,
                   size: blob.size,
                   data: data
                 };
 
+                // Track per-store stats
+                if (!backupData.stores[blob.store]) {
+                  backupData.stores[blob.store] = { count: 0, description: blob.storeDescription };
+                }
+                backupData.stores[blob.store].count++;
+
                 // Also save individual files for easier inspection
-                const filename = `${blob.key.replace(/[\/\\:*?"<>|]/g, '_')}.json`;
+                const filename = `${blob.store}_${blob.key.replace(/[\/\\:*?"<>|]/g, '_')}.json`;
                 await fs.writeFile(
                   join(backupDir, filename), 
                   JSON.stringify(data, null, 2)
@@ -137,7 +178,8 @@ jobs:
               backup_date: new Date().toISOString(),
               github_run_id: process.env.GITHUB_RUN_ID,
               github_sha: process.env.GITHUB_SHA,
-              total_blobs: blobs.length,
+              total_blobs: totalCount,
+              stores: Object.keys(backupData.stores),
               successful_backups: Object.values(backupData.blobs).filter(b => !b.error).length,
               failed_backups: Object.values(backupData.blobs).filter(b => b.error).length
             };
