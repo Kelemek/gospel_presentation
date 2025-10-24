@@ -34,6 +34,8 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
   const [isRestoring, setIsRestoring] = useState(false)
   const [editingScriptureId, setEditingScriptureId] = useState<string | null>(null)
   const [editingScriptureValue, setEditingScriptureValue] = useState('')
+  const [draggedItem, setDraggedItem] = useState<{sectionIndex: number, subsectionIndex: number, scriptureIndex: number, nestedIndex?: number} | null>(null)
+  const [dragOverItem, setDragOverItem] = useState<{sectionIndex: number, subsectionIndex: number, scriptureIndex: number, nestedIndex?: number} | null>(null)
 
   // Bible book abbreviations mapping
   const bibleBookAbbreviations: { [key: string]: string } = {
@@ -410,6 +412,138 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
     
     setHasChanges(true)
     cancelEditingScripture()
+  }
+
+  // Drag and Drop Functions
+  const handleDragStart = (e: React.DragEvent, sectionIndex: number, subsectionIndex: number, scriptureIndex: number, nestedIndex?: number) => {
+    setDraggedItem({ sectionIndex, subsectionIndex, scriptureIndex, nestedIndex })
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e: React.DragEvent, sectionIndex: number, subsectionIndex: number, scriptureIndex: number, nestedIndex?: number) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverItem({ sectionIndex, subsectionIndex, scriptureIndex, nestedIndex })
+  }
+
+  const handleDragLeave = () => {
+    setDragOverItem(null)
+  }
+
+  const handleDrop = (e: React.DragEvent, targetSectionIndex: number, targetSubsectionIndex: number, targetScriptureIndex: number, targetNestedIndex?: number) => {
+    e.preventDefault()
+    
+    if (!draggedItem || !profile) return
+
+    const { sectionIndex: sourceSectionIndex, subsectionIndex: sourceSubsectionIndex, scriptureIndex: sourceScriptureIndex, nestedIndex: sourceNestedIndex } = draggedItem
+
+    // Don't do anything if dropped on the same position
+    if (sourceSectionIndex === targetSectionIndex && 
+        sourceSubsectionIndex === targetSubsectionIndex && 
+        sourceScriptureIndex === targetScriptureIndex &&
+        sourceNestedIndex === targetNestedIndex) {
+      setDraggedItem(null)
+      setDragOverItem(null)
+      return
+    }
+
+    const newGospelData = [...profile.gospelData]
+
+    // Handle nested subsection reordering
+    if (sourceNestedIndex !== undefined && targetNestedIndex !== undefined) {
+      const sourceSubsection = newGospelData[sourceSectionIndex].subsections[sourceSubsectionIndex]
+      const targetSubsection = newGospelData[targetSectionIndex].subsections[targetSubsectionIndex]
+      
+      if (sourceSubsection.nestedSubsections && targetSubsection.nestedSubsections &&
+          sourceSubsection.nestedSubsections[sourceNestedIndex].scriptureReferences &&
+          targetSubsection.nestedSubsections[targetNestedIndex].scriptureReferences) {
+        
+        const sourceScriptures = [...sourceSubsection.nestedSubsections[sourceNestedIndex].scriptureReferences!]
+        const targetScriptures = [...targetSubsection.nestedSubsections[targetNestedIndex].scriptureReferences!]
+        
+        // Remove from source
+        const [movedScripture] = sourceScriptures.splice(sourceScriptureIndex, 1)
+        
+        // Add to target (same location if same array, adjusted if different)
+        const adjustedTargetIndex = (sourceSectionIndex === targetSectionIndex && 
+                                   sourceSubsectionIndex === targetSubsectionIndex && 
+                                   sourceNestedIndex === targetNestedIndex && 
+                                   sourceScriptureIndex < targetScriptureIndex) ? 
+                                   targetScriptureIndex - 1 : targetScriptureIndex
+        
+        if (sourceSectionIndex === targetSectionIndex && 
+            sourceSubsectionIndex === targetSubsectionIndex && 
+            sourceNestedIndex === targetNestedIndex) {
+          // Same nested subsection - just reorder
+          sourceScriptures.splice(adjustedTargetIndex, 0, movedScripture)
+          
+          const newNestedSubsections = [...sourceSubsection.nestedSubsections]
+          newNestedSubsections[sourceNestedIndex] = {
+            ...newNestedSubsections[sourceNestedIndex],
+            scriptureReferences: sourceScriptures
+          }
+          updateSubsection(sourceSectionIndex, sourceSubsectionIndex, 'nestedSubsections', newNestedSubsections)
+        } else {
+          // Different nested subsections - move between them
+          targetScriptures.splice(adjustedTargetIndex, 0, movedScripture)
+          
+          // Update source
+          const sourceNewNestedSubsections = [...sourceSubsection.nestedSubsections]
+          sourceNewNestedSubsections[sourceNestedIndex] = {
+            ...sourceNewNestedSubsections[sourceNestedIndex],
+            scriptureReferences: sourceScriptures
+          }
+          updateSubsection(sourceSectionIndex, sourceSubsectionIndex, 'nestedSubsections', sourceNewNestedSubsections)
+          
+          // Update target
+          const targetNewNestedSubsections = [...targetSubsection.nestedSubsections]
+          targetNewNestedSubsections[targetNestedIndex] = {
+            ...targetNewNestedSubsections[targetNestedIndex],
+            scriptureReferences: targetScriptures
+          }
+          updateSubsection(targetSectionIndex, targetSubsectionIndex, 'nestedSubsections', targetNewNestedSubsections)
+        }
+      }
+    }
+    // Handle regular subsection reordering
+    else if (sourceNestedIndex === undefined && targetNestedIndex === undefined) {
+      const sourceSubsection = newGospelData[sourceSectionIndex].subsections[sourceSubsectionIndex]
+      const targetSubsection = newGospelData[targetSectionIndex].subsections[targetSubsectionIndex]
+      
+      if (sourceSubsection.scriptureReferences && targetSubsection.scriptureReferences) {
+        const sourceScriptures = [...sourceSubsection.scriptureReferences]
+        const targetScriptures = [...targetSubsection.scriptureReferences]
+        
+        // Remove from source
+        const [movedScripture] = sourceScriptures.splice(sourceScriptureIndex, 1)
+        
+        // Add to target
+        const adjustedTargetIndex = (sourceSectionIndex === targetSectionIndex && 
+                                   sourceSubsectionIndex === targetSubsectionIndex && 
+                                   sourceScriptureIndex < targetScriptureIndex) ? 
+                                   targetScriptureIndex - 1 : targetScriptureIndex
+        
+        if (sourceSectionIndex === targetSectionIndex && sourceSubsectionIndex === targetSubsectionIndex) {
+          // Same subsection - just reorder
+          sourceScriptures.splice(adjustedTargetIndex, 0, movedScripture)
+          updateSubsection(sourceSectionIndex, sourceSubsectionIndex, 'scriptureReferences', sourceScriptures)
+        } else {
+          // Different subsections - move between them
+          targetScriptures.splice(adjustedTargetIndex, 0, movedScripture)
+          updateSubsection(sourceSectionIndex, sourceSubsectionIndex, 'scriptureReferences', sourceScriptures)
+          updateSubsection(targetSectionIndex, targetSubsectionIndex, 'scriptureReferences', targetScriptures)
+        }
+      }
+    }
+
+    setHasChanges(true)
+    setDraggedItem(null)
+    setDragOverItem(null)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedItem(null)
+    setDragOverItem(null)
   }
 
   // Backup and Restore Functions
@@ -900,9 +1034,26 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
                         {subsection.scriptureReferences.map((scripture, scriptureIndex) => {
                           const editId = `${sectionIndex}-${subsectionIndex}-${scriptureIndex}`
                           const isEditing = editingScriptureId === editId
+                          const isDragging = draggedItem?.sectionIndex === sectionIndex && 
+                                           draggedItem?.subsectionIndex === subsectionIndex && 
+                                           draggedItem?.scriptureIndex === scriptureIndex &&
+                                           draggedItem?.nestedIndex === undefined
+                          const isDragOver = dragOverItem?.sectionIndex === sectionIndex && 
+                                           dragOverItem?.subsectionIndex === subsectionIndex && 
+                                           dragOverItem?.scriptureIndex === scriptureIndex &&
+                                           dragOverItem?.nestedIndex === undefined
                           
                           return (
-                            <div key={scriptureIndex} className="relative group">
+                            <div 
+                              key={scriptureIndex} 
+                              className={`relative group ${isDragging ? 'opacity-50' : ''} ${isDragOver ? 'ring-2 ring-blue-400' : ''}`}
+                              draggable={!isEditing}
+                              onDragStart={(e) => handleDragStart(e, sectionIndex, subsectionIndex, scriptureIndex)}
+                              onDragOver={(e) => handleDragOver(e, sectionIndex, subsectionIndex, scriptureIndex)}
+                              onDragLeave={handleDragLeave}
+                              onDrop={(e) => handleDrop(e, sectionIndex, subsectionIndex, scriptureIndex)}
+                              onDragEnd={handleDragEnd}
+                            >
                               {isEditing ? (
                                 <div className="flex items-center gap-1 bg-yellow-50 border border-yellow-300 rounded-md p-1">
                                   <input
@@ -938,18 +1089,33 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
                                 </div>
                               ) : (
                                 <>
-                                  <ScriptureHoverModal reference={scripture.reference}>
-                                    <button
-                                      onClick={() => toggleScriptureFavorite(sectionIndex, subsectionIndex, scriptureIndex)}
-                                      className={`inline-block px-3 py-1 text-sm rounded-md transition-colors cursor-pointer ${
-                                        scripture.favorite
-                                          ? 'bg-blue-200 hover:bg-blue-300 text-blue-900 border-2 border-blue-400 hover:border-blue-500 font-medium'
-                                          : 'bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-200 hover:border-blue-300'
-                                      }`}
+                                  <div className="flex items-center">
+                                    <div 
+                                      className="drag-handle cursor-move p-1 opacity-0 group-hover:opacity-100 transition-opacity mr-1"
+                                      title="Drag to reorder"
                                     >
-                                      {scripture.favorite ? '⭐' : '☆'} {scripture.reference}
-                                    </button>
-                                  </ScriptureHoverModal>
+                                      <svg width="8" height="12" viewBox="0 0 8 12" fill="none" className="text-gray-400">
+                                        <circle cx="2" cy="2" r="1" fill="currentColor"/>
+                                        <circle cx="6" cy="2" r="1" fill="currentColor"/>
+                                        <circle cx="2" cy="6" r="1" fill="currentColor"/>
+                                        <circle cx="6" cy="6" r="1" fill="currentColor"/>
+                                        <circle cx="2" cy="10" r="1" fill="currentColor"/>
+                                        <circle cx="6" cy="10" r="1" fill="currentColor"/>
+                                      </svg>
+                                    </div>
+                                    <ScriptureHoverModal reference={scripture.reference}>
+                                      <button
+                                        onClick={() => toggleScriptureFavorite(sectionIndex, subsectionIndex, scriptureIndex)}
+                                        className={`inline-block px-3 py-1 text-sm rounded-md transition-colors cursor-pointer ${
+                                          scripture.favorite
+                                            ? 'bg-blue-200 hover:bg-blue-300 text-blue-900 border-2 border-blue-400 hover:border-blue-500 font-medium'
+                                            : 'bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-200 hover:border-blue-300'
+                                        }`}
+                                      >
+                                        {scripture.favorite ? '⭐' : '☆'} {scripture.reference}
+                                      </button>
+                                    </ScriptureHoverModal>
+                                  </div>
                                   <button
                                     onClick={() => removeScriptureReference(sectionIndex, subsectionIndex, scriptureIndex)}
                                     className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
@@ -975,7 +1141,7 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
                     )}
                     
                     <p className="text-xs text-slate-500 mt-2">
-                      Click scripture to toggle favorite (⭐), hover for 1 sec to preview verse text, hover and click × to remove, ✏️ to edit
+                      Click scripture to toggle favorite (⭐), hover for 1 sec to preview verse text, hover and click × to remove, ✏️ to edit, drag ⋮⋮ to reorder
                     </p>
                   </div>
 
@@ -1078,9 +1244,26 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
                             {nested.scriptureReferences.map((scripture, scriptureIndex) => {
                               const editId = `${sectionIndex}-${subsectionIndex}-${nestedIndex}-${scriptureIndex}`
                               const isEditing = editingScriptureId === editId
+                              const isDragging = draggedItem?.sectionIndex === sectionIndex && 
+                                               draggedItem?.subsectionIndex === subsectionIndex && 
+                                               draggedItem?.scriptureIndex === scriptureIndex &&
+                                               draggedItem?.nestedIndex === nestedIndex
+                              const isDragOver = dragOverItem?.sectionIndex === sectionIndex && 
+                                               dragOverItem?.subsectionIndex === subsectionIndex && 
+                                               dragOverItem?.scriptureIndex === scriptureIndex &&
+                                               dragOverItem?.nestedIndex === nestedIndex
                               
                               return (
-                                <div key={scriptureIndex} className="relative group">
+                                <div 
+                                  key={scriptureIndex} 
+                                  className={`relative group ${isDragging ? 'opacity-50' : ''} ${isDragOver ? 'ring-2 ring-blue-400' : ''}`}
+                                  draggable={!isEditing}
+                                  onDragStart={(e) => handleDragStart(e, sectionIndex, subsectionIndex, scriptureIndex, nestedIndex)}
+                                  onDragOver={(e) => handleDragOver(e, sectionIndex, subsectionIndex, scriptureIndex, nestedIndex)}
+                                  onDragLeave={handleDragLeave}
+                                  onDrop={(e) => handleDrop(e, sectionIndex, subsectionIndex, scriptureIndex, nestedIndex)}
+                                  onDragEnd={handleDragEnd}
+                                >
                                   {isEditing ? (
                                     <div className="flex items-center gap-1 bg-yellow-50 border border-yellow-300 rounded p-1">
                                       <input
@@ -1116,19 +1299,34 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
                                     </div>
                                   ) : (
                                     <>
-                                      <ScriptureHoverModal reference={scripture.reference}>
-                                        <button
-                                          onClick={() => toggleNestedScriptureFavorite(sectionIndex, subsectionIndex, nestedIndex, scriptureIndex)}
-                                          className={`inline-block px-2 py-1 text-xs rounded transition-colors cursor-pointer ${
-                                            scripture.favorite
-                                              ? 'bg-blue-200 hover:bg-blue-300 text-blue-900 border border-blue-400 font-medium'
-                                              : 'bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-200'
-                                          }`}
-                                          title={scripture.favorite ? 'Click to unfavorite' : 'Click to favorite'}
+                                      <div className="flex items-center">
+                                        <div 
+                                          className="drag-handle cursor-move p-0.5 opacity-0 group-hover:opacity-100 transition-opacity mr-1"
+                                          title="Drag to reorder"
                                         >
-                                          {scripture.favorite ? '⭐' : '☆'} {scripture.reference}
-                                        </button>
-                                      </ScriptureHoverModal>
+                                          <svg width="6" height="10" viewBox="0 0 6 10" fill="none" className="text-gray-400">
+                                            <circle cx="1.5" cy="1.5" r="0.8" fill="currentColor"/>
+                                            <circle cx="4.5" cy="1.5" r="0.8" fill="currentColor"/>
+                                            <circle cx="1.5" cy="5" r="0.8" fill="currentColor"/>
+                                            <circle cx="4.5" cy="5" r="0.8" fill="currentColor"/>
+                                            <circle cx="1.5" cy="8.5" r="0.8" fill="currentColor"/>
+                                            <circle cx="4.5" cy="8.5" r="0.8" fill="currentColor"/>
+                                          </svg>
+                                        </div>
+                                        <ScriptureHoverModal reference={scripture.reference}>
+                                          <button
+                                            onClick={() => toggleNestedScriptureFavorite(sectionIndex, subsectionIndex, nestedIndex, scriptureIndex)}
+                                            className={`inline-block px-2 py-1 text-xs rounded transition-colors cursor-pointer ${
+                                              scripture.favorite
+                                                ? 'bg-blue-200 hover:bg-blue-300 text-blue-900 border border-blue-400 font-medium'
+                                                : 'bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-200'
+                                            }`}
+                                            title={scripture.favorite ? 'Click to unfavorite' : 'Click to favorite'}
+                                          >
+                                            {scripture.favorite ? '⭐' : '☆'} {scripture.reference}
+                                          </button>
+                                        </ScriptureHoverModal>
+                                      </div>
                                       <button
                                         onClick={() => removeNestedScriptureReference(sectionIndex, subsectionIndex, nestedIndex, scriptureIndex)}
                                         className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
@@ -1175,6 +1373,32 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
                   className="text-green-600 hover:text-green-800 text-sm font-medium border border-green-200 hover:border-green-300 px-3 py-1.5 rounded bg-green-50 hover:bg-green-100 transition-colors"
                 >
                   + Add Subsection
+                </button>
+              </div>
+
+              {/* Section Save Button */}
+              <div className="mt-6 pt-4 border-t border-slate-200 text-center">
+                <button
+                  onClick={handleSaveContent}
+                  disabled={isSaving || !hasChanges}
+                  className="bg-green-600 text-white px-4 sm:px-6 py-2 rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSaving ? (
+                    <>
+                      <span className="hidden sm:inline">Saving...</span>
+                      <span className="sm:hidden">Saving</span>
+                    </>
+                  ) : hasChanges ? (
+                    <>
+                      <span className="hidden sm:inline">Save Changes</span>
+                      <span className="sm:hidden">Save</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="hidden sm:inline">No Changes</span>
+                      <span className="sm:hidden">✓</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
