@@ -38,6 +38,7 @@ export interface GospelProfile {
   visitCount: number              // Analytics counter
   createdAt: Date
   updatedAt: Date
+  lastVisited?: Date              // Last time this profile was accessed by a visitor
 }
 
 // Lightweight profile metadata for index operations
@@ -48,6 +49,7 @@ export interface ProfileMetadata {
   description?: string
   isDefault: boolean
   visitCount: number
+  lastVisited?: Date
   createdAt: Date
   updatedAt: Date
 }

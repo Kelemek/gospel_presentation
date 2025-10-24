@@ -292,11 +292,12 @@ export async function incrementProfileVisitCount(slug: string): Promise<void> {
     if (profile) {
       profile.visitCount = (profile.visitCount || 0) + 1
       profile.updatedAt = new Date()
+      profile.lastVisited = new Date()
       
       // Save to blob storage
       await saveProfiles(storage)
       
-      console.log(`[blob-data-service] Incremented visit count for '${slug}' to ${profile.visitCount}`)
+      console.log(`[blob-data-service] Incremented visit count for '${slug}' to ${profile.visitCount}, last visited: ${profile.lastVisited.toISOString()}`)
     }
   } catch (error) {
     // Don't throw errors for visit counting - it shouldn't break the page

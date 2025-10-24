@@ -66,6 +66,8 @@ export default function AdminPage() {
     setIsAuth(false)
   }
 
+
+
   const generateSlug = (title: string) => {
     return title.toLowerCase()
       .replace(/[^a-z0-9\s]/g, '')
@@ -375,6 +377,9 @@ export default function AdminPage() {
                           <span>{profile.visitCount} visits</span>
                           <span className="hidden sm:inline">Created {new Date(profile.createdAt).toLocaleDateString()}</span>
                           <span>Updated {new Date(profile.updatedAt).toLocaleDateString()}</span>
+                          {profile.lastVisited && (
+                            <span>Last visited {new Date(profile.lastVisited).toLocaleDateString()}</span>
+                          )}
                         </div>
                       </div>
 
