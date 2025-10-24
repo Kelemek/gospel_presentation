@@ -87,11 +87,19 @@ export default function AdminPage() {
       })
 
       if (response.ok) {
-        await fetchProfiles() // Refresh the profile list
+        const data = await response.json()
+        const newProfile = data.profile || data
+        
+        // Immediately add the new profile to the UI (optimistic update)
+        setProfiles(prev => [...prev, newProfile])
+        
+        // Close the form and reset
         setShowCreateForm(false)
         setCreateForm({ title: '', slug: '', description: '', cloneFromSlug: 'default' })
         setSlugManuallyEdited(false)
-        // Show success message could be added here
+        
+        // Refresh from server to ensure consistency
+        await fetchProfiles()
       } else {
         const errorData = await response.json()
         setError(errorData.error || 'Failed to create profile')
