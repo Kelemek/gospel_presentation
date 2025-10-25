@@ -26,9 +26,6 @@ export default function CopyrightPage() {
               <p className="text-slate-700 mb-3 leading-relaxed">
                 <strong className="text-slate-800">Gospel Presentation Content:</strong> "Presenting the Gospel in its Context" by Dr. Stuart Scott
               </p>
-              <p className="text-slate-700">
-                <strong className="text-slate-800">Website:</strong> <a href="http://www.oneeightycounseling.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline transition-colors">www.oneeightycounseling.com</a>
-              </p>
             </div>
           </section>
 
@@ -112,8 +109,7 @@ export default function CopyrightPage() {
             <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline mr-4 transition-colors">
               www.esv.org
             </a>
-            <a href="http://www.oneeightycounseling.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline transition-colors">
-              www.oneeightycounseling.com
+            
             </a>
           </p>
         </div>

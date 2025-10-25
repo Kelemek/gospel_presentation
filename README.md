@@ -146,7 +146,7 @@ See [Netlify Deploy](docs/NETLIFY_DEPLOY.md) for detailed instructions.
 
 ## Credits
 
-- Content by Dr. Stuart Scott (www.oneeightycounseling.com)
+- Content by Dr. Stuart Scott
 - ESV API by Crossway
 - Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. All rights reserved.
 

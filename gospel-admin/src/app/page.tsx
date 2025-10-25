@@ -291,17 +291,6 @@ function GospelPresentationOld() {
 
       <footer className="bg-slate-700 text-white text-center py-8 mt-16">
         <div className="container mx-auto px-5">
-          <p className="mb-4">
-            You may download the PowerPoint presentation of this appendix on{' '}
-            <a 
-              href="http://www.oneeightycounseling.com" 
-              target="_blank" 
-              rel="noopener"
-              className="text-blue-300 hover:text-blue-200 underline"
-            >
-              www.oneeightycounseling.com
-            </a>
-          </p>
           <p className="text-sm opacity-80 mb-2">
             Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission.
           </p>

@@ -389,7 +389,7 @@ describe('GospelPresentation Page', () => {
     expect(screen.getByText('By Dr. Stuart Scott')).toBeInTheDocument()
 
     // Footer content
-    expect(screen.getByText(/www.oneeightycounseling.com/)).toBeInTheDocument()
+  // Removed reference to www.oneeightycounseling.com
     expect(screen.getByText(/Scripture quotations are from the ESV® Bible/)).toBeInTheDocument()
 
     // Navigation elements
