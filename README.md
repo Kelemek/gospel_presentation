@@ -120,7 +120,7 @@ This site is optimized for Netlify deployment with automatic builds and environm
 3. Add `ESV_API_TOKEN` environment variable in Netlify dashboard
 4. Deploy automatically builds and configures everything!
 
-See [NETLIFY_DEPLOY.md](NETLIFY_DEPLOY.md) for detailed instructions.
+See [Netlify Deploy](docs/NETLIFY_DEPLOY.md) for detailed instructions.
 
 ### 🏠 Local Usage
 
