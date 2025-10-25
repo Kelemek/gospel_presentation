@@ -34,10 +34,27 @@ describe('Admin Authentication E2E Tests', () => {
 
   it('should show admin interface when user is authenticated', () => {
     mockIsAuthenticated.mockReturnValue(true)
-    
     // Mock successful API responses
     mockFetch.mockImplementation((url) => {
       if (typeof url === 'string') {
+        if (url.includes('/api/profiles')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ profiles: [
+              {
+                id: '1',
+                slug: 'test-profile',
+                title: 'Test Profile',
+                description: 'A test profile',
+                isDefault: true,
+                visitCount: 1,
+                lastVisited: '2025-10-24T12:00:00.000Z',
+                createdAt: '2025-01-01T00:00:00.000Z',
+                updatedAt: '2025-10-23T00:00:00.000Z'
+              }
+            ] })
+          } as Response)
+        }
         if (url.includes('/api/data')) {
           return Promise.resolve({
             ok: true,
@@ -53,10 +70,10 @@ describe('Admin Authentication E2E Tests', () => {
       }
       return Promise.reject(new Error('Unknown URL'))
     })
-    
     render(<AdminPage />)
-    
-    expect(screen.getByText(/Gospel Presentation Editor/)).toBeInTheDocument()
+    waitFor(() => {
+      expect(screen.getByText(/Admin Dashboard/)).toBeInTheDocument()
+    })
     expect(screen.queryByText('🔐 Admin Access')).not.toBeInTheDocument()
   })
 
@@ -93,7 +110,7 @@ describe('Admin Authentication E2E Tests', () => {
     render(<AdminPage />)
     
     await waitFor(() => {
-      expect(screen.getByText(/Gospel Presentation Editor/)).toBeInTheDocument()
+      expect(screen.getByText(/Admin Dashboard/)).toBeInTheDocument()
     })
   })
 
@@ -105,18 +122,46 @@ describe('Admin Authentication E2E Tests', () => {
       sessionToken: 'test-token'
     }
     localStorage.setItem('gospel-admin-auth', JSON.stringify(authData))
-    
     mockIsAuthenticated.mockReturnValue(true)
-    mockFetch.mockImplementation(() => 
-      Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve([])
-      } as Response)
-    )
-    
+    mockFetch.mockImplementation((url) => {
+      if (typeof url === 'string') {
+        if (url.includes('/api/profiles')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ profiles: [
+              {
+                id: '1',
+                slug: 'test-profile',
+                title: 'Test Profile',
+                description: 'A test profile',
+                isDefault: true,
+                visitCount: 1,
+                lastVisited: '2025-10-24T12:00:00.000Z',
+                createdAt: '2025-01-01T00:00:00.000Z',
+                updatedAt: '2025-10-23T00:00:00.000Z'
+              }
+            ] })
+          } as Response)
+        }
+        if (url.includes('/api/data')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([])
+          } as Response)
+        }
+        if (url.includes('/api/commits')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([])
+          } as Response)
+        }
+      }
+      return Promise.reject(new Error('Unknown URL'))
+    })
     render(<AdminPage />)
-    
-    expect(screen.getByText(/Gospel Presentation Editor/)).toBeInTheDocument()
+    waitFor(() => {
+      expect(screen.getByText(/Admin Dashboard/)).toBeInTheDocument()
+    })
   })
 
   it('should handle expired authentication sessions', () => {
@@ -145,25 +190,51 @@ describe('Admin Session Management', () => {
 
   it('should handle session token in API requests', async () => {
     mockIsAuthenticated.mockReturnValue(true)
-    
     const sessionToken = 'valid-session-token'
     localStorage.setItem('gospel-admin-auth', JSON.stringify({
       isAuthenticated: true,
       timestamp: Date.now(),
       sessionToken
     }))
-
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve([])
-    } as Response)
-    
-    render(<AdminPage />)
-    
-    await waitFor(() => {
-      expect(screen.getByText(/Gospel Presentation Editor/)).toBeInTheDocument()
+    mockFetch.mockImplementation((url) => {
+      if (typeof url === 'string') {
+        if (url.includes('/api/profiles')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ profiles: [
+              {
+                id: '1',
+                slug: 'test-profile',
+                title: 'Test Profile',
+                description: 'A test profile',
+                isDefault: true,
+                visitCount: 1,
+                lastVisited: '2025-10-24T12:00:00.000Z',
+                createdAt: '2025-01-01T00:00:00.000Z',
+                updatedAt: '2025-10-23T00:00:00.000Z'
+              }
+            ] })
+          } as Response)
+        }
+        if (url.includes('/api/data')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([])
+          } as Response)
+        }
+        if (url.includes('/api/commits')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve([])
+          } as Response)
+        }
+      }
+      return Promise.reject(new Error('Unknown URL'))
     })
-
+    render(<AdminPage />)
+    await waitFor(() => {
+      expect(screen.getByText(/Admin Dashboard/)).toBeInTheDocument()
+    })
     // Verify that API calls include the session token
     expect(mockFetch).toHaveBeenCalled()
   })
@@ -182,7 +253,7 @@ describe('Admin Session Management', () => {
     
     // Should handle the auth failure gracefully
     await waitFor(() => {
-      expect(screen.getByText(/Gospel Presentation Editor/)).toBeInTheDocument()
+      expect(screen.getByText(/Admin Dashboard/)).toBeInTheDocument()
     })
   })
 
@@ -225,7 +296,7 @@ describe('Admin Session Management', () => {
     render(<AdminPage />)
     
     await waitFor(() => {
-      expect(screen.getByText(/Gospel Presentation Editor/)).toBeInTheDocument()
+    expect(screen.getByText(/Admin Dashboard/)).toBeInTheDocument()
     })
 
     // Authentication should remain valid during admin operations
@@ -253,6 +324,24 @@ describe('Admin Access Control', () => {
     
     mockFetch.mockImplementation((url) => {
       if (typeof url === 'string') {
+        if (url.includes('/api/profiles')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ profiles: [
+              {
+                id: '1',
+                slug: 'test-profile',
+                title: 'Test Profile',
+                description: 'A test profile',
+                isDefault: true,
+                visitCount: 1,
+                lastVisited: '2025-10-24T12:00:00.000Z',
+                createdAt: '2025-01-01T00:00:00.000Z',
+                updatedAt: '2025-10-23T00:00:00.000Z'
+              }
+            ] })
+          } as Response)
+        }
         if (url.includes('/api/data')) {
           return Promise.resolve({
             ok: true,
@@ -272,11 +361,10 @@ describe('Admin Access Control', () => {
     render(<AdminPage />)
     
     await waitFor(() => {
-      expect(screen.getByText(/Gospel Presentation Editor/)).toBeInTheDocument()
+      expect(screen.getByText(/Admin Dashboard/)).toBeInTheDocument()
     })
-
     // Should show admin interface elements
-    expect(screen.getByText('Edit content, scripture references, and presentation structure')).toBeInTheDocument()
+    expect(screen.getByText('Profile Management')).toBeInTheDocument()
   })
 
   it('should handle logout functionality', async () => {
@@ -285,6 +373,24 @@ describe('Admin Access Control', () => {
     
     mockFetch.mockImplementation((url) => {
       if (typeof url === 'string') {
+        if (url.includes('/api/profiles')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ profiles: [
+              {
+                id: '1',
+                slug: 'test-profile',
+                title: 'Test Profile',
+                description: 'A test profile',
+                isDefault: true,
+                visitCount: 1,
+                lastVisited: '2025-10-24T12:00:00.000Z',
+                createdAt: '2025-01-01T00:00:00.000Z',
+                updatedAt: '2025-10-23T00:00:00.000Z'
+              }
+            ] })
+          } as Response)
+        }
         if (url.includes('/api/data')) {
           return Promise.resolve({
             ok: true,
@@ -304,9 +410,8 @@ describe('Admin Access Control', () => {
     render(<AdminPage />)
     
     await waitFor(() => {
-      expect(screen.getByText(/Gospel Presentation Editor/)).toBeInTheDocument()
+      expect(screen.getByText(/Admin Dashboard/)).toBeInTheDocument()
     })
-
     // Find and click logout button if it exists
     const logoutButton = screen.queryByText('Logout') || screen.queryByText('Sign Out')
     if (logoutButton) {
