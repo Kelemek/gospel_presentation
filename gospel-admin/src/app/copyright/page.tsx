@@ -76,13 +76,37 @@ export default function CopyrightPage() {
             <div className="bg-slate-50 border-l-4 border-slate-400 rounded-lg p-6">
               <div className="space-y-3">
                 <p className="text-slate-700">
-                  <strong className="text-slate-800">Development:</strong> Next.js application with TypeScript
+                  <strong className="text-slate-800">Framework:</strong> Next.js 16 (React 19)
                 </p>
                 <p className="text-slate-700">
-                  <strong className="text-slate-800">Scripture Integration:</strong> ESV API v3 for dynamic text retrieval
-                </p>  
+                  <strong className="text-slate-800">Language:</strong> TypeScript
+                </p>
                 <p className="text-slate-700">
-                  <strong className="text-slate-800">Hosting:</strong> Static site deployment with serverless API functions
+                  <strong className="text-slate-800">UI:</strong> Tailwind CSS, Geist font
+                </p>
+                <p className="text-slate-700">
+                  <strong className="text-slate-800">Authentication:</strong> Session-based authentication
+                </p>
+                <p className="text-slate-700">
+                  <strong className="text-slate-800">Scripture Integration:</strong> ESV API v3 (dynamic text retrieval)
+                </p>
+                <p className="text-slate-700">
+                  <strong className="text-slate-800">Data Storage:</strong> Netlify Blob Storage (profiles, gospel data)
+                </p>
+                <p className="text-slate-700">
+                  <strong className="text-slate-800">Hosting:</strong> Netlify (static site + serverless API functions)
+                </p>
+                <p className="text-slate-700">
+                  <strong className="text-slate-800">Testing:</strong> Jest, React Testing Library, MSW
+                </p>
+                <p className="text-slate-700">
+                  <strong className="text-slate-800">Admin Features:</strong> Profile management, favorites, analytics, live preview
+                </p>
+                <p className="text-slate-700">
+                  <strong className="text-slate-800">Source Control:</strong> <a href="https://github.com/Kelemek/gospel_presentation" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">GitHub Repository</a>
+                </p>
+                <p className="text-slate-700">
+                  <strong className="text-slate-800">Author & Maintainer:</strong> Mark Larson (<a href="mailto:markdlarson@me.com" className="text-blue-500 underline">markdlarson@me.com</a>)
                 </p>
               </div>
             </div>
@@ -106,11 +130,10 @@ export default function CopyrightPage() {
             Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission.
           </p>
           <p className="text-sm opacity-80">
-            <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline mr-4 transition-colors">
-              www.esv.org
-            </a>
-            
-            </a>
+              <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline mr-4 transition-colors">
+                www.esv.org
+              </a>
+              <span className="ml-2">All other content © {new Date().getFullYear()} Gospel Presentation Project. All rights reserved.</span>
           </p>
         </div>
       </footer>
