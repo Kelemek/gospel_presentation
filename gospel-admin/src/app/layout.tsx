@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Gospel Presentation - Presenting the Gospel in its Context",
+  title: "The Gospel Presentation",
   description: "A comprehensive gospel presentation by Dr. Stuart Scott with integrated scripture references, favorites navigation, and admin management system.",
   keywords: ["gospel", "presentation", "scripture", "bible", "evangelism", "salvation"],
   authors: [{ name: "Dr. Stuart Scott" }],

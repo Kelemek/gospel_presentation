@@ -7,8 +7,8 @@ export default function NotFound() {
       <div className="max-w-md mx-auto text-center px-4">
         <div className="mb-8">
           <h1 className="text-6xl font-bold text-gray-400 mb-4">404</h1>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Profile Not Found</h2>
-          <p className="text-gray-600 mb-6">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Profile Not Found</h2>
+          <p className="text-gray-600 mb-6 text-base md:text-lg">
             The gospel presentation profile you're looking for doesn't exist or may have been removed.
           </p>
         </div>
@@ -16,16 +16,16 @@ export default function NotFound() {
         <div className="space-y-4">
           <Link 
             href="/"
-            className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            className="inline-block bg-blue-600 text-white px-6 py-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-base md:text-lg min-h-[48px] flex items-center"
           >
             View Default Presentation
           </Link>
           
-          <div className="text-sm text-gray-500">
+          <div className="text-base text-gray-500">
             <p>Looking for a specific presentation?</p>
             <Link 
               href="/admin" 
-              className="text-blue-600 hover:text-blue-800 underline"
+              className="text-blue-600 hover:text-blue-800 underline py-1 inline-block"
             >
               Contact the administrator
             </Link>
@@ -33,8 +33,8 @@ export default function NotFound() {
         </div>
 
         <div className="mt-12 p-4 bg-white rounded-lg shadow-sm">
-          <h3 className="font-semibold text-gray-900 mb-2">Available Options:</h3>
-          <ul className="text-sm text-gray-600 space-y-1">
+          <h3 className="font-semibold text-gray-900 mb-2 text-lg">Available Options:</h3>
+          <ul className="text-base text-gray-600 space-y-1">
             <li>• Return to the default gospel presentation</li>
             <li>• Check the URL for typos</li>
             <li>• Contact the site administrator for help</li>

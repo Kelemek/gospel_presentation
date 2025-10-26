@@ -329,8 +329,7 @@ export default function ProfileContent({ sections, profileInfo }: ProfileContent
 
       {/* Print-only header */}
       <div className="print-header" style={{ display: 'none' }}>
-        <h1 className="print-title">Presenting the Gospel in its Context</h1>
-        <p className="print-subtitle">Faithfully Sowing the Seed According to the Scriptures - By Dr. Stuart Scott</p>
+        <h1 className="print-title">The Gospel Presentation</h1>
       </div>
 
       <footer className="bg-slate-700 text-white text-center py-8 mt-16 print-hide">

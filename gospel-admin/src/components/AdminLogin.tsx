@@ -35,10 +35,10 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
+          <h2 className="mt-6 text-center text-3xl md:text-4xl font-bold text-gray-900">
             🔐 Admin Access
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-base md:text-lg text-gray-600">
             Enter the admin password to access the gospel presentation editor
           </p>
         </div>
@@ -53,7 +53,7 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
                 name="password"
                 type="password"
                 required
-                className="relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                className="relative block w-full px-4 py-4 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 text-base md:text-lg min-h-[48px]"
                 placeholder="Admin password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -64,7 +64,7 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
 
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-md p-3">
-              <p className="text-red-600 text-sm text-center">{error}</p>
+              <p className="text-red-600 text-base md:text-lg text-center">{error}</p>
             </div>
           )}
 
@@ -72,7 +72,7 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
             <button
               type="submit"
               disabled={isLoading}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="group relative w-full flex justify-center py-4 px-4 border border-transparent text-base md:text-lg font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-[52px]"
             >
               {isLoading ? (
                 <span className="flex items-center">
@@ -88,7 +88,7 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
           <div className="text-center">
             <a
               href="/"
-              className="text-sm text-blue-600 hover:text-blue-500"
+              className="text-base md:text-lg text-blue-600 hover:text-blue-500 inline-block py-2"
             >
               ← Back to Gospel Presentation
             </a>

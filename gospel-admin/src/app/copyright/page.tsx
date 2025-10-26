@@ -8,10 +8,10 @@ export default function CopyrightPage() {
       {/* Header matching the main page style */}
       <header className="bg-gradient-to-br from-slate-700 to-slate-800 text-white text-center py-10 shadow-lg">
         <div className="container mx-auto px-5">
-          <h1 className="text-3xl md:text-4xl font-bold mb-3">
+          <h1 className="text-4xl md:text-5xl font-bold mb-3">
             Copyright & Attribution
           </h1>
-          <p className="text-lg opacity-80">
+          <p className="text-xl md:text-2xl opacity-80">
             Legal information and content attributions for this gospel presentation
           </p>
         </div>
@@ -21,25 +21,28 @@ export default function CopyrightPage() {
         <div className="max-w-4xl mx-auto space-y-8">
           {/* Content Attribution Section */}
           <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-            <h2 className="text-2xl font-bold text-slate-800 mb-6 border-b border-gray-200 pb-3">Content Attribution</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-6 border-b border-gray-200 pb-3">Content Attribution</h2>
             <div className="bg-blue-50 border-l-4 border-blue-400 rounded-lg p-6">
-              <p className="text-slate-700 mb-3 leading-relaxed">
+              <p className="text-slate-700 mb-3 leading-relaxed text-base md:text-lg">
                 <strong className="text-slate-800">Gospel Presentation Content:</strong> "Presenting the Gospel in its Context" by Dr. Stuart Scott
+              </p>
+              <p className="text-slate-700 leading-relaxed text-base md:text-lg">
+                <strong className="text-slate-800">Original Resource:</strong> <a href="https://oneeightyministries.org/resources/the-gospel-in-context/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline transition-colors">oneeightyministries.org/resources/the-gospel-in-context/</a>
               </p>
             </div>
           </section>
 
           {/* Scripture Attribution Section */}
           <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-            <h2 className="text-2xl font-bold text-slate-800 mb-6 border-b border-gray-200 pb-3">Scripture Attribution</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-6 border-b border-gray-200 pb-3">Scripture Attribution</h2>
             <div className="bg-green-50 border-l-4 border-green-400 rounded-lg p-6">
-              <p className="text-slate-700 mb-4 leading-relaxed">
+              <p className="text-slate-700 mb-4 leading-relaxed text-base md:text-lg">
                 Scripture quotations are from the <strong>ESV® Bible</strong> (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. All rights reserved. The ESV text may not be quoted in any publication made available to the public by a Creative Commons license. The ESV may not be translated into any other language.
               </p>
-              <p className="text-slate-700 mb-4 leading-relaxed">
+              <p className="text-slate-700 mb-4 leading-relaxed text-base md:text-lg">
                 Users may not copy or download more than 500 verses of the ESV Bible or more than one half of any book of the ESV Bible.
               </p>
-              <p className="text-slate-700">
+              <p className="text-slate-700 text-base md:text-lg">
                 <strong className="text-slate-800">ESV API:</strong> <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline transition-colors">www.esv.org</a>
               </p>
             </div>
@@ -47,9 +50,9 @@ export default function CopyrightPage() {
 
           {/* Usage Terms Section */}
           <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-            <h2 className="text-2xl font-bold text-slate-800 mb-6 border-b border-gray-200 pb-3">Usage Terms</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-6 border-b border-gray-200 pb-3">Usage Terms</h2>
             <div className="bg-amber-50 border-l-4 border-amber-400 rounded-lg p-6">
-              <ul className="text-slate-700 space-y-3 leading-relaxed">
+              <ul className="text-slate-700 space-y-3 leading-relaxed text-base md:text-lg">
                 <li className="flex items-start">
                   <span className="text-amber-600 font-bold mr-3">•</span>
                   <span>This site is for non-commercial, ministry use only</span>
@@ -72,40 +75,40 @@ export default function CopyrightPage() {
 
           {/* Technical Implementation Section */}
           <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-            <h2 className="text-2xl font-bold text-slate-800 mb-6 border-b border-gray-200 pb-3">Technical Implementation</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-6 border-b border-gray-200 pb-3">Technical Implementation</h2>
             <div className="bg-slate-50 border-l-4 border-slate-400 rounded-lg p-6">
               <div className="space-y-3">
-                <p className="text-slate-700">
+                <p className="text-slate-700 text-base md:text-lg">
                   <strong className="text-slate-800">Framework:</strong> Next.js 16 (React 19)
                 </p>
-                <p className="text-slate-700">
+                <p className="text-slate-700 text-base md:text-lg">
                   <strong className="text-slate-800">Language:</strong> TypeScript
                 </p>
-                <p className="text-slate-700">
+                <p className="text-slate-700 text-base md:text-lg">
                   <strong className="text-slate-800">UI:</strong> Tailwind CSS, Geist font
                 </p>
-                <p className="text-slate-700">
+                <p className="text-slate-700 text-base md:text-lg">
                   <strong className="text-slate-800">Authentication:</strong> Session-based authentication
                 </p>
-                <p className="text-slate-700">
+                <p className="text-slate-700 text-base md:text-lg">
                   <strong className="text-slate-800">Scripture Integration:</strong> ESV API v3 (dynamic text retrieval)
                 </p>
-                <p className="text-slate-700">
+                <p className="text-slate-700 text-base md:text-lg">
                   <strong className="text-slate-800">Data Storage:</strong> Netlify Blob Storage (profiles, gospel data)
                 </p>
-                <p className="text-slate-700">
+                <p className="text-slate-700 text-base md:text-lg">
                   <strong className="text-slate-800">Hosting:</strong> Netlify (static site + serverless API functions)
                 </p>
-                <p className="text-slate-700">
+                <p className="text-slate-700 text-base md:text-lg">
                   <strong className="text-slate-800">Testing:</strong> Jest, React Testing Library, MSW
                 </p>
-                <p className="text-slate-700">
+                <p className="text-slate-700 text-base md:text-lg">
                   <strong className="text-slate-800">Admin Features:</strong> Profile management, favorites, analytics, live preview
                 </p>
-                <p className="text-slate-700">
+                <p className="text-slate-700 text-base md:text-lg">
                   <strong className="text-slate-800">Source Control:</strong> <a href="https://github.com/Kelemek/gospel_presentation" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">GitHub Repository</a>
                 </p>
-                <p className="text-slate-700">
+                <p className="text-slate-700 text-base md:text-lg">
                   <strong className="text-slate-800">Author & Maintainer:</strong> Mark Larson (<a href="mailto:markdlarson@me.com" className="text-blue-500 underline">markdlarson@me.com</a>)
                 </p>
               </div>
@@ -120,7 +123,7 @@ export default function CopyrightPage() {
           <div className="mb-6">
             <Link 
               href="/"
-              className="inline-flex items-center gap-2 bg-slate-600 hover:bg-slate-500 text-white px-6 py-3 rounded-lg transition-colors font-medium"
+              className="inline-flex items-center gap-2 bg-slate-600 hover:bg-slate-500 text-white px-6 py-4 rounded-lg transition-colors font-medium text-base md:text-lg min-h-[48px]"
             >
               <span>←</span>
               Back to Gospel Presentation

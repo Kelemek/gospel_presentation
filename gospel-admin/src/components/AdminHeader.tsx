@@ -89,7 +89,7 @@ export default function AdminHeader({
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
         <div className="flex-1">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-2">
-            <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-br from-slate-700 to-slate-800 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-br from-slate-700 to-slate-800 bg-clip-text text-transparent">
               {title}
             </h1>
             
@@ -98,7 +98,7 @@ export default function AdminHeader({
               <div className="relative">
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-800 border border-slate-200 hover:border-slate-300 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+                  className="flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 hover:text-slate-800 border border-slate-200 hover:border-slate-300 rounded-lg text-base font-medium transition-all duration-200 shadow-sm hover:shadow-md min-h-[44px]"
                   disabled={isLoading}
                 >
                   <span className="text-xs">👤</span>
@@ -123,14 +123,14 @@ export default function AdminHeader({
                     {/* Dropdown */}
                     <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-lg z-20">
                       <div className="p-2">
-                        <div className="text-xs font-medium text-slate-500 px-2 py-1 mb-1">
+                        <div className="text-sm font-medium text-slate-500 px-2 py-1 mb-1">
                           Switch Profile
                         </div>
                         {profiles.map((profile) => (
                           <button
                             key={profile.slug}
                             onClick={() => handleProfileSwitch(profile.slug)}
-                            className={`w-full text-left px-2 py-2 rounded-lg text-sm transition-all duration-200 ${
+                            className={`w-full text-left px-3 py-3 rounded-lg text-base transition-all duration-200 min-h-[44px] flex items-center ${
                               profile.slug === currentProfileSlug
                                 ? 'bg-slate-100 text-slate-800 font-medium shadow-sm'
                                 : 'hover:bg-slate-50 text-slate-700'
@@ -173,31 +173,31 @@ export default function AdminHeader({
             )}
           </div>
           
-          <p className="text-slate-600 text-sm sm:text-base">
+          <p className="text-slate-600 text-base sm:text-lg">
             {description}
           </p>
           
           {/* Profile Context Info */}
           {currentProfile && (
-            <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm">
+            <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm sm:text-base">
               <span className="text-slate-500">Editing:</span>
               <Link
                 href={`/${currentProfile.slug}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-slate-600 hover:text-slate-800 underline break-all"
+                className="text-slate-600 hover:text-slate-800 underline break-all py-1"
               >
                 /{currentProfile.slug}
               </Link>
               <Link
                 href={`/admin/profiles/${currentProfile.slug}`}
-                className="text-slate-600 hover:text-slate-800 hover:underline"
+                className="text-slate-600 hover:text-slate-800 hover:underline py-1"
               >
                 Profile Settings
               </Link>
               <Link
                 href={`/admin/profiles/${currentProfile.slug}/content`}
-                className="text-slate-600 hover:text-slate-800 hover:underline"
+                className="text-slate-600 hover:text-slate-800 hover:underline py-1"
               >
                 Edit Content
               </Link>

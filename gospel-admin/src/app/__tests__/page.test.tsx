@@ -134,7 +134,7 @@ describe('GospelPresentation Page', () => {
     render(<GospelPresentation />)
 
     await waitFor(() => {
-      expect(screen.getByText('Presenting the Gospel in its Context')).toBeInTheDocument()
+      expect(screen.getByText('The Gospel Presentation')).toBeInTheDocument()
     })
 
     expect(screen.getByText('God')).toBeInTheDocument()
@@ -381,12 +381,8 @@ describe('GospelPresentation Page', () => {
     render(<GospelPresentation />)
 
     await waitFor(() => {
-      expect(screen.getByText('Presenting the Gospel in its Context')).toBeInTheDocument()
+      expect(screen.getByText('The Gospel Presentation')).toBeInTheDocument()
     })
-
-    // Header content
-    expect(screen.getByText('Faithfully Sowing the Seed According to the Scriptures')).toBeInTheDocument()
-    expect(screen.getByText('By Dr. Stuart Scott')).toBeInTheDocument()
 
     // Footer content
   // Removed reference to www.oneeightycounseling.com

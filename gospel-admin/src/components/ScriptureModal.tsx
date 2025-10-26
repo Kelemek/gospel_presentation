@@ -193,9 +193,9 @@ export default function ScriptureModal({
                 ◀
               </button>
               <div className="text-center flex-1 px-2">
-                <h3 className="text-sm md:text-base font-semibold text-slate-800 leading-tight">{reference}</h3>
+                <h3 className="text-lg md:text-xl font-semibold text-slate-800 leading-tight">{reference}</h3>
                 {totalFavorites > 0 && (
-                  <div className="text-xs text-slate-500 mt-1">
+                  <div className="text-sm md:text-base text-slate-600 mt-1">
                     {currentIndex + 1} of {totalFavorites} favorites
                   </div>
                 )}
@@ -227,7 +227,7 @@ export default function ScriptureModal({
           <div className="flex gap-2 justify-center">
             <button
               onClick={() => setShowingContext(false)}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors min-h-[44px] ${
+              className={`px-4 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] ${
                 !showingContext 
                   ? 'bg-blue-100 text-blue-700 border border-blue-300' 
                   : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100 border border-slate-200'
@@ -238,7 +238,7 @@ export default function ScriptureModal({
             <button
               onClick={fetchChapterContext}
               disabled={contextLoading}
-              className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors min-h-[44px] border ${
+              className={`px-4 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border ${
                 showingContext 
                   ? 'bg-blue-100 text-blue-700 border-blue-300' 
                   : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100 border-slate-200'
@@ -252,7 +252,7 @@ export default function ScriptureModal({
         {/* Context Information - Only show when available */}
         {context && (
           <div className="px-4 py-3 bg-slate-50 border-b flex-shrink-0">
-            <div className="text-slate-700 text-sm">
+            <div className="text-slate-700 text-base md:text-lg">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-blue-600">📚</span>
                 <strong className="text-slate-800">Section:</strong> 
@@ -262,7 +262,7 @@ export default function ScriptureModal({
                 <span className="text-blue-500">📖</span>
                 <span className="font-medium">{context.subsectionTitle}</span>
               </div>
-              <div className="text-slate-600 text-xs leading-relaxed">
+              <div className="text-slate-600 text-sm md:text-base leading-relaxed">
                 {context.content}
               </div>
             </div>
@@ -273,7 +273,7 @@ export default function ScriptureModal({
           {(loading || contextLoading) && (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-slate-600">
+              <span className="ml-3 text-slate-600 text-base md:text-lg">
                 {contextLoading ? 'Loading chapter context...' : 'Loading scripture...'}
               </span>
             </div>
@@ -281,8 +281,8 @@ export default function ScriptureModal({
           
           {error && (
             <div className="text-red-600 text-center py-8">
-              <p className="mb-2">⚠️ {error}</p>
-              <p className="text-sm text-slate-500">
+              <p className="mb-2 text-base md:text-lg">⚠️ {error}</p>
+              <p className="text-sm md:text-base text-slate-500">
                 ESV API may be unavailable or reference format incorrect
               </p>
             </div>
@@ -292,7 +292,7 @@ export default function ScriptureModal({
           {!showingContext && scriptureText && (
             <div className="prose max-w-none">
               <div 
-                className="text-slate-700 leading-relaxed text-base"
+                className="text-slate-700 leading-relaxed text-lg md:text-xl"
                 dangerouslySetInnerHTML={{
                   __html: scriptureText
                     .replace(/\[(\d+)\]/g, '<sup class="text-blue-600 font-medium">$1</sup>')
@@ -305,7 +305,7 @@ export default function ScriptureModal({
           {/* Display chapter context with highlighted verse */}
           {showingContext && chapterText && (
             <div className="prose max-w-none">
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-slate-700 text-sm">
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-slate-700 text-base md:text-lg">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-blue-600">📚</span>
                   <strong className="text-slate-800">Chapter Context:</strong> 
@@ -318,7 +318,7 @@ export default function ScriptureModal({
               </div>
               <div 
                 id="chapter-content"
-                className="text-slate-700 leading-relaxed"
+                className="text-slate-700 leading-relaxed text-lg md:text-xl"
                 dangerouslySetInnerHTML={{
                   __html: processChapterText(chapterText)
                 }}

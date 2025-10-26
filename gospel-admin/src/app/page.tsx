@@ -218,17 +218,8 @@ function GospelPresentationOld() {
       <header className="bg-gradient-to-br from-slate-700 to-slate-800 text-white text-center py-10 shadow-lg">
         <div className="container mx-auto px-5">
           <h1 className="text-4xl md:text-5xl font-bold mb-3">
-            Presenting the Gospel in its Context
+            The Gospel Presentation
           </h1>
-          <h2 className="text-xl md:text-2xl mb-4 opacity-90">
-            Faithfully Sowing the Seed According to the Scriptures
-          </h2>
-          <p className="text-lg italic opacity-80 mb-2">
-            "The Gospel Presentation" with Highlighted Scriptures for Easy Reference
-          </p>
-          <p className="text-base opacity-70">
-            By Dr. Stuart Scott
-          </p>
         </div>
       </header>
 

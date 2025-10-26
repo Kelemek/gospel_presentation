@@ -133,7 +133,7 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
       {/* Modal */}
       {isVisible && (
         <div
-          className="fixed z-50 bg-white border border-slate-300 rounded-lg shadow-xl p-6 max-w-6xl w-96 max-w-[calc(100vw-40px)]"
+          className="fixed z-50 bg-white border border-slate-300 rounded-lg shadow-xl p-6 max-w-6xl w-96 max-w-[calc(100vw-40px)] min-h-[60px]"
           style={{
             left: `${position.x}px`,
             top: `${position.y}px`,
@@ -143,26 +143,26 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
         >
           {loading ? (
             <div className="flex items-center gap-2 text-slate-600">
-              <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-              <span className="text-sm">Loading verse...</span>
+              <div className="w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+              <span className="text-base md:text-lg">Loading verse...</span>
             </div>
           ) : error ? (
-            <div className="text-red-600 text-sm">
+            <div className="text-red-600 text-base md:text-lg">
               <p className="font-medium">Error loading verse:</p>
               <p>{error}</p>
             </div>
           ) : scriptureData ? (
             <div className="text-slate-700">
-              <div className="font-medium text-slate-900 mb-2 text-sm">
+              <div className="font-medium text-slate-900 mb-2 text-base md:text-lg">
                 {scriptureData.reference}
               </div>
-              <div className="text-sm leading-relaxed">
+              <div className="text-base md:text-lg leading-relaxed">
                 {scriptureData.text}
               </div>
             </div>
           ) : (
-            <div className="text-slate-600 text-sm">
-              Hover for 2 seconds to load verse text
+            <div className="text-slate-600 text-base md:text-lg">
+              Hover for 1 second to load verse text
             </div>
           )}
 

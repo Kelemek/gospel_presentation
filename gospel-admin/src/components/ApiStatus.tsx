@@ -24,7 +24,7 @@ export default function ApiStatus() {
 
   return (
     <div className="mb-4">
-      <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+      <div className={`inline-flex items-center px-4 py-2 rounded-full text-base font-medium min-h-[40px] ${
         apiStatus === 'online' 
           ? 'bg-green-100 text-green-800' 
           : apiStatus === 'offline'
