@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import GospelSection from '@/components/GospelSection'
 import ScriptureModal from '@/components/ScriptureModal'
 import TableOfContents from '@/components/TableOfContents'
@@ -54,6 +54,12 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
   
   // Current last viewed scripture (use local state for immediate updates)
   const currentLastViewed = localLastViewed || lastViewedScripture?.reference
+  
+  // Wrapper function to reset progress and update local state immediately
+  const handleClearProgress = useCallback(async () => {
+    await resetProgress()
+    setLocalLastViewed(null)
+  }, [resetProgress])
   
   // Debug logging
   useEffect(() => {
@@ -378,6 +384,7 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
                     section={section}
                     onScriptureClick={handleScriptureClick}
                     lastViewedScripture={currentLastViewed}
+                    onClearProgress={handleClearProgress}
                   />
                 </div>
               ))}
@@ -456,6 +463,7 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
                   section={section}
                   onScriptureClick={handleScriptureClick}
                   lastViewedScripture={currentLastViewed}
+                  onClearProgress={handleClearProgress}
                 />
               </div>
             ))}
