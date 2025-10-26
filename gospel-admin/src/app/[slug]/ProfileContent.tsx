@@ -227,10 +227,11 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
       }
     }
     
-    // Update current reference index if this is a favorite
-    const favoriteIndex = favoriteReferences.indexOf(reference)
-    if (favoriteIndex !== -1) {
-      setCurrentReferenceIndex(favoriteIndex)
+    // Update current reference index based on navigation array
+    const navigationRefs = favoriteReferences.length > 0 ? favoriteReferences : allScriptureRefs.map(ref => ref.reference)
+    const navIndex = navigationRefs.indexOf(reference)
+    if (navIndex !== -1) {
+      setCurrentReferenceIndex(navIndex)
     }
     
     setSelectedScripture({ 
@@ -240,13 +241,16 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
     })
   }
 
-  // Navigation functions for favorite references only
+  // Determine navigation array: use favorites if available, otherwise use all references
+  const navigationRefs = favoriteReferences.length > 0 ? favoriteReferences : allScriptureRefs.map(ref => ref.reference)
+  
+  // Navigation functions for favorite references or all references if no favorites
   const navigateToPrevious = () => {
-    if (favoriteReferences.length === 0) return
+    if (navigationRefs.length === 0) return
     
-    const newIndex = (currentReferenceIndex - 1 + favoriteReferences.length) % favoriteReferences.length
+    const newIndex = (currentReferenceIndex - 1 + navigationRefs.length) % navigationRefs.length
     setCurrentReferenceIndex(newIndex)
-    const reference = favoriteReferences[newIndex]
+    const reference = navigationRefs[newIndex]
     const refWithContext = allScriptureRefs.find(ref => ref.reference === reference)
     
     // Track the new scripture being viewed
@@ -260,11 +264,11 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
   }
 
   const navigateToNext = () => {
-    if (favoriteReferences.length === 0) return
+    if (navigationRefs.length === 0) return
     
-    const newIndex = (currentReferenceIndex + 1) % favoriteReferences.length
+    const newIndex = (currentReferenceIndex + 1) % navigationRefs.length
     setCurrentReferenceIndex(newIndex)
-    const reference = favoriteReferences[newIndex]
+    const reference = navigationRefs[newIndex]
     const refWithContext = allScriptureRefs.find(ref => ref.reference === reference)
     
     // Track the new scripture being viewed
@@ -277,9 +281,9 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
     })
   }
 
-  // Navigation state for favorites only
-  const hasPrevious = favoriteReferences.length > 1
-  const hasNext = favoriteReferences.length > 1
+  // Navigation state: enabled if more than one reference available
+  const hasPrevious = navigationRefs.length > 1
+  const hasNext = navigationRefs.length > 1
 
   const closeModal = () => {
     setSelectedScripture({ reference: '', isOpen: false })
@@ -503,6 +507,7 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
         hasNext={hasNext}
         currentIndex={currentReferenceIndex}
         totalFavorites={favoriteReferences.length}
+        totalReferences={navigationRefs.length}
         context={selectedScripture.context}
         onScriptureViewed={handleModalScriptureViewed}
       />

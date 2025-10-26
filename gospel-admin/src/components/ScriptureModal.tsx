@@ -12,6 +12,7 @@ interface ScriptureModalProps {
   hasNext?: boolean
   currentIndex?: number
   totalFavorites?: number
+  totalReferences?: number
   context?: {
     sectionTitle: string
     subsectionTitle: string
@@ -31,6 +32,7 @@ export default function ScriptureModal({
   hasNext = false,
   currentIndex = 0,
   totalFavorites = 0,
+  totalReferences = 0,
   context,
   onScriptureViewed
 }: ScriptureModalProps) {
@@ -40,6 +42,13 @@ export default function ScriptureModal({
   const [loading, setLoading] = useState(false)
   const [contextLoading, setContextLoading] = useState(false)
   const [error, setError] = useState<string>('')
+
+  // Touch/swipe state for mobile navigation
+  const [touchStart, setTouchStart] = useState<number | null>(null)
+  const [touchEnd, setTouchEnd] = useState<number | null>(null)
+
+  // Minimum swipe distance (in px) to trigger navigation
+  const minSwipeDistance = 50
 
   // Extract chapter reference from verse reference
   const getChapterReference = (verseRef: string): string => {
@@ -177,9 +186,33 @@ export default function ScriptureModal({
     return processedText
   }
 
+  // Touch event handlers for mobile swiping
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null) // Reset touchEnd when a new touch starts
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+    
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > minSwipeDistance
+    const isRightSwipe = distance < -minSwipeDistance
+
+    if (isLeftSwipe && hasNext && onNext) {
+      onNext()
+    } else if (isRightSwipe && hasPrevious && onPrevious) {
+      onPrevious()
+    }
+  }
+
   return (
     <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 z-50 flex items-start md:items-center justify-center p-0 md:p-4" style={{ minHeight: '100vh', minWidth: '100vw' }}>
-      <div className="bg-white w-full md:max-w-2xl lg:max-w-4xl xl:max-w-5xl shadow-xl flex flex-col h-full md:h-auto md:max-h-[80vh] md:rounded-lg">
+      <div className="bg-white w-full md:max-w-2xl lg:max-w-4xl xl:max-w-5xl shadow-xl flex flex-col h-full md:h-[80vh] md:rounded-lg">
         
         {/* Fixed Header with Controls - Always Visible */}
         <div className="bg-slate-100 px-4 pt-safe-or-3 pb-3 border-b flex-shrink-0 relative z-10 md:rounded-t-lg" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}>
@@ -201,10 +234,10 @@ export default function ScriptureModal({
               </button>
               <div className="text-center flex-1 px-2">
                 <h3 className="text-lg md:text-xl font-semibold text-slate-800 leading-tight">{reference}</h3>
-                {totalFavorites > 0 && (
-                  <div className="text-sm md:text-base text-slate-600 mt-1">
-                    {currentIndex + 1} of {totalFavorites} favorites
-                  </div>
+                                {totalReferences > 0 && (
+                  <span className="text-sm text-gray-600">
+                    {currentIndex + 1} of {totalReferences} {totalFavorites > 0 ? 'favorites' : 'verses'}
+                  </span>
                 )}
               </div>
               <button
@@ -276,7 +309,12 @@ export default function ScriptureModal({
           </div>
         )}
         {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 min-h-0">
+        <div 
+          className="flex-1 overflow-y-auto px-4 py-4 min-h-0"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           {(loading || contextLoading) && (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
