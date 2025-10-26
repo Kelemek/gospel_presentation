@@ -17,6 +17,8 @@ interface ScriptureModalProps {
     subsectionTitle: string
     content: string
   }
+  // Progress tracking props
+  onScriptureViewed?: (reference: string) => void
 }
 
 export default function ScriptureModal({ 
@@ -29,7 +31,8 @@ export default function ScriptureModal({
   hasNext = false,
   currentIndex = 0,
   totalFavorites = 0,
-  context
+  context,
+  onScriptureViewed
 }: ScriptureModalProps) {
   const [scriptureText, setScriptureText] = useState<string>('')
   const [chapterText, setChapterText] = useState<string>('')
@@ -134,6 +137,10 @@ export default function ScriptureModal({
             setError(data.error)
           } else {
             setScriptureText(data.text)
+            // Track scripture progress when successfully viewed in modal
+            if (onScriptureViewed) {
+              onScriptureViewed(reference)
+            }
           }
         })
         .catch(err => {

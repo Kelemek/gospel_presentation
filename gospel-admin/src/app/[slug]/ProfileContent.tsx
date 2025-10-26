@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import GospelSection from '@/components/GospelSection'
 import ScriptureModal from '@/components/ScriptureModal'
 import TableOfContents from '@/components/TableOfContents'
-import { GospelSection as GospelSectionType } from '@/lib/types'
+import { GospelSection as GospelSectionType, GospelProfile } from '@/lib/types'
+import { useScriptureProgress } from '@/lib/useScriptureProgress'
 
 interface ProfileInfo {
   title: string
@@ -16,9 +17,10 @@ interface ProfileInfo {
 interface ProfileContentProps {
   sections: GospelSectionType[]
   profileInfo: ProfileInfo
+  profile?: GospelProfile | null  // Full profile for scripture progress tracking
 }
 
-export default function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
+export default function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps) {
   const [selectedScripture, setSelectedScripture] = useState<{
     reference: string
     isOpen: boolean
@@ -32,6 +34,37 @@ export default function ProfileContent({ sections, profileInfo }: ProfileContent
   const [favoriteReferences, setFavoriteReferences] = useState<string[]>([])
   const [currentReferenceIndex, setCurrentReferenceIndex] = useState(0)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+
+  // Scripture progress tracking
+  const { 
+    trackScriptureView, 
+    resetProgress, 
+    lastViewedScripture, 
+    isLoading: progressLoading,
+    error: progressError 
+  } = useScriptureProgress(profile || null)
+  
+  // Local state to track the current progress for immediate UI updates
+  const [localLastViewed, setLocalLastViewed] = useState<string | null>(null)
+  
+  // Update local state when profile changes or lastViewedScripture changes
+  useEffect(() => {
+    setLocalLastViewed(lastViewedScripture?.reference || null)
+  }, [lastViewedScripture])
+  
+  // Current last viewed scripture (use local state for immediate updates)
+  const currentLastViewed = localLastViewed || lastViewedScripture?.reference
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('[ProfileContent] Debug:', {
+      profileSlug: profile?.slug,
+      isDefault: profile?.isDefault,
+      lastViewedFromProfile: lastViewedScripture?.reference,
+      localLastViewed,
+      currentLastViewed
+    })
+  }, [profile, lastViewedScripture, localLastViewed, currentLastViewed])
 
   // Early return if required props are missing
   if (!sections || !profileInfo) {
@@ -141,9 +174,52 @@ export default function ProfileContent({ sections, profileInfo }: ProfileContent
     ])
   )
 
-  const handleScriptureClick = (reference: string) => {
+  const handleScriptureClick = async (reference: string) => {
     // Find the context for this reference
     const refWithContext = allScriptureRefs.find(ref => ref.reference === reference)
+    
+    // Track scripture progress for non-default profiles
+    if (profile && !profile.isDefault) {
+      try {
+        // Find section and subsection IDs for tracking
+        let sectionId = ''
+        let subsectionId = ''
+        
+        for (const section of sections) {
+          for (let subIndex = 0; subIndex < section.subsections.length; subIndex++) {
+            const subsection = section.subsections[subIndex]
+            
+            // Check main subsection references
+            if (subsection.scriptureReferences?.some(ref => ref.reference === reference)) {
+              sectionId = `section-${section.section}`
+              subsectionId = `${sectionId}-${subIndex}`
+              break
+            }
+            
+            // Check nested subsection references
+            if (subsection.nestedSubsections) {
+              for (const nested of subsection.nestedSubsections) {
+                if (nested.scriptureReferences?.some(ref => ref.reference === reference)) {
+                  sectionId = `section-${section.section}`
+                  subsectionId = `${sectionId}-${subIndex}`
+                  break
+                }
+              }
+            }
+          }
+          if (sectionId) break
+        }
+        
+        if (sectionId && subsectionId) {
+          await trackScriptureView(reference, sectionId, subsectionId)
+          // Immediately update local state for visual feedback
+          setLocalLastViewed(reference)
+        }
+      } catch (error) {
+        console.warn('Failed to track scripture progress:', error)
+        // Don't break the user experience
+      }
+    }
     
     // Update current reference index if this is a favorite
     const favoriteIndex = favoriteReferences.indexOf(reference)
@@ -167,6 +243,9 @@ export default function ProfileContent({ sections, profileInfo }: ProfileContent
     const reference = favoriteReferences[newIndex]
     const refWithContext = allScriptureRefs.find(ref => ref.reference === reference)
     
+    // Track the new scripture being viewed
+    handleModalScriptureViewed(reference)
+    
     setSelectedScripture({ 
       reference, 
       isOpen: true,
@@ -181,6 +260,9 @@ export default function ProfileContent({ sections, profileInfo }: ProfileContent
     setCurrentReferenceIndex(newIndex)
     const reference = favoriteReferences[newIndex]
     const refWithContext = allScriptureRefs.find(ref => ref.reference === reference)
+    
+    // Track the new scripture being viewed
+    handleModalScriptureViewed(reference)
     
     setSelectedScripture({ 
       reference, 
@@ -205,6 +287,21 @@ export default function ProfileContent({ sections, profileInfo }: ProfileContent
     setIsMenuOpen(false)
   }
 
+  // Simplified scripture tracking for modal (doesn't need section/subsection IDs)
+  const handleModalScriptureViewed = async (reference: string) => {
+    if (profile && !profile.isDefault) {
+      try {
+        // For modal views, use generic section/subsection IDs
+        await trackScriptureView(reference, 'modal-view', 'modal-view')
+        // Immediately update local state for visual feedback
+        setLocalLastViewed(reference)
+      } catch (error) {
+        console.warn('Failed to track scripture progress from modal:', error)
+        // Don't break the user experience
+      }
+    }
+  }
+
   return (
     <>
       {/* Desktop Layout - Two columns for large screens */}
@@ -225,8 +322,45 @@ export default function ProfileContent({ sections, profileInfo }: ProfileContent
                   <div className="text-xs text-slate-500 mb-2">{profileInfo.description}</div>
                 )}
                 {profileInfo?.favoriteScriptures && profileInfo.favoriteScriptures.length > 0 && (
-                  <div className="text-xs text-blue-600">
+                  <div className="text-xs text-blue-600 mb-2">
                     📖 {profileInfo.favoriteScriptures.length} favorite{profileInfo.favoriteScriptures.length !== 1 ? 's' : ''}
+                  </div>
+                )}
+                
+                {/* Scripture Progress Section */}
+                {profile && !profile.isDefault && (
+                  <div className="mt-4 pt-4 border-t border-gray-100">
+                    {currentLastViewed ? (
+                      <div className="space-y-2">
+                        <div className="text-xs font-medium text-slate-600">Reading Progress</div>
+                        <div className="text-xs text-yellow-700 bg-yellow-50 p-2 rounded border">
+                          📍 Last: {currentLastViewed}
+                        </div>
+                        <div className="text-xs text-slate-400 mt-1">
+                          Profile: {profile?.lastViewedScripture?.reference || 'none'} | Local: {localLastViewed || 'none'}
+                        </div>
+                        <button
+                          onClick={async () => {
+                            await resetProgress()
+                            setLocalLastViewed(null)
+                          }}
+                          disabled={progressLoading}
+                          className="text-xs px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded transition-colors disabled:opacity-50 w-full"
+                        >
+                          {progressLoading ? 'Resetting...' : 'Reset Progress'}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-slate-500 italic">
+                        Click any scripture to start tracking your progress
+                      </div>
+                    )}
+                    
+                    {progressError && (
+                      <div className="text-xs text-red-600 mt-2">
+                        Error: {progressError}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -243,6 +377,7 @@ export default function ProfileContent({ sections, profileInfo }: ProfileContent
                   <GospelSection 
                     section={section}
                     onScriptureClick={handleScriptureClick}
+                    lastViewedScripture={currentLastViewed}
                   />
                 </div>
               ))}
@@ -320,6 +455,7 @@ export default function ProfileContent({ sections, profileInfo }: ProfileContent
                 <GospelSection 
                   section={section}
                   onScriptureClick={handleScriptureClick}
+                  lastViewedScripture={currentLastViewed}
                 />
               </div>
             ))}
@@ -360,6 +496,7 @@ export default function ProfileContent({ sections, profileInfo }: ProfileContent
         currentIndex={currentReferenceIndex}
         totalFavorites={favoriteReferences.length}
         context={selectedScripture.context}
+        onScriptureViewed={handleModalScriptureViewed}
       />
     </>
   )

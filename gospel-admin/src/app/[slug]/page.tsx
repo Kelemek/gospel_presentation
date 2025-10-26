@@ -125,6 +125,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
           slug: slug,
           favoriteScriptures: favoriteScriptures
         }}
+        profile={profile}
       />
     </div>
   )
