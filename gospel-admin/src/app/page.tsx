@@ -6,6 +6,7 @@ import ScriptureModal from '@/components/ScriptureModal'
 import TableOfContents from '@/components/TableOfContents'
 import GospelSection from '@/components/GospelSection'
 import Link from 'next/link'
+import { logger } from '@/lib/logger'
 
 export default function GospelPresentation() {
   // Redirect to default profile to ensure we get the latest data with favorites
@@ -71,7 +72,7 @@ function GospelPresentationOld() {
     })
     
     setFavoriteReferences(favorites)
-    console.log('📖 Found', favorites.length, 'favorite scripture references:', favorites)
+    logger.debug('📖 Found', favorites.length, 'favorite scripture references:', favorites)
   }
 
   // Load data on mount

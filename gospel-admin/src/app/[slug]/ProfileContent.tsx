@@ -6,6 +6,7 @@ import ScriptureModal from '@/components/ScriptureModal'
 import TableOfContents from '@/components/TableOfContents'
 import { GospelSection as GospelSectionType, GospelProfile } from '@/lib/types'
 import { useScriptureProgress } from '@/lib/useScriptureProgress'
+import { logger } from '@/lib/logger'
 
 interface ProfileInfo {
   title: string
@@ -63,7 +64,7 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
   
   // Debug logging
   useEffect(() => {
-    console.log('[ProfileContent] Debug:', {
+    logger.debug('[ProfileContent] Debug:', {
       profileSlug: profile?.slug,
       isDefault: profile?.isDefault,
       lastViewedFromProfile: lastViewedScripture?.reference,
@@ -108,7 +109,7 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
     })
     
     setFavoriteReferences(favorites)
-    console.log('📖 Found', favorites.length, 'favorite scripture references:', favorites)
+    logger.debug('📖 Found', favorites.length, 'favorite scripture references:', favorites)
   }
 
   // Load favorite references when sections change

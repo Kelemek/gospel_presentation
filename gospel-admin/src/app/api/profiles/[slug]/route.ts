@@ -9,6 +9,7 @@ import {
   updateProfile,
   deleteProfile
 } from '@/lib/data-service'
+import { logger } from '@/lib/logger'
 
 interface RouteContext {
   params: Promise<{
@@ -49,7 +50,7 @@ export async function GET(
     }
 
   } catch (error) {
-    console.error('Error fetching profile:', error)
+    logger.error('Error fetching profile:', error)
     return NextResponse.json(
       { error: 'Failed to fetch profile' },
       { status: 500 }
@@ -65,7 +66,7 @@ export async function PUT(
     const { slug } = await context.params
     const body = await request.json()
     
-    console.log(`[API] PUT /api/profiles/${slug}`, { 
+    logger.debug(`[API] PUT /api/profiles/${slug}`, { 
       bodyKeys: Object.keys(body),
       title: body.title,
       description: body.description,
@@ -80,14 +81,14 @@ export async function PUT(
 
     const updatedProfile = await updateProfile(slug, updates)
 
-    console.log(`[API] Profile updated successfully:`, { 
+    logger.debug(`[API] Profile updated successfully:`, { 
       slug: updatedProfile.slug,
       title: updatedProfile.title 
     })
 
     return NextResponse.json(updatedProfile)
   } catch (error) {
-    console.error('Error updating profile:', error)
+    logger.error('Error updating profile:', error)
     
     if (error instanceof Error && error.message.includes('not found')) {
       return NextResponse.json(

@@ -6,6 +6,7 @@ import {
   GospelPresentationData 
 } from './types'
 import { createProfileFromRequest } from './profile-service'
+import { logger } from './logger'
 
 // Store names
 const PROFILES_STORE = 'profiles'
@@ -47,14 +48,14 @@ export async function loadGospelData(): Promise<GospelPresentationData> {
   try {
     // Try to load from blob storage first
     const store = getGospelDataStore()
-    const data = await store.get('gospel-presentation.json', { type: 'json' })
+    const data = await store.get('gospel-presentation.json', { type: 'json' }) as GospelPresentationData | null
     
     if (data) {
-      console.log('[blob-data-service] Loaded gospel data from blob storage')
-      return data as GospelPresentationData
+      logger.debug('[blob-data-service] Loaded gospel data from blob storage')
+      return data
     }
   } catch (error) {
-    console.log('[blob-data-service] Blob storage not available, loading from file')
+    logger.debug('[blob-data-service] Blob storage not available, loading from file')
   }
   
   // Fallback to reading from file (for initial setup or local dev)
@@ -73,9 +74,9 @@ export async function loadGospelData(): Promise<GospelPresentationData> {
     try {
       const store = getGospelDataStore()
       await store.setJSON('gospel-presentation.json', data)
-      console.log('[blob-data-service] Cached gospel data to blob storage')
+      logger.debug('[blob-data-service] Cached gospel data to blob storage')
     } catch (err) {
-      console.log('[blob-data-service] Could not cache to blob storage:', err)
+      logger.debug('[blob-data-service] Could not cache to blob storage:', err)
     }
     
     return data
@@ -96,32 +97,28 @@ export async function loadProfiles(): Promise<ProfileStorage> {
   if (hasCredentials) {
     try {
       const store = getProfilesStore()
-      const data = await store.get('profiles.json', { type: 'json' })
+      const storage = await store.get('profiles.json', { type: 'json' }) as ProfileStorage | null
       
-      if (data) {
-        const storage = data as ProfileStorage
-        
-        // Convert date strings back to Date objects
-        storage.profiles = storage.profiles.map(profile => ({
-          ...profile,
-          createdAt: new Date(profile.createdAt),
-          updatedAt: new Date(profile.updatedAt)
+      if (storage) {
+        // Deserialize dates
+        storage.profiles = storage.profiles.map(p => ({
+          ...p,
+          createdAt: new Date(p.createdAt),
+          updatedAt: new Date(p.updatedAt)
         }))
-        
-        console.log('[blob-data-service] ✅ Successfully loaded', storage.profiles.length, 'profiles from blob storage - returning immediately')
+        logger.debug('[blob-data-service] ✅ Successfully loaded', storage.profiles.length, 'profiles from blob storage - returning immediately')
         return storage
-      } else {
-        console.log('[blob-data-service] No existing data in blob storage')
       }
+      logger.debug('[blob-data-service] No existing data in blob storage')
     } catch (error) {
-      console.log('[blob-data-service] Error accessing blob storage:', error instanceof Error ? error.message : String(error))
+      logger.debug('[blob-data-service] Error accessing blob storage:', error instanceof Error ? error.message : String(error))
     }
   } else {
-    console.log('[blob-data-service] No Netlify credentials available')
+    logger.debug('[blob-data-service] No Netlify credentials available')
   }
   
   // Create default profile if no data exists anywhere
-  console.log('[blob-data-service] 🆕 No existing profiles found, creating default profile...')
+  logger.debug('[blob-data-service] 🆕 No existing profiles found, creating default profile...')
   
   // Create default profile
   const gospelData = await loadGospelData()
@@ -166,7 +163,8 @@ export async function saveProfiles(storage: ProfileStorage): Promise<void> {
     }
     
     await store.setJSON('profiles.json', dataToSave)
-    console.log('[blob-data-service] ✅ Saved', storage.profiles.length, 'profiles to blob storage')
+    
+    logger.debug('[blob-data-service] ✅ Saved', storage.profiles.length, 'profiles to blob storage')
   } catch (error) {
     console.error('[blob-data-service] ❌ Failed to save to blob storage:', error)
     throw new Error('Failed to save profiles to blob storage')
@@ -221,7 +219,7 @@ export async function createProfile(request: CreateProfileRequest): Promise<Gosp
   // Save to blob storage
   await saveProfiles(storage)
   
-  console.log('[blob-data-service] Created new profile:', newProfile.slug)
+  logger.debug('[blob-data-service] Created new profile:', newProfile.slug)
   return newProfile
 }
 
@@ -253,7 +251,7 @@ export async function updateProfile(
   // Save to blob storage
   await saveProfiles(storage)
   
-  console.log('[blob-data-service] Updated profile:', slug)
+  logger.debug('[blob-data-service] Updated profile:', slug)
   return updatedProfile
 }
 
@@ -278,7 +276,7 @@ export async function deleteProfile(slug: string): Promise<void> {
   // Save to blob storage
   await saveProfiles(storage)
   
-  console.log('[blob-data-service] Deleted profile:', slug)
+  logger.debug('[blob-data-service] Deleted profile:', slug)
 }
 
 /**
@@ -297,10 +295,10 @@ export async function incrementProfileVisitCount(slug: string): Promise<void> {
       // Save to blob storage
       await saveProfiles(storage)
       
-      console.log(`[blob-data-service] Incremented visit count for '${slug}' to ${profile.visitCount}, last visited: ${profile.lastVisited.toISOString()}`)
+      logger.debug(`[blob-data-service] Incremented visit count for '${slug}' to ${profile.visitCount}, last visited: ${profile.lastVisited.toISOString()}`)
     }
   } catch (error) {
     // Don't throw errors for visit counting - it shouldn't break the page
-    console.warn('[blob-data-service] Failed to increment visit count:', error)
+    logger.warn('[blob-data-service] Failed to increment visit count:', error)
   }
 }

@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react'
 import { GospelProfile } from './types'
+import { logger } from './logger'
 
 interface ScriptureProgress {
   reference: string
@@ -58,10 +59,10 @@ export function useScriptureProgress(
         throw new Error(`Failed to track scripture progress: ${response.status}`)
       }
 
-      console.log(`[useScriptureProgress] Tracked view: ${reference}`)
+      logger.debug(`[useScriptureProgress] Tracked view: ${reference}`)
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to track scripture progress'
-      console.error('[useScriptureProgress] Error:', errorMessage)
+      logger.error('[useScriptureProgress] Error:', errorMessage)
       setError(errorMessage)
     } finally {
       setIsLoading(false)
@@ -80,13 +81,13 @@ export function useScriptureProgress(
       })
 
       if (!response.ok) {
-        throw new Error(`Failed to reset scripture progress: ${response.status}`)
+        throw new Error(`Failed to reset progress: ${response.status}`)
       }
 
-      console.log(`[useScriptureProgress] Reset progress for profile: ${profile.slug}`)
+      logger.debug(`[useScriptureProgress] Reset progress for profile: ${profile.slug}`)
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to reset scripture progress'
-      console.error('[useScriptureProgress] Error:', errorMessage)
+      const errorMessage = err instanceof Error ? err.message : 'Failed to reset progress'
+      logger.error('[useScriptureProgress] Error:', errorMessage)
       setError(errorMessage)
     } finally {
       setIsLoading(false)

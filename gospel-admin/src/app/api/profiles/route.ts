@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 import { getProfiles, createProfile } from '@/lib/data-service'
 import type { CreateProfileRequest, GospelProfile } from '@/lib/types'
+import { logger } from '@/lib/logger'
 
 export async function GET() {
   try {
-    console.log('[API] GET /api/profiles - loading from file-data-service')
+    logger.debug('[API] GET /api/profiles - loading from file-data-service')
     
     const profiles = await getProfiles()
     
@@ -23,7 +24,7 @@ export async function GET() {
     
     return NextResponse.json({ profiles: profileList })
   } catch (error) {
-    console.error('[API] GET /api/profiles error:', error)
+    logger.error('[API] GET /api/profiles error:', error)
     return NextResponse.json(
       { error: 'Failed to load profiles' },
       { status: 500 }
@@ -33,7 +34,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    console.log('[API] POST /api/profiles - creating new profile with persistence')
+    logger.debug('[API] POST /api/profiles - creating new profile with persistence')
     
     const body = await request.json() as CreateProfileRequest
     
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
     // Create the profile using file-data-service (will persist to file)
     const newProfile = await createProfile(body)
     
-    console.log('[API] POST /api/profiles - profile created and saved:', newProfile.slug)
+    logger.debug('[API] POST /api/profiles - profile created and saved:', newProfile.slug)
     
     return NextResponse.json({ 
       profile: {

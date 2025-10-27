@@ -8,6 +8,17 @@ import {
   saveProfiles
 } from '../blob-data-service'
 import { GospelProfile } from '../types'
+import * as loggerModule from '../logger'
+
+// Mock the logger
+jest.mock('../logger', () => ({
+  logger: {
+    debug: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn()
+  }
+}))
 
 // Mock Netlify Blob Store
 jest.mock('@netlify/blobs', () => ({
@@ -54,13 +65,11 @@ describe('Blob Data Service', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    // Reset console.log mock
-    jest.spyOn(console, 'log').mockImplementation()
-    jest.spyOn(console, 'error').mockImplementation()
+    // Logger is already mocked globally
   })
 
   afterEach(() => {
-    jest.restoreAllMocks()
+    jest.clearAllMocks()
   })
 
   describe('getProfiles', () => {
@@ -95,8 +104,8 @@ describe('Blob Data Service', () => {
       // creating and returning a default profile storage.
       expect(Array.isArray(result)).toBe(true)
       expect(result.length).toBeGreaterThanOrEqual(1)
-      // The service logs the blob access error; ensure we called console.log
-      expect(console.log).toHaveBeenCalled()
+      // The service logs the blob access error via logger
+      expect(loggerModule.logger.debug).toHaveBeenCalled()
     })
   })
 
