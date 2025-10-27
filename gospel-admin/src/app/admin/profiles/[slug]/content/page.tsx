@@ -31,7 +31,6 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
   const [addingScriptureToSection, setAddingScriptureToSection] = useState<string | null>(null)
   const [newNestedScriptureRef, setNewNestedScriptureRef] = useState('')
   const [addingScriptureToNested, setAddingScriptureToNested] = useState<string | null>(null)
-  const [isRestoring, setIsRestoring] = useState(false)
   const [editingScriptureId, setEditingScriptureId] = useState<string | null>(null)
   const [editingScriptureValue, setEditingScriptureValue] = useState('')
   const [draggedItem, setDraggedItem] = useState<{sectionIndex: number, subsectionIndex: number, scriptureIndex: number, nestedIndex?: number} | null>(null)
@@ -546,91 +545,6 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
     setDragOverItem(null)
   }
 
-  // Backup and Restore Functions
-  const downloadBackup = () => {
-    if (!profile) return
-
-    const backupData = {
-      profileInfo: {
-        title: profile.title,
-        slug: profile.slug,
-        description: profile.description
-      },
-      gospelData: profile.gospelData,
-      exportedAt: new Date().toISOString(),
-      exportedBy: 'Gospel Presentation Admin'
-    }
-
-    const dataStr = JSON.stringify(backupData, null, 2)
-    const dataBlob = new Blob([dataStr], { type: 'application/json' })
-    
-    const url = URL.createObjectURL(dataBlob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `gospel-profile-${profile.slug}-backup-${new Date().toISOString().split('T')[0]}.json`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
-  }
-
-  const handleFileRestore = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    if (!confirm(`Are you sure you want to restore from "${file.name}"? This will replace all current content and cannot be undone.`)) {
-      event.target.value = '' // Reset the input
-      return
-    }
-
-    setIsRestoring(true)
-    setError('')
-
-    try {
-      const fileContent = await file.text()
-      const backupData = JSON.parse(fileContent)
-
-      // Validate backup file structure
-      if (!backupData.gospelData || !Array.isArray(backupData.gospelData)) {
-        throw new Error('Invalid backup file format: missing or invalid gospelData')
-      }
-
-      // Update the profile with restored data
-      const updatedProfile = {
-        ...profile!,
-        gospelData: backupData.gospelData
-      }
-      setProfile(updatedProfile)
-      setHasChanges(true)
-
-      // Auto-save the restored content
-      const response = await fetch(`/api/profiles/${slug}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          gospelData: backupData.gospelData
-        })
-      })
-
-      if (response.ok) {
-        setHasChanges(false)
-        alert(`Successfully restored content from "${file.name}"!`)
-      } else {
-        const errorData = await response.json().catch(() => ({}))
-        throw new Error(errorData.error || 'Failed to save restored content')
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to restore backup'
-      setError(`Restore failed: ${errorMessage}`)
-      alert(`Restore failed: ${errorMessage}`)
-    } finally {
-      setIsRestoring(false)
-      event.target.value = '' // Reset the input
-    }
-  }
-
   // Functions to create new content
   const createNewSection = () => {
     if (!profile) return
@@ -858,42 +772,6 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
             <div className="text-red-800">{error}</div>
           </div>
         )}
-
-        {/* Backup & Restore Info Panel */}
-        <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-6">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-            <div className="flex-1">
-              <h3 className="text-sm font-medium text-slate-800 mb-1">Profile Data Management</h3>
-              <div className="text-xs text-slate-600 space-y-1">
-                <div><strong>Backup:</strong> Download your current profile data as a JSON file for safekeeping.</div>
-                <div><strong>Restore:</strong> Upload a previously saved backup file to replace current content.</div>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2 lg:flex-shrink-0">
-              <button
-                onClick={downloadBackup}
-                disabled={!profile}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed text-center"
-                title="Download profile backup"
-              >
-                <span className="hidden sm:inline">📥 Download Backup</span>
-                <span className="sm:hidden">📥 Backup</span>
-              </button>
-              
-              <label className="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 px-3 py-1.5 rounded-lg text-sm font-medium transition-all hover:shadow-sm cursor-pointer text-center block">
-                <span className="hidden sm:inline">{isRestoring ? '⏳ Restoring...' : '📤 Upload & Restore'}</span>
-                <span className="sm:hidden">{isRestoring ? '⏳ Restoring...' : '📤 Restore'}</span>
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleFileRestore}
-                  disabled={isRestoring}
-                  className="hidden"
-                />
-              </label>
-            </div>
-          </div>
-        </div>
 
         {/* Content Editor */}
         {profile && profile.gospelData.map((section, sectionIndex) => (
