@@ -98,9 +98,21 @@ describe('ProfileContent Component - Responsive Layout', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
-    ;(global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ success: true })
+    ;(global.fetch as jest.Mock).mockImplementation((input, init) => {
+      const urlStr = typeof input === 'string' ? input : (input && input.url) || ''
+
+      // Handle visit tracking POST
+      if (urlStr.endsWith('/visit') && init && init.method === 'POST') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) })
+      }
+
+      // If a test or component requests the profiles index, return an empty list by default
+      if (urlStr.includes('/api/profiles') && (!init || init.method === 'GET')) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ profiles: [] }) })
+      }
+
+      // Fallback: generic successful response
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ success: true }) })
     })
   })
 

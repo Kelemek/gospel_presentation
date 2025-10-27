@@ -27,13 +27,13 @@ describe('Data Utility Functions', () => {
 
       const mockResponse = {
         ok: true,
-        json: () => Promise.resolve(mockData)
+        json: () => Promise.resolve({ content: { sections: mockData } })
       }
       mockFetch.mockResolvedValueOnce(mockResponse as Response)
 
       const result = await getGospelPresentationData()
       
-      expect(mockFetch).toHaveBeenCalledWith('/api/data', {
+      expect(mockFetch).toHaveBeenCalledWith('/api/profiles/default', {
         cache: 'no-store'
       })
       expect(result).toEqual(mockData)

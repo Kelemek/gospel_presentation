@@ -68,7 +68,8 @@ describe('Admin Authentication E2E Tests', () => {
           } as Response)
         }
       }
-      return Promise.reject(new Error('Unknown URL'))
+      // Fallback: return empty profiles response to avoid noisy "Unknown URL" errors
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ profiles: [] }) } as Response)
     })
     render(<AdminPage />)
     waitFor(() => {
@@ -103,7 +104,7 @@ describe('Admin Authentication E2E Tests', () => {
           } as Response)
         }
       }
-      return Promise.reject(new Error('Unknown URL'))
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ profiles: [] }) } as Response)
     })
     
     // Re-render with new auth state
@@ -156,7 +157,7 @@ describe('Admin Authentication E2E Tests', () => {
           } as Response)
         }
       }
-      return Promise.reject(new Error('Unknown URL'))
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ profiles: [] }) } as Response)
     })
     render(<AdminPage />)
     waitFor(() => {
@@ -229,7 +230,7 @@ describe('Admin Session Management', () => {
           } as Response)
         }
       }
-      return Promise.reject(new Error('Unknown URL'))
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ profiles: [] }) } as Response)
     })
     render(<AdminPage />)
     await waitFor(() => {
@@ -290,7 +291,7 @@ describe('Admin Session Management', () => {
           } as Response)
         }
       }
-      return Promise.reject(new Error('Unknown URL'))
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ profiles: [] }) } as Response)
     })
     
     render(<AdminPage />)
@@ -355,7 +356,7 @@ describe('Admin Access Control', () => {
           } as Response)
         }
       }
-      return Promise.reject(new Error('Unknown URL'))
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ profiles: [] }) } as Response)
     })
     
     render(<AdminPage />)
