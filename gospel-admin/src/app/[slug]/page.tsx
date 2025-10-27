@@ -3,6 +3,7 @@
 import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
 import ProfileContent from './ProfileContent'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { GospelProfile } from '@/lib/types'
 
 // Configure dynamic routes
@@ -107,27 +108,29 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   })
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-gradient-to-br from-slate-700 to-slate-800 text-white text-center py-10 shadow-lg">
-        <div className="container mx-auto px-5">
-          <h1 className="text-4xl md:text-5xl font-bold mb-3">
-            The Gospel Presentation
-          </h1>
-        </div>
-      </header>
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gray-50">
+        <header className="bg-gradient-to-br from-slate-700 to-slate-800 text-white text-center py-10 shadow-lg">
+          <div className="container mx-auto px-5">
+            <h1 className="text-4xl md:text-5xl font-bold mb-3">
+              The Gospel Presentation
+            </h1>
+          </div>
+        </header>
 
-      {/* Gospel Sections with Hamburger Menu */}
-      <ProfileContent 
-        sections={gospelData} 
-        profileInfo={{
-          title: profile.title,
-          description: profile.description,
-          slug: slug,
-          favoriteScriptures: favoriteScriptures
-        }}
-        profile={profile}
-      />
-    </div>
+        {/* Gospel Sections with Hamburger Menu */}
+        <ProfileContent 
+          sections={gospelData} 
+          profileInfo={{
+            title: profile.title,
+            description: profile.description,
+            slug: slug,
+            favoriteScriptures: favoriteScriptures
+          }}
+          profile={profile}
+        />
+      </div>
+    </ErrorBoundary>
   )
 }
 

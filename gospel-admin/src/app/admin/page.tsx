@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import AdminLogin from '@/components/AdminLogin'
 import AdminHeader from '@/components/AdminHeader'
+import AdminErrorBoundary from '@/components/AdminErrorBoundary'
 import { isAuthenticated, logout } from '@/lib/auth'
 
-export default function AdminPage() {
+function AdminPageContent() {
   const [isAuth, setIsAuth] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [profiles, setProfiles] = useState<any[]>([])
@@ -425,5 +426,13 @@ export default function AdminPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function AdminPage() {
+  return (
+    <AdminErrorBoundary>
+      <AdminPageContent />
+    </AdminErrorBoundary>
   )
 }
