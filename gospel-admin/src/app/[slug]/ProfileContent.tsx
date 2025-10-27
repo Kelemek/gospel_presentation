@@ -314,6 +314,11 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
 
   return (
     <>
+      {/* Print-only header - appears at top of first page */}
+      <div className="print-header" style={{ display: 'none' }}>
+        <h1 className="print-title">The Gospel Presentation</h1>
+      </div>
+
       {/* Desktop Layout - Two columns for large screens */}
       <div className="hidden lg:flex min-h-screen">
         {/* Persistent Sidebar for Table of Contents */}
@@ -473,11 +478,6 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
             ))}
           </div>
         </main>
-      </div>
-
-      {/* Print-only header */}
-      <div className="print-header" style={{ display: 'none' }}>
-        <h1 className="print-title">The Gospel Presentation</h1>
       </div>
 
       <footer className="bg-slate-700 text-white text-center py-8 mt-16 print-hide">
