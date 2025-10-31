@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
-import { getProfiles, createProfile } from '@/lib/data-service'
+import { getProfiles, createProfile } from '@/lib/supabase-data-service'
 import type { CreateProfileRequest, GospelProfile } from '@/lib/types'
 import { logger } from '@/lib/logger'
 
 export async function GET() {
   try {
-    logger.debug('[API] GET /api/profiles - loading from file-data-service')
+    logger.debug('[API] GET /api/profiles - loading from supabase-data-service')
     
     const profiles = await getProfiles()
     

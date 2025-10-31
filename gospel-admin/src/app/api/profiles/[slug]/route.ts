@@ -8,7 +8,7 @@ import {
   getProfileBySlug,
   updateProfile,
   deleteProfile
-} from '@/lib/data-service'
+} from '@/lib/supabase-data-service'
 import { logger } from '@/lib/logger'
 
 interface RouteContext {

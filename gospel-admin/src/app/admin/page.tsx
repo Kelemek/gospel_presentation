@@ -1,14 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import AdminLogin from '@/components/AdminLogin'
 import AdminHeader from '@/components/AdminHeader'
 import AdminErrorBoundary from '@/components/AdminErrorBoundary'
-import { isAuthenticated, logout } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/client'
+import { logger } from '@/lib/logger'
 
 function AdminPageContent() {
-  const [isAuth, setIsAuth] = useState(false)
+  const router = useRouter()
+  const [user, setUser] = useState<any>(null)
+  const [userRole, setUserRole] = useState<'admin' | 'counselor' | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [profiles, setProfiles] = useState<any[]>([])
   const [error, setError] = useState('')
@@ -25,13 +28,31 @@ function AdminPageContent() {
   const [isRestoringNew, setIsRestoringNew] = useState(false)
 
   useEffect(() => {
-    setIsAuth(isAuthenticated())
-    if (isAuthenticated()) {
-      fetchProfiles()
-    } else {
-      setIsLoading(false)
-    }
+    checkAuth()
   }, [])
+
+  const checkAuth = async () => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user) {
+      router.push('/login')
+      return
+    }
+    
+    setUser(user)
+    
+    // Get user role
+    const { data: userProfile } = await supabase
+      .from('user_profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+    
+    setUserRole((userProfile as any)?.role || 'counselor')
+    setIsLoading(false)
+    fetchProfiles()
+  }
 
   useEffect(() => {
     // Set the actual site URL from the browser
@@ -39,6 +60,12 @@ function AdminPageContent() {
       setSiteUrl(`${window.location.protocol}//${window.location.host}`)
     }
   }, [])
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
 
   const fetchProfiles = async () => {
     try {
@@ -57,18 +84,6 @@ function AdminPageContent() {
       setIsLoading(false)
     }
   }
-
-  const handleLogin = () => {
-    setIsAuth(true)
-    fetchProfiles()
-  }
-
-  const handleLogout = () => {
-    logout()
-    setIsAuth(false)
-  }
-
-
 
   const generateSlug = (title: string) => {
     return title.toLowerCase()
@@ -396,8 +411,16 @@ function AdminPageContent() {
     )
   }
 
-  if (!isAuth) {
-    return <AdminLogin onLogin={handleLogin} />
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null // Will redirect to login
   }
 
   return (
@@ -409,6 +432,15 @@ function AdminPageContent() {
           showProfileSwitcher={false}
           actions={
             <>
+              {userRole === 'admin' && (
+                <Link
+                  href="/admin/users"
+                  className="px-2 sm:px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-medium transition-all hover:shadow-md whitespace-nowrap shrink-0 shadow-sm"
+                >
+                  <span className="hidden sm:inline">Manage Users</span>
+                  <span className="sm:hidden">Users</span>
+                </Link>
+              )}
               <Link
                 href="/"
                 className="px-2 sm:px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 rounded-lg text-xs sm:text-sm font-medium transition-all hover:shadow-md whitespace-nowrap shrink-0 shadow-sm"
@@ -628,19 +660,24 @@ function AdminPageContent() {
                             View
                           </Link>
                           
-                          <Link
-                            href={`/admin/profiles/${profile.slug}`}
-                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-800 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-slate-200"
-                          >
-                            Settings
-                          </Link>
-                          
-                          <Link
-                            href={`/admin/profiles/${profile.slug}/content`}
-                            className="bg-gradient-to-br from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 text-emerald-700 hover:text-emerald-800 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-emerald-200"
-                          >
-                            Content
-                          </Link>
+                          {/* Hide Settings and Content buttons for non-admins on default profile */}
+                          {(!profile.isDefault || userRole === 'admin') && (
+                            <>
+                              <Link
+                                href={`/admin/profiles/${profile.slug}`}
+                                className="bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-800 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-slate-200"
+                              >
+                                Settings
+                              </Link>
+                              
+                              <Link
+                                href={`/admin/profiles/${profile.slug}/content`}
+                                className="bg-gradient-to-br from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 text-emerald-700 hover:text-emerald-800 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-emerald-200"
+                              >
+                                Content
+                              </Link>
+                            </>
+                          )}
                           
                           {!profile.isDefault && (
                             <button
@@ -653,25 +690,30 @@ function AdminPageContent() {
                         </div>
 
                         <div className="flex items-center gap-2 flex-wrap">
-                          <button
-                            onClick={() => handleDownloadBackup(profile)}
-                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 px-2 py-1 rounded text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md border border-blue-200"
-                            title="Download profile backup"
-                          >
-                            <span className="hidden sm:inline">📥 Download Backup</span>
-                            <span className="sm:hidden">📥 Backup</span>
-                          </button>
-                          
-                          <label className="bg-amber-50 hover:bg-amber-100 text-amber-700 hover:text-amber-800 px-2 py-1 rounded text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md border border-amber-200 cursor-pointer">
-                            <span className="hidden sm:inline">📤 Upload & Restore</span>
-                            <span className="sm:hidden">📤 Restore</span>
-                            <input
-                              type="file"
-                              accept=".json"
-                              onChange={(e) => handleRestoreBackup(profile, e)}
-                              className="hidden"
-                            />
-                          </label>
+                          {/* Hide backup/restore for non-admins on default profile */}
+                          {(!profile.isDefault || userRole === 'admin') && (
+                            <>
+                              <button
+                                onClick={() => handleDownloadBackup(profile)}
+                                className="bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 px-2 py-1 rounded text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md border border-blue-200"
+                                title="Download profile backup"
+                              >
+                                <span className="hidden sm:inline">📥 Download Backup</span>
+                                <span className="sm:hidden">📥 Backup</span>
+                              </button>
+                              
+                              <label className="bg-amber-50 hover:bg-amber-100 text-amber-700 hover:text-amber-800 px-2 py-1 rounded text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md border border-amber-200 cursor-pointer">
+                                <span className="hidden sm:inline">📤 Upload & Restore</span>
+                                <span className="sm:hidden">📤 Restore</span>
+                                <input
+                                  type="file"
+                                  accept=".json"
+                                  onChange={(e) => handleRestoreBackup(profile, e)}
+                                  className="hidden"
+                                />
+                              </label>
+                            </>
+                          )}
                         </div>
                       </div>
                     </div>

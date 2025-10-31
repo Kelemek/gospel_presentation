@@ -21,7 +21,7 @@ async function getProfile(slug: string): Promise<GospelProfile | null> {
   try {
     // For server-side rendering, import the data service directly
     if (typeof window === 'undefined') {
-      const { getProfileBySlug } = await import('@/lib/blob-data-service')
+      const { getProfileBySlug } = await import('@/lib/supabase-data-service')
       return await getProfileBySlug(slug)
     }
     
