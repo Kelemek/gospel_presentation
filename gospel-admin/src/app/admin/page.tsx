@@ -18,6 +18,7 @@ function AdminPageContent() {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [siteUrl, setSiteUrl] = useState('yoursite.com')
+  const [searchQuery, setSearchQuery] = useState('')
   const [createForm, setCreateForm] = useState({
     title: '',
     slug: '',
@@ -498,6 +499,19 @@ function AdminPageContent() {
     }
   }
 
+  // Filter profiles based on search query
+  const filteredProfiles = profiles.filter(profile => {
+    if (!searchQuery.trim()) return true
+    
+    const query = searchQuery.toLowerCase()
+    return (
+      profile.title?.toLowerCase().includes(query) ||
+      profile.slug?.toLowerCase().includes(query) ||
+      profile.description?.toLowerCase().includes(query) ||
+      profile.ownerDisplayName?.toLowerCase().includes(query)
+    )
+  })
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -591,6 +605,42 @@ function AdminPageContent() {
                   />
                 </label>
               </div>
+            </div>
+
+            {/* Search Field */}
+            <div className="mb-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search profiles by name, URL, description, or owner..."
+                  className="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400 text-sm text-slate-900 placeholder-slate-400"
+                />
+                <svg
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              {searchQuery && (
+                <p className="text-xs text-slate-500 mt-2">
+                  Found {filteredProfiles.length} of {profiles.length} profile{filteredProfiles.length !== 1 ? 's' : ''}
+                </p>
+              )}
             </div>
 
           {showCreateForm && (
@@ -703,15 +753,19 @@ function AdminPageContent() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600 mx-auto mb-4"></div>
               <p className="text-slate-600">Loading profiles...</p>
             </div>
-          ) : profiles.length === 0 ? (
+          ) : filteredProfiles.length === 0 ? (
             <div className="text-center py-8">
-              <div className="text-slate-400 text-3xl sm:text-4xl mb-4">📋</div>
-              <p className="text-slate-600 mb-4 text-sm sm:text-base">No profiles found</p>
-              <p className="text-xs sm:text-sm text-slate-500">Create your first profile using the button above to get started.</p>
+              <div className="text-slate-400 text-3xl sm:text-4xl mb-4">�</div>
+              <p className="text-slate-600 mb-4 text-sm sm:text-base">
+                {searchQuery ? 'No profiles match your search' : 'No profiles found'}
+              </p>
+              <p className="text-xs sm:text-sm text-slate-500">
+                {searchQuery ? 'Try a different search term' : 'Create your first profile using the button above to get started.'}
+              </p>
             </div>
           ) : (
             <div className="divide-y divide-slate-200">
-              {profiles.map(profile => (
+              {filteredProfiles.map(profile => (
                 <div key={profile.id} className="p-4 sm:p-6">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div className="flex-1 min-w-0">
