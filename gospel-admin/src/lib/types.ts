@@ -6,10 +6,20 @@ export interface ScriptureReference {
   favorite?: boolean
 }
 
+export interface QuestionAnswer {
+  id: string
+  question: string
+  answer?: string              // User's answer (optional until they save it)
+  maxLength?: number           // Maximum characters allowed for answer
+  createdAt?: Date            // When the question was added
+  answeredAt?: Date           // When the user last saved their answer
+}
+
 export interface NestedSubsection {
   title: string
   content: string
   scriptureReferences?: ScriptureReference[]
+  questions?: QuestionAnswer[]
 }
 
 export interface Subsection {
@@ -17,6 +27,7 @@ export interface Subsection {
   content: string
   scriptureReferences?: ScriptureReference[]
   nestedSubsections?: NestedSubsection[]
+  questions?: QuestionAnswer[]
 }
 
 export interface GospelSection {
@@ -99,6 +110,8 @@ export const PROFILE_VALIDATION = {
   SLUG_MAX_LENGTH: 20,
   TITLE_MAX_LENGTH: 50,
   DESCRIPTION_MAX_LENGTH: 200,
+  QUESTION_MAX_LENGTH: 500,        // Max length for question text
+  ANSWER_MAX_LENGTH: 2000,         // Max length for answer text (allows full explanation)
   MAX_PROFILES_PER_USER: 50,
   RESERVED_SLUGS: ['admin', 'api', 'auth', '_next', 'favicon']
 } as const
