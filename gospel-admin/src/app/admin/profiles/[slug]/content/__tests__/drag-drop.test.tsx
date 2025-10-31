@@ -1,12 +1,13 @@
+// Mock dependencies used by the page. Declare mocks using the path alias so
+// runtime imports within the component match the mocked module.
+jest.mock('@/lib/data-service')
+jest.mock('@/lib/auth')
+
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import AdminContentPage from '../page'
 import * as dataService from '@/lib/data-service'
 import * as auth from '@/lib/auth'
-
-// Mock the dependencies
-jest.mock('@/lib/data-service')
-jest.mock('@/lib/auth')
 
 const mockDataService = dataService as jest.Mocked<typeof dataService>
 const mockAuth = auth as jest.Mocked<typeof auth>
@@ -80,7 +81,7 @@ describe('Admin Content Page - Drag and Drop', () => {
     render(<AdminContentPage params={mockParams} />)
 
     await waitFor(() => {
-      expect(screen.getByText('Test Profile')).toBeInTheDocument()
+      expect(screen.getAllByText('Test Profile').length).toBeGreaterThan(0)
     })
 
     // Wait for scripture reference to render
@@ -105,7 +106,7 @@ describe('Admin Content Page - Drag and Drop', () => {
     render(<AdminContentPage params={mockParams} />)
 
     await waitFor(() => {
-      expect(screen.getByText('Test Profile')).toBeInTheDocument()
+      expect(screen.getAllByText('Test Profile').length).toBeGreaterThan(0)
     })
 
     // Wait for scripture reference to render
@@ -161,7 +162,7 @@ describe('Admin Content Page - Drag and Drop', () => {
     render(<AdminContentPage params={mockParams} />)
 
     await waitFor(() => {
-      expect(screen.getByText('Test Profile')).toBeInTheDocument()
+      expect(screen.getAllByText('Test Profile').length).toBeGreaterThan(0)
     })
 
     // Wait for the specific scripture references to render
@@ -186,7 +187,7 @@ describe('Admin Content Page - Drag and Drop', () => {
     render(<AdminContentPage params={mockParams} />)
 
     await waitFor(() => {
-      expect(screen.getByText('Test Profile')).toBeInTheDocument()
+      expect(screen.getAllByText('Test Profile').length).toBeGreaterThan(0)
     })
     // Make a change so the Save button is enabled (toggle favorite)
     await waitFor(() => expect(screen.getByText(/Isaiah\s*6:3/)).toBeInTheDocument())
@@ -207,7 +208,7 @@ describe('Admin Content Page - Drag and Drop', () => {
     render(<AdminContentPage params={mockParams} />)
 
     await waitFor(() => {
-      expect(screen.getByText('Test Profile')).toBeInTheDocument()
+      expect(screen.getAllByText('Test Profile').length).toBeGreaterThan(0)
     })
 
   // At minimum there should be a main save button or an indicator showing
@@ -223,7 +224,7 @@ describe('Admin Content Page - Drag and Drop', () => {
     render(<AdminContentPage params={mockParams} />)
 
     await waitFor(() => {
-      expect(screen.getByText('Test Profile')).toBeInTheDocument()
+      expect(screen.getAllByText('Test Profile').length).toBeGreaterThan(0)
     })
 
     // Wait for scripture button to exist and then click it

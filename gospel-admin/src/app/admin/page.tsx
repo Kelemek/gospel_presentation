@@ -591,14 +591,6 @@ function AdminPageContent() {
                 <p className="text-xs sm:text-sm text-slate-600 mt-1">Create, edit, and manage presentation profiles</p>
               </div>
               <div className="flex gap-2">
-                <Link
-                  href="/admin/templates"
-                  className="px-3 sm:px-4 py-2 border border-purple-300 hover:border-purple-400 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
-                >
-                  <span className="hidden sm:inline">📋 View Templates</span>
-                  <span className="sm:hidden">📋</span>
-                </Link>
-                
                 <button
                   onClick={() => setShowCreateForm(true)}
                   className="px-3 sm:px-4 py-2 border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
@@ -607,6 +599,14 @@ function AdminPageContent() {
                   <span className="hidden sm:inline">New Profile</span>
                   <span className="sm:hidden">New</span>
                 </button>
+                
+                <Link
+                  href="/admin/templates"
+                  className="px-3 sm:px-4 py-2 border border-purple-300 hover:border-purple-400 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
+                >
+                  <span className="hidden sm:inline">📋 View Templates</span>
+                  <span className="sm:hidden">📋</span>
+                </Link>
                 
                 <label className="px-3 sm:px-4 py-2 border border-purple-300 hover:border-purple-400 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer">
                   <span className="hidden sm:inline">{isRestoringNew ? '⏳ Restoring...' : '📦 Create from Backup'}</span>
@@ -818,6 +818,11 @@ function AdminPageContent() {
                           {profile.isTemplate && (
                             <span className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full font-medium w-fit">
                               Template
+                            </span>
+                          )}
+                          {profile.isDefault && (
+                            <span className="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded-full font-medium w-fit ml-2">
+                              Default
                             </span>
                           )}
                           {profile.isTemplate && !profile.isDefault && (

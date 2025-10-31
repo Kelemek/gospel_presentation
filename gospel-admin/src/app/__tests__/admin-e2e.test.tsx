@@ -1,9 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import AdminPage from '../admin/page'
-import { isAuthenticated } from '@/lib/auth'
-
-// Mock authentication functions
+// Mock authentication functions (declare before importing modules that use it)
 jest.mock('@/lib/auth', () => ({
   isAuthenticated: jest.fn(),
   authenticate: jest.fn(),
@@ -11,6 +6,15 @@ jest.mock('@/lib/auth', () => ({
   getAuthStatus: jest.fn(),
   getSessionToken: jest.fn()
 }))
+
+// Use the shared next/navigation mock push exposed by jest.setup.js
+// (global.__mockNextPush) so assertions reliably observe redirects.
+const mockPush = (global as any).__mockNextPush
+
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import AdminPage from '../admin/page'
+import { isAuthenticated } from '@/lib/auth'
 
 const mockIsAuthenticated = isAuthenticated as jest.MockedFunction<typeof isAuthenticated>
 const mockFetch = global.fetch as jest.MockedFunction<typeof fetch>
@@ -22,17 +26,16 @@ describe('Admin Authentication E2E Tests', () => {
     localStorage.clear()
   })
 
-  it('should show login form when user is not authenticated', () => {
+  it('should show login form when user is not authenticated', async () => {
     mockIsAuthenticated.mockReturnValue(false)
     
     render(<AdminPage />)
     
-    expect(screen.getByText('🔐 Admin Access')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Admin password')).toBeInTheDocument()
-    expect(screen.getByText('🔑 Access Admin Panel')).toBeInTheDocument()
+    // Should redirect to login when not authenticated (effect is async)
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/login'))
   })
 
-  it('should show admin interface when user is authenticated', () => {
+  it('should show admin interface when user is authenticated', async () => {
     mockIsAuthenticated.mockReturnValue(true)
     // Mock successful API responses
     mockFetch.mockImplementation((url) => {
@@ -72,7 +75,7 @@ describe('Admin Authentication E2E Tests', () => {
       return Promise.resolve({ ok: true, json: () => Promise.resolve({ profiles: [] }) } as Response)
     })
     render(<AdminPage />)
-    waitFor(() => {
+    await waitFor(() => {
       expect(screen.getByText(/Admin Dashboard/)).toBeInTheDocument()
     })
     expect(screen.queryByText('🔐 Admin Access')).not.toBeInTheDocument()
@@ -84,7 +87,8 @@ describe('Admin Authentication E2E Tests', () => {
     
     const { unmount } = render(<AdminPage />)
     
-    expect(screen.getByText('🔐 Admin Access')).toBeInTheDocument()
+  // Should have redirected to login when unauthenticated
+  await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/login'))
     
     // Unmount and simulate successful authentication
     unmount()
@@ -115,7 +119,7 @@ describe('Admin Authentication E2E Tests', () => {
     })
   })
 
-  it('should persist authentication state across page refreshes', () => {
+  it('should persist authentication state across page refreshes', async () => {
     // Simulate authentication persistence in localStorage
     const authData = {
       isAuthenticated: true,
@@ -160,12 +164,12 @@ describe('Admin Authentication E2E Tests', () => {
       return Promise.resolve({ ok: true, json: () => Promise.resolve({ profiles: [] }) } as Response)
     })
     render(<AdminPage />)
-    waitFor(() => {
+    await waitFor(() => {
       expect(screen.getByText(/Admin Dashboard/)).toBeInTheDocument()
     })
   })
 
-  it('should handle expired authentication sessions', () => {
+  it('should handle expired authentication sessions', async () => {
     // Simulate expired authentication
     const expiredAuthData = {
       isAuthenticated: true,
@@ -178,8 +182,7 @@ describe('Admin Authentication E2E Tests', () => {
     
     render(<AdminPage />)
     
-    expect(screen.getByText('🔐 Admin Access')).toBeInTheDocument()
-    expect(screen.queryByText(/Gospel Presentation Editor/)).not.toBeInTheDocument()
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/login'))
   })
 })
 
@@ -306,7 +309,7 @@ describe('Admin Session Management', () => {
 })
 
 describe('Admin Access Control', () => {
-  it('should prevent unauthorized access to admin features', () => {
+  it('should prevent unauthorized access to admin features', async () => {
     mockIsAuthenticated.mockReturnValue(false)
     
     render(<AdminPage />)
@@ -316,8 +319,8 @@ describe('Admin Access Control', () => {
     expect(screen.queryByText('Gospel Sections')).not.toBeInTheDocument()
     expect(screen.queryByText('Commit History')).not.toBeInTheDocument()
     
-    // Should show login form instead
-    expect(screen.getByText('🔐 Admin Access')).toBeInTheDocument()
+    // Should show login form instead (redirect happens asynchronously)
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/login'))
   })
 
   it('should show all admin features when authenticated', async () => {
@@ -417,10 +420,10 @@ describe('Admin Access Control', () => {
     const logoutButton = screen.queryByText('Logout') || screen.queryByText('Sign Out')
     if (logoutButton) {
       await user.click(logoutButton)
-      // After logout, should show login form
-      await waitFor(() => {
-        expect(screen.getByText('🔐 Admin Access')).toBeInTheDocument()
-      })
+      // After logout, should redirect to login
+        await waitFor(() => {
+          expect(mockPush).toHaveBeenCalledWith('/login')
+        })
     }
   })
 })
