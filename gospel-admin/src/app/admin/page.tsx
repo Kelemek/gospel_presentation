@@ -23,7 +23,8 @@ function AdminPageContent() {
     title: '',
     slug: '',
     description: '',
-    cloneFromSlug: 'default'
+    cloneFromSlug: 'default',
+    isTemplate: false
   })
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false)
   const [isRestoringNew, setIsRestoringNew] = useState(false)
@@ -103,7 +104,8 @@ function AdminPageContent() {
         slug: createForm.slug || generateSlug(createForm.title),
         title: createForm.title.trim(),
         description: createForm.description.trim() || undefined,
-        cloneFromSlug: createForm.cloneFromSlug || 'default'
+        cloneFromSlug: createForm.cloneFromSlug || 'default',
+        isTemplate: userRole === 'admin' ? createForm.isTemplate : false
       }
 
       const response = await fetch('/api/profiles', {
@@ -123,7 +125,7 @@ function AdminPageContent() {
         
         // Close the form and reset
         setShowCreateForm(false)
-        setCreateForm({ title: '', slug: '', description: '', cloneFromSlug: 'default' })
+        setCreateForm({ title: '', slug: '', description: '', cloneFromSlug: 'default', isTemplate: false })
         setSlugManuallyEdited(false)
         
         // Refresh from server to ensure consistency
@@ -500,7 +502,12 @@ function AdminPageContent() {
   }
 
   // Filter profiles based on search query
+  // Filter profiles: exclude templates and apply search
   const filteredProfiles = profiles.filter(profile => {
+    // Exclude template profiles
+    if (profile.isTemplate) return false
+    
+    // Apply search filter
     if (!searchQuery.trim()) return true
     
     const query = searchQuery.toLowerCase()
@@ -584,6 +591,14 @@ function AdminPageContent() {
                 <p className="text-xs sm:text-sm text-slate-600 mt-1">Create, edit, and manage presentation profiles</p>
               </div>
               <div className="flex gap-2">
+                <Link
+                  href="/admin/templates"
+                  className="px-3 sm:px-4 py-2 border border-purple-300 hover:border-purple-400 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
+                >
+                  <span className="hidden sm:inline">📋 View Templates</span>
+                  <span className="sm:hidden">📋</span>
+                </Link>
+                
                 <button
                   onClick={() => setShowCreateForm(true)}
                   className="px-3 sm:px-4 py-2 border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
@@ -666,7 +681,7 @@ function AdminPageContent() {
 
                 <div>
                   <label htmlFor="slug" className="block text-xs sm:text-sm font-medium text-slate-700 mb-1">
-                    URL Slug (optional)
+                    URL *
                   </label>
                   <div className="flex">
                     <span className="inline-flex items-center px-2 sm:px-3 rounded-l-lg border border-r-0 border-slate-200 bg-slate-50 text-slate-500 text-xs sm:text-sm">
@@ -681,25 +696,27 @@ function AdminPageContent() {
                       placeholder="auto-generated from title"
                       pattern="[a-z0-9]*"
                       maxLength={20}
+                      required
                     />
                   </div>
                   <p className="text-xs text-slate-500 mt-1">
-                    Leave empty to auto-generate from title • Only lowercase letters and numbers
+                    Auto-generated from title • Only lowercase letters and numbers
                   </p>
                 </div>
 
                 <div>
                   <label htmlFor="description" className="block text-xs sm:text-sm font-medium text-slate-700 mb-1">
-                    Description (optional)
+                    Description *
                   </label>
                   <textarea
                     id="description"
                     value={createForm.description}
                     onChange={(e) => setCreateForm(prev => ({ ...prev, description: e.target.value }))}
                     className="w-full px-3 py-2 border border-slate-200 hover:border-slate-300 focus:border-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 text-slate-900 bg-white shadow-sm text-sm transition-all resize-y"
-                    placeholder="Optional description of this profile..."
+                    placeholder="Describe this profile..."
                     rows={3}
                     maxLength={200}
+                    required
                   />
                 </div>
 
@@ -711,23 +728,48 @@ function AdminPageContent() {
                     id="cloneFrom"
                     value={createForm.cloneFromSlug}
                     onChange={(e) => setCreateForm(prev => ({ ...prev, cloneFromSlug: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-200 hover:border-slate-300 focus:border-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 text-slate-900 bg-white shadow-sm text-sm transition-all"
+                    className="w-full px-3 py-2 border border-slate-200 hover:border-slate-300 focus:border-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 text-slate-900 bg-white shadow-sm text-sm transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat pr-10"
                   >
-                    {profiles.map(profile => (
+                    {profiles.filter(p => {
+                      // Admin can clone from any template or any profile
+                      if (userRole === 'admin') {
+                        return p.isTemplate || !p.isTemplate
+                      }
+                      // Counselor can clone from templates or their own profiles
+                      return p.isTemplate || p.createdBy === user?.id
+                    }).map(profile => (
                       <option key={profile.slug} value={profile.slug}>
                         {profile.title} ({profile.slug})
+                        {profile.isTemplate ? ' - Template' : ''}
                       </option>
                     ))}
                   </select>
                   <p className="text-xs text-slate-500 mt-1">
-                    The new profile will start with a copy of the selected profile's content
+                    {userRole === 'admin' 
+                      ? 'Clone from any template or profile'
+                      : 'Clone from templates or your own profiles'}
                   </p>
                 </div>
+
+                {userRole === 'admin' && (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="isTemplate"
+                      checked={createForm.isTemplate}
+                      onChange={(e) => setCreateForm(prev => ({ ...prev, isTemplate: e.target.checked }))}
+                      className="w-4 h-4 text-slate-600 border-slate-300 rounded focus:ring-slate-400"
+                    />
+                    <label htmlFor="isTemplate" className="text-xs sm:text-sm font-medium text-slate-700">
+                      Make this a template profile (editable only by admins, visible to all users)
+                    </label>
+                  </div>
+                )}
 
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <button
                     type="submit"
-                    disabled={isCreating || !createForm.title.trim()}
+                    disabled={isCreating || !createForm.title.trim() || !createForm.slug.trim() || !createForm.description.trim()}
                     className="bg-gradient-to-br from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white px-4 py-2 rounded-lg transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md text-sm sm:text-base"
                   >
                     {isCreating ? 'Creating...' : 'Create Profile'}
@@ -736,7 +778,7 @@ function AdminPageContent() {
                     type="button"
                     onClick={() => {
                       setShowCreateForm(false)
-                      setCreateForm({ title: '', slug: '', description: '', cloneFromSlug: 'default' })
+                      setCreateForm({ title: '', slug: '', description: '', cloneFromSlug: 'default', isTemplate: false })
                       setSlugManuallyEdited(false)
                     }}
                     className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-4 py-2 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md text-sm sm:text-base"
@@ -773,9 +815,14 @@ function AdminPageContent() {
                           <h3 className="text-base sm:text-lg font-semibold text-slate-900">
                             {profile.title}
                           </h3>
-                          {profile.isDefault && (
-                            <span className="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded-full font-medium w-fit">
-                              Default
+                          {profile.isTemplate && (
+                            <span className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full font-medium w-fit">
+                              Template
+                            </span>
+                          )}
+                          {profile.isTemplate && !profile.isDefault && (
+                            <span className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full font-medium w-fit">
+                              Template
                             </span>
                           )}
                         </div>
@@ -825,8 +872,8 @@ function AdminPageContent() {
                             Share
                           </button>
                           
-                          {/* Hide Settings and Content buttons for non-admins on default profile */}
-                          {(!profile.isDefault || userRole === 'admin') && (
+                          {/* Hide Settings and Content buttons for non-admins on templates and default profile */}
+                          {((!profile.isDefault && !profile.isTemplate) || userRole === 'admin') && (
                             <>
                               <Link
                                 href={`/admin/profiles/${profile.slug}`}

@@ -122,6 +122,7 @@ export function createProfileFromRequest(
     description: request.description?.trim() || '',
     gospelData: JSON.parse(JSON.stringify(sourceGospelData)), // Deep clone
     isDefault: false,
+    isTemplate: request.isTemplate || false,
     visitCount: 0,
     createdAt: now,
     updatedAt: now
@@ -140,6 +141,7 @@ export function createDefaultProfile(gospelData: GospelPresentationData): Omit<G
     description: 'The original gospel presentation',
     gospelData: JSON.parse(JSON.stringify(gospelData)), // Deep clone
     isDefault: true,
+    isTemplate: true, // Default profile is also a template
     visitCount: 0,
     createdAt: now,
     updatedAt: now
@@ -156,6 +158,7 @@ export function sanitizeProfileForPublic(profile: GospelProfile): Omit<GospelPro
     description: profile.description,
     gospelData: profile.gospelData,
     isDefault: profile.isDefault,
+    isTemplate: profile.isTemplate,
     visitCount: profile.visitCount
   }
 }

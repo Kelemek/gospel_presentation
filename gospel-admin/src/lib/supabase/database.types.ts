@@ -21,6 +21,7 @@ export interface Database {
           title: string
           description: string | null
           is_default: boolean
+          is_template: boolean
           visit_count: number
           gospel_data: Json
           last_viewed_scripture: Json | null
@@ -35,6 +36,7 @@ export interface Database {
           title: string
           description?: string | null
           is_default?: boolean
+          is_template?: boolean
           visit_count?: number
           gospel_data: Json
           last_viewed_scripture?: Json | null
@@ -49,6 +51,7 @@ export interface Database {
           title?: string
           description?: string | null
           is_default?: boolean
+          is_template?: boolean
           visit_count?: number
           gospel_data?: Json
           last_viewed_scripture?: Json | null

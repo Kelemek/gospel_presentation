@@ -35,6 +35,7 @@ export interface GospelProfile {
   description?: string            // Optional description
   gospelData: GospelSection[]     // Complete copy of gospel presentation data
   isDefault: boolean              // True for the / route
+  isTemplate: boolean             // True for template profiles (editable only by admins)
   visitCount: number              // Analytics counter
   createdAt: Date
   updatedAt: Date
@@ -56,6 +57,7 @@ export interface ProfileMetadata {
   title: string
   description?: string
   isDefault: boolean
+  isTemplate: boolean
   visitCount: number
   lastVisited?: Date
   createdAt: Date
@@ -79,6 +81,7 @@ export interface CreateProfileRequest {
   title: string
   description?: string
   cloneFromSlug?: string          // Which profile to clone from
+  isTemplate?: boolean            // Whether this is a template profile
 }
 
 export interface ProfileAnalytics {

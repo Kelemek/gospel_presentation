@@ -72,6 +72,7 @@ export async function getProfiles(): Promise<GospelProfile[]> {
       title: row.title,
       description: row.description || undefined,
       isDefault: row.is_default,
+      isTemplate: row.is_template || false,
       visitCount: row.visit_count,
       gospelData: row.gospel_data as unknown as GospelPresentationData,
       lastViewedScripture: row.last_viewed_scripture ? {
@@ -122,6 +123,7 @@ export async function getProfileBySlug(slug: string): Promise<GospelProfile | nu
       title: row.title,
       description: row.description || undefined,
       isDefault: row.is_default,
+      isTemplate: row.is_template || false,
       visitCount: row.visit_count,
       gospelData: row.gospel_data as unknown as GospelPresentationData,
       lastViewedScripture: row.last_viewed_scripture ? {
@@ -173,6 +175,7 @@ export async function createProfile(request: CreateProfileRequest): Promise<Gosp
         description: request.description,
         gospel_data: sourceProfile.gospelData,
         is_default: false,
+        is_template: request.isTemplate || false,
         created_by: user.id // Automatically owned by current user
       })
       .select()
@@ -188,6 +191,7 @@ export async function createProfile(request: CreateProfileRequest): Promise<Gosp
       title: data.title,
       description: data.description || undefined,
       isDefault: data.is_default,
+      isTemplate: data.is_template || false,
       visitCount: data.visit_count,
       gospelData: data.gospel_data as GospelPresentationData,
       lastViewedScripture: undefined,
