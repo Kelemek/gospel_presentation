@@ -395,6 +395,7 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
                     onScriptureClick={handleScriptureClick}
                     lastViewedScripture={currentLastViewed}
                     onClearProgress={handleClearProgress}
+                    profileSlug={profileInfo.slug}
                   />
                 </div>
               ))}
@@ -474,6 +475,7 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
                   onScriptureClick={handleScriptureClick}
                   lastViewedScripture={currentLastViewed}
                   onClearProgress={handleClearProgress}
+                  profileSlug={profileInfo.slug}
                 />
               </div>
             ))}
