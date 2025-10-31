@@ -299,6 +299,86 @@ function AdminPageContent() {
     }
   }
 
+    const handleRestoreNewBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!confirm(`Are you sure you want to create a new profile from "${file.name}"?`)) {
+      event.target.value = ''
+      return
+    }
+
+    try {
+      setIsRestoringNew(true)
+      setError('')
+      const fileContent = await file.text()
+      const backupData = JSON.parse(fileContent)
+
+      let profileData
+      if (backupData.profile) {
+        profileData = backupData.profile
+      } else if (backupData.gospelData) {
+        profileData = {
+          title: backupData.title || 'Restored Profile',
+          description: backupData.description || '',
+          gospelData: backupData.gospelData
+        }
+      } else {
+        throw new Error('Invalid backup file format')
+      }
+
+      if (!profileData.gospelData || !Array.isArray(profileData.gospelData)) {
+        throw new Error('Invalid backup file format: gospelData must be an array')
+      }
+
+      const slug = generateSlug(profileData.title) + '-' + Date.now().toString().slice(-6)
+
+      const response = await fetch('/api/profiles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: profileData.title,
+          slug: slug,
+          description: profileData.description,
+          gospelData: profileData.gospelData
+        })
+      })
+
+      if (response.ok) {
+        await fetchProfiles()
+        alert(`Successfully created new profile "${profileData.title}" from backup!`)
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to create profile')
+      }
+    } catch (err: any) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to restore backup'
+      setError(`Restore failed: ${errorMessage}`)
+      alert(`Restore failed: ${errorMessage}`)
+    } finally {
+      setIsRestoringNew(false)
+      event.target.value = ''
+    }
+  }
+
+  const handleCopyProfileUrl = async (profile: any) => {
+    const profileUrl = `${siteUrl}/${profile.slug}`
+    
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(profileUrl)
+        alert(`Profile link copied to clipboard!\n\n${profileUrl}\n\nYou can now paste and share this link.`)
+      } else {
+        // Fallback for browsers that don't support clipboard API
+        alert(`Profile URL:\n\n${profileUrl}\n\nPlease copy this link manually.`)
+      }
+    } catch (error) {
+      alert(`Profile URL:\n\n${profileUrl}\n\nPlease copy this link manually.`)
+    }
+  }
+
   const handleCreateFromBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
@@ -659,6 +739,13 @@ function AdminPageContent() {
                           >
                             View
                           </Link>
+                          
+                          <button
+                            onClick={() => handleCopyProfileUrl(profile)}
+                            className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm font-medium bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded border border-blue-200 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                          >
+                            Share
+                          </button>
                           
                           {/* Hide Settings and Content buttons for non-admins on default profile */}
                           {(!profile.isDefault || userRole === 'admin') && (
