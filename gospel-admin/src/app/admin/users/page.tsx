@@ -234,7 +234,7 @@ export default function UsersPage() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowNewUserModal(true)}
-                  className="px-4 py-2 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-lg transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+                  className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 rounded-lg transition-all duration-200 font-medium shadow-sm hover:shadow-md"
                 >
                   + New User
                 </button>
@@ -316,7 +316,7 @@ export default function UsersPage() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <button
                             onClick={() => handleDeleteUser(user.id, user.email)}
-                            className="text-red-600 hover:text-red-700 font-medium transition-colors"
+                            className="text-slate-600 hover:text-slate-800 font-medium transition-colors"
                           >
                             Delete
                           </button>
@@ -384,7 +384,7 @@ export default function UsersPage() {
                     <button
                       type="submit"
                       disabled={isCreatingUser}
-                      className="flex-1 px-4 py-2 bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 text-white rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium"
+                      className="flex-1 px-4 py-2 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 disabled:opacity-50 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium"
                     >
                       {isCreatingUser ? 'Creating...' : 'Create User'}
                     </button>

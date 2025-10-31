@@ -130,7 +130,7 @@ export default function ProfileEditPage({ params }: ProfileEditPageProps) {
             <p className="text-gray-600 mb-6">{error}</p>
             <Link
               href="/admin"
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+              className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 px-4 py-2 rounded-lg transition-colors"
             >
               Back to Dashboard
             </Link>
@@ -224,7 +224,7 @@ export default function ProfileEditPage({ params }: ProfileEditPageProps) {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 px-4 sm:px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 flex-1 sm:flex-none"
+                className="border border-slate-300 text-slate-600 bg-white hover:bg-slate-50 px-4 sm:px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 flex-1 sm:flex-none"
               >
                 {isSaving ? (
                   <>
@@ -240,7 +240,7 @@ export default function ProfileEditPage({ params }: ProfileEditPageProps) {
               </button>
               <Link
                 href="/admin"
-                className="border border-slate-300 text-slate-600 bg-slate-50 hover:bg-slate-100 px-4 sm:px-6 py-2 rounded-lg transition-colors text-center flex-1 sm:flex-none"
+                className="border border-slate-300 text-slate-600 bg-white hover:bg-slate-50 px-4 sm:px-6 py-2 rounded-lg transition-colors text-center flex-1 sm:flex-none"
               >
                 <span className="hidden sm:inline">Cancel</span>
                 <span className="sm:hidden">✕</span>
@@ -279,7 +279,7 @@ export default function ProfileEditPage({ params }: ProfileEditPageProps) {
               
               <Link
                 href={`/admin/profiles/${slug}/content`}
-                className="border border-green-300 text-green-700 bg-green-50 hover:bg-green-100 px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                className="border border-slate-300 text-slate-600 bg-white hover:bg-slate-50 px-4 py-2 rounded-lg transition-colors text-sm font-medium"
               >
                 Edit Content
               </Link>

@@ -119,7 +119,7 @@ function TemplatesPageContent() {
         <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 mb-6 border border-slate-100">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-6">
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-br from-purple-700 to-purple-800 bg-clip-text text-transparent">
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">
                 Template Profiles
               </h1>
               <p className="text-xs sm:text-sm text-slate-600 mt-1">
@@ -219,7 +219,7 @@ function TemplatesPageContent() {
                         <h3 className="text-base sm:text-lg font-semibold text-slate-900">
                           {template.title}
                         </h3>
-                        <span className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full font-medium w-fit">
+                        <span className="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded-full font-medium w-fit">
                           Template
                         </span>
                       </div>
@@ -264,7 +264,7 @@ function TemplatesPageContent() {
                         
                         <button
                           onClick={() => handleCopyProfileUrl(template)}
-                          className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm font-medium bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded border border-blue-200 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                          className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 py-1 rounded border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                         >
                           Share
                         </button>
@@ -274,14 +274,14 @@ function TemplatesPageContent() {
                           <>
                             <Link
                               href={`/admin/profiles/${template.slug}`}
-                              className="bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-800 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-slate-200"
+                              className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300"
                             >
                               Settings
                             </Link>
                             
                             <Link
                               href={`/admin/profiles/${template.slug}/content`}
-                              className="bg-gradient-to-br from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 text-emerald-700 hover:text-emerald-800 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-emerald-200"
+                              className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300"
                             >
                               Content
                             </Link>

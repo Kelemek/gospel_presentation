@@ -554,7 +554,7 @@ function AdminPageContent() {
               {userRole === 'admin' && (
                 <Link
                   href="/admin/users"
-                  className="px-2 sm:px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-medium transition-all hover:shadow-md whitespace-nowrap shrink-0 shadow-sm"
+                  className="px-2 sm:px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 rounded-lg text-xs sm:text-sm font-medium transition-all hover:shadow-md whitespace-nowrap shrink-0 shadow-sm"
                 >
                   <span className="hidden sm:inline">Manage Users</span>
                   <span className="sm:hidden">Users</span>
@@ -602,13 +602,13 @@ function AdminPageContent() {
                 
                 <Link
                   href="/admin/templates"
-                  className="px-3 sm:px-4 py-2 border border-purple-300 hover:border-purple-400 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
+                  className="px-3 sm:px-4 py-2 border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
                 >
                   <span className="hidden sm:inline">📋 View Templates</span>
                   <span className="sm:hidden">📋</span>
                 </Link>
                 
-                <label className="px-3 sm:px-4 py-2 border border-purple-300 hover:border-purple-400 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer">
+                <label className="px-3 sm:px-4 py-2 border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer">
                   <span className="hidden sm:inline">{isRestoringNew ? '⏳ Restoring...' : '📦 Create from Backup'}</span>
                   <span className="sm:hidden">{isRestoringNew ? '⏳' : '📦'}</span>
                   <input
@@ -770,7 +770,7 @@ function AdminPageContent() {
                   <button
                     type="submit"
                     disabled={isCreating || !createForm.title.trim() || !createForm.slug.trim() || !createForm.description.trim()}
-                    className="bg-gradient-to-br from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white px-4 py-2 rounded-lg transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md text-sm sm:text-base"
+                    className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 px-4 py-2 rounded-lg transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md text-sm sm:text-base"
                   >
                     {isCreating ? 'Creating...' : 'Create Profile'}
                   </button>
@@ -816,7 +816,7 @@ function AdminPageContent() {
                             {profile.title}
                           </h3>
                           {profile.isTemplate && (
-                            <span className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full font-medium w-fit">
+                            <span className="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded-full font-medium w-fit">
                               Template
                             </span>
                           )}
@@ -826,7 +826,7 @@ function AdminPageContent() {
                             </span>
                           )}
                           {profile.isTemplate && !profile.isDefault && (
-                            <span className="bg-purple-100 text-purple-700 text-xs px-2 py-1 rounded-full font-medium w-fit">
+                            <span className="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded-full font-medium w-fit">
                               Template
                             </span>
                           )}
@@ -872,7 +872,7 @@ function AdminPageContent() {
                           
                           <button
                             onClick={() => handleCopyProfileUrl(profile)}
-                            className="text-blue-600 hover:text-blue-800 text-xs sm:text-sm font-medium bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded border border-blue-200 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                            className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 py-1 rounded border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                           >
                             Share
                           </button>
@@ -882,14 +882,14 @@ function AdminPageContent() {
                             <>
                               <Link
                                 href={`/admin/profiles/${profile.slug}`}
-                                className="bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-800 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-slate-200"
+                                className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300"
                               >
                                 Settings
                               </Link>
                               
                               <Link
                                 href={`/admin/profiles/${profile.slug}/content`}
-                                className="bg-gradient-to-br from-emerald-50 to-green-50 hover:from-emerald-100 hover:to-green-100 text-emerald-700 hover:text-emerald-800 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-emerald-200"
+                                className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300"
                               >
                                 Content
                               </Link>
@@ -899,7 +899,7 @@ function AdminPageContent() {
                           {!profile.isDefault && (
                             <button
                               onClick={() => handleDeleteProfile(profile.slug, profile.title)}
-                              className="text-red-600 hover:text-red-800 text-xs sm:text-sm font-medium bg-red-50 hover:bg-red-100 px-2 py-1 rounded border border-red-200 hover:border-red-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                              className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 py-1 rounded border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                             >
                               Delete
                             </button>
@@ -912,14 +912,14 @@ function AdminPageContent() {
                             <>
                               <button
                                 onClick={() => handleDownloadBackup(profile)}
-                                className="bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 px-2 py-1 rounded text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md border border-blue-200"
+                                className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 py-1 rounded text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300"
                                 title="Download profile backup"
                               >
                                 <span className="hidden sm:inline">📥 Download Backup</span>
                                 <span className="sm:hidden">📥 Backup</span>
                               </button>
                               
-                              <label className="bg-amber-50 hover:bg-amber-100 text-amber-700 hover:text-amber-800 px-2 py-1 rounded text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md border border-amber-200 cursor-pointer">
+                              <label className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 py-1 rounded text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300 cursor-pointer">
                                 <span className="hidden sm:inline">📤 Upload & Restore</span>
                                 <span className="sm:hidden">📤 Restore</span>
                                 <input
