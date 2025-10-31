@@ -792,7 +792,7 @@ function AdminPageContent() {
                         
                         {profile.description && (
                           <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                            {profile.description}
+                            <span className="font-medium">Description:</span> {profile.description}
                           </p>
                         )}
                         
