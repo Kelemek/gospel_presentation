@@ -37,17 +37,34 @@ export async function getProfiles(): Promise<GospelProfile[]> {
   try {
     const supabase = await createClient()
     
+    // First get all profiles
     const { data, error } = await supabase
       .from('profiles')
-      .select(`
-        *,
-        owner:user_profiles!profiles_created_by_fkey(display_name)
-      `)
+      .select('*')
       .order('created_at', { ascending: true })
     
-    if (error) throw error
+    if (error) {
+      logger.error('[supabase-data-service] Error loading profiles:', error)
+      throw error
+    }
     
-    logger.debug(`[supabase-data-service] Loaded ${data.length} profiles`)
+    // Get unique user IDs
+    const userIds = [...new Set(data?.map(p => p.created_by).filter(Boolean))]
+    
+    // Get user display names
+    let userMap = new Map()
+    if (userIds.length > 0) {
+      const { data: users } = await supabase
+        .from('user_profiles')
+        .select('id, display_name')
+        .in('id', userIds)
+      
+      if (users) {
+        users.forEach(u => userMap.set(u.id, u.display_name))
+      }
+    }
+    
+    logger.debug(`[supabase-data-service] Loaded ${data?.length || 0} profiles`)
     
     return data.map((row: any) => ({
       id: row.id,
@@ -67,7 +84,7 @@ export async function getProfiles(): Promise<GospelProfile[]> {
       updatedAt: new Date(row.updated_at),
       lastVisited: row.last_visited ? new Date(row.last_visited) : undefined,
       createdBy: row.created_by,
-      ownerDisplayName: row.owner?.display_name || null
+      ownerDisplayName: row.created_by ? userMap.get(row.created_by) || null : null
     }))
   } catch (error) {
     logger.error('[supabase-data-service] Error loading profiles:', error)
