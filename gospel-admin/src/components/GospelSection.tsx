@@ -159,8 +159,8 @@ function Questions({ questions, profileSlug }: QuestionsProps) {
   if (!questions || questions.length === 0) return null
 
   return (
-    <div className="mt-6 space-y-6">
-      <h5 className="text-lg font-semibold text-slate-700 border-b border-slate-200 pb-2">
+    <div className="mt-4 space-y-3">
+      <h5 className="text-base font-semibold text-slate-700 border-b border-slate-200 pb-1">
         Reflection Questions
       </h5>
       {questions.map((question, index) => {
@@ -169,18 +169,18 @@ function Questions({ questions, profileSlug }: QuestionsProps) {
         const isSaved = savedStatus[question.id]
         
         return (
-          <div key={question.id} className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-            <p className="font-medium text-slate-800 mb-3">
+          <div key={question.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+            <p className="font-medium text-slate-800 mb-2 text-sm">
               {index + 1}. {question.question}
             </p>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <textarea
                 value={currentAnswer}
                 onChange={(e) => handleAnswerChange(question.id, e.target.value)}
                 placeholder="Type your answer here..."
                 maxLength={maxLength}
-                rows={4}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent resize-y bg-white"
+                rows={3}
+                className="w-full px-2.5 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent resize-y bg-white"
               />
               <div className="flex items-center justify-between">
                 <span className="text-xs text-slate-500">
@@ -188,7 +188,7 @@ function Questions({ questions, profileSlug }: QuestionsProps) {
                 </span>
                 <button
                   onClick={() => handleSaveAnswer(question.id, question.maxLength)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-all ${
                     isSaved
                       ? 'bg-green-600 text-white'
                       : 'bg-slate-600 hover:bg-slate-700 text-white'
