@@ -14,7 +14,6 @@
     "migrate-to-supabase": "tsx scripts/migrate-to-supabase.ts"
   },
   "dependencies": {
-    "@netlify/blobs": "^10.2.1",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.78.0",
     "dotenv": "^17.2.3",

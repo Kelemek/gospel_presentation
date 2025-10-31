@@ -88,16 +88,16 @@ export default function CopyrightPage() {
                   <strong className="text-slate-800">UI:</strong> Tailwind CSS, Geist font
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
-                  <strong className="text-slate-800">Authentication:</strong> Session-based authentication
+                  <strong className="text-slate-800">Authentication:</strong> Supabase Auth (passwordless magic links)
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
                   <strong className="text-slate-800">Scripture Integration:</strong> ESV API v3 (dynamic text retrieval)
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
-                  <strong className="text-slate-800">Data Storage:</strong> Netlify Blob Storage (profiles, gospel data)
+                  <strong className="text-slate-800">Data Storage:</strong> Supabase PostgreSQL with Row-Level Security
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
-                  <strong className="text-slate-800">Hosting:</strong> Netlify (static site + serverless API functions)
+                  <strong className="text-slate-800">Hosting:</strong> Vercel (Edge Functions & Global CDN)
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
                   <strong className="text-slate-800">Testing:</strong> Jest, React Testing Library, MSW
