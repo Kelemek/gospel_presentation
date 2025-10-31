@@ -19,7 +19,9 @@ export async function GET() {
       visitCount: p.visitCount,
       lastVisited: p.lastVisited ? (p.lastVisited instanceof Date ? p.lastVisited.toISOString() : p.lastVisited) : undefined,
       createdAt: p.createdAt.toISOString(),
-      updatedAt: p.updatedAt.toISOString()
+      updatedAt: p.updatedAt.toISOString(),
+      createdBy: p.createdBy,
+      ownerDisplayName: p.ownerDisplayName
     }))
     
     return NextResponse.json({ profiles: profileList })

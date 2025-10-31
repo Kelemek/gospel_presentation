@@ -26,8 +26,6 @@ function AdminPageContent() {
   })
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false)
   const [isRestoringNew, setIsRestoringNew] = useState(false)
-  const [slugExists, setSlugExists] = useState(false)
-  const [isCheckingSlug, setIsCheckingSlug] = useState(false)
 
   useEffect(() => {
     checkAuth()
@@ -94,24 +92,6 @@ function AdminPageContent() {
       .substring(0, 15) || 'profile'
   }
 
-  const checkSlugExists = async (slug: string) => {
-    if (!slug || slug.length === 0) {
-      setSlugExists(false)
-      return
-    }
-
-    setIsCheckingSlug(true)
-    try {
-      // Check if slug exists in current profiles list
-      const exists = profiles.some(p => p.slug === slug)
-      setSlugExists(exists)
-    } catch (err) {
-      console.error('Error checking slug:', err)
-    } finally {
-      setIsCheckingSlug(false)
-    }
-  }
-
   const handleCreateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsCreating(true)
@@ -149,10 +129,28 @@ function AdminPageContent() {
         await fetchProfiles()
       } else {
         const errorData = await response.json()
-        setError(errorData.error || 'Failed to create profile')
+        const errorMessage = errorData.error || 'Failed to create profile'
+        
+        // Check if it's a duplicate slug error
+        if (errorMessage.includes('duplicate key') || 
+            errorMessage.includes('unique constraint') || 
+            errorMessage.includes('profiles_slug_key')) {
+          setError('This URL slug is already in use. Please choose a different one.')
+        } else {
+          setError(errorMessage)
+        }
       }
     } catch (err: any) {
-      setError('Failed to create profile: ' + (err.message || 'Unknown error'))
+      const errorMessage = err.message || 'Unknown error'
+      
+      // Check if it's a duplicate slug error
+      if (errorMessage.includes('duplicate key') || 
+          errorMessage.includes('unique constraint') || 
+          errorMessage.includes('profiles_slug_key')) {
+        setError('This URL slug is already in use. Please choose a different one.')
+      } else {
+        setError('Failed to create profile: ' + errorMessage)
+      }
     } finally {
       setIsCreating(false)
     }
@@ -165,10 +163,6 @@ function AdminPageContent() {
       title,
       slug: newSlug
     }))
-    // Check if the generated slug exists
-    if (!slugManuallyEdited) {
-      checkSlugExists(newSlug)
-    }
   }
 
   const handleSlugChange = (value: string) => {
@@ -176,8 +170,6 @@ function AdminPageContent() {
     setCreateForm(prev => ({ ...prev, slug: cleanSlug }))
     // Mark as manually edited when user types anything
     setSlugManuallyEdited(true)
-    // Check if this slug exists
-    checkSlugExists(cleanSlug)
   }
 
   const handleDeleteProfile = async (slug: string, title: string) => {
@@ -635,29 +627,15 @@ function AdminPageContent() {
                       id="slug"
                       value={createForm.slug}
                       onChange={(e) => handleSlugChange(e.target.value)}
-                      className={`flex-1 px-3 py-2 border rounded-r-lg focus:outline-none focus:ring-2 text-slate-900 bg-white shadow-sm text-sm transition-all ${
-                        slugExists 
-                          ? 'border-red-300 hover:border-red-400 focus:border-red-500 focus:ring-red-200' 
-                          : 'border-slate-200 hover:border-slate-300 focus:border-slate-400 focus:ring-slate-200'
-                      }`}
+                      className="flex-1 px-3 py-2 border border-slate-200 hover:border-slate-300 focus:border-slate-400 focus:ring-slate-200 rounded-r-lg focus:outline-none focus:ring-2 text-slate-900 bg-white shadow-sm text-sm transition-all"
                       placeholder="auto-generated from title"
                       pattern="[a-z0-9]*"
                       maxLength={20}
                     />
                   </div>
-                  {slugExists ? (
-                    <p className="text-xs text-red-600 mt-1 font-medium">
-                      ⚠️ This slug already exists. Please choose a different one.
-                    </p>
-                  ) : isCheckingSlug ? (
-                    <p className="text-xs text-slate-500 mt-1">
-                      Checking availability...
-                    </p>
-                  ) : (
-                    <p className="text-xs text-slate-500 mt-1">
-                      Leave empty to auto-generate from title • Only lowercase letters and numbers
-                    </p>
-                  )}
+                  <p className="text-xs text-slate-500 mt-1">
+                    Leave empty to auto-generate from title • Only lowercase letters and numbers
+                  </p>
                 </div>
 
                 <div>
@@ -699,10 +677,10 @@ function AdminPageContent() {
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <button
                     type="submit"
-                    disabled={isCreating || !createForm.title.trim() || slugExists || isCheckingSlug}
+                    disabled={isCreating || !createForm.title.trim()}
                     className="bg-gradient-to-br from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white px-4 py-2 rounded-lg transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md text-sm sm:text-base"
                   >
-                    {isCreating ? 'Creating...' : slugExists ? 'Slug Already Exists' : 'Create Profile'}
+                    {isCreating ? 'Creating...' : 'Create Profile'}
                   </button>
                   <button
                     type="button"
@@ -710,7 +688,6 @@ function AdminPageContent() {
                       setShowCreateForm(false)
                       setCreateForm({ title: '', slug: '', description: '', cloneFromSlug: 'default' })
                       setSlugManuallyEdited(false)
-                      setSlugExists(false)
                     }}
                     className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-4 py-2 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md text-sm sm:text-base"
                   >
@@ -752,6 +729,12 @@ function AdminPageContent() {
                         <p className="text-xs sm:text-sm text-slate-600 mt-1">
                           <span className="font-medium">URL:</span> <span className="break-all">{siteUrl}/{profile.slug}</span>
                         </p>
+                        
+                        {profile.ownerDisplayName && (
+                          <p className="text-xs sm:text-sm text-slate-600 mt-1">
+                            <span className="font-medium">Owner:</span> {profile.ownerDisplayName}
+                          </p>
+                        )}
                         
                         {profile.description && (
                           <p className="text-xs sm:text-sm text-slate-600 mt-1">

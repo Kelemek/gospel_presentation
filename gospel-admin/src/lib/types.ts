@@ -45,6 +45,8 @@ export interface GospelProfile {
     subsectionId: string          // For navigation purposes
     viewedAt: Date
   }
+  createdBy?: string | null       // User ID who created this profile
+  ownerDisplayName?: string | null // Display name of the owner
 }
 
 // Lightweight profile metadata for index operations

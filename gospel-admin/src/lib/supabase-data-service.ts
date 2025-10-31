@@ -39,14 +39,17 @@ export async function getProfiles(): Promise<GospelProfile[]> {
     
     const { data, error } = await supabase
       .from('profiles')
-      .select('*')
+      .select(`
+        *,
+        owner:user_profiles!profiles_created_by_fkey(display_name)
+      `)
       .order('created_at', { ascending: true })
     
     if (error) throw error
     
     logger.debug(`[supabase-data-service] Loaded ${data.length} profiles`)
     
-    return data.map((row: Database['public']['Tables']['profiles']['Row']) => ({
+    return data.map((row: any) => ({
       id: row.id,
       slug: row.slug,
       title: row.title,
@@ -55,14 +58,16 @@ export async function getProfiles(): Promise<GospelProfile[]> {
       visitCount: row.visit_count,
       gospelData: row.gospel_data as unknown as GospelPresentationData,
       lastViewedScripture: row.last_viewed_scripture ? {
-        reference: (row.last_viewed_scripture as any).reference,
-        sectionId: (row.last_viewed_scripture as any).sectionId,
-        subsectionId: (row.last_viewed_scripture as any).subsectionId,
-        viewedAt: new Date((row.last_viewed_scripture as any).viewedAt)
+        reference: row.last_viewed_scripture.reference,
+        sectionId: row.last_viewed_scripture.sectionId,
+        subsectionId: row.last_viewed_scripture.subsectionId,
+        viewedAt: new Date(row.last_viewed_scripture.viewedAt)
       } : undefined,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
-      lastVisited: row.last_visited ? new Date(row.last_visited) : undefined
+      lastVisited: row.last_visited ? new Date(row.last_visited) : undefined,
+      createdBy: row.created_by,
+      ownerDisplayName: row.owner?.display_name || null
     }))
   } catch (error) {
     logger.error('[supabase-data-service] Error loading profiles:', error)
