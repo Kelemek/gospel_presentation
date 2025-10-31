@@ -79,31 +79,37 @@ export default function CopyrightPage() {
             <div className="bg-slate-50 border-l-4 border-slate-400 rounded-lg p-6">
               <div className="space-y-3">
                 <p className="text-slate-700 text-base md:text-lg">
-                  <strong className="text-slate-800">Framework:</strong> Next.js 16 (React 19)
+                  <strong className="text-slate-800">Framework:</strong> Next.js 16 (React 19, App Router)
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
                   <strong className="text-slate-800">Language:</strong> TypeScript
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
-                  <strong className="text-slate-800">UI:</strong> Tailwind CSS, Geist font
+                  <strong className="text-slate-800">UI:</strong> Tailwind CSS 4, Geist font
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
-                  <strong className="text-slate-800">Authentication:</strong> Supabase Auth (passwordless magic links)
+                  <strong className="text-slate-800">Database:</strong> Supabase PostgreSQL with Row-Level Security (RLS)
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
-                  <strong className="text-slate-800">Scripture Integration:</strong> ESV API v3 (dynamic text retrieval)
+                  <strong className="text-slate-800">Authentication:</strong> Supabase Auth with passwordless magic links
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
-                  <strong className="text-slate-800">Data Storage:</strong> Supabase PostgreSQL with Row-Level Security
+                  <strong className="text-slate-800">User Roles:</strong> Admin (full access) & Counselor (own profiles only)
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
-                  <strong className="text-slate-800">Hosting:</strong> Vercel (Edge Functions & Global CDN)
+                  <strong className="text-slate-800">Scripture API:</strong> ESV API v3 (dynamic text retrieval)
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
-                  <strong className="text-slate-800">Testing:</strong> Jest, React Testing Library, MSW
+                  <strong className="text-slate-800">Hosting:</strong> Vercel (Edge Network, automatic deployments)
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
-                  <strong className="text-slate-800">Admin Features:</strong> Profile management, favorites, analytics, live preview
+                  <strong className="text-slate-800">Security:</strong> Row-Level Security policies, secure session management
+                </p>
+                <p className="text-slate-700 text-base md:text-lg">
+                  <strong className="text-slate-800">Features:</strong> Multi-user profiles, backup/restore, profile sharing, favorites
+                </p>
+                <p className="text-slate-700 text-base md:text-lg">
+                  <strong className="text-slate-800">Testing:</strong> Jest, React Testing Library, MSW (Mock Service Worker)
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
                   <strong className="text-slate-800">Source Control:</strong> <a href="https://github.com/Kelemek/gospel_presentation" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">GitHub Repository</a>
