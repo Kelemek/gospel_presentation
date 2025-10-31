@@ -4,10 +4,9 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { GospelProfile, GospelSection } from '@/lib/types'
-import AdminLogin from '@/components/AdminLogin'
 import AdminHeader from '@/components/AdminHeader'
 import ScriptureHoverModal from '@/components/ScriptureHoverModal'
-import { isAuthenticated } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/client'
 
 interface ContentEditPageProps {
   params: Promise<{
@@ -35,6 +34,21 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
   const [editingScriptureValue, setEditingScriptureValue] = useState('')
   const [draggedItem, setDraggedItem] = useState<{sectionIndex: number, subsectionIndex: number, scriptureIndex: number, nestedIndex?: number} | null>(null)
   const [dragOverItem, setDragOverItem] = useState<{sectionIndex: number, subsectionIndex: number, scriptureIndex: number, nestedIndex?: number} | null>(null)
+  
+  // Check authentication on mount
+  useEffect(() => {
+    checkAuth()
+  }, [])
+
+  const checkAuth = async () => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    setIsAuth(!!user)
+    if (!user) {
+      router.push('/login')
+    }
+    setIsLoading(false)
+  }
 
   // Bible book abbreviations mapping
   const bibleBookAbbreviations: { [key: string]: string } = {
@@ -122,12 +136,6 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
     // Return original if no abbreviation found
     return trimmed
   }
-
-  // Check authentication on mount
-  useEffect(() => {
-    setIsAuth(isAuthenticated())
-    setIsLoading(false)
-  }, [])
 
   // Resolve params Promise
   useEffect(() => {
@@ -677,15 +685,7 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
     }
   }
 
-  const handleLogin = () => {
-    setIsAuth(true)
-  }
-
-  if (!isAuth) {
-    return <AdminLogin onLogin={handleLogin} />
-  }
-
-  if (isLoading) {
+  if (!isAuth || isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">

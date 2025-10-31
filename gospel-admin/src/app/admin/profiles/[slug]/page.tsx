@@ -4,9 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { GospelProfile } from '@/lib/types'
-import AdminLogin from '@/components/AdminLogin'
 import AdminHeader from '@/components/AdminHeader'
-import { isAuthenticated } from '@/lib/auth'
+import { createClient } from '@/lib/supabase/client'
 
 interface ProfileEditPageProps {
   params: Promise<{
@@ -29,9 +28,18 @@ export default function ProfileEditPage({ params }: ProfileEditPageProps) {
 
   // Check authentication on mount
   useEffect(() => {
-    setIsAuth(isAuthenticated())
-    setIsLoading(false)
+    checkAuth()
   }, [])
+
+  const checkAuth = async () => {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    setIsAuth(!!user)
+    if (!user) {
+      router.push('/login')
+    }
+    setIsLoading(false)
+  }
 
   // Resolve params Promise
   useEffect(() => {
@@ -101,17 +109,9 @@ export default function ProfileEditPage({ params }: ProfileEditPageProps) {
     }
   }
 
-  const handleLogin = () => {
-    setIsAuth(true)
-  }
-
-  if (!isAuth) {
-    return <AdminLogin onLogin={handleLogin} />
-  }
-
-  if (isLoading) {
+  if (!isAuth || isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading profile...</p>

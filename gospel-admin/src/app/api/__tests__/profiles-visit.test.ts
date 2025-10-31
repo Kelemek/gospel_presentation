@@ -1,10 +1,10 @@
 import { POST } from '../profiles/[slug]/visit/route'
 import { NextRequest } from 'next/server'
-import * as blobDataService from '@/lib/blob-data-service'
+import * as supabaseDataService from '@/lib/supabase-data-service'
 
-// Mock the blob data service
-jest.mock('@/lib/blob-data-service')
-const mockBlobDataService = blobDataService as jest.Mocked<typeof blobDataService>
+// Mock the Supabase data service
+jest.mock('@/lib/supabase-data-service')
+const mockDataService = supabaseDataService as jest.Mocked<typeof supabaseDataService>
 
 describe('/api/profiles/[slug]/visit', () => {
   beforeEach(() => {
@@ -13,7 +13,7 @@ describe('/api/profiles/[slug]/visit', () => {
 
   describe('POST', () => {
       it.skip('should increment visit count successfully', async () => {
-      mockBlobDataService.incrementProfileVisitCount.mockResolvedValue()
+      mockDataService.incrementProfileVisitCount.mockResolvedValue()
 
       const request = new NextRequest('http://localhost:3000/api/profiles/test-profile/visit', {
         method: 'POST'
@@ -25,11 +25,11 @@ describe('/api/profiles/[slug]/visit', () => {
       expect(response.status).toBe(200)
       expect(data.success).toBe(true)
       expect(data.message).toContain('Visit count incremented')
-      expect(mockBlobDataService.incrementProfileVisitCount).toHaveBeenCalledWith('test-profile')
+      expect(mockDataService.incrementProfileVisitCount).toHaveBeenCalledWith('test-profile')
     })
 
       it.skip('should handle errors gracefully', async () => {
-      mockBlobDataService.incrementProfileVisitCount.mockRejectedValue(new Error('Database error'))
+      mockDataService.incrementProfileVisitCount.mockRejectedValue(new Error('Database error'))
 
       const request = new NextRequest('http://localhost:3000/api/profiles/test-profile/visit', {
         method: 'POST'

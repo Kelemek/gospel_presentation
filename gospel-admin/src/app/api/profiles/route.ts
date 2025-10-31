@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       )
     }
     
-    // Create the profile using file-data-service (will persist to file)
+    // Create the profile in Supabase
     const newProfile = await createProfile(body)
     
     logger.debug('[API] POST /api/profiles - profile created and saved:', newProfile.slug)

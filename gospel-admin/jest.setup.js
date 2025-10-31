@@ -40,22 +40,16 @@ jest.mock('next/server', () => ({
   },
 }))
 
-// Mock environment variables
-process.env.ADMIN_PASSWORD = 'test-password-123'
-process.env.GITHUB_TOKEN = 'test-github-token'
+// Mock environment variables for Supabase
+process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
+process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
+process.env.SUPABASE_SERVICE_KEY = 'test-service-key'
 process.env.ESV_API_KEY = 'test-esv-key'
-// Provide dummy Netlify credentials so server-side data service doesn't throw during tests
-process.env.NETLIFY_SITE_ID = 'test-site-id'
-process.env.NETLIFY_TOKEN = 'test-token'
 
-// Mock Netlify blobs package (some packages ship ESM which Jest may not transform).
-// Provide a minimal in-memory stub for getStore used by blob-data-service so tests
-// don't try to import the real ESM package from node_modules.
+// Mock Netlify blobs package (legacy - tests may still reference this)
 jest.mock('@netlify/blobs', () => ({
   getStore: jest.fn(() => ({
-    // Return null for gets by default so code falls back to file-based data
     get: jest.fn(async (key, opts) => null),
-    // No-op setters
     setJSON: jest.fn(async (key, data) => {}),
     set: jest.fn(async (key, data) => {}),
   })),
