@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd gospel-admin && npm run build",
+  "devCommand": "cd gospel-admin && npm run dev",
+  "installCommand": "cd gospel-admin && npm install",
+  "framework": "nextjs",
+  "outputDirectory": "gospel-admin/.next"
+}
