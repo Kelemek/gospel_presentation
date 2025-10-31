@@ -35,6 +35,12 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
   const [draggedItem, setDraggedItem] = useState<{sectionIndex: number, subsectionIndex: number, scriptureIndex: number, nestedIndex?: number} | null>(null)
   const [dragOverItem, setDragOverItem] = useState<{sectionIndex: number, subsectionIndex: number, scriptureIndex: number, nestedIndex?: number} | null>(null)
   
+  // Question management states
+  const [newQuestion, setNewQuestion] = useState('')
+  const [addingQuestionToSection, setAddingQuestionToSection] = useState<string | null>(null)
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null)
+  const [editingQuestionValue, setEditingQuestionValue] = useState('')
+  
   // Check authentication on mount
   useEffect(() => {
     checkAuth()
@@ -685,6 +691,151 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
     }
   }
 
+  // Question Management Functions
+  const addQuestion = (sectionIndex: number, subsectionIndex: number, nestedIndex?: number) => {
+    if (!profile || !newQuestion.trim()) return
+
+    const questionId = `q-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    const newQuestionObj = {
+      id: questionId,
+      question: newQuestion.trim(),
+      maxLength: 2000, // Default max length for answers
+      createdAt: new Date()
+    }
+
+    if (nestedIndex !== undefined) {
+      // Add to nested subsection
+      const newGospelData = [...profile.gospelData]
+      const subsection = newGospelData[sectionIndex].subsections[subsectionIndex]
+      
+      if (subsection.nestedSubsections) {
+        const newNestedSubsections = [...subsection.nestedSubsections]
+        const nested = newNestedSubsections[nestedIndex]
+        const existingQuestions = [...(nested.questions || [])]
+        existingQuestions.push(newQuestionObj)
+        
+        newNestedSubsections[nestedIndex] = {
+          ...nested,
+          questions: existingQuestions
+        }
+        
+        updateSubsection(sectionIndex, subsectionIndex, 'nestedSubsections', newNestedSubsections)
+      }
+    } else {
+      // Add to regular subsection
+      const newGospelData = [...profile.gospelData]
+      const subsection = newGospelData[sectionIndex].subsections[subsectionIndex]
+      const existingQuestions = [...(subsection.questions || [])]
+      existingQuestions.push(newQuestionObj)
+      
+      updateSubsection(sectionIndex, subsectionIndex, 'questions', existingQuestions)
+    }
+
+    setNewQuestion('')
+    setAddingQuestionToSection(null)
+  }
+
+  const removeQuestion = (sectionIndex: number, subsectionIndex: number, questionIndex: number, nestedIndex?: number) => {
+    if (!profile) return
+
+    if (nestedIndex !== undefined) {
+      // Remove from nested subsection
+      const newGospelData = [...profile.gospelData]
+      const subsection = newGospelData[sectionIndex].subsections[subsectionIndex]
+      
+      if (subsection.nestedSubsections && subsection.nestedSubsections[nestedIndex].questions) {
+        const newNestedSubsections = [...subsection.nestedSubsections]
+        const newQuestions = [...newNestedSubsections[nestedIndex].questions!]
+        newQuestions.splice(questionIndex, 1)
+        
+        newNestedSubsections[nestedIndex] = {
+          ...newNestedSubsections[nestedIndex],
+          questions: newQuestions
+        }
+        
+        updateSubsection(sectionIndex, subsectionIndex, 'nestedSubsections', newNestedSubsections)
+      }
+    } else {
+      // Remove from regular subsection
+      const newGospelData = [...profile.gospelData]
+      const subsection = newGospelData[sectionIndex].subsections[subsectionIndex]
+      
+      if (subsection.questions) {
+        const newQuestions = [...subsection.questions]
+        newQuestions.splice(questionIndex, 1)
+        updateSubsection(sectionIndex, subsectionIndex, 'questions', newQuestions)
+      }
+    }
+  }
+
+  const startEditingQuestion = (sectionIndex: number, subsectionIndex: number, questionIndex: number, nestedIndex?: number) => {
+    const id = nestedIndex !== undefined 
+      ? `${sectionIndex}-${subsectionIndex}-${nestedIndex}-${questionIndex}`
+      : `${sectionIndex}-${subsectionIndex}-${questionIndex}`
+    
+    const section = profile?.gospelData[sectionIndex]
+    if (!section) return
+    
+    let currentQuestion = ''
+    if (nestedIndex !== undefined) {
+      const nested = section.subsections[subsectionIndex]?.nestedSubsections?.[nestedIndex]
+      currentQuestion = nested?.questions?.[questionIndex]?.question || ''
+    } else {
+      currentQuestion = section.subsections[subsectionIndex]?.questions?.[questionIndex]?.question || ''
+    }
+    
+    setEditingQuestionId(id)
+    setEditingQuestionValue(currentQuestion)
+  }
+
+  const cancelEditingQuestion = () => {
+    setEditingQuestionId(null)
+    setEditingQuestionValue('')
+  }
+
+  const saveEditedQuestion = (sectionIndex: number, subsectionIndex: number, questionIndex: number, nestedIndex?: number) => {
+    if (!profile || !editingQuestionValue.trim()) return
+
+    if (nestedIndex !== undefined) {
+      // Edit nested subsection question
+      const newGospelData = [...profile.gospelData]
+      const subsection = newGospelData[sectionIndex].subsections[subsectionIndex]
+      
+      if (subsection.nestedSubsections && subsection.nestedSubsections[nestedIndex].questions) {
+        const newNestedSubsections = [...subsection.nestedSubsections]
+        const newQuestions = [...newNestedSubsections[nestedIndex].questions!]
+        
+        newQuestions[questionIndex] = {
+          ...newQuestions[questionIndex],
+          question: editingQuestionValue.trim()
+        }
+        
+        newNestedSubsections[nestedIndex] = {
+          ...newNestedSubsections[nestedIndex],
+          questions: newQuestions
+        }
+        
+        updateSubsection(sectionIndex, subsectionIndex, 'nestedSubsections', newNestedSubsections)
+      }
+    } else {
+      // Edit regular subsection question
+      const newGospelData = [...profile.gospelData]
+      const subsection = newGospelData[sectionIndex].subsections[subsectionIndex]
+      
+      if (subsection.questions) {
+        const newQuestions = [...subsection.questions]
+        newQuestions[questionIndex] = {
+          ...newQuestions[questionIndex],
+          question: editingQuestionValue.trim()
+        }
+        updateSubsection(sectionIndex, subsectionIndex, 'questions', newQuestions)
+      }
+    }
+    
+    setHasChanges(true)
+    cancelEditingQuestion()
+  }
+
   if (!isAuth || isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
@@ -1023,6 +1174,132 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
                     </p>
                   </div>
 
+                  {/* Questions & Answers */}
+                  <div className="mt-6">
+                    <div className="flex items-center justify-between mb-3 pr-2">
+                      <h4 className="text-sm font-medium text-slate-700">Questions & Answers:</h4>
+                      <button
+                        onClick={() => {
+                          const sectionKey = `${sectionIndex}-${subsectionIndex}`
+                          setAddingQuestionToSection(addingQuestionToSection === sectionKey ? null : sectionKey)
+                          setNewQuestion('')
+                        }}
+                        className="text-slate-600 hover:text-slate-800 text-xs font-medium border border-slate-200 hover:border-slate-300 px-2 py-1 rounded bg-white hover:bg-slate-50 transition-colors"
+                      >
+                        {addingQuestionToSection === `${sectionIndex}-${subsectionIndex}` ? 'Cancel' : (
+                          <>
+                            <span className="hidden sm:inline">+ Add Question</span>
+                            <span className="sm:hidden">+ Q</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {addingQuestionToSection === `${sectionIndex}-${subsectionIndex}` && (
+                      <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mb-3">
+                        <div className="flex flex-col gap-2">
+                          <textarea
+                            value={newQuestion}
+                            onChange={(e) => setNewQuestion(e.target.value)}
+                            placeholder="Enter your question (max 500 characters)"
+                            maxLength={500}
+                            rows={3}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 shadow-sm resize-y"
+                          />
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs text-slate-500">{newQuestion.length}/500 characters</span>
+                            <button
+                              onClick={() => addQuestion(sectionIndex, subsectionIndex)}
+                              disabled={!newQuestion.trim()}
+                              className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              Add Question
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {subsection.questions && subsection.questions.length > 0 ? (
+                      <div className="space-y-3">
+                        {subsection.questions.map((question, questionIndex) => {
+                          const editId = `${sectionIndex}-${subsectionIndex}-${questionIndex}`
+                          const isEditing = editingQuestionId === editId
+                          
+                          return (
+                            <div 
+                              key={question.id} 
+                              className="bg-white border border-slate-200 rounded-lg p-3 hover:border-slate-300 transition-colors"
+                            >
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <div className="flex-1">
+                                  {isEditing ? (
+                                    <div className="space-y-2">
+                                      <textarea
+                                        value={editingQuestionValue}
+                                        onChange={(e) => setEditingQuestionValue(e.target.value)}
+                                        maxLength={500}
+                                        rows={3}
+                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400"
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Escape') {
+                                            cancelEditingQuestion()
+                                          }
+                                        }}
+                                      />
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => saveEditedQuestion(sectionIndex, subsectionIndex, questionIndex)}
+                                          disabled={!editingQuestionValue.trim()}
+                                          className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 px-3 py-1 rounded text-xs transition-colors disabled:opacity-50"
+                                        >
+                                          Save
+                                        </button>
+                                        <button
+                                          onClick={cancelEditingQuestion}
+                                          className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 px-3 py-1 rounded text-xs transition-colors"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <p className="text-slate-700 font-medium">Q: {question.question}</p>
+                                  )}
+                                </div>
+                                {!isEditing && (
+                                  <div className="flex gap-1">
+                                    <button
+                                      onClick={() => startEditingQuestion(sectionIndex, subsectionIndex, questionIndex)}
+                                      className="text-slate-600 hover:text-slate-800 text-xs px-2 py-1 rounded hover:bg-slate-100 transition-colors"
+                                      title="Edit question"
+                                    >
+                                      ✏️
+                                    </button>
+                                    <button
+                                      onClick={() => removeQuestion(sectionIndex, subsectionIndex, questionIndex)}
+                                      className="text-slate-600 hover:text-slate-800 text-xs px-2 py-1 rounded hover:bg-slate-100 transition-colors"
+                                      title="Remove question"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                              {!isEditing && (
+                                <p className="text-xs text-slate-500 mt-1">
+                                  Answer field will be shown to users viewing this profile (max {question.maxLength || 2000} characters)
+                                </p>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-slate-500 text-sm italic">No questions yet. Click "Add Question" to create reflection questions.</p>
+                    )}
+                  </div>
+
                   {/* Nested Subsections */}
                   {subsection.nestedSubsections && subsection.nestedSubsections.map((nested, nestedIndex) => (
                     <div key={nestedIndex} className="ml-4 mt-4 border-l-2 border-slate-300 pl-4 bg-gradient-to-r from-slate-25 to-blue-25 rounded-r-lg py-3">
@@ -1227,6 +1504,132 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
                           </div>
                         ) : (
                           <p className="text-slate-400 text-xs italic">No scripture references yet.</p>
+                        )}
+                      </div>
+
+                      {/* Nested Questions & Answers */}
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between mb-2 pr-2">
+                          <h5 className="text-xs font-medium text-slate-600">Questions & Answers:</h5>
+                          <button
+                            onClick={() => {
+                              const nestedQuestionKey = `${sectionIndex}-${subsectionIndex}-${nestedIndex}`
+                              setAddingQuestionToSection(addingQuestionToSection === nestedQuestionKey ? null : nestedQuestionKey)
+                              setNewQuestion('')
+                            }}
+                            className="text-slate-600 hover:text-slate-800 text-xs font-medium border border-slate-200 hover:border-slate-300 px-1.5 py-0.5 rounded bg-white hover:bg-slate-50 transition-colors"
+                          >
+                            {addingQuestionToSection === `${sectionIndex}-${subsectionIndex}-${nestedIndex}` ? 'Cancel' : (
+                              <>
+                                <span className="hidden sm:inline">+ Add Question</span>
+                                <span className="sm:hidden">+ Q</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+
+                        {addingQuestionToSection === `${sectionIndex}-${subsectionIndex}-${nestedIndex}` && (
+                          <div className="bg-slate-50 border border-slate-200 rounded p-2 mb-2">
+                            <div className="flex flex-col gap-2">
+                              <textarea
+                                value={newQuestion}
+                                onChange={(e) => setNewQuestion(e.target.value)}
+                                placeholder="Enter your question (max 500 characters)"
+                                maxLength={500}
+                                rows={2}
+                                className="w-full px-2 py-1.5 border border-slate-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-slate-400 resize-y"
+                              />
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs text-slate-500">{newQuestion.length}/500</span>
+                                <button
+                                  onClick={() => addQuestion(sectionIndex, subsectionIndex, nestedIndex)}
+                                  disabled={!newQuestion.trim()}
+                                  className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 px-2 py-1 rounded text-xs transition-colors disabled:opacity-50"
+                                >
+                                  Add
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {nested.questions && nested.questions.length > 0 ? (
+                          <div className="space-y-2">
+                            {nested.questions.map((question, questionIndex) => {
+                              const editId = `${sectionIndex}-${subsectionIndex}-${nestedIndex}-${questionIndex}`
+                              const isEditing = editingQuestionId === editId
+                              
+                              return (
+                                <div 
+                                  key={question.id} 
+                                  className="bg-white border border-slate-200 rounded p-2 hover:border-slate-300 transition-colors"
+                                >
+                                  <div className="flex items-start justify-between gap-2 mb-1">
+                                    <div className="flex-1">
+                                      {isEditing ? (
+                                        <div className="space-y-2">
+                                          <textarea
+                                            value={editingQuestionValue}
+                                            onChange={(e) => setEditingQuestionValue(e.target.value)}
+                                            maxLength={500}
+                                            rows={2}
+                                            className="w-full px-2 py-1.5 border border-slate-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-slate-400"
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Escape') {
+                                                cancelEditingQuestion()
+                                              }
+                                            }}
+                                          />
+                                          <div className="flex gap-1">
+                                            <button
+                                              onClick={() => saveEditedQuestion(sectionIndex, subsectionIndex, questionIndex, nestedIndex)}
+                                              disabled={!editingQuestionValue.trim()}
+                                              className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 px-2 py-0.5 rounded text-xs transition-colors disabled:opacity-50"
+                                            >
+                                              Save
+                                            </button>
+                                            <button
+                                              onClick={cancelEditingQuestion}
+                                              className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 px-2 py-0.5 rounded text-xs transition-colors"
+                                            >
+                                              Cancel
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <p className="text-slate-700 font-medium text-xs">Q: {question.question}</p>
+                                      )}
+                                    </div>
+                                    {!isEditing && (
+                                      <div className="flex gap-1">
+                                        <button
+                                          onClick={() => startEditingQuestion(sectionIndex, subsectionIndex, questionIndex, nestedIndex)}
+                                          className="text-slate-600 hover:text-slate-800 text-xs px-1 py-0.5 rounded hover:bg-slate-100 transition-colors"
+                                          title="Edit question"
+                                        >
+                                          ✏️
+                                        </button>
+                                        <button
+                                          onClick={() => removeQuestion(sectionIndex, subsectionIndex, questionIndex, nestedIndex)}
+                                          className="text-slate-600 hover:text-slate-800 text-xs px-1 py-0.5 rounded hover:bg-slate-100 transition-colors"
+                                          title="Remove question"
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                  {!isEditing && (
+                                    <p className="text-xs text-slate-400 mt-0.5">
+                                      Answer field (max {question.maxLength || 2000} chars)
+                                    </p>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-slate-400 text-xs italic">No questions yet.</p>
                         )}
                       </div>
                     </div>
