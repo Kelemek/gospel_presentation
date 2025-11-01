@@ -1184,7 +1184,7 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
                           setAddingQuestionToSection(addingQuestionToSection === sectionKey ? null : sectionKey)
                           setNewQuestion('')
                         }}
-                        className="text-slate-600 hover:text-slate-800 text-xs font-medium border border-slate-200 hover:border-slate-300 px-2 py-1 rounded bg-white hover:bg-slate-50 transition-colors"
+                        className="text-green-600 hover:text-green-800 text-xs font-medium border border-green-200 hover:border-green-300 px-2 py-1 rounded bg-green-50 hover:bg-green-100 transition-colors"
                       >
                         {addingQuestionToSection === `${sectionIndex}-${subsectionIndex}` ? 'Cancel' : (
                           <>
@@ -1221,7 +1221,7 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
                     )}
 
                     {subsection.questions && subsection.questions.length > 0 ? (
-                      <div className="space-y-3">
+                      <div className="space-y-3 pr-2">
                         {subsection.questions.map((question, questionIndex) => {
                           const editId = `${sectionIndex}-${subsectionIndex}-${questionIndex}`
                           const isEditing = editingQuestionId === editId
@@ -1517,7 +1517,7 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
                               setAddingQuestionToSection(addingQuestionToSection === nestedQuestionKey ? null : nestedQuestionKey)
                               setNewQuestion('')
                             }}
-                            className="text-slate-600 hover:text-slate-800 text-xs font-medium border border-slate-200 hover:border-slate-300 px-1.5 py-0.5 rounded bg-white hover:bg-slate-50 transition-colors"
+                            className="text-green-600 hover:text-green-800 text-xs font-medium border border-green-200 hover:border-green-300 px-1.5 py-0.5 rounded bg-green-50 hover:bg-green-100 transition-colors"
                           >
                             {addingQuestionToSection === `${sectionIndex}-${subsectionIndex}-${nestedIndex}` ? 'Cancel' : (
                               <>
@@ -1554,7 +1554,7 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
                         )}
 
                         {nested.questions && nested.questions.length > 0 ? (
-                          <div className="space-y-2">
+                          <div className="space-y-2 pr-2">
                             {nested.questions.map((question, questionIndex) => {
                               const editId = `${sectionIndex}-${subsectionIndex}-${nestedIndex}-${questionIndex}`
                               const isEditing = editingQuestionId === editId

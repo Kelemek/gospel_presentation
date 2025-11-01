@@ -180,7 +180,7 @@ function Questions({ questions, profileSlug }: QuestionsProps) {
                 placeholder="Type your answer here..."
                 maxLength={maxLength}
                 rows={3}
-                className="w-full px-2.5 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent resize-y bg-white"
+                className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent resize-y bg-white"
               />
               <div className="flex items-center justify-between">
                 <span className="text-xs text-slate-500">
@@ -191,7 +191,7 @@ function Questions({ questions, profileSlug }: QuestionsProps) {
                   className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-all ${
                     isSaved
                       ? 'bg-green-600 text-white'
-                      : 'bg-slate-600 hover:bg-slate-700 text-white'
+                      : 'bg-slate-500 hover:bg-slate-600 text-white'
                   }`}
                 >
                   {isSaved ? '✓ Saved' : 'Save Answer'}
