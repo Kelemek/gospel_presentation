@@ -454,24 +454,24 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
         </div>
       </div>
 
-      {/* Mobile/Tablet Layout - Hamburger Menu Button - only show when previewing from editor */}
-      {canEdit && fromEditor && (
-        <div className="lg:hidden sticky top-0 z-40 bg-white shadow-md print-hide">
-          <div className="w-full px-5 py-3">
-            <div className="flex justify-between items-center gap-3">
-              <button
-                onClick={toggleMenu}
-                className="flex items-center gap-3 px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-md transition-colors"
-              >
-                <div className="flex flex-col gap-1">
-                  <div className={`w-5 h-0.5 bg-white transition-transform ${isMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`}></div>
-                  <div className={`w-5 h-0.5 bg-white transition-opacity ${isMenuOpen ? 'opacity-0' : ''}`}></div>
-                  <div className={`w-5 h-0.5 bg-white transition-transform ${isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></div>
-                </div>
-                <span className="font-medium">Menu</span>
-              </button>
-              
-              {/* Right side group */}
+      {/* Mobile/Tablet Layout - Hamburger Menu Button */}
+      <div className="lg:hidden sticky top-0 z-40 bg-white shadow-md print-hide">
+        <div className="w-full px-5 py-3">
+          <div className="flex justify-between items-center gap-3">
+            <button
+              onClick={toggleMenu}
+              className="flex items-center gap-3 px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-md transition-colors"
+            >
+              <div className="flex flex-col gap-1">
+                <div className={`w-5 h-0.5 bg-white transition-transform ${isMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`}></div>
+                <div className={`w-5 h-0.5 bg-white transition-opacity ${isMenuOpen ? 'opacity-0' : ''}`}></div>
+                <div className={`w-5 h-0.5 bg-white transition-transform ${isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></div>
+              </div>
+              <span className="font-medium">Menu</span>
+            </button>
+            
+            {/* Right side group - only show when previewing from editor */}
+            {canEdit && fromEditor && (
               <div className="flex items-center gap-3">
                 {/* Profile Info */}
                 <div className="text-right">
@@ -491,10 +491,10 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
                   ✏️ Edit
                 </Link>
               </div>
-            </div>
+            )}
           </div>
         </div>
-      )}
+      </div>
 
       {/* Mobile Collapsible Menu Overlay */}
       {isMenuOpen && (
