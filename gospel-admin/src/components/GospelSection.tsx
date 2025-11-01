@@ -189,20 +189,20 @@ function Questions({ questions, profileSlug, savedAnswers = [] }: QuestionsProps
         const isSaved = savedStatus[question.id]
         
         return (
-          <div key={question.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-            <p className="font-medium text-slate-800 mb-2 text-sm">
+          <div key={question.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3 print:p-2 print:space-y-1">
+            <p className="font-medium text-slate-800 mb-2 text-sm print:mb-1">
               {index + 1}. {question.question}
             </p>
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 print:space-y-0">
               <textarea
                 value={currentAnswer}
                 onChange={(e) => handleAnswerChange(question.id, e.target.value)}
                 placeholder="Type your answer here..."
                 maxLength={maxLength}
                 rows={3}
-                className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent resize-y bg-white"
+                className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent resize-y bg-white print:px-2 print:py-1 print:min-h-[60px] print:placeholder:text-transparent"
               />
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between print:hidden">
                 <span className="text-xs text-slate-500">
                   {currentAnswer.length}/{maxLength} characters
                 </span>
