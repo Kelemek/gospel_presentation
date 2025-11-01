@@ -466,7 +466,7 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
                 </button>
               </div>
               
-              <TableOfContents sections={sections} />
+              <TableOfContents sections={sections} currentProfileSlug={profileInfo.slug} />
               
               {/* Profile Info in Sidebar */}
               <div className="mt-8 pt-6 border-t border-gray-200">

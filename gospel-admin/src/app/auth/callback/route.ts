@@ -36,12 +36,32 @@ export async function GET(request: Request) {
         
         const role = (userProfile as any)?.role
         
-        // If counselee, check if they were invited for a specific profile
+        // If counselee, check how many profiles they have access to
         if (role === 'counselee') {
-          const profileSlug = user.user_metadata?.profile_slug
+          // Get all profiles this counselee has access to
+          const { data: accessList } = await supabase
+            .from('profile_access')
+            .select('profile_id, profiles!inner(slug)')
+            .eq('user_email', user.email?.toLowerCase() || '')
           
+          if (accessList && accessList.length > 0) {
+            // If only one profile, redirect directly to it
+            if (accessList.length === 1) {
+              const profile = accessList[0] as any
+              const profileSlug = profile?.profiles?.slug
+              if (profileSlug) {
+                return NextResponse.redirect(new URL(`/${profileSlug}`, requestUrl.origin))
+              }
+            } else {
+              // Multiple profiles - show them a list to choose from
+              // For now, redirect to admin which will show their accessible profiles
+              return NextResponse.redirect(new URL('/admin', requestUrl.origin))
+            }
+          }
+          
+          // Fallback: check if they were invited for a specific profile (from metadata)
+          const profileSlug = user.user_metadata?.profile_slug
           if (profileSlug) {
-            // Redirect to their assigned profile
             return NextResponse.redirect(new URL(`/${profileSlug}`, requestUrl.origin))
           }
         }
