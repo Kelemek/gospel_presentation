@@ -79,7 +79,7 @@ export async function DELETE(
 
     // Update profile to remove last viewed scripture
     await updateProfile(slug, {
-      lastViewedScripture: undefined
+      lastViewedScripture: null as any
     })
 
     return NextResponse.json({

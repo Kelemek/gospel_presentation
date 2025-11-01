@@ -43,7 +43,7 @@ export default function TableOfContents({ sections }: TableOfContentsProps) {
             href={`#section-${section.section}`}
             className="text-blue-600 hover:text-blue-800 active:text-blue-900 font-medium text-xl md:text-lg block mb-3 md:mb-2 py-3 md:py-2 px-4 md:px-3 rounded-md hover:bg-blue-50 active:bg-blue-100 transition-colors min-h-[52px] flex items-center"
           >
-            {section.section}. {section.title}
+            {section.title}
           </a>
           <ul className="ml-2 md:ml-4 space-y-2 md:space-y-1">
             {section.subsections.map((subsection, index) => (

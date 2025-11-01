@@ -297,7 +297,7 @@ export default function GospelSection({ section, onScriptureClick, lastViewedScr
   return (
     <section id={sectionId} className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 print-section">
       <h3 className="text-3xl md:text-4xl font-bold text-slate-800 mb-6 pb-3 border-b border-gray-200 print-section-header">
-        {section.section}. {section.title}
+        {section.title}
       </h3>
       
       <div className="space-y-8">

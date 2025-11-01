@@ -175,10 +175,7 @@ export default function ScriptureModal({
       
       processedText = processedText.replace(pattern, (match, verseContent) => {
         return `<div id="verse-${verseNum}" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); border-left: 4px solid #3b82f6; padding: 12px 16px; margin: 16px 0; border-radius: 0 6px 6px 0; box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);">
-          <div style="font-weight: 600; color: #1e293b; font-size: 16px; line-height: 1.7; margin-bottom: 8px;">${verseContent}</div>
-          <div style="font-size: 12px; color: #64748b; font-weight: 500; display: flex; align-items: center; gap: 4px;">
-            <span style="color: #3b82f6;">📖</span> Your Reference: ${reference}
-          </div>
+          <div style="font-weight: 600; color: #1e293b; font-size: 16px; line-height: 1.7;">${verseContent}</div>
         </div>`
       })
     })
@@ -267,24 +264,24 @@ export default function ScriptureModal({
           <div className="flex gap-2 justify-center">
             <button
               onClick={() => setShowingContext(false)}
-              className={`px-4 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] ${
+              className={`px-4 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border-2 ${
                 !showingContext 
-                  ? 'bg-blue-100 text-blue-700 border border-blue-300' 
-                  : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100 border border-slate-200'
+                  ? 'bg-blue-100 text-blue-700 border-blue-400' 
+                  : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100 border-slate-400'
               }`}
             >
-              📖 Verse
+              Verse
             </button>
             <button
               onClick={fetchChapterContext}
               disabled={contextLoading}
-              className={`px-4 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border ${
+              className={`px-4 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border-2 ${
                 showingContext 
-                  ? 'bg-blue-100 text-blue-700 border-blue-300' 
-                  : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100 border-slate-200'
+                  ? 'bg-blue-100 text-blue-700 border-blue-400' 
+                  : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100 border-slate-400'
               } ${contextLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {contextLoading ? '⏳' : '📚'} Chapter Context
+              {contextLoading ? 'Loading...' : 'Chapter Context'}
             </button>
           </div>
         </div>
@@ -294,12 +291,10 @@ export default function ScriptureModal({
           <div className="px-4 py-3 bg-slate-50 border-b flex-shrink-0">
             <div className="text-slate-700 text-base md:text-lg">
               <div className="flex items-center gap-2 mb-1">
-                <span className="text-blue-600">📚</span>
                 <strong className="text-slate-800">Section:</strong> 
                 <span className="font-medium text-slate-600">{context.sectionTitle}</span>
               </div>
               <div className="flex items-center gap-2 mb-2 text-slate-600">
-                <span className="text-blue-500">📖</span>
                 <span className="font-medium">{context.subsectionTitle}</span>
               </div>
               <div className="text-slate-600 text-sm md:text-base leading-relaxed">
@@ -351,14 +346,9 @@ export default function ScriptureModal({
           {showingContext && chapterText && (
             <div className="prose max-w-none">
               <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-slate-700 text-base md:text-lg">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-blue-600">📚</span>
+                <div className="flex items-center gap-2">
                   <strong className="text-slate-800">Chapter Context:</strong> 
                   <span className="font-medium text-slate-600">{getChapterReference(reference)}</span>
-                </div>
-                <div className="flex items-center gap-2 text-slate-600">
-                  <span className="text-blue-500">📖</span>
-                  <span>Your reference ({reference}) is highlighted below</span>
                 </div>
               </div>
               <div 

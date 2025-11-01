@@ -41,6 +41,33 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null)
   const [editingQuestionValue, setEditingQuestionValue] = useState('')
   
+  // COMA questions template
+  const [showComaTemplateEditor, setShowComaTemplateEditor] = useState(false)
+  const [comaTemplate, setComaTemplate] = useState<string[]>([
+    "Context: Who wrote it? Who was it written to? What's happening in the surrounding chapters or book? This step helps you avoid misinterpreting verses by placing them in their proper historical and literary setting.",
+    "Observation: Look closely at what the passage says. What words or phrases stand out? Are there repeated ideas, contrasts, or commands? What is the structure or flow? This is about noticing the details before jumping to conclusions.",
+    "Meaning: Ask what the passage means. What does this teach about God, humanity, or salvation? What is the author's main message? How does this connect to the gospel? This step helps you uncover the theological and spiritual significance.",
+    "Application: Apply the passage to your life. What should change in your thoughts, actions, or relationships? Is there a promise to trust or a command to obey? How can you live this out today? This is where Scripture becomes personal and transformative."
+  ])
+  
+  // Load COMA template from database on mount
+  useEffect(() => {
+    const loadComaTemplate = async () => {
+      try {
+        const response = await fetch('/api/coma-template')
+        if (response.ok) {
+          const data = await response.json()
+          if (data.template?.questions) {
+            setComaTemplate(data.template.questions)
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load COMA template:', e)
+      }
+    }
+    loadComaTemplate()
+  }, [])
+  
   // Check authentication on mount
   useEffect(() => {
     checkAuth()
@@ -836,6 +863,122 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
     cancelEditingQuestion()
   }
 
+  // Delete Functions
+  const deleteSection = (sectionIndex: number) => {
+    if (!profile) return
+
+    const newGospelData = [...profile.gospelData]
+    newGospelData.splice(sectionIndex, 1)
+    
+    // Renumber remaining sections
+    newGospelData.forEach((section, index) => {
+      section.section = (index + 1).toString()
+    })
+
+    setProfile({
+      ...profile,
+      gospelData: newGospelData
+    })
+    setHasChanges(true)
+  }
+
+  const deleteSubsection = (sectionIndex: number, subsectionIndex: number) => {
+    if (!profile) return
+
+    const newGospelData = [...profile.gospelData]
+    const newSubsections = [...newGospelData[sectionIndex].subsections]
+    newSubsections.splice(subsectionIndex, 1)
+    
+    // Don't allow deleting the last subsection
+    if (newSubsections.length === 0) {
+      alert('Cannot delete the last subsection. A section must have at least one subsection.')
+      return
+    }
+
+    newGospelData[sectionIndex] = {
+      ...newGospelData[sectionIndex],
+      subsections: newSubsections
+    }
+
+    setProfile({
+      ...profile,
+      gospelData: newGospelData
+    })
+    setHasChanges(true)
+  }
+
+  const deleteNestedSubsection = (sectionIndex: number, subsectionIndex: number, nestedIndex: number) => {
+    if (!profile) return
+
+    const newGospelData = [...profile.gospelData]
+    const subsection = newGospelData[sectionIndex].subsections[subsectionIndex]
+    
+    if (subsection.nestedSubsections) {
+      const newNestedSubsections = [...subsection.nestedSubsections]
+      newNestedSubsections.splice(nestedIndex, 1)
+      
+      updateSubsection(sectionIndex, subsectionIndex, 'nestedSubsections', newNestedSubsections)
+    }
+  }
+
+  // COMA Questions Functions
+  const applyComaQuestions = (sectionIndex: number, subsectionIndex: number, nestedIndex?: number) => {
+    if (!profile) return
+
+    const newQuestions = comaTemplate.map(questionText => ({
+      id: `q-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      question: questionText,
+      maxLength: 2000,
+      createdAt: new Date()
+    }))
+
+    if (nestedIndex !== undefined) {
+      // Apply to nested subsection
+      const newGospelData = [...profile.gospelData]
+      const subsection = newGospelData[sectionIndex].subsections[subsectionIndex]
+      
+      if (subsection.nestedSubsections) {
+        const newNestedSubsections = [...subsection.nestedSubsections]
+        const existingQuestions = newNestedSubsections[nestedIndex].questions || []
+        
+        newNestedSubsections[nestedIndex] = {
+          ...newNestedSubsections[nestedIndex],
+          questions: [...existingQuestions, ...newQuestions]
+        }
+        
+        updateSubsection(sectionIndex, subsectionIndex, 'nestedSubsections', newNestedSubsections)
+      }
+    } else {
+      // Apply to regular subsection
+      const newGospelData = [...profile.gospelData]
+      const subsection = newGospelData[sectionIndex].subsections[subsectionIndex]
+      const existingQuestions = [...(subsection.questions || [])]
+      
+      updateSubsection(sectionIndex, subsectionIndex, 'questions', [...existingQuestions, ...newQuestions])
+    }
+  }
+
+  const saveComaTemplate = async (newTemplate: string[]) => {
+    setComaTemplate(newTemplate)
+    
+    // Save to database
+    try {
+      const response = await fetch('/api/coma-template', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ questions: newTemplate }),
+      })
+      
+      if (!response.ok) {
+        console.error('Failed to save COMA template to database')
+      }
+    } catch (error) {
+      console.error('Error saving COMA template:', error)
+    }
+  }
+
   if (!isAuth || isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
@@ -879,18 +1022,19 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
           actions={
             <>
               <Link
-                href={`/admin/profiles/${slug}`}
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-              >
-                ← Profile Settings
-              </Link>
-              <Link
-                href={`/${slug}`}
+                href={`/${slug}?preview=true`}
                 target="_blank"
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                className="text-slate-600 hover:text-slate-800 text-sm font-medium bg-white hover:bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
               >
                 Preview →
               </Link>
+              
+              <button
+                onClick={() => setShowComaTemplateEditor(!showComaTemplateEditor)}
+                className="text-slate-600 hover:text-slate-800 text-sm font-medium bg-white hover:bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+              >
+                {showComaTemplateEditor ? 'Hide' : 'Edit'} COMA Template
+              </button>
 
               <button
                 onClick={handleSaveContent}
@@ -924,20 +1068,84 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
           </div>
         )}
 
+        {/* COMA Template Editor */}
+        {showComaTemplateEditor && (
+          <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-6 mb-6 shadow-lg">
+            <h3 className="text-xl font-bold text-slate-800 mb-4">Edit COMA Questions Template</h3>
+            <p className="text-sm text-slate-600 mb-4">
+              These questions will be applied when you click "Apply COMA" on any subsection. Edit them to customize your default COMA questions.
+            </p>
+            <div className="space-y-4">
+              {comaTemplate.map((question, index) => (
+                <div key={index} className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-slate-700">
+                      Question {index + 1}
+                    </label>
+                    <button
+                      onClick={() => {
+                        const newTemplate = comaTemplate.filter((_, i) => i !== index)
+                        saveComaTemplate(newTemplate)
+                      }}
+                      className="text-red-600 hover:text-red-800 text-xs px-2 py-1"
+                      title="Remove this question"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <textarea
+                    value={question}
+                    onChange={(e) => {
+                      const newTemplate = [...comaTemplate]
+                      newTemplate[index] = e.target.value
+                      saveComaTemplate(newTemplate)
+                    }}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    placeholder="Enter question text..."
+                  />
+                </div>
+              ))}
+              <button
+                onClick={() => {
+                  const newTemplate = [...comaTemplate, '']
+                  saveComaTemplate(newTemplate)
+                }}
+                className="text-green-600 hover:text-green-800 text-sm font-medium border border-green-200 hover:border-green-300 px-3 py-2 rounded bg-green-50 hover:bg-green-100 transition-colors"
+              >
+                + Add Question to Template
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Content Editor */}
         {profile && profile.gospelData.map((section, sectionIndex) => (
           <div key={section.section} className="bg-white border border-slate-200 rounded-lg p-4 sm:p-6 mb-6 shadow-lg">
             <div className="mb-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-2xl font-bold text-slate-800 pr-4">
-                  {section.section}. {section.title}
+                  {section.title}
                 </h2>
-                <button
-                  onClick={() => setEditingSectionId(editingSectionId === sectionIndex ? null : sectionIndex)}
-                  className="text-blue-600 hover:text-blue-800 text-xs font-medium border border-blue-200 hover:border-blue-300 px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 transition-colors flex-shrink-0 mr-2"
-                >
-                  {editingSectionId === sectionIndex ? 'Cancel' : 'Edit'}
-                </button>
+                <div className="flex gap-2 mr-2">
+                  <button
+                    onClick={() => setEditingSectionId(editingSectionId === sectionIndex ? null : sectionIndex)}
+                    className="text-blue-600 hover:text-blue-800 text-xs font-medium border border-blue-200 hover:border-blue-300 px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 transition-colors flex-shrink-0"
+                  >
+                    {editingSectionId === sectionIndex ? 'Cancel' : 'Edit'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (window.confirm(`Are you sure you want to delete section ${section.section}. "${section.title}"? This will delete all subsections, scriptures, and questions within it. This action cannot be undone.`)) {
+                        deleteSection(sectionIndex)
+                      }
+                    }}
+                    className="text-red-600 hover:text-red-800 text-xs font-medium border border-red-200 hover:border-red-300 px-2 py-1 rounded bg-red-50 hover:bg-red-100 transition-colors flex-shrink-0"
+                    title="Delete section"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
 
               {editingSectionId === sectionIndex && (
@@ -967,15 +1175,28 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
                     <h3 className="text-xl font-bold text-slate-800 pr-4">
                       {subsection.title}
                     </h3>
-                    <button
-                      onClick={() => {
-                        const id = `${sectionIndex}-${subsectionIndex}`
-                        setEditingSubsectionId(editingSubsectionId === id ? null : id)
-                      }}
-                      className="text-blue-600 hover:text-blue-800 text-xs font-medium border border-blue-200 hover:border-blue-300 px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 transition-colors flex-shrink-0 ml-4 mr-2"
-                    >
-                      {editingSubsectionId === `${sectionIndex}-${subsectionIndex}` ? 'Cancel' : 'Edit'}
-                    </button>
+                    <div className="flex gap-2 mr-2">
+                      <button
+                        onClick={() => {
+                          const id = `${sectionIndex}-${subsectionIndex}`
+                          setEditingSubsectionId(editingSubsectionId === id ? null : id)
+                        }}
+                        className="text-blue-600 hover:text-blue-800 text-xs font-medium border border-blue-200 hover:border-blue-300 px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 transition-colors flex-shrink-0"
+                      >
+                        {editingSubsectionId === `${sectionIndex}-${subsectionIndex}` ? 'Cancel' : 'Edit'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to delete the subsection "${subsection.title}"? This will delete all scriptures and questions within it. This action cannot be undone.`)) {
+                            deleteSubsection(sectionIndex, subsectionIndex)
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-800 text-xs font-medium border border-red-200 hover:border-red-300 px-2 py-1 rounded bg-red-50 hover:bg-red-100 transition-colors flex-shrink-0"
+                        title="Delete subsection"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
 
                   {editingSubsectionId === `${sectionIndex}-${subsectionIndex}` && (
@@ -1176,23 +1397,33 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
 
                   {/* Questions & Answers */}
                   <div className="mt-6">
-                    <div className="flex items-center justify-between mb-3 pr-2">
+                    <div className="flex items-center justify-between mb-3 pr-2 flex-wrap gap-2">
                       <h4 className="text-sm font-medium text-slate-700">Questions & Answers:</h4>
-                      <button
-                        onClick={() => {
-                          const sectionKey = `${sectionIndex}-${subsectionIndex}`
-                          setAddingQuestionToSection(addingQuestionToSection === sectionKey ? null : sectionKey)
-                          setNewQuestion('')
-                        }}
-                        className="text-green-600 hover:text-green-800 text-xs font-medium border border-green-200 hover:border-green-300 px-2 py-1 rounded bg-green-50 hover:bg-green-100 transition-colors"
-                      >
-                        {addingQuestionToSection === `${sectionIndex}-${subsectionIndex}` ? 'Cancel' : (
-                          <>
-                            <span className="hidden sm:inline">+ Add Question</span>
-                            <span className="sm:hidden">+ Q</span>
-                          </>
-                        )}
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => applyComaQuestions(sectionIndex, subsectionIndex)}
+                          className="text-blue-600 hover:text-blue-800 text-xs font-medium border border-blue-200 hover:border-blue-300 px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 transition-colors"
+                          title="Apply COMA questions template"
+                        >
+                          <span className="hidden sm:inline">Apply COMA</span>
+                          <span className="sm:hidden">COMA</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            const sectionKey = `${sectionIndex}-${subsectionIndex}`
+                            setAddingQuestionToSection(addingQuestionToSection === sectionKey ? null : sectionKey)
+                            setNewQuestion('')
+                          }}
+                          className="text-green-600 hover:text-green-800 text-xs font-medium border border-green-200 hover:border-green-300 px-2 py-1 rounded bg-green-50 hover:bg-green-100 transition-colors"
+                        >
+                          {addingQuestionToSection === `${sectionIndex}-${subsectionIndex}` ? 'Cancel' : (
+                            <>
+                              <span className="hidden sm:inline">+ Add Question</span>
+                              <span className="sm:hidden">+ Q</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
 
                     {addingQuestionToSection === `${sectionIndex}-${subsectionIndex}` && (
@@ -1305,15 +1536,28 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
                     <div key={nestedIndex} className="ml-4 mt-4 border-l-2 border-slate-300 pl-4 bg-gradient-to-r from-slate-25 to-blue-25 rounded-r-lg py-3">
                       <div className="flex items-start justify-between mb-2">
                         <h4 className="font-medium text-slate-800 pr-3">{nested.title}</h4>
-                        <button
-                          onClick={() => {
-                            const id = `${sectionIndex}-${subsectionIndex}-${nestedIndex}`
-                            setEditingNestedSubsectionId(editingNestedSubsectionId === id ? null : id)
-                          }}
-                          className="text-purple-600 hover:text-purple-800 text-xs font-medium border border-purple-200 hover:border-purple-300 px-1.5 py-0.5 rounded bg-purple-50 hover:bg-purple-100 transition-colors flex-shrink-0 ml-2 mr-1"
-                        >
-                          {editingNestedSubsectionId === `${sectionIndex}-${subsectionIndex}-${nestedIndex}` ? 'Cancel' : 'Edit'}
-                        </button>
+                        <div className="flex gap-1 mr-2">
+                          <button
+                            onClick={() => {
+                              const id = `${sectionIndex}-${subsectionIndex}-${nestedIndex}`
+                              setEditingNestedSubsectionId(editingNestedSubsectionId === id ? null : id)
+                            }}
+                            className="text-blue-600 hover:text-blue-800 text-xs font-medium border border-blue-200 hover:border-blue-300 px-1.5 py-0.5 rounded bg-blue-50 hover:bg-blue-100 transition-colors flex-shrink-0"
+                          >
+                            {editingNestedSubsectionId === `${sectionIndex}-${subsectionIndex}-${nestedIndex}` ? 'Cancel' : 'Edit'}
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm('Are you sure you want to delete this sub-subsection? This action cannot be undone.')) {
+                                deleteNestedSubsection(sectionIndex, subsectionIndex, nestedIndex)
+                              }
+                            }}
+                            className="text-red-600 hover:text-red-800 text-xs font-medium border border-red-200 hover:border-red-300 px-1.5 py-0.5 rounded bg-red-50 hover:bg-red-100 transition-colors flex-shrink-0"
+                            title="Delete sub-subsection"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
 
                       {editingNestedSubsectionId === `${sectionIndex}-${subsectionIndex}-${nestedIndex}` && (
@@ -1509,23 +1753,33 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
 
                       {/* Nested Questions & Answers */}
                       <div className="mt-4">
-                        <div className="flex items-center justify-between mb-2 pr-2">
+                        <div className="flex items-center justify-between mb-2 pr-2 flex-wrap gap-2">
                           <h5 className="text-xs font-medium text-slate-600">Questions & Answers:</h5>
-                          <button
-                            onClick={() => {
-                              const nestedQuestionKey = `${sectionIndex}-${subsectionIndex}-${nestedIndex}`
-                              setAddingQuestionToSection(addingQuestionToSection === nestedQuestionKey ? null : nestedQuestionKey)
-                              setNewQuestion('')
-                            }}
-                            className="text-green-600 hover:text-green-800 text-xs font-medium border border-green-200 hover:border-green-300 px-1.5 py-0.5 rounded bg-green-50 hover:bg-green-100 transition-colors"
-                          >
-                            {addingQuestionToSection === `${sectionIndex}-${subsectionIndex}-${nestedIndex}` ? 'Cancel' : (
-                              <>
-                                <span className="hidden sm:inline">+ Add Question</span>
-                                <span className="sm:hidden">+ Q</span>
-                              </>
-                            )}
-                          </button>
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => applyComaQuestions(sectionIndex, subsectionIndex, nestedIndex)}
+                              className="text-blue-600 hover:text-blue-800 text-xs font-medium border border-blue-200 hover:border-blue-300 px-1.5 py-0.5 rounded bg-blue-50 hover:bg-blue-100 transition-colors"
+                              title="Apply COMA questions template"
+                            >
+                              <span className="hidden sm:inline">Apply COMA</span>
+                              <span className="sm:hidden">COMA</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                const nestedQuestionKey = `${sectionIndex}-${subsectionIndex}-${nestedIndex}`
+                                setAddingQuestionToSection(addingQuestionToSection === nestedQuestionKey ? null : nestedQuestionKey)
+                                setNewQuestion('')
+                              }}
+                              className="text-green-600 hover:text-green-800 text-xs font-medium border border-green-200 hover:border-green-300 px-1.5 py-0.5 rounded bg-green-50 hover:bg-green-100 transition-colors"
+                            >
+                              {addingQuestionToSection === `${sectionIndex}-${subsectionIndex}-${nestedIndex}` ? 'Cancel' : (
+                                <>
+                                  <span className="hidden sm:inline">+ Add Question</span>
+                                  <span className="sm:hidden">+ Q</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
 
                         {addingQuestionToSection === `${sectionIndex}-${subsectionIndex}-${nestedIndex}` && (

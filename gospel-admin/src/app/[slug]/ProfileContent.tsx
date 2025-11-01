@@ -1,12 +1,15 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import GospelSection from '@/components/GospelSection'
 import ScriptureModal from '@/components/ScriptureModal'
 import TableOfContents from '@/components/TableOfContents'
 import { GospelSection as GospelSectionType, GospelProfile, SavedAnswer } from '@/lib/types'
 import { useScriptureProgress } from '@/lib/useScriptureProgress'
 import { logger } from '@/lib/logger'
+import { createClient } from '@/lib/supabase/client'
 
 interface ProfileInfo {
   title: string
@@ -23,6 +26,7 @@ interface ProfileContentProps {
 }
 
 export default function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps) {
+  const router = useRouter()
   const [selectedScripture, setSelectedScripture] = useState<{
     reference: string
     isOpen: boolean
@@ -36,6 +40,34 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
   const [favoriteReferences, setFavoriteReferences] = useState<string[]>([])
   const [currentReferenceIndex, setCurrentReferenceIndex] = useState(0)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [canEdit, setCanEdit] = useState(false)
+  const [fromEditor, setFromEditor] = useState(false)
+
+  // Check authentication and role
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        // Check user role
+        const { data: userProfile } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single<{ role: 'admin' | 'counselor' | 'counselee' }>()
+        
+        if (userProfile && (userProfile.role === 'admin' || userProfile.role === 'counselor')) {
+          setCanEdit(true)
+        }
+      }
+    }
+    checkAuth()
+    
+    // Check if coming from editor via URL parameter
+    const params = new URLSearchParams(window.location.search)
+    setFromEditor(params.get('preview') === 'true')
+  }, [])
 
   // Scripture progress tracking
   const { 
@@ -61,18 +93,9 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
   const handleClearProgress = useCallback(async () => {
     await resetProgress()
     setLocalLastViewed(null)
-  }, [resetProgress])
-  
-  // Debug logging
-  useEffect(() => {
-    logger.debug('[ProfileContent] Debug:', {
-      profileSlug: profile?.slug,
-      isDefault: profile?.isDefault,
-      lastViewedFromProfile: lastViewedScripture?.reference,
-      localLastViewed,
-      currentLastViewed
-    })
-  }, [profile, lastViewedScripture, localLastViewed, currentLastViewed])
+    // Refresh the page data to get updated profile from server
+    router.refresh()
+  }, [resetProgress, router])
 
   // Early return if required props are missing
   if (!sections || !profileInfo) {
@@ -164,7 +187,7 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
       ...(subsection.scriptureReferences || []).map(ref => ({
         reference: ref.reference,
         context: {
-          sectionTitle: `${section.section}. ${section.title}`,
+          sectionTitle: section.title,
           subsectionTitle: subsection.title,
           content: subsection.content
         }
@@ -173,7 +196,7 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
         (nested.scriptureReferences || []).map(ref => ({
           reference: ref.reference,
           context: {
-            sectionTitle: `${section.section}. ${section.title}`,
+            sectionTitle: section.title,
             subsectionTitle: `${subsection.title} - ${nested.title}`,
             content: nested.content
           }
@@ -322,30 +345,56 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
       </div>
 
       {/* Desktop Layout - Two columns for large screens */}
-      <div className="hidden lg:flex min-h-screen">
-        {/* Persistent Sidebar for Table of Contents */}
-        <aside className="w-80 bg-white shadow-lg border-r border-gray-200 print-hide">
-          <div className="sticky top-0 h-screen overflow-y-auto">
-            <div className="p-6">
-              <h3 className="text-xl font-semibold text-slate-700 mb-6 border-b border-gray-200 pb-3">
-                Table of Contents
-              </h3>
-              <TableOfContents sections={sections} />
-              
-              {/* Profile Info in Sidebar */}
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <div className="text-sm font-medium text-slate-700 mb-2">{profileInfo?.title || 'Gospel Profile'}</div>
-                {profileInfo?.description && (
-                  <div className="text-xs text-slate-500 mb-2">{profileInfo.description}</div>
-                )}
+      <div className="hidden lg:flex min-h-screen flex-col">
+        {/* Desktop Header with Edit Button - only show when previewing from editor */}
+        {canEdit && fromEditor && (
+          <div className="sticky top-0 z-40 bg-white shadow-md print-hide w-full">
+            <div className="flex justify-end items-center gap-4 px-5 py-3">
+              {/* Profile Info */}
+              <div className="text-right">
+                <div className="text-sm font-medium text-slate-700">{profileInfo?.title || 'Gospel Profile'}</div>
                 {profileInfo?.favoriteScriptures && profileInfo.favoriteScriptures.length > 0 && (
-                  <div className="text-xs text-blue-600 mb-2">
+                  <div className="text-xs text-blue-600">
                     📖 {profileInfo.favoriteScriptures.length} favorite{profileInfo.favoriteScriptures.length !== 1 ? 's' : ''}
                   </div>
                 )}
+              </div>
+              
+              {/* Edit Button for authenticated users - top right */}
+              <Link
+                href={`/admin/profiles/${profileInfo.slug}/content`}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors whitespace-nowrap"
+              >
+                ✏️ Edit Content
+              </Link>
+            </div>
+          </div>
+        )}
+        
+        <div className="flex flex-1">
+          {/* Persistent Sidebar for Table of Contents */}
+          <aside className="w-80 bg-white shadow-lg border-r border-gray-200 print-hide">
+            <div className="sticky top-0 h-screen overflow-y-auto">
+              <div className="p-6">
+                <h3 className="text-xl font-semibold text-slate-700 mb-6 border-b border-gray-200 pb-3">
+                  Table of Contents
+                </h3>
+                <TableOfContents sections={sections} />
                 
-                {/* Scripture Progress Section */}
-                {profile && !profile.isDefault && (
+                {/* Profile Info in Sidebar */}
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                  <div className="text-sm font-medium text-slate-700 mb-2">{profileInfo?.title || 'Gospel Profile'}</div>
+                  {profileInfo?.description && (
+                    <div className="text-xs text-slate-500 mb-2">{profileInfo.description}</div>
+                  )}
+                  {profileInfo?.favoriteScriptures && profileInfo.favoriteScriptures.length > 0 && (
+                    <div className="text-xs text-blue-600 mb-2">
+                      📖 {profileInfo.favoriteScriptures.length} favorite{profileInfo.favoriteScriptures.length !== 1 ? 's' : ''}
+                    </div>
+                  )}
+                  
+                  {/* Scripture Progress Section */}
+                  {profile && !profile.isDefault && (
                   <div className="mt-4 pt-4 border-t border-gray-100">
                     {currentLastViewed ? (
                       <div className="space-y-2">
@@ -353,13 +402,11 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
                         <div className="text-xs text-yellow-700 bg-yellow-50 p-2 rounded border">
                           📍 Last: {currentLastViewed}
                         </div>
-                        <div className="text-xs text-slate-400 mt-1">
-                          Profile: {profile?.lastViewedScripture?.reference || 'none'} | Local: {localLastViewed || 'none'}
-                        </div>
                         <button
                           onClick={async () => {
                             await resetProgress()
                             setLocalLastViewed(null)
+                            router.refresh()
                           }}
                           disabled={progressLoading}
                           className="text-xs px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded transition-colors disabled:opacity-50 w-full"
@@ -404,39 +451,50 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
             </div>
           </main>
         </div>
+        </div>
       </div>
 
-      {/* Mobile/Tablet Layout - Hamburger Menu Button */}
-      <div className="lg:hidden sticky top-0 z-40 bg-white shadow-md print-hide">
-        <div className="container mx-auto px-5 py-3">
-          <div className="flex justify-between items-center">
-            <button
-              onClick={toggleMenu}
-              className="flex items-center gap-3 px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-md transition-colors"
-            >
-              <div className="flex flex-col gap-1">
-                <div className={`w-5 h-0.5 bg-white transition-transform ${isMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`}></div>
-                <div className={`w-5 h-0.5 bg-white transition-opacity ${isMenuOpen ? 'opacity-0' : ''}`}></div>
-                <div className={`w-5 h-0.5 bg-white transition-transform ${isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></div>
-              </div>
-              <span className="font-medium">Table of Contents</span>
-            </button>
-            
-            {/* Profile Info - Subtle indicator */}
-            <div className="text-right">
-              <div className="text-sm font-medium text-slate-700">{profileInfo?.title || 'Gospel Profile'}</div>
-              {profileInfo?.description && (
-                <div className="text-xs text-slate-500">{profileInfo.description}</div>
-              )}
-              {profileInfo?.favoriteScriptures && profileInfo.favoriteScriptures.length > 0 && (
-                <div className="text-xs text-blue-600">
-                  📖 {profileInfo.favoriteScriptures.length} favorite{profileInfo.favoriteScriptures.length !== 1 ? 's' : ''}
+      {/* Mobile/Tablet Layout - Hamburger Menu Button - only show when previewing from editor */}
+      {canEdit && fromEditor && (
+        <div className="lg:hidden sticky top-0 z-40 bg-white shadow-md print-hide">
+          <div className="w-full px-5 py-3">
+            <div className="flex justify-between items-center gap-3">
+              <button
+                onClick={toggleMenu}
+                className="flex items-center gap-3 px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-md transition-colors"
+              >
+                <div className="flex flex-col gap-1">
+                  <div className={`w-5 h-0.5 bg-white transition-transform ${isMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`}></div>
+                  <div className={`w-5 h-0.5 bg-white transition-opacity ${isMenuOpen ? 'opacity-0' : ''}`}></div>
+                  <div className={`w-5 h-0.5 bg-white transition-transform ${isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></div>
                 </div>
-              )}
+                <span className="font-medium">Menu</span>
+              </button>
+              
+              {/* Right side group */}
+              <div className="flex items-center gap-3">
+                {/* Profile Info */}
+                <div className="text-right">
+                  <div className="text-sm font-medium text-slate-700">{profileInfo?.title || 'Gospel Profile'}</div>
+                  {profileInfo?.favoriteScriptures && profileInfo.favoriteScriptures.length > 0 && (
+                    <div className="text-xs text-blue-600">
+                      📖 {profileInfo.favoriteScriptures.length} favorite{profileInfo.favoriteScriptures.length !== 1 ? 's' : ''}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Edit Button for authenticated users - top right */}
+                <Link
+                  href={`/admin/profiles/${profileInfo.slug}/content`}
+                  className="px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors whitespace-nowrap"
+                >
+                  ✏️ Edit
+                </Link>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Mobile Collapsible Menu Overlay */}
       {isMenuOpen && (

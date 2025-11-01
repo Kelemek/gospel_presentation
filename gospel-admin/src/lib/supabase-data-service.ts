@@ -260,7 +260,8 @@ export async function updateProfile(
     if (updates.description !== undefined) updateData.description = updates.description
     if (updates.gospelData !== undefined) updateData.gospel_data = updates.gospelData
     if (updates.lastViewedScripture !== undefined) {
-      updateData.last_viewed_scripture = updates.lastViewedScripture
+      // Use null to clear the field, otherwise use the value
+      updateData.last_viewed_scripture = updates.lastViewedScripture === null ? null : updates.lastViewedScripture
     }
     if (updates.savedAnswers !== undefined) {
       updateData.saved_answers = updates.savedAnswers

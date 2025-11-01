@@ -176,33 +176,6 @@ export default function AdminHeader({
           <p className="text-slate-600 text-base sm:text-lg">
             {description}
           </p>
-          
-          {/* Profile Context Info */}
-          {currentProfile && (
-            <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm sm:text-base">
-              <span className="text-slate-500">Editing:</span>
-              <Link
-                href={`/${currentProfile.slug}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-slate-600 hover:text-slate-800 underline break-all py-1"
-              >
-                /{currentProfile.slug}
-              </Link>
-              <Link
-                href={`/admin/profiles/${currentProfile.slug}`}
-                className="text-slate-600 hover:text-slate-800 hover:underline py-1"
-              >
-                Profile Settings
-              </Link>
-              <Link
-                href={`/admin/profiles/${currentProfile.slug}/content`}
-                className="text-slate-600 hover:text-slate-800 hover:underline py-1"
-              >
-                Edit Content
-              </Link>
-            </div>
-          )}
         </div>
 
         {/* Actions */}

@@ -395,7 +395,7 @@ function TemplatesPageContent() {
                               href={`/admin/profiles/${template.slug}/content`}
                               className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300"
                             >
-                              Content
+                              Edit
                             </Link>
                             
                             {!template.isDefault && (
