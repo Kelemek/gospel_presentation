@@ -22,7 +22,8 @@ export async function GET() {
       createdAt: p.createdAt.toISOString(),
       updatedAt: p.updatedAt.toISOString(),
       createdBy: p.createdBy,
-      ownerDisplayName: p.ownerDisplayName
+      ownerDisplayName: p.ownerDisplayName,
+      counseleeEmails: (p as any).counseleeEmails || []
     }))
     
     return NextResponse.json({ profiles: profileList })
@@ -41,15 +42,15 @@ export async function POST(request: Request) {
     
     const body = await request.json() as CreateProfileRequest
     
-    // Validate required fields
-    if (!body.slug || !body.title) {
+    // Validate required fields (slug is optional, will be auto-generated if not provided)
+    if (!body.title) {
       return NextResponse.json(
-        { error: 'Missing required fields: slug and title' },
+        { error: 'Missing required field: title' },
         { status: 400 }
       )
     }
     
-    // Create the profile in Supabase
+    // Create the profile in Supabase (slug will be auto-generated if not provided)
     const newProfile = await createProfile(body)
     
     logger.debug('[API] POST /api/profiles - profile created and saved:', newProfile.slug)

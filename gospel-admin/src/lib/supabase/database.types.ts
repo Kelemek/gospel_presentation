@@ -9,7 +9,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export type UserRole = 'admin' | 'counselor'
+export type UserRole = 'admin' | 'counselor' | 'counselee'
 
 export interface Database {
   public: {
@@ -59,6 +59,35 @@ export interface Database {
           updated_at?: string
           last_visited?: string | null
           created_by?: string | null
+        }
+      }
+      profile_access: {
+        Row: {
+          id: string
+          profile_id: string
+          user_email: string
+          user_id: string | null
+          access_role: 'counselee' | 'counselor'
+          granted_by: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          profile_id: string
+          user_email: string
+          user_id?: string | null
+          access_role: 'counselee' | 'counselor'
+          granted_by: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          profile_id?: string
+          user_email?: string
+          user_id?: string | null
+          access_role?: 'counselee' | 'counselor'
+          granted_by?: string
+          created_at?: string
         }
       }
       user_profiles: {

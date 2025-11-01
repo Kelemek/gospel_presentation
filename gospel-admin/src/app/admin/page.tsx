@@ -11,7 +11,7 @@ import { logger } from '@/lib/logger'
 function AdminPageContent() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
-  const [userRole, setUserRole] = useState<'admin' | 'counselor' | null>(null)
+  const [userRole, setUserRole] = useState<'admin' | 'counselor' | 'counselee' | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [profiles, setProfiles] = useState<any[]>([])
   const [error, setError] = useState('')
@@ -21,11 +21,12 @@ function AdminPageContent() {
   const [searchQuery, setSearchQuery] = useState('')
   const [createForm, setCreateForm] = useState({
     title: '',
-    slug: '',
     description: '',
     cloneFromSlug: 'default',
-    isTemplate: false
+    isTemplate: false,
+    counseleeEmails: [] as string[]
   })
+  const [counseleeEmailInput, setCounseleeEmailInput] = useState('')
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false)
   const [isRestoringNew, setIsRestoringNew] = useState(false)
 
@@ -101,11 +102,11 @@ function AdminPageContent() {
 
     try {
       const profileData = {
-        slug: createForm.slug || generateSlug(createForm.title),
         title: createForm.title.trim(),
         description: createForm.description.trim() || undefined,
         cloneFromSlug: createForm.cloneFromSlug || 'default',
-        isTemplate: userRole === 'admin' ? createForm.isTemplate : false
+        isTemplate: userRole === 'admin' ? createForm.isTemplate : false,
+        counseleeEmails: createForm.counseleeEmails.filter(e => e.trim())
       }
 
       const response = await fetch('/api/profiles', {
@@ -125,7 +126,14 @@ function AdminPageContent() {
         
         // Close the form and reset
         setShowCreateForm(false)
-        setCreateForm({ title: '', slug: '', description: '', cloneFromSlug: 'default', isTemplate: false })
+        setCreateForm({ 
+          title: '', 
+          description: '', 
+          cloneFromSlug: 'default', 
+          isTemplate: false,
+          counseleeEmails: []
+        })
+        setCounseleeEmailInput('')
         setSlugManuallyEdited(false)
         
         // Refresh from server to ensure consistency
@@ -160,19 +168,28 @@ function AdminPageContent() {
   }
 
   const handleTitleChange = (title: string) => {
-    const newSlug = slugManuallyEdited ? createForm.slug : generateSlug(title)
     setCreateForm(prev => ({
       ...prev,
-      title,
-      slug: newSlug
+      title
     }))
   }
 
-  const handleSlugChange = (value: string) => {
-    const cleanSlug = value.toLowerCase().replace(/[^a-z0-9]/g, '')
-    setCreateForm(prev => ({ ...prev, slug: cleanSlug }))
-    // Mark as manually edited when user types anything
-    setSlugManuallyEdited(true)
+  const handleAddCounseleeEmail = () => {
+    const email = counseleeEmailInput.trim().toLowerCase()
+    if (email && email.includes('@') && !createForm.counseleeEmails.includes(email)) {
+      setCreateForm(prev => ({
+        ...prev,
+        counseleeEmails: [...prev.counseleeEmails, email]
+      }))
+      setCounseleeEmailInput('')
+    }
+  }
+
+  const handleRemoveCounseleeEmail = (email: string) => {
+    setCreateForm(prev => ({
+      ...prev,
+      counseleeEmails: prev.counseleeEmails.filter(e => e !== email)
+    }))
   }
 
   const handleDeleteProfile = async (slug: string, title: string) => {
@@ -546,8 +563,12 @@ function AdminPageContent() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
         <AdminHeader
-          title="Admin Dashboard"
-          description="Manage gospel presentation profiles, content, and settings"
+          title="Profiles"
+          description={
+            userRole === 'counselee' 
+              ? "View and share gospel presentation profiles" 
+              : "Manage gospel presentation profiles, content, and settings"
+          }
           showProfileSwitcher={false}
           actions={
             <>
@@ -587,39 +608,46 @@ function AdminPageContent() {
                   <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 mb-6 border border-slate-100">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
               <div className="flex-1 min-w-0">
-                <h2 className="text-lg sm:text-xl font-semibold bg-gradient-to-br from-slate-700 to-slate-800 bg-clip-text text-transparent">Profile Management</h2>
-                <p className="text-xs sm:text-sm text-slate-600 mt-1">Create, edit, and manage presentation profiles</p>
+                <h2 className="text-lg sm:text-xl font-semibold bg-gradient-to-br from-slate-700 to-slate-800 bg-clip-text text-transparent">
+                  {userRole === 'counselee' ? 'My Profiles' : 'Profile Management'}
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-600 mt-1">
+                  {userRole === 'counselee' 
+                    ? 'View profiles shared with you' 
+                    : 'Create, edit, and manage presentation profiles'}
+                </p>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowCreateForm(true)}
-                  className="px-3 sm:px-4 py-2 border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
-                >
-                  <span className="text-sm sm:text-lg">+</span>
-                  <span className="hidden sm:inline">New Profile</span>
-                  <span className="sm:hidden">New</span>
-                </button>
-                
-                <Link
-                  href="/admin/templates"
-                  className="px-3 sm:px-4 py-2 border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0"
-                >
-                  <span className="hidden sm:inline">📋 View Templates</span>
-                  <span className="sm:hidden">📋</span>
-                </Link>
-                
-                <label className="px-3 sm:px-4 py-2 border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer">
-                  <span className="hidden sm:inline">{isRestoringNew ? '⏳ Restoring...' : '📦 Create from Backup'}</span>
-                  <span className="sm:hidden">{isRestoringNew ? '⏳' : '📦'}</span>
-                  <input
-                    type="file"
-                    accept=".json"
-                    onChange={handleCreateFromBackup}
-                    disabled={isRestoringNew}
-                    className="hidden"
-                  />
-                </label>
-              </div>
+              {/* Hide management buttons for counselees */}
+              {userRole !== 'counselee' && (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowCreateForm(true)}
+                    className="px-3 sm:px-4 py-2 border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 shadow-sm hover:shadow-md"
+                  >
+                    <span className="text-sm sm:text-lg">+</span>
+                    <span className="hidden sm:inline">New Profile</span>
+                    <span className="sm:hidden">New</span>
+                  </button>
+                  
+                  <Link
+                    href="/admin/templates"
+                    className="px-3 sm:px-4 py-2 border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 shadow-sm hover:shadow-md"
+                  >
+                    View Templates
+                  </Link>
+                  
+                  <label className="px-3 sm:px-4 py-2 border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm inline-flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer shadow-sm hover:shadow-md">
+                    {isRestoringNew ? 'Restoring...' : 'Create from Backup'}
+                    <input
+                      type="file"
+                      accept=".json"
+                      onChange={handleCreateFromBackup}
+                      disabled={isRestoringNew}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+              )}
             </div>
 
             {/* Search Field */}
@@ -677,31 +705,6 @@ function AdminPageContent() {
                     required
                     maxLength={50}
                   />
-                </div>
-
-                <div>
-                  <label htmlFor="slug" className="block text-xs sm:text-sm font-medium text-slate-700 mb-1">
-                    URL *
-                  </label>
-                  <div className="flex">
-                    <span className="inline-flex items-center px-2 sm:px-3 rounded-l-lg border border-r-0 border-slate-200 bg-slate-50 text-slate-500 text-xs sm:text-sm">
-                      {siteUrl}/
-                    </span>
-                    <input
-                      type="text"
-                      id="slug"
-                      value={createForm.slug}
-                      onChange={(e) => handleSlugChange(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-slate-200 hover:border-slate-300 focus:border-slate-400 focus:ring-slate-200 rounded-r-lg focus:outline-none focus:ring-2 text-slate-900 bg-white shadow-sm text-sm transition-all"
-                      placeholder="auto-generated from title"
-                      pattern="[a-z0-9]*"
-                      maxLength={20}
-                      required
-                    />
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Auto-generated from title • Only lowercase letters and numbers
-                  </p>
                 </div>
 
                 <div>
@@ -766,10 +769,61 @@ function AdminPageContent() {
                   </div>
                 )}
 
+                {/* Counselee Email Invites */}
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-700 mb-2">
+                    Invite Counselees (Optional)
+                  </label>
+                  <p className="text-xs text-slate-500 mb-2">
+                    Add email addresses of people you want to give view-only access to this profile
+                  </p>
+                  
+                  <div className="flex gap-2 mb-2">
+                    <input
+                      type="email"
+                      value={counseleeEmailInput}
+                      onChange={(e) => setCounseleeEmailInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          handleAddCounseleeEmail()
+                        }
+                      }}
+                      className="flex-1 px-3 py-2 border border-slate-200 hover:border-slate-300 focus:border-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 text-slate-900 bg-white shadow-sm text-sm"
+                      placeholder="email@example.com"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCounseleeEmail}
+                      disabled={!counseleeEmailInput.trim() || !counseleeEmailInput.includes('@')}
+                      className="bg-green-50 hover:bg-green-100 text-green-700 hover:text-green-800 px-4 py-2 rounded-lg border border-green-200 hover:border-green-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  
+                  {createForm.counseleeEmails.length > 0 && (
+                    <div className="space-y-1 max-h-32 overflow-y-auto border border-slate-200 rounded-lg p-2 bg-slate-50">
+                      {createForm.counseleeEmails.map(email => (
+                        <div key={email} className="flex items-center justify-between bg-white px-3 py-2 rounded border border-slate-200">
+                          <span className="text-sm text-slate-700">{email}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCounseleeEmail(email)}
+                            className="text-red-600 hover:text-red-800 text-sm font-medium"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                   <button
                     type="submit"
-                    disabled={isCreating || !createForm.title.trim() || !createForm.slug.trim() || !createForm.description.trim()}
+                    disabled={isCreating || !createForm.title.trim() || !createForm.description.trim()}
                     className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 px-4 py-2 rounded-lg transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md text-sm sm:text-base"
                   >
                     {isCreating ? 'Creating...' : 'Create Profile'}
@@ -778,7 +832,14 @@ function AdminPageContent() {
                     type="button"
                     onClick={() => {
                       setShowCreateForm(false)
-                      setCreateForm({ title: '', slug: '', description: '', cloneFromSlug: 'default', isTemplate: false })
+                      setCreateForm({ 
+                        title: '', 
+                        description: '', 
+                        cloneFromSlug: 'default', 
+                        isTemplate: false,
+                        counseleeEmails: []
+                      })
+                      setCounseleeEmailInput('')
                       setSlugManuallyEdited(false)
                     }}
                     className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-4 py-2 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md text-sm sm:text-base"
@@ -842,6 +903,17 @@ function AdminPageContent() {
                           </p>
                         )}
                         
+                        {profile.counseleeEmails && profile.counseleeEmails.length > 0 && (
+                          <p className="text-xs sm:text-sm text-slate-600 mt-1">
+                            <span className="font-medium">Counselees:</span>{' '}
+                            <span className="text-blue-600">
+                              {profile.counseleeEmails.length} {profile.counseleeEmails.length === 1 ? 'user' : 'users'}
+                            </span>
+                            {' '}({profile.counseleeEmails.slice(0, 2).join(', ')}
+                            {profile.counseleeEmails.length > 2 && `, +${profile.counseleeEmails.length - 2} more`})
+                          </p>
+                        )}
+                        
                         {profile.description && (
                           <p className="text-xs sm:text-sm text-slate-600 mt-1">
                             <span className="font-medium">Description:</span> {profile.description}
@@ -865,63 +937,71 @@ function AdminPageContent() {
                           <Link
                             href={`/${profile.slug}`}
                             target="_blank"
-                            className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 py-1 rounded border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                            className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 sm:px-3 py-1 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                           >
                             View
                           </Link>
                           
-                          <button
-                            onClick={() => handleCopyProfileUrl(profile)}
-                            className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 py-1 rounded border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                          >
-                            Share
-                          </button>
-                          
-                          {/* Hide Settings and Content buttons for non-admins on templates and default profile */}
-                          {((!profile.isDefault && !profile.isTemplate) || userRole === 'admin') && (
+                          {/* Hide Share, Settings, Content, and Delete buttons for counselees */}
+                          {userRole !== 'counselee' && (
                             <>
-                              <Link
-                                href={`/admin/profiles/${profile.slug}`}
-                                className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300"
+                              <button
+                                onClick={() => handleCopyProfileUrl(profile)}
+                                className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 sm:px-3 py-1 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                               >
-                                Settings
-                              </Link>
-                              
-                              <Link
-                                href={`/admin/profiles/${profile.slug}/content`}
-                                className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300"
-                              >
-                                Content
-                              </Link>
+                                Share
+                              </button>
                             </>
                           )}
                           
-                          {!profile.isDefault && (
-                            <button
-                              onClick={() => handleDeleteProfile(profile.slug, profile.title)}
-                              className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 py-1 rounded border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                            >
-                              Delete
-                            </button>
+                          {/* Hide Settings, Content, and Delete buttons for counselees */}
+                          {userRole !== 'counselee' && (
+                            <>
+                              {/* Hide Settings and Content buttons for non-admins on templates and default profile */}
+                              {((!profile.isDefault && !profile.isTemplate) || userRole === 'admin') && (
+                                <>
+                                  <Link
+                                    href={`/admin/profiles/${profile.slug}`}
+                                    className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300"
+                                  >
+                                    Settings
+                                  </Link>
+                                  
+                                  <Link
+                                    href={`/admin/profiles/${profile.slug}/content`}
+                                    className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300"
+                                  >
+                                    Content
+                                  </Link>
+                                </>
+                              )}
+                              
+                              {!profile.isDefault && (!profile.isTemplate || userRole === 'admin') && (
+                                <button
+                                  onClick={() => handleDeleteProfile(profile.slug, profile.title)}
+                                  className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 sm:px-3 py-1 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                                >
+                                  Delete
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
 
                         <div className="flex items-center gap-2 flex-wrap">
-                          {/* Hide backup/restore for non-admins on default profile */}
-                          {(!profile.isDefault || userRole === 'admin') && (
+                          {/* Hide backup/restore for counselees, non-admins on default profile, and non-admins on templates */}
+                          {userRole !== 'counselee' && (!profile.isDefault || userRole === 'admin') && (!profile.isTemplate || userRole === 'admin') && (
                             <>
                               <button
                                 onClick={() => handleDownloadBackup(profile)}
-                                className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 py-1 rounded text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300"
+                                className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300"
                                 title="Download profile backup"
                               >
-                                <span className="hidden sm:inline">📥 Download Backup</span>
-                                <span className="sm:hidden">📥 Backup</span>
+                                Download Backup
                               </button>
                               
-                              <label className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 py-1 rounded text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300 cursor-pointer">
-                                <span className="hidden sm:inline">📤 Upload & Restore</span>
-                                <span className="sm:hidden">📤 Restore</span>
+                              <label className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300 cursor-pointer">
+                                Upload & Restore
                                 <input
                                   type="file"
                                   accept=".json"

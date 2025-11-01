@@ -15,6 +15,16 @@ export class ProfileValidationError extends Error {
 }
 
 /**
+ * Generates a secure, random slug for a profile
+ * Uses first 8 characters of a UUID for brevity while maintaining uniqueness
+ */
+export function generateSecureSlug(): string {
+  // Generate a UUID and take first 8 chars (still extremely unlikely to collide)
+  const uuid = crypto.randomUUID().split('-')[0]
+  return uuid.toLowerCase()
+}
+
+/**
  * Validates a profile slug according to business rules
  */
 export function validateProfileSlug(slug: string, existingSlugs: string[] = []): ProfileValidation['slug'] {
@@ -98,7 +108,10 @@ export function validateCreateProfileRequest(
   request: CreateProfileRequest, 
   existingSlugs: string[] = []
 ): ProfileValidation {
-  const slugValidation = validateProfileSlug(request.slug, existingSlugs)
+  // Generate slug if not provided
+  const slugToValidate = request.slug || generateSecureSlug()
+  
+  const slugValidation = validateProfileSlug(slugToValidate, existingSlugs)
   const titleValidation = validateProfileTitle(request.title)
 
   return {
@@ -116,8 +129,11 @@ export function createProfileFromRequest(
 ): Omit<GospelProfile, 'id'> {
   const now = new Date()
   
+  // Use provided slug or generate a secure one
+  const slug = request.slug ? request.slug.toLowerCase().trim() : generateSecureSlug()
+  
   return {
-    slug: request.slug.toLowerCase().trim(),
+    slug,
     title: request.title.trim(),
     description: request.description?.trim() || '',
     gospelData: JSON.parse(JSON.stringify(sourceGospelData)), // Deep clone

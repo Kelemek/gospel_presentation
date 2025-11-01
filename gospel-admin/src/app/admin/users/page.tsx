@@ -9,7 +9,7 @@ import Link from 'next/link'
 interface UserProfile {
   id: string
   email: string
-  role: 'admin' | 'counselor'
+  role: 'admin' | 'counselor' | 'counselee'
   created_at: string
   last_sign_in?: string
 }
@@ -21,7 +21,7 @@ export default function UsersPage() {
   const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'counselor' | null>(null)
   const [showNewUserModal, setShowNewUserModal] = useState(false)
   const [newUserEmail, setNewUserEmail] = useState('')
-  const [newUserRole, setNewUserRole] = useState<'admin' | 'counselor'>('counselor')
+  const [newUserRole, setNewUserRole] = useState<'admin' | 'counselor' | 'counselee'>('counselor')
   const [isCreatingUser, setIsCreatingUser] = useState(false)
 
   useEffect(() => {
@@ -90,7 +90,7 @@ export default function UsersPage() {
     }
   }
 
-  const handleRoleChange = async (userId: string, newRole: 'admin' | 'counselor') => {
+  const handleRoleChange = async (userId: string, newRole: 'admin' | 'counselor' | 'counselee') => {
     try {
       const supabase = createClient()
       
@@ -303,11 +303,12 @@ export default function UsersPage() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <select
                             value={user.role}
-                            onChange={(e) => handleRoleChange(user.id, e.target.value as 'admin' | 'counselor')}
+                            onChange={(e) => handleRoleChange(user.id, e.target.value as 'admin' | 'counselor' | 'counselee')}
                             className="px-3 py-1 text-sm border border-slate-200 hover:border-slate-300 focus:border-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 bg-white text-slate-900 shadow-sm transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat pr-10"
                           >
                             <option value="admin">Admin</option>
                             <option value="counselor">Counselor</option>
+                            <option value="counselee">Counselee</option>
                           </select>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
@@ -334,7 +335,8 @@ export default function UsersPage() {
             <p className="font-semibold mb-2">User Roles</p>
             <ul className="text-sm space-y-1">
               <li><strong>Admin:</strong> Full access to all profiles and settings</li>
-              <li><strong>Counselor:</strong> Can only create, edit, and delete their own profiles</li>
+              <li><strong>Counselor:</strong> Can create, edit, and delete their own profiles, and grant counselee access</li>
+              <li><strong>Counselee:</strong> View-only access to profiles they've been granted access to</li>
             </ul>
           </div>
 
@@ -371,10 +373,11 @@ export default function UsersPage() {
                       </label>
                       <select
                         value={newUserRole}
-                        onChange={(e) => setNewUserRole(e.target.value as 'admin' | 'counselor')}
+                        onChange={(e) => setNewUserRole(e.target.value as 'admin' | 'counselor' | 'counselee')}
                         className="w-full px-3 py-2 border border-slate-200 hover:border-slate-300 focus:border-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 bg-white text-slate-900 shadow-sm transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat pr-10"
                       >
                         <option value="counselor">Counselor</option>
+                        <option value="counselee">Counselee</option>
                         <option value="admin">Admin</option>
                       </select>
                     </div>

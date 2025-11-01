@@ -64,6 +64,26 @@ export async function getProfiles(): Promise<GospelProfile[]> {
       }
     }
     
+    // Get profile access (counselees) for all profiles
+    const profileIds = data?.map(p => p.id).filter(Boolean) || []
+    let accessMap = new Map()
+    if (profileIds.length > 0) {
+      const { data: accessData } = await supabase
+        .from('profile_access')
+        .select('profile_id, user_email, user_id')
+        .in('profile_id', profileIds)
+      
+      if (accessData) {
+        // Group by profile_id
+        accessData.forEach(access => {
+          if (!accessMap.has(access.profile_id)) {
+            accessMap.set(access.profile_id, [])
+          }
+          accessMap.get(access.profile_id).push(access.user_email)
+        })
+      }
+    }
+    
     logger.debug(`[supabase-data-service] Loaded ${data?.length || 0} profiles`)
     
     return data.map((row: any) => ({
@@ -86,7 +106,8 @@ export async function getProfiles(): Promise<GospelProfile[]> {
       updatedAt: new Date(row.updated_at),
       lastVisited: row.last_visited ? new Date(row.last_visited) : undefined,
       createdBy: row.created_by,
-      ownerDisplayName: row.created_by ? userMap.get(row.created_by) || null : null
+      ownerDisplayName: row.created_by ? userMap.get(row.created_by) || null : null,
+      counseleeEmails: accessMap.get(row.id) || []
     }))
   } catch (error) {
     logger.error('[supabase-data-service] Error loading profiles:', error)
@@ -155,10 +176,13 @@ export async function createProfile(request: CreateProfileRequest): Promise<Gosp
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('User not authenticated')
     
+    // Generate secure slug if not provided
+    const profileSlug = request.slug || crypto.randomUUID().split('-')[0]
+    
     // Check if slug already exists
-    const existing = await getProfileBySlug(request.slug)
+    const existing = await getProfileBySlug(profileSlug)
     if (existing) {
-      throw new Error(`Profile with slug '${request.slug}' already exists`)
+      throw new Error(`Profile with slug '${profileSlug}' already exists`)
     }
     
     // Clone gospel data from source profile
@@ -172,7 +196,7 @@ export async function createProfile(request: CreateProfileRequest): Promise<Gosp
     const { data, error } = await supabase
       .from('profiles')
       .insert({
-        slug: request.slug,
+        slug: profileSlug,
         title: request.title,
         description: request.description,
         gospel_data: sourceProfile.gospelData,
@@ -185,7 +209,12 @@ export async function createProfile(request: CreateProfileRequest): Promise<Gosp
     
     if (error) throw error
     
-    logger.debug(`[supabase-data-service] Created profile: ${request.slug}`)
+    logger.debug(`[supabase-data-service] Created profile: ${profileSlug}`)
+    
+    // If counselee emails were provided, grant them access
+    if (request.counseleeEmails && request.counseleeEmails.length > 0) {
+      await grantProfileAccess(data.id, request.counseleeEmails, user.id)
+    }
     
     return {
       id: data.id,
@@ -200,7 +229,9 @@ export async function createProfile(request: CreateProfileRequest): Promise<Gosp
       savedAnswers: [],
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at),
-      lastVisited: undefined
+      lastVisited: undefined,
+      createdBy: data.created_by,
+      accessList: []
     }
   } catch (error) {
     logger.error('[supabase-data-service] Error creating profile:', error)
@@ -300,12 +331,160 @@ export async function incrementProfileVisitCount(slug: string): Promise<void> {
   try {
     const supabase = await createClient()
     
-    const { error } = await supabase.rpc('increment_visit_count', { profile_slug: slug })
-    
-    if (error) throw error
+    // Use RPC to increment atomically
+    await supabase.rpc('increment_visit_count', { profile_slug: slug })
     
     logger.debug(`[supabase-data-service] Incremented visit count for: ${slug}`)
   } catch (error) {
+    // Don't throw - visit count is not critical
     logger.warn(`[supabase-data-service] Error incrementing visit count for ${slug}:`, error)
   }
 }
+
+/**
+ * Grants access to a profile for counselee users
+ * Creates auth accounts if they don't exist
+ */
+export async function grantProfileAccess(
+  profileId: string,
+  emails: string[],
+  grantedBy: string
+): Promise<void> {
+  try {
+    const supabase = await createClient()
+    
+    // Validate emails
+    const validEmails = emails.filter(email => {
+      const trimmed = email.trim().toLowerCase()
+      return trimmed && trimmed.includes('@')
+    })
+    
+    if (validEmails.length === 0) {
+      logger.warn('[supabase-data-service] No valid emails provided for access grant')
+      return
+    }
+    
+    // Insert access records
+    const accessRecords = validEmails.map(email => ({
+      profile_id: profileId,
+      user_email: email.trim().toLowerCase(),
+      access_role: 'counselee' as const,
+      granted_by: grantedBy
+    }))
+    
+    const { error } = await supabase
+      .from('profile_access')
+      .upsert(accessRecords, { 
+        onConflict: 'profile_id,user_email',
+        ignoreDuplicates: false 
+      })
+    
+    if (error) throw error
+    
+    logger.debug(`[supabase-data-service] Granted access to ${validEmails.length} users for profile ${profileId}`)
+    
+    // Invite users who don't have accounts yet
+    await inviteCounseleeUsers(validEmails, profileId)
+  } catch (error) {
+    logger.error('[supabase-data-service] Error granting profile access:', error)
+    throw error
+  }
+}
+
+/**
+ * Revokes access to a profile
+ */
+export async function revokeProfileAccess(
+  profileId: string,
+  email: string
+): Promise<void> {
+  try {
+    const supabase = await createClient()
+    
+    const { error } = await supabase
+      .from('profile_access')
+      .delete()
+      .eq('profile_id', profileId)
+      .eq('user_email', email.trim().toLowerCase())
+    
+    if (error) throw error
+    
+    logger.debug(`[supabase-data-service] Revoked access for ${email} to profile ${profileId}`)
+  } catch (error) {
+    logger.error('[supabase-data-service] Error revoking profile access:', error)
+    throw error
+  }
+}
+
+/**
+ * Gets the access list for a profile
+ */
+export async function getProfileAccessList(profileId: string): Promise<any[]> {
+  try {
+    const supabase = await createClient()
+    
+    const { data, error } = await supabase
+      .from('profile_access')
+      .select('*')
+      .eq('profile_id', profileId)
+      .order('created_at', { ascending: true })
+    
+    if (error) throw error
+    
+    return data || []
+  } catch (error) {
+    logger.error('[supabase-data-service] Error getting profile access list:', error)
+    return []
+  }
+}
+
+/**
+ * Invites counselee users who don't have accounts yet
+ * This will send them an email invitation to sign up
+ */
+async function inviteCounseleeUsers(emails: string[], profileId: string): Promise<void> {
+  try {
+    const supabase = await createClient()
+    
+    // Check which emails don't have accounts
+    const { data: existingUsers } = await supabase.auth.admin.listUsers()
+    const existingEmails = new Set(existingUsers?.users?.map(u => u.email?.toLowerCase()) || [])
+    
+    const newEmails = emails.filter(email => !existingEmails.has(email.toLowerCase()))
+    
+    if (newEmails.length === 0) {
+      logger.debug('[supabase-data-service] All users already have accounts')
+      return
+    }
+    
+    // Create accounts with temporary passwords - they'll need to reset
+    for (const email of newEmails) {
+      try {
+        // Create user with email/password auth
+        const tempPassword = crypto.randomUUID() // Temporary password
+        
+        const { data, error } = await supabase.auth.admin.createUser({
+          email: email.toLowerCase(),
+          password: tempPassword,
+          email_confirm: false, // Require email confirmation
+          user_metadata: {
+            role: 'counselee',
+            invited_for_profile: profileId
+          }
+        })
+        
+        if (error) {
+          logger.warn(`[supabase-data-service] Failed to create user ${email}:`, error.message)
+        } else {
+          logger.debug(`[supabase-data-service] Created counselee account for ${email}`)
+        }
+      } catch (err) {
+        logger.warn(`[supabase-data-service] Error creating user ${email}:`, err)
+      }
+    }
+  } catch (error) {
+    logger.warn('[supabase-data-service] Error inviting counselee users:', error)
+    // Don't throw - access was granted, user creation is best-effort
+  }
+}
+

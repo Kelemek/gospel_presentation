@@ -25,6 +25,11 @@ export default function ProfileEditPage({ params }: ProfileEditPageProps) {
     title: '',
     description: ''
   })
+  const [counseleeEmailInput, setCounseleeEmailInput] = useState('')
+  const [profileAccess, setProfileAccess] = useState<any[]>([])
+  const [isLoadingAccess, setIsLoadingAccess] = useState(false)
+  const [isAddingCounselee, setIsAddingCounselee] = useState(false)
+  const [accessError, setAccessError] = useState('')
 
   // Check authentication on mount
   useEffect(() => {
@@ -37,8 +42,9 @@ export default function ProfileEditPage({ params }: ProfileEditPageProps) {
     setIsAuth(!!user)
     if (!user) {
       router.push('/login')
+      setIsLoading(false)
     }
-    setIsLoading(false)
+    // Don't set isLoading to false here - let fetchProfile handle it
   }
 
   // Resolve params Promise
@@ -51,10 +57,12 @@ export default function ProfileEditPage({ params }: ProfileEditPageProps) {
   useEffect(() => {
     if (slug && isAuth) {
       fetchProfile()
+      fetchProfileAccess()
     }
   }, [slug, isAuth])
 
   const fetchProfile = async () => {
+    setIsLoading(true)
     try {
       const response = await fetch(`/api/profiles/${slug}`)
       if (response.ok) {
@@ -73,6 +81,23 @@ export default function ProfileEditPage({ params }: ProfileEditPageProps) {
       setError('Failed to load profile')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchProfileAccess = async () => {
+    if (!slug) return
+    
+    setIsLoadingAccess(true)
+    try {
+      const response = await fetch(`/api/profiles/${slug}/access`)
+      if (response.ok) {
+        const data = await response.json()
+        setProfileAccess(data.access || [])
+      }
+    } catch (err) {
+      console.error('Failed to load profile access:', err)
+    } finally {
+      setIsLoadingAccess(false)
     }
   }
 
@@ -106,6 +131,63 @@ export default function ProfileEditPage({ params }: ProfileEditPageProps) {
       setError('Failed to save profile')
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleAddCounselee = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!counseleeEmailInput.trim() || !profile) return
+
+    setIsAddingCounselee(true)
+    setAccessError('')
+
+    try {
+      const response = await fetch(`/api/profiles/${slug}/access`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: counseleeEmailInput.trim()
+        })
+      })
+
+      if (response.ok) {
+        setCounseleeEmailInput('')
+        await fetchProfileAccess()
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        setAccessError(errorData.error || 'Failed to add counselee')
+      }
+    } catch (err) {
+      setAccessError('Failed to add counselee')
+    } finally {
+      setIsAddingCounselee(false)
+    }
+  }
+
+  const handleRemoveCounselee = async (email: string) => {
+    if (!confirm(`Remove access for ${email}?`)) return
+
+    setAccessError('')
+
+    try {
+      const response = await fetch(`/api/profiles/${slug}/access`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email })
+      })
+
+      if (response.ok) {
+        await fetchProfileAccess()
+      } else {
+        const errorData = await response.json().catch(() => ({}))
+        setAccessError(errorData.error || 'Failed to remove counselee')
+      }
+    } catch (err) {
+      setAccessError('Failed to remove counselee')
     }
   }
 
@@ -224,7 +306,7 @@ export default function ProfileEditPage({ params }: ProfileEditPageProps) {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="border border-slate-300 text-slate-600 bg-white hover:bg-slate-50 px-4 sm:px-6 py-2 rounded-lg transition-colors font-medium disabled:opacity-50 flex-1 sm:flex-none"
+                className="border border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-700 bg-white hover:bg-slate-50 px-4 sm:px-6 py-2 rounded-lg transition-all duration-200 font-medium disabled:opacity-50 flex-1 sm:flex-none shadow-sm hover:shadow-md"
               >
                 {isSaving ? (
                   <>
@@ -240,13 +322,83 @@ export default function ProfileEditPage({ params }: ProfileEditPageProps) {
               </button>
               <Link
                 href="/admin"
-                className="border border-slate-300 text-slate-600 bg-white hover:bg-slate-50 px-4 sm:px-6 py-2 rounded-lg transition-colors text-center flex-1 sm:flex-none"
+                className="border border-slate-200 hover:border-slate-300 text-slate-600 hover:text-slate-700 bg-white hover:bg-slate-50 px-4 sm:px-6 py-2 rounded-lg transition-all duration-200 text-center flex-1 sm:flex-none shadow-sm hover:shadow-md"
               >
                 <span className="hidden sm:inline">Cancel</span>
                 <span className="sm:hidden">✕</span>
               </Link>
             </div>
           </form>
+        </div>
+
+        {/* Counselee Access Management */}
+        <div className="bg-white border border-slate-200 rounded-lg p-6 mb-6 shadow-lg">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Counselee Access</h2>
+          <p className="text-sm text-slate-600 mb-4">
+            Grant counselees view-only access to this profile. They will receive an email invitation to create an account.
+          </p>
+
+          {accessError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+              <div className="text-red-800 text-sm">{accessError}</div>
+            </div>
+          )}
+
+          {/* Add Counselee Form */}
+          <form onSubmit={handleAddCounselee} className="mb-4">
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={counseleeEmailInput}
+                onChange={(e) => setCounseleeEmailInput(e.target.value)}
+                placeholder="counselee@example.com"
+                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 bg-white"
+                disabled={isAddingCounselee}
+              />
+              <button
+                type="submit"
+                disabled={isAddingCounselee || !counseleeEmailInput.trim()}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+              >
+                {isAddingCounselee ? 'Adding...' : 'Add Counselee'}
+              </button>
+            </div>
+          </form>
+
+          {/* List of Counselees */}
+          <div className="space-y-2">
+            {isLoadingAccess ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-slate-200 border-t-blue-600 mx-auto mb-2"></div>
+                <p className="text-sm text-slate-500">Loading counselees...</p>
+              </div>
+            ) : profileAccess.length === 0 ? (
+              <div className="text-sm text-slate-500 text-center py-4 bg-slate-50 rounded-lg">
+                No counselees have been granted access yet
+              </div>
+            ) : (
+              profileAccess.map((access) => (
+                <div 
+                  key={access.id}
+                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200"
+                >
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-slate-900">{access.user_email}</div>
+                    <div className="text-xs text-slate-500">
+                      Added {new Date(access.created_at).toLocaleDateString()}
+                      {access.user_id ? ' • Account created' : ' • Invitation pending'}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleRemoveCounselee(access.user_email)}
+                    className="text-red-600 hover:text-red-800 text-sm font-medium px-3 py-1 hover:bg-red-50 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md border border-transparent hover:border-red-200"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
         {/* Profile Stats */}

@@ -88,6 +88,35 @@ async function restoreBackup(backupFile) {
       }
     }
     
+    // Restore profile_access (counselee access grants)
+    if (backupData.tables.profile_access) {
+      console.log(`\n🔄 Restoring profile_access table (${backupData.tables.profile_access.length} records)...`);
+      
+      // Delete existing access records
+      const { error: deleteError } = await supabase
+        .from('profile_access')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+      
+      if (deleteError) {
+        console.warn('Warning deleting profile_access:', deleteError.message);
+        console.log('   (Table may not exist yet - skipping)');
+      } else {
+        // Insert backup data
+        if (backupData.tables.profile_access.length > 0) {
+          const { error: insertError } = await supabase
+            .from('profile_access')
+            .insert(backupData.tables.profile_access);
+          
+          if (insertError) {
+            console.warn(`Warning restoring profile_access: ${insertError.message}`);
+          } else {
+            console.log(`✅ Restored ${backupData.tables.profile_access.length} access records`);
+          }
+        }
+      }
+    }
+    
     console.log('\n✅ Database restore completed successfully!');
     
   } catch (error) {

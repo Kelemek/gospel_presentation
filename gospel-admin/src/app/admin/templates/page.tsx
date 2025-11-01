@@ -83,6 +83,118 @@ function TemplatesPageContent() {
     }
   }
 
+  const handleDeleteProfile = async (slug: string, title: string) => {
+    if (!confirm(`Are you sure you want to delete the template "${title}"? This action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/profiles/${slug}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        setTemplates(templates.filter(t => t.slug !== slug))
+        alert(`Template "${title}" deleted successfully`)
+      } else {
+        const errorData = await response.json()
+        setError(errorData.error || 'Failed to delete template')
+      }
+    } catch (err: any) {
+      setError('Failed to delete template: ' + (err.message || 'Unknown error'))
+    }
+  }
+
+  const handleDownloadBackup = async (profile: any) => {
+    try {
+      const response = await fetch(`/api/profiles/${profile.slug}`)
+      if (!response.ok) throw new Error('Failed to fetch profile')
+      
+      const fullProfile = await response.json()
+      
+      const backupData = {
+        version: '2.0',
+        exportDate: new Date().toISOString(),
+        profile: {
+          slug: fullProfile.slug,
+          title: fullProfile.title,
+          description: fullProfile.description,
+          isDefault: fullProfile.isDefault,
+          isTemplate: fullProfile.isTemplate,
+          gospelData: fullProfile.gospelData,
+          visitCount: fullProfile.visitCount,
+          lastVisited: fullProfile.lastVisited,
+          lastViewedScripture: fullProfile.lastViewedScripture,
+        }
+      }
+      
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${profile.slug}-backup-${new Date().toISOString().split('T')[0]}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Error downloading backup:', error)
+      alert('Failed to download backup')
+    }
+  }
+
+  const handleRestoreBackup = async (profile: any, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!confirm(`Are you sure you want to restore "${profile.title}" from "${file.name}"? This will replace all current content and cannot be undone.`)) {
+      event.target.value = ''
+      return
+    }
+
+    try {
+      const fileContent = await file.text()
+      const backupData = JSON.parse(fileContent)
+
+      const profileData = backupData.profile || {
+        ...backupData.profileInfo,
+        gospelData: backupData.gospelData
+      }
+
+      if (!profileData.gospelData || !Array.isArray(profileData.gospelData)) {
+        throw new Error('Invalid backup file format: gospelData must be an array')
+      }
+
+      const updateData = {
+        title: profileData.title || profile.title,
+        description: profileData.description || '',
+        gospelData: profileData.gospelData,
+        lastViewedScripture: profileData.lastViewedScripture
+      }
+
+      const response = await fetch(`/api/profiles/${profile.slug}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData)
+      })
+
+      if (response.ok) {
+        alert(`Successfully restored content for "${profile.title}" from "${file.name}"!`)
+        await fetchTemplates()
+      } else {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to save restored content')
+      }
+    } catch (error: any) {
+      console.error('Error restoring backup:', error)
+      alert(`Failed to restore backup: ${error.message}`)
+    } finally {
+      event.target.value = ''
+    }
+  }
+
   const handleLogout = async () => {
     const supabase = createClient()
     await supabase.auth.signOut()
@@ -257,14 +369,14 @@ function TemplatesPageContent() {
                         <Link
                           href={`/${template.slug}`}
                           target="_blank"
-                          className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 py-1 rounded border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                          className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 sm:px-3 py-1 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                         >
                           View
                         </Link>
                         
                         <button
                           onClick={() => handleCopyProfileUrl(template)}
-                          className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 py-1 rounded border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                          className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 sm:px-3 py-1 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
                         >
                           Share
                         </button>
@@ -285,9 +397,41 @@ function TemplatesPageContent() {
                             >
                               Content
                             </Link>
+                            
+                            {!template.isDefault && (
+                              <button
+                                onClick={() => handleDeleteProfile(template.slug, template.title)}
+                                className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 sm:px-3 py-1 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                              >
+                                Delete
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
+
+                      {/* Backup/Restore buttons for admins */}
+                      {userRole === 'admin' && (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            onClick={() => handleDownloadBackup(template)}
+                            className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300"
+                            title="Download template backup"
+                          >
+                            Download Backup
+                          </button>
+                          
+                          <label className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300 cursor-pointer">
+                            Upload & Restore
+                            <input
+                              type="file"
+                              accept=".json"
+                              onChange={(e) => handleRestoreBackup(template, e)}
+                              className="hidden"
+                            />
+                          </label>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

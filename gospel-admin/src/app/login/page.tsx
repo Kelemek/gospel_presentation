@@ -61,7 +61,7 @@ function LoginForm() {
             Gospel Presentation
           </h1>
           <p className="text-slate-600">
-            Admin Login
+            Sign in to your account
           </p>
         </div>
 
@@ -91,7 +91,7 @@ function LoginForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900 transition-all"
-                placeholder="admin@example.com"
+                placeholder="you@example.com"
                 disabled={isLoading}
               />
             </div>
@@ -99,7 +99,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-br from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+              className="w-full bg-slate-500 hover:bg-slate-600 active:bg-slate-700 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md border border-slate-600"
             >
               {isLoading ? 'Sending...' : 'Send Login Link'}
             </button>

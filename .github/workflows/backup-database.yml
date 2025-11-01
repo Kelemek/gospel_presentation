@@ -60,13 +60,25 @@ jobs:
               
               if (userProfilesError) throw userProfilesError;
               
+              // Backup profile_access table (counselee access grants)
+              const { data: profileAccess, error: profileAccessError } = await supabase
+                .from('profile_access')
+                .select('*');
+              
+              // Don't fail if table doesn't exist yet
+              if (profileAccessError) {
+                console.log('Note: profile_access table not found (may not be migrated yet)');
+              }
+              
               // Create backup object
               const backup = {
                 backup_date: new Date().toISOString(),
                 backup_type: 'automated',
+                version: '1.1',
                 tables: {
                   profiles: profiles,
-                  user_profiles: userProfiles
+                  user_profiles: userProfiles,
+                  profile_access: profileAccess || []
                 }
               };
               

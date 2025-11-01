@@ -46,9 +46,20 @@ export interface SavedAnswer {
 }
 
 // Profile System Types
+
+export interface ProfileAccess {
+  id: string
+  profileId: string
+  userEmail: string
+  userId?: string | null         // Populated after user accepts invite
+  accessRole: 'counselee' | 'counselor'
+  grantedBy: string              // User ID who granted access
+  createdAt: Date
+}
+
 export interface GospelProfile {
   id: string
-  slug: string                    // URL path: 'default', 'myprofile', 'youthgroup'
+  slug: string                    // URL path: UUID-based for security
   title: string                   // Display name
   description?: string            // Optional description
   gospelData: GospelSection[]     // Complete copy of gospel presentation data
@@ -67,6 +78,7 @@ export interface GospelProfile {
   savedAnswers?: SavedAnswer[]    // Answers saved by anonymous users viewing this profile
   createdBy?: string | null       // User ID who created this profile
   ownerDisplayName?: string | null // Display name of the owner
+  accessList?: ProfileAccess[]    // List of users with access to this profile
 }
 
 // Lightweight profile metadata for index operations
@@ -96,11 +108,12 @@ export interface ProfileValidation {
 }
 
 export interface CreateProfileRequest {
-  slug: string
+  slug?: string                   // Optional - will be auto-generated if not provided
   title: string
   description?: string
   cloneFromSlug?: string          // Which profile to clone from
   isTemplate?: boolean            // Whether this is a template profile
+  counseleeEmails?: string[]      // Email addresses to grant counselee access
 }
 
 export interface ProfileAnalytics {

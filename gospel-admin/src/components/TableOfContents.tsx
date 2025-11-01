@@ -12,6 +12,19 @@ export default function TableOfContents({ sections }: TableOfContentsProps) {
 
   return (
     <div className="space-y-4 md:space-y-3">
+      {/* Login Button */}
+      <div className="mb-4">
+        <Link 
+          href="/admin"
+          className="inline-flex items-center w-full px-4 py-3 text-base md:text-lg font-medium text-white bg-slate-500 hover:bg-slate-600 active:bg-slate-700 border border-slate-600 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px]"
+        >
+          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+          </svg>
+          Login
+        </Link>
+      </div>
+      
       {/* Print Button */}
       <div className="mb-6 pb-4 border-b border-slate-200">
         <button
@@ -21,7 +34,7 @@ export default function TableOfContents({ sections }: TableOfContentsProps) {
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
           </svg>
-          Print Condensed Version
+          Print Version
         </button>
       </div>
       {sections.map((section) => (
@@ -46,19 +59,6 @@ export default function TableOfContents({ sections }: TableOfContentsProps) {
           </ul>
         </div>
       ))}
-      
-      {/* Admin Edit Button */}
-      <div className="mt-8 pt-4 border-t border-slate-200">
-        <Link 
-          href="/admin"
-          className="inline-flex items-center px-4 py-3 text-base font-medium text-slate-600 bg-slate-50 hover:bg-slate-100 hover:text-slate-700 rounded-md transition-colors duration-200 border border-slate-200 shadow-sm min-h-[48px]"
-        >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-          Edit Content
-        </Link>
-      </div>
     </div>
   )
 }
