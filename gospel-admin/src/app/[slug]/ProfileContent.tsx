@@ -42,6 +42,7 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [canEdit, setCanEdit] = useState(false)
   const [fromEditor, setFromEditor] = useState(false)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
 
   // Check authentication and role
   useEffect(() => {
@@ -50,6 +51,8 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
       const { data: { user } } = await supabase.auth.getUser()
       
       if (user) {
+        setUserEmail(user.email || null)
+        
         // Check user role
         const { data: userProfile } = await supabase
           .from('user_profiles')
@@ -362,28 +365,44 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
                 <span className="font-medium">Menu</span>
               </button>
               
-              {/* Right side group - only show when previewing from editor */}
-              {canEdit && fromEditor && (
-                <div className="flex items-center gap-3">
-                  {/* Profile Info */}
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-slate-700">{profileInfo?.title || 'Gospel Profile'}</div>
-                    {profileInfo?.favoriteScriptures && profileInfo.favoriteScriptures.length > 0 && (
-                      <div className="text-xs text-blue-600">
-                        📖 {profileInfo.favoriteScriptures.length} favorite{profileInfo.favoriteScriptures.length !== 1 ? 's' : ''}
-                      </div>
-                    )}
+              {/* Right side content */}
+              <div className="flex items-center gap-3">
+                {/* Logged in indicator - always show when user is logged in */}
+                {userEmail && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-md">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-xs text-green-700 font-medium hidden sm:inline">
+                      {userEmail}
+                    </span>
+                    <span className="text-xs text-green-700 font-medium sm:hidden">
+                      Logged in
+                    </span>
                   </div>
-                  
-                  {/* Edit Button for authenticated users - top right */}
-                  <Link
-                    href={`/admin/profiles/${profileInfo.slug}/content`}
-                    className="px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors whitespace-nowrap"
-                  >
-                    ✏️ Edit
-                  </Link>
-                </div>
-              )}
+                )}
+                
+                {/* Profile Info and Edit Button - only show when previewing from editor */}
+                {canEdit && fromEditor && (
+                  <>
+                    {/* Profile Info */}
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-slate-700">{profileInfo?.title || 'Gospel Profile'}</div>
+                      {profileInfo?.favoriteScriptures && profileInfo.favoriteScriptures.length > 0 && (
+                        <div className="text-xs text-blue-600">
+                          📖 {profileInfo.favoriteScriptures.length} favorite{profileInfo.favoriteScriptures.length !== 1 ? 's' : ''}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Edit Button for authenticated users - top right */}
+                    <Link
+                      href={`/admin/profiles/${profileInfo.slug}/content`}
+                      className="px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors whitespace-nowrap"
+                    >
+                      ✏️ Edit
+                    </Link>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
