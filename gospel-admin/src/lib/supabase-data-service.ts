@@ -458,29 +458,34 @@ async function inviteCounseleeUsers(emails: string[], profileId: string): Promis
       return
     }
     
-    // Create accounts with temporary passwords - they'll need to reset
+    // Get the profile details for the welcome email
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('title, slug')
+      .eq('id', profileId)
+      .single()
+    
+    // Create accounts and send welcome emails
     for (const email of newEmails) {
       try {
-        // Create user with email/password auth
-        const tempPassword = crypto.randomUUID() // Temporary password
-        
-        const { data, error } = await supabase.auth.admin.createUser({
-          email: email.toLowerCase(),
-          password: tempPassword,
-          email_confirm: false, // Require email confirmation
-          user_metadata: {
+        // Use inviteUserByEmail which sends a magic link and creates the account
+        const { data, error } = await supabase.auth.admin.inviteUserByEmail(email.toLowerCase(), {
+          data: {
             role: 'counselee',
-            invited_for_profile: profileId
-          }
+            invited_for_profile: profileId,
+            profile_title: profile?.title,
+            profile_slug: profile?.slug
+          },
+          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`
         })
         
         if (error) {
-          logger.warn(`[supabase-data-service] Failed to create user ${email}:`, error.message)
+          logger.warn(`[supabase-data-service] Failed to invite user ${email}:`, error.message)
         } else {
-          logger.debug(`[supabase-data-service] Created counselee account for ${email}`)
+          logger.info(`[supabase-data-service] Sent welcome email to ${email} for profile: ${profile?.title}`)
         }
       } catch (err) {
-        logger.warn(`[supabase-data-service] Error creating user ${email}:`, err)
+        logger.warn(`[supabase-data-service] Error inviting user ${email}:`, err)
       }
     }
   } catch (error) {

@@ -23,7 +23,21 @@ export async function GET(request: Request) {
         return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(exchangeError.message)}`, requestUrl.origin))
       }
       
-      // Successfully authenticated, redirect to admin
+      // Get user data to check their role and metadata
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        // Check if this is a new counselee invited for a specific profile
+        const profileSlug = user.user_metadata?.profile_slug
+        const role = user.user_metadata?.role
+        
+        // If counselee with assigned profile, redirect them there
+        if (role === 'counselee' && profileSlug) {
+          return NextResponse.redirect(new URL(`/${profileSlug}`, requestUrl.origin))
+        }
+      }
+      
+      // Default: redirect to admin dashboard (for admin/counselor users)
       return NextResponse.redirect(new URL('/admin', requestUrl.origin))
     } catch (err) {
       console.error('Exception in auth callback:', err)
