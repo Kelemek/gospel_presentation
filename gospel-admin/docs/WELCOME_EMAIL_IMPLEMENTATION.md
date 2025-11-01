@@ -210,4 +210,4 @@ Before pushing to production:
 
 ---
 
-**Current Status:** Code is ready! Just need to configure Supabase email template and test.
+**Current Status:** Code is deployed! Just need to configure Supabase email template and test.
