@@ -276,6 +276,7 @@ function GospelPresentationOld() {
               key={section.section}
               section={section}
               onScriptureClick={handleScriptureClick}
+              profileSlug="default"
             />
           ))}
         </div>
