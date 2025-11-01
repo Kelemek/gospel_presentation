@@ -469,14 +469,15 @@ async function inviteCounseleeUsers(emails: string[], profileId: string): Promis
     for (const email of newEmails) {
       try {
         // Use inviteUserByEmail which sends a magic link and creates the account
+        // Note: The redirect URL should be configured in Supabase Dashboard under Authentication > URL Configuration
         const { data, error } = await supabase.auth.admin.inviteUserByEmail(email.toLowerCase(), {
           data: {
             role: 'counselee',
             invited_for_profile: profileId,
             profile_title: profile?.title,
             profile_slug: profile?.slug
-          },
-          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback`
+          }
+          // redirectTo is optional - will use Supabase's configured Site URL + /auth/callback
         })
         
         if (error) {
