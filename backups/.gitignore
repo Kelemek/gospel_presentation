@@ -1,0 +1,8 @@
+# Ignore all backup files by default
+*.json
+
+# Keep the README
+!README.md
+
+# If you want to commit specific important backups, use:
+# git add -f backups/important-backup.json

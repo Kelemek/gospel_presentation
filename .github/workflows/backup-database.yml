@@ -1,0 +1,125 @@
+name: Backup Supabase Database
+
+on:
+  # Run daily at 2 AM UTC
+  schedule:
+    - cron: '0 2 * * *'
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: |
+          npm install @supabase/supabase-js
+      
+      - name: Create backup directory
+        run: mkdir -p backups
+      
+      - name: Backup database
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          node -e "
+          const { createClient } = require('@supabase/supabase-js');
+          const fs = require('fs');
+          const path = require('path');
+          
+          const supabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_ANON_KEY
+          );
+          
+          async function backup() {
+            try {
+              const timestamp = new Date().toISOString().split('T')[0];
+              
+              // Backup profiles table
+              const { data: profiles, error: profilesError } = await supabase
+                .from('profiles')
+                .select('*');
+              
+              if (profilesError) throw profilesError;
+              
+              // Backup user_profiles table
+              const { data: userProfiles, error: userProfilesError } = await supabase
+                .from('user_profiles')
+                .select('*');
+              
+              if (userProfilesError) throw userProfilesError;
+              
+              // Create backup object
+              const backup = {
+                backup_date: new Date().toISOString(),
+                backup_type: 'automated',
+                tables: {
+                  profiles: profiles,
+                  user_profiles: userProfiles
+                }
+              };
+              
+              // Write backup file
+              const filename = \`database-backup-\${timestamp}.json\`;
+              fs.writeFileSync(
+                path.join('backups', filename),
+                JSON.stringify(backup, null, 2)
+              );
+              
+              // Also create latest backup
+              fs.writeFileSync(
+                path.join('backups', 'latest-backup.json'),
+                JSON.stringify(backup, null, 2)
+              );
+              
+              // Create individual profile backups
+              const profilesDir = path.join('backups', 'profiles');
+              fs.mkdirSync(profilesDir, { recursive: true });
+              
+              userProfiles.forEach(profile => {
+                const profileBackup = {
+                  profile: profile,
+                  backup: {
+                    exportedAt: new Date().toISOString(),
+                    exportedBy: 'GitHub Actions',
+                    version: '1.0'
+                  }
+                };
+                
+                const profileFile = \`gospel-profile-\${profile.slug}-backup-\${timestamp}.json\`;
+                fs.writeFileSync(
+                  path.join(profilesDir, profileFile),
+                  JSON.stringify(profileBackup, null, 2)
+                );
+              });
+              
+              console.log(\`✅ Backup created: \${filename}\`);
+              console.log(\`   Profiles: \${profiles.length}\`);
+              console.log(\`   User Profiles: \${userProfiles.length}\`);
+            } catch (error) {
+              console.error('❌ Backup failed:', error);
+              process.exit(1);
+            }
+          }
+          
+          backup();
+          "
+      
+      - name: Upload backup artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-backup-${{ github.run_number }}
+          path: backups/
+          retention-days: 90
+          compression-level: 9
