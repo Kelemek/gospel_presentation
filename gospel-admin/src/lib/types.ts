@@ -38,6 +38,13 @@ export interface GospelSection {
 
 export type GospelPresentationData = GospelSection[]
 
+// Saved answer from anonymous user
+export interface SavedAnswer {
+  questionId: string              // ID of the question being answered
+  answer: string                  // User's answer text
+  answeredAt: Date               // When the answer was saved
+}
+
 // Profile System Types
 export interface GospelProfile {
   id: string
@@ -57,6 +64,7 @@ export interface GospelProfile {
     subsectionId: string          // For navigation purposes
     viewedAt: Date
   }
+  savedAnswers?: SavedAnswer[]    // Answers saved by anonymous users viewing this profile
   createdBy?: string | null       // User ID who created this profile
   ownerDisplayName?: string | null // Display name of the owner
 }

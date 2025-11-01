@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import GospelSection from '@/components/GospelSection'
 import ScriptureModal from '@/components/ScriptureModal'
 import TableOfContents from '@/components/TableOfContents'
-import { GospelSection as GospelSectionType, GospelProfile } from '@/lib/types'
+import { GospelSection as GospelSectionType, GospelProfile, SavedAnswer } from '@/lib/types'
 import { useScriptureProgress } from '@/lib/useScriptureProgress'
 import { logger } from '@/lib/logger'
 
@@ -13,6 +13,7 @@ interface ProfileInfo {
   description?: string
   slug: string
   favoriteScriptures: string[]
+  savedAnswers?: SavedAnswer[]
 }
 
 interface ProfileContentProps {
@@ -396,6 +397,7 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
                     lastViewedScripture={currentLastViewed}
                     onClearProgress={handleClearProgress}
                     profileSlug={profileInfo.slug}
+                    savedAnswers={profileInfo.savedAnswers}
                   />
                 </div>
               ))}

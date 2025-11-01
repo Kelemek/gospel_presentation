@@ -125,7 +125,8 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
             title: profile.title,
             description: profile.description,
             slug: slug,
-            favoriteScriptures: favoriteScriptures
+            favoriteScriptures: favoriteScriptures,
+            savedAnswers: profile.savedAnswers
           }}
           profile={profile}
         />

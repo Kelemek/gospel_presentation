@@ -1,4 +1,4 @@
-import { GospelSection as GospelSectionType, Subsection, NestedSubsection, ScriptureReference, QuestionAnswer, PROFILE_VALIDATION } from '@/lib/types'
+import { GospelSection as GospelSectionType, Subsection, NestedSubsection, ScriptureReference, QuestionAnswer, PROFILE_VALIDATION, SavedAnswer } from '@/lib/types'
 import ScriptureHoverModal from './ScriptureHoverModal'
 import { useState, useEffect } from 'react'
 
@@ -8,6 +8,7 @@ interface GospelSectionProps {
   lastViewedScripture?: string  // Reference of the last viewed scripture
   onClearProgress?: () => void  // Function to clear progress when pin is clicked
   profileSlug: string
+  savedAnswers?: SavedAnswer[]
 }
 
 interface ScriptureReferencesProps {
@@ -25,6 +26,7 @@ interface SubsectionProps {
   lastViewedScripture?: string
   onClearProgress?: () => void
   profileSlug: string
+  savedAnswers?: SavedAnswer[]
 }
 
 interface NestedSubsectionProps {
@@ -33,6 +35,7 @@ interface NestedSubsectionProps {
   lastViewedScripture?: string
   onClearProgress?: () => void
   profileSlug: string
+  savedAnswers?: SavedAnswer[]
 }
 
 function ScriptureReferences({ references, onScriptureClick, lastViewedScripture, onClearProgress }: ScriptureReferencesProps) {
@@ -91,24 +94,28 @@ function ScriptureReferences({ references, onScriptureClick, lastViewedScripture
 interface QuestionsProps {
   questions: QuestionAnswer[]
   profileSlug: string
+  savedAnswers?: Array<{ questionId: string; answer: string; answeredAt: Date }>
 }
 
-function Questions({ questions, profileSlug }: QuestionsProps) {
+function Questions({ questions, profileSlug, savedAnswers = [] }: QuestionsProps) {
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [savedStatus, setSavedStatus] = useState<Record<string, boolean>>({})
+  const [isInitialized, setIsInitialized] = useState(false)
 
-  // Load saved answers from localStorage on mount
+  // Load saved answers from profile data on mount (only once)
   useEffect(() => {
-    const loadedAnswers: Record<string, string> = {}
-    questions.forEach(q => {
-      const key = `gospel-answer-${profileSlug}-${q.id}`
-      const saved = localStorage.getItem(key)
-      if (saved) {
-        loadedAnswers[q.id] = saved
-      }
-    })
-    setAnswers(loadedAnswers)
-  }, [questions, profileSlug])
+    if (!isInitialized && savedAnswers.length >= 0) {
+      const loadedAnswers: Record<string, string> = {}
+      questions.forEach(q => {
+        const savedAnswer = savedAnswers.find(sa => sa.questionId === q.id)
+        if (savedAnswer) {
+          loadedAnswers[q.id] = savedAnswer.answer
+        }
+      })
+      setAnswers(loadedAnswers)
+      setIsInitialized(true)
+    }
+  }, [isInitialized, questions, savedAnswers])
 
   const handleAnswerChange = (questionId: string, value: string) => {
     setAnswers(prev => ({
@@ -133,9 +140,22 @@ function Questions({ questions, profileSlug }: QuestionsProps) {
     }
 
     try {
-      // Save to localStorage
-      const key = `gospel-answer-${profileSlug}-${questionId}`
-      localStorage.setItem(key, answer)
+      // Save to database via API
+      const response = await fetch(`/api/profiles/${profileSlug}/save-answer`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          questionId,
+          answer
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to save answer')
+      }
 
       // Show saved confirmation
       setSavedStatus(prev => ({
@@ -205,7 +225,7 @@ function Questions({ questions, profileSlug }: QuestionsProps) {
   )
 }
 
-function NestedSubsectionComponent({ nestedSubsection, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug }: NestedSubsectionProps) {
+function NestedSubsectionComponent({ nestedSubsection, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers }: NestedSubsectionProps) {
   return (
     <div className="ml-6 mt-4 border-l-2 border-gray-200 pl-4 print-subsection">
       <h5 className="font-medium text-slate-800 mb-2 print-subsection-title text-lg md:text-xl">{nestedSubsection.title}</h5>
@@ -222,13 +242,14 @@ function NestedSubsectionComponent({ nestedSubsection, onScriptureClick, lastVie
         <Questions 
           questions={nestedSubsection.questions}
           profileSlug={profileSlug}
+          savedAnswers={savedAnswers}
         />
       )}
     </div>
   )
 }
 
-function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug }: SubsectionProps) {
+function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers }: SubsectionProps) {
   return (
     <div id={`${sectionId}-${subsectionIndex}`} className="mb-6 print-subsection">
       <h4 className="text-xl md:text-2xl font-semibold text-slate-800 mb-3 print-subsection-title">{subsection.title}</h4>
@@ -247,6 +268,7 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
         <Questions 
           questions={subsection.questions}
           profileSlug={profileSlug}
+          savedAnswers={savedAnswers}
         />
       )}
       
@@ -260,6 +282,7 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
               lastViewedScripture={lastViewedScripture}
               onClearProgress={onClearProgress}
               profileSlug={profileSlug}
+              savedAnswers={savedAnswers}
             />
           ))}
         </div>
@@ -268,7 +291,7 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
   )
 }
 
-export default function GospelSection({ section, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug }: GospelSectionProps) {
+export default function GospelSection({ section, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers }: GospelSectionProps) {
   const sectionId = `section-${section.section}`
   
   return (
@@ -288,6 +311,7 @@ export default function GospelSection({ section, onScriptureClick, lastViewedScr
             lastViewedScripture={lastViewedScripture}
             onClearProgress={onClearProgress}
             profileSlug={profileSlug}
+            savedAnswers={savedAnswers}
           />
         ))}
       </div>

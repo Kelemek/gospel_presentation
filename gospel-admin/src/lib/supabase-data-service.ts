@@ -81,6 +81,7 @@ export async function getProfiles(): Promise<GospelProfile[]> {
         subsectionId: row.last_viewed_scripture.subsectionId,
         viewedAt: new Date(row.last_viewed_scripture.viewedAt)
       } : undefined,
+      savedAnswers: row.saved_answers || [],
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
       lastVisited: row.last_visited ? new Date(row.last_visited) : undefined,
@@ -132,6 +133,7 @@ export async function getProfileBySlug(slug: string): Promise<GospelProfile | nu
         subsectionId: row.last_viewed_scripture.subsectionId,
         viewedAt: new Date(row.last_viewed_scripture.viewedAt)
       } : undefined,
+      savedAnswers: row.saved_answers || [],
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
       lastVisited: row.last_visited ? new Date(row.last_visited) : undefined
@@ -195,6 +197,7 @@ export async function createProfile(request: CreateProfileRequest): Promise<Gosp
       visitCount: data.visit_count,
       gospelData: data.gospel_data as GospelPresentationData,
       lastViewedScripture: undefined,
+      savedAnswers: [],
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at),
       lastVisited: undefined
@@ -215,6 +218,7 @@ export async function updateProfile(
     description: string
     gospelData: GospelPresentationData
     lastViewedScripture: any
+    savedAnswers: any[]
   }>
 ): Promise<GospelProfile> {
   try {
@@ -226,6 +230,9 @@ export async function updateProfile(
     if (updates.gospelData !== undefined) updateData.gospel_data = updates.gospelData
     if (updates.lastViewedScripture !== undefined) {
       updateData.last_viewed_scripture = updates.lastViewedScripture
+    }
+    if (updates.savedAnswers !== undefined) {
+      updateData.saved_answers = updates.savedAnswers
     }
     
     const { data, error } = await supabase
@@ -245,6 +252,7 @@ export async function updateProfile(
       title: data.title,
       description: data.description || undefined,
       isDefault: data.is_default,
+      isTemplate: data.is_template || false,
       visitCount: data.visit_count,
       gospelData: data.gospel_data as GospelPresentationData,
       lastViewedScripture: data.last_viewed_scripture ? {
@@ -253,6 +261,7 @@ export async function updateProfile(
         subsectionId: data.last_viewed_scripture.subsectionId,
         viewedAt: new Date(data.last_viewed_scripture.viewedAt)
       } : undefined,
+      savedAnswers: data.saved_answers || [],
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at),
       lastVisited: data.last_visited ? new Date(data.last_visited) : undefined
