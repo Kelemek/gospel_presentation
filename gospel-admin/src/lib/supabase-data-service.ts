@@ -445,7 +445,9 @@ export async function getProfileAccessList(profileId: string): Promise<any[]> {
  */
 async function inviteCounseleeUsers(emails: string[], profileId: string): Promise<void> {
   try {
-    const supabase = await createClient()
+    // Use admin client for auth.admin operations
+    const { createAdminClient } = await import('@/lib/supabase/server')
+    const supabase = createAdminClient()
     
     // Check which emails don't have accounts
     const { data: existingUsers } = await supabase.auth.admin.listUsers()
@@ -484,6 +486,23 @@ async function inviteCounseleeUsers(emails: string[], profileId: string): Promis
           logger.warn(`[supabase-data-service] Failed to invite user ${email}:`, error.message)
         } else {
           logger.info(`[supabase-data-service] Sent welcome email to ${email} for profile: ${profile?.title}`)
+          
+          // Ensure the user_profiles table has the correct role set to 'counselee'
+          if (data?.user?.id) {
+            const { error: profileError } = await supabase
+              .from('user_profiles')
+              .upsert({
+                id: data.user.id,
+                role: 'counselee',
+                display_name: email
+              }, {
+                onConflict: 'id'
+              })
+            
+            if (profileError) {
+              logger.warn(`[supabase-data-service] Failed to set counselee role for ${email}:`, profileError.message)
+            }
+          }
         }
       } catch (err) {
         logger.warn(`[supabase-data-service] Error inviting user ${email}:`, err)

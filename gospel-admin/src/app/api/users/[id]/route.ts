@@ -53,7 +53,24 @@ export async function DELETE(
     const { createAdminClient } = await import('@/lib/supabase/server')
     const adminClient = createAdminClient()
 
-    // First, delete all profiles owned by this user
+    // Get user email before deleting (needed for profile_access cleanup)
+    const { data: userData } = await adminClient.auth.admin.getUserById(userIdToDelete)
+    const userEmail = userData?.user?.email
+
+    // First, remove user from all profile access grants
+    if (userEmail) {
+      const { error: accessError } = await adminClient
+        .from('profile_access')
+        .delete()
+        .eq('user_email', userEmail.toLowerCase())
+
+      if (accessError) {
+        logger.warn('Failed to delete profile access grants:', accessError)
+        // Continue anyway
+      }
+    }
+
+    // Delete all profiles owned by this user
     const { error: profilesError } = await adminClient
       .from('profiles')
       .delete()
