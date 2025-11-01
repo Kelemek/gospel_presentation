@@ -1,0 +1,135 @@
+name: Restore Database from Backup
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Backup Run ID to restore from (leave empty to see recent backups)'
+        required: false
+        type: string
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd gospel-admin
+          npm ci
+
+      - name: List recent backups
+        if: ${{ !inputs.run_id }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Recent backup runs:"
+          echo "──────────────────────────────────────────────────────────────────"
+          
+          # Get recent workflow runs
+          curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/workflows/backup-database.yml/runs?per_page=10" \
+            | jq -r '.workflow_runs[] | "\(.run_number). Run ID: \(.id) - \(.created_at) - Status: \(.conclusion)"'
+          
+          echo ""
+          echo "To restore from a backup, run this workflow again and provide the Run ID"
+          echo "Example: Use the number after 'Run ID:' from the list above"
+          
+          exit 0
+
+      - name: Download backup artifact
+        if: ${{ inputs.run_id }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Downloading backup from run ${{ inputs.run_id }}..."
+          
+          # Get artifact download URL
+          ARTIFACT_URL=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ inputs.run_id }}/artifacts" \
+            | jq -r '.artifacts[] | select(.name=="database-backup") | .archive_download_url')
+          
+          if [ -z "$ARTIFACT_URL" ]; then
+            echo "Error: No backup artifact found for run ${{ inputs.run_id }}"
+            echo "The artifact may have expired (90-day retention) or the run may not exist"
+            exit 1
+          fi
+          
+          echo "Found artifact, downloading..."
+          curl -L -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "$ARTIFACT_URL" -o backup.zip
+          
+          echo "Extracting backup..."
+          unzip -q backup.zip
+          
+          echo "✓ Backup downloaded and extracted"
+
+      - name: Restore database
+        if: ${{ inputs.run_id }}
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          echo "Restoring database..."
+          
+          # Find the backup JSON file
+          BACKUP_FILE=$(ls backup-*.json | head -1)
+          
+          if [ -z "$BACKUP_FILE" ]; then
+            echo "Error: No backup JSON file found"
+            exit 1
+          fi
+          
+          echo "Found backup file: $BACKUP_FILE"
+          
+          # Run restore script
+          cd gospel-admin
+          npm run restore "../$BACKUP_FILE"
+          
+          echo "✓ Database restored successfully!"
+
+      - name: Verify restore
+        if: ${{ inputs.run_id }}
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          cd gospel-admin
+          node -e "
+          const { createClient } = require('@supabase/supabase-js');
+          
+          const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+          );
+          
+          (async () => {
+            const { data, error } = await supabase
+              .from('profiles')
+              .select('slug, title')
+              .order('created_at');
+            
+            if (error) {
+              console.error('Verification failed:', error);
+              process.exit(1);
+            }
+            
+            console.log('');
+            console.log('Restored profiles:');
+            console.log('──────────────────────────────────────────');
+            data.forEach(p => console.log('  -', p.slug, ':', p.title));
+            console.log('');
+            console.log('Total profiles:', data.length);
+          })();
+          "
