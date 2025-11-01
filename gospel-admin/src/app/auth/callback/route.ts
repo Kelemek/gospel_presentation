@@ -27,17 +27,27 @@ export async function GET(request: Request) {
       const { data: { user } } = await supabase.auth.getUser()
       
       if (user) {
-        // Check if this is a new counselee invited for a specific profile
-        const profileSlug = user.user_metadata?.profile_slug
-        const role = user.user_metadata?.role
+        // Check the user_profiles table for their actual role
+        const { data: userProfile } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
         
-        // If counselee with assigned profile, redirect them there
-        if (role === 'counselee' && profileSlug) {
-          return NextResponse.redirect(new URL(`/${profileSlug}`, requestUrl.origin))
+        const role = (userProfile as any)?.role
+        
+        // If counselee, check if they were invited for a specific profile
+        if (role === 'counselee') {
+          const profileSlug = user.user_metadata?.profile_slug
+          
+          if (profileSlug) {
+            // Redirect to their assigned profile
+            return NextResponse.redirect(new URL(`/${profileSlug}`, requestUrl.origin))
+          }
         }
       }
       
-      // Default: redirect to admin dashboard (for admin/counselor users)
+      // Default: redirect to admin dashboard (for admin/counselor users or counselees without assigned profile)
       return NextResponse.redirect(new URL('/admin', requestUrl.origin))
     } catch (err) {
       console.error('Exception in auth callback:', err)
