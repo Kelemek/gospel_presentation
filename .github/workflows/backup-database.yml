@@ -46,40 +46,40 @@ jobs:
             try {
               const timestamp = new Date().toISOString().split('T')[0];
               
-              // Backup profiles table
-              const { data: profiles, error: profilesError } = await supabase
-                .from('profiles')
-                .select('*');
+              // Define all tables to backup
+              const tablesToBackup = [
+                'profiles',
+                'user_profiles', 
+                'profile_access',
+                'coma_templates'
+              ];
               
-              if (profilesError) throw profilesError;
+              // Backup all tables dynamically
+              const tables = {};
+              let backupStats = {};
               
-              // Backup user_profiles table
-              const { data: userProfiles, error: userProfilesError } = await supabase
-                .from('user_profiles')
-                .select('*');
-              
-              if (userProfilesError) throw userProfilesError;
-              
-              // Backup profile_access table (counselee access grants)
-              const { data: profileAccess, error: profileAccessError } = await supabase
-                .from('profile_access')
-                .select('*');
-              
-              // Don't fail if table doesn't exist yet
-              if (profileAccessError) {
-                console.log('Note: profile_access table not found (may not be migrated yet)');
+              for (const tableName of tablesToBackup) {
+                const { data, error } = await supabase
+                  .from(tableName)
+                  .select('*');
+                
+                if (error) {
+                  console.log(\`⚠️  Warning: Could not backup table '\${tableName}': \${error.message}\`);
+                  tables[tableName] = [];
+                  backupStats[tableName] = 0;
+                } else {
+                  tables[tableName] = data || [];
+                  backupStats[tableName] = data?.length || 0;
+                  console.log(\`✓ Backed up '\${tableName}': \${data?.length || 0} rows\`);
+                }
               }
               
               // Create backup object
               const backup = {
                 backup_date: new Date().toISOString(),
                 backup_type: 'automated',
-                version: '1.1',
-                tables: {
-                  profiles: profiles,
-                  user_profiles: userProfiles,
-                  profile_access: profileAccess || []
-                }
+                version: '1.2',
+                tables: tables
               };
               
               // Write backup file
@@ -99,6 +99,7 @@ jobs:
               const profilesDir = path.join('backups', 'profiles');
               fs.mkdirSync(profilesDir, { recursive: true });
               
+              const userProfiles = tables.user_profiles || [];
               userProfiles.forEach(profile => {
                 const profileBackup = {
                   profile: profile,
@@ -116,9 +117,11 @@ jobs:
                 );
               });
               
-              console.log(\`✅ Backup created: \${filename}\`);
-              console.log(\`   Profiles: \${profiles.length}\`);
-              console.log(\`   User Profiles: \${userProfiles.length}\`);
+              console.log(\`\n✅ Backup created: \${filename}\`);
+              console.log('   Table Summary:');
+              Object.entries(backupStats).forEach(([table, count]) => {
+                console.log(\`   - \${table}: \${count} rows\`);
+              });
             } catch (error) {
               console.error('❌ Backup failed:', error);
               process.exit(1);

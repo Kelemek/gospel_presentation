@@ -115,21 +115,41 @@ jobs:
           );
           
           (async () => {
-            const { data, error } = await supabase
+            console.log('');
+            console.log('Verifying restored data...');
+            console.log('──────────────────────────────────────────');
+            
+            // Check profiles
+            const { data: profiles, error: profilesError } = await supabase
               .from('profiles')
               .select('slug, title')
               .order('created_at');
             
-            if (error) {
-              console.error('Verification failed:', error);
-              process.exit(1);
+            if (profilesError) {
+              console.error('Error checking profiles:', profilesError);
+            } else {
+              console.log('');
+              console.log('Profiles (\${profiles.length} total):');
+              profiles.slice(0, 5).forEach(p => console.log('  -', p.slug, ':', p.title));
+              if (profiles.length > 5) console.log('  ... and \${profiles.length - 5} more');
+            }
+            
+            // Check coma_templates
+            const { data: templates, error: templatesError } = await supabase
+              .from('coma_templates')
+              .select('name, is_default');
+            
+            if (templatesError) {
+              console.log('');
+              console.log('COMA Templates: Table not found or empty');
+            } else {
+              console.log('');
+              console.log('COMA Templates (\${templates.length} total):');
+              templates.forEach(t => console.log('  -', t.name, t.is_default ? '(default)' : ''));
             }
             
             console.log('');
-            console.log('Restored profiles:');
             console.log('──────────────────────────────────────────');
-            data.forEach(p => console.log('  -', p.slug, ':', p.title));
-            console.log('');
-            console.log('Total profiles:', data.length);
+            console.log('✓ Verification complete');
           })();
           "

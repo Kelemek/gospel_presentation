@@ -34,7 +34,8 @@ async function restoreBackup(backupFile) {
     }
     
     console.log(`📅 Backup date: ${backupData.backup_date}`);
-    console.log(`📊 Tables to restore: ${Object.keys(backupData.tables).join(', ')}`);
+    console.log(`📊 Backup version: ${backupData.version || 'legacy'}`);
+    console.log(`📋 Tables in backup: ${Object.keys(backupData.tables).join(', ')}`);
     
     // Confirm restoration
     console.log('\n⚠️  WARNING: This will DELETE all existing data and restore from backup!');
@@ -42,82 +43,62 @@ async function restoreBackup(backupFile) {
     
     await new Promise(resolve => setTimeout(resolve, 5000));
     
-    // Restore profiles
-    if (backupData.tables.profiles) {
-      console.log(`\n🔄 Restoring profiles table (${backupData.tables.profiles.length} records)...`);
-      
-      // Delete existing profiles
-      const { error: deleteError } = await supabase
-        .from('profiles')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
-      
-      if (deleteError) console.warn('Warning deleting profiles:', deleteError.message);
-      
-      // Insert backup data
-      if (backupData.tables.profiles.length > 0) {
-        const { error: insertError } = await supabase
-          .from('profiles')
-          .insert(backupData.tables.profiles);
-        
-        if (insertError) throw new Error(`Failed to restore profiles: ${insertError.message}`);
-        console.log(`✅ Restored ${backupData.tables.profiles.length} profiles`);
-      }
-    }
+    // Get list of tables to restore from backup
+    const tablesToRestore = Object.keys(backupData.tables);
+    let restoredCount = 0;
+    let skippedCount = 0;
     
-    // Restore user_profiles
-    if (backupData.tables.user_profiles) {
-      console.log(`\n🔄 Restoring user_profiles table (${backupData.tables.user_profiles.length} records)...`);
+    // Restore each table dynamically
+    for (const tableName of tablesToRestore) {
+      const records = backupData.tables[tableName];
       
-      // Delete existing user profiles
-      const { error: deleteError } = await supabase
-        .from('user_profiles')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
-      
-      if (deleteError) console.warn('Warning deleting user_profiles:', deleteError.message);
-      
-      // Insert backup data
-      if (backupData.tables.user_profiles.length > 0) {
-        const { error: insertError } = await supabase
-          .from('user_profiles')
-          .insert(backupData.tables.user_profiles);
-        
-        if (insertError) throw new Error(`Failed to restore user_profiles: ${insertError.message}`);
-        console.log(`✅ Restored ${backupData.tables.user_profiles.length} user profiles`);
+      if (!Array.isArray(records)) {
+        console.warn(`⚠️  Skipping ${tableName} - invalid data format`);
+        skippedCount++;
+        continue;
       }
-    }
-    
-    // Restore profile_access (counselee access grants)
-    if (backupData.tables.profile_access) {
-      console.log(`\n🔄 Restoring profile_access table (${backupData.tables.profile_access.length} records)...`);
       
-      // Delete existing access records
-      const { error: deleteError } = await supabase
-        .from('profile_access')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+      console.log(`\n🔄 Restoring ${tableName} table (${records.length} records)...`);
       
-      if (deleteError) {
-        console.warn('Warning deleting profile_access:', deleteError.message);
-        console.log('   (Table may not exist yet - skipping)');
-      } else {
+      try {
+        // Delete existing records
+        const { error: deleteError } = await supabase
+          .from(tableName)
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
+        
+        if (deleteError) {
+          console.warn(`   Warning deleting ${tableName}:`, deleteError.message);
+        }
+        
         // Insert backup data
-        if (backupData.tables.profile_access.length > 0) {
+        if (records.length > 0) {
           const { error: insertError } = await supabase
-            .from('profile_access')
-            .insert(backupData.tables.profile_access);
+            .from(tableName)
+            .insert(records);
           
           if (insertError) {
-            console.warn(`Warning restoring profile_access: ${insertError.message}`);
+            console.warn(`   ❌ Failed to restore ${tableName}: ${insertError.message}`);
+            skippedCount++;
           } else {
-            console.log(`✅ Restored ${backupData.tables.profile_access.length} access records`);
+            console.log(`   ✅ Restored ${records.length} records`);
+            restoredCount++;
           }
+        } else {
+          console.log(`   ℹ️  No records to restore`);
+          restoredCount++;
         }
+      } catch (tableError) {
+        console.warn(`   ❌ Error restoring ${tableName}:`, tableError.message);
+        skippedCount++;
       }
     }
     
-    console.log('\n✅ Database restore completed successfully!');
+    console.log('\n' + '='.repeat(60));
+    console.log(`✅ Restore completed!`);
+    console.log(`   - Tables restored: ${restoredCount}`);
+    console.log(`   - Tables skipped: ${skippedCount}`);
+    console.log('='.repeat(60) + '\n');
     
   } catch (error) {
     console.error('❌ Restore failed:', error.message);
