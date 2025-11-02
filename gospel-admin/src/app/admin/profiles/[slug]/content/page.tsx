@@ -49,6 +49,7 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
     "Meaning: Ask what the passage means. What does this teach about God, humanity, or salvation? What is the author's main message? How does this connect to the gospel? This step helps you uncover the theological and spiritual significance.",
     "Application: Apply the passage to your life. What should change in your thoughts, actions, or relationships? Is there a promise to trust or a command to obey? How can you live this out today? This is where Scripture becomes personal and transformative."
   ])
+  const [comaInstructions, setComaInstructions] = useState<string>('')
   
   // Load COMA template from database on mount
   useEffect(() => {
@@ -59,6 +60,9 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
           const data = await response.json()
           if (data.template?.questions) {
             setComaTemplate(data.template.questions)
+          }
+          if (data.template?.instructions) {
+            setComaInstructions(data.template.instructions)
           }
         }
       } catch (e) {
@@ -958,17 +962,25 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
     }
   }
 
-  const saveComaTemplate = async (newTemplate: string[]) => {
+  const saveComaTemplate = async (newTemplate: string[], newInstructions?: string) => {
     setComaTemplate(newTemplate)
+    if (newInstructions !== undefined) {
+      setComaInstructions(newInstructions)
+    }
     
     // Save to database
     try {
+      const body: { questions: string[]; instructions?: string } = { questions: newTemplate }
+      if (newInstructions !== undefined) {
+        body.instructions = newInstructions
+      }
+      
       const response = await fetch('/api/coma-template', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ questions: newTemplate }),
+        body: JSON.stringify(body),
       })
       
       if (!response.ok) {
@@ -1071,11 +1083,35 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
         {/* COMA Template Editor */}
         {showComaTemplateEditor && (
           <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-6 mb-6 shadow-lg">
-            <h3 className="text-xl font-bold text-slate-800 mb-4">Edit COMA Questions Template</h3>
-            <p className="text-sm text-slate-600 mb-4">
-              These questions will be applied when you click "Apply COMA" on any subsection. Edit them to customize your default COMA questions.
+            <h3 className="text-xl font-bold text-slate-800 mb-4">Edit COMA Template</h3>
+            <p className="text-sm text-slate-600 mb-6">
+              Edit the default COMA questions and instructions that appear when users click "C.O.M.A." in the text.
             </p>
-            <div className="space-y-4">
+            
+            {/* COMA Instructions */}
+            <div className="mb-6">
+              <label className="text-sm font-medium text-slate-700 mb-2 block">
+                COMA Instructions (shown when clicking "C.O.M.A." in text)
+              </label>
+              <p className="text-xs text-slate-500 mb-2">
+                You can use HTML tags like &lt;br&gt; for line breaks, &lt;strong&gt; for bold, etc.
+              </p>
+              <textarea
+                value={comaInstructions}
+                onChange={(e) => saveComaTemplate(comaTemplate, e.target.value)}
+                rows={6}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                placeholder="Enter COMA method instructions..."
+              />
+            </div>
+
+            {/* COMA Questions */}
+            <div>
+              <h4 className="text-lg font-semibold text-slate-800 mb-2">COMA Questions</h4>
+              <p className="text-sm text-slate-600 mb-4">
+                These questions will be applied when you click "Apply COMA" on any subsection.
+              </p>
+              <div className="space-y-4">
               {comaTemplate.map((question, index) => (
                 <div key={index} className="bg-slate-50 border border-slate-200 rounded-lg p-3">
                   <div className="flex items-center justify-between mb-2">
@@ -1093,6 +1129,9 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
                       Remove
                     </button>
                   </div>
+                  <p className="text-xs text-slate-500 mb-2">
+                    Supports HTML: use &lt;br&gt; for line breaks, &lt;strong&gt; for bold, &lt;em&gt; for italic, etc.
+                  </p>
                   <textarea
                     value={question}
                     onChange={(e) => {
@@ -1115,6 +1154,7 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
               >
                 + Add Question to Template
               </button>
+              </div>
             </div>
           </div>
         )}

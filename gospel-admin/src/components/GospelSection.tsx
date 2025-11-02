@@ -1,6 +1,43 @@
 import { GospelSection as GospelSectionType, Subsection, NestedSubsection, ScriptureReference, QuestionAnswer, PROFILE_VALIDATION, SavedAnswer } from '@/lib/types'
 import ScriptureHoverModal from './ScriptureHoverModal'
+import ComaModal from './ComaModal'
 import { useState, useEffect } from 'react'
+
+// Helper component to render text with COMA buttons
+function TextWithComaButtons({ text, onComaClick }: { text: string; onComaClick: () => void }) {
+  // Replace COMA text with a placeholder marker
+  const marker = '___COMA_BUTTON___'
+  const markedText = text.replace(/(C\.O\.M\.A\.|COMA)/gi, marker)
+  
+  // Split by the marker
+  const parts = markedText.split(marker)
+  const matches = text.match(/(C\.O\.M\.A\.|COMA)/gi) || []
+  
+  const elements: React.ReactNode[] = []
+  parts.forEach((part, index) => {
+    // Add the HTML part
+    if (part) {
+      elements.push(
+        <span key={`text-${index}`} dangerouslySetInnerHTML={{ __html: part }} />
+      )
+    }
+    // Add the COMA button if there's a match at this position
+    if (matches[index]) {
+      elements.push(
+        <button
+          key={`coma-${index}`}
+          onClick={onComaClick}
+          className="inline-flex items-center gap-1 px-2 py-0.5 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors mx-0.5"
+          title="Learn about the C.O.M.A. method"
+        >
+          {matches[index]}
+        </button>
+      )
+    }
+  })
+  
+  return <>{elements}</>
+}
 
 interface GospelSectionProps {
   section: GospelSectionType
@@ -101,6 +138,8 @@ function Questions({ questions, profileSlug, savedAnswers = [] }: QuestionsProps
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [savedStatus, setSavedStatus] = useState<Record<string, boolean>>({})
   const [isInitialized, setIsInitialized] = useState(false)
+  const [expandedQuestions, setExpandedQuestions] = useState<Record<string, boolean>>({})
+  const [showComaModal, setShowComaModal] = useState(false)
 
   // Load saved answers from profile data on mount (only once)
   useEffect(() => {
@@ -116,6 +155,30 @@ function Questions({ questions, profileSlug, savedAnswers = [] }: QuestionsProps
       setIsInitialized(true)
     }
   }, [isInitialized, questions, savedAnswers])
+
+  const toggleQuestion = (questionId: string) => {
+    setExpandedQuestions(prev => ({
+      ...prev,
+      [questionId]: !prev[questionId]
+    }))
+  }
+
+  // Parse question to extract prefix and detail (e.g., "Context:" and the rest)
+  const parseQuestion = (questionText: string) => {
+    // Find the first colon in the text
+    const colonIndex = questionText.indexOf(':')
+    if (colonIndex !== -1 && colonIndex > 0) {
+      // Split at the first colon
+      const prefix = questionText.substring(0, colonIndex + 1) // Include the colon
+      const detail = questionText.substring(colonIndex + 1).trim() // Everything after, trimmed
+      
+      // Only treat as collapsible if there's actual detail text
+      if (detail.length > 0) {
+        return { prefix, detail }
+      }
+    }
+    return { prefix: questionText, detail: null }
+  }
 
   const handleAnswerChange = (questionId: string, value: string) => {
     setAnswers(prev => ({
@@ -179,7 +242,9 @@ function Questions({ questions, profileSlug, savedAnswers = [] }: QuestionsProps
   if (!questions || questions.length === 0) return null
 
   return (
-    <div className="mt-4 space-y-3">
+    <>
+      <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
+      <div className="mt-4 space-y-3">
       <h5 className="text-base font-semibold text-slate-700 border-b border-slate-200 pb-1">
         Reflection Questions
       </h5>
@@ -187,12 +252,41 @@ function Questions({ questions, profileSlug, savedAnswers = [] }: QuestionsProps
         const currentAnswer = answers[question.id] || ''
         const maxLength = question.maxLength || PROFILE_VALIDATION.ANSWER_MAX_LENGTH
         const isSaved = savedStatus[question.id]
+        const isExpanded = expandedQuestions[question.id]
+        const { prefix, detail } = parseQuestion(question.question)
         
         return (
           <div key={question.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3 print:p-2 print:space-y-1">
-            <p className="font-medium text-slate-800 mb-2 text-sm print:mb-1">
-              {index + 1}. {question.question}
-            </p>
+            <div className="mb-2">
+              <span className="text-sm text-slate-600">{index + 1}. </span>
+              {detail ? (
+                <div className="inline">
+                  <button
+                    onClick={() => toggleQuestion(question.id)}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors"
+                  >
+                    {prefix}
+                    <svg 
+                      className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {isExpanded && (
+                    <div className="mt-2 text-sm text-slate-700 pl-4 border-l-2 border-blue-200">
+                      <TextWithComaButtons text={detail} onComaClick={() => setShowComaModal(true)} />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <span className="font-medium text-slate-800 text-sm">
+                  <TextWithComaButtons text={question.question} onComaClick={() => setShowComaModal(true)} />
+                </span>
+              )}
+            </div>
             <div className="space-y-1.5 print:space-y-0">
               <textarea
                 value={currentAnswer}
@@ -221,48 +315,62 @@ function Questions({ questions, profileSlug, savedAnswers = [] }: QuestionsProps
           </div>
         )
       })}
-    </div>
+      </div>
+    </>
   )
 }
 
 function NestedSubsectionComponent({ nestedSubsection, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers }: NestedSubsectionProps) {
+  const [showComaModal, setShowComaModal] = useState(false)
+  
   return (
-    <div className="ml-6 mt-4 border-l-2 border-gray-200 pl-4 print-subsection">
-      <h5 className="font-medium text-slate-800 mb-2 print-subsection-title text-lg md:text-xl">{nestedSubsection.title}</h5>
-      <p className="text-slate-700 mb-2 print-content text-base md:text-lg leading-relaxed">{nestedSubsection.content}</p>
-      {nestedSubsection.scriptureReferences && (
-        <ScriptureReferences 
-          references={nestedSubsection.scriptureReferences} 
-          onScriptureClick={onScriptureClick} 
-          lastViewedScripture={lastViewedScripture}
-          onClearProgress={onClearProgress}
-        />
-      )}
-      {nestedSubsection.questions && (
-        <Questions 
-          questions={nestedSubsection.questions}
-          profileSlug={profileSlug}
-          savedAnswers={savedAnswers}
-        />
-      )}
-    </div>
+    <>
+      <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
+      <div className="ml-6 mt-4 border-l-2 border-gray-200 pl-4 print-subsection">
+        <h5 className="font-medium text-slate-800 mb-2 print-subsection-title text-lg md:text-xl">{nestedSubsection.title}</h5>
+        <p className="text-slate-700 mb-2 print-content text-base md:text-lg leading-relaxed">
+          <TextWithComaButtons text={nestedSubsection.content} onComaClick={() => setShowComaModal(true)} />
+        </p>
+        {nestedSubsection.scriptureReferences && (
+          <ScriptureReferences 
+            references={nestedSubsection.scriptureReferences} 
+            onScriptureClick={onScriptureClick} 
+            lastViewedScripture={lastViewedScripture}
+            onClearProgress={onClearProgress}
+          />
+        )}
+        {nestedSubsection.questions && (
+          <Questions 
+            questions={nestedSubsection.questions}
+            profileSlug={profileSlug}
+            savedAnswers={savedAnswers}
+          />
+        )}
+      </div>
+    </>
   )
 }
 
 function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers }: SubsectionProps) {
+  const [showComaModal, setShowComaModal] = useState(false)
+  
   return (
-    <div id={`${sectionId}-${subsectionIndex}`} className="mb-6 print-subsection">
-      <h4 className="text-xl md:text-2xl font-semibold text-slate-800 mb-3 print-subsection-title">{subsection.title}</h4>
-      <p className="text-slate-700 mb-3 leading-relaxed print-content text-base md:text-lg">{subsection.content}</p>
+    <>
+      <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
+      <div id={`${sectionId}-${subsectionIndex}`} className="mb-6 print-subsection">
+        <h4 className="text-xl md:text-2xl font-semibold text-slate-800 mb-3 print-subsection-title">{subsection.title}</h4>
+        <p className="text-slate-700 mb-3 leading-relaxed print-content text-base md:text-lg">
+          <TextWithComaButtons text={subsection.content} onComaClick={() => setShowComaModal(true)} />
+        </p>
       
-      {subsection.scriptureReferences && (
-        <ScriptureReferences 
-          references={subsection.scriptureReferences} 
-          onScriptureClick={onScriptureClick} 
-          lastViewedScripture={lastViewedScripture}
-          onClearProgress={onClearProgress}
-        />
-      )}
+        {subsection.scriptureReferences && (
+          <ScriptureReferences 
+            references={subsection.scriptureReferences} 
+            onScriptureClick={onScriptureClick} 
+            lastViewedScripture={lastViewedScripture}
+            onClearProgress={onClearProgress}
+          />
+        )}
       
       {subsection.questions && (
         <Questions 
@@ -287,7 +395,8 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </>
   )
 }
 

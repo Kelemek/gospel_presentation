@@ -5,6 +5,7 @@ type ComaTemplate = {
   id: string
   name: string
   questions: string[]
+  instructions?: string
   is_default: boolean
   created_at: string
   updated_at: string
@@ -57,20 +58,26 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 })
     }
 
-    const { questions } = await request.json()
+    const { questions, instructions } = await request.json()
 
     if (!Array.isArray(questions)) {
       return NextResponse.json({ error: 'Questions must be an array' }, { status: 400 })
     }
 
     // Update the default template
+    const updateData: { questions: string[]; instructions?: string; updated_at: string } = {
+      questions,
+      updated_at: new Date().toISOString()
+    }
+    
+    if (instructions !== undefined) {
+      updateData.instructions = instructions
+    }
+
     const { data, error } = await supabase
       .from('coma_templates')
       // @ts-expect-error - Supabase type inference issue
-      .update({ 
-        questions,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('is_default', true)
       .select<'*', ComaTemplate>()
       .single()
