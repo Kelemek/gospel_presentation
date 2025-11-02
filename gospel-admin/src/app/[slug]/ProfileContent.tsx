@@ -478,27 +478,6 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
               
               <TableOfContents sections={sections} currentProfileSlug={profileInfo.slug} />
               
-              {/* Login / View Profiles Button */}
-              <div className="mt-6 pt-4 border-t border-gray-200">
-                {userEmail ? (
-                  <Link
-                    href="/admin"
-                    className="block w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-center rounded-md transition-colors font-medium"
-                    onClick={closeMenu}
-                  >
-                    View Profiles
-                  </Link>
-                ) : (
-                  <Link
-                    href="/login"
-                    className="block w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-center rounded-md transition-colors font-medium"
-                    onClick={closeMenu}
-                  >
-                    Login
-                  </Link>
-                )}
-              </div>
-              
               {/* Profile Info in Sidebar */}
               <div className="mt-8 pt-6 border-t border-gray-200">
                 <div className="text-sm font-medium text-slate-700 mb-2">{profileInfo?.title || 'Gospel Profile'}</div>
