@@ -28,36 +28,23 @@ export default function TableOfContents({ sections, currentProfileSlug }: TableO
     window.print()
   }
 
-  const handleLogout = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    setIsLoggedIn(false)
-    
-    // If on a profile page (not default), redirect to default profile
-    if (currentProfileSlug && currentProfileSlug !== 'default') {
-      router.push('/default')
-    } else {
-      router.refresh()
-    }
-  }
-
   return (
     <div className="space-y-4 md:space-y-3">
-      {/* Login/Logout Button */}
+      {/* Login/View Profiles Button */}
       <div className="mb-4">
         {isLoggedIn ? (
-          <button
-            onClick={handleLogout}
+          <Link
+            href="/admin"
             className="inline-flex items-center w-full px-4 py-3 text-base md:text-lg font-medium text-white bg-slate-500 hover:bg-slate-600 active:bg-slate-700 border border-slate-600 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px]"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            Logout
-          </button>
+            View Profiles
+          </Link>
         ) : (
           <Link 
-            href="/admin"
+            href="/login"
             className="inline-flex items-center w-full px-4 py-3 text-base md:text-lg font-medium text-white bg-slate-500 hover:bg-slate-600 active:bg-slate-700 border border-slate-600 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px]"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

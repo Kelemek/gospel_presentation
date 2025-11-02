@@ -367,9 +367,19 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
               
               {/* Right side content */}
               <div className="flex items-center gap-3">
-                {/* Logged in indicator - always show when user is logged in */}
+                {/* Logged in indicator - clickable to logout with confirmation */}
                 {userEmail && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-md">
+                  <button
+                    onClick={async () => {
+                      if (confirm('Are you sure you want to log out?')) {
+                        const supabase = createClient()
+                        await supabase.auth.signOut()
+                        router.push('/default')
+                      }
+                    }}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 transition-colors cursor-pointer"
+                    title="Click to log out"
+                  >
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                     <span className="text-xs text-green-700 font-medium hidden sm:inline">
                       {userEmail}
@@ -377,7 +387,7 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
                     <span className="text-xs text-green-700 font-medium sm:hidden">
                       Logged in
                     </span>
-                  </div>
+                  </button>
                 )}
                 
                 {/* Profile Info and Edit Button - only show when previewing from editor */}
@@ -467,6 +477,27 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
               </div>
               
               <TableOfContents sections={sections} currentProfileSlug={profileInfo.slug} />
+              
+              {/* Login / View Profiles Button */}
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                {userEmail ? (
+                  <Link
+                    href="/admin"
+                    className="block w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-center rounded-md transition-colors font-medium"
+                    onClick={closeMenu}
+                  >
+                    View Profiles
+                  </Link>
+                ) : (
+                  <Link
+                    href="/login"
+                    className="block w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-center rounded-md transition-colors font-medium"
+                    onClick={closeMenu}
+                  >
+                    Login
+                  </Link>
+                )}
+              </div>
               
               {/* Profile Info in Sidebar */}
               <div className="mt-8 pt-6 border-t border-gray-200">

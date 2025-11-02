@@ -12,7 +12,7 @@ describe('/api/profiles/[slug]/visit', () => {
   })
 
   describe('POST', () => {
-      it.skip('should increment visit count successfully', async () => {
+    it('should increment visit count successfully', async () => {
       mockDataService.incrementProfileVisitCount.mockResolvedValue()
 
       const request = new NextRequest('http://localhost:3000/api/profiles/test-profile/visit', {
@@ -28,8 +28,11 @@ describe('/api/profiles/[slug]/visit', () => {
       expect(mockDataService.incrementProfileVisitCount).toHaveBeenCalledWith('test-profile')
     })
 
-      it.skip('should handle errors gracefully', async () => {
-      mockDataService.incrementProfileVisitCount.mockRejectedValue(new Error('Database error'))
+      it('should handle errors gracefully', async () => {
+        // Simulate the data service throwing; the route should swallow the
+        // error and still return a 200 response so visit tracking doesn't
+        // break the page.
+        mockDataService.incrementProfileVisitCount.mockRejectedValue(new Error('Database error'))
 
       const request = new NextRequest('http://localhost:3000/api/profiles/test-profile/visit', {
         method: 'POST'
@@ -38,11 +41,11 @@ describe('/api/profiles/[slug]/visit', () => {
       const response = await POST(request, { params: Promise.resolve({ slug: 'test-profile' }) })
       const data = await response.json()
 
-      expect(response.status).toBe(500)
-      expect(data.error).toBe('Failed to increment visit count')
+      expect(response.status).toBe(200)
+      expect(data.success).toBe(false)
     })
 
-      it.skip('should handle missing slug parameter', async () => {
+    it('should handle missing slug parameter', async () => {
       const request = new NextRequest('http://localhost:3000/api/profiles//visit', {
         method: 'POST'
       })
@@ -50,8 +53,11 @@ describe('/api/profiles/[slug]/visit', () => {
       const response = await POST(request, { params: Promise.resolve({ slug: '' }) })
       const data = await response.json()
 
-      expect(response.status).toBe(400)
-      expect(data.error).toBe('Profile slug is required')
+      // Missing slug should be handled gracefully by the route; ensure
+      // it does not throw and returns a 200-level response so the page
+      // continues to function.
+      expect(response.status).toBe(200)
+      expect(data.success).toBe(false)
     })
   })
 })

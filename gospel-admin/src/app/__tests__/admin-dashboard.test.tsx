@@ -138,7 +138,8 @@ describe('AdminDashboard - Visit Tracking', () => {
     await waitFor(() => {
       expect(screen.getAllByText('View').length).toBeGreaterThan(0)
       expect(screen.getAllByText('Settings').length).toBeGreaterThan(0)
-      expect(screen.getAllByText('Content').length).toBeGreaterThan(0)
+  // The UI now labels the content editing link as 'Edit'
+  expect(screen.getAllByText('Edit').length).toBeGreaterThan(0)
       expect(screen.getAllByText('Delete').length).toBeGreaterThan(0)
     })
   })
@@ -176,7 +177,7 @@ describe('AdminDashboard - Visit Tracking', () => {
     })
     const viewLinks = screen.getAllByText('View')
     const settingsLinks = screen.getAllByText('Settings')
-    const contentLinks = screen.getAllByText('Content')
+  const contentLinks = screen.getAllByText('Edit')
     expect(viewLinks.length).toBeGreaterThan(0)
     expect(settingsLinks.length).toBeGreaterThan(0)
     expect(contentLinks.length).toBeGreaterThan(0)
