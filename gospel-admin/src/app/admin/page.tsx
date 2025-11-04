@@ -448,33 +448,31 @@ function AdminPageContent() {
         throw new Error('Invalid backup file format: gospelData must be an array')
       }
 
-      // Prompt for new slug (can't use the old one as it might exist)
-      const newSlug = prompt(
-        `Enter a new slug for the restored profile:\n\nOriginal slug: ${profileData.slug}\nOriginal title: ${profileData.title}\n\nNew slug (letters and numbers only):`,
-        `${profileData.slug}-restored`
-      )
-
-      if (!newSlug) {
-        event.target.value = ''
-        setIsRestoringNew(false)
-        return
+      // Try to restore with original slug first
+      let slugToUse = profileData.slug
+      
+      // Check if the original slug exists
+      if (slugToUse) {
+        const existingProfile = profiles.find(p => p.slug === slugToUse)
+        if (existingProfile) {
+          // Slug exists, so we'll let the server generate a new one
+          slugToUse = undefined
+        }
       }
 
-      // Clean the slug
-      const cleanSlug = newSlug.toLowerCase().replace(/[^a-z0-9]/g, '')
-      if (!cleanSlug) {
-        throw new Error('Invalid slug. Use only letters and numbers.')
-      }
+      // Add "Restored" to the profile title
+      const restoredTitle = `${profileData.title} Restored`
 
-      // Create new profile with restored data
+      // Create new profile with restored data using the same code path as new profile creation
+      // If slugToUse is undefined, the API will auto-generate a unique slug using crypto.randomUUID().split('-')[0]
       const response = await fetch('/api/profiles', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          slug: cleanSlug,
-          title: profileData.title,
+          slug: slugToUse, // Use original slug if available, otherwise let server generate
+          title: restoredTitle,
           description: profileData.description,
           cloneFromSlug: 'default', // Will be overridden by gospelData below
           gospelData: profileData.gospelData
@@ -484,9 +482,10 @@ function AdminPageContent() {
       if (response.ok) {
         const data = await response.json()
         const newProfile = data.profile || data
+        const newSlug = newProfile.slug
 
         // Update the newly created profile with the full backup data
-        const updateResponse = await fetch(`/api/profiles/${cleanSlug}`, {
+        const updateResponse = await fetch(`/api/profiles/${newSlug}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -500,7 +499,13 @@ function AdminPageContent() {
         if (updateResponse.ok) {
           // Refresh profiles list
           await fetchProfiles()
-          alert(`Successfully created profile "${profileData.title}" from backup!\n\nNew slug: ${cleanSlug}`)
+          
+          const usedOriginalSlug = slugToUse === newSlug
+          const message = usedOriginalSlug 
+            ? `Successfully created profile "${profileData.title}" from backup!\n\nSlug: ${newSlug} (original slug restored)`
+            : `Successfully created profile "${profileData.title}" from backup!\n\nOriginal slug was taken, new slug: ${newSlug}`
+          
+          alert(message)
         } else {
           throw new Error('Profile created but failed to restore full data')
         }
