@@ -24,7 +24,7 @@ export default function GospelPresentation() {
   )
 }
 
-function GospelPresentationOld() {
+export function GospelPresentationOld() {
   const [gospelData, setGospelData] = useState<GospelSectionType[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedScripture, setSelectedScripture] = useState<{

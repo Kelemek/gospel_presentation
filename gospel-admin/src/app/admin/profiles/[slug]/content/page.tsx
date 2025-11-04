@@ -14,7 +14,7 @@ interface ContentEditPageProps {
   }>
 }
 
-export default function ContentEditPage({ params }: ContentEditPageProps) {
+function ContentEditPage({ params }: ContentEditPageProps) {
   const router = useRouter()
   const [slug, setSlug] = useState<string>('')
   const [profile, setProfile] = useState<GospelProfile | null>(null)
@@ -1995,3 +1995,7 @@ export default function ContentEditPage({ params }: ContentEditPageProps) {
     </div>
   )
 }
+
+// Export named for testing to allow focused rendering in unit tests
+export { ContentEditPage }
+export default ContentEditPage

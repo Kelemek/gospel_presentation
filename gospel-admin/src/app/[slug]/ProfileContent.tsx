@@ -25,7 +25,7 @@ interface ProfileContentProps {
   profile?: GospelProfile | null  // Full profile for scripture progress tracking
 }
 
-export default function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps) {
+function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps) {
   const router = useRouter()
   const [selectedScripture, setSelectedScripture] = useState<{
     reference: string
@@ -565,3 +565,7 @@ export default function ProfileContent({ sections, profileInfo, profile }: Profi
     </>
   )
 }
+
+// Export named for testing (allows focused tests to import internals)
+export { ProfileContent }
+export default ProfileContent

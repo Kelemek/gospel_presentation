@@ -20,8 +20,16 @@ export class ProfileValidationError extends Error {
  */
 export function generateSecureSlug(): string {
   // Generate a UUID and take first 8 chars (still extremely unlikely to collide)
-  const uuid = crypto.randomUUID().split('-')[0]
-  return uuid.toLowerCase()
+  // Ensure slug starts with a letter (profile slugs must start with a letter)
+  let uuid = crypto.randomUUID().split('-')[0].toLowerCase()
+
+  // If it doesn't start with a letter, prefix with 'a' and trim to max length
+  if (!/^[a-z]/.test(uuid)) {
+    const maxLen = PROFILE_VALIDATION.SLUG_MAX_LENGTH
+    uuid = ('a' + uuid).substring(0, maxLen)
+  }
+
+  return uuid
 }
 
 /**

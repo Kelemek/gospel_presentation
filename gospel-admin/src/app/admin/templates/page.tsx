@@ -451,3 +451,6 @@ export default function TemplatesPage() {
     </AdminErrorBoundary>
   )
 }
+
+// Named export for testing
+export { TemplatesPageContent }

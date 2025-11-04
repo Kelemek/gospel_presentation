@@ -1,3 +1,10 @@
+import GospelPresentation from '../page'
+
+describe('src/app/page', () => {
+  test('exports a default component function', () => {
+    expect(typeof GospelPresentation).toBe('function')
+  })
+})
 // Test removed: This file depended on old app routing and was removed per maintainer request.
 // Kept as a placeholder so historical test intent is preserved. If you want this behavior
 // re-tested, consider re-implementing integration tests that target the current `/default`

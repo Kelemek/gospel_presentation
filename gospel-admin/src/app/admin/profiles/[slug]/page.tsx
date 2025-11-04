@@ -13,7 +13,7 @@ interface ProfileEditPageProps {
   }>
 }
 
-export default function ProfileEditPage({ params }: ProfileEditPageProps) {
+function ProfileEditPage({ params }: ProfileEditPageProps) {
   const router = useRouter()
   const [slug, setSlug] = useState<string>('')
   const [profile, setProfile] = useState<GospelProfile | null>(null)
@@ -435,3 +435,7 @@ export default function ProfileEditPage({ params }: ProfileEditPageProps) {
     </div>
   )
 }
+
+// Named export for testing
+export { ProfileEditPage }
+export default ProfileEditPage

@@ -8,6 +8,45 @@ import AdminErrorBoundary from '@/components/AdminErrorBoundary'
 import { createClient } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
 
+// Small pure helpers exported for testing. Kept additive and isolated from
+// React hooks so they can be unit tested without rendering the client UI.
+export function generateSlug(title: string) {
+  return (title || '').toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, '')
+    .substring(0, 15) || 'profile'
+}
+
+export function createProfilePayload(form: {
+  title: string
+  description?: string
+  cloneFromSlug?: string
+  isTemplate?: boolean
+  counseleeEmails?: string[]
+}, userRole: 'admin' | 'counselor' | 'counselee' | null) {
+  return {
+    title: (form.title || '').trim(),
+    description: (form.description || '').trim() || undefined,
+    cloneFromSlug: form.cloneFromSlug || 'default',
+    isTemplate: userRole === 'admin' ? !!form.isTemplate : false,
+    counseleeEmails: (form.counseleeEmails || []).filter((e) => !!(e || '').trim())
+  }
+}
+
+export function isUniqueConstraintError(errOrMessage: any) {
+  const text = typeof errOrMessage === 'string'
+    ? errOrMessage
+    : (errOrMessage && (errOrMessage.error || errOrMessage.message)) || ''
+
+  return (
+    typeof text === 'string' && (
+      text.includes('duplicate key') ||
+      text.includes('unique constraint') ||
+      text.includes('profiles_slug_key')
+    )
+  )
+}
+
 function AdminPageContent() {
   const router = useRouter()
   const [user, setUser] = useState<any>(null)
@@ -88,12 +127,7 @@ function AdminPageContent() {
     }
   }
 
-  const generateSlug = (title: string) => {
-    return title.toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
-      .replace(/\s+/g, '')
-      .substring(0, 15) || 'profile'
-  }
+  // use the top-level `generateSlug` helper (exported) for consistency
 
   const handleCreateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1028,6 +1062,8 @@ function AdminPageContent() {
     </div>
   )
 }
+
+export { AdminPageContent }
 
 export default function AdminPage() {
   return (
