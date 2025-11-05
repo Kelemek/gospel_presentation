@@ -6,8 +6,8 @@ export const isAuthenticated = (): boolean => {
   return false
 }
 
-export const authenticate = async (/* password?: string */) => {
-  return { success: false }
+export const authenticate = async (password?: string) => {
+  return false
 }
 
 export const logout = async () => {
