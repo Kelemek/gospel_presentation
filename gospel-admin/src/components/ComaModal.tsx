@@ -22,11 +22,32 @@ export default function ComaModal({ isOpen, onClose }: ComaModalProps) {
       const response = await fetch('/api/coma-template')
       if (response.ok) {
         const data = await response.json()
-        setInstructions(data.template?.instructions || 'COMA instructions not available.')
+        let rawInstructions = data.template?.instructions || ''
+        
+        // If instructions are empty or just whitespace, provide a default message
+        if (!rawInstructions || rawInstructions.trim() === '') {
+          setInstructions('<p>COMA instructions are not currently available. Please contact your counselor.</p>')
+        } else {
+          // Convert plain text to HTML if it doesn't contain HTML tags
+          const hasHtmlTags = /<[^>]+>/.test(rawInstructions)
+          if (!hasHtmlTags) {
+            // Convert newlines to <br> tags and wrap in paragraph
+            const formatted = rawInstructions
+              .split('\n\n')
+              .map((para: string) => `<p>${para.replace(/\n/g, '<br>')}</p>`)
+              .join('')
+            setInstructions(formatted)
+          } else {
+            setInstructions(rawInstructions)
+          }
+        }
+      } else {
+        console.error('Failed to fetch COMA template, status:', response.status)
+        setInstructions('<p>Unable to load COMA instructions. Please contact your counselor.</p>')
       }
     } catch (error) {
       console.error('Failed to load COMA instructions:', error)
-      setInstructions('Failed to load COMA instructions.')
+      setInstructions('<p>Unable to load COMA instructions. Please contact your counselor.</p>')
     } finally {
       setLoading(false)
     }
