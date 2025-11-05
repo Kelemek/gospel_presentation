@@ -30,10 +30,12 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
   const [isLoadingAccess, setIsLoadingAccess] = useState(false)
   const [isAddingCounselee, setIsAddingCounselee] = useState(false)
   const [accessError, setAccessError] = useState('')
+  const [availableUsers, setAvailableUsers] = useState<Array<{ email: string; role: string }>>([])
 
   // Check authentication on mount
   useEffect(() => {
     checkAuth()
+    loadAvailableUsers()
   }, [])
 
   const checkAuth = async () => {
@@ -98,6 +100,32 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
       console.error('Failed to load profile access:', err)
     } finally {
       setIsLoadingAccess(false)
+    }
+  }
+
+  const loadAvailableUsers = async () => {
+    try {
+      const supabase = createClient()
+      const { data: profiles, error: profilesError } = await supabase
+        .from('user_profiles')
+        .select('display_name, role')
+        .order('display_name', { ascending: true })
+      
+      if (profilesError) {
+        console.error('Failed to load users for dropdown:', profilesError)
+        return
+      }
+      
+      const users = profiles
+        .filter((p: any) => p.display_name) // Only include users with emails
+        .map((p: any) => ({
+          email: p.display_name,
+          role: p.role
+        }))
+      
+      setAvailableUsers(users)
+    } catch (error) {
+      console.error('Error loading available users:', error)
     }
   }
 
@@ -347,20 +375,41 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
           {/* Add Counselee Form */}
           <form onSubmit={handleAddCounselee} className="mb-4">
             <div className="flex gap-2">
-              <input
-                type="email"
-                value={counseleeEmailInput}
-                onChange={(e) => setCounseleeEmailInput(e.target.value)}
-                placeholder="counselee@example.com"
-                className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 bg-white"
-                disabled={isAddingCounselee}
-              />
+              <div className="flex-1 grid grid-cols-2 gap-2">
+                <select
+                  onChange={(e) => {
+                    if (e.target.value && e.target.value !== 'custom') {
+                      setCounseleeEmailInput(e.target.value)
+                    } else if (e.target.value === 'custom') {
+                      setCounseleeEmailInput('')
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-slate-200 hover:border-slate-300 focus:border-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 bg-white text-slate-900 shadow-sm transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat pr-10 text-sm"
+                  disabled={isAddingCounselee}
+                >
+                  <option value="">Select existing user...</option>
+                  {availableUsers.map(user => (
+                    <option key={user.email} value={user.email}>
+                      {user.email} ({user.role})
+                    </option>
+                  ))}
+                  <option value="custom">--- Type custom email ---</option>
+                </select>
+                <input
+                  type="email"
+                  value={counseleeEmailInput}
+                  onChange={(e) => setCounseleeEmailInput(e.target.value)}
+                  placeholder="Or type email here..."
+                  className="w-full px-3 py-2 border border-slate-200 hover:border-slate-300 focus:border-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 text-slate-900 bg-white shadow-sm text-sm transition-colors"
+                  disabled={isAddingCounselee}
+                />
+              </div>
               <button
                 type="submit"
                 disabled={isAddingCounselee || !counseleeEmailInput.trim()}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md whitespace-nowrap"
               >
-                {isAddingCounselee ? 'Adding...' : 'Add Counselee'}
+                {isAddingCounselee ? 'Adding...' : 'Add'}
               </button>
             </div>
           </form>
