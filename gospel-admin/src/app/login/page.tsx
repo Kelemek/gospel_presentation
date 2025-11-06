@@ -187,7 +187,7 @@ function LoginForm() {
         </div>
 
         <div className="text-center text-sm text-slate-600">
-          <p>Need access? Contact your administrator.</p>
+          <p>Need access? Contact your councelor.</p>
         </div>
       </div>
     </div>
