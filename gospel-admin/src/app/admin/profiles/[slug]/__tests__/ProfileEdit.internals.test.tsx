@@ -96,9 +96,9 @@ test('ProfileEditPage adds a counselee and displays it in the access list', asyn
 
   await waitFor(() => expect(screen.getByTestId('admin-header')).toBeInTheDocument())
 
-  const emailInput = screen.getByPlaceholderText(/counselee@example.com/i)
+    const emailInput = screen.getByPlaceholderText(/Or type email here.../i)
   await userEvent.type(emailInput, 'c@ex.com')
-  const addButton = screen.getByRole('button', { name: /Add Counselee/i })
+    const addButton = screen.getByRole('button', { name: /Add|Adding.../i })
   await userEvent.click(addButton)
 
   // Wait for fetch to be called and the new access entry to appear

@@ -33,6 +33,7 @@ describe('ComaModal', () => {
     const onClose = jest.fn()
     render(<ComaModal isOpen={true} onClose={onClose} />)
 
-    await waitFor(() => expect(screen.getByText(/Failed to load COMA instructions/i)).toBeInTheDocument())
+    // Component sets fallback text 'Unable to load COMA instructions...' on error
+    await waitFor(() => expect(screen.getByText(/Unable to load COMA instructions/i)).toBeInTheDocument())
   })
 })
