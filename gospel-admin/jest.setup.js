@@ -62,6 +62,45 @@ jest.mock('next/server', () => ({
   },
 }))
 
+// Provide a lightweight global Response polyfill for tests running under
+// a Node environment where the Web/Fetch `Response` global is not defined.
+// Some route handlers use `Response.redirect(...)` which exists in the
+// runtime; tests can rely on this minimal shim to inspect `status` and
+// `headers.get('location')`.
+if (typeof global.Response === 'undefined') {
+  class _MockResponse {
+    status
+    _body
+    headers
+    constructor(body = null, init = {}) {
+      this._body = body
+      this.status = init.status || 200
+      // simple headers object with a get method used by tests
+      this.headers = {
+        get: (k) => null,
+      }
+    }
+
+    static redirect(url, status = 302) {
+        // url may be a URL instance or string
+        const urlStr = url && url.toString ? url.toString() : String(url)
+        const inst = new _MockResponse(null, { status })
+        // override headers.get to return the absolute location
+        inst.headers = {
+          get: (k) => (k === 'location' ? urlStr : null),
+        }
+        return inst
+    }
+
+    async json() {
+      return this._body
+    }
+  }
+
+  // @ts-ignore - test-time polyfill
+  global.Response = _MockResponse
+}
+
 // Mock environment variables for Supabase
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
