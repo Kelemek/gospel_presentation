@@ -586,10 +586,10 @@ function AdminPageContent() {
   }
 
   // Filter profiles based on search query
-  // Filter profiles: exclude templates and apply search
+  // Filter profiles: exclude templates unless user is admin or counselor, then apply search
   const filteredProfiles = profiles.filter(profile => {
-    // Exclude template profiles
-    if (profile.isTemplate) return false
+    // Exclude template profiles for non-admin/counselor users
+    if (profile.isTemplate && userRole !== 'admin' && userRole !== 'counselor') return false
     
     // Apply search filter
     if (!searchQuery.trim()) return true
@@ -1044,8 +1044,8 @@ function AdminPageContent() {
                           {/* Hide Settings, Content, and Delete buttons for counselees */}
                           {userRole !== 'counselee' && (
                             <>
-                              {/* Hide Settings and Content buttons for non-admins on templates and default profile */}
-                              {((!profile.isDefault && !profile.isTemplate) || userRole === 'admin') && (
+                              {/* Only admins can edit templates and default profile. Counselors can edit their own non-template profiles */}
+                              {(userRole === 'admin' || (!profile.isDefault && !profile.isTemplate)) && (
                                 <>
                                   <Link
                                     href={`/admin/profiles/${profile.slug}`}
@@ -1063,7 +1063,8 @@ function AdminPageContent() {
                                 </>
                               )}
                               
-                              {!profile.isDefault && (!profile.isTemplate || userRole === 'admin') && (
+                              {/* Only admins can delete templates. Counselors can delete their own non-template, non-default profiles */}
+                              {!profile.isDefault && (userRole === 'admin' || !profile.isTemplate) && (
                                 <button
                                   onClick={() => handleDeleteProfile(profile.slug, profile.title)}
                                   className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 sm:px-3 py-1 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
@@ -1076,8 +1077,8 @@ function AdminPageContent() {
                         </div>
 
                         <div className="flex items-center gap-2 flex-wrap">
-                          {/* Hide backup/restore for counselees, non-admins on default profile, and non-admins on templates */}
-                          {userRole !== 'counselee' && (!profile.isDefault || userRole === 'admin') && (!profile.isTemplate || userRole === 'admin') && (
+                          {/* Only admins can backup/restore templates and default profile. Counselors can backup/restore their own non-template profiles */}
+                          {userRole !== 'counselee' && (userRole === 'admin' || (!profile.isDefault && !profile.isTemplate)) && (
                             <>
                               <button
                                 onClick={() => handleDownloadBackup(profile)}
