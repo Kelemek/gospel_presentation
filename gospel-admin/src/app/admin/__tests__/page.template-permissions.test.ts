@@ -17,22 +17,11 @@ describe('Template Profile Permissions', () => {
       { id: '3', slug: 'default', title: 'Default', isTemplate: false, isDefault: true, createdBy: 'admin1' },
     ]
 
-    it('should show templates to counselors', () => {
+    it('should hide all templates from main profile list (they only show in templates page)', () => {
       const userRole: UserRole = 'counselor'
       const filtered = mockProfiles.filter(profile => {
-        // This matches the filtering logic in page.tsx
-        if (profile.isTemplate && userRole !== 'admin' && userRole !== 'counselor') return false
-        return true
-      })
-
-      expect(filtered.length).toBe(3)
-      expect(filtered.some(p => p.isTemplate)).toBe(true)
-    })
-
-    it('should hide templates from counselees', () => {
-      const userRole: UserRole = 'counselee'
-      const filtered = mockProfiles.filter(profile => {
-        if (profile.isTemplate && userRole !== 'admin' && userRole !== 'counselor') return false
+        // Templates are excluded from main list - they only appear in templates page
+        if (profile.isTemplate) return false
         return true
       })
 
@@ -40,15 +29,26 @@ describe('Template Profile Permissions', () => {
       expect(filtered.every(p => !p.isTemplate)).toBe(true)
     })
 
-    it('should show templates to admins', () => {
-      const userRole: UserRole = 'admin'
+    it('should hide templates from counselees in main profile list', () => {
+      const userRole: UserRole = 'counselee'
       const filtered = mockProfiles.filter(profile => {
-        if (profile.isTemplate && userRole !== 'admin' && userRole !== 'counselor') return false
+        if (profile.isTemplate) return false
         return true
       })
 
-      expect(filtered.length).toBe(3)
-      expect(filtered.some(p => p.isTemplate)).toBe(true)
+      expect(filtered.length).toBe(2)
+      expect(filtered.every(p => !p.isTemplate)).toBe(true)
+    })
+
+    it('should hide templates from admins in main profile list (templates page only)', () => {
+      const userRole: UserRole = 'admin'
+      const filtered = mockProfiles.filter(profile => {
+        if (profile.isTemplate) return false
+        return true
+      })
+
+      expect(filtered.length).toBe(2)
+      expect(filtered.every(p => !p.isTemplate)).toBe(true)
     })
   })
 

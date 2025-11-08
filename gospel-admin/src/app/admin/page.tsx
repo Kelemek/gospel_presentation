@@ -586,10 +586,10 @@ function AdminPageContent() {
   }
 
   // Filter profiles based on search query
-  // Filter profiles: exclude templates unless user is admin or counselor, then apply search
+  // Filter profiles: exclude ALL templates (they only appear in the templates page)
   const filteredProfiles = profiles.filter(profile => {
-    // Exclude template profiles for non-admin/counselor users
-    if (profile.isTemplate && userRole !== 'admin' && userRole !== 'counselor') return false
+    // Exclude all template profiles - they only show in the templates page
+    if (profile.isTemplate) return false
     
     // Apply search filter
     if (!searchQuery.trim()) return true
