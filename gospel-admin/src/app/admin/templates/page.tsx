@@ -374,12 +374,15 @@ function TemplatesPageContent() {
                           View
                         </Link>
                         
-                        <button
-                          onClick={() => handleCopyProfileUrl(template)}
-                          className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 sm:px-3 py-1 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                        >
-                          Share
-                        </button>
+                        {/* Only show share button for admins */}
+                        {userRole === 'admin' && (
+                          <button
+                            onClick={() => handleCopyProfileUrl(template)}
+                            className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 sm:px-3 py-1 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                          >
+                            Share
+                          </button>
+                        )}
                         
                         {/* Only show edit buttons for admins */}
                         {userRole === 'admin' && (
