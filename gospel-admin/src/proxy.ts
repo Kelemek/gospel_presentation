@@ -19,16 +19,29 @@ export async function proxy(request: NextRequest) {
   // Protect admin routes
   if (pathname.startsWith('/admin')) {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      // Redirect to login if not authenticated
+    
+    // Get session to validate expiry, not just user
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    // If no valid session or session error, redirect to login
+    if (!session || sessionError) {
+      const loginUrl = new URL('/login', request.url)
+      loginUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+    
+    // Check if session is expired (Supabase default JWT expiry is 1 hour)
+    const expiresAt = session.expires_at ? session.expires_at * 1000 : 0
+    const now = Date.now()
+    
+    if (expiresAt && expiresAt < now) {
+      // Session expired, redirect to login
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('redirect', pathname)
       return NextResponse.redirect(loginUrl)
     }
 
-    // User is authenticated, allow access
+    // User is authenticated with valid session, allow access
     return NextResponse.next()
   }
 

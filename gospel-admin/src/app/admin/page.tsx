@@ -7,6 +7,7 @@ import AdminHeader from '@/components/AdminHeader'
 import AdminErrorBoundary from '@/components/AdminErrorBoundary'
 import { createClient } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
+import { useSessionMonitor } from '@/hooks/useSessionMonitor'
 
 // Small pure helpers exported for testing. Kept additive and isolated from
 // React hooks so they can be unit tested without rendering the client UI.
@@ -70,6 +71,16 @@ function AdminPageContent() {
   const [isRestoringNew, setIsRestoringNew] = useState(false)
   const [availableUsers, setAvailableUsers] = useState<Array<{ email: string; role: string }>>([])
 
+  // Monitor session and auto-logout on expiration
+  useSessionMonitor({
+    checkInterval: 60000, // Check every minute
+    enabled: !!user, // Only monitor after user is authenticated
+    onSessionExpired: () => {
+      logger.warn('Session expired, redirecting to login')
+      router.push('/login')
+    }
+  })
+
   useEffect(() => {
     checkAuth()
     loadAvailableUsers()
@@ -77,6 +88,31 @@ function AdminPageContent() {
 
   const checkAuth = async () => {
     const supabase = createClient()
+    
+    // Get session instead of just user - this validates expiry
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    
+    // If no valid session, redirect to login
+    if (!session || sessionError) {
+      router.push('/login')
+      return
+    }
+    
+    // Check if session is expired (Supabase default is 1 hour)
+    const expiresAt = session.expires_at ? session.expires_at * 1000 : 0
+    const now = Date.now()
+    
+    if (expiresAt && expiresAt < now) {
+      // Session expired, try to refresh
+      const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession()
+      
+      if (!refreshedSession || refreshError) {
+        // Refresh failed, redirect to login
+        router.push('/login')
+        return
+      }
+    }
+    
     const { data: { user } } = await supabase.auth.getUser()
     
     if (!user) {
