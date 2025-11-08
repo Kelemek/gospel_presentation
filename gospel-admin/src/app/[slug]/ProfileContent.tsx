@@ -374,6 +374,9 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                       if (confirm('Are you sure you want to log out?')) {
                         const supabase = createClient()
                         await supabase.auth.signOut()
+                        // Clear user state immediately before redirecting
+                        setUserEmail(null)
+                        setCanEdit(false)
                         router.push('/default')
                       }
                     }}
