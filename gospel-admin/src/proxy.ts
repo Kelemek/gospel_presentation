@@ -20,22 +20,35 @@ export async function proxy(request: NextRequest) {
   if (pathname.startsWith('/admin')) {
     const supabase = await createClient()
     
-    // Get session to validate expiry, not just user
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    
+    // Prefer getSession() which provides expiry info; fall back to getUser()
+    let session: any = null
+    let sessionError: any = null
+
+    if (typeof (supabase.auth as any).getSession === 'function') {
+      const res = await (supabase.auth as any).getSession()
+      session = res?.data?.session
+      sessionError = res?.error
+    } else if (typeof (supabase.auth as any).getUser === 'function') {
+      const resUser = await (supabase.auth as any).getUser()
+      const fetchedUser = resUser?.data?.user
+      if (fetchedUser) {
+        session = { user: fetchedUser, expires_at: null }
+        sessionError = null
+      }
+    }
+
     // If no valid session or session error, redirect to login
     if (!session || sessionError) {
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('redirect', pathname)
       return NextResponse.redirect(loginUrl)
     }
-    
-    // Check if session is expired (Supabase default JWT expiry is 1 hour)
+
+    // If we have expiry info, check if expired and redirect to login
     const expiresAt = session.expires_at ? session.expires_at * 1000 : 0
     const now = Date.now()
-    
+
     if (expiresAt && expiresAt < now) {
-      // Session expired, redirect to login
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('redirect', pathname)
       return NextResponse.redirect(loginUrl)

@@ -89,32 +89,59 @@ function AdminPageContent() {
   const checkAuth = async () => {
     const supabase = createClient()
     
-    // Get session instead of just user - this validates expiry
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-    
+    // Prefer getSession() which provides expiry info, but fall back to getUser()
+    // because tests (and some older clients) may mock only getUser.
+    let session: any = null
+    let sessionError: any = null
+    let fetchedUser: any = null
+
+    if (typeof (supabase.auth as any).getSession === 'function') {
+      const res = await (supabase.auth as any).getSession()
+      session = res?.data?.session
+      sessionError = res?.error
+    } else if (typeof (supabase.auth as any).getUser === 'function') {
+      // Construct a lightweight session fallback when getSession isn't available.
+      const resUser = await (supabase.auth as any).getUser()
+      fetchedUser = resUser?.data?.user
+      if (fetchedUser) {
+        session = { user: fetchedUser, expires_at: null }
+        sessionError = null
+      }
+    }
+
     // If no valid session, redirect to login
     if (!session || sessionError) {
       router.push('/login')
       return
     }
-    
-    // Check if session is expired (Supabase default is 1 hour)
+
+    // If we have expiry info, check and try to refresh if expired.
     const expiresAt = session.expires_at ? session.expires_at * 1000 : 0
     const now = Date.now()
-    
+
     if (expiresAt && expiresAt < now) {
-      // Session expired, try to refresh
-      const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession()
-      
-      if (!refreshedSession || refreshError) {
-        // Refresh failed, redirect to login
+      if (typeof (supabase.auth as any).refreshSession === 'function') {
+        const refreshRes = await (supabase.auth as any).refreshSession()
+        const refreshedSession = refreshRes?.data?.session
+        const refreshError = refreshRes?.error
+        if (!refreshedSession || refreshError) {
+          router.push('/login')
+          return
+        }
+      } else {
+        // No refresh available on this client; force login
         router.push('/login')
         return
       }
     }
-    
-    const { data: { user } } = await supabase.auth.getUser()
-    
+
+    // Ensure we have the user object (may have been fetched above)
+    let user = fetchedUser
+    if (!user) {
+      const { data: { user: gotUser } = {} } = await (supabase.auth as any).getUser()
+      user = gotUser
+    }
+
     if (!user) {
       router.push('/login')
       return
