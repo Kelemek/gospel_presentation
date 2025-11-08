@@ -53,39 +53,53 @@ describe('Template Profile Permissions', () => {
   })
 
   describe('Edit button visibility logic', () => {
-    it('should hide edit buttons for templates when user is counselor', () => {
+    it('should hide edit button for templates when user is counselor', () => {
       const userRole: UserRole = 'counselor'
-      const templateProfile = { isTemplate: true, isDefault: false }
+      const userId = 'counselor-123'
+      const templateProfile = { isTemplate: true, isDefault: false, createdBy: userId }
       
       // This matches the logic in page.tsx for showing Settings/Edit buttons
-      const canEdit = userRole === 'admin' || (!templateProfile.isDefault && !templateProfile.isTemplate)
+      const canEdit = (userRole === 'admin' || (templateProfile.createdBy === userId && !templateProfile.isDefault && !templateProfile.isTemplate))
       
       expect(canEdit).toBe(false)
     })
 
-    it('should show edit buttons for templates when user is admin', () => {
+    it('should show edit button for templates when user is admin', () => {
       const userRole: UserRole = 'admin'
-      const templateProfile = { isTemplate: true, isDefault: false }
+      const userId = 'admin-123'
+      const templateProfile = { isTemplate: true, isDefault: false, createdBy: 'other-user-456' }
       
-      const canEdit = userRole === 'admin' || (!templateProfile.isDefault && !templateProfile.isTemplate)
-      
-      expect(canEdit).toBe(true)
-    })
-
-    it('should show edit buttons for non-template profiles when user is counselor', () => {
-      const userRole: UserRole = 'counselor'
-      const regularProfile = { isTemplate: false, isDefault: false }
-      
-      const canEdit = userRole === 'admin' || (!regularProfile.isDefault && !regularProfile.isTemplate)
+      const canEdit = (userRole === 'admin' || (templateProfile.createdBy === userId && !templateProfile.isDefault && !templateProfile.isTemplate))
       
       expect(canEdit).toBe(true)
     })
 
-    it('should hide edit buttons for default profile when user is counselor', () => {
+    it('should show edit button for non-template profiles when user is counselor and owns the profile', () => {
       const userRole: UserRole = 'counselor'
-      const defaultProfile = { isTemplate: false, isDefault: true }
+      const userId = 'counselor-123'
+      const regularProfile = { isTemplate: false, isDefault: false, createdBy: userId }
       
-      const canEdit = userRole === 'admin' || (!defaultProfile.isDefault && !defaultProfile.isTemplate)
+      const canEdit = (userRole === 'admin' || (regularProfile.createdBy === userId && !regularProfile.isDefault && !regularProfile.isTemplate))
+      
+      expect(canEdit).toBe(true)
+    })
+
+    it('should hide edit button for non-template profiles when user is counselor but does not own the profile', () => {
+      const userRole: UserRole = 'counselor'
+      const userId = 'counselor-123'
+      const regularProfile = { isTemplate: false, isDefault: false, createdBy: 'other-user-456' }
+      
+      const canEdit = (userRole === 'admin' || (regularProfile.createdBy === userId && !regularProfile.isDefault && !regularProfile.isTemplate))
+      
+      expect(canEdit).toBe(false)
+    })
+
+    it('should never show edit button for default profile when user is counselor', () => {
+      const userRole: UserRole = 'counselor'
+      const userId = 'counselor-123'
+      const defaultProfile = { isTemplate: false, isDefault: true, createdBy: userId }
+      
+      const canEdit = (userRole === 'admin' || (defaultProfile.createdBy === userId && !defaultProfile.isDefault && !defaultProfile.isTemplate))
       
       expect(canEdit).toBe(false)
     })
@@ -94,39 +108,53 @@ describe('Template Profile Permissions', () => {
   describe('Delete button visibility logic', () => {
     it('should hide delete button for templates when user is counselor', () => {
       const userRole: UserRole = 'counselor'
-      const templateProfile = { isTemplate: true, isDefault: false }
+      const userId = 'counselor-123'
+      const templateProfile = { isTemplate: true, isDefault: false, createdBy: userId }
       
       // This matches the logic in page.tsx for showing Delete button
-      const canDelete = !templateProfile.isDefault && (userRole === 'admin' || !templateProfile.isTemplate)
+      const canDelete = !templateProfile.isDefault && (userRole === 'admin' || (templateProfile.createdBy === userId && !templateProfile.isTemplate))
       
       expect(canDelete).toBe(false)
     })
 
     it('should show delete button for templates when user is admin', () => {
       const userRole: UserRole = 'admin'
-      const templateProfile = { isTemplate: true, isDefault: false }
+      const userId = 'admin-123'
+      const templateProfile = { isTemplate: true, isDefault: false, createdBy: 'other-user-456' }
       
-      const canDelete = !templateProfile.isDefault && (userRole === 'admin' || !templateProfile.isTemplate)
+      const canDelete = !templateProfile.isDefault && (userRole === 'admin' || (templateProfile.createdBy === userId && !templateProfile.isTemplate))
       
       expect(canDelete).toBe(true)
     })
 
-    it('should show delete button for non-template profiles when user is counselor', () => {
+    it('should show delete button for non-template profiles when user is counselor and owns the profile', () => {
       const userRole: UserRole = 'counselor'
-      const regularProfile = { isTemplate: false, isDefault: false }
+      const userId = 'counselor-123'
+      const regularProfile = { isTemplate: false, isDefault: false, createdBy: userId }
       
-      const canDelete = !regularProfile.isDefault && (userRole === 'admin' || !regularProfile.isTemplate)
+      const canDelete = !regularProfile.isDefault && (userRole === 'admin' || (regularProfile.createdBy === userId && !regularProfile.isTemplate))
       
       expect(canDelete).toBe(true)
+    })
+
+    it('should hide delete button for non-template profiles when user is counselor but does not own the profile', () => {
+      const userRole: UserRole = 'counselor'
+      const userId = 'counselor-123'
+      const regularProfile = { isTemplate: false, isDefault: false, createdBy: 'other-user-456' }
+      
+      const canDelete = !regularProfile.isDefault && (userRole === 'admin' || (regularProfile.createdBy === userId && !regularProfile.isTemplate))
+      
+      expect(canDelete).toBe(false)
     })
 
     it('should never show delete button for default profile regardless of role', () => {
       const adminRole: UserRole = 'admin'
       const counselorRole: UserRole = 'counselor'
-      const defaultProfile = { isTemplate: false, isDefault: true }
+      const userId = 'user-123'
+      const defaultProfile = { isTemplate: false, isDefault: true, createdBy: userId }
       
-      const canDeleteAsAdmin = !defaultProfile.isDefault && (adminRole === 'admin' || !defaultProfile.isTemplate)
-      const canDeleteAsCounselor = !defaultProfile.isDefault && (counselorRole === 'admin' || !defaultProfile.isTemplate)
+      const canDeleteAsAdmin = !defaultProfile.isDefault && (adminRole === 'admin' || (defaultProfile.createdBy === userId && !defaultProfile.isTemplate))
+      const canDeleteAsCounselor = !defaultProfile.isDefault && (counselorRole === 'admin' || (defaultProfile.createdBy === userId && !defaultProfile.isTemplate))
       
       expect(canDeleteAsAdmin).toBe(false)
       expect(canDeleteAsCounselor).toBe(false)
@@ -136,37 +164,51 @@ describe('Template Profile Permissions', () => {
   describe('Backup/Restore button visibility logic', () => {
     it('should hide backup/restore buttons for templates when user is counselor', () => {
       const userRole: UserRole = 'counselor'
-      const templateProfile = { isTemplate: true, isDefault: false }
+      const userId = 'counselor-123'
+      const templateProfile = { isTemplate: true, isDefault: false, createdBy: userId }
       
       // This matches the logic in page.tsx for showing backup/restore buttons
-      const canBackup = userRole !== 'counselee' && (userRole === 'admin' || (!templateProfile.isDefault && !templateProfile.isTemplate))
+      const canBackup = userRole !== 'counselee' && (userRole === 'admin' || (templateProfile.createdBy === userId && !templateProfile.isDefault && !templateProfile.isTemplate))
       
       expect(canBackup).toBe(false)
     })
 
     it('should show backup/restore buttons for templates when user is admin', () => {
       const userRole: UserRole = 'admin'
-      const templateProfile = { isTemplate: true, isDefault: false }
+      const userId = 'admin-123'
+      const templateProfile = { isTemplate: true, isDefault: false, createdBy: 'other-user-456' }
       
-      const canBackup = userRole !== 'counselee' && (userRole === 'admin' || (!templateProfile.isDefault && !templateProfile.isTemplate))
+      const canBackup = userRole !== 'counselee' && (userRole === 'admin' || (templateProfile.createdBy === userId && !templateProfile.isDefault && !templateProfile.isTemplate))
       
       expect(canBackup).toBe(true)
     })
 
-    it('should show backup/restore buttons for non-template profiles when user is counselor', () => {
+    it('should show backup/restore buttons for non-template profiles when user is counselor and owns the profile', () => {
       const userRole: UserRole = 'counselor'
-      const regularProfile = { isTemplate: false, isDefault: false }
+      const userId = 'counselor-123'
+      const regularProfile = { isTemplate: false, isDefault: false, createdBy: userId }
       
-      const canBackup = userRole !== 'counselee' && (userRole === 'admin' || (!regularProfile.isDefault && !regularProfile.isTemplate))
+      const canBackup = userRole !== 'counselee' && (userRole === 'admin' || (regularProfile.createdBy === userId && !regularProfile.isDefault && !regularProfile.isTemplate))
       
       expect(canBackup).toBe(true)
+    })
+
+    it('should hide backup/restore buttons for non-template profiles when user is counselor but does not own the profile', () => {
+      const userRole: UserRole = 'counselor'
+      const userId = 'counselor-123'
+      const regularProfile = { isTemplate: false, isDefault: false, createdBy: 'other-user-456' }
+      
+      const canBackup = userRole !== 'counselee' && (userRole === 'admin' || (regularProfile.createdBy === userId && !regularProfile.isDefault && !regularProfile.isTemplate))
+      
+      expect(canBackup).toBe(false)
     })
 
     it('should hide backup/restore buttons for counselees', () => {
       const userRole: UserRole = 'counselee'
-      const regularProfile = { isTemplate: false, isDefault: false }
+      const userId = 'counselee-123'
+      const regularProfile = { isTemplate: false, isDefault: false, createdBy: userId }
       
-      const canBackup = userRole !== 'counselee' && (userRole === 'admin' || (!regularProfile.isDefault && !regularProfile.isTemplate))
+      const canBackup = userRole !== 'counselee' && (userRole === 'admin' || (regularProfile.createdBy === userId && !regularProfile.isDefault && !regularProfile.isTemplate))
       
       expect(canBackup).toBe(false)
     })

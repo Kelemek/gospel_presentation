@@ -1032,20 +1032,23 @@ function AdminPageContent() {
                           {/* Hide Share, Settings, Content, and Delete buttons for counselees */}
                           {userRole !== 'counselee' && (
                             <>
-                              <button
-                                onClick={() => handleCopyProfileUrl(profile)}
-                                className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 sm:px-3 py-1 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
-                              >
-                                Share
-                              </button>
+                              {/* Only show Share for admins or counselors who own the profile */}
+                              {(userRole === 'admin' || profile.createdBy === user?.id) && (
+                                <button
+                                  onClick={() => handleCopyProfileUrl(profile)}
+                                  className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 sm:px-3 py-1 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                                >
+                                  Share
+                                </button>
+                              )}
                             </>
                           )}
                           
                           {/* Hide Settings, Content, and Delete buttons for counselees */}
                           {userRole !== 'counselee' && (
                             <>
-                              {/* Only admins can edit templates and default profile. Counselors can edit their own non-template profiles */}
-                              {(userRole === 'admin' || (!profile.isDefault && !profile.isTemplate)) && (
+                              {/* Only admins can edit templates and default profile. Counselors can only edit profiles they own */}
+                              {(userRole === 'admin' || (profile.createdBy === user?.id && !profile.isDefault && !profile.isTemplate)) && (
                                 <>
                                   <Link
                                     href={`/admin/profiles/${profile.slug}`}
@@ -1063,8 +1066,8 @@ function AdminPageContent() {
                                 </>
                               )}
                               
-                              {/* Only admins can delete templates. Counselors can delete their own non-template, non-default profiles */}
-                              {!profile.isDefault && (userRole === 'admin' || !profile.isTemplate) && (
+                              {/* Only admins can delete templates. Counselors can only delete profiles they own (non-template, non-default) */}
+                              {!profile.isDefault && (userRole === 'admin' || (profile.createdBy === user?.id && !profile.isTemplate)) && (
                                 <button
                                   onClick={() => handleDeleteProfile(profile.slug, profile.title)}
                                   className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 sm:px-3 py-1 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
@@ -1077,8 +1080,8 @@ function AdminPageContent() {
                         </div>
 
                         <div className="flex items-center gap-2 flex-wrap">
-                          {/* Only admins can backup/restore templates and default profile. Counselors can backup/restore their own non-template profiles */}
-                          {userRole !== 'counselee' && (userRole === 'admin' || (!profile.isDefault && !profile.isTemplate)) && (
+                          {/* Only admins can backup/restore templates and default profile. Counselors can only backup/restore profiles they own */}
+                          {userRole !== 'counselee' && (userRole === 'admin' || (profile.createdBy === user?.id && !profile.isDefault && !profile.isTemplate)) && (
                             <>
                               <button
                                 onClick={() => handleDownloadBackup(profile)}
