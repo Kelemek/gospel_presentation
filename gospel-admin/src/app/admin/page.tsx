@@ -1043,43 +1043,52 @@ function AdminPageContent() {
                           )}
                         </div>
                         
-                        <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                          <span className="font-medium">URL:</span> <span className="break-all">{siteUrl}/{profile.slug}</span>
-                        </p>
-                        
-                        {profile.ownerDisplayName && (
-                          <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                            <span className="font-medium">Owner:</span> {profile.ownerDisplayName}
-                          </p>
-                        )}
-                        
-                        {profile.counseleeEmails && profile.counseleeEmails.length > 0 && (
-                          <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                            <span className="font-medium">Counselees:</span>{' '}
-                            <span className="text-blue-600">
-                              {profile.counseleeEmails.length} {profile.counseleeEmails.length === 1 ? 'user' : 'users'}
-                            </span>
-                            {' '}({profile.counseleeEmails.slice(0, 2).join(', ')}
-                            {profile.counseleeEmails.length > 2 && `, +${profile.counseleeEmails.length - 2} more`})
-                          </p>
+                        {/* Hide URL, owner, counselees, and bottom details for counselees */}
+                        {userRole !== 'counselee' && (
+                          <>
+                            <p className="text-xs sm:text-sm text-slate-600 mt-1">
+                              <span className="font-medium">URL:</span> <span className="break-all">{siteUrl}/{profile.slug}</span>
+                            </p>
+                            
+                            {profile.ownerDisplayName && (
+                              <p className="text-xs sm:text-sm text-slate-600 mt-1">
+                                <span className="font-medium">Owner:</span> {profile.ownerDisplayName}
+                              </p>
+                            )}
+                            
+                            {profile.counseleeEmails && profile.counseleeEmails.length > 0 && (
+                              <p className="text-xs sm:text-sm text-slate-600 mt-1">
+                                <span className="font-medium">Counselees:</span>{' '}
+                                <span className="text-blue-600">
+                                  {profile.counseleeEmails.length} {profile.counseleeEmails.length === 1 ? 'user' : 'users'}
+                                </span>
+                                {' '}({profile.counseleeEmails.slice(0, 2).join(', ')}
+                                {profile.counseleeEmails.length > 2 && `, +${profile.counseleeEmails.length - 2} more`})
+                              </p>
+                            )}
+                          </>
                         )}
                         
                         {profile.description && (
                           <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                            <span className="font-medium">Description:</span> {profile.description}
+                            {userRole === 'counselee' ? '' : <span className="font-medium">Description: </span>}
+                            {profile.description}
                           </p>
                         )}
                         
-                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs text-slate-500">
-                          <span>{profile.visitCount} visits</span>
-                          <span className="hidden sm:inline">Created {new Date(profile.createdAt).toLocaleDateString()}</span>
-                          <span>Updated {new Date(profile.updatedAt).toLocaleDateString()}</span>
-                          {profile.lastVisited ? (
-                            <span>Last visited {new Date(profile.lastVisited).toLocaleDateString()}</span>
-                          ) : profile.visitCount === 0 ? (
-                            <span className="text-orange-500">Never visited</span>
-                          ) : null}
-                        </div>
+                        {/* Hide bottom details for counselees */}
+                        {userRole !== 'counselee' && (
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs text-slate-500">
+                            <span>{profile.visitCount} visits</span>
+                            <span className="hidden sm:inline">Created {new Date(profile.createdAt).toLocaleDateString()}</span>
+                            <span>Updated {new Date(profile.updatedAt).toLocaleDateString()}</span>
+                            {profile.lastVisited ? (
+                              <span>Last visited {new Date(profile.lastVisited).toLocaleDateString()}</span>
+                            ) : profile.visitCount === 0 ? (
+                              <span className="text-orange-500">Never visited</span>
+                            ) : null}
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex flex-col gap-2">
