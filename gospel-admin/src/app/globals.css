@@ -206,3 +206,651 @@ body {
     padding: 0.2rem !important;
   }
 }
+
+/* Tiptap Editor Styles */
+.ProseMirror {
+  outline: none;
+  min-height: 3rem;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: #adb5bd;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.ProseMirror ul {
+  list-style-type: disc;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
+}
+
+/* Hierarchical outline numbering: 1. a. i. α. */
+/* For both editor (ProseMirror) and preview */
+.ProseMirror ol.outline-style,
+ol.outline-style {
+  counter-reset: item;
+  list-style-type: none;
+}
+
+.ProseMirror ol.outline-style > li,
+ol.outline-style > li {
+  counter-increment: item;
+}
+
+.ProseMirror ol.outline-style > li::before,
+ol.outline-style > li::before {
+  content: counter(item) ". ";
+  font-weight: 600;
+  margin-right: 0.5rem;
+  float: left;
+}
+
+/* Make content inline with marker */
+.ProseMirror ol.outline-style > li > p,
+ol.outline-style > li > p {
+  display: inline;
+  margin: 0;
+}
+
+.ProseMirror ol.outline-style > li::after,
+ol.outline-style > li::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Second level: a, b, c */
+.ProseMirror ol.outline-style ol,
+ol.outline-style ol {
+  counter-reset: item;
+  list-style-type: none;
+  display: block;
+  margin-top: 0.25rem;
+  clear: both;
+}
+
+.ProseMirror ol.outline-style ol > li,
+ol.outline-style ol > li {
+  counter-increment: item;
+}
+
+.ProseMirror ol.outline-style ol > li::before,
+ol.outline-style ol > li::before {
+  content: counter(item, lower-alpha) ". ";
+  font-weight: 600;
+  margin-right: 0.5rem;
+  float: left;
+}
+
+.ProseMirror ol.outline-style ol > li > p,
+ol.outline-style ol > li > p {
+  display: inline;
+  margin: 0;
+}
+
+.ProseMirror ol.outline-style ol > li::after,
+ol.outline-style ol > li::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Third level: i, ii, iii */
+.ProseMirror ol.outline-style ol ol > li::before,
+ol.outline-style ol ol > li::before {
+  content: counter(item, lower-roman) ". ";
+  float: left;
+}
+
+.ProseMirror ol.outline-style ol ol > li > p,
+ol.outline-style ol ol > li > p {
+  display: inline;
+  margin: 0;
+}
+
+.ProseMirror ol.outline-style ol ol > li::after,
+ol.outline-style ol ol > li::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Fourth level: α, β, γ (or revert to numbers if preferred) */
+.ProseMirror ol.outline-style ol ol ol > li::before,
+ol.outline-style ol ol ol > li::before {
+  content: "(" counter(item) ") ";
+  float: left;
+}
+
+.ProseMirror ol.outline-style ol ol ol > li > p,
+ol.outline-style ol ol ol > li > p {
+  display: inline;
+  margin: 0;
+}
+
+.ProseMirror ol.outline-style ol ol ol > li::after,
+ol.outline-style ol ol ol > li::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Make paragraphs inside outline-style lists display inline */
+.ProseMirror ol.outline-style li > p,
+.ProseMirror ol.outline-style li > div,
+ol.outline-style li > p,
+ol.outline-style li > div {
+  display: inline;
+  margin: 0;
+}
+
+/* Legal style numbering: I. A. 1. a. i. */
+.ProseMirror ol.legal-style,
+ol.legal-style {
+  counter-reset: item;
+  list-style-type: none;
+}
+
+.ProseMirror ol.legal-style > li,
+ol.legal-style > li {
+  counter-increment: item;
+}
+
+.ProseMirror ol.legal-style > li::before,
+ol.legal-style > li::before {
+  content: counter(item, upper-roman) ". ";
+  font-weight: 600;
+  margin-right: 0.5rem;
+  float: left;
+}
+
+.ProseMirror ol.legal-style > li > p,
+ol.legal-style > li > p {
+  display: inline;
+  margin: 0;
+}
+
+.ProseMirror ol.legal-style > li::after,
+ol.legal-style > li::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.ProseMirror ol.legal-style ol,
+ol.legal-style ol {
+  counter-reset: item;
+  list-style-type: none;
+  display: block;
+  margin-top: 0.25rem;
+  clear: both;
+}
+
+.ProseMirror ol.legal-style ol > li,
+ol.legal-style ol > li {
+  counter-increment: item;
+}
+
+.ProseMirror ol.legal-style ol > li::before,
+ol.legal-style ol > li::before {
+  content: counter(item, upper-alpha) ". ";
+  font-weight: 600;
+  margin-right: 0.5rem;
+  float: left;
+}
+
+.ProseMirror ol.legal-style ol > li > p,
+ol.legal-style ol > li > p {
+  display: inline;
+  margin: 0;
+}
+
+.ProseMirror ol.legal-style ol > li::after,
+ol.legal-style ol > li::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.ProseMirror ol.legal-style ol ol > li::before,
+ol.legal-style ol ol > li::before {
+  content: counter(item) ". ";
+  float: left;
+}
+
+.ProseMirror ol.legal-style ol ol > li > p,
+ol.legal-style ol ol > li > p {
+  display: inline;
+  margin: 0;
+}
+
+.ProseMirror ol.legal-style ol ol > li::after,
+ol.legal-style ol ol > li::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.ProseMirror ol.legal-style ol ol ol > li::before,
+ol.legal-style ol ol ol > li::before {
+  content: counter(item, lower-alpha) ". ";
+  float: left;
+}
+
+.ProseMirror ol.legal-style ol ol ol > li > p,
+ol.legal-style ol ol ol > li > p {
+  display: inline;
+  margin: 0;
+}
+
+.ProseMirror ol.legal-style ol ol ol > li::after,
+ol.legal-style ol ol ol > li::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.ProseMirror ol.legal-style ol ol ol ol > li::before,
+ol.legal-style ol ol ol ol > li::before {
+  content: counter(item, lower-roman) ". ";
+  float: left;
+}
+
+.ProseMirror ol.legal-style ol ol ol ol > li > p,
+ol.legal-style ol ol ol ol > li > p {
+  display: inline;
+  margin: 0;
+}
+
+.ProseMirror ol.legal-style ol ol ol ol > li::after,
+ol.legal-style ol ol ol ol > li::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Make paragraphs inside legal-style lists display inline */
+.ProseMirror ol.legal-style li > p,
+.ProseMirror ol.legal-style li > div,
+ol.legal-style li > p,
+ol.legal-style li > div {
+  display: inline;
+  margin: 0;
+}
+
+/* Academic style numbering: 1.1, 1.2, 1.2.1 */
+.ProseMirror ol.academic-style,
+ol.academic-style {
+  counter-reset: section;
+  list-style-type: none;
+}
+
+.ProseMirror ol.academic-style > li,
+ol.academic-style > li {
+  counter-increment: section;
+}
+
+.ProseMirror ol.academic-style > li::before,
+ol.academic-style > li::before {
+  content: counter(section) ". ";
+  font-weight: 600;
+  margin-right: 0.5rem;
+  float: left;
+}
+
+.ProseMirror ol.academic-style > li > p,
+ol.academic-style > li > p {
+  display: inline;
+  margin: 0;
+}
+
+.ProseMirror ol.academic-style > li::after,
+ol.academic-style > li::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.ProseMirror ol.academic-style ol,
+ol.academic-style ol {
+  counter-reset: subsection;
+  list-style-type: none;
+  display: block;
+  margin-top: 0.25rem;
+  clear: both;
+}
+
+.ProseMirror ol.academic-style ol > li,
+ol.academic-style ol > li {
+  counter-increment: subsection;
+}
+
+.ProseMirror ol.academic-style ol > li::before,
+ol.academic-style ol > li::before {
+  content: counter(section) "." counter(subsection) " ";
+  font-weight: 600;
+  margin-right: 0.5rem;
+  float: left;
+}
+
+.ProseMirror ol.academic-style ol > li > p,
+ol.academic-style ol > li > p {
+  display: inline;
+  margin: 0;
+}
+
+.ProseMirror ol.academic-style ol > li::after,
+ol.academic-style ol > li::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.ProseMirror ol.academic-style ol ol,
+ol.academic-style ol ol {
+  counter-reset: subsubsection;
+  display: block;
+  margin-top: 0.25rem;
+  clear: both;
+}
+
+.ProseMirror ol.academic-style ol ol > li,
+ol.academic-style ol ol > li {
+  counter-increment: subsubsection;
+}
+
+.ProseMirror ol.academic-style ol ol > li::before,
+ol.academic-style ol ol > li::before {
+  content: counter(section) "." counter(subsection) "." counter(subsubsection) " ";
+  float: left;
+}
+
+.ProseMirror ol.academic-style ol ol > li > p,
+ol.academic-style ol ol > li > p {
+  display: inline;
+  margin: 0;
+}
+
+.ProseMirror ol.academic-style ol ol > li::after,
+ol.academic-style ol ol > li::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+/* Make paragraphs inside academic-style lists display inline */
+.ProseMirror ol.academic-style li > p,
+.ProseMirror ol.academic-style li > div,
+ol.academic-style li > p,
+ol.academic-style li > div {
+  display: inline;
+  margin: 0;
+}
+
+.ProseMirror li {
+  margin: 0.25rem 0;
+  display: list-item;
+}
+
+/* Task List Styles */
+.ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  align-items: start;
+  gap: 0.5rem;
+}
+
+.ProseMirror ul[data-type="taskList"] li > label {
+  display: flex;
+  align-items: center;
+  user-select: none;
+  margin-top: 0.125rem;
+}
+
+.ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
+  cursor: pointer;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+}
+
+.ProseMirror ul[data-type="taskList"] li > div {
+  flex: 1;
+}
+
+/* Nested task lists with indentation */
+.ProseMirror ul[data-type="taskList"] ul[data-type="taskList"] {
+  margin: 0.25rem 0;
+  padding-left: 1.5rem;
+}
+
+.ProseMirror strong {
+  font-weight: bold;
+}
+
+.ProseMirror em {
+  font-style: italic;
+}
+
+.ProseMirror s {
+  text-decoration: line-through;
+}
+
+.ProseMirror br {
+  display: block;
+  content: "";
+  margin-top: 0;
+}
+
+/* HTML content rendering (for preview/display) */
+.print-content ul,
+.print-content ol {
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.print-content ul {
+  list-style-type: disc;
+}
+
+.print-content ol {
+  list-style-type: decimal;
+}
+
+/* Hierarchical outline numbering for preview/display: 1. a. i. (1) */
+ol.outline-style {
+  counter-reset: item;
+  list-style-type: none;
+}
+
+ol.outline-style > li {
+  counter-increment: item;
+}
+
+ol.outline-style > li::before {
+  content: counter(item) ". ";
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+/* Second level: a, b, c */
+ol.outline-style ol {
+  counter-reset: item;
+  list-style-type: none;
+}
+
+ol.outline-style ol > li {
+  counter-increment: item;
+}
+
+ol.outline-style ol > li::before {
+  content: counter(item, lower-alpha) ". ";
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+/* Third level: i, ii, iii */
+ol.outline-style ol ol > li::before {
+  content: counter(item, lower-roman) ". ";
+}
+
+/* Fourth level: (1), (2), (3) */
+ol.outline-style ol ol ol > li::before {
+  content: "(" counter(item) ") ";
+}
+
+/* Legal style numbering for preview: I. A. 1. a. i. */
+ol.legal-style {
+  counter-reset: item;
+  list-style-type: none;
+}
+
+ol.legal-style > li {
+  counter-increment: item;
+}
+
+ol.legal-style > li::before {
+  content: counter(item, upper-roman) ". ";
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+ol.legal-style ol {
+  counter-reset: item;
+  list-style-type: none;
+}
+
+ol.legal-style ol > li {
+  counter-increment: item;
+}
+
+ol.legal-style ol > li::before {
+  content: counter(item, upper-alpha) ". ";
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+ol.legal-style ol ol > li::before {
+  content: counter(item) ". ";
+}
+
+ol.legal-style ol ol ol > li::before {
+  content: counter(item, lower-alpha) ". ";
+}
+
+ol.legal-style ol ol ol ol > li::before {
+  content: counter(item, lower-roman) ". ";
+}
+
+/* Academic style numbering for preview: 1.1, 1.2, 1.2.1 */
+ol.academic-style {
+  counter-reset: section;
+  list-style-type: none;
+}
+
+ol.academic-style > li {
+  counter-increment: section;
+}
+
+ol.academic-style > li::before {
+  content: counter(section) ". ";
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+ol.academic-style ol {
+  counter-reset: subsection;
+  list-style-type: none;
+}
+
+ol.academic-style ol > li {
+  counter-increment: subsection;
+}
+
+ol.academic-style ol > li::before {
+  content: counter(section) "." counter(subsection) " ";
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+ol.academic-style ol ol {
+  counter-reset: subsubsection;
+}
+
+ol.academic-style ol ol > li {
+  counter-increment: subsubsection;
+}
+
+ol.academic-style ol ol > li::before {
+  content: counter(section) "." counter(subsection) "." counter(subsubsection) " ";
+}
+
+.print-content li {
+  margin: 0.25rem 0;
+  display: list-item;
+}
+
+/* Task List Styles for preview/display */
+ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+ul[data-type="taskList"] li {
+  display: flex;
+  align-items: start;
+  gap: 0.5rem;
+}
+
+ul[data-type="taskList"] li > label {
+  display: flex;
+  align-items: center;
+  user-select: none;
+  margin-top: 0.125rem;
+}
+
+ul[data-type="taskList"] li > label input[type="checkbox"] {
+  cursor: pointer;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+}
+
+ul[data-type="taskList"] li > div {
+  flex: 1;
+}
+
+ul[data-type="taskList"] ul[data-type="taskList"] {
+  margin: 0.25rem 0;
+  padding-left: 1.5rem;
+}
+
+.print-content strong,
+strong {
+  font-weight: bold;
+}
+
+.print-content em,
+em {
+  font-style: italic;
+}
+
+.print-content s,
+s {
+  text-decoration: line-through;
+}

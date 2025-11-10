@@ -58,24 +58,19 @@ test('save content triggers PUT and shows success alert', async () => {
   // Wait for profile content to load (section title)
   await screen.findByText('S1')
 
-  // Click the subsection Edit button, change content to set hasChanges=true, then save
-  // Find the subsection titled 'Sub 1' and click the Edit button inside its container
+  // The subsection title uses InlineEditableText, so we need to click on it to edit
+  // Find the subsection titled 'Sub 1' - it's an h3 with contenteditable
   const subHeading = await screen.findByText('Sub 1')
-  let container: HTMLElement | null = subHeading.parentElement
-  // climb until we find a container that has an Edit button
-  while (container && !container.querySelector('button')) {
-    container = container.parentElement
-  }
-  expect(container).not.toBeNull()
-  const editBtn = within(container as HTMLElement).getByText(/Edit/i)
-  await userEvent.click(editBtn)
-
-  // Now the Content textarea for the subsection editor should be present
-  // The textarea may be rendered elsewhere inside the subsection; find any textarea in the document
-  const contentTextarea = document.querySelector('textarea') as HTMLTextAreaElement
-  expect(contentTextarea).not.toBeNull()
-  // Use fireEvent to change the textarea value
-  fireEvent.change(contentTextarea as Element, { target: { value: 'Updated content for test' } })
+  expect(subHeading).toBeInTheDocument()
+  
+  // Click on the title to make it editable
+  await userEvent.click(subHeading)
+  
+  // Change the title to trigger hasChanges
+  fireEvent.input(subHeading, { target: { textContent: 'Sub 1 Updated' } })
+  
+  // Blur to trigger onChange and setHasChanges
+  fireEvent.blur(subHeading)
 
   // Save button should now show 'Save Changes' and be enabled
   const saveBtn = await screen.findByRole('button', { name: /Save Changes/i })

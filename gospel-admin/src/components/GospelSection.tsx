@@ -1,42 +1,125 @@
 import { GospelSection as GospelSectionType, Subsection, NestedSubsection, ScriptureReference, QuestionAnswer, PROFILE_VALIDATION, SavedAnswer } from '@/lib/types'
 import ScriptureHoverModal from './ScriptureHoverModal'
 import ComaModal from './ComaModal'
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 
-// Helper component to render text with COMA buttons
-function TextWithComaButtons({ text, onComaClick }: { text: string; onComaClick: () => void }) {
-  // Replace COMA text with a placeholder marker
-  const marker = '___COMA_BUTTON___'
-  const markedText = text.replace(/(C\.O\.M\.A\.|COMA)/gi, marker)
+
+// Helper component to render text with COMA buttons and inline scripture references
+function TextWithComaButtons({ text, onComaClick, onScriptureClick }: { 
+  text: string; 
+  onComaClick: () => void;
+  onScriptureClick?: (reference: string) => void;
+}) {
+  const containerRef = React.useRef<HTMLSpanElement>(null)
   
-  // Split by the marker
-  const parts = markedText.split(marker)
-  const matches = text.match(/(C\.O\.M\.A\.|COMA)/gi) || []
+  // Improved scripture reference pattern - must have word boundary before and after
+  // Matches: "John 3:16", "1 Corinthians 13:4-7", "Romans 8:28", etc.
+  const scripturePattern = /\b(\d\s)?([A-Z][a-z]+(?:\s[A-Z][a-z]+)?)\s+(\d+):(\d+)(?:-(\d+))?(?:,\s*(\d+)(?::(\d+))?)*\b/g
   
-  const elements: React.ReactNode[] = []
-  parts.forEach((part, index) => {
-    // Add the HTML part
-    if (part) {
-      elements.push(
-        <span key={`text-${index}`} dangerouslySetInnerHTML={{ __html: part }} />
-      )
+  // First, handle COMA markers
+  const comaMarker = '___COMA_BUTTON___'
+  let processedText = text.replace(/(C\.O\.M\.A\.|COMA)/gi, comaMarker)
+  const comaMatches = text.match(/(C\.O\.M\.A\.|COMA)/gi) || []
+  
+  // Then, handle scripture references
+  const scriptureMarker = '___SCRIPTURE_REF___'
+  const scriptureMatches: string[] = []
+  
+  // Temporarily replace COMA markers to protect them
+  const protectedText = processedText.replace(new RegExp(comaMarker, 'g'), '§§COMA§§')
+  
+  let tempText = protectedText
+  let match
+  const regex = new RegExp(scripturePattern)
+  while ((match = regex.exec(protectedText)) !== null) {
+    const fullMatch = match[0].trim()
+    // Only add if it looks like a valid book name (not just random capitalized words)
+    const bookName = match[2]
+    const validBooks = /^(Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalms?|Proverbs?|Ecclesiastes|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans?|Corinthians?|Galatians?|Ephesians?|Philippians?|Colossians?|Thessalonians?|Timothy|Titus|Philemon|Hebrews?|James|Peter|Jude|Revelation)/i
+    if (validBooks.test(bookName)) {
+      scriptureMatches.push(fullMatch)
     }
-    // Add the COMA button if there's a match at this position
-    if (matches[index]) {
-      elements.push(
-        <button
-          key={`coma-${index}`}
-          onClick={onComaClick}
-          className="inline-flex items-center gap-1 px-2 py-0.5 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors mx-0.5"
-          title="Learn about the C.O.M.A. method"
-        >
-          {matches[index]}
-        </button>
-      )
+  }
+  
+  // Replace scripture references with markers
+  tempText = protectedText.replace(scripturePattern, (matched) => {
+    // Only replace if it's a valid book
+    const bookMatch = matched.match(/([A-Z][a-z]+(?:\s[A-Z][a-z]+)?)/)
+    if (bookMatch) {
+      const validBooks = /^(Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalms?|Proverbs?|Ecclesiastes|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans?|Corinthians?|Galatians?|Ephesians?|Philippians?|Colossians?|Thessalonians?|Timothy|Titus|Philemon|Hebrews?|James|Peter|Jude|Revelation)/i
+      if (validBooks.test(bookMatch[1])) {
+        return scriptureMarker
+      }
+    }
+    return matched
+  })
+  
+  // Restore COMA markers
+  processedText = tempText.replace(/§§COMA§§/g, comaMarker)
+  
+  // Split by both markers and reconstruct
+  const parts = processedText.split(new RegExp(`(${comaMarker}|${scriptureMarker})`))
+  
+  // Build everything as HTML string for true inline flow
+  let htmlString = ''
+  let comaIndex = 0
+  let scriptureIndex = 0
+  
+  parts.forEach((part) => {
+    if (part === comaMarker && comaMatches[comaIndex]) {
+      // Add COMA button as HTML - match scripture styling exactly
+      const comaText = comaMatches[comaIndex]
+      htmlString += `<a href="#" data-coma="true" class="px-1.5 py-0.5 font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors cursor-pointer whitespace-nowrap no-underline" style="display: inline; margin: 0 2px; vertical-align: baseline; font-size: inherit;" title="Learn about the C.O.M.A. method">${comaText}</a>`
+      comaIndex++
+    } else if (part === scriptureMarker && scriptureMatches[scriptureIndex]) {
+      // Add inline scripture reference as HTML string
+      const reference = scriptureMatches[scriptureIndex]
+      if (onScriptureClick) {
+        htmlString += `<a href="#" data-scripture="${reference}" class="px-1.5 py-0.5 font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors cursor-pointer whitespace-nowrap no-underline" style="display: inline; margin: 0 2px; vertical-align: baseline; font-size: inherit;" title="Click to view ${reference}">${reference}</a>`
+      } else {
+        htmlString += `<span class="px-1.5 py-0.5 font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded whitespace-nowrap" style="display: inline; margin: 0 2px; vertical-align: baseline; font-size: inherit;">${reference}</span>`
+      }
+      scriptureIndex++
+    } else if (part) {
+      // Add the HTML part
+      htmlString += part
     }
   })
   
-  return <>{elements}</>
+  // Add click handlers for both COMA and scripture links - scoped to this component's container
+  React.useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+    
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement
+      
+      // Handle COMA clicks - only if it's an anchor with data-coma
+      if (target.tagName === 'A' && target.hasAttribute('data-coma')) {
+        e.preventDefault()
+        e.stopPropagation()
+        onComaClick()
+        return
+      }
+      
+      // Handle scripture clicks - only if it's an anchor with data-scripture
+      if (target.tagName === 'A' && target.hasAttribute('data-scripture')) {
+        e.preventDefault()
+        e.stopPropagation()
+        const reference = target.getAttribute('data-scripture')
+        if (reference && onScriptureClick) {
+          onScriptureClick(reference)
+        }
+        return
+      }
+    }
+    
+    container.addEventListener('click', handleClick)
+    return () => container.removeEventListener('click', handleClick)
+  }, [onComaClick, onScriptureClick])
+  
+  return <span ref={containerRef} dangerouslySetInnerHTML={{ __html: htmlString }} />
+
 }
 
 interface GospelSectionProps {
@@ -328,9 +411,13 @@ function NestedSubsectionComponent({ nestedSubsection, onScriptureClick, lastVie
       <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
       <div className="ml-6 mt-4 border-l-2 border-gray-200 pl-4 print-subsection">
         <h5 className="font-medium text-slate-800 mb-2 print-subsection-title text-lg md:text-xl">{nestedSubsection.title}</h5>
-        <p className="text-slate-700 mb-2 print-content text-base md:text-lg leading-relaxed">
-          <TextWithComaButtons text={nestedSubsection.content} onComaClick={() => setShowComaModal(true)} />
-        </p>
+        <div className="text-slate-700 mb-2 print-content text-base md:text-lg leading-relaxed">
+          <TextWithComaButtons 
+            text={nestedSubsection.content} 
+            onComaClick={() => setShowComaModal(true)}
+            onScriptureClick={onScriptureClick}
+          />
+        </div>
         {nestedSubsection.scriptureReferences && (
           <ScriptureReferences 
             references={nestedSubsection.scriptureReferences} 
@@ -359,9 +446,13 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
       <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
       <div id={`${sectionId}-${subsectionIndex}`} className="mb-6 print-subsection">
         <h4 className="text-xl md:text-2xl font-semibold text-slate-800 mb-3 print-subsection-title">{subsection.title}</h4>
-        <p className="text-slate-700 mb-3 leading-relaxed print-content text-base md:text-lg">
-          <TextWithComaButtons text={subsection.content} onComaClick={() => setShowComaModal(true)} />
-        </p>
+        <div className="text-slate-700 mb-3 leading-relaxed print-content text-base md:text-lg">
+          <TextWithComaButtons 
+            text={subsection.content} 
+            onComaClick={() => setShowComaModal(true)}
+            onScriptureClick={onScriptureClick}
+          />
+        </div>
       
         {subsection.scriptureReferences && (
           <ScriptureReferences 

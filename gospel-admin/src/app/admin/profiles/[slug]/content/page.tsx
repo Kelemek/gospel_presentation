@@ -6,6 +6,8 @@ import Link from 'next/link'
 import { GospelProfile, GospelSection } from '@/lib/types'
 import AdminHeader from '@/components/AdminHeader'
 import ScriptureHoverModal from '@/components/ScriptureHoverModal'
+import InlineEditableText from '@/components/InlineEditableText'
+import RichTextEditor from '@/components/RichTextEditor'
 import { createClient } from '@/lib/supabase/client'
 
 interface ContentEditPageProps {
@@ -22,9 +24,6 @@ function ContentEditPage({ params }: ContentEditPageProps) {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
   const [isAuth, setIsAuth] = useState(false)
-  const [editingSectionId, setEditingSectionId] = useState<number | null>(null)
-  const [editingSubsectionId, setEditingSubsectionId] = useState<string | null>(null)
-  const [editingNestedSubsectionId, setEditingNestedSubsectionId] = useState<string | null>(null)
   const [hasChanges, setHasChanges] = useState(false)
   const [newScriptureRef, setNewScriptureRef] = useState('')
   const [addingScriptureToSection, setAddingScriptureToSection] = useState<string | null>(null)
@@ -1163,75 +1162,60 @@ function ContentEditPage({ params }: ContentEditPageProps) {
         {profile && profile.gospelData.map((section, sectionIndex) => (
           <div key={section.section} className="bg-white border border-slate-200 rounded-lg p-4 sm:p-6 mb-6 shadow-lg">
             <div className="mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-slate-800 pr-4">
-                  {section.title}
-                </h2>
-                <div className="flex gap-2 mr-2">
-                  <button
-                    onClick={() => setEditingSectionId(editingSectionId === sectionIndex ? null : sectionIndex)}
-                    className="text-blue-600 hover:text-blue-800 text-xs font-medium border border-blue-200 hover:border-blue-300 px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 transition-colors flex-shrink-0"
-                  >
-                    {editingSectionId === sectionIndex ? 'Cancel' : 'Edit'}
-                  </button>
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className="flex-1 min-w-0">
+                  <InlineEditableText
+                    value={section.title}
+                    onChange={(newTitle) => {
+                      updateSection(sectionIndex, 'title', newTitle)
+                      setHasChanges(true)
+                    }}
+                    className="text-2xl font-bold text-slate-800 w-full"
+                    placeholder="Section title..."
+                    as="h2"
+                  />
+                </div>
+                <div className="flex gap-2 flex-shrink-0">
                   <button
                     onClick={() => {
                       if (window.confirm(`Are you sure you want to delete section ${section.section}. "${section.title}"? This will delete all subsections, scriptures, and questions within it. This action cannot be undone.`)) {
                         deleteSection(sectionIndex)
                       }
                     }}
-                    className="text-red-600 hover:text-red-800 text-xs font-medium border border-red-200 hover:border-red-300 px-2 py-1 rounded bg-red-50 hover:bg-red-100 transition-colors flex-shrink-0"
+                    className="text-red-600 hover:text-red-800 text-xs font-medium border border-red-200 hover:border-red-300 px-2 py-1 rounded bg-red-50 hover:bg-red-100 transition-colors"
                     title="Delete section"
                   >
                     Delete
                   </button>
                 </div>
               </div>
-
-              {editingSectionId === sectionIndex && (
-                <div className="bg-gradient-to-br from-slate-50 to-blue-50 border border-slate-200 rounded-lg p-4 mb-4 shadow-sm">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Section Title
-                      </label>
-                      <input
-                        type="text"
-                        value={section.title}
-                        onChange={(e) => updateSection(sectionIndex, 'title', e.target.value)}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Subsections */}
             <div className="space-y-6">
               {section.subsections.map((subsection, subsectionIndex) => (
                 <div key={subsectionIndex} className="border-l-4 border-slate-300 pl-6 mb-6 bg-slate-50 rounded-r-lg py-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-xl font-bold text-slate-800 pr-4">
-                      {subsection.title}
-                    </h3>
-                    <div className="flex gap-2 mr-2">
-                      <button
-                        onClick={() => {
-                          const id = `${sectionIndex}-${subsectionIndex}`
-                          setEditingSubsectionId(editingSubsectionId === id ? null : id)
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="flex-1 min-w-0">
+                      <InlineEditableText
+                        value={subsection.title}
+                        onChange={(newTitle) => {
+                          updateSubsection(sectionIndex, subsectionIndex, 'title', newTitle)
+                          setHasChanges(true)
                         }}
-                        className="text-blue-600 hover:text-blue-800 text-xs font-medium border border-blue-200 hover:border-blue-300 px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 transition-colors flex-shrink-0"
-                      >
-                        {editingSubsectionId === `${sectionIndex}-${subsectionIndex}` ? 'Cancel' : 'Edit'}
-                      </button>
+                        className="text-xl font-bold text-slate-800 w-full"
+                        placeholder="Subsection title..."
+                        as="h3"
+                      />
+                    </div>
+                    <div className="flex gap-2 flex-shrink-0">
                       <button
                         onClick={() => {
                           if (window.confirm(`Are you sure you want to delete the subsection "${subsection.title}"? This will delete all scriptures and questions within it. This action cannot be undone.`)) {
                             deleteSubsection(sectionIndex, subsectionIndex)
                           }
                         }}
-                        className="text-red-600 hover:text-red-800 text-xs font-medium border border-red-200 hover:border-red-300 px-2 py-1 rounded bg-red-50 hover:bg-red-100 transition-colors flex-shrink-0"
+                        className="text-red-600 hover:text-red-800 text-xs font-medium border border-red-200 hover:border-red-300 px-2 py-1 rounded bg-red-50 hover:bg-red-100 transition-colors"
                         title="Delete subsection"
                       >
                         Delete
@@ -1239,38 +1223,19 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                     </div>
                   </div>
 
-                  {editingSubsectionId === `${sectionIndex}-${subsectionIndex}` && (
-                    <div className="bg-gradient-to-br from-blue-50 to-slate-50 border border-blue-200 rounded-lg p-4 mb-4 shadow-sm">
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">
-                            Subsection Title
-                          </label>
-                          <input
-                            type="text"
-                            value={subsection.title}
-                            onChange={(e) => updateSubsection(sectionIndex, subsectionIndex, 'title', e.target.value)}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-slate-700 mb-1">
-                            Content
-                          </label>
-                          <textarea
-                            value={subsection.content}
-                            onChange={(e) => updateSubsection(sectionIndex, subsectionIndex, 'content', e.target.value)}
-                            rows={4}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <p className="text-slate-700 mb-4 leading-relaxed">
-                    {subsection.content}
-                  </p>
+                  <div className="pr-2">
+                    <RichTextEditor
+                      value={subsection.content}
+                      onChange={(newContent) => {
+                        updateSubsection(sectionIndex, subsectionIndex, 'content', newContent)
+                        setHasChanges(true)
+                      }}
+                      className="text-slate-700 mb-4 leading-relaxed w-full block"
+                      placeholder="Click to edit content..."
+                      multiline
+                      as="p"
+                    />
+                  </div>
 
                   {/* Scripture References */}
                   <div className="mt-4">
@@ -1574,25 +1539,27 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                   {/* Nested Subsections */}
                   {subsection.nestedSubsections && subsection.nestedSubsections.map((nested, nestedIndex) => (
                     <div key={nestedIndex} className="ml-4 mt-4 border-l-2 border-slate-300 pl-4 bg-gradient-to-r from-slate-25 to-blue-25 rounded-r-lg py-3">
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-medium text-slate-800 pr-3">{nested.title}</h4>
-                        <div className="flex gap-1 mr-2">
-                          <button
-                            onClick={() => {
-                              const id = `${sectionIndex}-${subsectionIndex}-${nestedIndex}`
-                              setEditingNestedSubsectionId(editingNestedSubsectionId === id ? null : id)
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <div className="flex-1 min-w-0">
+                          <InlineEditableText
+                            value={nested.title}
+                            onChange={(newTitle) => {
+                              updateNestedSubsection(sectionIndex, subsectionIndex, nestedIndex, 'title', newTitle)
+                              setHasChanges(true)
                             }}
-                            className="text-blue-600 hover:text-blue-800 text-xs font-medium border border-blue-200 hover:border-blue-300 px-1.5 py-0.5 rounded bg-blue-50 hover:bg-blue-100 transition-colors flex-shrink-0"
-                          >
-                            {editingNestedSubsectionId === `${sectionIndex}-${subsectionIndex}-${nestedIndex}` ? 'Cancel' : 'Edit'}
-                          </button>
+                            className="font-medium text-slate-800 w-full"
+                            placeholder="Nested subsection title..."
+                            as="h4"
+                          />
+                        </div>
+                        <div className="flex gap-1 flex-shrink-0">
                           <button
                             onClick={() => {
                               if (window.confirm('Are you sure you want to delete this sub-subsection? This action cannot be undone.')) {
                                 deleteNestedSubsection(sectionIndex, subsectionIndex, nestedIndex)
                               }
                             }}
-                            className="text-red-600 hover:text-red-800 text-xs font-medium border border-red-200 hover:border-red-300 px-1.5 py-0.5 rounded bg-red-50 hover:bg-red-100 transition-colors flex-shrink-0"
+                            className="text-red-600 hover:text-red-800 text-xs font-medium border border-red-200 hover:border-red-300 px-1.5 py-0.5 rounded bg-red-50 hover:bg-red-100 transition-colors"
                             title="Delete sub-subsection"
                           >
                             Delete
@@ -1600,36 +1567,19 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                         </div>
                       </div>
 
-                      {editingNestedSubsectionId === `${sectionIndex}-${subsectionIndex}-${nestedIndex}` && (
-                        <div className="bg-gradient-to-br from-purple-50 to-slate-50 border border-purple-200 rounded-lg p-3 mb-3 shadow-sm">
-                          <div className="space-y-3">
-                            <div>
-                              <label className="block text-xs font-medium text-slate-700 mb-1">
-                                Sub-subsection Title
-                              </label>
-                              <input
-                                type="text"
-                                value={nested.title}
-                                onChange={(e) => updateNestedSubsection(sectionIndex, subsectionIndex, nestedIndex, 'title', e.target.value)}
-                                className="w-full px-2 py-1 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-slate-700 mb-1">
-                                Content
-                              </label>
-                              <textarea
-                                value={nested.content}
-                                onChange={(e) => updateNestedSubsection(sectionIndex, subsectionIndex, nestedIndex, 'content', e.target.value)}
-                                rows={3}
-                                className="w-full px-2 py-1 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-purple-500"
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      <p className="text-slate-700 text-sm mb-2">{nested.content}</p>
+                      <div className="pr-2">
+                        <RichTextEditor
+                          value={nested.content}
+                          onChange={(newContent) => {
+                            updateNestedSubsection(sectionIndex, subsectionIndex, nestedIndex, 'content', newContent)
+                            setHasChanges(true)
+                          }}
+                          className="text-slate-700 text-sm mb-2 w-full block"
+                          placeholder="Click to edit content..."
+                          multiline
+                          as="p"
+                        />
+                      </div>
                       
                       {/* Nested Scripture References */}
                       <div className="mt-3">
