@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { GospelProfile } from '@/lib/types'
 import AdminHeader from '@/components/AdminHeader'
 import { createClient } from '@/lib/supabase/client'
+import RichTextEditor from '@/components/RichTextEditor'
 
 interface ProfileEditPageProps {
   params: Promise<{
@@ -305,14 +306,10 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
               <label htmlFor="title" className="block text-sm font-medium text-slate-700 mb-1">
                 Profile Title *
               </label>
-              <input
-                type="text"
-                id="title"
+              <RichTextEditor
                 value={editForm.title}
-                onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 bg-white"
+                onChange={(value) => setEditForm(prev => ({ ...prev, title: value }))}
                 placeholder="e.g., Mark Larson's Gospel Presentation"
-                required
               />
             </div>
 
@@ -320,12 +317,9 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
               <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-1">
                 Description
               </label>
-              <textarea
-                id="description"
+              <RichTextEditor
                 value={editForm.description}
-                onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
-                rows={3}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 bg-white"
+                onChange={(value) => setEditForm(prev => ({ ...prev, description: value }))}
                 placeholder="Optional description of this profile's purpose"
               />
             </div>

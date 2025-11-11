@@ -58,19 +58,25 @@ test('save content triggers PUT and shows success alert', async () => {
   // Wait for profile content to load (section title)
   await screen.findByText('S1')
 
-  // The subsection title uses InlineEditableText, so we need to click on it to edit
-  // Find the subsection titled 'Sub 1' - it's an h3 with contenteditable
+  // The subsection title uses the inline editor (pencil → RichTextEditor). Click the pencil to edit.
+  // Find the subsection titled 'Sub 1'
   const subHeading = await screen.findByText('Sub 1')
   expect(subHeading).toBeInTheDocument()
-  
-  // Click on the title to make it editable
-  await userEvent.click(subHeading)
-  
-  // Change the title to trigger hasChanges
-  fireEvent.input(subHeading, { target: { textContent: 'Sub 1 Updated' } })
-  
-  // Blur to trigger onChange and setHasChanges
-  fireEvent.blur(subHeading)
+
+  // Click the pencil (Edit) button adjacent to the heading to open the inline editor
+  const headingContainer = subHeading.parentElement
+  const editBtn = within(headingContainer as HTMLElement).getByTitle('Edit')
+  await userEvent.click(editBtn)
+
+  // TipTap editor is mocked as a textarea in tests; find it by the inline placeholder and update
+  const inlineTextarea = await screen.findByPlaceholderText(/Subsection title.../i)
+  await userEvent.clear(inlineTextarea)
+  await userEvent.type(inlineTextarea, 'Sub 1 Updated')
+
+  // Click the inline Save button (scoped to the editor controls)
+  const inlineContainer = inlineTextarea.closest('div')
+  const inlineSave = within(inlineContainer as HTMLElement).getByRole('button', { name: /Save/i })
+  await userEvent.click(inlineSave)
 
   // Save button should now show 'Save Changes' and be enabled
   const saveBtn = await screen.findByRole('button', { name: /Save Changes/i })

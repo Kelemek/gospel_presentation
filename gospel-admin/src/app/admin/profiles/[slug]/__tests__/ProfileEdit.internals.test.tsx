@@ -5,7 +5,14 @@ import userEvent from '@testing-library/user-event'
 jest.mock('@/components/AdminHeader', () => ({ __esModule: true, default: ({ title }: any) => <div data-testid="admin-header">{title}</div> }))
 jest.mock('@/lib/supabase/client', () => ({
   __esModule: true,
-  createClient: () => ({ auth: { getUser: async () => ({ data: { user: { id: 'u1', email: 'admin@example.com' } } }) } })
+  createClient: () => ({ 
+    auth: { getUser: async () => ({ data: { user: { id: 'u1', email: 'admin@example.com' } } }) },
+    from: () => ({
+      select: () => ({
+        order: () => Promise.resolve({ data: [], error: null })
+      })
+    })
+  })
 }))
 
 beforeAll(() => {
@@ -31,7 +38,7 @@ test('ProfileEditPage renders and loads profile data', async () => {
   render(<ProfileEditPage params={Promise.resolve({ slug: 'p1' })} />)
 
   await waitFor(() => expect(screen.getByTestId('admin-header')).toBeInTheDocument())
-  expect(screen.getByText(/P1/i)).toBeInTheDocument()
+  expect(screen.getAllByText(/P1/i).length).toBeGreaterThan(0)
 })
 
 test('ProfileEditPage saves profile and redirects on success', async () => {
@@ -60,7 +67,7 @@ test('ProfileEditPage saves profile and redirects on success', async () => {
   await waitFor(() => expect(screen.getByTestId('admin-header')).toBeInTheDocument())
 
   // Change the title and submit the form
-  const titleInput = screen.getByLabelText(/Profile Title/i)
+  const titleInput = screen.getByPlaceholderText(/Mark Larson's Gospel Presentation/i)
   await userEvent.clear(titleInput)
   await userEvent.type(titleInput, 'New Title')
 

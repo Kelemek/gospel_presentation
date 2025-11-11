@@ -5,6 +5,8 @@ import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
+import Superscript from '@tiptap/extension-superscript'
+import Subscript from '@tiptap/extension-subscript'
 import { useEffect } from 'react'
 import { Extension } from '@tiptap/core'
 
@@ -63,6 +65,8 @@ export default function RichTextEditor({
         nested: true, // Allow nested task lists
       }),
       OrderedListExtended,
+      Superscript,
+      Subscript,
     ],
     content: value,
     immediatelyRender: false, // Fix SSR hydration issues
@@ -121,6 +125,26 @@ export default function RichTextEditor({
           title="Strikethrough"
         >
           S
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleSuperscript().run()}
+          disabled={!editor.can().chain().focus().toggleSuperscript().run()}
+          className={`px-2 py-1 text-sm rounded hover:bg-slate-200 transition-colors ${
+            editor.isActive('superscript') ? 'bg-slate-300' : 'bg-white'
+          }`}
+          title="Superscript"
+        >
+          X<sup>2</sup>
+        </button>
+        <button
+          onClick={() => editor.chain().focus().toggleSubscript().run()}
+          disabled={!editor.can().chain().focus().toggleSubscript().run()}
+          className={`px-2 py-1 text-sm rounded hover:bg-slate-200 transition-colors ${
+            editor.isActive('subscript') ? 'bg-slate-300' : 'bg-white'
+          }`}
+          title="Subscript"
+        >
+          X<sub>2</sub>
         </button>
         
         <div className="w-px h-6 bg-slate-300 mx-1" />

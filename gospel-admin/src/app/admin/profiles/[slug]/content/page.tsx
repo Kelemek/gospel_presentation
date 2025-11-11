@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { GospelProfile, GospelSection } from '@/lib/types'
 import AdminHeader from '@/components/AdminHeader'
 import ScriptureHoverModal from '@/components/ScriptureHoverModal'
-import InlineEditableText from '@/components/InlineEditableText'
+import InlineRichTextEditor from '@/components/InlineRichTextEditor'
 import RichTextEditor from '@/components/RichTextEditor'
 import { createClient } from '@/lib/supabase/client'
 
@@ -1166,7 +1166,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
             <div className="mb-6">
               <div className="flex items-start justify-between gap-3 mb-4">
                 <div className="flex-1 min-w-0">
-                  <InlineEditableText
+                  <InlineRichTextEditor
                     value={section.title}
                     onChange={(newTitle) => {
                       updateSection(sectionIndex, 'title', newTitle)
@@ -1199,7 +1199,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                 <div key={subsectionIndex} className="border-l-4 border-slate-300 pl-6 mb-6 bg-slate-50 rounded-r-lg py-4">
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex-1 min-w-0">
-                      <InlineEditableText
+                      <InlineRichTextEditor
                         value={subsection.title}
                         onChange={(newTitle) => {
                           updateSubsection(sectionIndex, subsectionIndex, 'title', newTitle)
@@ -1538,7 +1538,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                     <div key={nestedIndex} className="ml-4 mt-4 border-l-2 border-slate-300 pl-4 bg-gradient-to-r from-slate-25 to-blue-25 rounded-r-lg py-3">
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="flex-1 min-w-0">
-                          <InlineEditableText
+                          <InlineRichTextEditor
                             value={nested.title}
                             onChange={(newTitle) => {
                               updateNestedSubsection(sectionIndex, subsectionIndex, nestedIndex, 'title', newTitle)

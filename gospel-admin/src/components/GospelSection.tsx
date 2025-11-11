@@ -436,7 +436,10 @@ function NestedSubsectionComponent({ nestedSubsection, onScriptureClick, lastVie
     <>
       <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
       <div className="ml-6 mt-4 border-l-2 border-gray-200 pl-4 print-subsection">
-        <h5 className="font-medium text-slate-800 mb-2 print-subsection-title text-lg md:text-xl">{nestedSubsection.title}</h5>
+        <h5 
+          className="font-medium text-slate-800 mb-2 print-subsection-title text-lg md:text-xl"
+          dangerouslySetInnerHTML={{ __html: nestedSubsection.title }}
+        />
         <div className="text-slate-700 mb-2 print-content text-base md:text-lg leading-relaxed">
           <TextWithComaButtons 
             text={nestedSubsection.content} 
@@ -471,7 +474,10 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
     <>
       <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
       <div id={`${sectionId}-${subsectionIndex}`} className="mb-6 print-subsection">
-        <h4 className="text-xl md:text-2xl font-semibold text-slate-800 mb-3 print-subsection-title">{subsection.title}</h4>
+        <h4 
+          className="text-xl md:text-2xl font-semibold text-slate-800 mb-3 print-subsection-title"
+          dangerouslySetInnerHTML={{ __html: subsection.title }}
+        />
         <div className="text-slate-700 mb-3 leading-relaxed print-content text-base md:text-lg">
           <TextWithComaButtons 
             text={subsection.content} 
@@ -522,9 +528,10 @@ export default function GospelSection({ section, onScriptureClick, lastViewedScr
   
   return (
     <section id={sectionId} className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 print-section">
-      <h3 className="text-3xl md:text-4xl font-bold text-slate-800 mb-6 pb-3 border-b border-gray-200 print-section-header">
-        {section.title}
-      </h3>
+      <h3 
+        className="text-3xl md:text-4xl font-bold text-slate-800 mb-6 pb-3 border-b border-gray-200 print-section-header"
+        dangerouslySetInnerHTML={{ __html: section.title }}
+      />
       
       <div className="space-y-8">
         {section.subsections.map((subsection, index) => (
