@@ -250,3 +250,17 @@ jest.mock('@/lib/supabase/client', () => ({
     }
   })
 }))
+
+// Provide a reusable, lightweight mock for the TipTap-based RichTextEditor
+// used across admin pages. TipTap/ProseMirror relies on browser APIs that
+// JSDOM doesn't fully implement, so tests should use this simple textarea
+// implementation by default. Individual tests can still override this mock
+// when they need to exercise editor behavior.
+jest.mock('@/components/RichTextEditor', () => ({ __esModule: true, default: ({ value, onChange, placeholder = 'Click to edit...' }) => {
+  const React = require('react')
+  return React.createElement('textarea', {
+    placeholder,
+    value: value || '',
+    onChange: (e) => onChange && onChange(e.target.value),
+  })
+} }))
