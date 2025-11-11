@@ -235,6 +235,37 @@ body {
   list-style-type: decimal;
 }
 
+/* Question content with rich text formatting */
+.question-content {
+  line-height: 1.25rem;
+}
+
+.question-content ul {
+  list-style-type: disc !important;
+  padding-left: 1.5rem !important;
+  margin: 0.5rem 0 !important;
+}
+
+.question-content ol {
+  list-style-type: decimal !important;
+  padding-left: 1.5rem !important;
+  margin: 0.5rem 0 !important;
+}
+
+.question-content li {
+  display: list-item !important;
+  margin-left: 0 !important;
+}
+
+.question-content p {
+  margin: 0;
+  line-height: 1.25rem;
+}
+
+.question-content p:first-child {
+  margin-top: -2px;
+}
+
 /* Hierarchical outline numbering: 1. a. i. α. */
 /* For both editor (ProseMirror) and preview */
 .ProseMirror ol.outline-style,

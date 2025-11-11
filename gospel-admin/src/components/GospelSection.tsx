@@ -248,6 +248,24 @@ function Questions({ questions, profileSlug, savedAnswers = [] }: QuestionsProps
 
   // Parse question to extract prefix and detail (e.g., "Context:" and the rest)
   const parseQuestion = (questionText: string) => {
+    // Don't parse as collapsible if the text contains HTML tags (from rich text editor)
+    // This prevents formatted questions from being treated as collapsible
+    const hasHtmlTags = /<[^>]+>/.test(questionText)
+    if (hasHtmlTags) {
+      return { prefix: questionText, detail: null }
+    }
+    
+    // Only treat as collapsible if it starts with specific patterns like "Context:", "Observation:", etc.
+    // This is more restrictive and prevents accidental collapsing
+    const collapsiblePrefixes = ['Context:', 'Observation:', 'Meaning:', 'Application:']
+    const startsWithCollapsiblePrefix = collapsiblePrefixes.some(prefix => 
+      questionText.trim().startsWith(prefix)
+    )
+    
+    if (!startsWithCollapsiblePrefix) {
+      return { prefix: questionText, detail: null }
+    }
+    
     // Find the first colon in the text
     const colonIndex = questionText.indexOf(':')
     if (colonIndex !== -1 && colonIndex > 0) {
@@ -337,38 +355,46 @@ function Questions({ questions, profileSlug, savedAnswers = [] }: QuestionsProps
         const isSaved = savedStatus[question.id]
         const isExpanded = expandedQuestions[question.id]
         const { prefix, detail } = parseQuestion(question.question)
+        const hasHtmlTags = /<[^>]+>/.test(question.question)
         
         return (
           <div key={question.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3 print:p-2 print:space-y-1">
-            <div className="mb-2">
-              <span className="text-sm text-slate-600">{index + 1}. </span>
-              {detail ? (
-                <div className="inline">
-                  <button
-                    onClick={() => toggleQuestion(question.id)}
-                    className="inline-flex items-center gap-1 px-2 py-1 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors"
-                  >
-                    {prefix}
-                    <svg 
-                      className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
+            <div className="mb-2 flex gap-1">
+              <span className="text-sm text-slate-600 flex-shrink-0 relative top-[2px]">{index + 1}. </span>
+              <div className="flex-1">
+                {detail ? (
+                  <div>
+                    <button
+                      onClick={() => toggleQuestion(question.id)}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  {isExpanded && (
-                    <div className="mt-2 text-sm text-slate-700 pl-4 border-l-2 border-blue-200">
-                      <TextWithComaButtons text={detail} onComaClick={() => setShowComaModal(true)} />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <span className="font-medium text-slate-800 text-sm">
-                  <TextWithComaButtons text={question.question} onComaClick={() => setShowComaModal(true)} />
-                </span>
-              )}
+                      {prefix}
+                      <svg 
+                        className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {isExpanded && (
+                      <div className="mt-2 text-sm text-slate-700 pl-4 border-l-2 border-blue-200">
+                        <TextWithComaButtons text={detail} onComaClick={() => setShowComaModal(true)} />
+                      </div>
+                    )}
+                  </div>
+                ) : hasHtmlTags ? (
+                  <div 
+                    className="question-content font-medium text-slate-800 text-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: question.question }}
+                  />
+                ) : (
+                  <span className="font-medium text-slate-800 text-sm">
+                    <TextWithComaButtons text={question.question} onComaClick={() => setShowComaModal(true)} />
+                  </span>
+                )}
+              </div>
             </div>
             <div className="space-y-1.5 print:space-y-0">
               <textarea

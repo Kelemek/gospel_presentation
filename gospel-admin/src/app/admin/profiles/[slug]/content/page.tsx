@@ -1093,13 +1093,14 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                 COMA Instructions (shown when clicking "C.O.M.A." in text)
               </label>
               <p className="text-xs text-slate-500 mb-2">
-                You can use HTML tags like &lt;br&gt; for line breaks, &lt;strong&gt; for bold, etc.
+                You can use rich text formatting with the toolbar below.
               </p>
-              <textarea
+              <RichTextEditor
                 value={comaInstructions}
-                onChange={(e) => saveComaTemplate(comaTemplate, e.target.value)}
-                rows={6}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                onChange={(newValue) => saveComaTemplate(comaTemplate, newValue)}
+                multiline
+                as="div"
+                className="w-full text-sm"
                 placeholder="Enter COMA method instructions..."
               />
             </div>
@@ -1129,17 +1130,18 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                     </button>
                   </div>
                   <p className="text-xs text-slate-500 mb-2">
-                    Supports HTML: use &lt;br&gt; for line breaks, &lt;strong&gt; for bold, &lt;em&gt; for italic, etc.
+                    Use the rich text toolbar for formatting.
                   </p>
-                  <textarea
+                  <RichTextEditor
                     value={question}
-                    onChange={(e) => {
+                    onChange={(newValue) => {
                       const newTemplate = [...comaTemplate]
-                      newTemplate[index] = e.target.value
+                      newTemplate[index] = newValue
                       saveComaTemplate(newTemplate)
                     }}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    multiline
+                    as="div"
+                    className="w-full text-sm"
                     placeholder="Enter question text..."
                   />
                 </div>
@@ -1434,13 +1436,13 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                     {addingQuestionToSection === `${sectionIndex}-${subsectionIndex}` && (
                       <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 mb-3">
                         <div className="flex flex-col gap-2">
-                          <textarea
+                          <RichTextEditor
                             value={newQuestion}
-                            onChange={(e) => setNewQuestion(e.target.value)}
+                            onChange={(newValue) => setNewQuestion(newValue)}
                             placeholder="Enter your question (max 500 characters)"
-                            maxLength={500}
-                            rows={3}
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 shadow-sm resize-y"
+                            multiline
+                            as="div"
+                            className="w-full text-sm"
                           />
                           <div className="flex items-center justify-between">
                             <span className="text-xs text-slate-500">{newQuestion.length}/500 characters</span>
@@ -1471,17 +1473,12 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                                 <div className="flex-1">
                                   {isEditing ? (
                                     <div className="space-y-2">
-                                      <textarea
+                                      <RichTextEditor
                                         value={editingQuestionValue}
-                                        onChange={(e) => setEditingQuestionValue(e.target.value)}
-                                        maxLength={500}
-                                        rows={3}
-                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400"
-                                        onKeyDown={(e) => {
-                                          if (e.key === 'Escape') {
-                                            cancelEditingQuestion()
-                                          }
-                                        }}
+                                        onChange={(newValue) => setEditingQuestionValue(newValue)}
+                                        multiline
+                                        as="div"
+                                        className="w-full text-sm"
                                       />
                                       <div className="flex gap-2">
                                         <button
@@ -1775,13 +1772,13 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                         {addingQuestionToSection === `${sectionIndex}-${subsectionIndex}-${nestedIndex}` && (
                           <div className="bg-slate-50 border border-slate-200 rounded p-2 mb-2">
                             <div className="flex flex-col gap-2">
-                              <textarea
+                              <RichTextEditor
                                 value={newQuestion}
-                                onChange={(e) => setNewQuestion(e.target.value)}
+                                onChange={(newValue) => setNewQuestion(newValue)}
                                 placeholder="Enter your question (max 500 characters)"
-                                maxLength={500}
-                                rows={2}
-                                className="w-full px-2 py-1.5 border border-slate-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-slate-400 resize-y"
+                                multiline
+                                as="div"
+                                className="w-full text-xs"
                               />
                               <div className="flex items-center justify-between">
                                 <span className="text-xs text-slate-500">{newQuestion.length}/500</span>
@@ -1812,17 +1809,12 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                                     <div className="flex-1">
                                       {isEditing ? (
                                         <div className="space-y-2">
-                                          <textarea
+                                          <RichTextEditor
                                             value={editingQuestionValue}
-                                            onChange={(e) => setEditingQuestionValue(e.target.value)}
-                                            maxLength={500}
-                                            rows={2}
-                                            className="w-full px-2 py-1.5 border border-slate-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-slate-400"
-                                            onKeyDown={(e) => {
-                                              if (e.key === 'Escape') {
-                                                cancelEditingQuestion()
-                                              }
-                                            }}
+                                            onChange={(newValue) => setEditingQuestionValue(newValue)}
+                                            multiline
+                                            as="div"
+                                            className="w-full text-xs"
                                           />
                                           <div className="flex gap-1">
                                             <button
