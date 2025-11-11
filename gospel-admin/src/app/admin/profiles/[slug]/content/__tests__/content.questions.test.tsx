@@ -5,6 +5,12 @@ import userEvent from '@testing-library/user-event'
 // Keep the page small by mocking heavy child components
 jest.mock('@/components/AdminHeader', () => ({ __esModule: true, default: ({ title }: any) => <div data-testid="admin-header">{title}</div> }))
 jest.mock('@/components/ScriptureHoverModal', () => ({ __esModule: true, default: ({ children }: any) => <div>{children}</div> }))
+// Mock the RichTextEditor used in admin pages to a simple textarea so tests can
+// interact with it synchronously (TipTap/ProseMirror requires browser APIs
+// that JSDOM doesn't fully implement).
+jest.mock('@/components/RichTextEditor', () => ({ __esModule: true, default: ({ value, onChange, placeholder }: any) => (
+  <textarea placeholder={placeholder} value={value} onChange={(e: any) => onChange(e.target.value)} />
+) }))
 
 // Mock supabase auth used during checkAuth
 jest.mock('@/lib/supabase/client', () => ({
@@ -63,6 +69,8 @@ test('apply COMA template populates questions and adding a question works', asyn
   expect(addQuestionButtons.length).toBeGreaterThan(0)
   await userEvent.click(addQuestionButtons[0])
 
+  // The RichTextEditor is mocked to a textarea in tests, so we can find it
+  // by its placeholder and type into it.
   const textarea = await screen.findByPlaceholderText(/Enter your question/i)
   await userEvent.type(textarea, 'What does this passage mean?')
 
