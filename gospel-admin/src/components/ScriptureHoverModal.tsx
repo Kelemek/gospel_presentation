@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from '@/contexts/TranslationContext'
 
 interface ScriptureHoverModalProps {
   reference: string
@@ -11,6 +12,7 @@ interface ScriptureHoverModalProps {
 interface ScriptureData {
   reference: string
   text: string
+  translation?: string
 }
 
 export default function ScriptureHoverModal({ reference, children, hoverDelayMs = 1000 }: ScriptureHoverModalProps) {
@@ -21,8 +23,14 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isAbove, setIsAbove] = useState(true)
   
+  const { translation } = useTranslation()
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Clear cached scripture when translation changes
+  useEffect(() => {
+    setScriptureData(null)
+  }, [translation])
 
   const fetchScriptureText = async () => {
     if (scriptureData) return // Already fetched
@@ -31,7 +39,7 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
     setError(null)
 
     try {
-      const response = await fetch(`/api/scripture?reference=${encodeURIComponent(reference)}`)
+      const response = await fetch(`/api/scripture?reference=${encodeURIComponent(reference)}&translation=${translation}`)
       const data = await response.json()
 
       if (response.ok) {

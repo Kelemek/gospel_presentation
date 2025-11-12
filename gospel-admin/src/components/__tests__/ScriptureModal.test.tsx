@@ -136,7 +136,7 @@ describe('ScriptureModal Component', () => {
     render(<ScriptureModal {...defaultProps} />)
     
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/scripture?reference=John%203%3A16')
+      expect(mockFetch).toHaveBeenCalledWith('/api/scripture?reference=John%203%3A16&translation=esv')
     })
   })
 

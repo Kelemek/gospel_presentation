@@ -95,6 +95,7 @@ export interface Database {
           id: string
           role: UserRole
           display_name: string | null
+          preferred_translation: string | null
           created_at: string
           updated_at: string
         }
@@ -102,6 +103,7 @@ export interface Database {
           id: string
           role?: UserRole
           display_name?: string | null
+          preferred_translation?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -109,6 +111,7 @@ export interface Database {
           id?: string
           role?: UserRole
           display_name?: string | null
+          preferred_translation?: string | null
           created_at?: string
           updated_at?: string
         }

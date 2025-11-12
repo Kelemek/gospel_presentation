@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import AdminHeader from '@/components/AdminHeader'
 import AdminErrorBoundary from '@/components/AdminErrorBoundary'
+import TranslationSettings from '@/components/TranslationSettings'
 import { createClient } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
 import { useSessionMonitor } from '@/hooks/useSessionMonitor'
@@ -185,7 +186,7 @@ function AdminPageContent() {
         setError('Failed to fetch profiles')
       }
     } catch (error) {
-      console.error('Error fetching profiles:', error)
+      logger.error('Error fetching profiles:', error)
       setError('Error loading profiles')
     } finally {
       setIsLoading(false)
@@ -732,6 +733,13 @@ function AdminPageContent() {
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <div className="text-red-800">{error}</div>
+          </div>
+        )}
+
+        {/* Translation Settings - Admin Only */}
+        {userRole === 'admin' && (
+          <div className="mb-6">
+            <TranslationSettings />
           </div>
         )}
 

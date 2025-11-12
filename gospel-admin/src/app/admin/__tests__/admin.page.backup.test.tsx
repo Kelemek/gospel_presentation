@@ -54,17 +54,18 @@ describe('AdminPageContent backup/restore flows', () => {
     // GET /api/profiles/:slug -> returns full profile with gospelData
     // Use mockImplementationOnce sequence
     // @ts-ignore
-    global.fetch = jest.fn()
-      .mockImplementationOnce((url, opts) => {
-        if (url === '/api/profiles') return Promise.resolve({ ok: true, json: async () => ({ profiles: [profile] }) })
-        return Promise.resolve({ ok: true, json: async () => ({}) })
-      })
-      .mockImplementationOnce((url, opts) => {
-        if (typeof url === 'string' && url.startsWith(`/api/profiles/${slug}`)) {
-          return Promise.resolve({ ok: true, json: async () => ({ profile: { ...profile, gospelData: [{ id: 'g1' }] } }) })
-        }
-        return Promise.resolve({ ok: true, json: async () => ({}) })
-      })
+    global.fetch = jest.fn((url, opts) => {
+      // initial profiles list
+      if (url === '/api/profiles') return Promise.resolve({ ok: true, json: async () => ({ profiles: [profile] }) })
+
+      // fetch full profile by slug (download flow)
+      if (typeof url === 'string' && url.startsWith(`/api/profiles/${slug}`)) {
+        return Promise.resolve({ ok: true, json: async () => ({ profile: { ...profile, gospelData: [{ id: 'g1' }] } }) })
+      }
+
+      // default safe response for any other API calls
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    })
 
     // Spy on URL.createObjectURL and revoke
     const origCreate = URL.createObjectURL

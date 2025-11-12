@@ -106,6 +106,8 @@ process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://test.supabase.co'
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test-anon-key'
 process.env.SUPABASE_SERVICE_KEY = 'test-service-key'
 process.env.ESV_API_KEY = 'test-esv-key'
+// Some code expects ESV API token to be in ESV_API_TOKEN; provide both for tests
+process.env.ESV_API_TOKEN = process.env.ESV_API_TOKEN || process.env.ESV_API_KEY
 
 // Note: Netlify blobs were used historically. The project now uses Supabase for
 // blob storage; remove legacy Netlify mocks when no tests require them.
@@ -264,3 +266,32 @@ jest.mock('@/components/RichTextEditor', () => ({ __esModule: true, default: ({ 
     onChange: (e) => onChange && onChange(e.target.value),
   })
 } }))
+
+// Provide a lightweight default mock for the TranslationContext used by many
+// components. Tests that need specific behavior can still mock the module
+// themselves or import the real provider. This prevents errors like
+// "useTranslation must be used within a TranslationProvider" when tests
+// render components that call useTranslation.
+jest.mock('@/contexts/TranslationContext', () => {
+  const React = require('react')
+  const defaultContext = {
+    translation: 'esv',
+    setTranslation: jest.fn(),
+    isLoading: false,
+    enabledTranslations: ['esv', 'kjv', 'nasb'],
+  }
+
+  return {
+    __esModule: true,
+    // A no-op provider that simply renders children
+    TranslationProvider: ({ children }) => React.createElement(React.Fragment, null, children),
+    // Hook used by components
+    useTranslation: () => defaultContext,
+    // Export the type-like constants for tests that import them
+    BibleTranslation: {
+      esv: 'esv',
+      kjv: 'kjv',
+      nasb: 'nasb'
+    }
+  }
+})

@@ -1,5 +1,6 @@
 // Gospel Presentation Data - Managed via Profile System
 import { GospelSection } from './types'
+import { logger } from '@/lib/logger'
 
 // This function fetches data from the profile system
 export async function getGospelPresentationData(): Promise<GospelSection[]> {
@@ -15,7 +16,7 @@ export async function getGospelPresentationData(): Promise<GospelSection[]> {
     const profile = await response.json()
     return profile.content.sections || []
   } catch (error) {
-    console.error('Error fetching gospel presentation data:', error)
+    logger.error('Error fetching gospel presentation data:', error)
     // Return fallback data if API fails
     return getFallbackData()
   }

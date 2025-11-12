@@ -39,8 +39,10 @@ describe('supabase-data-service additional branches', () => {
 
     const res = await getProfiles()
     expect(Array.isArray(res)).toBe(true)
-    expect(res[0].ownerDisplayName).toBe('User One')
-    expect(res[0].counseleeEmails).toContain('x@x.com')
+  expect(res[0].ownerDisplayName).toBe('User One')
+  // counseleeEmails is added by mapping logic; cast to any in the test to avoid
+  // tight coupling with the GospelProfile type used in the implementation.
+  expect((res[0] as any).counseleeEmails).toContain('x@x.com')
   })
 
   it('updateProfile returns mapped profile', async () => {

@@ -22,7 +22,8 @@ export default function CopyrightPage() {
           {/* Content Attribution Section */}
           <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-6 border-b border-gray-200 pb-3">Content Attribution</h2>
-            <div className="bg-blue-50 border-l-4 border-blue-400 rounded-lg p-6">
+            
+            <div className="bg-blue-50 border-l-4 border-blue-400 rounded-lg p-6 mb-6">
               <p className="text-slate-700 mb-3 leading-relaxed text-base md:text-lg">
                 <strong className="text-slate-800">Gospel Presentation Content:</strong> "Presenting the Gospel in its Context" by Dr. Stuart Scott
               </p>
@@ -30,12 +31,20 @@ export default function CopyrightPage() {
                 <strong className="text-slate-800">Original Resource:</strong> <a href="https://oneeightyministries.org/resources/the-gospel-in-context/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline transition-colors">oneeightyministries.org/resources/the-gospel-in-context/</a>
               </p>
             </div>
+
+            <div className="bg-purple-50 border-l-4 border-purple-400 rounded-lg p-6">
+              <p className="text-slate-700 mb-3 leading-relaxed text-base md:text-lg">
+                <strong className="text-slate-800">Marriage Enrichment Content:</strong> "God-Centered Marriage: A Marriage Enrichment Seminar from a Biblical Perspective" by Dr. Randy Westerberg
+              </p>
+            </div>
           </section>
 
           {/* Scripture Attribution Section */}
           <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-800 mb-6 border-b border-gray-200 pb-3">Scripture Attribution</h2>
-            <div className="bg-green-50 border-l-4 border-green-400 rounded-lg p-6">
+            
+            <div className="bg-green-50 border-l-4 border-green-400 rounded-lg p-6 mb-6">
+              <h3 className="text-xl font-bold text-slate-800 mb-3">English Standard Version (ESV)</h3>
               <p className="text-slate-700 mb-4 leading-relaxed text-base md:text-lg">
                 Scripture quotations are from the <strong>ESV® Bible</strong> (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. All rights reserved. The ESV text may not be quoted in any publication made available to the public by a Creative Commons license. The ESV may not be translated into any other language.
               </p>
@@ -44,6 +53,26 @@ export default function CopyrightPage() {
               </p>
               <p className="text-slate-700 text-base md:text-lg">
                 <strong className="text-slate-800">ESV API:</strong> <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline transition-colors">www.esv.org</a>
+              </p>
+            </div>
+
+            <div className="bg-blue-50 border-l-4 border-blue-400 rounded-lg p-6 mb-6">
+              <h3 className="text-xl font-bold text-slate-800 mb-3">King James Version (KJV)</h3>
+              <p className="text-slate-700 mb-4 leading-relaxed text-base md:text-lg">
+                Scripture quotations from the King James Version (KJV) are in the public domain.
+              </p>
+              <p className="text-slate-700 text-base md:text-lg">
+                <strong className="text-slate-800">Provided by:</strong> <a href="https://scripture.api.bible" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline transition-colors">API.Bible</a>
+              </p>
+            </div>
+
+            <div className="bg-purple-50 border-l-4 border-purple-400 rounded-lg p-6">
+              <h3 className="text-xl font-bold text-slate-800 mb-3">New American Standard Bible (NASB 1995)</h3>
+              <p className="text-slate-700 mb-4 leading-relaxed text-base md:text-lg">
+                Scripture quotations taken from the <strong>New American Standard Bible®</strong> (NASB), Copyright © 1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation. Used by permission. All rights reserved. <a href="https://www.lockman.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline transition-colors">www.lockman.org</a>
+              </p>
+              <p className="text-slate-700 text-base md:text-lg">
+                <strong className="text-slate-800">Provided by:</strong> <a href="https://scripture.api.bible" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline transition-colors">API.Bible</a>
               </p>
             </div>
           </section>
@@ -97,7 +126,10 @@ export default function CopyrightPage() {
                   <strong className="text-slate-800">User Roles:</strong> Admin (full access) & Counselor (own profiles only)
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
-                  <strong className="text-slate-800">Scripture API:</strong> ESV API v3 (dynamic text retrieval)
+                  <strong className="text-slate-800">Scripture APIs:</strong> ESV API v3, <a href="https://scripture.api.bible" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline transition-colors">API.Bible</a> (KJV, NASB)
+                </p>
+                <p className="text-slate-700 text-base md:text-lg">
+                  <strong className="text-slate-800">Rich Text Editor:</strong> <a href="https://tiptap.dev" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline transition-colors">Tiptap Editor</a> (MIT License)
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
                   <strong className="text-slate-800">Hosting:</strong> Vercel (Edge Network, automatic deployments)
@@ -137,6 +169,9 @@ export default function CopyrightPage() {
           </div>
           <p className="text-sm opacity-80 mb-2">
             Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission.
+          </p>
+          <p className="text-sm opacity-80 mb-2">
+            King James Version (KJV) scripture quotations are in the public domain. New American Standard Bible® (NASB 1995), © 1960-1995 by The Lockman Foundation. Used by permission. Provided by <a href="https://scripture.api.bible" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">API.Bible</a>.
           </p>
           <p className="text-sm opacity-80">
               <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline mr-4 transition-colors">

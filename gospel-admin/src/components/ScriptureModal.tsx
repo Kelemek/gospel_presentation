@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useTranslation } from '@/contexts/TranslationContext'
 
 interface ScriptureModalProps {
   reference: string
@@ -36,6 +37,7 @@ export default function ScriptureModal({
   context,
   onScriptureViewed
 }: ScriptureModalProps) {
+  const { translation } = useTranslation()
   const [scriptureText, setScriptureText] = useState<string>('')
   const [chapterText, setChapterText] = useState<string>('')
   const [showingContext, setShowingContext] = useState(false)
@@ -80,7 +82,7 @@ export default function ScriptureModal({
     setError('')
 
     try {
-      const response = await fetch(`/api/scripture?reference=${encodeURIComponent(chapterRef)}`)
+      const response = await fetch(`/api/scripture?reference=${encodeURIComponent(chapterRef)}&translation=${translation}`)
       const data = await response.json()
       
       if (data.error) {
@@ -131,6 +133,13 @@ export default function ScriptureModal({
     }
   }, [showingContext, chapterText, reference])
 
+  // Clear cached scripture when translation changes
+  useEffect(() => {
+    setScriptureText('')
+    setChapterText('')
+    setShowingContext(false)
+  }, [translation])
+
   useEffect(() => {
     if (isOpen && reference) {
       setLoading(true)
@@ -139,7 +148,7 @@ export default function ScriptureModal({
       setChapterText('')
       setShowingContext(false)
 
-      fetch(`/api/scripture?reference=${encodeURIComponent(reference)}`)
+      fetch(`/api/scripture?reference=${encodeURIComponent(reference)}&translation=${translation}`)
         .then(response => response.json())
         .then(data => {
           if (data.error) {
@@ -364,14 +373,40 @@ export default function ScriptureModal({
         
         {/* Fixed Footer */}
         <div className="bg-slate-50 px-4 pt-2 border-t flex-shrink-0 md:rounded-b-lg" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
-          <p className="text-xs text-slate-500 text-center mb-1">
-            Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission.
-          </p>
-          <p className="text-xs text-slate-500 text-center">
-            <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
-              www.esv.org
-            </a>
-          </p>
+          {translation === 'esv' ? (
+            <>
+              <p className="text-xs text-slate-500 text-center mb-1">
+                Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission.
+              </p>
+              <p className="text-xs text-slate-500 text-center">
+                <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
+                  www.esv.org
+                </a>
+              </p>
+            </>
+          ) : translation === 'kjv' ? (
+            <>
+              <p className="text-xs text-slate-500 text-center mb-1">
+                Scripture quotations are from the King James Version (KJV), which is in the public domain.
+              </p>
+              <p className="text-xs text-slate-500 text-center">
+                Provided by <a href="https://scripture.api.bible" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
+                  API.Bible
+                </a>
+              </p>
+            </>
+          ) : translation === 'nasb' ? (
+            <>
+              <p className="text-xs text-slate-500 text-center mb-1">
+                Scripture quotations taken from the New American Standard Bible® (NASB), Copyright © 1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation. Used by permission.
+              </p>
+              <p className="text-xs text-slate-500 text-center">
+                Provided by <a href="https://scripture.api.bible" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
+                  API.Bible
+                </a>
+              </p>
+            </>
+          ) : null}
         </div>
       </div>
     </div>

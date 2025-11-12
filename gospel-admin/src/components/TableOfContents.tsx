@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { useTranslation, BibleTranslation } from '@/contexts/TranslationContext'
 
 interface TableOfContentsProps {
   sections: GospelSection[]
@@ -13,6 +14,7 @@ interface TableOfContentsProps {
 
 export default function TableOfContents({ sections, currentProfileSlug }: TableOfContentsProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const { translation, setTranslation, enabledTranslations } = useTranslation()
   const router = useRouter()
 
   useEffect(() => {
@@ -26,6 +28,11 @@ export default function TableOfContents({ sections, currentProfileSlug }: TableO
 
   const handlePrint = () => {
     window.print()
+  }
+
+  const handleTranslationChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newTranslation = e.target.value as BibleTranslation
+    await setTranslation(newTranslation)
   }
 
   return (
@@ -66,6 +73,29 @@ export default function TableOfContents({ sections, currentProfileSlug }: TableO
           </svg>
           Print Version
         </button>
+        
+        {/* Bible Translation Selector */}
+        <div className="mt-3">
+          <label htmlFor="bible-translation" className="block text-sm font-medium text-slate-700 mb-2">
+            Bible Translation
+          </label>
+          <select
+            id="bible-translation"
+            value={translation}
+            onChange={handleTranslationChange}
+            className="w-full px-3 py-2 border border-slate-200 hover:border-slate-300 focus:border-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 text-slate-900 bg-white shadow-sm text-sm transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat pr-10"
+          >
+            {enabledTranslations.includes('esv') && (
+              <option value="esv">ESV (English Standard Version)</option>
+            )}
+            {enabledTranslations.includes('kjv') && (
+              <option value="kjv">KJV (King James Version)</option>
+            )}
+            {enabledTranslations.includes('nasb') && (
+              <option value="nasb">NASB (New American Standard Bible)</option>
+            )}
+          </select>
+        </div>
       </div>
       {sections.map((section) => (
         <div key={section.section} className="mb-4 md:mb-3">

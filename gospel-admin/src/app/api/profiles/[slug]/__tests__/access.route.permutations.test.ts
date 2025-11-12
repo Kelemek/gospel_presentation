@@ -32,7 +32,8 @@ describe('access route permutations (programmatic)', () => {
                 }
                 // user_profiles
                 if (userProfile === 'undefined') return { data: null }
-                if (userProfile === {}) return { data: {} }
+                // userProfile may be an empty object in the permutations -> detect object shape
+                if (typeof userProfile === 'object' && Object.keys(userProfile).length === 0) return { data: {} }
                 return { data: { role: userProfile } }
               }
             })
