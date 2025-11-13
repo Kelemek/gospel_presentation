@@ -95,7 +95,7 @@ export default function RichTextEditor({
   return (
     <div className="rich-text-editor">
       {/* Toolbar */}
-      <div className="flex items-center gap-1 mb-2 p-2 bg-slate-50 border border-slate-200 rounded-t-lg">
+      <div className="flex flex-wrap items-center gap-1 mb-2 p-2 bg-slate-50 border border-slate-200 rounded-t-lg">
         <button
           onClick={() => editor.chain().focus().toggleBold().run()}
           disabled={!editor.can().chain().focus().toggleBold().run()}
