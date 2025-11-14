@@ -1,5 +1,34 @@
 import { GET } from '../route'
 
+// Mock Supabase admin client for cache operations
+jest.mock('@/lib/supabase/server', () => ({
+  createAdminClient: jest.fn(() => ({
+    from: jest.fn((table: string) => {
+      if (table === 'scripture_cache') {
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                gte: jest.fn().mockReturnValue({
+                  maybeSingle: jest.fn().mockResolvedValue({
+                    data: null, // cache miss - no cached data
+                    error: null
+                  })
+                })
+              })
+            })
+          }),
+          upsert: jest.fn().mockResolvedValue({
+            data: null,
+            error: null
+          })
+        }
+      }
+      return {}
+    })
+  }))
+}))
+
 describe('scripture API route', () => {
   beforeEach(() => {
     jest.resetModules()

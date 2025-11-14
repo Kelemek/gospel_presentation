@@ -1,0 +1,84 @@
+name: Cleanup Scripture Cache
+
+on:
+  # Run daily at 3 AM UTC (after backup completes at 2 AM)
+  schedule:
+    - cron: '0 3 * * *'
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      days_to_keep:
+        description: 'Number of days to keep cached entries'
+        required: false
+        default: '30'
+        type: string
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: |
+          npm install @supabase/supabase-js
+      
+      - name: Cleanup old scripture cache entries
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          node -e "
+          const { createClient } = require('@supabase/supabase-js');
+          
+          const supabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_KEY
+          );
+          
+          async function cleanupCache() {
+            try {
+              const daysToKeep = parseInt('${{ inputs.days_to_keep }}' || '30');
+              console.log(\`🧹 Cleaning up scripture cache entries older than \${daysToKeep} days...\`);
+              
+              // Call the cleanup function
+              const { data, error } = await supabase.rpc('cleanup_old_scripture_cache', {
+                days_to_keep: daysToKeep
+              });
+              
+              if (error) {
+                console.error('❌ Error cleaning up cache:', error);
+                process.exit(1);
+              }
+              
+              console.log(\`✅ Successfully deleted \${data} old scripture cache entries\`);
+              
+              // Get cache statistics
+              const { count, error: statsError } = await supabase
+                .from('scripture_cache')
+                .select('*', { count: 'exact', head: true });
+              
+              if (!statsError) {
+                console.log(\`📊 Remaining cache entries: \${count || 0}\`);
+              }
+              
+            } catch (err) {
+              console.error('❌ Cleanup failed:', err);
+              process.exit(1);
+            }
+          }
+          
+          cleanupCache();
+          "
+      
+      - name: Report cleanup results
+        if: success()
+        run: |
+          echo "✅ Scripture cache cleanup completed successfully"
