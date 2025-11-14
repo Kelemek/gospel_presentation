@@ -1026,7 +1026,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <AdminHeader
-          title={profile ? `${profile.title}` : "Content Editor"}
+          title={profile ? profile.title : "Content Editor"}
           description={profile?.description || "Edit gospel presentation content and scripture references"}
           currentProfileSlug={slug}
           showProfileSwitcher={true}

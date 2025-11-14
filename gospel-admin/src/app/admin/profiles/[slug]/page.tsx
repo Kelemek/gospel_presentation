@@ -256,7 +256,7 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <AdminHeader
-          title={profile ? `${profile.title}` : "Profile Settings"}
+          title={profile ? profile.title : "Profile Settings"}
           description={profile?.description || "Configure profile settings and information"}
           currentProfileSlug={slug}
           showProfileSwitcher={true}
@@ -306,10 +306,14 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
               <label htmlFor="title" className="block text-sm font-medium text-slate-700 mb-1">
                 Profile Title *
               </label>
-              <RichTextEditor
+              <input
+                id="title"
+                type="text"
                 value={editForm.title}
-                onChange={(value) => setEditForm(prev => ({ ...prev, title: value }))}
+                onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
                 placeholder="e.g., Mark Larson's Gospel Presentation"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
               />
             </div>
 
@@ -317,10 +321,13 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
               <label htmlFor="description" className="block text-sm font-medium text-slate-700 mb-1">
                 Description
               </label>
-              <RichTextEditor
+              <textarea
+                id="description"
                 value={editForm.description}
-                onChange={(value) => setEditForm(prev => ({ ...prev, description: value }))}
+                onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Optional description of this profile's purpose"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px]"
+                rows={4}
               />
             </div>
 
