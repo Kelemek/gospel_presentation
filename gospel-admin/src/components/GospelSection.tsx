@@ -248,33 +248,44 @@ function Questions({ questions, profileSlug, savedAnswers = [] }: QuestionsProps
 
   // Parse question to extract prefix and detail (e.g., "Context:" and the rest)
   const parseQuestion = (questionText: string) => {
-    // Don't parse as collapsible if the text contains HTML tags (from rich text editor)
-    // This prevents formatted questions from being treated as collapsible
+    // Extract plain text from HTML to check for collapsible patterns
     const hasHtmlTags = /<[^>]+>/.test(questionText)
+    let plainText = questionText
+    
     if (hasHtmlTags) {
-      return { prefix: questionText, detail: null }
+      // Remove HTML tags to get plain text for parsing
+      plainText = questionText.replace(/<[^>]+>/g, '')
     }
     
     // Only treat as collapsible if it starts with specific patterns like "Context:", "Observation:", etc.
     // This is more restrictive and prevents accidental collapsing
     const collapsiblePrefixes = ['Context:', 'Observation:', 'Meaning:', 'Application:']
     const startsWithCollapsiblePrefix = collapsiblePrefixes.some(prefix => 
-      questionText.trim().startsWith(prefix)
+      plainText.trim().startsWith(prefix)
     )
     
     if (!startsWithCollapsiblePrefix) {
       return { prefix: questionText, detail: null }
     }
     
-    // Find the first colon in the text
-    const colonIndex = questionText.indexOf(':')
+    // Find the first colon in the plain text
+    const colonIndex = plainText.indexOf(':')
     if (colonIndex !== -1 && colonIndex > 0) {
-      // Split at the first colon
-      const prefix = questionText.substring(0, colonIndex + 1) // Include the colon
-      const detail = questionText.substring(colonIndex + 1).trim() // Everything after, trimmed
+      // Split at the first colon on plain text
+      const prefixPlain = plainText.substring(0, colonIndex + 1) // Include the colon
+      const detailPlain = plainText.substring(colonIndex + 1).trim() // Everything after, trimmed
       
       // Only treat as collapsible if there's actual detail text
-      if (detail.length > 0) {
+      if (detailPlain.length > 0) {
+        // For the prefix, extract just the plain text part from the original
+        // This preserves any HTML formatting in the prefix
+        const prefixEndInOriginal = questionText.indexOf(prefixPlain.substring(prefixPlain.length - 1)) + 1
+        const prefix = questionText.substring(0, prefixEndInOriginal)
+        
+        // For detail, use the original HTML after the colon
+        const colonIndexInOriginal = questionText.indexOf(':')
+        const detail = questionText.substring(colonIndexInOriginal + 1).trim()
+        
         return { prefix, detail }
       }
     }
@@ -368,7 +379,11 @@ function Questions({ questions, profileSlug, savedAnswers = [] }: QuestionsProps
                       onClick={() => toggleQuestion(question.id)}
                       className="inline-flex items-center gap-1 px-2 py-1 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors"
                     >
-                      {prefix}
+                      {hasHtmlTags ? (
+                        <span dangerouslySetInnerHTML={{ __html: prefix }} />
+                      ) : (
+                        prefix
+                      )}
                       <svg 
                         className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
                         fill="none" 
@@ -380,7 +395,14 @@ function Questions({ questions, profileSlug, savedAnswers = [] }: QuestionsProps
                     </button>
                     {isExpanded && (
                       <div className="mt-2 text-sm text-slate-700 pl-4 border-l-2 border-blue-200">
-                        <TextWithComaButtons text={detail} onComaClick={() => setShowComaModal(true)} />
+                        {hasHtmlTags ? (
+                          <div 
+                            className="prose prose-slate max-w-none"
+                            dangerouslySetInnerHTML={{ __html: detail }}
+                          />
+                        ) : (
+                          <TextWithComaButtons text={detail} onComaClick={() => setShowComaModal(true)} />
+                        )}
                       </div>
                     )}
                   </div>
