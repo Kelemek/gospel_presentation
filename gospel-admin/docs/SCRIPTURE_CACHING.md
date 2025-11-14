@@ -45,6 +45,19 @@ Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
 ## Cache Management
 
+### Automatic LRU (Least Recently Used) Enforcement
+
+**ESV API Compliance:**
+The system automatically enforces the ESV API's 500-verse cache limit using LRU eviction:
+- When ESV cache exceeds 500 verses, least-recently-used entries are automatically deleted
+- This happens automatically after each new ESV verse is cached
+- Frequently accessed verses stay in cache longer
+- Ensures compliance with ESV API terms
+
+**API.Bible:**
+- No automatic eviction (unlimited caching allowed)
+- Only removed during scheduled 30-day TTL cleanup
+
 ### View Cache Statistics
 
 ```bash
@@ -54,7 +67,16 @@ curl https://your-domain.com/api/scripture/cache
 Returns:
 ```json
 {
-  "totalEntries": 283,
+  "totalEntries": 350,
+  "esvCache": {
+    "entries": 283,
+    "maxLimit": 500,
+    "compliance": "283/500 verses"
+  },
+  "apiBibleCache": {
+    "entries": 67,
+    "maxLimit": "Unlimited"
+  },
   "cacheTTLDays": 30
 }
 ```
@@ -111,14 +133,29 @@ SELECT cron.schedule(
 );
 ```
 
-## Storage Estimates
+## Storage Estimates & Compliance
 
+### Cache Size
 - **Average cache entry**: ~600 bytes
-- **283 verses × 3 translations**: ~0.5 MB
-- **1,000 entries**: ~0.6 MB
-- **10,000 entries**: ~6 MB
+- **283 verses (ESV)**: ~0.17 MB
+- **283 verses per API.Bible translation**: ~0.17 MB each
+- **Full cache (1 ESV + 3 API.Bible versions)**: ~0.68 MB
 
 Supabase free tier provides 500 MB, so caching is negligible.
+
+### API License Compliance
+
+**ESV API (Free Tier)**
+- ✅ **Cache limit**: 500 verses maximum
+- ✅ **Enforcement**: Automatic LRU eviction when limit exceeded
+- ✅ **Current compliance**: Real-time monitoring via cache stats endpoint
+- Cache entries older than 30 days also removed automatically
+
+**API.Bible (Free Tier)**
+- ✅ **Cache limit**: Unlimited (no restriction)
+- Uses FUMS Fair Use Management System for usage tracking
+- Caching is explicitly permitted
+- Entries removed only after 30-day TTL expires
 
 ## Monitoring
 

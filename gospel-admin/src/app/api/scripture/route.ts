@@ -4,6 +4,8 @@ import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/server'
 
 // Cache configuration
+// ESV API free tier: max 500 verses (we cache 283 = compliant)
+// API.Bible free tier: unlimited caching allowed
 const CACHE_TTL_DAYS = 30 // Number of days to keep cached entries
 
 export async function GET(request: NextRequest) {
@@ -77,6 +79,19 @@ export async function GET(request: NextRequest) {
       // Continue anyway - caching failure shouldn't break the request
     } else {
       logger.info(`💾 Cached: ${reference} (${translation})`)
+      
+      // For ESV API: enforce 500-verse limit (free tier restriction)
+      if (translation === 'esv') {
+        const { data: evictedCount, error: lruError } = await (supabase.rpc as any)(
+          'enforce_esv_cache_limit',
+          { p_max_verses: 500 }
+        )
+        if (lruError) {
+          logger.error('Failed to enforce cache limit:', lruError)
+        } else if (evictedCount > 0) {
+          logger.debug(`🗑️ Evicted ${evictedCount} old ESV cache entries to stay within 500-verse limit`)
+        }
+      }
     }
     
     return NextResponse.json(

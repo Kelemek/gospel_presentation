@@ -26,7 +26,8 @@ jest.mock('@/lib/supabase/server', () => ({
         }
       }
       return {}
-    })
+    }),
+    rpc: jest.fn().mockResolvedValue({ data: 0, error: null })
   }))
 }))
 

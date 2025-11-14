@@ -44,12 +44,20 @@ export async function GET() {
   try {
     const supabase = createAdminClient()
     
-    const { count, error } = await supabase
+    // Get ESV cache count
+    const { count: esvCount, error: esvError } = await supabase
       .from('scripture_cache' as any)
       .select('*', { count: 'exact', head: true })
+      .eq('translation', 'esv')
 
-    if (error) {
-      logger.error('Failed to get cache stats:', error)
+    // Get API.Bible cache count (all non-ESV entries)
+    const { count: apiBibleCount, error: apiBibleError } = await supabase
+      .from('scripture_cache' as any)
+      .select('*', { count: 'exact', head: true })
+      .neq('translation', 'esv')
+
+    if (esvError || apiBibleError) {
+      logger.error('Failed to get cache stats:', esvError || apiBibleError)
       return NextResponse.json(
         { error: 'Failed to get cache statistics' },
         { status: 500 }
@@ -57,7 +65,16 @@ export async function GET() {
     }
 
     return NextResponse.json({
-      totalEntries: count || 0,
+      totalEntries: (esvCount || 0) + (apiBibleCount || 0),
+      esvCache: {
+        entries: esvCount || 0,
+        maxLimit: 500,
+        compliance: `${esvCount || 0}/500 verses`
+      },
+      apiBibleCache: {
+        entries: apiBibleCount || 0,
+        maxLimit: 'Unlimited'
+      },
       cacheTTLDays: 30
     })
   } catch (error) {
