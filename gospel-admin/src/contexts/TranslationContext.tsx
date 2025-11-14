@@ -96,15 +96,25 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
       setTranslationState(newTranslation)
       
       // Check if user is logged in
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user }, error: userError } = await supabase.auth.getUser()
       
-      if (user) {
+      if (user && !userError) {
         // Save to user profile using direct API call
-        await fetch('/api/user/translation', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ translation: newTranslation })
-        })
+        try {
+          const response = await fetch('/api/user/translation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ translation: newTranslation })
+          })
+          
+          if (!response.ok) {
+            // Fall back to sessionStorage if API call fails
+            sessionStorage.setItem(STORAGE_KEY, newTranslation)
+          }
+        } catch (apiError) {
+          // Fall back to sessionStorage on API error
+          sessionStorage.setItem(STORAGE_KEY, newTranslation)
+        }
       } else {
         // Save to sessionStorage for anonymous users
         sessionStorage.setItem(STORAGE_KEY, newTranslation)

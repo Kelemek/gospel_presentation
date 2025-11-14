@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
@@ -13,16 +13,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = createAdminClient()
+    // First, authenticate the user with the regular client (has access to cookies)
+    const supabase = await createClient()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Update the user's profile with the new translation preference
-    // Using admin client to bypass RLS
-    const { error: updateError } = await (supabase
+    // Now use admin client to update (bypasses RLS)
+    const adminClient = createAdminClient()
+    const { error: updateError } = await (adminClient
       .from('user_profiles') as any)
       .update({ preferred_translation: translation })
       .eq('id', user.id)
