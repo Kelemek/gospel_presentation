@@ -540,7 +540,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
             Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission.
           </p>
           <p className="text-sm opacity-80 mb-2">
-            King James Version (KJV) scripture quotations are in the public domain. New American Standard Bible® (NASB 1995), © 1960-1995 by The Lockman Foundation. Used by permission. Provided by <a href="https://scripture.api.bible" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">API.Bible</a>.
+            King James Version (KJV) scripture quotations are in the public domain.
           </p>
           <p className="text-sm opacity-80">
             <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline mr-4">

@@ -306,8 +306,8 @@ export default function ScriptureModal({
               <div className="flex items-center gap-2 mb-2 text-slate-600">
                 <span className="font-medium">{context.subsectionTitle}</span>
               </div>
-              <div className="text-slate-600 text-sm md:text-base leading-relaxed">
-                {context.content}
+              <div className="prose prose-sm max-w-none text-slate-600 text-sm md:text-base leading-relaxed">
+                <div dangerouslySetInnerHTML={{ __html: context.content }} />
               </div>
             </div>
           </div>
@@ -385,27 +385,13 @@ export default function ScriptureModal({
               </p>
             </>
           ) : translation === 'kjv' ? (
-            <>
-              <p className="text-xs text-slate-500 text-center mb-1">
-                Scripture quotations are from the King James Version (KJV), which is in the public domain.
-              </p>
-              <p className="text-xs text-slate-500 text-center">
-                Provided by <a href="https://scripture.api.bible" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
-                  API.Bible
-                </a>
-              </p>
-            </>
+            <p className="text-xs text-slate-500 text-center">
+              Scripture quotations are from the King James Version (KJV), which is in the public domain.
+            </p>
           ) : translation === 'nasb' ? (
-            <>
-              <p className="text-xs text-slate-500 text-center mb-1">
-                Scripture quotations taken from the New American Standard Bible® (NASB), Copyright © 1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation. Used by permission.
-              </p>
-              <p className="text-xs text-slate-500 text-center">
-                Provided by <a href="https://scripture.api.bible" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
-                  API.Bible
-                </a>
-              </p>
-            </>
+            <p className="text-xs text-slate-500 text-center">
+              Scripture quotations taken from the New American Standard Bible® (NASB), Copyright © 1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation. Used by permission.
+            </p>
           ) : null}
         </div>
       </div>

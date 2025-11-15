@@ -56,23 +56,10 @@ export default function CopyrightPage() {
               </p>
             </div>
 
-            <div className="bg-blue-50 border-l-4 border-blue-400 rounded-lg p-6 mb-6">
+            <div className="bg-blue-50 border-l-4 border-blue-400 rounded-lg p-6">
               <h3 className="text-xl font-bold text-slate-800 mb-3">King James Version (KJV)</h3>
-              <p className="text-slate-700 mb-4 leading-relaxed text-base md:text-lg">
+              <p className="text-slate-700 leading-relaxed text-base md:text-lg">
                 Scripture quotations from the King James Version (KJV) are in the public domain.
-              </p>
-              <p className="text-slate-700 text-base md:text-lg">
-                <strong className="text-slate-800">Provided by:</strong> <a href="https://scripture.api.bible" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline transition-colors">API.Bible</a>
-              </p>
-            </div>
-
-            <div className="bg-purple-50 border-l-4 border-purple-400 rounded-lg p-6">
-              <h3 className="text-xl font-bold text-slate-800 mb-3">New American Standard Bible (NASB 1995)</h3>
-              <p className="text-slate-700 mb-4 leading-relaxed text-base md:text-lg">
-                Scripture quotations taken from the <strong>New American Standard Bible®</strong> (NASB), Copyright © 1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation. Used by permission. All rights reserved. <a href="https://www.lockman.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline transition-colors">www.lockman.org</a>
-              </p>
-              <p className="text-slate-700 text-base md:text-lg">
-                <strong className="text-slate-800">Provided by:</strong> <a href="https://scripture.api.bible" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline transition-colors">API.Bible</a>
               </p>
             </div>
           </section>
@@ -126,7 +113,7 @@ export default function CopyrightPage() {
                   <strong className="text-slate-800">User Roles:</strong> Admin (full access) & Counselor (own profiles only)
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
-                  <strong className="text-slate-800">Scripture APIs:</strong> ESV API v3, <a href="https://scripture.api.bible" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline transition-colors">API.Bible</a> (KJV, NASB)
+                  <strong className="text-slate-800">Scripture APIs:</strong> ESV API v3
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
                   <strong className="text-slate-800">Rich Text Editor:</strong> <a href="https://tiptap.dev" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline transition-colors">Tiptap Editor</a> (MIT License)

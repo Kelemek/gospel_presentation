@@ -1,21 +1,14 @@
 // Bible API service for fetching scripture from multiple translations
-// Supports ESV (api.esv.org) and API.Bible (rest.api.bible)
+// Supports ESV (api.esv.org) and local database for KJV/NASB
 
 export type BibleTranslation = 'esv' | 'kjv' | 'nasb'
 import { logger } from '@/lib/logger'
+import { createAdminClient } from '@/lib/supabase/server'
 
 interface ScriptureResult {
   reference: string
   text: string
   translation: BibleTranslation
-}
-
-// API.Bible IDs (https://rest.api.bible)
-// Get your API key from https://scripture.api.bible
-const API_BIBLE_IDS: Record<string, string> = {
-  'kjv': 'de4e12af7f28f599-01',  // King James Version
-  'nasb': '8e5cfc0c7d0b6e16-02', // New American Standard Bible 1995 (NASB 1995)
-  // Add more translations here based on your API.Bible account access
 }
 
 /**
@@ -57,153 +50,116 @@ async function fetchFromESV(reference: string): Promise<ScriptureResult> {
 }
 
 /**
- * Fetch scripture text from API.Bible (rest.api.bible)
+ * Parse a scripture reference into components
+ * Examples: "John 3:16", "Genesis 1:1-3", "Psalm 23", "Isaiah 40:25–26", "Isaiah 44:6–7a"
+ * Handles both hyphens (-) and en dashes (–) in verse ranges
+ * Strips letter suffixes like "a", "b" from verse numbers
  */
-async function fetchFromAPIBible(reference: string, translation: BibleTranslation): Promise<ScriptureResult> {
-  const apiKey = process.env.API_BIBLE_KEY
+function parseReference(reference: string): { book: string; chapter: number; verseStart: number | null; verseEnd: number | null } | null {
+  // Normalize en dashes to hyphens and remove letter suffixes
+  const normalized = reference.replace(/–/g, '-').replace(/(\d+)[a-z]+/g, '$1')
   
-  if (!apiKey) {
-    throw new Error('API.Bible key not configured (API_BIBLE_KEY required)')
+  // Handle formats like "John 3:16" or "Genesis 1:1-3" or "Psalm 23"
+  const match = normalized.match(/^(.+?)\s+(\d+)(?::(\d+)(?:-(\d+))?)?$/)
+  if (!match) return null
+  
+  return {
+    book: match[1].trim(),
+    chapter: parseInt(match[2]),
+    verseStart: match[3] ? parseInt(match[3]) : null,
+    verseEnd: match[4] ? parseInt(match[4]) : null
   }
+}
 
-  const bibleId = API_BIBLE_IDS[translation]
-  if (!bibleId) {
-    throw new Error(`No API.Bible ID configured for translation: ${translation}`)
+/**
+ * Normalize book names to match database format
+ * Database uses: "I Samuel", "II Samuel", "Revelation of John", etc.
+ * Common input: "1 Samuel", "2 Samuel", "Revelation", etc.
+ */
+function normalizeBookName(book: string): string {
+  const normalizations: Record<string, string> = {
+    '1 samuel': 'I Samuel',
+    '2 samuel': 'II Samuel',
+    '1 kings': 'I Kings',
+    '2 kings': 'II Kings',
+    '1 chronicles': 'I Chronicles',
+    '2 chronicles': 'II Chronicles',
+    '1 corinthians': 'I Corinthians',
+    '2 corinthians': 'II Corinthians',
+    '1 thessalonians': 'I Thessalonians',
+    '2 thessalonians': 'II Thessalonians',
+    '1 timothy': 'I Timothy',
+    '2 timothy': 'II Timothy',
+    '1 peter': 'I Peter',
+    '2 peter': 'II Peter',
+    '1 john': 'I John',
+    '2 john': 'II John',
+    '3 john': 'III John',
+    'revelation': 'Revelation of John',
+    'song of songs': 'Song of Solomon',
+    'song of sol': 'Song of Solomon',
   }
-
-  const cleanReference = reference.trim()
-
-  // Check if this is a chapter request (no verse numbers)
-  const isChapterRequest = /^[^:]+\s+\d+$/.test(cleanReference)
   
-  // First, search to get the passage/chapter ID
-  const searchUrl = `https://rest.api.bible/v1/bibles/${bibleId}/search?query=${encodeURIComponent(cleanReference)}&limit=1`
-  
-  logger.debug('[API.Bible] Searching:', { searchUrl, reference: cleanReference, bibleId, isChapterRequest })
-  
-  const searchResponse = await fetch(searchUrl, {
-    headers: {
-      'api-key': apiKey,
-    },
-  })
+  const key = book.toLowerCase()
+  return normalizations[key] || book
+}
 
-    if (!searchResponse.ok) {
-    const errorText = await searchResponse.text()
-    logger.error('[API.Bible] Search error:', {
-      status: searchResponse.status,
-      body: errorText,
-    })
-    throw new Error(`API.Bible search error: ${searchResponse.status} - ${errorText}`)
+/**
+ * Fetch scripture text from local database
+ * Currently supports: KJV, NASB (when imported)
+ */
+async function fetchFromDatabase(reference: string, translation: BibleTranslation): Promise<ScriptureResult> {
+  const supabase = createAdminClient()
+  
+  // Parse the reference (e.g., "John 3:16" or "Genesis 1:1-3")
+  const parsed = parseReference(reference)
+  if (!parsed) {
+    throw new Error(`Invalid scripture reference format: ${reference}`)
   }
-
-  const searchData = await searchResponse.json()
   
-  if (searchData.data && searchData.data.passages && searchData.data.passages.length > 0) {
-    const passage = searchData.data.passages[0]
-    
-    if (isChapterRequest) {
-      // For whole chapters, use the chapters endpoint
-      if (passage.chapterIds && passage.chapterIds.length > 0) {
-        const chapterId = passage.chapterIds[0]
-        
-        // Fetch the full chapter
-        const chapterUrl = `https://rest.api.bible/v1/bibles/${bibleId}/chapters/${chapterId}?content-type=text&include-notes=false&include-titles=false&include-chapter-numbers=false&include-verse-numbers=true`
-        
-  logger.debug('[API.Bible] Fetching chapter:', { chapterUrl, chapterId })
-        
-        const chapterResponse = await fetch(chapterUrl, {
-          headers: {
-            'api-key': apiKey,
-          },
-        })
-
-        if (!chapterResponse.ok) {
-          const errorText = await chapterResponse.text()
-          logger.error('[API.Bible] Chapter error:', {
-            status: chapterResponse.status,
-            body: errorText,
-          })
-          throw new Error(`API.Bible chapter error: ${chapterResponse.status}`)
-        }
-
-        const chapterData = await chapterResponse.json()
-        
-        if (chapterData.data && chapterData.data.content) {
-          // Format verse numbers like ESV: [1] [2] etc.
-          const formattedText = chapterData.data.content
-            .replace(/<span[^>]*class="v"[^>]*>(\d+)<\/span>/g, '[$1]') // Convert verse numbers to [n] format
-            .replace(/<[^>]*>/g, '') // Remove remaining HTML tags
-            .replace(/\s+/g, ' ')    // Normalize whitespace
-            .trim()
-          
-          return {
-            reference: chapterData.data.reference || cleanReference,
-            text: formattedText,
-            translation: translation
-          }
-        }
-      }
+  const { book, chapter, verseStart, verseEnd } = parsed
+  
+  // Normalize book name for database lookup
+  const normalizedBook = normalizeBookName(book)
+  
+  // Fetch verses from database
+  let query = supabase
+    .from('bible_verses')
+    .select('verse, text')
+    .eq('translation', translation)
+    .eq('book', normalizedBook)
+    .eq('chapter', chapter)
+    .order('verse', { ascending: true })
+  
+  if (verseStart !== null) {
+    query = query.gte('verse', verseStart)
+    if (verseEnd !== null) {
+      query = query.lte('verse', verseEnd)
     } else {
-      // For verse/passage requests, construct the passage ID from the reference
-      // Parse the reference to get book, chapter, and verse range
-      const verseRangeMatch = cleanReference.match(/(\d+):(\d+)[-–](\d+)/)
-      
-      let passageId = passage.id
-      
-      if (verseRangeMatch) {
-        // This is a verse range (e.g., "John 3:16-18")
-        const startVerse = verseRangeMatch[2]
-        const endVerse = verseRangeMatch[3]
-        
-        // Construct passage ID with range: BOOK.CHAPTER.STARTVERSE-BOOK.CHAPTER.ENDVERSE
-        const baseId = passage.id // e.g., "REV.20.12"
-        const parts = baseId.split('.')
-        if (parts.length === 3) {
-          const book = parts[0]
-          const chapter = parts[1]
-          passageId = `${book}.${chapter}.${startVerse}-${book}.${chapter}.${endVerse}`
-        }
-      }
-      
-      const passageUrl = `https://rest.api.bible/v1/bibles/${bibleId}/passages/${passageId}?content-type=text&include-notes=false&include-titles=false&include-chapter-numbers=false&include-verse-numbers=true&include-verse-spans=false`
-      
-  logger.debug('[API.Bible] Fetching passage:', { passageUrl, passageId, originalId: passage.id })
-      
-      const passageResponse = await fetch(passageUrl, {
-        headers: {
-          'api-key': apiKey,
-        },
-      })
-
-      if (!passageResponse.ok) {
-        const errorText = await passageResponse.text()
-        logger.error('[API.Bible] Passage error:', {
-          status: passageResponse.status,
-          body: errorText,
-        })
-        throw new Error(`API.Bible passage error: ${passageResponse.status}`)
-      }
-
-      const passageData = await passageResponse.json()
-      
-      if (passageData.data && passageData.data.content) {
-        // Format verse numbers like ESV: [1] [2] etc.
-        const formattedText = passageData.data.content
-          .replace(/<span[^>]*class="v"[^>]*>(\d+)<\/span>/g, '[$1]') // Convert verse numbers to [n] format
-          .replace(/<[^>]*>/g, '') // Remove remaining HTML tags
-          .replace(/\s+/g, ' ')    // Normalize whitespace
-          .trim()
-        
-        return {
-          reference: passageData.data.reference || cleanReference,
-          text: formattedText,
-          translation: translation
-        }
-      }
+      query = query.eq('verse', verseStart)
     }
   }
   
-  throw new Error('Scripture text not found in API.Bible response')
+  const { data, error } = await query
+  
+  if (error) {
+    throw new Error(`Database error: ${error.message}`)
+  }
+  
+  if (!data || data.length === 0) {
+    throw new Error(`Scripture text not found in database for ${translation.toUpperCase()}. Make sure the translation has been imported.`)
+  }
+  
+  // Format the verses with verse numbers
+  const formattedText = data
+    .map((v: any) => `[${v.verse}] ${v.text}`)
+    .join(' ')
+  
+  return {
+    reference: reference.trim(),
+    text: formattedText,
+    translation
+  }
 }
 
 /**
@@ -218,12 +174,10 @@ export async function fetchScripture(
       return fetchFromESV(reference)
     case 'kjv':
     case 'nasb':
-      return fetchFromAPIBible(reference, translation)
+      // Fetch from local database
+      logger.debug(`Fetching ${reference} (${translation}) from local database`)
+      return await fetchFromDatabase(reference, translation)
     default:
-      // For any future API.Bible translations
-      if (API_BIBLE_IDS[translation]) {
-        return fetchFromAPIBible(reference, translation)
-      }
       throw new Error(`Unsupported translation: ${translation}`)
   }
 }

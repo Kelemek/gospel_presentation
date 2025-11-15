@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react'
 
 
 // Helper component to render text with COMA buttons and inline scripture references
+// Helper component to render text with COMA buttons and inline scripture references
 function TextWithComaButtons({ text, onComaClick, onScriptureClick }: { 
   text: string; 
   onComaClick: () => void;
@@ -460,8 +461,13 @@ function NestedSubsectionComponent({ nestedSubsection, onScriptureClick, lastVie
       <div className="ml-6 mt-4 border-l-2 border-gray-200 pl-4 print-subsection">
         <h5 
           className="font-medium text-slate-800 mb-2 print-subsection-title text-lg md:text-xl"
-          dangerouslySetInnerHTML={{ __html: nestedSubsection.title }}
-        />
+        >
+          <TextWithComaButtons 
+            text={nestedSubsection.title} 
+            onComaClick={() => setShowComaModal(true)}
+            onScriptureClick={onScriptureClick}
+          />
+        </h5>
         <div className="text-slate-700 mb-2 print-content text-base md:text-lg leading-relaxed">
           <TextWithComaButtons 
             text={nestedSubsection.content} 
@@ -498,8 +504,13 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
       <div id={`${sectionId}-${subsectionIndex}`} className="mb-6 print-subsection">
         <h4 
           className="text-xl md:text-2xl font-semibold text-slate-800 mb-3 print-subsection-title"
-          dangerouslySetInnerHTML={{ __html: subsection.title }}
-        />
+        >
+          <TextWithComaButtons 
+            text={subsection.title} 
+            onComaClick={() => setShowComaModal(true)}
+            onScriptureClick={onScriptureClick}
+          />
+        </h4>
         <div className="text-slate-700 mb-3 leading-relaxed print-content text-base md:text-lg">
           <TextWithComaButtons 
             text={subsection.content} 
@@ -547,13 +558,20 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
 
 export default function GospelSection({ section, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers }: GospelSectionProps) {
   const sectionId = `section-${section.section}`
+  const [showComaModal, setShowComaModal] = useState(false)
   
   return (
     <section id={sectionId} className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 print-section">
+      <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
       <h3 
         className="text-3xl md:text-4xl font-bold text-slate-800 mb-6 pb-3 border-b border-gray-200 print-section-header"
-        dangerouslySetInnerHTML={{ __html: section.title }}
-      />
+      >
+        <TextWithComaButtons 
+          text={section.title} 
+          onComaClick={() => setShowComaModal(true)}
+          onScriptureClick={onScriptureClick}
+        />
+      </h3>
       
       <div className="space-y-8">
         {section.subsections.map((subsection, index) => (

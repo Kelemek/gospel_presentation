@@ -4,8 +4,8 @@ import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/server'
 
 // Cache configuration
-// ESV API free tier: max 500 verses (we cache 283 = compliant)
-// API.Bible free tier: unlimited caching allowed
+// ESV API free tier: max 500 verses (we cache to stay compliant)
+// KJV/NASB are served directly from bible_verses table (no caching needed)
 const CACHE_TTL_DAYS = 30 // Number of days to keep cached entries
 
 export async function GET(request: NextRequest) {
@@ -23,10 +23,27 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Try to use cache (use admin client to bypass RLS)
+    // KJV and NASB are served directly from database, no caching needed
+    if (translation === 'kjv' || translation === 'nasb') {
+      const result = await fetchScripture(reference, translation)
+      return NextResponse.json(
+        { 
+          reference: result.reference,
+          text: result.text,
+          translation: result.translation,
+          cached: false
+        },
+        {
+          headers: {
+            'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800'
+          }
+        }
+      )
+    }
+
+    // ESV: Check cache first (use admin client to bypass RLS)
     const supabase = createAdminClient()
     
-    // Check cache first (entries newer than TTL days)
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() - CACHE_TTL_DAYS)
 
@@ -55,8 +72,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Cache miss - fetch from external API
-    logger.debug(`❌ Cache miss: ${reference} (${translation}) - fetching from API`)
+    // Cache miss - fetch from ESV API
+    logger.debug(`❌ Cache miss: ${reference} (${translation}) - fetching from ESV API`)
     const result = await fetchScripture(reference, translation)
     
     // Store in cache (upsert to handle duplicates)
@@ -80,17 +97,15 @@ export async function GET(request: NextRequest) {
     } else {
       logger.info(`💾 Cached: ${reference} (${translation})`)
       
-      // For ESV API: enforce 500-verse limit (free tier restriction)
-      if (translation === 'esv') {
-        const { data: evictedCount, error: lruError } = await (supabase.rpc as any)(
-          'enforce_esv_cache_limit',
-          { p_max_verses: 500 }
-        )
-        if (lruError) {
-          logger.error('Failed to enforce cache limit:', lruError)
-        } else if (evictedCount > 0) {
-          logger.debug(`🗑️ Evicted ${evictedCount} old ESV cache entries to stay within 500-verse limit`)
-        }
+      // Enforce 500-verse limit for ESV (free tier restriction)
+      const { data: evictedCount, error: lruError } = await (supabase.rpc as any)(
+        'enforce_esv_cache_limit',
+        { p_max_verses: 500 }
+      )
+      if (lruError) {
+        logger.error('Failed to enforce cache limit:', lruError)
+      } else if (evictedCount > 0) {
+        logger.debug(`🗑️ Evicted ${evictedCount} old ESV cache entries to stay within 500-verse limit`)
       }
     }
     
@@ -115,8 +130,11 @@ export async function GET(request: NextRequest) {
       if (/ESV API token not configured/i.test(msg)) {
         return NextResponse.json({ error: msg }, { status: 500 })
       }
-      if (/Scripture text not found/i.test(msg)) {
+      if (/Scripture text not found|Make sure the translation has been imported/i.test(msg)) {
         return NextResponse.json({ error: msg }, { status: 404 })
+      }
+      if (/Database error/i.test(msg)) {
+        return NextResponse.json({ error: 'Database error occurred', details: msg }, { status: 500 })
       }
       return NextResponse.json({ error: 'Failed to fetch scripture text', details: msg }, { status: 500 })
     }

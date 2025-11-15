@@ -12,6 +12,14 @@ interface TableOfContentsProps {
   currentProfileSlug?: string
 }
 
+// Helper function to strip HTML tags from text
+function stripHtmlTags(html: string): string {
+  // Create a temporary DOM element and use textContent to extract plain text
+  const temp = document.createElement('div')
+  temp.innerHTML = html
+  return temp.textContent || temp.innerText || ''
+}
+
 export default function TableOfContents({ sections, currentProfileSlug }: TableOfContentsProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const { translation, setTranslation, enabledTranslations } = useTranslation()
@@ -103,7 +111,7 @@ export default function TableOfContents({ sections, currentProfileSlug }: TableO
             href={`#section-${section.section}`}
             className="text-blue-600 hover:text-blue-800 active:text-blue-900 font-medium text-xl md:text-lg block mb-3 md:mb-2 py-3 md:py-2 px-4 md:px-3 rounded-md hover:bg-blue-50 active:bg-blue-100 transition-colors min-h-[52px] flex items-center"
           >
-            {section.title}
+            {stripHtmlTags(section.title)}
           </a>
           <ul className="ml-2 md:ml-4 space-y-2 md:space-y-1">
             {section.subsections.map((subsection, index) => (
@@ -112,7 +120,7 @@ export default function TableOfContents({ sections, currentProfileSlug }: TableO
                   href={`#section-${section.section}-${index}`}
                   className="text-blue-600 hover:text-blue-800 active:text-blue-900 text-base md:text-sm block py-3 md:py-2 px-4 md:px-3 rounded-md hover:bg-blue-50 active:bg-blue-100 transition-colors min-h-[48px] flex items-center leading-relaxed"
                 >
-                  {subsection.title}
+                  {stripHtmlTags(subsection.title)}
                 </a>
               </li>
             ))}
