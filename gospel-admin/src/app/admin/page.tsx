@@ -719,6 +719,7 @@ function AdminPageContent() {
                 <span className="hidden sm:inline">View Site</span>
                 <span className="sm:hidden">Site</span>
               </Link>
+              {userRole === 'admin' && <TranslationSettings />}
               <button
                 onClick={handleLogout}
                 className="px-2 sm:px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 rounded-lg text-xs sm:text-sm font-medium transition-all hover:shadow-md whitespace-nowrap shrink-0 shadow-sm"
@@ -733,13 +734,6 @@ function AdminPageContent() {
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <div className="text-red-800">{error}</div>
-          </div>
-        )}
-
-        {/* Translation Settings - Admin Only */}
-        {userRole === 'admin' && (
-          <div className="mb-6">
-            <TranslationSettings />
           </div>
         )}
 

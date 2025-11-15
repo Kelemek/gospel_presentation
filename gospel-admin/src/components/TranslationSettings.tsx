@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 
 interface TranslationSetting {
   translation_code: string
@@ -13,10 +13,26 @@ export default function TranslationSettings() {
   const [settings, setSettings] = useState<TranslationSetting[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
+  const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     loadSettings()
   }, [])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [isOpen])
 
   async function loadSettings() {
     try {
@@ -66,72 +82,93 @@ export default function TranslationSettings() {
     }
   }
 
+  const enabledCount = settings.filter(s => s.is_enabled).length
+
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-xl font-bold text-slate-800 mb-4">Bible Translation Settings</h3>
-        <p className="text-slate-600">Loading...</p>
-      </div>
+      <button className="px-4 py-2 bg-slate-100 text-slate-400 rounded-lg text-sm font-medium cursor-not-allowed">
+        Loading...
+      </button>
     )
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <h3 className="text-xl font-bold text-slate-800 mb-2">Bible Translation Settings</h3>
-      <p className="text-sm text-slate-600 mb-4">
-        Control which Bible translations are available site-wide. Disabled translations will not appear in dropdowns, and users with disabled translations will automatically use ESV.
-      </p>
+    <div className="relative inline-block" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="px-2 sm:px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 rounded-lg text-xs sm:text-sm font-medium transition-all hover:shadow-md whitespace-nowrap shrink-0 shadow-sm flex items-center gap-2"
+      >
+        <span className="hidden sm:inline">Translations</span>
+        <span className="sm:hidden">Trans</span>
+        <svg 
+          className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
 
-      <div className="space-y-3">
-        {settings.map((setting) => (
-          <div
-            key={setting.translation_code}
-            className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
-          >
-            <div className="flex-1">
-              <h4 className="font-medium text-slate-800">{setting.translation_name}</h4>
-              <p className="text-xs text-slate-500 mt-1">Code: {setting.translation_code.toUpperCase()}</p>
-            </div>
-            
-            <div className="flex items-center gap-3">
-              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                setting.is_enabled 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-red-100 text-red-800'
-              }`}>
-                {setting.is_enabled ? 'Enabled' : 'Disabled'}
-              </span>
-              
-              <button
-                onClick={() => toggleTranslation(setting.translation_code, setting.is_enabled)}
-                disabled={saving === setting.translation_code || setting.translation_code === 'esv'}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                  setting.translation_code === 'esv'
-                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                    : setting.is_enabled
-                    ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                    : 'bg-green-100 text-green-700 hover:bg-green-200'
-                }`}
-                title={setting.translation_code === 'esv' ? 'ESV cannot be disabled' : ''}
-              >
-                {saving === setting.translation_code ? (
-                  'Saving...'
-                ) : setting.is_enabled ? (
-                  'Disable'
-                ) : (
-                  'Enable'
-                )}
-              </button>
-            </div>
+      {isOpen && (
+        <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-slate-200 py-2 z-50">
+          <div className="px-4 py-2 border-b border-slate-200">
+            <h3 className="font-semibold text-slate-800 text-sm">Bible Translations</h3>
+            <p className="text-xs text-slate-500 mt-1">Toggle to enable/disable</p>
           </div>
-        ))}
-      </div>
 
-      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-sm text-blue-800">
-          <strong>Note:</strong> ESV cannot be disabled as it serves as the fallback translation when a user's preferred translation is unavailable.
-        </p>
-      </div>
+          <div className="max-h-80 overflow-y-auto">
+            {settings.map((setting) => (
+              <div
+                key={setting.translation_code}
+                className="px-4 py-3 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-b-0"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-slate-800 text-sm">
+                      {setting.translation_code.toUpperCase()}
+                    </span>
+                    <span className={`w-2 h-2 rounded-full ${
+                      setting.is_enabled ? 'bg-green-500' : 'bg-red-500'
+                    }`} />
+                  </div>
+                  
+                  <button
+                    onClick={() => toggleTranslation(setting.translation_code, setting.is_enabled)}
+                    disabled={saving === setting.translation_code || setting.translation_code === 'esv'}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      setting.translation_code === 'esv'
+                        ? 'bg-slate-300 cursor-not-allowed opacity-50'
+                        : setting.is_enabled
+                        ? 'bg-green-600'
+                        : 'bg-slate-300'
+                    }`}
+                    title={setting.translation_code === 'esv' ? 'ESV cannot be disabled (fallback)' : `Toggle ${setting.translation_name}`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        setting.is_enabled ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+                
+                <p className="text-xs text-slate-500 mt-1">{setting.translation_name}</p>
+                
+                {saving === setting.translation_code && (
+                  <p className="text-xs text-blue-600 mt-1">Saving...</p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="px-4 py-2 border-t border-slate-200 bg-blue-50">
+            <p className="text-xs text-blue-800">
+              <strong>Note:</strong> ESV is the fallback and cannot be disabled.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
