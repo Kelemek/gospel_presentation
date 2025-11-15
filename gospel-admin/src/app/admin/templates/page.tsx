@@ -446,7 +446,6 @@ function TemplatesPageContent() {
           )}
         </div>
         </div>
-        </div>
       </div>
     </div>
   )
