@@ -692,7 +692,8 @@ function AdminPageContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
+      <div className="container mx-auto py-4 sm:py-6">
+        <div className="px-3 sm:px-4 lg:px-6">
         <AdminHeader
           title="Profiles"
           description={
@@ -736,7 +737,9 @@ function AdminPageContent() {
             <div className="text-red-800">{error}</div>
           </div>
         )}
+        </div>
 
+        <div className="px-3 sm:px-4 lg:px-6">
                   <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 mb-6 border border-slate-100">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
               <div className="flex-1 min-w-0">
@@ -1021,7 +1024,7 @@ function AdminPageContent() {
           ) : (
             <div className="divide-y divide-slate-200">
               {filteredProfiles.map(profile => (
-                <div key={profile.id} className="p-4 sm:p-6">
+                <div key={profile.id} className="py-4">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
@@ -1183,6 +1186,7 @@ function AdminPageContent() {
               ))}
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>
