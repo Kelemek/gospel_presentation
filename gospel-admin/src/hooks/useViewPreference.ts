@@ -19,8 +19,8 @@ const STORAGE_KEY = 'gospel-view-preference'
 export function useViewPreference(defaultView: ViewPreference = 'list'): [ViewPreference, (view: ViewPreference) => void] {
   const [view, setViewState] = useState<ViewPreference>(defaultView)
   const [isHydrated, setIsHydrated] = useState(false)
-  const debounceTimerRef = useRef<NodeJS.Timeout>()
-  const userIdRef = useRef<string>()
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const userIdRef = useRef<string | null>(null)
 
   // Load preference on mount
   useEffect(() => {
@@ -45,8 +45,8 @@ export function useViewPreference(defaultView: ViewPreference = 'list'): [ViewPr
             .eq('id', user.id)
             .single()
           
-          if (!error && data?.view_preference) {
-            const dbPreference = data.view_preference as ViewPreference
+          if (!error && data && typeof data === 'object' && 'view_preference' in data) {
+            const dbPreference = (data as any).view_preference as ViewPreference
             if (dbPreference === 'list' || dbPreference === 'card') {
               setViewState(dbPreference)
               localStorage.setItem(STORAGE_KEY, dbPreference)
@@ -87,9 +87,10 @@ export function useViewPreference(defaultView: ViewPreference = 'list'): [ViewPr
 /**
  * Saves view preference to database for authenticated user
  */
-async function saveToDatabase(preference: ViewPreference, userId: string) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function saveToDatabase(preference: ViewPreference, userId: string): Promise<any> {
   try {
-    const supabase = createClient()
+    const supabase = createClient() as any
     await supabase
       .from('user_profiles')
       .update({ view_preference: preference })
