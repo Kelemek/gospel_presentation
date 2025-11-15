@@ -14,8 +14,9 @@ function TextWithComaButtons({ text, onComaClick, onScriptureClick }: {
   const containerRef = React.useRef<HTMLSpanElement>(null)
   
   // Improved scripture reference pattern - must have word boundary before and after
-  // Matches: "John 3:16", "1 Corinthians 13:4-7", "Romans 8:28", etc.
-  const scripturePattern = /\b(\d\s)?([A-Z][a-z]+(?:\s[A-Z][a-z]+)?)\s+(\d+):(\d+)(?:-(\d+))?(?:,\s*(\d+)(?::(\d+))?)*\b/g
+  // Matches: "John 3:16", "1 Corinthians 13:4-7", "Romans 8:28", "Song of Solomon 3:6", etc.
+  // Allows up to 3 words for book names like "Song of Solomon" and "Revelation of John"
+  const scripturePattern = /\b(\d\s)?([A-Z][a-z]+(?:\s[A-Z][a-z]+){0,2})\s+(\d+):(\d+)(?:-(\d+))?(?:,\s*(\d+)(?::(\d+))?)*\b/g
   
   // First, handle COMA markers
   const comaMarker = '___COMA_BUTTON___'
@@ -45,7 +46,7 @@ function TextWithComaButtons({ text, onComaClick, onScriptureClick }: {
   // Replace scripture references with markers
   tempText = protectedText.replace(scripturePattern, (matched) => {
     // Only replace if it's a valid book
-    const bookMatch = matched.match(/([A-Z][a-z]+(?:\s[A-Z][a-z]+)?)/)
+    const bookMatch = matched.match(/([A-Z][a-z]+(?:\s[A-Z][a-z]+){0,2})/)
     if (bookMatch) {
       const validBooks = /^(Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalms?|Proverbs?|Ecclesiastes|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans?|Corinthians?|Galatians?|Ephesians?|Philippians?|Colossians?|Thessalonians?|Timothy|Titus|Philemon|Hebrews?|James|Peter|Jude|Revelation)/i
       if (validBooks.test(bookMatch[1])) {
