@@ -395,8 +395,8 @@ function Questions({ questions, profileSlug, savedAnswers = [] }: QuestionsProps
         
         return (
           <div key={question.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3 print:p-2 print:space-y-1">
-            <div className="mb-2 flex gap-1">
-              <span className="text-sm text-slate-600 flex-shrink-0 relative top-[2px]">{index + 1}. </span>
+            <div className="mb-2 flex gap-1 items-baseline">
+              <span className="text-sm text-slate-600 flex-shrink-0 leading-none">{index + 1}. </span>
               <div className="flex-1">
                 {detail ? (
                   <div>
@@ -433,7 +433,7 @@ function Questions({ questions, profileSlug, savedAnswers = [] }: QuestionsProps
                   </div>
                 ) : hasHtmlTags ? (
                   <div 
-                    className="question-content font-medium text-slate-800 text-sm max-w-none"
+                    className="question-content font-medium text-slate-800 text-sm max-w-none mt-0"
                     dangerouslySetInnerHTML={{ __html: question.question }}
                   />
                 ) : (

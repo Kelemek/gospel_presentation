@@ -263,7 +263,7 @@ body {
 }
 
 .question-content p:first-child {
-  margin-top: -2px;
+  margin-top: 0;
 }
 
 /* Hierarchical outline numbering: 1. a. i. α. */
