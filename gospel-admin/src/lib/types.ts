@@ -33,6 +33,8 @@ export interface Subsection {
 export interface GospelSection {
   section: string
   title: string
+  linkUrl?: string
+  linkDescription?: string
   subsections: Subsection[]
 }
 

@@ -1191,12 +1191,46 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                   </button>
                 </div>
               </div>
+              
+              {/* Optional Link Section */}
+              <div className="mt-4 border-t border-slate-200 pt-4">
+                <h4 className="text-sm font-medium text-slate-700 mb-3">Optional Link (appears below title):</h4>
+                <div className="space-y-3 bg-slate-50 p-3 rounded-lg">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Link URL:</label>
+                    <input
+                      type="url"
+                      value={section.linkUrl || ''}
+                      onChange={(e) => {
+                        updateSection(sectionIndex, 'linkUrl', e.target.value)
+                        setHasChanges(true)
+                      }}
+                      placeholder="https://example.com (optional)"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-600 mb-1">Link Text/Description:</label>
+                    <input
+                      type="text"
+                      value={section.linkDescription || ''}
+                      onChange={(e) => {
+                        updateSection(sectionIndex, 'linkDescription', e.target.value)
+                        setHasChanges(true)
+                      }}
+                      placeholder="e.g., 'Watch the video' or 'Read more here' (optional)"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">This text will appear on the link button</p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Subsections */}
             <div className="space-y-6">
               {section.subsections.map((subsection, subsectionIndex) => (
-                <div key={subsectionIndex} className="border-l-4 border-slate-300 pl-6 mb-6 bg-slate-50 rounded-r-lg py-4">
+                <div key={subsectionIndex} className="border-l-4 border-slate-300 pl-6 pr-6 mb-6 bg-slate-50 rounded-r-lg py-4">
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex-1 min-w-0">
                       <InlineRichTextEditor

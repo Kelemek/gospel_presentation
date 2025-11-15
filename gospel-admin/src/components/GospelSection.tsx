@@ -615,6 +615,20 @@ export default function GospelSection({ section, onScriptureClick, lastViewedScr
         />
       </h3>
       
+      {/* Optional Link Section */}
+      {section.linkUrl && (
+        <div className="mb-6 -mt-2">
+          <a
+            href={section.linkUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-base md:text-lg rounded-md bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-200 hover:border-blue-300 transition-colors min-h-[44px]"
+          >
+            {section.linkDescription || 'Visit Link'} ⧉
+          </a>
+        </div>
+      )}
+      
       <div className="space-y-8">
         {section.subsections.map((subsection, index) => (
           <SubsectionComponent

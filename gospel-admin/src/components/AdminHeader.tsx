@@ -123,6 +123,20 @@ export default function AdminHeader({
                     {/* Dropdown */}
                     <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-lg z-20">
                       <div className="p-2">
+                        {/* Dashboard Link */}
+                        <Link
+                          href="/admin"
+                          className="block w-full text-left px-2 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded transition-colors font-medium mb-2"
+                          onClick={() => setIsDropdownOpen(false)}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span>🏠</span>
+                            Dashboard
+                          </span>
+                        </Link>
+                        
+                        <div className="border-t border-gray-100 mt-2 pt-2 mb-2" />
+                        
                         <div className="text-sm font-medium text-slate-500 px-2 py-1 mb-1">
                           Switch Profile
                         </div>
@@ -151,20 +165,6 @@ export default function AdminHeader({
                             </div>
                           </button>
                         ))}
-                        
-                        {/* Quick Links */}
-                        <div className="border-t border-gray-100 mt-2 pt-2">
-                          <Link
-                            href="/admin"
-                            className="block w-full text-left px-2 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded transition-colors"
-                            onClick={() => setIsDropdownOpen(false)}
-                          >
-                            <span className="flex items-center gap-2">
-                              <span>🏠</span>
-                              Dashboard
-                            </span>
-                          </Link>
-                        </div>
                       </div>
                     </div>
                   </>
