@@ -1,3 +1,5 @@
+'use client'
+
 import { GospelSection as GospelSectionType, Subsection, NestedSubsection, ScriptureReference, QuestionAnswer, PROFILE_VALIDATION, SavedAnswer } from '@/lib/types'
 import ScriptureHoverModal from './ScriptureHoverModal'
 import ComaModal from './ComaModal'
@@ -13,10 +15,16 @@ function TextWithComaButtons({ text, onComaClick, onScriptureClick }: {
 }) {
   const containerRef = React.useRef<HTMLSpanElement>(null)
   
-  // Improved scripture reference pattern - must have word boundary before and after
-  // Matches: "John 3:16", "1 Corinthians 13:4-7", "Romans 8:28", "Song of Solomon 3:6", etc.
-  // Allows up to 3 words for book names like "Song of Solomon" and "Revelation of John"
-  const scripturePattern = /\b(\d\s)?([A-Z][a-z]+(?:\s[A-Z][a-z]+){0,2})\s+(\d+):(\d+)(?:-(\d+))?(?:,\s*(\d+)(?::(\d+))?)*\b/g
+  // Helper function to strip HTML tags for pattern matching
+  const stripHtmlTags = (html: string): string => {
+    // Always use regex fallback to avoid SSR issues with document
+    return html.replace(/<[^>]*>/g, '')
+  }
+  
+  // Improved scripture reference pattern
+  // Matches: "John 3:16", "1 Corinthians 13:4-7", "Song of Solomon 7:10", "Revelation of John 3:6"
+  // Allows 3+ word book names with lowercase connectors like "of", "and"
+  const scripturePattern = /\b([A-Z][a-z]+(?:\s(?:of|and|the)\s[A-Z][a-z]+)*)\s+(\d+):(\d+)(?:-(\d+))?(?:,\s*(\d+)(?::(\d+))?)*(?=\s|$|[.,:;!?])/g
   
   // First, handle COMA markers
   const comaMarker = '___COMA_BUTTON___'
@@ -30,31 +38,46 @@ function TextWithComaButtons({ text, onComaClick, onScriptureClick }: {
   // Temporarily replace COMA markers to protect them
   const protectedText = processedText.replace(new RegExp(comaMarker, 'g'), '§§COMA§§')
   
-  let tempText = protectedText
+  // Strip HTML tags to find verse references in plain text
+  const plainText = stripHtmlTags(protectedText)
+  
+  // Find all verse references in the plain text version
   let match
   const regex = new RegExp(scripturePattern)
-  while ((match = regex.exec(protectedText)) !== null) {
+  while ((match = regex.exec(plainText)) !== null) {
     const fullMatch = match[0].trim()
     // Only add if it looks like a valid book name (not just random capitalized words)
-    const bookName = match[2]
+    const bookName = match[1]
     const validBooks = /^(Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalms?|Proverbs?|Ecclesiastes|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans?|Corinthians?|Galatians?|Ephesians?|Philippians?|Colossians?|Thessalonians?|Timothy|Titus|Philemon|Hebrews?|James|Peter|Jude|Revelation)/i
     if (validBooks.test(bookName)) {
       scriptureMatches.push(fullMatch)
     }
   }
   
-  // Replace scripture references with markers
-  tempText = protectedText.replace(scripturePattern, (matched) => {
-    // Only replace if it's a valid book
-    const bookMatch = matched.match(/([A-Z][a-z]+(?:\s[A-Z][a-z]+){0,2})/)
-    if (bookMatch) {
-      const validBooks = /^(Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalms?|Proverbs?|Ecclesiastes|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans?|Corinthians?|Galatians?|Ephesians?|Philippians?|Colossians?|Thessalonians?|Timothy|Titus|Philemon|Hebrews?|James|Peter|Jude|Revelation)/i
-      if (validBooks.test(bookMatch[1])) {
-        return scriptureMarker
-      }
+  // Replace scripture references with markers in the HTML version
+  // Create a regex that matches the verse references with optional HTML tags around them
+  let tempText = protectedText
+  for (const ref of scriptureMatches) {
+    // Escape special regex characters in the reference
+    const escapedRef = ref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    // Create a pattern that allows HTML tags within the reference (e.g., between "Song" and "of" and "Solomon")
+    const flexiblePattern = ref
+      .split(/\s+/)
+      .map((word, i) => i === 0 ? word : `(?:<[^>]*>)*\\s*${word}`)
+      .join('')
+    
+    const refPattern = new RegExp(`\\b${flexiblePattern}(?::<[^>]*>)*\\s+\\d+:\\d+(?:-\\d+)?`, 'g')
+    tempText = tempText.replace(refPattern, scriptureMarker)
+  }
+  
+  // If no matches with flexible pattern, try direct replacement for simple cases
+  if (tempText === protectedText && scriptureMatches.length > 0) {
+    // Fallback: replace each reference as-is
+    for (const ref of scriptureMatches) {
+      const escapedRef = ref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      tempText = tempText.replace(new RegExp(escapedRef, 'g'), scriptureMarker)
     }
-    return matched
-  })
+  }
   
   // Restore COMA markers
   processedText = tempText.replace(/§§COMA§§/g, comaMarker)
