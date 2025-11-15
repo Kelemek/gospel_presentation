@@ -240,9 +240,10 @@ interface QuestionsProps {
   questions: QuestionAnswer[]
   profileSlug: string
   savedAnswers?: Array<{ questionId: string; answer: string; answeredAt: Date }>
+  onScriptureClick?: (reference: string) => void
 }
 
-function Questions({ questions, profileSlug, savedAnswers = [] }: QuestionsProps) {
+function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick }: QuestionsProps) {
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [savedStatus, setSavedStatus] = useState<Record<string, boolean>>({})
   const [isInitialized, setIsInitialized] = useState(false)
@@ -434,8 +435,13 @@ function Questions({ questions, profileSlug, savedAnswers = [] }: QuestionsProps
                 ) : hasHtmlTags ? (
                   <div 
                     className="question-content font-medium text-slate-800 text-sm max-w-none mt-0"
-                    dangerouslySetInnerHTML={{ __html: question.question }}
-                  />
+                  >
+                    <TextWithComaButtons 
+                      text={question.question} 
+                      onComaClick={() => setShowComaModal(true)}
+                      onScriptureClick={onScriptureClick}
+                    />
+                  </div>
                 ) : (
                   <span className="font-medium text-slate-800 text-sm">
                     <TextWithComaButtons text={question.question} onComaClick={() => setShowComaModal(true)} />
@@ -512,6 +518,7 @@ function NestedSubsectionComponent({ nestedSubsection, onScriptureClick, lastVie
             questions={nestedSubsection.questions}
             profileSlug={profileSlug}
             savedAnswers={savedAnswers}
+            onScriptureClick={onScriptureClick}
           />
         )}
       </div>
@@ -557,6 +564,7 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
           questions={subsection.questions}
           profileSlug={profileSlug}
           savedAnswers={savedAnswers}
+          onScriptureClick={onScriptureClick}
         />
       )}
       
