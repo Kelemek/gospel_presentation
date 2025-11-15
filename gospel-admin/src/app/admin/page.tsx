@@ -6,9 +6,12 @@ import Link from 'next/link'
 import AdminHeader from '@/components/AdminHeader'
 import AdminErrorBoundary from '@/components/AdminErrorBoundary'
 import TranslationSettings from '@/components/TranslationSettings'
+import ViewToggle from '@/components/ViewToggle'
+import ProfileCard from '@/components/ProfileCard'
 import { createClient } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
 import { useSessionMonitor } from '@/hooks/useSessionMonitor'
+import { useViewPreference, type ViewPreference } from '@/hooks/useViewPreference'
 
 // Small pure helpers exported for testing. Kept additive and isolated from
 // React hooks so they can be unit tested without rendering the client UI.
@@ -60,6 +63,7 @@ function AdminPageContent() {
   const [isCreating, setIsCreating] = useState(false)
   const [siteUrl, setSiteUrl] = useState('yoursite.com')
   const [searchQuery, setSearchQuery] = useState('')
+  const [view, setView] = useViewPreference('list')
   const [createForm, setCreateForm] = useState({
     title: '',
     description: '',
@@ -787,31 +791,36 @@ function AdminPageContent() {
 
             {/* Search Field */}
             <div className="mb-4">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search profiles by name, URL, description, or owner..."
-                  className="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400 text-sm text-slate-900 placeholder-slate-400"
-                />
-                <svg
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search profiles by name, URL, description, or owner..."
+                    className="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400 text-sm text-slate-900 placeholder-slate-400"
+                  />
+                  <svg
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                {filteredProfiles.length > 0 && (
+                  <ViewToggle view={view} onViewChange={setView} />
                 )}
               </div>
               {searchQuery && (
@@ -1021,7 +1030,24 @@ function AdminPageContent() {
                 {searchQuery ? 'Try a different search term' : 'Create your first profile using the button above to get started.'}
               </p>
             </div>
+          ) : view === 'card' ? (
+            // Card View
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {filteredProfiles.map(profile => (
+                <ProfileCard
+                  key={profile.id}
+                  profile={profile}
+                  siteUrl={siteUrl}
+                  onCopyUrl={handleCopyProfileUrl}
+                  onDownloadBackup={handleDownloadBackup}
+                  onRestoreBackup={handleRestoreBackup}
+                  onDelete={handleDeleteProfile}
+                  canManage={userRole !== 'counselee' && (userRole === 'admin' || (profile.createdBy === user?.id && !profile.isDefault && !profile.isTemplate))}
+                />
+              ))}
+            </div>
           ) : (
+            // List View
             <div className="divide-y divide-slate-200">
               {filteredProfiles.map(profile => (
                 <div key={profile.id} className="py-4">
@@ -1101,7 +1127,7 @@ function AdminPageContent() {
                           <Link
                             href={`/${profile.slug}`}
                             target="_blank"
-                            className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 sm:px-3 py-1 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                            className="text-slate-700 hover:text-slate-800 text-xs sm:text-sm font-medium bg-slate-100 hover:bg-slate-200 px-2 sm:px-3 py-1 rounded-lg border border-slate-300 hover:border-slate-400 transition-all duration-200 shadow-sm hover:shadow-md"
                           >
                             View
                           </Link>
@@ -1113,7 +1139,7 @@ function AdminPageContent() {
                               {(userRole === 'admin' || profile.createdBy === user?.id) && (
                                 <button
                                   onClick={() => handleCopyProfileUrl(profile)}
-                                  className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 sm:px-3 py-1 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                                  className="text-slate-700 hover:text-slate-800 text-xs sm:text-sm font-medium bg-slate-100 hover:bg-slate-200 px-2 sm:px-3 py-1 rounded-lg border border-slate-300 hover:border-slate-400 transition-all duration-200 shadow-sm hover:shadow-md"
                                 >
                                   Share
                                 </button>
@@ -1129,14 +1155,14 @@ function AdminPageContent() {
                                 <>
                                   <Link
                                     href={`/admin/profiles/${profile.slug}`}
-                                    className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300"
+                                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-blue-200 hover:border-blue-300"
                                   >
                                     Settings
                                   </Link>
                                   
                                   <Link
                                     href={`/admin/profiles/${profile.slug}/content`}
-                                    className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300"
+                                    className="bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-blue-200 hover:border-blue-300"
                                   >
                                     Edit
                                   </Link>
@@ -1147,7 +1173,7 @@ function AdminPageContent() {
                               {!profile.isDefault && (userRole === 'admin' || (profile.createdBy === user?.id && !profile.isTemplate)) && (
                                 <button
                                   onClick={() => handleDeleteProfile(profile.slug, profile.title)}
-                                  className="text-slate-600 hover:text-slate-800 text-xs sm:text-sm font-medium bg-white hover:bg-slate-50 px-2 sm:px-3 py-1 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                                  className="text-red-700 hover:text-red-800 text-xs sm:text-sm font-medium bg-red-50 hover:bg-red-100 px-2 sm:px-3 py-1 rounded-lg border border-red-200 hover:border-red-300 transition-all duration-200 shadow-sm hover:shadow-md"
                                 >
                                   Delete
                                 </button>
@@ -1162,13 +1188,13 @@ function AdminPageContent() {
                             <>
                               <button
                                 onClick={() => handleDownloadBackup(profile)}
-                                className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300"
+                                className="bg-green-50 hover:bg-green-100 text-green-700 hover:text-green-800 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md border border-green-200 hover:border-green-300"
                                 title="Download profile backup"
                               >
                                 Download Backup
                               </button>
                               
-                              <label className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md border border-slate-200 hover:border-slate-300 cursor-pointer">
+                              <label className="bg-green-50 hover:bg-green-100 text-green-700 hover:text-green-800 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md border border-green-200 hover:border-green-300 cursor-pointer">
                                 Upload & Restore
                                 <input
                                   type="file"

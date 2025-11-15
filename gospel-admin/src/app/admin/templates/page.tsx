@@ -4,8 +4,11 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import AdminErrorBoundary from '@/components/AdminErrorBoundary'
+import ViewToggle from '@/components/ViewToggle'
+import ProfileCard from '@/components/ProfileCard'
 import { createClient } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
+import { useViewPreference, type ViewPreference } from '@/hooks/useViewPreference'
 
 function TemplatesPageContent() {
   const router = useRouter()
@@ -16,6 +19,7 @@ function TemplatesPageContent() {
   const [error, setError] = useState('')
   const [siteUrl, setSiteUrl] = useState('yoursite.com')
   const [searchQuery, setSearchQuery] = useState('')
+  const [view, setView] = useViewPreference('list')
 
   useEffect(() => {
     checkAuth()
@@ -280,31 +284,36 @@ function TemplatesPageContent() {
 
           {/* Search Field */}
           <div className="mb-4">
-            <div className="relative">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search templates by name, URL, description, or owner..."
-                className="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 text-sm text-slate-900 placeholder-slate-400"
-              />
-              <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search templates by name, URL, description, or owner..."
+                  className="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 text-sm text-slate-900 placeholder-slate-400"
+                />
+                <svg
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              {filteredTemplates.length > 0 && (
+                <ViewToggle view={view} onViewChange={setView} />
               )}
             </div>
             {searchQuery && (
@@ -324,7 +333,24 @@ function TemplatesPageContent() {
                 {searchQuery ? 'Try a different search term' : userRole === 'admin' ? 'Create template profiles from the main profiles page' : 'No templates available yet'}
               </p>
             </div>
+          ) : view === 'card' ? (
+            // Card View
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {filteredTemplates.map(template => (
+                <ProfileCard
+                  key={template.id}
+                  profile={template}
+                  siteUrl={siteUrl}
+                  onCopyUrl={handleCopyProfileUrl}
+                  onDownloadBackup={handleDownloadBackup}
+                  onRestoreBackup={handleRestoreBackup}
+                  onDelete={handleDeleteProfile}
+                  canManage={userRole === 'admin'}
+                />
+              ))}
+            </div>
           ) : (
+            // List View
             <div className="divide-y divide-slate-200">
               {filteredTemplates.map(template => (
                 <div key={template.id} className="py-4">
