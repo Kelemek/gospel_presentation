@@ -15,72 +15,82 @@ function TextWithComaButtons({ text, onComaClick, onScriptureClick }: {
 }) {
   const containerRef = React.useRef<HTMLSpanElement>(null)
   
-  // Helper function to strip HTML tags for pattern matching
+// Helper function to strip HTML tags for pattern matching
   const stripHtmlTags = (html: string): string => {
     // Always use regex fallback to avoid SSR issues with document
     return html.replace(/<[^>]*>/g, '')
   }
   
-  // Improved scripture reference pattern
-  // Matches: "John 3:16", "1 Corinthians 13:4-7", "Song of Solomon 7:10", "Revelation of John 3:6"
-  // Allows 3+ word book names with lowercase connectors like "of", "and"
-  const scripturePattern = /\b([A-Z][a-z]+(?:\s(?:of|and|the)\s[A-Z][a-z]+)*)\s+(\d+):(\d+)(?:-(\d+))?(?:,\s*(\d+)(?::(\d+))?)*(?=\s|$|[.,:;!?])/g
+  // Bible book names lookup table - covers all 66 canonical books with common variations
+  const BIBLE_BOOKS = new Set([
+    // Old Testament - Pentateuch
+    'Genesis', 'Exodus', 'Leviticus', 'Numbers', 'Deuteronomy',
+    // Old Testament - Historical
+    'Joshua', 'Judges', 'Ruth', '1 Samuel', '2 Samuel', '1 Kings', '2 Kings',
+    '1 Chronicles', '2 Chronicles', 'Ezra', 'Nehemiah', 'Esther',
+    // Old Testament - Wisdom/Poetry
+    'Job', 'Psalms', 'Psalm', 'Proverbs', 'Ecclesiastes', 'Song of Songs', 'Song of Solomon',
+    // Old Testament - Major Prophets
+    'Isaiah', 'Jeremiah', 'Lamentations', 'Ezekiel', 'Daniel',
+    // Old Testament - Minor Prophets
+    'Hosea', 'Joel', 'Amos', 'Obadiah', 'Jonah', 'Micah', 'Nahum', 'Habakkuk',
+    'Zephaniah', 'Haggai', 'Zechariah', 'Malachi',
+    // New Testament - Gospels
+    'Matthew', 'Mark', 'Luke', 'John',
+    // New Testament - Acts and Paul's epistles
+    'Acts', 'Romans', '1 Corinthians', '2 Corinthians', 'Galatians', 'Ephesians',
+    'Philippians', 'Colossians', '1 Thessalonians', '2 Thessalonians', '1 Timothy',
+    '2 Timothy', 'Titus', 'Philemon',
+    // New Testament - Hebrews and James
+    'Hebrews', 'James',
+    // New Testament - Peter, John, Jude
+    '1 Peter', '2 Peter', '1 John', '2 John', '3 John', 'Jude',
+    // New Testament - Revelation
+    'Revelation', 'Apocalypse'
+  ])
+  
+  // Improved scripture reference pattern - matches book name (with optional number prefix) followed by chapter:verse
+  // Improved scripture reference pattern - matches book name followed by chapter:verse with optional ranges
+  // Handles: "John 3:16", "1 Corinthians 7:3-4", "Song of Solomon 7:10-12", "Psalm 23:1,3,5"
+  // Allows HTML tags between words for rich text content
+  const wordPattern = '[A-Z][a-z]+'
+  const spaceWithOptionalTags = '(?:<[^>]*>)*\\s+(?:<[^>]*>)*'
+  const scripturePattern = new RegExp(
+    `\\b((?:\\d${spaceWithOptionalTags})?${wordPattern}(?:${spaceWithOptionalTags}(?:of|and|the)${spaceWithOptionalTags}${wordPattern})*)` +
+    `${spaceWithOptionalTags}(\\d+)(?:<[^>]*>)*:(</[^>]*>)*(?:<[^>]*>)*(\\d+)(?:-\\d+)?(?:,\\s*\\d+(?::\\d+)?)*\\b`,
+    'g'
+  )
   
   // First, handle COMA markers
   const comaMarker = '___COMA_BUTTON___'
   let processedText = text.replace(/(C\.O\.M\.A\.|COMA)/gi, comaMarker)
   const comaMatches = text.match(/(C\.O\.M\.A\.|COMA)/gi) || []
   
-  // Then, handle scripture references
+  // Then, handle scripture references - match directly in the HTML text
   const scriptureMarker = '___SCRIPTURE_REF___'
   const scriptureMatches: string[] = []
+  const cleanReferences: string[] = []  // Store clean references without HTML tags
   
-  // Temporarily replace COMA markers to protect them
-  const protectedText = processedText.replace(new RegExp(comaMarker, 'g'), '§§COMA§§')
-  
-  // Strip HTML tags to find verse references in plain text
-  const plainText = stripHtmlTags(protectedText)
-  
-  // Find all verse references in the plain text version
+  // Find all verse references in the text (with HTML tags)
   let match
-  const regex = new RegExp(scripturePattern)
-  while ((match = regex.exec(plainText)) !== null) {
-    const fullMatch = match[0].trim()
-    // Only add if it looks like a valid book name (not just random capitalized words)
-    const bookName = match[1]
-    const validBooks = /^(Genesis|Exodus|Leviticus|Numbers|Deuteronomy|Joshua|Judges|Ruth|Samuel|Kings|Chronicles|Ezra|Nehemiah|Esther|Job|Psalms?|Proverbs?|Ecclesiastes|Song|Isaiah|Jeremiah|Lamentations|Ezekiel|Daniel|Hosea|Joel|Amos|Obadiah|Jonah|Micah|Nahum|Habakkuk|Zephaniah|Haggai|Zechariah|Malachi|Matthew|Mark|Luke|John|Acts|Romans?|Corinthians?|Galatians?|Ephesians?|Philippians?|Colossians?|Thessalonians?|Timothy|Titus|Philemon|Hebrews?|James|Peter|Jude|Revelation)/i
-    if (validBooks.test(bookName)) {
-      scriptureMatches.push(fullMatch)
-    }
-  }
-  
-  // Replace scripture references with markers in the HTML version
-  // Create a regex that matches the verse references with optional HTML tags around them
-  let tempText = protectedText
-  for (const ref of scriptureMatches) {
-    // Escape special regex characters in the reference
-    const escapedRef = ref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    // Create a pattern that allows HTML tags within the reference (e.g., between "Song" and "of" and "Solomon")
-    const flexiblePattern = ref
-      .split(/\s+/)
-      .map((word, i) => i === 0 ? word : `(?:<[^>]*>)*\\s*${word}`)
-      .join('')
+  while ((match = scripturePattern.exec(processedText)) !== null) {
+    const fullMatch = match[0]
+    // Strip HTML tags from the book name for validation
+    const bookNameWithTags = match[1]
+    const bookName = bookNameWithTags.replace(/<[^>]*>/g, '').trim()
     
-    const refPattern = new RegExp(`\\b${flexiblePattern}(?::<[^>]*>)*\\s+\\d+:\\d+(?:-\\d+)?`, 'g')
-    tempText = tempText.replace(refPattern, scriptureMarker)
-  }
-  
-  // If no matches with flexible pattern, try direct replacement for simple cases
-  if (tempText === protectedText && scriptureMatches.length > 0) {
-    // Fallback: replace each reference as-is
-    for (const ref of scriptureMatches) {
-      const escapedRef = ref.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      tempText = tempText.replace(new RegExp(escapedRef, 'g'), scriptureMarker)
+    // Only add if it's a valid book name from our lookup table
+    if (BIBLE_BOOKS.has(bookName)) {
+      scriptureMatches.push(fullMatch)
+      // Store the clean reference (without HTML tags) for display
+      const cleanRef = fullMatch.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
+      cleanReferences.push(cleanRef)
+      // Replace this match with a marker
+      processedText = processedText.substring(0, match.index) + scriptureMarker + processedText.substring(match.index + fullMatch.length)
+      // Reset regex lastIndex since we modified the string
+      scripturePattern.lastIndex = match.index + scriptureMarker.length
     }
   }
-  
-  // Restore COMA markers
-  processedText = tempText.replace(/§§COMA§§/g, comaMarker)
   
   // Split by both markers and reconstruct
   const parts = processedText.split(new RegExp(`(${comaMarker}|${scriptureMarker})`))
@@ -96,9 +106,9 @@ function TextWithComaButtons({ text, onComaClick, onScriptureClick }: {
       const comaText = comaMatches[comaIndex]
       htmlString += `<a href="#" data-coma="true" class="px-1.5 py-0.5 font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors cursor-pointer whitespace-nowrap no-underline" style="display: inline; margin: 0 2px; vertical-align: baseline; font-size: inherit;" title="Learn about the C.O.M.A. method">${comaText}</a>`
       comaIndex++
-    } else if (part === scriptureMarker && scriptureMatches[scriptureIndex]) {
-      // Add inline scripture reference as HTML string
-      const reference = scriptureMatches[scriptureIndex]
+    } else if (part === scriptureMarker && scriptureIndex < cleanReferences.length) {
+      // Add inline scripture reference as HTML string using clean reference
+      const reference = cleanReferences[scriptureIndex]
       if (onScriptureClick) {
         htmlString += `<a href="#" data-scripture="${reference}" class="px-1.5 py-0.5 font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors cursor-pointer whitespace-nowrap no-underline" style="display: inline; margin: 0 2px; vertical-align: baseline; font-size: inherit;" title="Click to view ${reference}">${reference}</a>`
       } else {
