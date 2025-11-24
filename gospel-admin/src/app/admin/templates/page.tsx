@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import AdminErrorBoundary from '@/components/AdminErrorBoundary'
 import ViewToggle from '@/components/ViewToggle'
-import ProfileCard from '@/components/ProfileCard'
+import TemplateCard from '@/components/TemplateCard'
 import { createClient } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
 import { useViewPreference, type ViewPreference } from '@/hooks/useViewPreference'
@@ -20,6 +20,7 @@ function TemplatesPageContent() {
   const [siteUrl, setSiteUrl] = useState('yoursite.com')
   const [searchQuery, setSearchQuery] = useState('')
   const [view, setView] = useViewPreference('list')
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     checkAuth()
@@ -318,7 +319,34 @@ function TemplatesPageContent() {
                 )}
               </div>
               {filteredTemplates.length > 0 && (
-                <ViewToggle view={view} onViewChange={setView} />
+                <div className="flex items-center gap-2">
+                  {userRole === 'admin' && view === 'card' && (
+                    <div className="inline-flex items-center gap-1 p-1 bg-slate-100 rounded-lg border border-slate-200">
+                      <button
+                        onClick={() => {
+                          if (expandedRows.size === filteredTemplates.length) {
+                            setExpandedRows(new Set())
+                          } else {
+                            const allIds = filteredTemplates.map(t => t.id)
+                            setExpandedRows(new Set(allIds))
+                          }
+                        }}
+                        className="px-2 sm:px-3 py-1.5 rounded text-xs sm:text-sm font-medium transition-all inline-flex items-center gap-1.5 bg-white text-slate-700 shadow-sm hover:bg-slate-50 cursor-pointer"
+                        title={expandedRows.size > 0 ? 'Collapse all details' : 'Expand all details'}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          {expandedRows.size > 0 ? (
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                          ) : (
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          )}
+                        </svg>
+                        <span className="hidden sm:inline">{expandedRows.size > 0 ? 'Collapse' : 'Expand'}</span>
+                      </button>
+                    </div>
+                  )}
+                  <ViewToggle view={view} onViewChange={setView} />
+                </div>
               )}
             </div>
             {searchQuery && (
@@ -342,13 +370,25 @@ function TemplatesPageContent() {
             // Card View
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {filteredTemplates.map(template => (
-                <ProfileCard
+                <TemplateCard
                   key={template.id}
-                  profile={template}
+                  template={template}
                   siteUrl={siteUrl}
                   onCopyUrl={handleCopyProfileUrl}
                   onDelete={handleDeleteProfile}
-                  canManage={userRole === 'admin'}
+                  onDownloadBackup={handleDownloadBackup}
+                  onRestoreBackup={handleRestoreBackup}
+                  userRole={userRole}
+                  isExpanded={expandedRows.has(template.id)}
+                  onToggleExpand={() => {
+                    const newSet = new Set(expandedRows)
+                    if (newSet.has(template.id)) {
+                      newSet.delete(template.id)
+                    } else {
+                      newSet.add(template.id)
+                    }
+                    setExpandedRows(newSet)
+                  }}
                 />
               ))}
             </div>
