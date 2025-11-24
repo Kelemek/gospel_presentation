@@ -47,7 +47,7 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
       } else {
         setError(data.error || 'Failed to fetch scripture text')
       }
-    } catch (err) {
+    } catch {
       setError('Network error while fetching scripture')
     } finally {
       setLoading(false)

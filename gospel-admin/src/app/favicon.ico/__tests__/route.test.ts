@@ -6,13 +6,13 @@ describe('favicon route', () => {
 
     // Mock Response.redirect used by Next's route handlers. Prefer constructing
     // a real Response instance when available so types are satisfied.
-    // @ts-ignore - intentionally overwrite for test
+    // @ts-expect-error - intentionally overwrite for test
     global.Response = {
       redirect(url: URL | string, status?: number) {
         const statusCode = status ?? 302
         // If a native Response constructor exists, use it for a proper object
         // otherwise fall back to a minimal shape compatible with the assertions.
-        // @ts-ignore
+        // @ts-expect-error mocking incompatible types
         if (typeof globalThis.Response === 'function') {
           try {
             return new (globalThis as any).Response(null, { status: statusCode, headers: { location: String(url) } })

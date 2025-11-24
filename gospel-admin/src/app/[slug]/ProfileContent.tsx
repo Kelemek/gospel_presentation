@@ -100,11 +100,6 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     router.refresh()
   }, [resetProgress, router])
 
-  // Early return if required props are missing
-  if (!sections || !profileInfo) {
-    return <div>Loading...</div>
-  }
-
   // Collect favorite references from gospel data
   const collectFavoriteReferences = (data: GospelSectionType[]) => {
     const favorites: string[] = []
@@ -141,8 +136,10 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
 
   // Load favorite references when sections change
   useEffect(() => {
-    collectFavoriteReferences(sections)
-  }, [sections])
+    if (sections && profileInfo) {
+      collectFavoriteReferences(sections)
+    }
+  }, [sections, profileInfo])
 
   // Track visit count when profile is viewed
   useEffect(() => {
@@ -161,10 +158,10 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     }
 
     // Only track visits for actual profile slugs (not admin pages)
-    if (profileInfo.slug && profileInfo.slug !== 'admin') {
+    if (profileInfo && profileInfo.slug && profileInfo.slug !== 'admin') {
       trackVisit()
     }
-  }, [profileInfo.slug])
+  }, [profileInfo])
 
   // Add keyboard navigation
   useEffect(() => {
@@ -182,10 +179,11 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedScripture.isOpen, favoriteReferences, currentReferenceIndex])
 
-  // Collect all scripture references with context in order
-  const allScriptureRefs = sections.flatMap(section => 
+  // Collect all scripture references with context in order (conditional on sections being available)
+  const allScriptureRefs = sections ? sections.flatMap(section => 
     section.subsections.flatMap(subsection => [
       ...(subsection.scriptureReferences || []).map(ref => ({
         reference: ref.reference,
@@ -206,7 +204,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
         }))
       ) || [])
     ])
-  )
+  ) : []
 
   const handleScriptureClick = async (reference: string) => {
     // Find the context for this reference
@@ -273,7 +271,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
   const navigationRefs = favoriteReferences.length > 0 ? favoriteReferences : allScriptureRefs.map(ref => ref.reference)
   
   // Navigation functions for favorite references or all references if no favorites
-  const navigateToPrevious = () => {
+  const navigateToPrevious = useCallback(() => {
     if (navigationRefs.length === 0) return
     
     const newIndex = (currentReferenceIndex - 1 + navigationRefs.length) % navigationRefs.length
@@ -289,9 +287,10 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
       isOpen: true,
       context: refWithContext?.context
     })
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigationRefs, currentReferenceIndex, allScriptureRefs])
 
-  const navigateToNext = () => {
+  const navigateToNext = useCallback(() => {
     if (navigationRefs.length === 0) return
     
     const newIndex = (currentReferenceIndex + 1) % navigationRefs.length
@@ -307,7 +306,8 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
       isOpen: true,
       context: refWithContext?.context
     })
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigationRefs, currentReferenceIndex, allScriptureRefs])
 
   // Navigation state: enabled if more than one reference available
   const hasPrevious = navigationRefs.length > 1
@@ -338,6 +338,11 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
         // Don't break the user experience
       }
     }
+  }
+
+  // Early return if required props are missing - moved after all hooks
+  if (!sections || !profileInfo) {
+    return <div>Loading...</div>
   }
 
   return (
@@ -552,9 +557,9 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
             <a href="https://www.lockman.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline mr-4">
               www.lockman.org
             </a>
-            <a href="/copyright" className="text-blue-400 hover:text-blue-300 underline">
+            <Link href="/copyright" className="text-blue-400 hover:text-blue-300 underline">
               Copyright & Attribution
-            </a>
+            </Link>
           </p>
         </div>
       </footer>

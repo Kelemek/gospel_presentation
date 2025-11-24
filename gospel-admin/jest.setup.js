@@ -1,4 +1,5 @@
 // jest.setup.js
+/* eslint-disable @typescript-eslint/no-require-imports */
 import '@testing-library/jest-dom'
 
 // Mock Vercel analytics and speed-insights to avoid .mjs ESM parse issues

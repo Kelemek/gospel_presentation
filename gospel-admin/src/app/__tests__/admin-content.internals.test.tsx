@@ -30,7 +30,7 @@ beforeAll(() => {
 })
 
 afterAll(() => {
-  // @ts-ignore
+  // @ts-expect-error mocking incompatible types
   global.fetch = undefined
 })
 

@@ -63,7 +63,7 @@ describe('TemplatesPageContent - additional branches', () => {
     })
 
     const writeMock = jest.fn().mockResolvedValue(undefined)
-    // @ts-ignore - add clipboard mock
+    // @ts-expect-error - add clipboard mock
     global.navigator.clipboard = { writeText: writeMock }
 
     const alertSpy = jest.spyOn(global, 'alert')

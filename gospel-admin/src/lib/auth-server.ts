@@ -2,6 +2,7 @@
 import { NextRequest } from 'next/server'
 
 // Lightweight auth shim for server-side code
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const validateSession = (token: string): boolean => {
   return false
 }
@@ -57,7 +58,7 @@ export function requireAuth(handler: (request: NextRequest, context?: any) => Pr
       }
 
       return handler(request, context)
-    } catch (error) {
+    } catch {
       return new Response(JSON.stringify({ error: 'Authentication error' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }

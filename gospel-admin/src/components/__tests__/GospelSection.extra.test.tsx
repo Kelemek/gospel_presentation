@@ -3,11 +3,19 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 // Mock modal components to keep interaction simple and observable
-jest.mock('@/components/ComaModal', () => ({ isOpen, onClose }: any) => (
-  <div data-testid="coma-modal" data-open={isOpen ? 'true' : 'false'} onClick={onClose}>COMA</div>
-))
+jest.mock('@/components/ComaModal', () => {
+  const Component = ({ isOpen, onClose }: any) => (
+    <div data-testid="coma-modal" data-open={isOpen ? 'true' : 'false'} onClick={onClose}>COMA</div>
+  )
+  Component.displayName = 'ComaModal'
+  return Component
+})
 
-jest.mock('@/components/ScriptureHoverModal', () => ({ children }: any) => <div>{children}</div>)
+jest.mock('@/components/ScriptureHoverModal', () => {
+  const Component = ({ children }: any) => <div>{children}</div>
+  Component.displayName = 'ScriptureHoverModal'
+  return Component
+})
 
 import GospelSection from '../GospelSection'
 
@@ -16,7 +24,7 @@ describe('GospelSection (extra tests)', () => {
     // use fake timers for tests that advance the saved-confirmation timeout
     jest.useFakeTimers()
     // reset fetch mock
-    // @ts-ignore
+    // @ts-expect-error mocking incompatible types
     global.fetch = jest.fn()
   })
 
@@ -92,7 +100,7 @@ describe('GospelSection (extra tests)', () => {
     }
 
     // mock fetch to return ok
-    // @ts-ignore
+    // @ts-expect-error mocking incompatible types
     global.fetch.mockResolvedValue({ ok: true, json: async () => ({}) })
 
     render(
@@ -139,7 +147,7 @@ describe('GospelSection (extra tests)', () => {
     const question = { id: 'q1', question: 'Q: Simple', maxLength: 10 }
 
     const alertSpy = jest.spyOn(global, 'alert').mockImplementation(() => {})
-    // @ts-ignore
+    // @ts-expect-error mocking incompatible types
     global.fetch.mockResolvedValue({ ok: false, json: async () => ({ error: 'boom' }) })
 
     render(

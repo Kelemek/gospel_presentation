@@ -20,7 +20,7 @@ describe('useScriptureProgress', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     // default fetch returns ok true
-    // @ts-ignore
+    // @ts-expect-error mocking incompatible types
     global.fetch = jest.fn(() => Promise.resolve({ ok: true, json: async () => ({}) }))
   })
 
@@ -39,7 +39,7 @@ describe('useScriptureProgress', () => {
 
   test('tracks scripture view successfully for non-default profile', async () => {
     const profile = { slug: 'p1', isDefault: false }
-    // @ts-ignore
+    // @ts-expect-error mocking incompatible types
     global.fetch = jest.fn((url, opts) => {
       expect(url).toContain(`/api/profiles/${profile.slug}/scripture-progress`)
       expect(opts && (opts as any).method).toBe('POST')
@@ -57,7 +57,7 @@ describe('useScriptureProgress', () => {
 
   test('resetProgress sets error when delete fails', async () => {
     const profile = { slug: 'p2', isDefault: false }
-    // @ts-ignore
+    // @ts-expect-error mocking incompatible types
     global.fetch = jest.fn(() => Promise.resolve({ ok: false, status: 500 }))
 
     render(<TestHarness profile={profile} />)

@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { GospelProfile } from '@/lib/types'
 import AdminHeader from '@/components/AdminHeader'
 import { createClient } from '@/lib/supabase/client'
-import RichTextEditor from '@/components/RichTextEditor'
 
 interface ProfileEditPageProps {
   params: Promise<{
@@ -28,7 +27,6 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
   })
   const [counseleeEmailInput, setCounseleeEmailInput] = useState('')
   const [usernameInput, setUsernameInput] = useState('')
-  const [isTypingCustomEmail, setIsTypingCustomEmail] = useState(false)
   const [profileAccess, setProfileAccess] = useState<any[]>([])
   const [isLoadingAccess, setIsLoadingAccess] = useState(false)
   const [isAddingCounselee, setIsAddingCounselee] = useState(false)
@@ -41,6 +39,7 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
   useEffect(() => {
     checkAuth()
     loadAvailableUsers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const checkAuth = async () => {
@@ -66,6 +65,7 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
       fetchProfile()
       fetchProfileAccess()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, isAuth])
 
   const fetchProfile = async () => {
@@ -84,7 +84,7 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
       } else {
         setError('Failed to load profile')
       }
-    } catch (err) {
+    } catch {
       setError('Failed to load profile')
     } finally {
       setIsLoading(false)
@@ -151,7 +151,7 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
         const errorData = await response.json().catch(() => ({}))
         setError(errorData.error || 'Failed to save profile')
       }
-    } catch (err) {
+    } catch {
       setError('Failed to save profile')
     } finally {
       setIsSaving(false)
@@ -231,7 +231,7 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
         const errorData = await response.json().catch(() => ({}))
         setAccessError(errorData.error || 'Failed to add counselee')
       }
-    } catch (err) {
+    } catch {
       setAccessError('Failed to add counselee')
     } finally {
       setIsAddingCounselee(false)
@@ -294,7 +294,7 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
         const errorData = await response.json().catch(() => ({}))
         setAccessError(errorData.error || 'Failed to remove counselee')
       }
-    } catch (err) {
+    } catch {
       setAccessError('Failed to remove counselee')
     }
   }

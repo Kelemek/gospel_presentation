@@ -41,9 +41,9 @@ beforeAll(() => {
 })
 
 afterAll(() => {
-  // @ts-ignore
+  // @ts-expect-error mocking incompatible types
   global.fetch = undefined
-  // @ts-ignore
+  // @ts-expect-error mocking incompatible types
   global.alert = undefined
 })
 

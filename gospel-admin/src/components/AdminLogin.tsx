@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { authenticate } from '@/lib/auth'
 
 interface AdminLoginProps {
@@ -23,7 +24,7 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
       } else {
         setError('Invalid password. Please try again.')
       }
-    } catch (err) {
+    } catch {
       setError('Authentication failed. Please try again.')
     } finally {
       setIsLoading(false)
@@ -86,12 +87,12 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
           </div>
           
           <div className="text-center">
-            <a
+            <Link
               href="/"
               className="text-base md:text-lg text-blue-600 hover:text-blue-500 inline-block py-2"
             >
               ← Back to Gospel Presentation
-            </a>
+            </Link>
           </div>
         </form>
       </div>

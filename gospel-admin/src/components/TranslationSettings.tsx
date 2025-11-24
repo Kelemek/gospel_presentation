@@ -100,8 +100,6 @@ export default function TranslationSettings() {
     }
   }
 
-  const enabledCount = settings.filter(s => s.is_enabled).length
-
   if (loading) {
     return (
       <button className="px-4 py-2 bg-slate-100 text-slate-400 rounded-lg text-sm font-medium cursor-not-allowed">

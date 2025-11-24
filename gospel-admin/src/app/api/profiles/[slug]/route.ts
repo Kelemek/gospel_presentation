@@ -2,7 +2,7 @@
 // API Route: PUT /api/profiles/[slug] - Update specific profile
 // API Route: DELETE /api/profiles/[slug] - Delete specific profile
 import { NextRequest, NextResponse } from 'next/server'
-import { GospelPresentationData, GospelProfile } from '@/lib/types'
+import { GospelProfile } from '@/lib/types'
 import { sanitizeProfileForPublic } from '@/lib/profile-service'
 import {
   getProfileBySlug,

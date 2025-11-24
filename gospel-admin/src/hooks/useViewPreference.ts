@@ -18,7 +18,8 @@ const STORAGE_KEY = 'gospel-view-preference'
  */
 export function useViewPreference(defaultView: ViewPreference = 'list'): [ViewPreference, (view: ViewPreference) => void] {
   const [view, setViewState] = useState<ViewPreference>(defaultView)
-  const [isHydrated, setIsHydrated] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_isHydrated, setIsHydrated] = useState(false)
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
   const userIdRef = useRef<string | null>(null)
 
@@ -87,7 +88,6 @@ export function useViewPreference(defaultView: ViewPreference = 'list'): [ViewPr
 /**
  * Saves view preference to database for authenticated user
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function saveToDatabase(preference: ViewPreference, userId: string): Promise<any> {
   try {
     const supabase = createClient() as any

@@ -15,7 +15,7 @@ jest.mock('next/og', () => ({
 describe('OG Icon', () => {
   it('exports size and contentType and returns an ImageResponse', async () => {
     // Import after setting up the mock
-    // eslint-disable-next-line global-require
+     
     const iconMod = require('@/app/icon')
 
     expect(iconMod.size).toEqual({ width: 32, height: 32 })

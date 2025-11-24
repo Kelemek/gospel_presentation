@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Tests for counselor ability to view all users in the select existing user dropdown
  * 

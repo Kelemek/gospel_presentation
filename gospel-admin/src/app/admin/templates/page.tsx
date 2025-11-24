@@ -7,12 +7,12 @@ import AdminErrorBoundary from '@/components/AdminErrorBoundary'
 import ViewToggle from '@/components/ViewToggle'
 import TemplateCard from '@/components/TemplateCard'
 import { createClient } from '@/lib/supabase/client'
-import { logger } from '@/lib/logger'
-import { useViewPreference, type ViewPreference } from '@/hooks/useViewPreference'
+import { useViewPreference } from '@/hooks/useViewPreference'
 
 function TemplatesPageContent() {
   const router = useRouter()
-  const [user, setUser] = useState<any>(null)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_user, setUser] = useState<any>(null)
   const [userRole, setUserRole] = useState<'admin' | 'counselor' | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [templates, setTemplates] = useState<any[]>([])
@@ -24,6 +24,7 @@ function TemplatesPageContent() {
 
   useEffect(() => {
     checkAuth()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const checkAuth = async () => {

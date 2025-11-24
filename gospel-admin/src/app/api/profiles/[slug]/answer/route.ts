@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
 import { PROFILE_VALIDATION } from '@/lib/types'
 
@@ -16,7 +15,7 @@ export async function POST(
   try {
     const { slug } = await params
     const body = await request.json()
-    const { questionId, answer, sectionIndex, subsectionIndex, nestedSubsectionIndex } = body
+    const { questionId, answer } = body
 
     // Validate answer length
     if (!answer || typeof answer !== 'string') {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, FormEvent, useEffect, Suspense } from 'react'
+import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
@@ -101,7 +102,7 @@ function LoginForm() {
                   Check Your Email
                 </h2>
                 <p className="text-lg text-slate-700 font-medium mb-4">
-                  We've sent you a login link!
+                  We&apos;ve sent you a login link!
                 </p>
               </div>
 
@@ -113,18 +114,18 @@ function LoginForm() {
                   </li>
                   <li className="flex items-start">
                     <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">2</span>
-                    <span className="pt-0.5">Click the "Log in" button in the email</span>
+                    <span className="pt-0.5">Click the &ldquo;Log in&rdquo; button in the email</span>
                   </li>
                   <li className="flex items-start">
                     <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">3</span>
-                    <span className="pt-0.5">You'll be automatically signed in</span>
+                    <span className="pt-0.5">You&apos;ll be automatically signed in</span>
                   </li>
                 </ol>
               </div>
 
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                 <p className="text-sm text-yellow-800">
-                  <strong>💡 Tip:</strong> The link expires in 1 hour. If you don't see the email, check your spam folder.
+                  <strong>💡 Tip:</strong> The link expires in 1 hour. If you don&apos;t see the email, check your spam folder.
                 </p>
               </div>
 
@@ -171,18 +172,18 @@ function LoginForm() {
               </button>
 
               <p className="text-xs text-center text-slate-600 mt-4">
-                We'll email you a magic link for passwordless sign in
+                We&apos;ll email you a magic link for passwordless sign in
               </p>
             </form>
           )}
 
           <div className="mt-6 text-center">
-            <a
+            <Link
               href="/"
               className="text-sm text-blue-600 hover:text-blue-700 font-medium"
             >
               ← Back to Gospel Presentation
-            </a>
+            </Link>
           </div>
         </div>
 

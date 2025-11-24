@@ -21,7 +21,7 @@ describe('supabase server cookie helpers - get path', () => {
 
     let createClient: any
     jest.isolateModules(() => {
-      // eslint-disable-next-line global-require
+       
       createClient = require('../server').createClient
     })
 

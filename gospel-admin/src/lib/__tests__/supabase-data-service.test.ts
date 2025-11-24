@@ -146,7 +146,7 @@ describe('supabase-data-service (unit)', () => {
       } },
       from: () => ({ select: async () => ({ data: { title: 'T', slug: 's' } }), }),
       // upsert on user_profiles
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+       
       authAdmin: true,
     }
 

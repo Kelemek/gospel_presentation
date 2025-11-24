@@ -25,7 +25,7 @@ export default function CopyrightPage() {
             
             <div className="bg-blue-50 border-l-4 border-blue-400 rounded-lg p-6 mb-6">
               <p className="text-slate-700 mb-3 leading-relaxed text-base md:text-lg">
-                <strong className="text-slate-800">Gospel Presentation Content:</strong> "Presenting the Gospel in its Context" by Dr. Stuart Scott
+                <strong className="text-slate-800">Gospel Presentation Content:</strong> &ldquo;Presenting the Gospel in its Context&rdquo; by Dr. Stuart Scott
               </p>
               <p className="text-slate-700 leading-relaxed text-base md:text-lg">
                 <strong className="text-slate-800">Original Resource:</strong> <a href="https://oneeightyministries.org/resources/the-gospel-in-context/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline transition-colors">oneeightyministries.org/resources/the-gospel-in-context/</a>
@@ -34,7 +34,7 @@ export default function CopyrightPage() {
 
             <div className="bg-purple-50 border-l-4 border-purple-400 rounded-lg p-6">
               <p className="text-slate-700 mb-3 leading-relaxed text-base md:text-lg">
-                <strong className="text-slate-800">Marriage Enrichment Content:</strong> "God-Centered Marriage: A Marriage Enrichment Seminar from a Biblical Perspective" by Dr. Randy Westerberg
+                <strong className="text-slate-800">Marriage Enrichment Content:</strong> &ldquo;God-Centered Marriage: A Marriage Enrichment Seminar from a Biblical Perspective&rdquo; by Dr. Randy Westerberg
               </p>
             </div>
           </section>

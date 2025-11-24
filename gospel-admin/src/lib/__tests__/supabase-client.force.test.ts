@@ -24,7 +24,7 @@ describe('supabase client - force import for coverage', () => {
     await jest.isolateModulesAsync(async () => {
       // Use jest.requireActual to bypass any jest.mock hoisted in setup and
       // ensure we load the real implementation so coverage records the file.
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+       
       mod = jest.requireActual(require.resolve('../supabase/client'))
     })
 

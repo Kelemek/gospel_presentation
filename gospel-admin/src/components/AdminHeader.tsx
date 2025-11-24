@@ -31,12 +31,6 @@ export default function AdminHeader({
   const router = useRouter()
   const pathname = usePathname()
 
-  useEffect(() => {
-    if (showProfileSwitcher) {
-      fetchProfiles()
-    }
-  }, [showProfileSwitcher])
-
   const fetchProfiles = async () => {
     try {
       const response = await fetch('/api/profiles')
@@ -52,6 +46,13 @@ export default function AdminHeader({
       console.error('Error fetching profiles:', error)
     }
   }
+
+  useEffect(() => {
+    if (showProfileSwitcher) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchProfiles()
+    }
+  }, [showProfileSwitcher])
 
   const handleProfileSwitch = (targetSlug: string) => {
     if (targetSlug === currentProfileSlug) {

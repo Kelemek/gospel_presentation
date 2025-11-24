@@ -4,9 +4,6 @@
  * - Only admins can edit/delete templates
  */
 
-// @ts-nocheck - Testing runtime logic with specific literal types
-/* eslint-disable @typescript-eslint/no-unnecessary-condition */
-
 type UserRole = 'admin' | 'counselor' | 'counselee'
 
 describe('Template Profile Permissions', () => {

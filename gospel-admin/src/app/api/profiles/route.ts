@@ -80,7 +80,7 @@ export async function GET() {
                 if (up.id && up.username) {
                   // Find the email for this user ID
                   const email = Array.from(emailToIdMap.entries())
-                    .find(([_, id]) => id === up.id)?.[0]
+                    .find(([, id]) => id === up.id)?.[0]
                   if (email) {
                     usernameMap.set(email, up.username)
                   }

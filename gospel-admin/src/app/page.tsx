@@ -111,6 +111,7 @@ export function GospelPresentationOld() {
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedScripture.isOpen, favoriteReferences, currentReferenceIndex])
 
   if (isLoading) {
@@ -300,9 +301,9 @@ export function GospelPresentationOld() {
             <a href="https://www.lockman.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline mr-4">
               www.lockman.org
             </a>
-            <a href="/copyright" className="text-blue-400 hover:text-blue-300 underline">
+            <Link href="/copyright" className="text-blue-400 hover:text-blue-300 underline">
               Copyright & Attribution
-            </a>
+            </Link>
           </p>
         </div>
       </footer>

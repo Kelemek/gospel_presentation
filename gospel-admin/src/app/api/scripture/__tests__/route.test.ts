@@ -56,7 +56,7 @@ describe('scripture API route', () => {
     process.env.ESV_API_TOKEN = 'token'
 
     // mock global fetch
-    // @ts-ignore
+    // @ts-expect-error mocking incompatible types
     global.fetch = jest.fn(async () => ({
       ok: true,
       json: async () => ({ passages: ['In the beginning...'] }),

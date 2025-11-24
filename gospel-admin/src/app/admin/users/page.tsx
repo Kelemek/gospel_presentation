@@ -437,7 +437,7 @@ export default function UsersPage() {
             <ul className="text-sm space-y-1">
               <li><strong>Admin:</strong> Full access to all profiles and settings</li>
               <li><strong>Counselor:</strong> Can create, edit, and delete their own profiles, and grant counselee access</li>
-              <li><strong>Counselee:</strong> View-only access to profiles they've been granted access to</li>
+              <li><strong>Counselee:</strong> View-only access to profiles they&apos;ve been granted access to</li>
             </ul>
           </div>
 

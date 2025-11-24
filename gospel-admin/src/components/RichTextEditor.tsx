@@ -50,7 +50,8 @@ export default function RichTextEditor({
   className = '',
   placeholder = 'Click to edit...',
   multiline = false,
-  as = 'p'
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  as: _as = 'p'
 }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [

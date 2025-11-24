@@ -88,6 +88,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
     }
 
     loadTranslation()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Save translation preference
@@ -111,7 +112,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
             // Fall back to sessionStorage if API call fails
             sessionStorage.setItem(STORAGE_KEY, newTranslation)
           }
-        } catch (apiError) {
+        } catch {
           // Fall back to sessionStorage on API error
           sessionStorage.setItem(STORAGE_KEY, newTranslation)
         }

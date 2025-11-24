@@ -32,13 +32,13 @@ jest.mock('next/navigation', () => ({ useRouter: () => ({ refresh: refreshMock, 
 beforeEach(() => {
   jest.clearAllMocks()
   // Default fetch mock to accept visit tracking and other calls
-  // @ts-ignore
+  // @ts-expect-error mocking incompatible types
   global.fetch = jest.fn(() => Promise.resolve({ ok: true, json: async () => ({}) }))
   lastViewedValue = null
 })
 
 afterEach(() => {
-  // @ts-ignore
+  // @ts-expect-error mocking incompatible types
   global.fetch = undefined
 })
 

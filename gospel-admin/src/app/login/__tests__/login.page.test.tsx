@@ -27,7 +27,7 @@ describe('Login form flows', () => {
 
   it('shows success state when magic link is sent', async () => {
     // check-user returns exists: true
-    // @ts-ignore
+    // @ts-expect-error mocking incompatible types
     global.fetch = jest.fn((url, opts) => {
       if (url === '/api/auth/check-user') {
         return Promise.resolve({ ok: true, json: async () => ({ exists: true }) })
@@ -52,7 +52,7 @@ describe('Login form flows', () => {
 
   it('shows an error when user does not exist', async () => {
     // check-user returns exists: false
-    // @ts-ignore
+    // @ts-expect-error mocking incompatible types
     global.fetch = jest.fn((url, opts) => {
       if (url === '/api/auth/check-user') {
         return Promise.resolve({ ok: true, json: async () => ({ exists: false }) })

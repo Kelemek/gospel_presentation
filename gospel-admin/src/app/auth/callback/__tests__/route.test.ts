@@ -14,7 +14,7 @@ describe('auth callback route', () => {
   })
 
   it('redirects to login when no code provided', async () => {
-  // eslint-disable-next-line global-require
+   
   const handler = require('@/app/auth/callback/route')
   // jsdom/Node doesn't expose Request in this environment; the handler only
   // reads `request.url`, so pass a minimal object.
@@ -23,7 +23,7 @@ describe('auth callback route', () => {
   })
 
   it('redirects to login when error param present', async () => {
-  // eslint-disable-next-line global-require
+   
   const handler = require('@/app/auth/callback/route')
   const res = await handler.GET({ url: 'https://example.com/auth/callback?error=fail&error_description=bad' })
   expect(res).toEqual({ redirectedTo: 'https://example.com/login?error=bad' })
@@ -39,7 +39,7 @@ describe('auth callback route', () => {
       })
     }))
 
-  // eslint-disable-next-line global-require
+   
   const handler = require('@/app/auth/callback/route')
   const res = await handler.GET({ url: 'https://example.com/auth/callback?code=abc' })
   expect(res).toEqual({ redirectedTo: 'https://example.com/login?error=exchange%20failed' })
@@ -69,7 +69,7 @@ describe('auth callback route', () => {
       })
     }))
 
-  // eslint-disable-next-line global-require
+   
   const handler = require('@/app/auth/callback/route')
   const res = await handler.GET({ url: 'https://example.com/auth/callback?code=abc' })
   expect(res).toEqual({ redirectedTo: 'https://example.com/myslug' })

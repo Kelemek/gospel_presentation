@@ -30,18 +30,18 @@ jest.mock('@/lib/useScriptureProgress', () => ({
 beforeEach(() => {
   jest.clearAllMocks()
   // Basic fetch mock used for visit tracking in the component
-  // @ts-ignore
+  // @ts-expect-error mocking incompatible types
   global.fetch = jest.fn((url, opts) => Promise.resolve({ ok: true, json: async () => ({}) }))
 })
 
 afterEach(() => {
   // restore any modified location
   try {
-    // @ts-ignore
+    // @ts-expect-error mocking incompatible types
     if ((global as any).__origLocation) {
-      // @ts-ignore
+      // @ts-expect-error mocking incompatible types
       window.location = (global as any).__origLocation
-      // @ts-ignore
+      // @ts-expect-error mocking incompatible types
       delete (global as any).__origLocation
     }
   } catch (e) {
@@ -51,7 +51,7 @@ afterEach(() => {
 
 test('shows Edit button when user is admin and preview param present', async () => {
   // Use spyOn on the already-loaded client module to avoid resetting modules
-  // eslint-disable-next-line global-require
+   
   const clientMod = require('@/lib/supabase/client')
   jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({
     auth: {
@@ -69,11 +69,11 @@ test('shows Edit button when user is admin and preview param present', async () 
 
   // Simulate preview=true in the URL so fromEditor becomes true
   // window.location is read-only in JSDOM; temporarily replace it
-  // @ts-ignore
+  // @ts-expect-error mocking incompatible types
   if (!(global as any).__origLocation) (global as any).__origLocation = window.location
-  // @ts-ignore
+  // @ts-expect-error mocking incompatible types
   delete (window as any).location
-  // @ts-ignore
+  // @ts-expect-error mocking incompatible types
   window.location = { search: '?preview=true' } as any
 
   const { ProfileContent } = await import('../ProfileContent')

@@ -11,7 +11,7 @@ import ProfileCard from '@/components/ProfileCard'
 import { createClient } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
 import { useSessionMonitor } from '@/hooks/useSessionMonitor'
-import { useViewPreference, type ViewPreference } from '@/hooks/useViewPreference'
+import { useViewPreference } from '@/hooks/useViewPreference'
 
 // Small pure helpers exported for testing. Kept additive and isolated from
 // React hooks so they can be unit tested without rendering the client UI.
@@ -73,8 +73,6 @@ function AdminPageContent() {
   })
   const [counseleeEmailInput, setCounseleeEmailInput] = useState('')
   const [usernameInput, setUsernameInput] = useState('')
-  const [isTypingCustomEmail, setIsTypingCustomEmail] = useState(false)
-  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false)
   const [isRestoringNew, setIsRestoringNew] = useState(false)
   const [availableUsers, setAvailableUsers] = useState<Array<{ email: string; role: string; username?: string }>>([])
   const [selectedCounselee, setSelectedCounselee] = useState<string>('')
@@ -94,6 +92,7 @@ function AdminPageContent() {
   useEffect(() => {
     checkAuth()
     loadAvailableUsers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const checkAuth = async () => {
@@ -260,7 +259,6 @@ function AdminPageContent() {
           counseleeEmails: []
         })
         setCounseleeEmailInput('')
-        setSlugManuallyEdited(false)
         
         // Refresh from server to ensure consistency
         await fetchProfiles()
@@ -412,7 +410,8 @@ function AdminPageContent() {
     }
   }
 
-  const handleDownloadBackup = async (profile: any) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _handleDownloadBackup = async (profile: any) => {
     try {
       setError('')
       
@@ -464,7 +463,8 @@ function AdminPageContent() {
     }
   }
 
-  const handleRestoreBackup = async (profile: any, event: React.ChangeEvent<HTMLInputElement>) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _handleRestoreBackup = async (profile: any, event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
@@ -528,7 +528,8 @@ function AdminPageContent() {
     }
   }
 
-    const handleRestoreNewBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _handleRestoreNewBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
@@ -604,7 +605,7 @@ function AdminPageContent() {
         // Fallback for browsers that don't support clipboard API
         alert(`Profile URL:\n\n${profileUrl}\n\nPlease copy this link manually.`)
       }
-    } catch (error) {
+    } catch {
       alert(`Profile URL:\n\n${profileUrl}\n\nPlease copy this link manually.`)
     }
   }
@@ -1204,7 +1205,6 @@ function AdminPageContent() {
                         counseleeEmails: []
                       })
                       setCounseleeEmailInput('')
-                      setSlugManuallyEdited(false)
                     }}
                     className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 px-4 py-2 rounded-lg border border-slate-200 hover:border-slate-300 transition-all duration-200 shadow-sm hover:shadow-md text-sm sm:text-base"
                   >

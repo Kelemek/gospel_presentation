@@ -6,7 +6,8 @@ export const isAuthenticated = (): boolean => {
   return false
 }
 
-export const authenticate = async (password?: string) => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export const authenticate = async (_password?: string) => {
   return false
 }
 
@@ -22,10 +23,12 @@ export const getSessionToken = (): string | null => {
   return null
 }
 
-export default {
+const authModule = {
   isAuthenticated,
   authenticate,
   logout,
   getAuthStatus,
   getSessionToken,
 }
+
+export default authModule

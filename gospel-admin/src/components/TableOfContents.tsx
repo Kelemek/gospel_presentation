@@ -4,7 +4,6 @@ import { GospelSection } from '@/lib/types'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 import { useTranslation, BibleTranslation } from '@/contexts/TranslationContext'
 
 interface TableOfContentsProps {
@@ -20,10 +19,12 @@ function stripHtmlTags(html: string): string {
   return temp.textContent || temp.innerText || ''
 }
 
-export default function TableOfContents({ sections, currentProfileSlug }: TableOfContentsProps) {
+export default function TableOfContents({
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  sections, currentProfileSlug: _currentProfileSlug
+}: TableOfContentsProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const { translation, setTranslation, enabledTranslations } = useTranslation()
-  const router = useRouter()
 
   useEffect(() => {
     const checkAuth = async () => {

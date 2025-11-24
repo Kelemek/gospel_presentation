@@ -24,7 +24,7 @@ beforeEach(() => {
 
 test('save failure shows alert', async () => {
   // spy createClient to simulate admin
-  // eslint-disable-next-line global-require
+   
   const clientMod = require('@/lib/supabase/client')
   jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({
     auth: { getUser: async () => ({ data: { user: { id: 'u-admin', email: 'a@x.com' } } } ), signOut: async () => ({}) },
@@ -35,7 +35,7 @@ test('save failure shows alert', async () => {
   jest.spyOn(window, 'alert').mockImplementation(() => {})
 
   // Mock fetch: GET profile + GET coma-template, PUT returns not-ok
-  // @ts-ignore
+  // @ts-expect-error mocking incompatible types
   global.fetch = jest.fn((url, opts) => {
     if (String(url).endsWith('/api/coma-template') && (!opts || opts.method === 'GET')) {
       return Promise.resolve({ ok: true, json: async () => ({ template: { questions: ['q1'], instructions: 'i' } }) })
@@ -74,7 +74,7 @@ test('save failure shows alert', async () => {
 
 test('delete last subsection triggers confirm and alert', async () => {
   // spy createClient to simulate admin
-  // eslint-disable-next-line global-require
+   
   const clientMod = require('@/lib/supabase/client')
   jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({
     auth: { getUser: async () => ({ data: { user: { id: 'u-admin', email: 'a@x.com' } } } ), signOut: async () => ({}) },
@@ -85,7 +85,7 @@ test('delete last subsection triggers confirm and alert', async () => {
   const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {})
 
   // Mock fetch: GET profile + GET coma-template, PUT returns ok true for saves
-  // @ts-ignore
+  // @ts-expect-error mocking incompatible types
   global.fetch = jest.fn((url, opts) => {
     if (String(url).endsWith('/api/coma-template') && (!opts || opts.method === 'GET')) {
       return Promise.resolve({ ok: true, json: async () => ({ template: { questions: ['q1'], instructions: 'i' } }) })

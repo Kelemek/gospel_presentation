@@ -27,7 +27,7 @@ test('shows no templates when API returns empty list', async () => {
   // no-op: authentication is provided by the test-level supabase client mock above
 
   // Mock fetch to return empty profiles list
-  // @ts-ignore
+  // @ts-expect-error mocking incompatible types
   global.fetch = jest.fn((url: any, opts: any) => {
     if (typeof url === 'string' && url.includes('/api/profiles')) {
       return Promise.resolve({ ok: true, json: async () => ({ profiles: [] }) })
@@ -51,7 +51,7 @@ test('renders templates list and shows never visited marker for zero visits', as
     isDefault: false, visitCount: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), ownerDisplayName: 'Owner'
   }
 
-  // @ts-ignore
+  // @ts-expect-error mocking incompatible types
   global.fetch = jest.fn((url: any, opts: any) => {
     if (typeof url === 'string' && url.includes('/api/profiles')) {
       return Promise.resolve({ ok: true, json: async () => ({ profiles: [sampleTemplate] }) })

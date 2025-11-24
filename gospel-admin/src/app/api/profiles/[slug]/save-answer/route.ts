@@ -72,7 +72,7 @@ export async function POST(
     }
 
     // Update the profile with new saved answers
-    const updatedProfile = await dataService.updateProfile(slug, {
+    await dataService.updateProfile(slug, {
       savedAnswers
     })
 

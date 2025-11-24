@@ -25,8 +25,10 @@ export default function TemplateCard({
   siteUrl,
   onCopyUrl,
   onDelete,
-  onDownloadBackup,
-  onRestoreBackup,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onDownloadBackup: _onDownloadBackup,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onRestoreBackup: _onRestoreBackup,
   userRole,
   canManage = true,
   isExpanded = false,

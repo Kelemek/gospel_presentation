@@ -14,7 +14,7 @@ export default function ApiStatus() {
         } else {
           setApiStatus('offline')
         }
-      } catch (error) {
+      } catch {
         setApiStatus('offline')
       }
     }

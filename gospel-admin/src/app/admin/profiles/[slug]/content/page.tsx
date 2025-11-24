@@ -74,6 +74,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
   // Check authentication on mount
   useEffect(() => {
     checkAuth()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const checkAuth = async () => {
@@ -184,6 +185,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
     if (slug && isAuth) {
       fetchProfile()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, isAuth])
 
   const fetchProfile = async () => {
@@ -197,7 +199,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
       } else {
         setError('Failed to load profile')
       }
-    } catch (err) {
+    } catch {
       setError('Failed to load profile')
     } finally {
       setIsLoading(false)
@@ -229,7 +231,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
         const errorData = await response.json().catch(() => ({}))
         setError(errorData.error || 'Failed to save content')
       }
-    } catch (err) {
+    } catch {
       setError('Failed to save content')
     } finally {
       setIsSaving(false)
@@ -1091,13 +1093,13 @@ function ContentEditPage({ params }: ContentEditPageProps) {
           <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-6 mb-6 shadow-lg">
             <h3 className="text-xl font-bold text-slate-800 mb-4">Edit COMA Template</h3>
             <p className="text-sm text-slate-600 mb-6">
-              Edit the default COMA questions and instructions that appear when users click "C.O.M.A." in the text.
+              Edit the default COMA questions and instructions that appear when users click &ldquo;C.O.M.A.&rdquo; in the text.
             </p>
             
             {/* COMA Instructions */}
             <div className="mb-6">
               <label className="text-sm font-medium text-slate-700 mb-2 block">
-                COMA Instructions (shown when clicking "C.O.M.A." in text)
+                COMA Instructions (shown when clicking &ldquo;C.O.M.A.&rdquo; in text)
               </label>
               <p className="text-xs text-slate-500 mb-2">
                 You can use rich text formatting with the toolbar below.
@@ -1116,7 +1118,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
             <div>
               <h4 className="text-lg font-semibold text-slate-800 mb-2">COMA Questions</h4>
               <p className="text-sm text-slate-600 mb-4">
-                These questions will be applied when you click "Apply COMA" on any subsection.
+                These questions will be applied when you click &ldquo;Apply COMA&rdquo; on any subsection.
               </p>
               <div className="space-y-4">
               {comaTemplate.map((question, index) => (
@@ -1435,7 +1437,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                         })}
                       </div>
                     ) : (
-                      <p className="text-slate-500 text-sm italic">No scripture references yet. Click "Add Scripture" to add some.</p>
+                      <p className="text-slate-500 text-sm italic">No scripture references yet. Click &ldquo;Add Scripture&rdquo; to add some.</p>
                     )}
                     
                     <p className="text-xs text-slate-500 mt-2">
@@ -1570,7 +1572,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                         })}
                       </div>
                     ) : (
-                      <p className="text-slate-500 text-sm italic">No questions yet. Click "Add Question" to create reflection questions.</p>
+                      <p className="text-slate-500 text-sm italic">No questions yet. Click &ldquo;Add Question&rdquo; to create reflection questions.</p>
                     )}
                   </div>
 

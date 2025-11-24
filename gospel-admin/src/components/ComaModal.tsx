@@ -22,7 +22,7 @@ export default function ComaModal({ isOpen, onClose }: ComaModalProps) {
       const response = await fetch('/api/coma-template')
       if (response.ok) {
         const data = await response.json()
-        let rawInstructions = data.template?.instructions || ''
+        const rawInstructions = data.template?.instructions || ''
         
         // If instructions are empty or just whitespace, provide a default message
         if (!rawInstructions || rawInstructions.trim() === '') {

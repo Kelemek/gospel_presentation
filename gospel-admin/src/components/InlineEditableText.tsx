@@ -104,8 +104,6 @@ export default function InlineEditableText({
     }
   }
 
-  const getCurrentValue = () => contentRef.current?.innerHTML || ''
-
   const Component = as
   const baseClassName = `inline-editable-text ${className}`
   const editingClassName = isEditing 

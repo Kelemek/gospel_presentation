@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { ErrorBoundary } from './ErrorBoundary'
 import { ReactNode } from 'react'
 
@@ -46,18 +47,18 @@ export default function AdminErrorBoundary({ children }: AdminErrorBoundaryProps
               >
                 Reload Page
               </button>
-              <a
+              <Link
                 href="/admin"
                 className="flex-1 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors text-center"
               >
                 Admin Home
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/"
                 className="flex-1 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors text-center"
               >
                 Public Site
-              </a>
+              </Link>
             </div>
           </div>
         </div>

@@ -1,8 +1,8 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 // Supabase data service - replaces blob-data-service.ts
 // Note: Type checking disabled due to Supabase client type inference issues
 import { createClient } from './supabase/server'
-import type { Database } from './supabase/database.types'
 import type { GospelProfile, CreateProfileRequest, GospelPresentationData } from './types'
 import { logger } from './logger'
 
@@ -52,7 +52,7 @@ export async function getProfiles(): Promise<GospelProfile[]> {
     const userIds = [...new Set(data?.map(p => p.created_by).filter(Boolean))]
     
     // Get user display names
-    let userMap = new Map()
+    const userMap = new Map()
     if (userIds.length > 0) {
       const { data: users } = await supabase
         .from('user_profiles')
@@ -66,7 +66,7 @@ export async function getProfiles(): Promise<GospelProfile[]> {
     
     // Get profile access (counselees) for all profiles
     const profileIds = data?.map(p => p.id).filter(Boolean) || []
-    let accessMap = new Map()
+    const accessMap = new Map()
     if (profileIds.length > 0) {
       const { data: accessData } = await supabase
         .from('profile_access')

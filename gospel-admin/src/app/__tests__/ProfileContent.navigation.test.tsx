@@ -11,7 +11,7 @@ import userEvent from '@testing-library/user-event'
 // Create mutable mocks that the jest.mock factory below will close over.
 const trackMock = jest.fn()
 const resetMock = jest.fn()
-let lastViewed: { reference: string | null } = { reference: null }
+const lastViewed: { reference: string | null } = { reference: null }
 
 jest.mock('@/lib/useScriptureProgress', () => ({
   useScriptureProgress: (_profile: any) => ({

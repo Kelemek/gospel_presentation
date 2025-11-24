@@ -25,7 +25,7 @@ beforeEach(() => {
 
 test('create section, add scripture, toggle favorite and save content (success)', async () => {
   // Spy on createClient to simulate authenticated user
-  // eslint-disable-next-line global-require
+   
   const clientMod = require('@/lib/supabase/client')
   jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({
     auth: { getUser: async () => ({ data: { user: { id: 'u-admin', email: 'a@x.com' } } } ), signOut: async () => ({}) },
@@ -37,7 +37,7 @@ test('create section, add scripture, toggle favorite and save content (success)'
   const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {})
 
   // Mock fetch handlers for coma-template, profile GET and profile PUT
-  // @ts-ignore
+  // @ts-expect-error mocking incompatible types
   global.fetch = jest.fn((url, opts) => {
     if (String(url).endsWith('/api/coma-template') && (!opts || opts.method === 'GET')) {
       return Promise.resolve({ ok: true, json: async () => ({ template: { questions: ['q1','q2'], instructions: 'inst' } }) })

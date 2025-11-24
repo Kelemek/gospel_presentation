@@ -15,12 +15,6 @@ function TextWithComaButtons({ text, onComaClick, onScriptureClick }: {
 }) {
   const containerRef = React.useRef<HTMLSpanElement>(null)
   
-// Helper function to strip HTML tags for pattern matching
-  const stripHtmlTags = (html: string): string => {
-    // Always use regex fallback to avoid SSR issues with document
-    return html.replace(/<[^>]*>/g, '')
-  }
-  
   // Bible book names lookup table - covers all 66 canonical books with common variations
   const BIBLE_BOOKS = new Set([
     // Old Testament - Pentateuch

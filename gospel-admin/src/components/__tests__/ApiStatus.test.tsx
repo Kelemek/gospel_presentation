@@ -9,7 +9,7 @@ describe('ApiStatus', () => {
 
   it('shows loading state initially and then online when fetch ok', async () => {
     // mock a successful fetch
-    // @ts-ignore global fetch mock
+    // @ts-expect-error global fetch mock
     global.fetch = jest.fn().mockResolvedValue({ ok: true })
 
     render(<ApiStatus />)
@@ -22,7 +22,7 @@ describe('ApiStatus', () => {
   })
 
   it('shows offline when fetch returns non-ok', async () => {
-    // @ts-ignore
+    // @ts-expect-error mocking incompatible types
     global.fetch = jest.fn().mockResolvedValue({ ok: false })
 
     render(<ApiStatus />)
@@ -33,7 +33,7 @@ describe('ApiStatus', () => {
   })
 
   it('shows offline when fetch throws', async () => {
-    // @ts-ignore
+    // @ts-expect-error mocking incompatible types
     global.fetch = jest.fn().mockRejectedValue(new Error('network'))
 
     render(<ApiStatus />)

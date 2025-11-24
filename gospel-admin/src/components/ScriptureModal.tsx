@@ -92,7 +92,7 @@ export default function ScriptureModal({
         setChapterText(data.text)
         setShowingContext(true)
       }
-    } catch (err) {
+    } catch {
       setError('Failed to load chapter context')
     } finally {
       setContextLoading(false)
@@ -171,13 +171,14 @@ export default function ScriptureModal({
             }
           }
         })
-        .catch(err => {
+        .catch(() => {
           setError('Failed to load scripture text')
         })
         .finally(() => {
           setLoading(false)
         })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, reference])
 
   if (!isOpen) return null

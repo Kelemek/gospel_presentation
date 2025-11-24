@@ -16,7 +16,7 @@ describe('TableOfContents additional behaviors', () => {
 
   it('calls window.print when Print Version is clicked', async () => {
     const mockPrint = jest.fn()
-    // @ts-ignore
+    // @ts-expect-error mocking incompatible types
     window.print = mockPrint
 
     // Import the component (router is mocked above) and render
@@ -33,7 +33,7 @@ describe('TableOfContents additional behaviors', () => {
   it('renders View Profiles when user is logged in', async () => {
     // Spy on the already-loaded supabase client module and mock createClient
     // (avoids resetModules or doMock which can create a second React instance).
-    // eslint-disable-next-line global-require
+     
     const clientMod = require('@/lib/supabase/client')
     jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({
       auth: { getUser: async () => ({ data: { user: { id: 'u1' } } }) },

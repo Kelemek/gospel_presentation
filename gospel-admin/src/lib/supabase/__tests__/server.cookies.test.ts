@@ -24,7 +24,7 @@ describe('supabase server cookie helpers', () => {
     let createClient: any
     jest.isolateModules(() => {
       // Import the module after mocking next/headers so the mock is used
-      // eslint-disable-next-line global-require
+       
       createClient = require('../server').createClient
     })
 
@@ -43,7 +43,7 @@ describe('supabase server cookie helpers', () => {
     // module-level mock above returns opts.cookies when createServerClient is called
     let createAdminClient: any
     jest.isolateModules(() => {
-      // eslint-disable-next-line global-require
+       
       createAdminClient = require('../server').createAdminClient
     })
 

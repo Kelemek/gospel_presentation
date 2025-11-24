@@ -1,6 +1,5 @@
 // API Route: POST /api/profiles/[slug]/visit - Track visit to profile
 import { NextRequest, NextResponse } from 'next/server'
-import { logger } from '@/lib/logger'
 import { incrementProfileVisitCount } from '@/lib/supabase-data-service'
 
 interface RouteContext {

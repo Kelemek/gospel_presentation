@@ -14,7 +14,7 @@ describe('supabase client singleton (CJS-friendly)', () => {
   it('calls createBrowserClient with env vars and enforces singleton', () => {
     // Simpler: require the module and exercise its public API.
     // This avoids fragile module-mocking ordering across many test files.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+     
     const mod = require('../supabase/client')
   const { createClient } = mod
 
