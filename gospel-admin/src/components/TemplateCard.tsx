@@ -56,20 +56,22 @@ export default function TemplateCard({
         )}
       </div>
 
-      {/* Details Toggle Button */}
-      <button
-        onClick={() => {
-          if (onToggleExpand !== undefined) {
-            onToggleExpand()
-          } else {
-            setInternalShowDetails(!internalShowDetails)
-          }
-        }}
-        className="w-full px-4 py-3 bg-gradient-to-r from-blue-50 to-slate-50 hover:from-blue-100 hover:to-slate-100 border-t border-slate-100 transition-colors cursor-pointer flex items-center justify-between"
-      >
-        <span className="text-xs sm:text-sm font-medium text-slate-700">Details...</span>
-        <span className="text-xs text-slate-500">{showDetails ? '▼' : '▶'}</span>
-      </button>
+      {/* Details Toggle Button - Only for admins */}
+      {userRole === 'admin' && (
+        <button
+          onClick={() => {
+            if (onToggleExpand !== undefined) {
+              onToggleExpand()
+            } else {
+              setInternalShowDetails(!internalShowDetails)
+            }
+          }}
+          className="w-full px-4 py-3 bg-gradient-to-r from-blue-50 to-slate-50 hover:from-blue-100 hover:to-slate-100 border-t border-slate-100 transition-colors cursor-pointer flex items-center justify-between"
+        >
+          <span className="text-xs sm:text-sm font-medium text-slate-700">Details...</span>
+          <span className="text-xs text-slate-500">{showDetails ? '▼' : '▶'}</span>
+        </button>
+      )}
 
       {/* Expandable Details Section */}
       {showDetails && (
