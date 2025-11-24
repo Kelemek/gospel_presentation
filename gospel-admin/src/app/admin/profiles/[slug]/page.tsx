@@ -632,7 +632,7 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
               <button
                 type="submit"
                 disabled={isAddingCounselee || !counseleeEmailInput.trim() || !counseleeEmailInput.includes('@') || !usernameInput.trim()}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md whitespace-nowrap"
+                className="bg-green-50 hover:bg-green-100 text-green-700 hover:text-green-800 px-4 py-2 rounded-lg transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md border border-green-200 hover:border-green-300 whitespace-nowrap"
               >
                 {isAddingCounselee ? 'Adding...' : 'Add'}
               </button>
@@ -665,7 +665,7 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
                   </div>
                   <button
                     onClick={() => handleRemoveCounselee(access.user_email)}
-                    className="text-red-600 hover:text-red-800 text-sm font-medium px-3 py-1 hover:bg-red-50 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md border border-transparent hover:border-red-200"
+                    className="text-red-700 hover:text-red-800 text-sm font-medium bg-red-50 hover:bg-red-100 px-3 py-1 rounded-lg border border-red-200 hover:border-red-300 transition-all duration-200 shadow-sm hover:shadow-md"
                   >
                     Remove
                   </button>
@@ -715,11 +715,11 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
             <button
               onClick={handleDownloadBackup}
               disabled={isBackingUp}
-              className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+              className="flex-1 px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 hover:text-green-800 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md border border-green-200 hover:border-green-300"
             >
               {isBackingUp ? 'Downloading...' : 'Download Backup'}
             </button>
-            <label className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-all duration-200 disabled:opacity-50 cursor-pointer text-center shadow-sm hover:shadow-md whitespace-nowrap">
+            <label className="flex-1 px-4 py-2 bg-green-50 hover:bg-green-100 text-green-700 hover:text-green-800 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 cursor-pointer text-center shadow-sm hover:shadow-md border border-green-200 hover:border-green-300 whitespace-nowrap">
               {isRestoringBackup ? 'Restoring...' : 'Restore Backup'}
               <input
                 type="file"

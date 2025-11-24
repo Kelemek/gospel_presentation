@@ -11,6 +11,7 @@ interface TemplateCardProps {
   onDownloadBackup: (template: any) => void
   onRestoreBackup: (template: any, event: React.ChangeEvent<HTMLInputElement>) => void
   userRole?: 'admin' | 'counselor' | null
+  canManage?: boolean
   isExpanded?: boolean
   onToggleExpand?: () => void
 }
@@ -27,6 +28,7 @@ export default function TemplateCard({
   onDownloadBackup,
   onRestoreBackup,
   userRole,
+  canManage = true,
   isExpanded = false,
   onToggleExpand
 }: TemplateCardProps) {
@@ -164,7 +166,7 @@ export default function TemplateCard({
                 Copy URL
               </button>
 
-              {!template.isDefault && (
+              {canManage && !template.isDefault && (
                 <button
                   onClick={() => onDelete(template.slug, template.title)}
                   className="flex-1 px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 hover:text-red-800 rounded text-xs font-medium transition-colors border border-red-200 hover:border-red-300"
@@ -172,27 +174,6 @@ export default function TemplateCard({
                   Delete
                 </button>
               )}
-            </div>
-
-            {/* Backup/Restore Actions */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => onDownloadBackup(template)}
-                className="flex-1 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 hover:text-green-800 rounded text-xs font-medium transition-colors border border-green-200 hover:border-green-300"
-                title="Download template backup"
-              >
-                Download Backup
-              </button>
-
-              <label className="flex-1 px-3 py-1.5 bg-green-50 hover:bg-green-100 text-green-700 hover:text-green-800 rounded text-xs font-medium transition-colors border border-green-200 hover:border-green-300 cursor-pointer text-center">
-                Restore
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={(e) => onRestoreBackup(template, e)}
-                  className="hidden"
-                />
-              </label>
             </div>
           </div>
         </div>

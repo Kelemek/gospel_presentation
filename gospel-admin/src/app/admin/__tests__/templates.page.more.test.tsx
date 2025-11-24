@@ -35,10 +35,17 @@ describe('TemplatesPageContent - additional branches', () => {
 
     // wait for template title to appear
     expect(await screen.findByText('Template One')).toBeInTheDocument()
-    // Never visited label should be shown for visitCount === 0
-    expect(screen.getByText('Never visited')).toBeInTheDocument()
-  // Owner display shown (may appear in multiple elements)
-  expect(screen.getAllByText(/Owner/).length).toBeGreaterThan(0)
+    // Description should be visible
+    expect(screen.getByText('desc')).toBeInTheDocument()
+  
+    // Expand details to see additional info
+    const detailsButtons = screen.getAllByRole('button', { name: /Details/i })
+    fireEvent.click(detailsButtons[0])
+  
+    // Now "Never visited" should be visible in expanded details
+    await waitFor(() => expect(screen.getByText('Never visited')).toBeInTheDocument())
+    // Owner display shown (may appear in multiple elements)
+    expect(screen.getAllByText(/Owner/).length).toBeGreaterThan(0)
   })
 
   test('copy/share button writes URL to clipboard and shows alert', async () => {
@@ -68,8 +75,18 @@ describe('TemplatesPageContent - additional branches', () => {
 
     expect(await screen.findByText('Copy Me')).toBeInTheDocument()
 
-    const share = screen.getByRole('button', { name: /Share/i })
-    fireEvent.click(share)
+    // Find and expand the template details to access the Copy URL button
+    const detailsButtons = screen.getAllByRole('button', { name: /Details/i })
+    const copyTemplateRow = screen.getByText('Copy Me').closest('tr') || screen.getByText('Copy Me').closest('div')
+    const detailsButton = copyTemplateRow?.querySelector('button[aria-label*="Details"]') || detailsButtons[0]
+    
+    if (detailsButton) {
+      fireEvent.click(detailsButton)
+    }
+
+    // Now the Copy URL button should be visible in the expanded details
+    const copyButton = await screen.findByRole('button', { name: /Copy URL/i })
+    fireEvent.click(copyButton)
 
     await waitFor(() => expect(writeMock).toHaveBeenCalled())
     expect(alertSpy).toHaveBeenCalled()
@@ -107,8 +124,17 @@ describe('TemplatesPageContent - additional branches', () => {
 
     expect(await screen.findByText('Delete Me')).toBeInTheDocument()
 
-    // Delete button should exist for admin role
-    const delBtn = screen.getByRole('button', { name: /Delete/i })
+    // Find and expand the template details to access the Delete button
+    const detailsButtons = screen.getAllByRole('button', { name: /Details/i })
+    const deleteTemplateRow = screen.getByText('Delete Me').closest('tr') || screen.getByText('Delete Me').closest('div')
+    const detailsButton = deleteTemplateRow?.querySelector('button[aria-label*="Details"]') || detailsButtons[0]
+    
+    if (detailsButton) {
+      fireEvent.click(detailsButton)
+    }
+
+    // Now the Delete button should be visible in the expanded details
+    const delBtn = await screen.findByRole('button', { name: /Delete/i })
     fireEvent.click(delBtn)
 
     await waitFor(() => expect(alertSpy).toHaveBeenCalled())
@@ -116,41 +142,29 @@ describe('TemplatesPageContent - additional branches', () => {
     await waitFor(() => expect(screen.queryByText('Delete Me')).not.toBeInTheDocument())
   })
 
-  test('download backup triggers blob URL creation', async () => {
+  test('templates page renders correctly without backup buttons', async () => {
     const profiles = [{
-      id: '4', slug: 't-dl', title: 'Download Me', isTemplate: true,
+      id: '4', slug: 't-no-backup', title: 'No Backup Buttons', isTemplate: true,
       visitCount: 2, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), lastVisited: null,
       ownerDisplayName: '', description: '', isDefault: false
     }]
 
-    ;(global.fetch as jest.Mock).mockImplementation((url: string, opts?: any) => {
-      if (url.match(/\/api\/profiles(?:\?.*)?$/)) {
+    ;(global.fetch as jest.Mock).mockImplementation((url: string) => {
+      if (/\/api\/profiles(?:\?.*)?$/.test(url)) {
         return Promise.resolve({ ok: true, json: async () => ({ profiles }) })
       }
-
-      // fetch profile detail
-      if (url.match(/\/api\/profiles\/t-dl(?:\?.*)?$/)) {
-        return Promise.resolve({ ok: true, json: async () => ({ slug: 't-dl', title: 'Download Me', description: '', isDefault: false, isTemplate: true, gospelData: [], visitCount: 2, lastVisited: null }) })
-      }
-
       return Promise.resolve({ ok: true, json: async () => ({}) })
     })
-
-  // jsdom may not implement createObjectURL; provide test stubs
-  ;(global.URL as any).createObjectURL = jest.fn().mockReturnValue('blob:mock')
-  ;(global.URL as any).revokeObjectURL = jest.fn()
 
     const mod = await import('@/app/admin/templates/page')
     const { TemplatesPageContent } = mod
 
     render(<TemplatesPageContent />)
 
-    expect(await screen.findByText('Download Me')).toBeInTheDocument()
-
-    const dl = screen.getByRole('button', { name: /Download Backup/i })
-    fireEvent.click(dl)
-
-    await waitFor(() => expect((global.URL as any).createObjectURL).toHaveBeenCalled())
-    expect((global.URL as any).revokeObjectURL).toHaveBeenCalled()
+    // Verify template is rendered
+    expect(await screen.findByText('No Backup Buttons')).toBeInTheDocument()
+    // Backup/restore buttons should NOT be in the list/card views (they're only in settings)
+    expect(screen.queryByRole('button', { name: /Download Backup/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Restore/i })).not.toBeInTheDocument()
   })
 })

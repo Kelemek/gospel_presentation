@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 // Provide a test-level supabase client mock so the page's `checkAuth` sees an authenticated user
@@ -66,8 +66,12 @@ test('renders templates list and shows never visited marker for zero visits', as
   await waitFor(() => expect(screen.findByRole('heading', { name: /Resource Template/i })).resolves.toBeTruthy())
   await waitFor(() => expect(screen.getByText(sampleTemplate.title)).toBeInTheDocument())
 
-  // Since visitCount === 0, the 'Never visited' label should be present
-  expect(screen.getByText(/Never visited/i)).toBeInTheDocument()
+  // Expand details to see "Never visited" label
+  const detailsButton = screen.getByRole('button', { name: /Details/i })
+  fireEvent.click(detailsButton)
+
+  // Since visitCount === 0, the 'Never visited' label should be present in expanded details
+  await waitFor(() => expect(screen.getByText(/Never visited/i)).toBeInTheDocument())
 
   // Test search: type a query that doesn't match -> shows 'No templates match your search'
   const searchInput = screen.getByPlaceholderText(/Search templates by name, URL, description, or owner.../i)

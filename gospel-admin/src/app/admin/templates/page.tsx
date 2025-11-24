@@ -297,7 +297,7 @@ function TemplatesPageContent() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search templates by name, URL, description, or owner..."
-                  className="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-purple-400 text-sm text-slate-900 placeholder-slate-400"
+                  className="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400 text-sm text-slate-900 placeholder-slate-400"
                 />
                 <svg
                   className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
@@ -320,7 +320,7 @@ function TemplatesPageContent() {
               </div>
               {filteredTemplates.length > 0 && (
                 <div className="flex items-center gap-2">
-                  {userRole === 'admin' && view === 'card' && (
+                  {userRole === 'admin' && (
                     <div className="inline-flex items-center gap-1 p-1 bg-slate-100 rounded-lg border border-slate-200">
                       <button
                         onClick={() => {
@@ -379,6 +379,7 @@ function TemplatesPageContent() {
                   onDownloadBackup={handleDownloadBackup}
                   onRestoreBackup={handleRestoreBackup}
                   userRole={userRole}
+                  canManage={userRole === 'admin'}
                   isExpanded={expandedRows.has(template.id)}
                   onToggleExpand={() => {
                     const newSet = new Set(expandedRows)
@@ -395,68 +396,126 @@ function TemplatesPageContent() {
           ) : (
             // List View
             <div className="divide-y divide-slate-200">
-              {filteredTemplates.map(template => (
-                <div key={template.id} className="py-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                        <h3 className="text-base sm:text-lg font-semibold text-slate-900">
-                          {template.title}
-                        </h3>
-                        <span className="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded-full font-medium w-fit">
-                          Template
-                        </span>
-                      </div>
-                      
-                      <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                        <span className="font-medium">URL:</span> <span className="break-all">{siteUrl}/{template.slug}</span>
-                      </p>
-                      
-                      {template.ownerDisplayName && (
-                        <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                          <span className="font-medium">Owner:</span> {template.ownerDisplayName}
-                        </p>
-                      )}
-                      
-                      {template.description && (
-                        <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                          <span className="font-medium">Description:</span> {template.description}
-                        </p>
-                      )}
-                      
-                      <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs text-slate-500">
-                        <span>{template.visitCount} visits</span>
-                        <span className="hidden sm:inline">Created {new Date(template.createdAt).toLocaleDateString()}</span>
-                        <span>Updated {new Date(template.updatedAt).toLocaleDateString()}</span>
-                        {template.lastVisited ? (
-                          <span>Last visited {new Date(template.lastVisited).toLocaleDateString()}</span>
-                        ) : template.visitCount === 0 ? (
-                          <span className="text-orange-500">Never visited</span>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2 flex-wrap">
+              {filteredTemplates.map(template => {
+                const isExpanded = expandedRows.has(template.id)
+                const toggleExpanded = () => {
+                  const newSet = new Set(expandedRows)
+                  if (newSet.has(template.id)) {
+                    newSet.delete(template.id)
+                  } else {
+                    newSet.add(template.id)
+                  }
+                  setExpandedRows(newSet)
+                }
+                
+                return (
+                  <div key={template.id} className="py-4">
+                    {/* Collapsed View - Always Shown */}
+                    <div className="relative group">
                       <Link
                         href={`/${template.slug}`}
                         target="_blank"
-                        className="text-slate-700 hover:text-slate-800 text-xs sm:text-sm font-medium bg-slate-100 hover:bg-slate-200 px-2 sm:px-3 py-1 rounded-lg border border-slate-300 hover:border-slate-400 transition-all duration-200 shadow-sm hover:shadow-md"
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 -m-4 rounded-lg transition-colors hover:bg-slate-50"
                       >
-                        View
-                      </Link>                        {/* Only show share button for admins */}
-                        {userRole === 'admin' && (
-                          <button
-                            onClick={() => handleCopyProfileUrl(template)}
-                            className="text-slate-700 hover:text-slate-800 text-xs sm:text-sm font-medium bg-slate-100 hover:bg-slate-200 px-2 sm:px-3 py-1 rounded-lg border border-slate-300 hover:border-slate-400 transition-all duration-200 shadow-sm hover:shadow-md"
-                          >
-                            Share
-                          </button>
-                        )}
-                        
-                        {/* Only show edit buttons for admins */}
-                        {userRole === 'admin' && (
-                          <>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-col gap-1">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                              <h3 className="text-base sm:text-lg font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                                {template.title}
+                              </h3>
+                              <span className="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded-full font-medium w-fit">
+                                Template
+                              </span>
+                            </div>
+                            
+                            {/* Description */}
+                            {template.description && (
+                              <p className="text-xs sm:text-sm text-slate-600">
+                                {template.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Right side - Details toggle */}
+                        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                          {/* Details toggle button */}
+                          {userRole === 'admin' && (
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault()
+                                toggleExpanded()
+                              }}
+                              className="relative z-10 text-slate-700 hover:text-slate-800 text-xs sm:text-sm font-medium bg-blue-50 hover:bg-blue-100 px-2 sm:px-3 py-1 rounded-lg border border-blue-200 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow-md"
+                            >
+                              {isExpanded ? '▼ Details' : '▶ Details'}
+                            </button>
+                          )}
+                        </div>
+                      </Link>
+                    </div>
+
+                    {/* Expanded Details - Only shown for admins */}
+                    {isExpanded && userRole === 'admin' && (
+                      <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
+                        {/* Details/Info */}
+                        <div className="space-y-2 text-xs sm:text-sm">
+                          {/* Badges */}
+                          <div className="flex flex-wrap gap-1.5 pb-2">
+                            <span className="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded-full font-medium">
+                              Template
+                            </span>
+                          </div>
+
+                          <p className="text-slate-600">
+                            <span className="font-medium">URL:</span> <span className="break-all">{siteUrl}/{template.slug}</span>
+                          </p>
+                          
+                          {template.ownerDisplayName && (
+                            <p className="text-slate-600">
+                              <span className="font-medium">Owner:</span> {template.ownerDisplayName}
+                            </p>
+                          )}
+
+                          {template.visitCount !== undefined && (
+                            <p className="text-slate-600">
+                              <span className="font-medium">Views:</span> {template.visitCount}
+                            </p>
+                          )}
+                          
+                          {template.createdAt && (
+                            <p className="text-slate-600">
+                              <span className="font-medium">Created:</span> {new Date(template.createdAt).toLocaleDateString()}
+                            </p>
+                          )}
+                          
+                          {template.updatedAt && (
+                            <p className="text-slate-600">
+                              <span className="font-medium">Updated:</span> {new Date(template.updatedAt).toLocaleDateString()}
+                            </p>
+                          )}
+                          
+                          {template.lastVisited ? (
+                            <p className="text-slate-600">
+                              <span className="font-medium">Last Viewed:</span> {new Date(template.lastVisited).toLocaleDateString()}
+                            </p>
+                          ) : template.visitCount === 0 ? (
+                            <p className="text-orange-500">
+                              <span className="font-medium">Last Viewed:</span> Never visited
+                            </p>
+                          ) : null}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="pt-3 border-t border-slate-100 space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                              onClick={() => handleCopyProfileUrl(template)}
+                              className="text-slate-700 hover:text-slate-800 text-xs sm:text-sm font-medium bg-slate-100 hover:bg-slate-200 px-2 sm:px-3 py-1 rounded-lg border border-slate-300 hover:border-slate-400 transition-all duration-200 shadow-sm hover:shadow-md"
+                            >
+                              Copy URL
+                            </button>
+                            
                             <Link
                               href={`/admin/profiles/${template.slug}`}
                               className="bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-blue-200 hover:border-blue-300"
@@ -471,7 +530,7 @@ function TemplatesPageContent() {
                               Edit
                             </Link>
                             
-                            {!template.isDefault && (
+                            {userRole === 'admin' && !template.isDefault && (
                               <button
                                 onClick={() => handleDeleteProfile(template.slug, template.title)}
                                 className="text-red-700 hover:text-red-800 text-xs sm:text-sm font-medium bg-red-50 hover:bg-red-100 px-2 sm:px-3 py-1 rounded-lg border border-red-200 hover:border-red-300 transition-all duration-200 shadow-sm hover:shadow-md"
@@ -479,36 +538,13 @@ function TemplatesPageContent() {
                                 Delete
                               </button>
                             )}
-                          </>
-                        )}
-                      </div>
-
-                      {/* Backup/Restore buttons for admins */}
-                      {userRole === 'admin' && (
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <button
-                            onClick={() => handleDownloadBackup(template)}
-                            className="bg-green-50 hover:bg-green-100 text-green-700 hover:text-green-800 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md border border-green-200 hover:border-green-300"
-                            title="Download template backup"
-                          >
-                            Download Backup
-                          </button>
-                          
-                          <label className="bg-green-50 hover:bg-green-100 text-green-700 hover:text-green-800 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 shadow-sm hover:shadow-md border border-green-200 hover:border-green-300 cursor-pointer">
-                            Upload & Restore
-                            <input
-                              type="file"
-                              accept=".json"
-                              onChange={(e) => handleRestoreBackup(template, e)}
-                              className="hidden"
-                            />
-                          </label>
+                          </div>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
