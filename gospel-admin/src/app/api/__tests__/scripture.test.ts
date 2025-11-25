@@ -62,6 +62,11 @@ jest.mock('@/lib/bible-api', () => ({
   })
 }))
 
+jest.mock('@/lib/scripture-logging', () => ({
+  getSessionId: jest.fn(() => 'test-session-id'),
+  logScriptureAccess: jest.fn().mockResolvedValue(undefined)
+}))
+
 describe('/api/scripture', () => {
   beforeEach(() => {
     delete process.env.ESV_API_TOKEN

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import Link from 'next/link'
 
 interface TranslationSetting {
   translation_code: string
@@ -192,6 +193,13 @@ export default function TranslationSettings() {
                 </p>
               </div>
             )}
+            
+            <Link
+              href="/admin/reports"
+              className="block mt-4 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg text-center transition-colors"
+            >
+              📊 View Usage Reports
+            </Link>
           </div>
         </div>
       )}

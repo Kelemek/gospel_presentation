@@ -3,6 +3,7 @@ import { fetchScripture, BibleTranslation } from '@/lib/bible-api'
 import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getTotalEsvCacheVerseCount } from '@/lib/verse-counter'
+import { logScriptureAccess, getSessionId } from '@/lib/scripture-logging'
 
 // Cache configuration
 // ESV API free tier: max 500 verses (we cache to stay compliant)
@@ -13,6 +14,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const reference = searchParams.get('reference')
   const translation = (searchParams.get('translation') || 'esv') as BibleTranslation
+  const profileSlug = searchParams.get('profile') || undefined
 
   if (!reference) {
     return NextResponse.json({ error: 'Scripture reference is required' }, { status: 400 })
@@ -23,10 +25,22 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid translation. Must be "esv", "kjv", or "nasb"' }, { status: 400 })
   }
 
+  // Get session ID for tracking
+  const sessionId = getSessionId(request)
+
   try {
     // KJV and NASB are served directly from database, no caching needed
     if (translation === 'kjv' || translation === 'nasb') {
       const result = await fetchScripture(reference, translation)
+      
+      // Log the access (async, non-blocking)
+      logScriptureAccess({
+        reference,
+        translation: translation as BibleTranslation,
+        sessionId,
+        request
+      }).catch(err => logger.warn('Failed to log scripture access:', err))
+      
       return NextResponse.json(
         { 
           reference: result.reference,
@@ -58,6 +72,15 @@ export async function GET(request: NextRequest) {
 
     if (cachedData && !cacheError) {
       logger.debug(`✅ Cache hit: ${reference} (${translation})`)
+      
+      // Log the access (async, non-blocking)
+      logScriptureAccess({
+        reference,
+        translation: translation as BibleTranslation,
+        sessionId,
+        request
+      }).catch(err => logger.warn('Failed to log scripture access:', err))
+      
       return NextResponse.json(
         { 
           reference,
@@ -115,6 +138,14 @@ export async function GET(request: NextRequest) {
         logger.info(`🗑️ Evicted ${evictedCount} old ESV cache entries (was ${totalVerses} verses, limit 500)`)
       }
     }
+    
+    // Log the ESV access (async, non-blocking)
+    logScriptureAccess({
+      reference,
+      translation: translation as BibleTranslation,
+      sessionId,
+      request
+    }).catch(err => logger.warn('Failed to log scripture access:', err))
     
     return NextResponse.json(
       { 

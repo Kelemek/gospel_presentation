@@ -30,6 +30,11 @@ jest.mock('@/lib/supabase/server', () => ({
   }))
 }))
 
+jest.mock('@/lib/scripture-logging', () => ({
+  getSessionId: jest.fn(() => 'test-session-id'),
+  logScriptureAccess: jest.fn().mockResolvedValue(undefined)
+}))
+
 describe('scripture route branches', () => {
   beforeEach(() => {
     jest.resetModules()

@@ -40,7 +40,14 @@ describe('scripture API error branches', () => {
   it('returns 500 when ESV API responds non-ok', async () => {
   ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: false, status: 502, json: async () => ({}) })
 
-    const req: any = { url: 'https://example.com/api/scripture?reference=John+3:16' }
+    const req: any = {
+      url: 'https://example.com/api/scripture?reference=John+3:16',
+      headers: {
+        get: jest.fn(() => null),
+        values: jest.fn(() => [])
+      },
+      cookies: { get: jest.fn(() => undefined) }
+    }
     const res = await GET(req)
     expect(res.status).toBe(500)
     const body = await res.json()
@@ -50,7 +57,14 @@ describe('scripture API error branches', () => {
   it('returns 404 when no passages present', async () => {
   ;(global.fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: async () => ({ passages: [] }) })
 
-    const req: any = { url: 'https://example.com/api/scripture?reference=Unknown+Ref' }
+    const req: any = {
+      url: 'https://example.com/api/scripture?reference=Unknown+Ref',
+      headers: {
+        get: jest.fn(() => null),
+        values: jest.fn(() => [])
+      },
+      cookies: { get: jest.fn(() => undefined) }
+    }
     const res = await GET(req)
     expect(res.status).toBe(404)
     const body = await res.json()
