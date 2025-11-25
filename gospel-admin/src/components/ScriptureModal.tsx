@@ -37,13 +37,14 @@ export default function ScriptureModal({
   context,
   onScriptureViewed
 }: ScriptureModalProps) {
-  const { translation } = useTranslation()
+  const { translation, setTranslation } = useTranslation()
   const [scriptureText, setScriptureText] = useState<string>('')
   const [chapterText, setChapterText] = useState<string>('')
   const [showingContext, setShowingContext] = useState(false)
   const [loading, setLoading] = useState(false)
   const [contextLoading, setContextLoading] = useState(false)
   const [error, setError] = useState<string>('')
+  const [availableTranslations, setAvailableTranslations] = useState<string[]>(['esv', 'kjv', 'nasb'])
 
   // Touch/swipe state for mobile navigation
   const [touchStart, setTouchStart] = useState<number | null>(null)
@@ -143,22 +144,26 @@ export default function ScriptureModal({
     }
   }, [showingContext, chapterText, reference])
 
-  // Clear cached scripture when translation changes
+  // Clear chapter context when translation changes
   useEffect(() => {
-    setScriptureText('')
-    setChapterText('')
-    setShowingContext(false)
+    if (translation) {
+      setChapterText('')
+      setShowingContext(false)
+    }
   }, [translation])
 
+  // Fetch scripture when modal opens, reference changes, or translation changes
   useEffect(() => {
     if (isOpen && reference) {
+      const abortController = new AbortController()
       setLoading(true)
       setError('')
-      setScriptureText('')
       setChapterText('')
       setShowingContext(false)
 
-      fetch(`/api/scripture?reference=${encodeURIComponent(reference)}&translation=${translation}`)
+      fetch(`/api/scripture?reference=${encodeURIComponent(reference)}&translation=${translation}`, {
+        signal: abortController.signal
+      })
         .then(response => response.json())
         .then(data => {
           if (data.error) {
@@ -171,15 +176,22 @@ export default function ScriptureModal({
             }
           }
         })
-        .catch(() => {
-          setError('Failed to load scripture text')
+        .catch((err) => {
+          // Don't set error if the request was aborted
+          if (err.name !== 'AbortError') {
+            setError('Failed to load scripture text')
+          }
         })
         .finally(() => {
           setLoading(false)
         })
+
+      return () => {
+        abortController.abort()
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, reference])
+  }, [isOpen, reference, translation])
 
   if (!isOpen) return null
 
@@ -302,7 +314,28 @@ export default function ScriptureModal({
           </div>
           
           {/* Context Toggle Buttons - Always Visible */}
-          <div className="flex gap-2 justify-center">
+          <div className="flex flex-wrap gap-2 justify-center">
+            {/* Translation Selector */}
+            <select
+              value={translation}
+              onChange={async (e) => {
+                await setTranslation(e.target.value as 'esv' | 'kjv' | 'nasb')
+                setChapterText('')
+                setShowingContext(false)
+              }}
+              className="px-6 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border-2 bg-slate-100 text-slate-700 border-slate-400 hover:text-slate-800 hover:bg-slate-150 cursor-pointer appearance-none bg-no-repeat pr-10"
+              style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23334155' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'%3E%3C/path%3E%3C/svg%3E")`,
+                backgroundPosition: 'right 10px center'
+              }}
+            >
+              {availableTranslations.map((trans) => (
+                <option key={trans} value={trans}>
+                  {trans.toUpperCase()}
+                </option>
+              ))}
+            </select>
+
             <button
               onClick={() => setShowingContext(false)}
               className={`px-4 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border-2 ${
@@ -313,6 +346,7 @@ export default function ScriptureModal({
             >
               Verse
             </button>
+
             <button
               onClick={fetchChapterContext}
               disabled={contextLoading}
