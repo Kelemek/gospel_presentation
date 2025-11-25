@@ -233,8 +233,8 @@ export async function POST(request: NextRequest) {
       const byKey = new Map<string, { trans: string; ref: string; year: number; count: number; sessions: Set<string> }>()
       
       for (const log of allLogs as any[]) {
-        if (log.timestamp) {
-          const year = new Date(log.timestamp).getFullYear()
+        if (log.scripture_reference) {
+          const year = log.year_accessed || (log.timestamp ? new Date(log.timestamp).getFullYear() : new Date().getFullYear())
           const key = `${log.translation}|${log.scripture_reference}|${year}`
           
           if (!byKey.has(key)) {
@@ -253,7 +253,6 @@ export async function POST(request: NextRequest) {
       }
 
       result = Array.from(byKey.values())
-        .filter(item => item.count >= 5)
         .map(item => ({
           translation: item.trans,
           scripture_reference: item.ref,
@@ -262,7 +261,7 @@ export async function POST(request: NextRequest) {
           unique_sessions: item.sessions.size
         }))
         .sort((a, b) => b.year - a.year || a.translation.localeCompare(b.translation) || b.access_count - a.access_count)
-        .slice(0, 50)
+        .slice(0, 100)
     } else {
       return NextResponse.json({
         columns: [],

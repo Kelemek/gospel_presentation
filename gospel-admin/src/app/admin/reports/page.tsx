@@ -14,12 +14,16 @@ interface ReportDefinition {
   description: string
 }
 
+type SortDirection = 'asc' | 'desc' | null
+
 export default function ReportsPage() {
   const [translations, setTranslations] = useState<string[]>([])
   const [selectedReport, setSelectedReport] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [results, setResults] = useState<ReportResult | null>(null)
+  const [sortColumn, setSortColumn] = useState<string | null>(null)
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null)
 
   // Fetch available translations from database on mount
   useEffect(() => {
@@ -129,6 +133,49 @@ export default function ReportsPage() {
   }
 
   const router = useRouter()
+
+  function handleSort(column: string) {
+    if (sortColumn === column) {
+      // Cycle: asc -> desc -> none
+      if (sortDirection === 'asc') {
+        setSortDirection('desc')
+      } else if (sortDirection === 'desc') {
+        setSortColumn(null)
+        setSortDirection(null)
+      }
+    } else {
+      // New column, start with asc
+      setSortColumn(column)
+      setSortDirection('asc')
+    }
+  }
+
+  function getSortedData() {
+    if (!results || !sortColumn || !sortDirection) {
+      return results?.data || []
+    }
+
+    const sorted = [...results.data].sort((a, b) => {
+      const aVal = a[sortColumn]
+      const bVal = b[sortColumn]
+
+      // Handle null/undefined
+      if (aVal === null || aVal === undefined) return sortDirection === 'asc' ? 1 : -1
+      if (bVal === null || bVal === undefined) return sortDirection === 'asc' ? -1 : 1
+
+      // Compare values
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        return sortDirection === 'asc' ? aVal - bVal : bVal - aVal
+      }
+
+      const aStr = String(aVal).toLowerCase()
+      const bStr = String(bVal).toLowerCase()
+      const cmp = aStr.localeCompare(bStr)
+      return sortDirection === 'asc' ? cmp : -cmp
+    })
+
+    return sorted
+  }
 
   function downloadCSV() {
     if (!results) return
@@ -256,15 +303,23 @@ export default function ReportsPage() {
                           {results.columns.map(col => (
                             <th
                               key={col}
-                              className="px-4 py-3 text-left font-semibold text-slate-900"
+                              onClick={() => handleSort(col)}
+                              className="px-4 py-3 text-left font-semibold text-slate-900 cursor-pointer hover:bg-slate-100 transition-colors"
                             >
-                              {col}
+                              <div className="flex items-center gap-2">
+                                {col}
+                                {sortColumn === col && (
+                                  <span className="text-xs font-bold">
+                                    {sortDirection === 'asc' ? '↑' : '↓'}
+                                  </span>
+                                )}
+                              </div>
                             </th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {results.data.map((row, idx) => (
+                        {getSortedData().map((row, idx) => (
                           <tr
                             key={idx}
                             className="border-b border-slate-100 hover:bg-slate-50 transition-colors"
