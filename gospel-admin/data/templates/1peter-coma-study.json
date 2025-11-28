@@ -1,0 +1,667 @@
+{
+  "title": "1 Peter COMA Study",
+  "description": "5-week walkthrough of 1 Peter using the COMA method (Context, Observation, Meaning, Application) from a Reformed Baptist perspective",
+  "isTemplate": true,
+  "gospelData": [
+    {
+      "section": "week1",
+      "title": "Week 1: Living Hope & Holy Living",
+      "subsections": [
+        {
+          "title": "Introduction to 1 Peter",
+          "content": "<p>Peter wrote this letter around AD 62-64 to Christians scattered throughout Asia Minor (modern-day Turkey)—described as 'elect exiles.' These believers faced increasing hostility and persecution for their faith. Peter writes to encourage them to stand firm, reminding them of their living hope in Christ and calling them to holy living in the midst of suffering.</p><p>The letter's major themes include: the believer's identity as chosen exiles, the living hope secured by Christ's resurrection, submission in various relationships, and the proper response to suffering. Peter draws heavily on Old Testament imagery, showing how the church is the true people of God.</p><p>This week we explore the opening chapter, which grounds our hope in God's saving work and calls us to holiness.</p>",
+          "scriptureReferences": [
+            { "reference": "1 Peter 1:1-2" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "Greeting to the Elect Exiles",
+          "content": "<p>Peter's greeting establishes the identity of his readers as chosen by God yet strangers in this world.</p>",
+          "scriptureReferences": [
+            { "reference": "1 Peter 1:1-2" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w1a-q1",
+              "question": "Context: Who is writing and to whom? What regions are mentioned? Why might Peter call them 'elect exiles' or 'sojourners'?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1a-q2",
+              "question": "Observation: What three Persons of the Trinity are mentioned in 1 Peter 1:2? What role does each play in salvation? What two things does Peter wish for them?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1a-q3",
+              "question": "Meaning: What does it mean to be chosen 'according to the foreknowledge of God the Father'? How does this relate to the Reformed understanding of unconditional election? What is 'sanctification of the Spirit' and 'sprinkling with his blood'?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1a-q4",
+              "question": "Application: How does seeing yourself as an 'elect exile' change your relationship to the world around you? Does your life reflect that you are a stranger here?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Born Again to a Living Hope",
+          "content": "<p>Peter breaks into praise for God's saving work, grounding our hope in Christ's resurrection.</p>",
+          "scriptureReferences": [
+            { "reference": "1 Peter 1:3-12" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w1b-q1",
+              "question": "Context: Why does Peter begin with a doxology (blessing God) rather than immediately addressing their suffering? What does this reveal about the proper response to trials?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1b-q2",
+              "question": "Observation: What has God done according to 1 Peter 1:3-5? What is the 'living hope'? What is the inheritance described? How is it kept and for whom? What role do trials play (1 Peter 1:6-7)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1b-q3",
+              "question": "Meaning: What does it mean to be 'born again' (1 Peter 1:3)? How does the resurrection of Jesus secure our hope? Why is our inheritance described as 'imperishable, undefiled, and unfading' (1 Peter 1:4)? How do trials 'test' and 'prove' faith (1 Peter 1:7)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1b-q4",
+              "question": "Application: How does the certainty of your inheritance affect how you face current trials? What does it mean that you are 'being guarded' by God's power through faith (1 Peter 1:5)?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "The Call to Holiness",
+          "content": "<p>Peter calls believers to live as obedient children, holy as their Father is holy.</p>",
+          "scriptureReferences": [
+            { "reference": "1 Peter 1:13-25" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w1c-q1",
+              "question": "Context: How does the call to holiness flow from the previous section about our living hope? Why does Peter ground ethical commands in theological truths?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1c-q2",
+              "question": "Observation: What commands does Peter give in 1 Peter 1:13-16? What motivations does he provide? What did our redemption cost (1 Peter 1:18-19)? What is the 'imperishable seed' by which we are born again (1 Peter 1:23-25)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1c-q3",
+              "question": "Meaning: What does 'preparing your minds for action' (literally 'girding up the loins of your mind') mean (1 Peter 1:13)? Why does Peter emphasize that Christ was 'foreknown before the foundation of the world' (1 Peter 1:20)? How does this connect to God's eternal plan of redemption? What does it mean to be born again 'through the living and abiding word of God' (1 Peter 1:23)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1c-q4",
+              "question": "Application: What 'former passions' (1 Peter 1:14) do you need to put away? How can you cultivate sincere brotherly love (1 Peter 1:22)? What role does God's Word play in your ongoing sanctification?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Memory Verse",
+          "content": "",
+          "scriptureReferences": [
+            { "reference": "1 Peter 1:3-4" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        }
+      ]
+    },
+    {
+      "section": "week2",
+      "title": "Week 2: Living Stones & Honorable Conduct",
+      "subsections": [
+        {
+          "title": "Context for This Week",
+          "content": "<p>Peter now moves from the foundation of our hope to practical instructions for the Christian community. He uses powerful Old Testament imagery—living stones, a chosen race, a royal priesthood—to describe the church's identity. He then addresses how believers should live among unbelievers, with a particular focus on submission to authorities and masters.</p>",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "Longing for Pure Spiritual Milk",
+          "content": "<p>Peter calls believers to put away sin and crave the Word that nourishes growth.</p>",
+          "scriptureReferences": [
+            { "reference": "1 Peter 2:1-3" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w2a-q1",
+              "question": "Context: How does this passage connect to 1 Peter 1:22-25 about the living Word? What 'therefore' is Peter drawing from?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2a-q2",
+              "question": "Observation: What five things are believers to 'put away' (1 Peter 2:1)? What are they to 'long for' (1 Peter 2:2)? What is the purpose of this longing?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2a-q3",
+              "question": "Meaning: Why does Peter use the image of newborn infants? What is 'pure spiritual milk' and how does it relate to growth unto salvation? What does 'if indeed you have tasted that the Lord is good' (1 Peter 2:3) imply about Christian experience?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2a-q4",
+              "question": "Application: Which of the five sins listed in 1 Peter 2:1 do you struggle with most in your relationships? How can you cultivate a greater appetite for God's Word?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "A Spiritual House and Holy Priesthood",
+          "content": "<p>Peter describes the church as living stones built on Christ, the cornerstone.</p>",
+          "scriptureReferences": [
+            { "reference": "1 Peter 2:4-10" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w2b-q1",
+              "question": "Context: Peter draws on Old Testament passages about the cornerstone. What is the background of these quotations (Psalm 118:22; Isaiah 28:16; Isaiah 8:14)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2b-q2",
+              "question": "Observation: What is Christ called (1 Peter 2:4, 6-7)? What are believers called (1 Peter 2:5, 9-10)? What happens to those who 'do not believe' (1 Peter 2:7-8)? What is the purpose for which believers are chosen (1 Peter 2:9)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2b-q3",
+              "question": "Meaning: What does it mean that believers are 'living stones' being built into a 'spiritual house'? How does the 'royal priesthood' of all believers differ from the Old Testament priesthood? What 'spiritual sacrifices' do we offer (1 Peter 2:5)? How does 1 Peter 2:8 relate to God's sovereignty over belief and unbelief—'They stumble because they disobey the word, as they were destined to do'?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2b-q4",
+              "question": "Application: How does your identity as part of a 'chosen race, a royal priesthood, a holy nation' shape how you view your role in the church? How can you 'proclaim the excellencies of him who called you out of darkness' (1 Peter 2:9)?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Honorable Conduct Among Gentiles",
+          "content": "<p>Peter addresses how believers should live as sojourners in a hostile world.</p>",
+          "scriptureReferences": [
+            { "reference": "1 Peter 2:11-12" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w2c-q1",
+              "question": "Context: How does Peter's address 'beloved' and 'sojourners and exiles' connect to his opening greeting (1 Peter 1:1)? Why does he return to this theme?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2c-q2",
+              "question": "Observation: What does Peter urge them to abstain from (1 Peter 2:11)? What should characterize their conduct among Gentiles (1 Peter 2:12)? What will be the result 'on the day of visitation'?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2c-q3",
+              "question": "Meaning: How do 'passions of the flesh' wage war against the soul? What is 'the day of visitation'—judgment or salvation? How can slander against Christians become praise to God?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2c-q4",
+              "question": "Application: In what ways might your good deeds cause unbelievers to 'glorify God'? Are there areas where your conduct might give ammunition to those who slander Christians?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Submission to Authorities and Masters",
+          "content": "<p>Peter addresses submission to governing authorities and the conduct of servants.</p>",
+          "scriptureReferences": [
+            { "reference": "1 Peter 2:13-25" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w2d-q1",
+              "question": "Context: Why would submission to authorities be especially challenging for these persecuted Christians? How does this teaching fit with Peter's emphasis on their identity as 'exiles'?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2d-q2",
+              "question": "Observation: What is the reason for submitting to human institutions (1 Peter 2:13-15)? How should believers use their freedom (1 Peter 2:16)? What four commands are given in 1 Peter 2:17? What example does Christ provide for suffering servants (1 Peter 2:21-24)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2d-q3",
+              "question": "Meaning: What does 'for the Lord's sake' (1 Peter 2:13) mean as a motivation for submission? How can we be 'free' yet 'servants of God' (1 Peter 2:16)? How does Christ's example of patient suffering under injustice inform how we respond to unfair treatment? What does it mean that Christ 'bore our sins in his body on the tree' (1 Peter 2:24)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2d-q4",
+              "question": "Application: How do you respond when you suffer unjustly—at work, in relationships, or in society? How can Christ's example of entrusting himself to the righteous Judge (1 Peter 2:23) guide you?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Memory Verse",
+          "content": "",
+          "scriptureReferences": [
+            { "reference": "1 Peter 2:9" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        }
+      ]
+    },
+    {
+      "section": "week3",
+      "title": "Week 3: Relationships & Suffering for Righteousness",
+      "subsections": [
+        {
+          "title": "Context for This Week",
+          "content": "<p>Peter continues his household instructions, addressing wives and husbands specifically. He then broadens to all believers, calling them to unity, compassion, and blessing rather than retaliation. The chapter climaxes with a profound discussion of suffering for righteousness' sake and Christ's own suffering and victory.</p>",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "Wives and Husbands",
+          "content": "<p>Peter addresses the conduct of Christian wives, especially those with unbelieving husbands, and the responsibility of husbands.</p>",
+          "scriptureReferences": [
+            { "reference": "1 Peter 3:1-7" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w3a-q1",
+              "question": "Context: How does Peter's address to wives connect to his teaching on submission in chapter 2? Why might he spend more time addressing wives than husbands?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3a-q2",
+              "question": "Observation: How might unbelieving husbands 'be won without a word' (1 Peter 3:1)? What should not be a wife's primary adornment (1 Peter 3:3)? What should be (1 Peter 3:4)? Who is the example given (1 Peter 3:5-6)? What instructions are given to husbands (1 Peter 3:7)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3a-q3",
+              "question": "Meaning: What is 'the imperishable beauty of a gentle and quiet spirit' (1 Peter 3:4)? How does this apply across cultures and eras? Why does Peter describe wives as 'the weaker vessel' (1 Peter 3:7) and what does this mean? How might a husband's treatment of his wife hinder his prayers?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3a-q4",
+              "question": "Application: Whether married or single, how can you cultivate inner character over outward appearance? How do these instructions challenge cultural assumptions—both ancient and modern?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Called to Bless",
+          "content": "<p>Peter addresses all believers, calling them to unity and blessing rather than retaliation.</p>",
+          "scriptureReferences": [
+            { "reference": "1 Peter 3:8-12" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w3b-q1",
+              "question": "Context: How does 'Finally, all of you' (1 Peter 3:8) transition from the specific household instructions to broader community life?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3b-q2",
+              "question": "Observation: What five qualities should characterize believers (1 Peter 3:8)? What should they not do, and what should they do instead (1 Peter 3:9)? What quotation from Psalm 34 does Peter include (1 Peter 3:10-12)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3b-q3",
+              "question": "Meaning: What does it mean to 'have unity of mind' and yet not uniformity? How is 'blessing' those who revile us possible? What does the Psalm 34 quotation teach about the Lord's disposition toward the righteous versus evildoers?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3b-q4",
+              "question": "Application: When has someone reviled you and you responded with insult? What would it look like to 'bless' in that situation? Which of the five qualities in 1 Peter 3:8 needs most cultivation in your life?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Suffering for Righteousness",
+          "content": "<p>Peter addresses the proper response when suffering comes because of doing good.</p>",
+          "scriptureReferences": [
+            { "reference": "1 Peter 3:13-17" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w3c-q1",
+              "question": "Context: How does 'Now who is there to harm you' (1 Peter 3:13) connect to the Psalm 34 quotation just cited? Is Peter being naive about persecution?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3c-q2",
+              "question": "Observation: What are believers called 'blessed' for (1 Peter 3:14)? What should they not fear? What should they always be prepared to do (1 Peter 3:15)? How should they do it (1 Peter 3:15-16)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3c-q3",
+              "question": "Meaning: What does 'honor Christ the Lord as holy' (1 Peter 3:15) mean in the context of suffering? What is 'the hope that is in you' that we should be ready to defend? Why is 'gentleness and respect' essential when giving an answer?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3c-q4",
+              "question": "Application: Are you prepared to give an answer for the hope within you? How can you grow in both knowledge and gentleness when speaking about your faith?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Christ's Suffering and Victory",
+          "content": "<p>Peter points to Christ's suffering, death, and proclamation of victory as the ultimate example and source of hope.</p>",
+          "scriptureReferences": [
+            { "reference": "1 Peter 3:18-22" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w3d-q1",
+              "question": "Context: Why does Peter introduce Christ's suffering at this point? How does Christ's example support his exhortation to suffer for righteousness?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3d-q2",
+              "question": "Observation: Why did Christ suffer (1 Peter 3:18)? To whom did he preach 'in the spirit' (1 Peter 3:19-20)? What does baptism now symbolize (1 Peter 3:21)? Where is Christ now (1 Peter 3:22)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3d-q3",
+              "question": "Meaning: What does 'the righteous for the unrighteous' (1 Peter 3:18) teach about substitutionary atonement? This challenging passage (1 Peter 3:19-20) has been interpreted various ways—what might it mean that Christ 'proclaimed to the spirits in prison'? How does baptism save us 'not as a removal of dirt...but as an appeal to God for a good conscience' (1 Peter 3:21)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3d-q4",
+              "question": "Application: How does Christ's ultimate victory (1 Peter 3:22) encourage you when facing opposition? What does your baptism represent about your union with Christ?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Memory Verse",
+          "content": "",
+          "scriptureReferences": [
+            { "reference": "1 Peter 3:15" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        }
+      ]
+    },
+    {
+      "section": "week4",
+      "title": "Week 4: Living for God & Suffering as a Christian",
+      "subsections": [
+        {
+          "title": "Context for This Week",
+          "content": "<p>Peter continues to address how believers should live in light of Christ's suffering and the approaching end. He calls them to arm themselves with the same mindset as Christ, to live for God's will rather than human passions, and to use their gifts to serve one another. The chapter addresses suffering directly—not as something strange but as participation in Christ's sufferings and an opportunity for joy.</p>",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "Armed with Christ's Mindset",
+          "content": "<p>Peter calls believers to adopt Christ's attitude toward suffering and to live differently from their former way.</p>",
+          "scriptureReferences": [
+            { "reference": "1 Peter 4:1-6" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w4a-q1",
+              "question": "Context: How does 'Since therefore Christ suffered in the flesh' (1 Peter 4:1) connect to 1 Peter 3:18? Why is Christ's suffering the foundation for our response?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4a-q2",
+              "question": "Observation: What should believers 'arm' themselves with (1 Peter 4:1)? What has one who has suffered 'ceased' from (1 Peter 4:1)? What characterized their former life (1 Peter 4:3)? How do unbelievers respond to their changed behavior (1 Peter 4:4)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4a-q3",
+              "question": "Meaning: What does 'whoever has suffered in the flesh has ceased from sin' (1 Peter 4:1) mean? Is Peter teaching sinless perfection? How does suffering relate to breaking sin's power? Why will the dead be judged for things done 'in the flesh' but 'live in the spirit' (1 Peter 4:6)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4a-q4",
+              "question": "Application: Have you experienced hostility or surprise from former friends because of your faith? How does the reality of coming judgment (1 Peter 4:5) affect how you view both your own life and those who malign you?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Stewards of God's Grace",
+          "content": "<p>Peter addresses how believers should live in light of the approaching end—with sobriety, love, and service.</p>",
+          "scriptureReferences": [
+            { "reference": "1 Peter 4:7-11" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w4b-q1",
+              "question": "Context: What does Peter mean by 'the end of all things is at hand' (1 Peter 4:7)? How should this reality shape daily living?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4b-q2",
+              "question": "Observation: What commands does Peter give in light of the end (1 Peter 4:7-11)? What covers 'a multitude of sins' (1 Peter 4:8)? What should be done 'without grumbling' (1 Peter 4:9)? How should gifts be used (1 Peter 4:10-11)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4b-q3",
+              "question": "Meaning: How does love 'cover a multitude of sins' (1 Peter 4:8; cf. Proverbs 10:12)? What does it mean to be 'good stewards of God's varied grace' (1 Peter 4:10)? Why does Peter emphasize that the purpose is 'that in everything God may be glorified' (1 Peter 4:11)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4b-q4",
+              "question": "Application: What gift has God given you to serve others? Are you using it as a steward who must give account? How can you show hospitality 'without grumbling'?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Suffering as a Christian",
+          "content": "<p>Peter addresses the 'fiery trial' his readers face and how to respond with joy rather than shame.</p>",
+          "scriptureReferences": [
+            { "reference": "1 Peter 4:12-19" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w4c-q1",
+              "question": "Context: Why does Peter say 'do not be surprised' at the fiery trial (1 Peter 4:12)? What expectations might they have had that needed correcting?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4c-q2",
+              "question": "Observation: What should believers do instead of being surprised (1 Peter 4:13)? When is one 'blessed' (1 Peter 4:14)? What should one NOT suffer for (1 Peter 4:15)? What should characterize one who suffers 'as a Christian' (1 Peter 4:16)? What sobering reality does Peter raise about judgment (1 Peter 4:17-18)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4c-q3",
+              "question": "Meaning: How is suffering for Christ a participation in his sufferings (1 Peter 4:13)? What does 'the Spirit of glory and of God rests upon you' (1 Peter 4:14) mean? Why does 'judgment begin at the household of God' (1 Peter 4:17), and what does this imply for unbelievers?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4c-q4",
+              "question": "Application: Have you ever 'suffered as a Christian'—faced opposition specifically for your faith? How can you 'entrust your soul to a faithful Creator while doing good' (1 Peter 4:19) in your current circumstances?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Memory Verse",
+          "content": "",
+          "scriptureReferences": [
+            { "reference": "1 Peter 4:12-13" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        }
+      ]
+    },
+    {
+      "section": "week5",
+      "title": "Week 5: Shepherding, Humility & Final Exhortations",
+      "subsections": [
+        {
+          "title": "Context for This Week",
+          "content": "<p>Peter concludes his letter with instructions to church leaders (elders) and the congregation as a whole. He addresses humility, spiritual vigilance against the devil, and the certainty of God's grace. The letter ends with greetings and a benediction of peace—fitting for a letter addressed to suffering exiles who need assurance of their standing in God's grace.</p>",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "Shepherding the Flock",
+          "content": "<p>Peter addresses elders with instructions for faithful shepherding.</p>",
+          "scriptureReferences": [
+            { "reference": "1 Peter 5:1-4" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w5a-q1",
+              "question": "Context: How does Peter identify himself in 1 Peter 5:1? Why might he emphasize being a 'fellow elder' and 'witness of the sufferings of Christ'?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5a-q2",
+              "question": "Observation: What does Peter exhort elders to do (1 Peter 5:2)? What three contrasts does he give for how they should serve (1 Peter 5:2-3)? What reward awaits faithful shepherds (1 Peter 5:4)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5a-q3",
+              "question": "Meaning: What does it mean to 'shepherd the flock of God' and 'exercise oversight' (1 Peter 5:2)? Why is serving 'willingly' rather than 'under compulsion,' 'eagerly' rather than 'for shameful gain,' and as 'examples' rather than 'domineering' so important? Who is 'the chief Shepherd' (1 Peter 5:4)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5a-q4",
+              "question": "Application: If you are in leadership, how do these standards challenge or encourage you? If you are not an elder, how should you view and support those who shepherd you?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Clothe Yourselves with Humility",
+          "content": "<p>Peter addresses the congregation with a call to humility and trust in God's care.</p>",
+          "scriptureReferences": [
+            { "reference": "1 Peter 5:5-7" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w5b-q1",
+              "question": "Context: How does the call to humility flow from Peter's address to elders? Why is humility especially relevant for a suffering community?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5b-q2",
+              "question": "Observation: What should younger members do (1 Peter 5:5)? What should all do toward one another? What does God do to the proud and humble (1 Peter 5:5)? What should believers do with their anxieties (1 Peter 5:7)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5b-q3",
+              "question": "Meaning: What does it mean to 'clothe yourselves with humility' (1 Peter 5:5)? How does the quotation from Proverbs 3:34 reinforce this? What is 'the mighty hand of God' (1 Peter 5:6) under which we humble ourselves? How does casting anxieties on God demonstrate trust in His care?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5b-q4",
+              "question": "Application: What anxieties are you carrying that you need to cast on God? What does it look like practically to 'clothe yourself with humility' in your relationships?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Resist the Devil",
+          "content": "<p>Peter warns of the devil's schemes and calls believers to spiritual vigilance.</p>",
+          "scriptureReferences": [
+            { "reference": "1 Peter 5:8-11" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w5c-q1",
+              "question": "Context: How does the warning about the devil connect to the suffering Peter has been addressing? How might the devil use persecution?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5c-q2",
+              "question": "Observation: What is the devil compared to (1 Peter 5:8)? What should believers do (1 Peter 5:8-9)? What comfort does Peter give about other believers (1 Peter 5:9)? What does Peter pray God will do (1 Peter 5:10)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5c-q3",
+              "question": "Meaning: How is the devil like 'a roaring lion' (1 Peter 5:8)? How do we 'resist him, firm in your faith' (1 Peter 5:9)? Why does Peter remind them that their suffering is shared by 'your brotherhood throughout the world'? What is the significance of the four actions God promises: restore, confirm, strengthen, establish (1 Peter 5:10)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5c-q4",
+              "question": "Application: How can you be 'sober-minded' and 'watchful' against the devil's schemes in your life? How does knowing other believers face similar struggles encourage you?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Final Greetings and Benediction",
+          "content": "<p>Peter closes with greetings and a final statement about the letter's purpose.</p>",
+          "scriptureReferences": [
+            { "reference": "1 Peter 5:12-14" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w5d-q1",
+              "question": "Context: Who is Silvanus (1 Peter 5:12)? Who is 'she who is at Babylon' and 'Mark my son' (1 Peter 5:13)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5d-q2",
+              "question": "Observation: What does Peter say is the purpose of his letter (1 Peter 5:12)? What does he declare about 'the true grace of God'? What is his final blessing (1 Peter 5:14)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5d-q3",
+              "question": "Meaning: Why does Peter emphasize that this is 'the true grace of God' in which they should 'stand firm' (1 Peter 5:12)? Reflect on how the entire letter has demonstrated God's grace to suffering exiles. Why does Peter wish them 'peace' (1 Peter 5:14)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5d-q4",
+              "question": "Application: As you conclude this 5-week study of 1 Peter, what is the 'true grace of God' that you need to stand firm in today? What key truth from this letter has impacted you most?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Memory Verses",
+          "content": "",
+          "scriptureReferences": [
+            { "reference": "1 Peter 5:6-7" },
+            { "reference": "1 Peter 5:10" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "Study Summary",
+          "content": "<h4>Key Themes of 1 Peter:</h4><ul><li><strong>Identity as Elect Exiles</strong> — Chosen by God yet strangers in this world (1:1-2; 2:9-11)</li><li><strong>Living Hope</strong> — Secured by Christ's resurrection and our imperishable inheritance (1:3-9)</li><li><strong>Holiness</strong> — Called to be holy as God is holy, redeemed by precious blood (1:13-21)</li><li><strong>Living Stones</strong> — Built on Christ the cornerstone, a royal priesthood (2:4-10)</li><li><strong>Submission & Suffering</strong> — Following Christ's example of patient endurance (2:13-25; 3:13-17)</li><li><strong>Suffering as Participation</strong> — Sharing in Christ's sufferings, not something strange (4:12-19)</li><li><strong>Humble Trust</strong> — Casting anxieties on God, resisting the devil, standing firm (5:5-11)</li></ul><p>May the God of all grace, who has called you to his eternal glory in Christ, restore, confirm, strengthen, and establish you. To him be the dominion forever and ever. Amen. (1 Peter 5:10-11)</p>",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": []
+        }
+      ]
+    }
+  ]
+}

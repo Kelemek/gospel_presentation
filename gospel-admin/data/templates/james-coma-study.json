@@ -1,0 +1,576 @@
+{
+  "title": "James COMA Study",
+  "description": "5-week walkthrough of James using the COMA method (Context, Observation, Meaning, Application) from a Reformed Baptist perspective",
+  "isTemplate": true,
+  "gospelData": [
+    {
+      "section": "week1",
+      "title": "Week 1: Trials, Temptation & Doing the Word",
+      "subsections": [
+        {
+          "title": "Introduction to James",
+          "content": "<p>James, the half-brother of Jesus and leader of the Jerusalem church, wrote this letter to Jewish Christians scattered abroad ('the twelve tribes in the Dispersion'). Writing around AD 45-49, this may be the earliest New Testament letter. James is known for its practical, wisdom-oriented teaching that calls believers to live out their faith in concrete ways.</p><p>The letter's major themes include: enduring trials with joy, the danger of the tongue, the relationship between faith and works, and living with an eternal perspective. James draws heavily on Jesus' Sermon on the Mount and Old Testament wisdom literature.</p><p>This week we explore how trials produce steadfastness, the nature of temptation, and the call to be doers of the Word.</p>",
+          "scriptureReferences": [
+            { "reference": "James 1:1" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "Greeting",
+          "content": "<p>James identifies himself and his audience.</p>",
+          "scriptureReferences": [
+            { "reference": "James 1:1" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w1a-q1",
+              "question": "Context: Who is James? What do we know about him from Acts 15 and Galatians 1-2? Why does he simply call himself 'a servant of God and of the Lord Jesus Christ' rather than emphasizing his relationship to Jesus?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1a-q2",
+              "question": "Observation: Who are 'the twelve tribes in the Dispersion' (James 1:1)? What does this suggest about his primary audience?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1a-q3",
+              "question": "Meaning: What does it mean to be 'a servant' (Greek: doulos, slave) of God and of Jesus Christ? How does this set the tone for the entire letter?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1a-q4",
+              "question": "Application: Do you see yourself as a 'servant' of Christ? How does this identity shape your daily decisions and priorities?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "The Testing of Faith",
+          "content": "<p>James calls believers to consider trials as joy because of what they produce.</p>",
+          "scriptureReferences": [
+            { "reference": "James 1:2-12" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w1b-q1",
+              "question": "Context: Why would James address trials immediately after his greeting? What might his scattered audience have been facing?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1b-q2",
+              "question": "Observation: What should believers do when they face trials (James 1:2)? What does the testing of faith produce (James 1:3-4)? What should those who lack wisdom do (James 1:5-8)? What perspective should both lowly and rich have (James 1:9-11)? What is promised to those who remain steadfast (James 1:12)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1b-q3",
+              "question": "Meaning: How can trials be 'counted as joy' (James 1:2)? What is 'steadfastness' (James 1:3) and why is it valuable? What does it mean to be 'double-minded' (James 1:8) and why does this hinder prayer? How does the 'crown of life' (James 1:12) relate to perseverance—is it earned or a gracious reward for those God preserves?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1b-q4",
+              "question": "Application: What trial are you currently facing? How can you ask God for wisdom 'in faith, with no doubting' (James 1:6)? What does 'lacking nothing' (James 1:4) look like in your spiritual life?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "The Source of Temptation",
+          "content": "<p>James distinguishes between trials (testing from outside) and temptation (enticement to sin from within).</p>",
+          "scriptureReferences": [
+            { "reference": "James 1:13-18" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w1c-q1",
+              "question": "Context: How does James 1:13 connect to the previous discussion of trials? Why is it important to distinguish between testing and temptation?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1c-q2",
+              "question": "Observation: Where does temptation NOT come from (James 1:13)? Where does it come from (James 1:14)? What is the progression James describes (James 1:14-15)? What does God give instead (James 1:17-18)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1c-q3",
+              "question": "Meaning: Why can God not be tempted with evil and why does He not tempt anyone (James 1:13)? How does our own desire 'lure and entice' us (James 1:14)? What does it mean that God 'brought us forth by the word of truth' (James 1:18)? How does this relate to regeneration and the Reformed understanding that new birth precedes faith?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1c-q4",
+              "question": "Application: What 'desires' most often lure you into sin? How does recognizing sin's progression (desire → sin → death) help you fight temptation at its root?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Doers of the Word",
+          "content": "<p>James calls believers to not only hear the Word but to do it.</p>",
+          "scriptureReferences": [
+            { "reference": "James 1:19-27" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w1d-q1",
+              "question": "Context: How does the call to 'receive with meekness the implanted word' (James 1:21) connect to James 1:18 about being brought forth by the word of truth?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1d-q2",
+              "question": "Observation: What three things should believers be (James 1:19)? What should they put away (James 1:21)? What is the danger of being a hearer only (James 1:22-24)? What is promised to the one who acts (James 1:25)? What characterizes 'pure and undefiled religion' (James 1:27)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1d-q3",
+              "question": "Meaning: Why does human anger not produce the righteousness of God (James 1:20)? What is 'the perfect law, the law of liberty' (James 1:25)? How can the law be both 'perfect' and bring 'liberty'? Why does James emphasize care for orphans, widows, and personal purity as markers of true religion?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1d-q4",
+              "question": "Application: Are you 'quick to hear, slow to speak, slow to anger' (James 1:19)? In what ways are you tempted to be a 'hearer only' rather than a 'doer'? How can you practice 'pure religion' this week?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Memory Verse",
+          "content": "",
+          "scriptureReferences": [
+            { "reference": "James 1:22" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        }
+      ]
+    },
+    {
+      "section": "week2",
+      "title": "Week 2: Faith and Works",
+      "subsections": [
+        {
+          "title": "Context for This Week",
+          "content": "<p>James now addresses one of the most discussed passages in all of Scripture: the relationship between faith and works. He begins by condemning partiality in the church, then moves to his famous declaration that 'faith apart from works is dead.' Properly understood, James and Paul are in complete harmony—Paul addresses how we are justified before God (by faith alone), while James addresses how genuine faith is demonstrated before others (by works).</p>",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "The Sin of Partiality",
+          "content": "<p>James condemns showing favoritism based on wealth or status.</p>",
+          "scriptureReferences": [
+            { "reference": "James 2:1-13" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w2a-q1",
+              "question": "Context: Why would James address partiality in an early Jewish Christian community? What social dynamics might have been at play?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2a-q2",
+              "question": "Observation: What example does James give of partiality (James 2:2-4)? Who has God chosen (James 2:5)? Who has dishonored the poor (James 2:6-7)? What is the 'royal law' (James 2:8)? What does breaking one point of the law mean (James 2:10-11)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2a-q3",
+              "question": "Meaning: Why is partiality incompatible with 'faith in our Lord Jesus Christ, the Lord of glory' (James 2:1)? What does 'God chose the poor in the world to be rich in faith' (James 2:5) teach about God's sovereign choice in salvation? How does 'the law of liberty' (James 2:12) judge us? What does 'mercy triumphs over judgment' (James 2:13) mean?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2a-q4",
+              "question": "Application: Are there ways you show partiality—favoring the wealthy, attractive, or influential? How does the gospel level all distinctions in the church?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Faith Without Works Is Dead",
+          "content": "<p>James demonstrates that genuine faith always produces good works.</p>",
+          "scriptureReferences": [
+            { "reference": "James 2:14-26" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w2b-q1",
+              "question": "Context: How does this passage connect to James' concern about partiality and 'pure religion' (James 1:27)? Is James contradicting Paul's teaching on justification by faith alone?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2b-q2",
+              "question": "Observation: What rhetorical question does James ask in James 2:14? What example does he give (James 2:15-17)? What challenge does he issue (James 2:18)? What do even the demons believe (James 2:19)? What two examples does he give of faith demonstrated by works (James 2:21-25)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2b-q3",
+              "question": "Meaning: What kind of 'faith' cannot save (James 2:14)? Note that James is not asking whether faith saves, but whether a certain kind of faith (mere intellectual assent without fruit) saves. How was Abraham 'justified by works' (James 2:21) when Paul says he was 'justified by faith' (Romans 4:2-3)? The key is that Paul speaks of justification before God, while James speaks of demonstrating genuine faith before men. How did Abraham's works 'complete' his faith (James 2:22)? What does the analogy of body and spirit (James 2:26) teach?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2b-q4",
+              "question": "Application: Is your faith 'working' (James 2:22)? What evidence of genuine faith do others see in your life? Are there areas where you have intellectual belief but no corresponding action?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Memory Verse",
+          "content": "",
+          "scriptureReferences": [
+            { "reference": "James 2:17" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        }
+      ]
+    },
+    {
+      "section": "week3",
+      "title": "Week 3: The Tongue & True Wisdom",
+      "subsections": [
+        {
+          "title": "Context for This Week",
+          "content": "<p>James now turns to the power and danger of the tongue—a small member that can set entire lives on fire. He then contrasts two kinds of wisdom: earthly wisdom marked by jealousy and selfish ambition, and heavenly wisdom marked by purity, peace, and gentleness. The connection is clear: our speech reveals what kind of wisdom governs our hearts.</p>",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "Taming the Tongue",
+          "content": "<p>James warns about the destructive power of the tongue and the difficulty of controlling it.</p>",
+          "scriptureReferences": [
+            { "reference": "James 3:1-12" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w3a-q1",
+              "question": "Context: Why does James begin with a warning about becoming teachers (James 3:1)? How does this connect to the theme of the tongue?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3a-q2",
+              "question": "Observation: What illustrations does James use for the tongue (James 3:3-6)? What can humans tame (James 3:7)? What can they not tame (James 3:8)? What inconsistency does James highlight (James 3:9-12)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3a-q3",
+              "question": "Meaning: Why will teachers be judged more strictly (James 3:1)? How is the tongue like a bit, a rudder, and a fire (James 3:3-6)? What does it mean that the tongue 'is set on fire by hell' (James 3:6)? Why is it impossible for blessing and cursing to come from the same source (James 3:10-12)? What does this reveal about the heart?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3a-q4",
+              "question": "Application: In what ways does your tongue 'set on fire the entire course of life' (James 3:6)—for good or for ill? What inconsistency exists between your worship and your speech about others?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Two Kinds of Wisdom",
+          "content": "<p>James contrasts earthly wisdom with wisdom from above.</p>",
+          "scriptureReferences": [
+            { "reference": "James 3:13-18" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w3b-q1",
+              "question": "Context: How does the discussion of wisdom connect to the problem of the tongue? What is the relationship between wisdom and speech?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3b-q2",
+              "question": "Observation: How is true wisdom shown (James 3:13)? What characterizes 'earthly, unspiritual, demonic' wisdom (James 3:14-16)? What eight qualities mark 'wisdom from above' (James 3:17)? What is the fruit of those who make peace (James 3:18)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3b-q3",
+              "question": "Meaning: What is 'the meekness of wisdom' (James 3:13)? Why does James call jealousy and selfish ambition 'earthly, unspiritual, demonic' (James 3:15)? How does the phrase 'first pure, then peaceable' (James 3:17) prioritize truth over a false peace? What does it mean to 'sow in peace' and 'reap a harvest of righteousness' (James 3:18)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3b-q4",
+              "question": "Application: Which characteristics of earthly wisdom do you struggle with most—bitter jealousy or selfish ambition? Which of the eight qualities of heavenly wisdom do you need to cultivate?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Memory Verse",
+          "content": "",
+          "scriptureReferences": [
+            { "reference": "James 3:17" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        }
+      ]
+    },
+    {
+      "section": "week4",
+      "title": "Week 4: Humility & Submission to God",
+      "subsections": [
+        {
+          "title": "Context for This Week",
+          "content": "<p>James addresses the root cause of conflicts: disordered desires that make war within us. The solution is humble submission to God and resistance to the devil. James warns against arrogant self-confidence in planning the future and condemns those who know the good they ought to do but fail to do it.</p>",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "The Source of Quarrels",
+          "content": "<p>James diagnoses the root of interpersonal conflicts.</p>",
+          "scriptureReferences": [
+            { "reference": "James 4:1-6" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w4a-q1",
+              "question": "Context: How does this passage connect to the contrast between earthly and heavenly wisdom in chapter 3? What 'disorder' (James 3:16) might James have in mind?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4a-q2",
+              "question": "Observation: Where do quarrels and fights come from (James 4:1)? Why don't they have what they want (James 4:2-3)? What does James call those who are friends with the world (James 4:4)? What does God give to the humble (James 4:6)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4a-q3",
+              "question": "Meaning: What are the 'passions at war within you' (James 4:1)? How does asking 'wrongly, to spend it on your passions' (James 4:3) relate to prayer? Why is 'friendship with the world' called 'enmity with God' (James 4:4)? What does it mean that God 'yearns jealously over the spirit that he has made to dwell in us' (James 4:5)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4a-q4",
+              "question": "Application: What 'passions' are currently causing conflict in your relationships? How might your prayers be characterized as asking 'wrongly'? Where are you tempted to friendship with the world?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Submit to God",
+          "content": "<p>James calls for humble repentance and submission to God.</p>",
+          "scriptureReferences": [
+            { "reference": "James 4:7-12" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w4b-q1",
+              "question": "Context: How do these imperatives flow from God giving 'more grace' to the humble (James 4:6)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4b-q2",
+              "question": "Observation: List the commands James gives in James 4:7-10. What is promised in response to each? What is the proper response to God according to James 4:9? Who is the only Lawgiver and Judge (James 4:12)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4b-q3",
+              "question": "Meaning: What does it mean to 'submit to God' and 'resist the devil' (James 4:7)? Why must we 'draw near to God' for Him to 'draw near' to us (James 4:8)? What does 'cleanse your hands' and 'purify your hearts' signify (James 4:8)? Why does James call them 'double-minded' (James 4:8; cf. James 1:8)? Why is speaking evil against a brother equivalent to judging the law (James 4:11)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4b-q4",
+              "question": "Application: Which of these commands do you most need to obey today? How can you practically 'humble yourself before the Lord' (James 4:10)? In what ways are you tempted to judge your brother or sister?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Boasting About Tomorrow",
+          "content": "<p>James warns against arrogant presumption about the future.</p>",
+          "scriptureReferences": [
+            { "reference": "James 4:13-17" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w4c-q1",
+              "question": "Context: How does this warning connect to the theme of humility in the previous section? Who might James be addressing?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4c-q2",
+              "question": "Observation: What attitude does James critique (James 4:13)? What is life compared to (James 4:14)? What should believers say instead (James 4:15)? What is the sin identified in James 4:16-17?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4c-q3",
+              "question": "Meaning: Is James condemning all planning for the future, or a particular attitude about it? What does 'If the Lord wills' (James 4:15) acknowledge about God's sovereignty? How is boasting about tomorrow 'arrogance' (James 4:16)? What is the significance of James 4:17 in context—'whoever knows the right thing to do and fails to do it, for him it is sin'?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4c-q4",
+              "question": "Application: How do you make plans? Do you hold them loosely before God's sovereignty? What 'right thing' do you know you should do but have been failing to do?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Memory Verse",
+          "content": "",
+          "scriptureReferences": [
+            { "reference": "James 4:7-8" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        }
+      ]
+    },
+    {
+      "section": "week5",
+      "title": "Week 5: Patience, Prayer & Restoration",
+      "subsections": [
+        {
+          "title": "Context for This Week",
+          "content": "<p>James concludes his letter with a warning to the rich who oppress the poor, a call to patient endurance until the Lord's coming, instructions on prayer and anointing the sick, and a final exhortation to restore wandering brothers and sisters. The letter ends as it began—with a focus on trials, steadfastness, and the community's responsibility for one another.</p>",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "Warning to the Rich",
+          "content": "<p>James pronounces woes on wealthy oppressors.</p>",
+          "scriptureReferences": [
+            { "reference": "James 5:1-6" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w5a-q1",
+              "question": "Context: Is James addressing believers or unbelievers here? How does this connect to his earlier teaching on partiality (James 2:1-7)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5a-q2",
+              "question": "Observation: What should the rich do (James 5:1)? What has happened to their riches (James 5:2-3)? What specific sins are named (James 5:4-6)? Who hears the cries of the laborers (James 5:4)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5a-q3",
+              "question": "Meaning: What are 'the miseries that are coming' (James 5:1)? Why does James say their corrosion 'will be evidence against you' (James 5:3)? Who is 'the Lord of hosts' (James 5:4) and why is this title significant? What does it mean that they have 'fattened their hearts in a day of slaughter' (James 5:5)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5a-q4",
+              "question": "Application: How should believers view wealth in light of this passage? Are there ways you might be withholding what is due to others or living in self-indulgence?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Patience Until the Lord's Coming",
+          "content": "<p>James calls for patient endurance in the face of suffering.</p>",
+          "scriptureReferences": [
+            { "reference": "James 5:7-11" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w5b-q1",
+              "question": "Context: How does 'Be patient, therefore, brothers' (James 5:7) connect to the preceding warning to the rich? Why might the oppressed need this encouragement?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5b-q2",
+              "question": "Observation: What example of patience does James give (James 5:7)? What should believers not do against one another (James 5:9)? What other examples of patience and suffering are given (James 5:10-11)? What do we learn about the Lord from Job's story (James 5:11)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5b-q3",
+              "question": "Meaning: What is 'the coming of the Lord' (James 5:7-8) and why does its nearness call for patience? Why does James warn against grumbling 'against one another' in this context (James 5:9)? How was Job an example of 'steadfastness' (James 5:11) and what was 'the purpose of the Lord'? What does it mean that 'the Lord is compassionate and merciful' (James 5:11)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5b-q4",
+              "question": "Application: In what situation do you need to 'establish your heart' (James 5:8) and wait patiently for the Lord? Are you tempted to grumble against fellow believers? How does remembering Job's story encourage you?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "The Prayer of Faith",
+          "content": "<p>James addresses oaths, prayer, anointing the sick, and confession.</p>",
+          "scriptureReferences": [
+            { "reference": "James 5:12-18" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w5c-q1",
+              "question": "Context: How does the prohibition of oaths (James 5:12) connect to the theme of speech throughout the letter? Why does James transition to prayer?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5c-q2",
+              "question": "Observation: What should believers do in various circumstances (James 5:13)? What should the sick person do (James 5:14)? What does 'the prayer of faith' accomplish (James 5:15)? What should believers do for one another (James 5:16)? What example does James give of effective prayer (James 5:17-18)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5c-q3",
+              "question": "Meaning: Why should our 'yes be yes and no be no' (James 5:12)? What is the role of elders and anointing with oil (James 5:14)? How does confession of sins relate to healing (James 5:16)? What does it mean that 'the prayer of a righteous person has great power' (James 5:16)? Why does James emphasize that Elijah was 'a man with a nature like ours' (James 5:17)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5c-q4",
+              "question": "Application: Is prayer your first response in suffering and sickness, or a last resort? Do you confess sins to fellow believers? How can you grow in fervent, faithful prayer?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Restoring the Wanderer",
+          "content": "<p>James concludes with the importance of bringing back those who stray from the truth.</p>",
+          "scriptureReferences": [
+            { "reference": "James 5:19-20" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w5d-q1",
+              "question": "Context: Why does James end his letter with this exhortation about wandering brothers? How does it summarize the letter's concerns?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5d-q2",
+              "question": "Observation: What might happen to someone 'among you' (James 5:19)? What should another believer do? What are the results of bringing someone back (James 5:20)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5d-q3",
+              "question": "Meaning: What does 'wanders from the truth' (James 5:19) mean—doctrinal error, moral failure, or both? How does bringing someone back 'save his soul from death' (James 5:20)? What sins are 'covered' (James 5:20; cf. Proverbs 10:12; 1 Peter 4:8)?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5d-q4",
+              "question": "Application: Is there someone in your life who has 'wandered from the truth'? What would it look like to pursue them and bring them back? How does the church's responsibility for one another challenge individualistic faith?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Memory Verse",
+          "content": "",
+          "scriptureReferences": [
+            { "reference": "James 5:16" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "Study Summary",
+          "content": "<h4>Key Themes of James:</h4><ul><li><strong>Trials & Steadfastness</strong> — Count it all joy when facing trials; testing produces steadfastness (1:2-4, 12)</li><li><strong>Wisdom from Above</strong> — Ask God for wisdom in faith; pursue heavenly not earthly wisdom (1:5-8; 3:13-18)</li><li><strong>Doers of the Word</strong> — Be doers, not hearers only; faith without works is dead (1:22-25; 2:14-26)</li><li><strong>The Tongue</strong> — A small member with great power for blessing or destruction (3:1-12)</li><li><strong>Humble Submission</strong> — Submit to God, resist the devil, draw near to God (4:6-10)</li><li><strong>Patient Endurance</strong> — Wait for the Lord's coming with steadfast hearts (5:7-11)</li><li><strong>Powerful Prayer</strong> — The prayer of a righteous person has great power (5:13-18)</li></ul><p>True faith shows itself in action—in how we speak, how we treat others, how we respond to trials, and how we live before a watching world. May we be doers of the Word and not hearers only!</p>",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": []
+        }
+      ]
+    }
+  ]
+}
