@@ -15,6 +15,7 @@
     "restore": "node scripts/restore-backup.js"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.27.0",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.78.0",
     "@tiptap/extension-placeholder": "^3.10.5",
