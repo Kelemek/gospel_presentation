@@ -17,7 +17,7 @@
   "dependencies": {
     "@sentry/nextjs": "^10.27.0",
     "@supabase/ssr": "^0.7.0",
-    "@supabase/supabase-js": "^2.78.0",
+    "@supabase/supabase-js": "^2.86.0",
     "@tiptap/extension-placeholder": "^3.10.5",
     "@tiptap/extension-subscript": "^3.10.5",
     "@tiptap/extension-superscript": "^3.10.5",
