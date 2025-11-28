@@ -48,25 +48,48 @@ jobs:
               const daysToKeep = parseInt('${{ inputs.days_to_keep }}' || '30');
               console.log(\`🧹 Cleaning up scripture cache entries older than \${daysToKeep} days...\`);
               
-              // Call the cleanup function
+              // First check if the table exists
+              const { count: tableCount, error: tableError } = await supabase
+                .from('scripture_cache')
+                .select('*', { count: 'exact', head: true });
+              
+              if (tableError) {
+                if (tableError.code === '42P01') {
+                  console.log('⚠️  scripture_cache table does not exist. Skipping cleanup.');
+                  console.log('📝 Run gospel-admin/sql/create_scripture_cache.sql in Supabase SQL Editor to create it.');
+                  process.exit(0);
+                } else {
+                  console.error('❌ Error checking table:', tableError);
+                  process.exit(1);
+                }
+              }
+              
+              console.log(\`📊 Current cache entries: \${tableCount || 0}\`);
+              
+              // Try to call the cleanup function
               const { data, error } = await supabase.rpc('cleanup_old_scripture_cache', {
                 days_to_keep: daysToKeep
               });
               
               if (error) {
+                if (error.code === '42883') {
+                  console.log('⚠️  cleanup_old_scripture_cache function does not exist. Skipping cleanup.');
+                  console.log('📝 Run gospel-admin/sql/create_scripture_cache.sql in Supabase SQL Editor to create it.');
+                  process.exit(0);
+                }
                 console.error('❌ Error cleaning up cache:', error);
                 process.exit(1);
               }
               
-              console.log(\`✅ Successfully deleted \${data} old scripture cache entries\`);
+              console.log(\`✅ Successfully deleted \${data || 0} old scripture cache entries\`);
               
-              // Get cache statistics
-              const { count, error: statsError } = await supabase
+              // Get updated cache statistics
+              const { count: finalCount, error: statsError } = await supabase
                 .from('scripture_cache')
                 .select('*', { count: 'exact', head: true });
               
               if (!statsError) {
-                console.log(\`📊 Remaining cache entries: \${count || 0}\`);
+                console.log(\`📊 Remaining cache entries: \${finalCount || 0}\`);
               }
               
             } catch (err) {
