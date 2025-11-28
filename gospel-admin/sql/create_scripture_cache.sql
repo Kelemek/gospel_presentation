@@ -29,24 +29,6 @@ CREATE POLICY "Service role can manage cache"
   TO service_role
   USING (true);
 
--- Function to automatically delete old cache entries
--- Call this periodically or via cron
-CREATE OR REPLACE FUNCTION cleanup_old_scripture_cache(days_to_keep INTEGER DEFAULT 30)
-RETURNS INTEGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  deleted_count INTEGER;
-BEGIN
-  DELETE FROM scripture_cache
-  WHERE cached_at < NOW() - (days_to_keep || ' days')::INTERVAL;
-  
-  GET DIAGNOSTICS deleted_count = ROW_COUNT;
-  RETURN deleted_count;
-END;
-$$;
-
 -- Function to get cached scripture (only if not expired)
 CREATE OR REPLACE FUNCTION get_cached_scripture(
   p_reference TEXT,
@@ -129,20 +111,8 @@ BEGIN
 END;
 $$;
 
--- Optional: Set up automatic cleanup via pg_cron (if available)
--- Runs daily at 3 AM to clean entries older than 30 days
--- Uncomment if you have pg_cron extension enabled:
-/*
-SELECT cron.schedule(
-  'cleanup-scripture-cache',
-  '0 3 * * *',  -- 3 AM daily
-  $$SELECT cleanup_old_scripture_cache(30)$$
-);
-*/
-
 COMMENT ON TABLE scripture_cache IS 'Caches scripture text from external APIs (ESV, API.Bible) to reduce rate limit usage';
 COMMENT ON COLUMN scripture_cache.reference IS 'Scripture reference (e.g., "John 3:16")';
 COMMENT ON COLUMN scripture_cache.translation IS 'Translation code (esv, kjv, nasb, etc.)';
 COMMENT ON COLUMN scripture_cache.text IS 'Cached scripture text from API';
 COMMENT ON COLUMN scripture_cache.cached_at IS 'Timestamp when this entry was cached';
-COMMENT ON FUNCTION cleanup_old_scripture_cache IS 'Deletes scripture cache entries older than specified days (default 30)';

@@ -129,11 +129,10 @@ To add a new translation (NIV, NRSV, etc.):
 
 **ESV** - Licensed content
 - Copyright © 2001 by Crossway
-- Free API tier available
+- Free API tier available (max 500 verses cached, enforced via real-time LRU eviction)
 - Attribution: www.esv.org
 
 ## Related Documentation
 - Full KJV details: [KJV_DATABASE.md](KJV_DATABASE.md)
-- Caching details: [SCRIPTURE_CACHING.md](SCRIPTURE_CACHING.md)
 - Translation setup: [BIBLE_TRANSLATION_FEATURE.md](BIBLE_TRANSLATION_FEATURE.md)
 - API removal notes: [API_BIBLE_REMOVAL_COMPLETE.md](API_BIBLE_REMOVAL_COMPLETE.md)
