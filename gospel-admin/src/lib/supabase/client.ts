@@ -9,15 +9,17 @@ export const createClient = () => {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
   
-  // Add Sentry breadcrumbs for Supabase operations
-  const originalFrom = client.from.bind(client)
-  client.from = (table: any) => {
-    Sentry.addBreadcrumb({
-      category: 'supabase',
-      message: `Query table: ${table}`,
-      level: 'info',
-    })
-    return originalFrom(table)
+  // Add Sentry breadcrumbs for Supabase operations (skip if mocked)
+  if (client.from && typeof client.from === 'function') {
+    const originalFrom = client.from.bind(client)
+    client.from = (table: any) => {
+      Sentry.addBreadcrumb({
+        category: 'supabase',
+        message: `Query table: ${table}`,
+        level: 'info',
+      })
+      return originalFrom(table)
+    }
   }
   
   return client

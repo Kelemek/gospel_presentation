@@ -33,15 +33,17 @@ export const createClient = async () => {
     }
   )
   
-  // Add Sentry breadcrumbs for Supabase operations
-  const originalFrom = client.from.bind(client)
-  client.from = (table: any) => {
-    Sentry.addBreadcrumb({
-      category: 'supabase',
-      message: `Query table: ${table}`,
-      level: 'info',
-    })
-    return originalFrom(table)
+  // Add Sentry breadcrumbs for Supabase operations (skip if mocked)
+  if (client.from && typeof client.from === 'function') {
+    const originalFrom = client.from.bind(client)
+    client.from = (table: any) => {
+      Sentry.addBreadcrumb({
+        category: 'supabase',
+        message: `Query table: ${table}`,
+        level: 'info',
+      })
+      return originalFrom(table)
+    }
   }
   
   return client
@@ -61,15 +63,17 @@ export const createAdminClient = () => {
     }
   )
   
-  // Add Sentry breadcrumbs for admin operations
-  const originalFrom = client.from.bind(client)
-  client.from = (table: any) => {
-    Sentry.addBreadcrumb({
-      category: 'supabase',
-      message: `Admin query table: ${table}`,
-      level: 'info',
-    })
-    return originalFrom(table)
+  // Add Sentry breadcrumbs for admin operations (skip if mocked)
+  if (client.from && typeof client.from === 'function') {
+    const originalFrom = client.from.bind(client)
+    client.from = (table: any) => {
+      Sentry.addBreadcrumb({
+        category: 'supabase',
+        message: `Admin query table: ${table}`,
+        level: 'info',
+      })
+      return originalFrom(table)
+    }
   }
   
   return client
