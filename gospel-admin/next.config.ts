@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
   
   // Optional: Add trailing slash for better hosting compatibility  
   trailingSlash: true,
+  
+  // Disable source maps in production to avoid 404 errors in console
+  productionBrowserSourceMaps: false,
 };
 
 export default withSentryConfig(nextConfig, {
