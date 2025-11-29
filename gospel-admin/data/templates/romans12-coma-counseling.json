@@ -1,0 +1,691 @@
+{
+  "title": "Romans 12 COMA Counseling Study",
+  "description": "A deep-dive into Romans 12 using COMA method with ACBC-style biblical counseling questions designed to promote self-examination, heart change, and practical application",
+  "isTemplate": true,
+  "gospelData": [
+    {
+      "section": "week1",
+      "title": "Week 1: A Living Sacrifice",
+      "subsections": [
+        {
+          "title": "Introduction",
+          "content": "<p>Romans 12 marks a turning point in Paul's letter. After 11 chapters of rich theology—our sin, God's righteousness, justification by faith, union with Christ, life in the Spirit, and God's sovereign purposes—Paul now says 'Therefore.' Everything that follows flows from the gospel truths that precede it.</p><p>This study uses questions designed to help you examine your heart, identify patterns of thinking and behavior, and apply God's Word to real-life situations. Be honest with yourself and with God as you work through these questions.</p>",
+          "scriptureReferences": [
+            { "reference": "Romans 12:1-2" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "Present Your Bodies",
+          "content": "<p>Paul begins with a comprehensive call to offer ourselves entirely to God.</p>",
+          "scriptureReferences": [
+            { "reference": "Romans 12:1" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w1a-q1",
+              "question": "Context: Paul says 'by the mercies of God.' Before asking anything of you, he points to what God has done. What specific mercies from Romans 1-11 come to mind? How does remembering God's mercy toward you—when you deserved judgment—change how you hear his appeal?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1a-q2",
+              "question": "Observation: Paul calls you to present your 'body' as a living sacrifice. Why do you think he emphasizes your physical body rather than just your 'heart' or 'soul'? What parts of your daily, bodily life are you most reluctant to hand over to God?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1a-q3",
+              "question": "Meaning: A sacrifice in the Old Testament was killed. Paul says you are a 'living' sacrifice. What does this mean practically—to be dead to your own agenda yet alive to serve God? In what specific situations this week have you 'crawled off the altar' and taken back control?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1a-q4",
+              "question": "Application: Paul calls this your 'reasonable' or 'logical' worship. Given everything God has done for you in Christ, is total surrender actually unreasonable—or is anything less unreasonable? What would it look like tomorrow morning to wake up and consciously present your body to God before you do anything else?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "The Renewed Mind",
+          "content": "<p>Transformation happens not by behavior modification but by the renewing of the mind.</p>",
+          "scriptureReferences": [
+            { "reference": "Romans 12:2" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w1b-q1",
+              "question": "Context: 'Do not be conformed to this world.' Be specific: What patterns of thinking in the world around you have you absorbed without realizing it? Consider how you think about success, comfort, relationships, conflict, money, or your rights.",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1b-q2",
+              "question": "Observation: The word 'transformed' is the Greek word from which we get 'metamorphosis.' This isn't minor adjustment but fundamental change from the inside out. Where have you been trying to change your behavior without addressing underlying beliefs and desires? What has been the result?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1b-q3",
+              "question": "Meaning: Your mind is renewed so that you can 'discern' (test and approve) God's will. Think of a current decision or struggle you're facing. What worldly thinking is clouding your ability to see what is 'good, acceptable, and perfect'? What Scripture speaks directly to that situation?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1b-q4",
+              "question": "Application: Mind renewal is not passive—it requires intentional engagement with God's Word. What is your current plan for saturating your mind with Scripture? Be honest: How much time do you spend consuming media, news, or entertainment compared to time in God's Word? What one change will you make this week?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Heart Examination",
+          "content": "",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w1c-q1",
+              "question": "When you read 'present your bodies as a living sacrifice,' what is your honest, gut-level reaction? Resistance? Fear? Exhaustion? Relief? What does that reaction reveal about what you believe about God and about yourself?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1c-q2",
+              "question": "What area of your life are you most protective of—most unwilling to let God have full access to? Why do you think that is? What do you fear would happen if you surrendered it completely?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Memory Verse",
+          "content": "",
+          "scriptureReferences": [
+            { "reference": "Romans 12:1-2" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        }
+      ]
+    },
+    {
+      "section": "week2",
+      "title": "Week 2: Sober Self-Assessment",
+      "subsections": [
+        {
+          "title": "Context for This Week",
+          "content": "<p>After the call to total surrender and mind renewal, Paul addresses how we think about ourselves—and how we function together as the body of Christ. Pride and false humility are both enemies of healthy Christian community.</p>",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "Thinking with Sober Judgment",
+          "content": "<p>An honest assessment of ourselves according to God's standard.</p>",
+          "scriptureReferences": [
+            { "reference": "Romans 12:3" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w2a-q1",
+              "question": "Context: Paul warns against thinking of yourself 'more highly than you ought to think.' When do you most struggle with an inflated view of yourself? Is it when you're comparing yourself to others? When you've succeeded at something? When you're giving advice? Be specific about the situations.",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2a-q2",
+              "question": "Observation: Paul says to think 'with sober judgment.' Sobriety implies clarity, not intoxication. What intoxicates your self-perception—praise from others, your accomplishments, your knowledge, your position? How does that distort how you see yourself?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2a-q3",
+              "question": "Meaning: The standard for sober judgment is 'the measure of faith that God has assigned.' Everything you have—including your faith—is a gift. How would you relate to others differently if you truly believed that every good thing in you is from God and not from yourself?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2a-q4",
+              "question": "Application: False humility—thinking too lowly of yourself, dismissing your gifts, or fishing for compliments—is also a failure of sober judgment. Do you struggle more with pride or with false humility? How do both actually center on self rather than on God? What would genuinely sober thinking look like for you?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "One Body, Many Members",
+          "content": "<p>Our individual identity finds its meaning in the corporate body.</p>",
+          "scriptureReferences": [
+            { "reference": "Romans 12:4-5" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w2b-q1",
+              "question": "Context: Paul says we are 'one body in Christ, and individually members one of another.' How connected do you actually feel to other believers? If you're honest, do you live as if you need them and they need you—or do you function independently?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2b-q2",
+              "question": "Observation: A hand cannot say it doesn't need the foot. What gifts or strengths in other believers do you tend to overlook, undervalue, or even resent? Why do you think that is?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2b-q3",
+              "question": "Meaning: 'Individually members one of another' means you belong to them and they belong to you. How does this challenge the Western emphasis on individual autonomy? What would change in your relationships if you truly saw yourself as belonging to other believers?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2b-q4",
+              "question": "Application: Be honest about your church involvement. Are you a consumer who attends for what you get, or a contributor who serves for the good of the whole? What specific step could you take to move from isolation toward genuine interdependence?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Using Your Gifts",
+          "content": "<p>Gifts are given not for personal enrichment but for serving others.</p>",
+          "scriptureReferences": [
+            { "reference": "Romans 12:6-8" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w2c-q1",
+              "question": "Context: Paul lists prophecy, service, teaching, exhortation, giving, leading, and mercy. Which of these do you believe God has given you? How do you know? What feedback have others given you about your gifts?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2c-q2",
+              "question": "Observation: Each gift comes with an instruction: prophecy 'in proportion to faith,' service 'in serving,' teaching 'in teaching,' etc. The point is: use your gift faithfully. Are you actually using your gifts, or are they dormant? What excuses have you made for not serving?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2c-q3",
+              "question": "Meaning: Notice that giving should be done 'with generosity,' leading 'with zeal,' and mercy 'with cheerfulness.' How we use our gifts matters. Do you serve begrudgingly, half-heartedly, or for recognition? What would wholehearted, cheerful, zealous service look like for you?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2c-q4",
+              "question": "Application: What is one specific way you will use your gifts to serve others this week? Be concrete—who, what, when? What obstacles might you face, and how will you address them?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Heart Examination",
+          "content": "",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w2d-q1",
+              "question": "When others are praised or succeed, what happens in your heart? Do you genuinely rejoice, or do you feel diminished? What does this reveal about where you're finding your identity and worth?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2d-q2",
+              "question": "Think of someone whose gifts you've envied or dismissed. What would it look like to genuinely thank God for that person and for how they contribute to the body? Can you pray that prayer honestly right now?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Memory Verse",
+          "content": "",
+          "scriptureReferences": [
+            { "reference": "Romans 12:3" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        }
+      ]
+    },
+    {
+      "section": "week3",
+      "title": "Week 3: Genuine Love in Action",
+      "subsections": [
+        {
+          "title": "Context for This Week",
+          "content": "<p>Paul now gives a rapid-fire series of commands that describe what genuine love looks like in practice. These aren't suggestions or ideals—they are the marks of a transformed life. As you work through these, ask yourself: 'Where am I falling short, and why?'</p>",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "Love Without Hypocrisy",
+          "content": "<p>The foundation: love that is genuine and discerning.</p>",
+          "scriptureReferences": [
+            { "reference": "Romans 12:9" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w3a-q1",
+              "question": "Context: 'Let love be genuine'—literally, 'without hypocrisy.' Love can be performed without being real. Where in your life are you going through the motions of love without genuine care for the other person? Why are you doing this?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3a-q2",
+              "question": "Observation: Paul pairs genuine love with 'Abhor what is evil; hold fast to what is good.' Real love isn't sentimental or permissive—it hates what destroys and clings to what builds up. Is there someone you 'love' but avoid speaking truth to because it would be uncomfortable? What are you really protecting—them or yourself?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3a-q3",
+              "question": "Meaning: Hypocrisy is wearing a mask. What mask do you wear in relationships? The mask of having it all together? The mask of not being hurt? The mask of approval? What are you afraid would happen if you dropped the mask?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3a-q4",
+              "question": "Application: Think of one relationship where your love has been more performance than reality. What would genuine love look like in that relationship this week? What is one concrete step you will take?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Brotherly Affection and Honor",
+          "content": "<p>How believers should relate to one another in the family of God.</p>",
+          "scriptureReferences": [
+            { "reference": "Romans 12:10" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w3b-q1",
+              "question": "Context: 'Love one another with brotherly affection.' The Greek word is 'philadelphia'—family love. Do you genuinely feel affection for other believers, or do you merely tolerate them? What makes you feel warmth toward some believers and coldness toward others?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3b-q2",
+              "question": "Observation: 'Outdo one another in showing honor.' This is a competition Paul endorses—competing to honor others! Who have you failed to honor recently? Perhaps someone you take for granted, disagree with, or look down on?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3b-q3",
+              "question": "Meaning: Honor means treating someone as valuable and worthy of respect. Think of someone who irritates you or whom you consider 'less than' in some way. What would it cost you to genuinely honor that person? What does your reluctance reveal about your heart?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3b-q4",
+              "question": "Application: This week, identify one person you will intentionally honor—especially someone you don't naturally gravitate toward. How will you do it? A note? A word of encouragement? An act of service? Be specific.",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Zeal, Hope, and Patience",
+          "content": "<p>The inner qualities that sustain outward love.</p>",
+          "scriptureReferences": [
+            { "reference": "Romans 12:11-12" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w3c-q1",
+              "question": "Context: 'Do not be slothful in zeal, be fervent in spirit, serve the Lord.' Where has your spiritual zeal cooled off? What used to excite you about following Christ that now feels like routine? What happened?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3c-q2",
+              "question": "Observation: 'Rejoice in hope, be patient in tribulation, be constant in prayer.' These three are connected. How does hope affect your ability to be patient in hard times? When trials come, do you run to prayer or away from it? Why?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3c-q3",
+              "question": "Meaning: 'Be constant in prayer' literally means 'persevere in prayer.' Prayer is not a quick fix but a sustained relationship. Describe your actual prayer life honestly. Do you pray when you feel like it, when you're in crisis, or consistently regardless of feelings? What does this reveal?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3c-q4",
+              "question": "Application: Identify a current tribulation in your life. How specifically can you 'rejoice in hope' regarding that situation? What is the hope? Write out a prayer that expresses both the pain and the hope, and commit to praying it daily this week.",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Generosity and Hospitality",
+          "content": "<p>Love expressed through tangible giving.</p>",
+          "scriptureReferences": [
+            { "reference": "Romans 12:13" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w3d-q1",
+              "question": "Context: 'Contribute to the needs of the saints.' Do you know the actual needs of believers around you? Or are you so disconnected that you wouldn't know if someone was struggling financially, emotionally, or spiritually?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3d-q2",
+              "question": "Observation: 'Seek to show hospitality.' The word means 'love of strangers.' Hospitality isn't entertaining friends—it's welcoming those outside your comfort zone. Who are the 'strangers' you've been avoiding? Why?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3d-q3",
+              "question": "Meaning: Both commands require you to move toward others at personal cost—your money, your time, your space. What do you protect most jealously? How might God be calling you to open it up for others?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3d-q4",
+              "question": "Application: This week, take one concrete step of generosity or hospitality. Give to a need, invite someone over, or extend yourself to someone outside your circle. Plan it now: Who? What? When?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Heart Examination",
+          "content": "",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w3e-q1",
+              "question": "As you read through these commands, which one produces the most resistance in you? Sit with that resistance. What is underneath it—fear, selfishness, past hurt, laziness? Talk to God honestly about what you find.",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Memory Verse",
+          "content": "",
+          "scriptureReferences": [
+            { "reference": "Romans 12:9-10" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        }
+      ]
+    },
+    {
+      "section": "week4",
+      "title": "Week 4: Responding to Others",
+      "subsections": [
+        {
+          "title": "Context for This Week",
+          "content": "<p>Paul now addresses how we respond when others treat us well or poorly. This is where the rubber meets the road—when someone blesses you, when someone hurts you, when you encounter people very different from you. Your responses reveal what you truly believe.</p>",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "Bless Those Who Persecute You",
+          "content": "<p>The radical call to respond to evil with blessing.</p>",
+          "scriptureReferences": [
+            { "reference": "Romans 12:14" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w4a-q1",
+              "question": "Context: 'Bless those who persecute you; bless and do not curse them.' Think of someone who has genuinely wronged you—not just annoyed you, but hurt you. What is your honest, gut-level desire for that person right now?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4a-q2",
+              "question": "Observation: To 'bless' means to speak well of, to wish good upon, to pray for their flourishing. To 'curse' means to wish harm or to slander. When you talk about the person who hurt you—to others or in your own mind—which are you doing?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4a-q3",
+              "question": "Meaning: Why is blessing persecutors so hard? What do we want instead—vindication, acknowledgment of wrong, revenge? What would it cost you to genuinely pray for the good of someone who has harmed you?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4a-q4",
+              "question": "Application: Write out a specific blessing for someone who has hurt you. Pray it daily this week. If you find you cannot do this, be honest with God about why. What would need to change in your heart for this to become possible?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Weep and Rejoice with Others",
+          "content": "<p>Entering into the emotional lives of those around you.</p>",
+          "scriptureReferences": [
+            { "reference": "Romans 12:15" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w4b-q1",
+              "question": "Context: 'Rejoice with those who rejoice, weep with those who weep.' Which is harder for you—entering into someone's joy or entering into their sorrow? Why do you think that is?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4b-q2",
+              "question": "Observation: When someone shares good news, do you genuinely celebrate, or do you feel a twinge of envy or comparison? When someone shares pain, do you enter in, or do you try to fix, minimize, or escape? Be honest.",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4b-q3",
+              "question": "Meaning: Both rejoicing and weeping require getting outside yourself and into another person's experience. What self-focus prevents you from fully entering in? Are you thinking about how their news affects you rather than them?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4b-q4",
+              "question": "Application: Think of someone currently experiencing either great joy or deep sorrow. How can you genuinely enter their experience this week—not with advice or platitudes, but with your presence and empathy?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Humility and Harmony",
+          "content": "<p>Living peaceably with all kinds of people.</p>",
+          "scriptureReferences": [
+            { "reference": "Romans 12:16" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w4c-q1",
+              "question": "Context: 'Live in harmony with one another.' What relationship in your life is currently marked by disharmony? What is your contribution to that discord—not their fault, yours?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4c-q2",
+              "question": "Observation: 'Do not be haughty, but associate with the lowly.' Who are the 'lowly' you tend to avoid—economically, socially, intellectually, or spiritually? What makes you uncomfortable about being with them?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4c-q3",
+              "question": "Meaning: 'Never be wise in your own sight.' When someone disagrees with you or offers correction, what is your typical response—openness or defensiveness? What does defensiveness reveal about where you're placing your confidence?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4c-q4",
+              "question": "Application: Identify one relationship where you have been 'wise in your own sight.' What would it look like to genuinely consider that you might be wrong? What step of humility will you take this week?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Pursuing Peace",
+          "content": "<p>Our responsibility for peace, as far as it depends on us.</p>",
+          "scriptureReferences": [
+            { "reference": "Romans 12:17-18" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w4d-q1",
+              "question": "Context: 'Repay no one evil for evil.' When someone wrongs you, what is your natural response? Silent treatment? Sharp words? Gossip? Withdrawal? How do you justify these responses to yourself?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4d-q2",
+              "question": "Observation: 'Give thought to do what is honorable in the sight of all.' Your response to being wronged is public testimony. When unbelievers watch how you handle conflict, what do they see? What should they see?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4d-q3",
+              "question": "Meaning: 'If possible, so far as it depends on you, live peaceably with all.' Notice the qualifications—peace isn't always possible, and it depends partly on others. But what is your part? Have you done everything within your power to pursue peace, or have you given up too easily?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4d-q4",
+              "question": "Application: Is there a broken relationship where you've been waiting for the other person to make the first move? What would 'so far as it depends on you' look like? What specific step will you take this week?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Heart Examination",
+          "content": "",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w4e-q1",
+              "question": "Is there anyone you are currently avoiding, resenting, or refusing to forgive? What would you have to believe about God—His justice, His sovereignty, His goodness—to release that person to Him?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Memory Verse",
+          "content": "",
+          "scriptureReferences": [
+            { "reference": "Romans 12:17-18" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        }
+      ]
+    },
+    {
+      "section": "week5",
+      "title": "Week 5: Overcoming Evil with Good",
+      "subsections": [
+        {
+          "title": "Context for This Week",
+          "content": "<p>Paul concludes Romans 12 with some of the most challenging words in Scripture. The call is not merely to refrain from evil but to actively overcome it with good. Vengeance belongs to God alone. Our response to enemies must be radically different from the world's.</p>",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "Leave Room for God's Wrath",
+          "content": "<p>The theological foundation for not taking revenge.</p>",
+          "scriptureReferences": [
+            { "reference": "Romans 12:19" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w5a-q1",
+              "question": "Context: 'Beloved, never avenge yourselves.' Why does Paul call them 'beloved' right before this command? How does knowing you are beloved by God affect your ability to not seek revenge?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5a-q2",
+              "question": "Observation: 'Leave it to the wrath of God.' This doesn't mean injustice doesn't matter—it means God will deal with it. Do you actually believe God will judge righteously, or do you feel like you need to make sure justice happens?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5a-q3",
+              "question": "Meaning: What forms does 'vengeance' take in your life? It may not be physical violence—it might be withdrawal of affection, passive-aggressive behavior, gossip, or withholding forgiveness. How do you take revenge without calling it that?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5a-q4",
+              "question": "Application: Think of a situation where you've been taking matters into your own hands rather than leaving room for God. What would it practically look like to release that person and that situation to God's judgment? What do you need to stop doing?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Feed Your Enemy",
+          "content": "<p>The shocking alternative to revenge: active kindness toward those who wrong us.</p>",
+          "scriptureReferences": [
+            { "reference": "Romans 12:20" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w5b-q1",
+              "question": "Context: 'If your enemy is hungry, feed him; if he is thirsty, give him something to drink.' This is not passive non-retaliation—it's active love. Who in your life qualifies as an 'enemy'—someone who has set themselves against you? What is your current posture toward them?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5b-q2",
+              "question": "Observation: What would it actually look like to 'feed' your enemy—to actively do good to someone who has done you harm? What specific act of kindness could you extend to them?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5b-q3",
+              "question": "Meaning: 'By so doing you will heap burning coals on his head.' This likely refers to the burning shame of conviction, not punishment. The goal is not to make your enemy feel bad but to open the door for repentance. But be honest: if doing good to your enemy is motivated by wanting to shame them, is it really love?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5b-q4",
+              "question": "Application: This is one of the hardest commands in Scripture. What is one concrete good you could do for someone who has wronged you? Not for their shame, but genuinely for their good? If you can't think of anything, what does that reveal about your heart?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Overcome Evil with Good",
+          "content": "<p>The summary statement: the strategy for victory over evil.</p>",
+          "scriptureReferences": [
+            { "reference": "Romans 12:21" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w5c-q1",
+              "question": "Context: 'Do not be overcome by evil.' When someone does evil to you, how can you be 'overcome' by it? What happens in your heart when bitterness, resentment, or hatred take root? How does the evil done to you start to control you?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5c-q2",
+              "question": "Observation: 'But overcome evil with good.' This is a battle, and there are only two outcomes—either evil overcomes you or you overcome evil. There is no neutral ground. In the situation that most troubles you right now, which is winning?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5c-q3",
+              "question": "Meaning: How did Jesus overcome evil with good? Think about the cross. He absorbed evil rather than returning it. He loved those who hated Him. He prayed for those who killed Him. How does meditating on Christ's example change your perspective on your own situation?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5c-q4",
+              "question": "Application: What specific evil are you currently facing—from another person, from circumstances, from the effects of living in a fallen world? What would 'overcoming it with good' look like in that situation? What is your plan?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Final Heart Examination",
+          "content": "",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w5d-q1",
+              "question": "As you complete this study of Romans 12, what is the main area where the Holy Spirit has been convicting you? What will you do about it?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5d-q2",
+              "question": "Who will you ask to hold you accountable for the changes God is calling you to make? When will you have that conversation?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5d-q3",
+              "question": "Look back at Romans 12:1-2. The transformation described in this chapter flows from presenting yourself as a living sacrifice and having your mind renewed. Where do you need to return to those foundational truths? Write out a prayer of renewed commitment to God.",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Memory Verse",
+          "content": "",
+          "scriptureReferences": [
+            { "reference": "Romans 12:21" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "Study Summary",
+          "content": "<h4>Key Themes of Romans 12:</h4><ul><li><strong>Total Surrender</strong> — Present your body as a living sacrifice; this is your reasonable worship (12:1)</li><li><strong>Renewed Mind</strong> — Transformation happens through mind renewal, not behavior modification (12:2)</li><li><strong>Sober Self-Assessment</strong> — Think rightly about yourself according to the grace God has given (12:3)</li><li><strong>Body Life</strong> — We belong to one another and need one another's gifts (12:4-8)</li><li><strong>Genuine Love</strong> — Love without hypocrisy; hate evil, hold fast to good (12:9)</li><li><strong>Radical Response</strong> — Bless persecutors, live peaceably, never avenge (12:14-19)</li><li><strong>Overcoming Strategy</strong> — Do not be overcome by evil, but overcome evil with good (12:21)</li></ul><p>May God give you grace to live out these truths—not in your own strength, but by the power of His Spirit working in you.</p>",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": []
+        }
+      ]
+    }
+  ]
+}

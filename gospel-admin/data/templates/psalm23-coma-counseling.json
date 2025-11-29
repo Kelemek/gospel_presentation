@@ -1,0 +1,541 @@
+{
+  "title": "Psalm 23 COMA Counseling Study",
+  "description": "A deep-dive into Psalm 23 using COMA method with ACBC-style biblical counseling questions designed to promote self-examination, trust in the Good Shepherd, and practical application in trials",
+  "isTemplate": true,
+  "gospelData": [
+    {
+      "section": "week1",
+      "title": "Week 1: The Lord is My Shepherd",
+      "subsections": [
+        {
+          "title": "Introduction",
+          "content": "<p>Psalm 23 is perhaps the most beloved passage in all of Scripture. Yet its familiarity can work against us—we may recite it without truly believing it. David wrote this psalm as one who knew both the tenderness of caring for sheep and the terror of being hunted. He knew what it meant to need a shepherd.</p><p>This study uses questions designed to help you move beyond mere familiarity into genuine trust. Be brutally honest with yourself: Do you actually believe these words apply to your situation right now?</p>",
+          "scriptureReferences": [
+            { "reference": "Psalm 23:1-2" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "The Lord is My Shepherd",
+          "content": "<p>The foundational declaration that shapes everything else.</p>",
+          "scriptureReferences": [
+            { "reference": "Psalm 23:1a" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w1a-q1",
+              "question": "Context: David was a shepherd before he was a king. He knew that sheep are utterly dependent—unable to find food, water, or protection on their own. They are also prone to wander into danger. How does understanding your own helplessness and tendency to wander affect how you hear David's claim that 'The LORD is my shepherd'?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1a-q2",
+              "question": "Observation: Notice the personal pronoun 'my.' David doesn't say 'The LORD is a shepherd' or 'our shepherd' but 'MY shepherd.' Can you say this with confidence right now? Or do you intellectually believe God shepherds others while struggling to believe He personally cares for you? What makes it hard to personalize this truth?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1a-q3",
+              "question": "Meaning: If the LORD—Yahweh, the covenant-keeping God who revealed Himself to Moses—is your shepherd, what does this say about His commitment to you? A hired hand might abandon the sheep, but a true shepherd has bound himself to their welfare. What fears or anxieties in your life right now suggest you don't fully believe this?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1a-q4",
+              "question": "Application: Jesus declared 'I am the good shepherd' (John 10:11,14). He laid down His life for the sheep. When you're anxious or afraid, do you run to the Shepherd or away from Him? What would it look like today to consciously place yourself under His care rather than trying to manage life on your own?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "I Shall Not Want",
+          "content": "<p>The logical conclusion of having the LORD as shepherd.</p>",
+          "scriptureReferences": [
+            { "reference": "Psalm 23:1b" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w1b-q1",
+              "question": "Context: 'Want' here means lack—to be in need, to be deficient. David lived as a fugitive, in caves, often hungry and hunted. Yet he could say 'I shall not want.' What current circumstances in your life make this statement feel impossible to believe? Be specific.",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1b-q2",
+              "question": "Observation: David doesn't say 'I shall have everything I desire' but 'I shall not want.' There's a difference between having every wish granted and having every genuine need met. What do you think you need that you don't have? Is it truly a need, or a desire you've elevated to a need?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1b-q3",
+              "question": "Meaning: If the Shepherd provides so that you 'shall not want,' then persistent anxiety about provision is actually a statement of unbelief. This is not meant to shame you but to diagnose you. Where is your anxiety revealing that you're functionally trusting something other than the Shepherd—your job, your health, your plans, your own competence?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1b-q4",
+              "question": "Application: Jesus said 'Do not be anxious about your life' and pointed to how God feeds the birds and clothes the flowers (Matthew 6:25-34). What specific thing are you anxious about this week? Can you bring that to the Shepherd right now in prayer and consciously release it to His care? What would trusting Him with that actually look like in your behavior?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Green Pastures and Still Waters",
+          "content": "<p>The Shepherd's provision of rest and refreshment.</p>",
+          "scriptureReferences": [
+            { "reference": "Psalm 23:2" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w1c-q1",
+              "question": "Context: In the arid land of Israel, finding green pastures and quiet waters required a shepherd who knew where to lead. Sheep cannot find these on their own. What 'green pastures' has the Lord led you to in the past that you couldn't have found yourself—places of spiritual nourishment, seasons of peace, provisions you didn't expect?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1c-q2",
+              "question": "Observation: 'He makes me lie down.' Sheep won't lie down if they're hungry, fearful, or in conflict with other sheep. The shepherd must address these needs first. Are you able to rest, or are you constantly driven by fear, hunger for approval, or conflict? What is keeping you from lying down in peace?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1c-q3",
+              "question": "Meaning: 'Still waters' literally means 'waters of rest.' Rushing water terrifies sheep—they can drown in their heavy wool. The shepherd leads to calm water. What 'rushing waters' in your life are overwhelming you? How might the Shepherd be trying to lead you to quieter places, and are you resisting His leading?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1c-q4",
+              "question": "Application: Jesus invited, 'Come to me, all who labor and are heavy laden, and I will give you rest' (Matthew 11:28). Are you coming to Him, or are you running harder? What specific practice could you implement this week to receive the rest the Shepherd offers rather than exhausting yourself trying to find your own pasture?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Heart Examination",
+          "content": "",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w1d-q1",
+              "question": "When life gets hard, what is your instinctive response—to trust the Shepherd or to take matters into your own hands? Be honest: In your current struggle, are you acting more like a sheep who follows or like one who has wandered off to find your own solution?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w1d-q2",
+              "question": "If you truly believed 'I shall not want,' how would your anxiety level change? How would your decision-making change? How would your relationships change? What is one area where you need to repent of functional unbelief and consciously trust the Shepherd this week?",
+              "maxLength": 2000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "week2",
+      "title": "Week 2: Restoration and Right Paths",
+      "subsections": [
+        {
+          "title": "Context for This Week",
+          "content": "<p>The Shepherd doesn't just provide—He restores and guides. For those who have wandered, failed, or lost their way, these verses offer profound hope. But they also require honesty about where we've strayed.</p>",
+          "scriptureReferences": [
+            { "reference": "Psalm 23:3" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "He Restores My Soul",
+          "content": "<p>The Shepherd's work of recovery and renewal.</p>",
+          "scriptureReferences": [
+            { "reference": "Psalm 23:3a" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w2a-q1",
+              "question": "Context: A 'cast' sheep is one that has rolled onto its back and cannot get up. Without the shepherd's help, it will die. David knew this from experience. Have you ever felt spiritually 'cast'—stuck, helpless, unable to right yourself no matter how hard you try? Describe that experience.",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2a-q2",
+              "question": "Observation: 'Restores' means to bring back, to return to a former condition, to revive. This implies something was lost or damaged. What in your soul needs restoration right now—your joy? Your hope? Your sense of God's presence? Your desire for His Word? Your love for others? Be specific.",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2a-q3",
+              "question": "Meaning: The Shepherd restores—you cannot restore yourself. Many people try harder religion when their soul is depleted: more discipline, more guilt, more striving. But restoration comes from the Shepherd, not from your effort. How have you been trying to fix yourself rather than receiving from Him?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2a-q4",
+              "question": "Application: What would it look like to stop striving and simply receive the Shepherd's restoration? Sometimes this means confession. Sometimes it means rest. Sometimes it means returning to basic practices you've abandoned. What is the Shepherd calling you to do (or stop doing) so that He can restore your soul?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Paths of Righteousness",
+          "content": "<p>The Shepherd's guidance in right living.</p>",
+          "scriptureReferences": [
+            { "reference": "Psalm 23:3b" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w2b-q1",
+              "question": "Context: 'Paths of righteousness' can also be translated 'right paths' or 'paths of justice.' Sheep naturally wander into danger; they need the shepherd's staff to guide them onto safe paths. Where have you wandered off the right path recently—in your thoughts, words, actions, relationships, or priorities?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2b-q2",
+              "question": "Observation: Notice 'He leads me.' The sheep follows; the shepherd leads. In the decision you're currently facing, are you asking God to bless the path you've already chosen, or are you genuinely asking Him to lead you to His path—even if it's not the one you prefer?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2b-q3",
+              "question": "Meaning: 'For His name's sake.' God's guidance isn't primarily about your comfort but about His glory. He leads you in right paths because His reputation is connected to how His sheep live. How does knowing that God's honor is at stake in your obedience change how you view the commands you find difficult?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2b-q4",
+              "question": "Application: Is there a path God is clearly calling you to walk that you're resisting? Perhaps it involves a hard conversation, a change in behavior, a step of faith, or letting go of something you're clinging to. What specific step of obedience is the Shepherd asking of you this week, and what is holding you back?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Heart Examination",
+          "content": "",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w2c-q1",
+              "question": "Do you truly want your soul restored, or have you grown comfortable in your depleted state? Sometimes we resist restoration because change is frightening or because we're using our brokenness as an excuse. Be honest: Is there any part of you that doesn't want to be restored?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w2c-q2",
+              "question": "Think of a time when God led you on a difficult path that you didn't want to walk. Looking back, how did that path prove to be a 'right path' even though it was hard? How can that memory strengthen your trust for the path He's leading you on now?",
+              "maxLength": 2000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "week3",
+      "title": "Week 3: Through the Valley",
+      "subsections": [
+        {
+          "title": "Context for This Week",
+          "content": "<p>Here we reach the heart of the psalm—and often the heart of our struggles. The valley of the shadow of death is not avoided but walked through. This is where faith is tested and proven.</p>",
+          "scriptureReferences": [
+            { "reference": "Psalm 23:4" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "The Valley of the Shadow of Death",
+          "content": "<p>The Shepherd's presence in the darkest places.</p>",
+          "scriptureReferences": [
+            { "reference": "Psalm 23:4a" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w3a-q1",
+              "question": "Context: The 'valley of the shadow of death' could refer to deep, dark ravines where predators lurked and danger was real. David experienced such places literally and metaphorically—fleeing Saul, losing a child, facing his own sin's consequences. What 'valley' are you walking through right now? Name it specifically.",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3a-q2",
+              "question": "Observation: Notice David says 'Though I walk THROUGH the valley'—not 'Though I camp in the valley' or 'Though I'm stuck in the valley.' Valleys are for passing through, not permanent residence. Are you treating your current trial as a permanent condition? What would it mean to believe this valley has an exit?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3a-q3",
+              "question": "Meaning: It's the valley of the SHADOW of death, not death itself. A shadow cannot harm you—only the thing casting the shadow can. The shadow of a sword cannot cut; the shadow of a lion cannot bite. What 'shadows' are you fearing as if they were the real thing? What power have you given to threats that may never materialize?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3a-q4",
+              "question": "Application: For the Christian, even death itself has become a shadow because Christ has defeated it. Paul asks, 'Where, O death, is your victory?' (1 Corinthians 15:55). If death is a defeated enemy, what lesser fear currently has power over you that shouldn't? What specific fear do you need to see as a shadow rather than reality?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "I Will Fear No Evil",
+          "content": "<p>The confidence that comes from the Shepherd's presence.</p>",
+          "scriptureReferences": [
+            { "reference": "Psalm 23:4b" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w3b-q1",
+              "question": "Context: 'I will fear no evil' is a choice, a decision of faith. David doesn't say 'I feel no fear' but 'I will fear no evil.' Fear may knock, but David refuses to let it in. What evil do you fear most? Be specific—is it suffering, loss, rejection, failure, death, harm to loved ones? Name it.",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3b-q2",
+              "question": "Observation: The reason for fearlessness: 'For You are with me.' Notice the shift from 'He' to 'You'—the psalm becomes personal, intimate. In the valley, David speaks directly to God. When you're in your darkest moments, do you talk ABOUT God or do you talk TO God? What's the difference?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3b-q3",
+              "question": "Meaning: God's presence doesn't mean the absence of danger—the valley is still dark, predators still lurk. But His presence changes everything. How does God's promise 'I will never leave you nor forsake you' (Hebrews 13:5) apply to the specific situation you're facing? Do you believe He is with you in it?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3b-q4",
+              "question": "Application: Fear and faith cannot occupy the same space. Fear says 'What if this terrible thing happens?' Faith says 'Even if it does, God is with me.' What would it look like to choose faith over fear today? What specific fearful thought do you need to combat with the truth of God's presence?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Your Rod and Your Staff",
+          "content": "<p>The Shepherd's tools of protection and guidance.</p>",
+          "scriptureReferences": [
+            { "reference": "Psalm 23:4c" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w3c-q1",
+              "question": "Context: The rod was a club used to fight off predators. The staff was a long crook used to guide sheep and pull them out of danger. Together they represent protection and direction. When has God fought for you—protected you from something you may not have even known about?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3c-q2",
+              "question": "Observation: 'They comfort me.' The rod and staff—instruments of the shepherd's authority—bring comfort. Even discipline from the Shepherd is comforting because it proves He cares. Can you look back on times God corrected you and see it as evidence of His love? How did His discipline ultimately comfort you?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3c-q3",
+              "question": "Meaning: The shepherd uses the staff to pull wandering sheep back from cliffs and dangerous paths. Sometimes this is uncomfortable for the sheep. Is there an area where God seems to be pulling you back from something you want? Can you see His restraint as love rather than deprivation?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3c-q4",
+              "question": "Application: God's Word and His Spirit function like the rod and staff—protecting us and guiding us. Are you daily putting yourself under the Shepherd's guidance through Scripture and prayer? If not, you're wandering without guidance in a dangerous valley. What will you do this week to stay close to the Shepherd's staff?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Heart Examination",
+          "content": "",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w3d-q1",
+              "question": "In your current valley, what are you most tempted to believe about God? That He's abandoned you? That He doesn't care? That He's punishing you? That He's too weak to help? Identify the lie, then counter it with specific truth from Scripture.",
+              "maxLength": 2000
+            },
+            {
+              "id": "w3d-q2",
+              "question": "The psalmist's fear decreases as his awareness of God's presence increases. Practically speaking, how can you cultivate greater awareness of God's presence in your daily life, especially when circumstances are screaming that you're alone?",
+              "maxLength": 2000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "week4",
+      "title": "Week 4: The Table and the Cup",
+      "subsections": [
+        {
+          "title": "Context for This Week",
+          "content": "<p>The imagery shifts from shepherd and sheep to host and guest. God doesn't just lead us—He lavishes abundance upon us, even in the presence of those who oppose us.</p>",
+          "scriptureReferences": [
+            { "reference": "Psalm 23:5" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "A Table in the Presence of Enemies",
+          "content": "<p>God's provision amid opposition.</p>",
+          "scriptureReferences": [
+            { "reference": "Psalm 23:5a" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w4a-q1",
+              "question": "Context: Hospitality in the ancient Near East was a profound statement. To be invited to someone's table meant protection, honor, and relationship. God Himself prepares a table for you. What does it mean to you that the Creator of the universe considers you worthy of such personal attention?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4a-q2",
+              "question": "Observation: The table is set 'in the presence of my enemies.' The enemies don't disappear—they watch. God's provision isn't contingent on the absence of opposition. Who are your 'enemies' right now—people who oppose you, circumstances that threaten you, spiritual forces that attack you? Name them.",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4a-q3",
+              "question": "Meaning: There's something defiant about feasting while enemies watch. It's a statement of trust and security in the host's protection. Instead of anxiously watching your enemies, you're enjoying the host's provision. In your current opposition, are you anxiously focused on your enemies or peacefully feasting with your Host?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4a-q4",
+              "question": "Application: The Lord's Supper is a table the Lord prepares for us—communion in the presence of a hostile world. How does regularly coming to the Lord's Table remind you that God provides and protects even when you're surrounded by opposition? How can you approach communion differently this week?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Anointed and Overflowing",
+          "content": "<p>God's abundant blessing beyond what we need.</p>",
+          "scriptureReferences": [
+            { "reference": "Psalm 23:5b" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w4b-q1",
+              "question": "Context: Anointing a guest's head with oil was a sign of honor, welcome, and celebration. It refreshed a weary traveler and made them feel valued. When have you felt 'anointed' by God—specially honored, refreshed, valued by Him? What were the circumstances?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4b-q2",
+              "question": "Observation: 'My cup overflows.' Not just enough, but more than enough. Abundance, not scarcity. Yet many Christians live with a scarcity mentality—anxious, grasping, never satisfied. Do you live as if your cup is half-empty, barely full, or overflowing? What does your attitude about what you have reveal?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4b-q3",
+              "question": "Meaning: An overflowing cup means you have more than you need—enough to share. Generosity flows from abundance. If you're hoarding—whether money, time, love, or forgiveness—you're acting as if your cup is running dry. What are you hoarding that you should be sharing because God has given you abundantly?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4b-q4",
+              "question": "Application: Take an inventory of your life right now—not what you lack, but what you have. What has God given you that you've been taking for granted? Make a list of ten things your cup contains and spend time thanking God for each one. How does this change your perspective on what you think you need?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Heart Examination",
+          "content": "",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w4c-q1",
+              "question": "Why do we so easily focus on our enemies rather than on the Host who has prepared the table? What does your chronic worry about opposition reveal about where you're looking? How can you shift your gaze from the enemies to the Host?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w4c-q2",
+              "question": "Entitlement kills gratitude. When you receive good things, do you respond with 'Finally!' (as if owed) or 'Thank You!' (as if graced)? Examine your heart: In what areas have you developed a sense of entitlement that blinds you to God's generous provision?",
+              "maxLength": 2000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "section": "week5",
+      "title": "Week 5: Goodness, Mercy, and Home",
+      "subsections": [
+        {
+          "title": "Context for This Week",
+          "content": "<p>The psalm ends with confident hope—not wishful thinking, but settled assurance. David looks back on God's faithfulness and looks forward to eternal dwelling. This is where the entire psalm has been leading.</p>",
+          "scriptureReferences": [
+            { "reference": "Psalm 23:6" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        },
+        {
+          "title": "Goodness and Mercy Shall Follow Me",
+          "content": "<p>God's relentless pursuit of His own.</p>",
+          "scriptureReferences": [
+            { "reference": "Psalm 23:6a" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w5a-q1",
+              "question": "Context: 'Surely'—this is certainty, not hope. David doesn't say 'Maybe goodness and mercy will follow me' or 'I hope they do.' He's confident. What would it take for you to say 'Surely' about God's goodness and mercy in your life? What's preventing you from that confidence?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5a-q2",
+              "question": "Observation: 'Follow' can also be translated 'pursue.' God's goodness and mercy are actively chasing you, not passively waiting for you to find them. In what ways has God pursued you with goodness even when you were running from Him or ignoring Him? Be specific about His relentless love.",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5a-q3",
+              "question": "Meaning: 'All the days of my life'—not just the good days, but all days. The days of sickness, loss, failure, and confusion are also days when goodness and mercy follow. Can you look back on a terrible day or season and now see God's goodness and mercy in it? How does this shape how you view current difficulties?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5a-q4",
+              "question": "Application: If goodness and mercy are pursuing you, why do you sometimes feel like you're running on empty? Perhaps you're running too fast to receive what's following you. What would it look like to slow down, look back, and receive the goodness and mercy that have been pursuing you all along?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Dwelling in the House of the Lord",
+          "content": "<p>The eternal home that awaits.</p>",
+          "scriptureReferences": [
+            { "reference": "Psalm 23:6b" }
+          ],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w5b-q1",
+              "question": "Context: 'The house of the LORD' for David meant the tabernacle/temple—the place of God's special presence. For us, it points to eternal communion with God. How often do you think about eternity? Does the hope of heaven significantly affect how you live today, or is it a distant, abstract concept?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5b-q2",
+              "question": "Observation: 'I shall dwell'—not visit, not pass through, but dwell. Permanent residence. The sheep that has been led through valleys and past enemies will finally arrive home and never leave. How does the promise of eternal security with God affect your view of temporary insecurities now?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5b-q3",
+              "question": "Meaning: 'Forever' is a long time. Every joy and every sorrow in this life is temporary, but dwelling with God is eternal. C.S. Lewis wrote that we are 'too easily pleased' with earthly things when infinite joy awaits. What earthly things are you treating as if they're forever when they're actually fleeting?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5b-q4",
+              "question": "Application: Living with eternity in view changes everything. It makes trials lighter and blessings sweeter. It loosens our grip on temporary things and tightens our grip on Christ. What specific change would you make if you truly lived as if you're headed home to dwell with the Lord forever?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Heart Examination",
+          "content": "",
+          "scriptureReferences": [],
+          "nestedSubsections": [],
+          "questions": [
+            {
+              "id": "w5c-q1",
+              "question": "As you've walked through this entire psalm, what has God revealed to you about your relationship with Him as your Shepherd? Where has your trust been weak? Where have you been trying to shepherd yourself? What needs to change?",
+              "maxLength": 2000
+            },
+            {
+              "id": "w5c-q2",
+              "question": "Write out Psalm 23 in your own words, making it personal to your current situation. Replace the imagery with the specifics of your life—your valleys, your enemies, your cup. Let it become your own prayer of trust in your Shepherd.",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Memory Verse",
+          "content": "",
+          "scriptureReferences": [
+            { "reference": "Psalm 23:1-6" }
+          ],
+          "nestedSubsections": [],
+          "questions": []
+        }
+      ]
+    }
+  ]
+}

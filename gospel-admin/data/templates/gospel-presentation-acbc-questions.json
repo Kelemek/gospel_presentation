@@ -1,0 +1,1457 @@
+{
+  "title": "Gospel Presentation with ACBC Counseling Questions",
+  "description": "The complete gospel presentation outline with ACBC-style biblical counseling questions designed to help counselees think deeply through each gospel truth and its personal application.",
+  "isTemplate": true,
+  "gospelData": [
+    {
+      "title": "1. Understanding God - Part 1",
+      "section": "1",
+      "subsections": [
+        {
+          "title": "A. There is no one like the one true God",
+          "content": "The one true God is unique and incomparable in His nature, character, and works.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Deuteronomy 4:35" },
+            { "favorite": false, "reference": "Psalms 86:8" },
+            { "favorite": false, "reference": "Psalms 86:10" },
+            { "favorite": false, "reference": "Isaiah 40:18" },
+            { "favorite": false, "reference": "Isaiah 40:25–26" },
+            { "favorite": false, "reference": "Isaiah 44:6–7a" },
+            { "favorite": false, "reference": "Isaiah 46:5" },
+            { "favorite": false, "reference": "Isaiah 46:9" }
+          ],
+          "questions": [
+            {
+              "id": "s1a-q1",
+              "question": "When you hear that there is 'no one like God,' what thoughts or feelings arise? Do you find this comforting, intimidating, or something else? What does your reaction reveal about how you currently view God?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s1a-q2",
+              "question": "What 'gods'—things you trust, fear, or live for—have you practically treated as comparable to the true God? Be specific: money, approval, comfort, control, relationships?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "B. He is triune",
+          "content": "God exists as three distinct persons, of one substance, different in function.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Genesis 1:26" },
+            { "favorite": false, "reference": "Deuteronomy 6:4" },
+            { "favorite": false, "reference": "Matthew 28:19" },
+            { "favorite": false, "reference": "Luke 3:21–22" },
+            { "favorite": false, "reference": "John 1:1" },
+            { "favorite": false, "reference": "John 1:14" },
+            { "favorite": false, "reference": "John 5:18" },
+            { "favorite": false, "reference": "John 10:30" },
+            { "favorite": false, "reference": "Acts 5:3–4" },
+            { "favorite": false, "reference": "2 Corinthians 13:14" },
+            { "favorite": false, "reference": "Colossians 2:9" },
+            { "favorite": false, "reference": "1 Thessalonians 1:2–5" },
+            { "favorite": false, "reference": "1 Peter 1:2" }
+          ],
+          "questions": [
+            {
+              "id": "s1b-q1",
+              "question": "The Trinity shows perfect relationship—Father, Son, and Spirit in eternal love and unity. How does knowing God exists in perfect community affect how you view your own need for relationship and your struggles with isolation or conflict?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s1b-q2",
+              "question": "Which person of the Trinity do you tend to focus on or neglect? How might a fuller understanding of Father, Son, and Spirit change how you pray and relate to God?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "C. He is the creator, and he is personal",
+          "content": "God created all things and maintains a personal relationship with His creation.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Genesis 1:26" },
+            { "favorite": false, "reference": "Psalms 95:6–7" },
+            { "favorite": false, "reference": "Psalms 100:3" },
+            { "favorite": false, "reference": "Isaiah 44:24" },
+            { "favorite": false, "reference": "John 16:14" },
+            { "favorite": false, "reference": "John 17:1" },
+            { "favorite": false, "reference": "John 17:4" },
+            { "favorite": false, "reference": "John 17:22–26" },
+            { "favorite": false, "reference": "Acts 17:24–25" },
+            { "favorite": false, "reference": "Colossians 1:16–17" }
+          ],
+          "questions": [
+            {
+              "id": "s1c-q1",
+              "question": "If God personally created you and sustains your very breath, what does that say about your value and purpose? How does this truth conflict with lies you've believed about yourself—that you're worthless, an accident, or self-made?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s1c-q2",
+              "question": "God is personal, not a distant force. How have you treated God—as a personal Father who knows and cares, or as an impersonal power to be manipulated or avoided? What would change if you truly believed He is personal?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "D. He is almighty and sovereign",
+          "content": "God has unlimited power and exercises supreme authority over all creation.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Deuteronomy 32:39" },
+            { "favorite": false, "reference": "Psalms 24:1–2" },
+            { "favorite": false, "reference": "Psalms 47:7–8" },
+            { "favorite": false, "reference": "Psalms 103:19" },
+            { "favorite": false, "reference": "Psalms 135:5–6" },
+            { "favorite": false, "reference": "Isaiah 46:9–11" },
+            { "favorite": false, "reference": "Romans 1:20" },
+            { "favorite": false, "reference": "Romans 8:28–29" }
+          ],
+          "questions": [
+            {
+              "id": "s1d-q1",
+              "question": "God is sovereign over everything—including your current circumstances. What situation in your life are you struggling to trust Him with? What does your anxiety or anger reveal about what you believe about His sovereignty?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s1d-q2",
+              "question": "If God works all things for the good of those who love Him (Romans 8:28), how might He be using your current struggles for your good and His glory—even if you can't see it yet?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "E. He is eternal",
+          "content": "God exists without beginning or end, outside the limitations of time.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Isaiah 57:15" },
+            { "favorite": false, "reference": "Colossians 1:16–20" },
+            { "favorite": false, "reference": "Jude 1:24–25" }
+          ],
+          "questions": [
+            {
+              "id": "s1e-q1",
+              "question": "God is eternal—He sees the end from the beginning. How does knowing that God is not surprised by anything in your life, past or future, affect how you view your current fears about tomorrow?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s1e-q2",
+              "question": "You are a finite creature living in time; God is the eternal One. How might this perspective shift help you hold your temporary circumstances more loosely and trust in His eternal purposes?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "F. He is righteous and holy",
+          "content": "God is morally perfect, pure, and set apart from all sin and evil.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "1 Samuel 2:2" },
+            { "favorite": false, "reference": "Psalms 5:4" },
+            { "favorite": false, "reference": "Isaiah 6:3" },
+            { "favorite": false, "reference": "Habakkuk 1:13" },
+            { "favorite": false, "reference": "1 Peter 1:14–16" },
+            { "favorite": false, "reference": "1 John 1:5" },
+            { "favorite": false, "reference": "Revelation 4:8" }
+          ],
+          "questions": [
+            {
+              "id": "s1f-q1",
+              "question": "God is perfectly holy—'in Him there is no darkness at all' (1 John 1:5). When you honestly compare yourself to His holiness, what do you see? What sins have you minimized, excused, or renamed?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s1f-q2",
+              "question": "Isaiah saw God's holiness and cried 'Woe is me! I am undone!' (Isaiah 6:5). Have you ever truly felt the weight of standing before a holy God? If not, why do you think that is?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "G. He is just",
+          "content": "God always acts in accordance with what is right and judges all things fairly.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Deuteronomy 32:4" },
+            { "favorite": false, "reference": "Psalms 9:7–8" },
+            { "favorite": false, "reference": "Psalms 89:14" },
+            { "favorite": false, "reference": "Acts 17:31" },
+            { "favorite": false, "reference": "Galatians 3:10" },
+            { "favorite": false, "reference": "1 Peter 3:18" }
+          ],
+          "questions": [
+            {
+              "id": "s1g-q1",
+              "question": "God is perfectly just—He cannot overlook sin or pretend it didn't happen. How does this truth make you feel about your own sin? Do you tend to minimize God's justice or presume upon His mercy?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s1g-q2",
+              "question": "If God is just and must punish all sin, what hope do you have? Where are you tempted to think your 'good deeds' might balance out your sin before a perfectly just God?",
+              "maxLength": 2000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "2. Understanding Man as Originally Created before the Fall",
+      "section": "2",
+      "subsections": [
+        {
+          "title": "A. Created in God's image to worship God",
+          "content": "Man was created to worship God, delight in him, reflect his glory, live for his advantage, and proclaim his majesty.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Deuteronomy 10:12–13" },
+            { "favorite": false, "reference": "Psalms 16:11" },
+            { "favorite": false, "reference": "Psalms 73:25–26" },
+            { "favorite": false, "reference": "Isaiah 43:6–7" },
+            { "favorite": false, "reference": "Colossians 1:16–18" }
+          ],
+          "questions": [
+            {
+              "id": "s2a-q1",
+              "question": "You were created to worship God and find your deepest satisfaction in Him. What have you been worshiping instead? What do you think about most, fear losing most, or work hardest to obtain?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s2a-q2",
+              "question": "Isaiah 43:7 says you were created 'for God's glory.' How does this purpose statement differ from how you've been living? What would change if you truly lived for His glory rather than your own comfort or reputation?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "B. Created to be loved and cared for by God",
+          "content": "Man was created to be loved, cared for, blessed by, taught by, satisfied by, and comforted by God, and to walk with him.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Genesis 1:27–30" },
+            { "favorite": false, "reference": "Genesis 2:15–17" },
+            { "favorite": false, "reference": "Genesis 3:8" },
+            { "favorite": false, "reference": "Exodus 6:7" },
+            { "favorite": false, "reference": "Deuteronomy 4:20" },
+            { "favorite": false, "reference": "Psalms 100:3" },
+            { "favorite": false, "reference": "Psalms 107:8–9" },
+            { "favorite": false, "reference": "Isaiah 30:18" },
+            { "favorite": false, "reference": "Isaiah 43:4" },
+            { "favorite": false, "reference": "Ezekiel 14:11" },
+            { "favorite": false, "reference": "John 4:24" },
+            { "favorite": false, "reference": "John 14:22–23" },
+            { "favorite": false, "reference": "Titus 2:14" }
+          ],
+          "questions": [
+            {
+              "id": "s2b-q1",
+              "question": "God designed you to walk with Him, be satisfied by Him, and be comforted by Him. Where have you sought satisfaction, comfort, and companionship apart from God? How has that worked out?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s2b-q2",
+              "question": "Genesis 3:8 shows Adam and Eve walking with God in the garden. What would it look like for you to 'walk with God' in your daily life? What barriers—real or perceived—keep you from that intimacy?",
+              "maxLength": 2000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "3. Understanding Sin - Breaking or Not Keeping God's Law",
+      "section": "3",
+      "subsections": [
+        {
+          "title": "A. Sin began with Satan in heaven",
+          "content": "Sin originated with Satan's rebellion in heaven before being introduced to earth.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Genesis 3:1–15" },
+            { "favorite": false, "reference": "Isaiah 14:12" },
+            { "favorite": false, "reference": "Luke 10:18" },
+            { "favorite": false, "reference": "2 Peter 2:4" },
+            { "favorite": false, "reference": "Jude 1:6" }
+          ],
+          "questions": [
+            {
+              "id": "s3a-q1",
+              "question": "Satan's sin was pride—wanting to be like God, to be autonomous, to rule himself. Where do you see that same desire in your own heart—the desire to be your own god, to call your own shots, to answer to no one?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s3a-q2",
+              "question": "Satan deceived Eve by questioning God's word ('Did God really say...?') and God's goodness ('God is holding out on you'). Where have you believed similar lies—that God's commands are restrictive or that He doesn't have your best interest at heart?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "B. Sin on earth began with Adam",
+          "content": "Sin entered the human race through Adam and has been passed to all mankind.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Genesis 2:17–18" },
+            { "favorite": false, "reference": "Genesis 3:1–7" },
+            { "favorite": false, "reference": "Romans 3:23" },
+            { "favorite": false, "reference": "Romans 5:12" },
+            { "favorite": false, "reference": "Romans 5:18" }
+          ],
+          "questions": [
+            {
+              "id": "s3b-q1",
+              "question": "Romans 5:12 says sin entered through one man and death through sin. Do you truly believe you were born a sinner—not just someone who occasionally sins, but someone with a sinful nature from birth? How does this affect your view of your problems?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s3b-q2",
+              "question": "Adam's sin wasn't just eating fruit—it was rejecting God's authority and choosing his own way. Where in your life are you doing the same thing Adam did—choosing your will over God's clear commands?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "C. We are responsible individually for choosing to sin",
+          "content": "Each person is personally accountable for their own choice to sin against God.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Ecclesiastes 7:20" },
+            { "favorite": false, "reference": "Isaiah 53:6" },
+            { "favorite": false, "reference": "Ezekiel 18:2" },
+            { "favorite": false, "reference": "Ezekiel 18:20" },
+            { "favorite": false, "reference": "Romans 3:23" },
+            { "favorite": false, "reference": "Galatians 3:10" },
+            { "favorite": false, "reference": "Ephesians 2:1–3" }
+          ],
+          "questions": [
+            {
+              "id": "s3c-q1",
+              "question": "It's easy to blame circumstances, upbringing, or other people for our sin. Be honest: What sins in your life have you blamed on others rather than taking personal responsibility? What excuses do you make?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s3c-q2",
+              "question": "Isaiah 53:6 says 'All we like sheep have gone astray; we have turned—every one—to his own way.' In what specific ways have you turned to your own way rather than God's way? Name the areas.",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "D. Sin separates",
+          "content": "Sin creates separation between God and mankind.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Genesis 3:8–24" },
+            { "favorite": false, "reference": "Isaiah 53:6a" },
+            { "favorite": false, "reference": "Isaiah 59:2" },
+            { "favorite": false, "reference": "Titus 3:3" }
+          ],
+          "questions": [
+            {
+              "id": "s3d-q1",
+              "question": "Isaiah 59:2 says your sins have 'made a separation between you and your God.' Do you feel that separation? Or have you grown comfortable with distance from God? What does spiritual distance feel like in your life?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s3d-q2",
+              "question": "After Adam sinned, he hid from God. In what ways do you 'hide' from God—avoiding prayer, Scripture, church, or honest self-examination? What are you afraid He might reveal?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "E. God's wrath is upon all the unsaved",
+          "content": "God's righteous anger rests upon all who remain in their sin.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Psalms 5:4" },
+            { "favorite": false, "reference": "Proverbs 15:8–9" },
+            { "favorite": false, "reference": "John 3:36" },
+            { "favorite": false, "reference": "Romans 1:18" }
+          ],
+          "questions": [
+            {
+              "id": "s3e-q1",
+              "question": "John 3:36 says 'whoever does not obey the Son shall not see life, but the wrath of God remains on him.' How do you respond to the idea that God has wrath? Do you tend to minimize this or struggle to believe it's real?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s3e-q2",
+              "question": "God's wrath isn't arbitrary anger but righteous response to sin. Considering His holiness and justice (Section 1), does His wrath make sense? How should understanding God's wrath affect how seriously you take your sin?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "F. Death, judgment, and hell are the results of our sin",
+          "content": "Sin leads to physical death, divine judgment, and eternal punishment in hell.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Exodus 34:6–7" },
+            { "favorite": false, "reference": "Psalms 7:11" },
+            { "favorite": false, "reference": "Matthew 10:28" },
+            { "favorite": false, "reference": "Matthew 13:38–42" },
+            { "favorite": false, "reference": "Matthew 13:49–50" },
+            { "favorite": false, "reference": "Matthew 25:31–46" },
+            { "favorite": false, "reference": "Acts 17:30" },
+            { "favorite": false, "reference": "Romans 6:23" },
+            { "favorite": false, "reference": "Galatians 3:10" },
+            { "favorite": false, "reference": "1 Thessalonians 1:10" },
+            { "favorite": false, "reference": "Hebrews 9:27" },
+            { "favorite": false, "reference": "Hebrews 10:26–27" },
+            { "favorite": false, "reference": "Revelation 20:11–15" }
+          ],
+          "questions": [
+            {
+              "id": "s3f-q1",
+              "question": "Hebrews 9:27 says 'it is appointed for man to die once, and after that comes judgment.' Do you live as if you will face judgment, or do you live as if death is far away and judgment is uncertain? How does this affect your urgency about spiritual things?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s3f-q2",
+              "question": "Jesus spoke more about hell than anyone else in Scripture. If hell is real and eternal, what does that say about the seriousness of sin? What does it say about the urgency of the gospel for you and for those you love?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "G. Mankind has been totally depraved since the fall of Adam",
+          "content": "Human nature has been corrupted in every aspect since Adam's fall.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Jeremiah 17:9–10" },
+            { "favorite": false, "reference": "Romans 3:10–18" },
+            { "favorite": false, "reference": "Ephesians 2:1–3" },
+            { "favorite": false, "reference": "Ephesians 4:17–19" },
+            { "favorite": false, "reference": "Titus 3:3" }
+          ],
+          "questions": [
+            {
+              "id": "s3g-q1",
+              "question": "Jeremiah 17:9 says 'The heart is deceitful above all things, and desperately sick.' Do you believe this about your own heart? Where have you trusted your own heart and been deceived?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s3g-q2",
+              "question": "Total depravity means sin affects every part of us—mind, will, emotions, desires. It doesn't mean we're as bad as we could be, but that no part is untouched by sin. How does this reality affect your confidence in your own ability to change yourself or fix your problems?",
+              "maxLength": 2000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "4. Understanding Our Hopelessness apart from God's Grace",
+      "section": "4",
+      "subsections": [
+        {
+          "title": "A. Not by nature can we be righteous",
+          "content": "Human nature is incapable of producing righteousness acceptable to God.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Ecclesiastes 7:20" },
+            { "favorite": false, "reference": "Isaiah 53:6" },
+            { "favorite": false, "reference": "Isaiah 64:6" },
+            { "favorite": false, "reference": "John 1:13" },
+            { "favorite": false, "reference": "Romans 3:10–18" }
+          ],
+          "questions": [
+            {
+              "id": "s4a-q1",
+              "question": "Isaiah 64:6 says 'all our righteous deeds are like a polluted garment.' Have you truly grasped that even your best efforts are contaminated by sin? How does this differ from how you've viewed your 'good' actions?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s4a-q2",
+              "question": "Where have you believed that if you just try harder, think more positively, or follow the right steps, you can become righteous on your own? What evidence do you have that this approach has failed?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "B. Not by works",
+          "content": "No amount of good works can earn salvation or righteousness before God.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Ephesians 2:8–9" },
+            { "favorite": false, "reference": "Philippians 3:1–10" },
+            { "favorite": false, "reference": "Titus 3:4–7" },
+            { "favorite": false, "reference": "James 2:10" }
+          ],
+          "questions": [
+            {
+              "id": "s4b-q1",
+              "question": "James 2:10 says whoever keeps the whole law but fails in one point is guilty of all of it. Have you ever broken even one of God's commands? What does this mean for any hope of being saved by your own obedience?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s4b-q2",
+              "question": "What 'works' have you been trusting in—church attendance, moral living, helping others, being 'a good person'? How does it feel to hear that these cannot save you? Does this produce despair or relief? Why?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "C. Not by heritage or lineage",
+          "content": "Being born into a religious family or heritage cannot save a person.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "John 1:13" },
+            { "favorite": false, "reference": "Philippians 3:4–7" }
+          ],
+          "questions": [
+            {
+              "id": "s4c-q1",
+              "question": "Have you ever assumed you were right with God because of your family background, church upbringing, or religious heritage? Paul had the best religious pedigree possible and counted it as 'rubbish' (Philippians 3:8). What 'spiritual resume' have you been trusting in?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s4c-q2",
+              "question": "John 1:13 says believers are born 'not of blood nor of the will of the flesh.' Your parents' faith cannot save you. Have you personally trusted Christ, or are you relying on a family faith that isn't your own?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "D. Not by our own will",
+          "content": "Human willpower alone cannot produce salvation or spiritual transformation.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "John 1:12–13" },
+            { "favorite": false, "reference": "John 6:44" },
+            { "favorite": false, "reference": "John 6:65" },
+            { "favorite": false, "reference": "Philippians 3:9" }
+          ],
+          "questions": [
+            {
+              "id": "s4d-q1",
+              "question": "Jesus said 'No one can come to me unless the Father who sent me draws him' (John 6:44). How does this challenge the idea that salvation is simply a human decision? Have you ever asked God to draw you to Himself?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s4d-q2",
+              "question": "Where have you tried to change yourself through sheer willpower—and failed? What does this failure teach you about your need for something more than determination?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "E. Our debt is insurmountable",
+          "content": "The debt of sin that we owe to God is beyond our ability to pay.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Psalms 130:3" },
+            { "favorite": false, "reference": "Matthew 18:21–35" },
+            { "favorite": false, "reference": "Luke 7:40–50" }
+          ],
+          "questions": [
+            {
+              "id": "s4e-q1",
+              "question": "In Jesus' parable (Matthew 18), the servant owed 10,000 talents—an unpayable debt representing billions of dollars. This pictures your debt to God. Do you feel the weight of how much you owe God that you cannot repay?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s4e-q2",
+              "question": "Psalm 130:3 asks, 'If you, O Lord, should mark iniquities, who could stand?' If God kept a detailed record of every sin—thought, word, deed, and omission—could you stand before Him? What is your honest answer?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "F. No hope",
+          "content": "Apart from God's grace, there is no hope of salvation or reconciliation with God.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Romans 2:2–3" },
+            { "favorite": false, "reference": "Galatians 3:10" },
+            { "favorite": false, "reference": "Galatians 3:22–24" },
+            { "favorite": false, "reference": "Ephesians 2:12" },
+            { "favorite": false, "reference": "Philippians 3:1–10" },
+            { "favorite": false, "reference": "Colossians 3:5–6" },
+            { "favorite": false, "reference": "1 Thessalonians 4:13" }
+          ],
+          "questions": [
+            {
+              "id": "s4f-q1",
+              "question": "Ephesians 2:12 describes life without Christ: 'having no hope and without God in the world.' Have you felt this hopelessness? Or have you manufactured false hopes to avoid facing it? What false hopes have you clung to?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s4f-q2",
+              "question": "The law was given to show us our sin and drive us to Christ (Galatians 3:24). Has this study of your sin and hopelessness begun to drive you toward Christ? What is your heart's response to your desperate condition?",
+              "maxLength": 2000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "5. Understanding God - Part 2",
+      "section": "5",
+      "subsections": [
+        {
+          "title": "A. He is merciful and compassionate",
+          "content": "God shows mercy and compassion toward His creation, even in their sinfulness.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Exodus 33:19" },
+            { "favorite": false, "reference": "Psalms 36:5" },
+            { "favorite": false, "reference": "Psalms 145:8–9" },
+            { "favorite": false, "reference": "Isaiah 63:9" },
+            { "favorite": false, "reference": "Lamentations 3:31–33" },
+            { "favorite": false, "reference": "John 1:14" },
+            { "favorite": false, "reference": "2 Corinthians 1:3" },
+            { "favorite": false, "reference": "1 John 4:8" }
+          ],
+          "questions": [
+            {
+              "id": "s5a-q1",
+              "question": "After seeing God's holiness, justice, and wrath—and your own sin and hopelessness—how does it strike you to now hear that God is merciful and compassionate? What emotions arise?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s5a-q2",
+              "question": "Mercy means not getting the punishment you deserve. Compassion means God enters into your suffering with you. Do you believe God looks at you with compassion, or do you assume He views you with disgust? What shapes your view?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "B. He is all-wise",
+          "content": "God possesses perfect knowledge and wisdom in all His ways and decisions.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Isaiah 55:8" },
+            { "favorite": false, "reference": "Romans 11:33–34" }
+          ],
+          "questions": [
+            {
+              "id": "s5b-q1",
+              "question": "God's ways are higher than your ways (Isaiah 55:8). Where have you questioned God's wisdom—thinking you knew better, or that His plan didn't make sense? How might His all-knowing wisdom see what you cannot?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s5b-q2",
+              "question": "If God is all-wise, then His plan of salvation through Christ is the wisest possible plan. How does trusting in God's wisdom help when you're tempted to think there should be 'another way' to God?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "C. He is gracious in two ways",
+          "content": "God shows both common grace to all humanity and special saving grace to His elect.",
+          "nestedSubsections": [
+            {
+              "title": "1. His common goodness",
+              "content": "God shows general kindness and goodness to all people.",
+              "scriptureReferences": [
+                { "favorite": false, "reference": "Matthew 5:43–48" },
+                { "favorite": false, "reference": "Romans 2:4" }
+              ]
+            },
+            {
+              "title": "2. His salvific (saving) grace for the elect",
+              "content": "God shows special saving grace to those He has chosen for salvation.",
+              "scriptureReferences": [
+                { "favorite": false, "reference": "John 6:37" },
+                { "favorite": false, "reference": "John 6:44" },
+                { "favorite": false, "reference": "John 6:65" },
+                { "favorite": false, "reference": "Romans 9:15–16" },
+                { "favorite": false, "reference": "Ephesians 1:3–6" },
+                { "favorite": false, "reference": "Ephesians 2:4–7" },
+                { "favorite": false, "reference": "1 Thessalonians 1:4" }
+              ]
+            }
+          ],
+          "questions": [
+            {
+              "id": "s5c-q1",
+              "question": "Romans 2:4 says God's kindness is meant to lead you to repentance. What good things in your life—health, provision, relationships, even another day of life—are evidences of God's kindness? Have they led you to repentance or presumption?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s5c-q2",
+              "question": "Grace means unmerited favor—getting what you don't deserve. What do you actually deserve from God based on your sin? How amazing is it, then, that God offers grace instead of judgment?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "D. He is angry with the wicked, yet loving at the same time",
+          "content": "God can simultaneously display righteous anger toward sin and perfect love toward sinners.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Psalms 5:4" },
+            { "favorite": false, "reference": "Proverbs 15:8–9" },
+            { "favorite": false, "reference": "John 3:16" },
+            { "favorite": false, "reference": "1 John 3:16" },
+            { "favorite": false, "reference": "1 John 4:8–10" },
+            { "favorite": false, "reference": "Mark 10:17–22" }
+          ],
+          "questions": [
+            {
+              "id": "s5d-q1",
+              "question": "God is both just (angry at sin) and loving (compassionate toward sinners). The cross is where these meet—God poured out His wrath on Jesus so He could pour out His love on you. How does the cross demonstrate both God's hatred of sin and His love for sinners?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s5d-q2",
+              "question": "In Mark 10:21, Jesus looked at the rich young ruler and 'loved him'—even as He spoke hard truth. Do you believe God can love you and still speak hard truth to you about your sin? How does His love make the hard truth bearable?",
+              "maxLength": 2000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "6. Understanding the Incarnation",
+      "section": "6",
+      "subsections": [
+        {
+          "title": "A. The God-man",
+          "content": "Jesus Christ is both fully God and fully man, united in one person.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "John 1:1" },
+            { "favorite": false, "reference": "John 1:14" },
+            { "favorite": false, "reference": "Mark 10:45" },
+            { "favorite": false, "reference": "Philippians 2:5–11" }
+          ],
+          "questions": [
+            {
+              "id": "s6a-q1",
+              "question": "Jesus is fully God—He could forgive sins, calm storms, and rise from the dead. He is also fully man—He experienced hunger, fatigue, and sorrow. Why was it necessary for your Savior to be both God and man? What would be lost if He were only one or the other?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s6a-q2",
+              "question": "Philippians 2 says Jesus 'emptied himself' and 'humbled himself.' He left glory to enter your broken world. What does this say about how much God values you? What does it say about how far He was willing to go to rescue you?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "B. Jesus' life: 100 percent righteous",
+          "content": "Jesus lived a perfect, sinless life in complete obedience to God the Father.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "2 Corinthians 5:21" },
+            { "favorite": false, "reference": "Hebrews 4:15" }
+          ],
+          "questions": [
+            {
+              "id": "s6b-q1",
+              "question": "Jesus was 'tempted in every way as we are, yet without sin' (Hebrews 4:15). He faced every kind of temptation you face and never once gave in. How does His perfect obedience—where you have failed—become good news for you?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s6b-q2",
+              "question": "You've already admitted you cannot be righteous on your own. Jesus lived the righteous life you could never live. What would it mean for His righteousness to be credited to your account?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "C. Jesus' death: paid in full for our sin",
+          "content": "Christ's death fully satisfied God's wrath and imputed His righteousness to believers.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Romans 5:19" },
+            { "favorite": false, "reference": "2 Corinthians 5:21" },
+            { "favorite": false, "reference": "Galatians 3:13–14" },
+            { "favorite": false, "reference": "1 Peter 3:18" }
+          ],
+          "questions": [
+            {
+              "id": "s6c-q1",
+              "question": "2 Corinthians 5:21: 'For our sake he made him to be sin who knew no sin, so that in him we might become the righteousness of God.' This is the great exchange—your sin placed on Christ, His righteousness placed on you. How does this exchange address both your guilt and your need for righteousness?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s6c-q2",
+              "question": "Jesus was cursed so you could be blessed (Galatians 3:13-14). He received what you deserved so you could receive what He deserved. Does this feel too good to be true? What keeps you from fully embracing it?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "D. God the Father was satisfied with Christ's death",
+          "content": "The Father accepted Christ's sacrifice as full payment for sin.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Isaiah 53:10–11" }
+          ],
+          "questions": [
+            {
+              "id": "s6d-q1",
+              "question": "Isaiah 53:11 says the Father 'shall see the anguish of His soul, and be satisfied.' God's justice was fully satisfied at the cross. What does it mean that nothing more is required—no additional payment, no penance, no earning? Is this hard for you to believe?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s6d-q2",
+              "question": "If the Father is satisfied with Christ's sacrifice, what are you adding to it? What 'extras' have you thought were necessary—good works, religious rituals, emotional experiences—beyond trusting in Christ alone?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "E. Jesus' resurrection: power over death and hope to come",
+          "content": "Christ's resurrection demonstrates His victory over death and secures eternal hope for believers.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "1 Corinthians 15:3–4" },
+            { "favorite": false, "reference": "1 Peter 1:3–5" }
+          ],
+          "questions": [
+            {
+              "id": "s6e-q1",
+              "question": "If Christ had not risen, the cross would be a tragedy and we would still be in our sins (1 Corinthians 15:17). But He rose! What does the resurrection prove about who Jesus is and whether His sacrifice was accepted?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s6e-q2",
+              "question": "The resurrection means death is not the end. How does the hope of resurrection change how you view your current sufferings, fears, and even death itself?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "F. God offers reconciliation by grace through faith in Christ",
+          "content": "God provides the means of reconciliation through faith in Jesus Christ alone.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Acts 17:30–31" },
+            { "favorite": false, "reference": "Romans 6:23" },
+            { "favorite": false, "reference": "Romans 10:13" },
+            { "favorite": false, "reference": "2 Corinthians 5:18–19" },
+            { "favorite": false, "reference": "Ephesians 2:13" }
+          ],
+          "questions": [
+            {
+              "id": "s6f-q1",
+              "question": "Romans 10:13 says 'everyone who calls on the name of the Lord will be saved.' This is an offer, a promise. What is keeping you from calling on Him? Pride? Doubt? Fear? Love of sin? Be honest.",
+              "maxLength": 2000
+            },
+            {
+              "id": "s6f-q2",
+              "question": "Reconciliation means enemies become friends. You were God's enemy through your sin; He offers to make you His friend through Christ. Do you want this reconciliation? What does your answer reveal about your heart?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "G. God declares believers to be justified through Christ",
+          "content": "God legally declares believers righteous based on Christ's work, not their own.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Romans 3:24–26" }
+          ],
+          "questions": [
+            {
+              "id": "s6g-q1",
+              "question": "Justification is a legal declaration—God declares you 'not guilty' and 'righteous' based on Christ's work. It's not that you become sinless, but that Christ's perfect record is credited to you. How is this different from trying to earn God's acceptance?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s6g-q2",
+              "question": "Romans 3:26 says God is 'just and the justifier'—He remains perfectly just while declaring sinners righteous. The cross makes this possible. How does understanding justification give you assurance that your standing with God doesn't depend on your performance?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "H. God offers forgiveness of sins and heaven to believers only through Jesus",
+          "content": "Salvation and eternal life are available only through faith in Jesus Christ.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "John 14:1–6" },
+            { "favorite": false, "reference": "Acts 4:12" },
+            { "favorite": false, "reference": "Colossians 2:13" }
+          ],
+          "questions": [
+            {
+              "id": "s6h-q1",
+              "question": "Jesus said, 'I am the way, the truth, and the life. No one comes to the Father except through me' (John 14:6). This is exclusive—only Jesus. Does this offend you or comfort you? Why do you think God made only one way?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s6h-q2",
+              "question": "Acts 4:12: 'There is salvation in no one else, for there is no other name under heaven given among men by which we must be saved.' Have you been hoping in any other 'name'—your own goodness, religious practice, or another spiritual path? What does this verse say about those hopes?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "I. God seeks worshipers and a people for himself through Jesus",
+          "content": "God calls people to worship Him and become His people through Jesus Christ.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Isaiah 45:22" },
+            { "favorite": false, "reference": "John 4:23" },
+            { "favorite": false, "reference": "Ephesians 1:4" }
+          ],
+          "questions": [
+            {
+              "id": "s6i-q1",
+              "question": "John 4:23 says the Father is 'seeking' worshipers. God is actively pursuing people to worship Him. What does it mean to you that God is seeking you—not to punish you, but to bring you into relationship with Himself?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s6i-q2",
+              "question": "God wants a people for Himself—not just individuals saved from hell, but a community that belongs to Him. Are you willing to belong wholly to God and to His people? What hesitations do you have?",
+              "maxLength": 2000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "7. Understanding Saving Faith (\"believing\")",
+      "section": "7",
+      "subsections": [
+        {
+          "title": "A. The knowledge (content) of the gospel, with Jesus as the object of faith",
+          "content": "True saving faith requires knowledge of the gospel message with Jesus Christ as its focus.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "John 17:3" },
+            { "favorite": false, "reference": "Hebrews 6:4" },
+            { "favorite": false, "reference": "Hebrews 10:26" },
+            { "favorite": false, "reference": "James 2:19" },
+            { "favorite": false, "reference": "John 1:12" },
+            { "favorite": false, "reference": "John 3:16" }
+          ],
+          "questions": [
+            {
+              "id": "s7a-q1",
+              "question": "Saving faith has content—you must believe something specific about Jesus: who He is and what He has done. Based on what you've learned, can you articulate the gospel? What is the good news?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s7a-q2",
+              "question": "James 2:19 says even demons believe that God exists—and shudder. Mere knowledge isn't saving faith. What's the difference between knowing facts about Jesus and truly trusting in Him?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "B. The agreement (intellectual assent) with the gospel facts",
+          "content": "Saving faith includes intellectual agreement with the truth of the gospel message.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Matthew 13:20" },
+            { "favorite": false, "reference": "John 6:44" },
+            { "favorite": false, "reference": "John 6:65" },
+            { "favorite": false, "reference": "Acts 26" },
+            { "favorite": false, "reference": "Hebrews 6:4" },
+            { "favorite": false, "reference": "James 2:19" }
+          ],
+          "questions": [
+            {
+              "id": "s7b-q1",
+              "question": "Do you intellectually agree that what the Bible says is true—that you are a sinner, that Jesus is the Son of God, that He died and rose again, that He is the only way to God? Where do you have doubts or disagreements?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s7b-q2",
+              "question": "Jesus said some hear the word with joy but have no root—they believe for a while and fall away (Matthew 13:20-21). What's the difference between temporary emotional response to the gospel and genuine faith that endures?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "C. A personal transfer of reliance from oneself to Jesus alone for justification",
+          "content": "True saving faith involves a complete transfer of trust from self to Jesus Christ alone, involving godly sorrow, repentance, and wholehearted commitment to follow Christ in obedience by the Spirit's enablement. This saving faith will always result in good works. Faith and repentance are the only evidences that a man has a new heart: turning from sin to Christ reveals a new heart; failure to turn from sin and to Christ reveals an old heart.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Isaiah 55:6–7" },
+            { "favorite": false, "reference": "Matthew 13:23" },
+            { "favorite": false, "reference": "Luke 14:25–33" },
+            { "favorite": false, "reference": "John 14:21" },
+            { "favorite": false, "reference": "Acts 3:19" },
+            { "favorite": false, "reference": "Acts 11:18" },
+            { "favorite": false, "reference": "2 Corinthians 5:15" },
+            { "favorite": false, "reference": "Philippians 3:9" },
+            { "favorite": false, "reference": "1 Thessalonians 1:9" },
+            { "favorite": false, "reference": "2 Timothy 2:25–26" },
+            { "favorite": false, "reference": "Ephesians 2:10" },
+            { "favorite": false, "reference": "James 2:26" }
+          ],
+          "questions": [
+            {
+              "id": "s7c-q1",
+              "question": "Saving faith is like sitting in a chair—not just believing it will hold you, but actually sitting in it, transferring your weight to it. Have you actually transferred your trust from yourself to Christ? Or are you still trying to stand on your own?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s7c-q2",
+              "question": "True faith includes repentance—turning from sin and self to Christ. 1 Thessalonians 1:9 describes converts who 'turned to God from idols to serve the living and true God.' What idols (false gods you've trusted in) do you need to turn from? Are you willing?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s7c-q3",
+              "question": "Luke 14:25-33 shows Jesus describing the cost of following Him—He must be more important than family, possessions, even your own life. Have you counted the cost? Are you willing to follow Jesus even when it's costly?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s7c-q4",
+              "question": "James says faith without works is dead (James 2:26). This doesn't mean works save you, but that real faith produces real change. If you claim to have faith, what evidence is there? What fruit has it produced in your life?",
+              "maxLength": 2000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "8. Coming to Christ",
+      "section": "8",
+      "subsections": [
+        {
+          "title": "A. Not in the wrong way",
+          "content": "There are many wrong motivations and approaches to coming to Christ that do not result in true salvation.",
+          "nestedSubsections": [
+            {
+              "title": "1. Doing God a favor that is deserving of his grace",
+              "content": "Thinking \"I'm so special\" - approaching God with pride rather than humility.",
+              "scriptureReferences": [
+                { "favorite": false, "reference": "Matthew 7:21" },
+                { "favorite": false, "reference": "Matthew 19:16–22" }
+              ]
+            },
+            {
+              "title": "2. Only for fire insurance (to avoid hell at death)",
+              "content": "Seeking salvation merely to avoid punishment rather than to know and love God.",
+              "scriptureReferences": []
+            },
+            {
+              "title": "3. Adding a good and helpful thing to my life",
+              "content": "Treating Christianity as just another helpful addition rather than total life transformation.",
+              "scriptureReferences": []
+            },
+            {
+              "title": "4. So I can go to heaven with my family",
+              "content": "Seeking salvation primarily for human relationships rather than relationship with God.",
+              "scriptureReferences": []
+            },
+            {
+              "title": "5. Wanting to become a better person",
+              "content": "Approaching Christianity for self-improvement rather than recognizing need for complete transformation.",
+              "scriptureReferences": []
+            },
+            {
+              "title": "6. So Jesus can give me what I want, but I'm still living for my advantage",
+              "content": "Using God for personal benefit while maintaining self-centered living.",
+              "scriptureReferences": []
+            },
+            {
+              "title": "7. Wanting to be saved \"in my sin\" and not \"from my sin\"",
+              "content": "Seeking salvation without repentance or desire to turn from sin.",
+              "scriptureReferences": []
+            }
+          ],
+          "questions": [
+            {
+              "id": "s8a-q1",
+              "question": "Look at the list of wrong motivations for coming to Christ. Which of these resonates with you? Have you approached Christianity with any of these motivations? Be brutally honest.",
+              "maxLength": 2000
+            },
+            {
+              "id": "s8a-q2",
+              "question": "Do you want to be saved FROM your sin—including the sins you enjoy—or just saved from hell while continuing to live as you please? What sins are you reluctant to give up?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s8a-q3",
+              "question": "Are you trying to add Jesus to your life, or are you willing for Jesus to become your life? What's the difference, and which describes you?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "B. But in the right way",
+          "content": "True conversion involves the right attitude and intentions toward Jesus Christ as Lord.",
+          "nestedSubsections": [
+            {
+              "title": "1. With the right attitude",
+              "content": "Humbled with a broken and contrite heart over my sin before a holy God and overwhelmed by God's undeserved goodness",
+              "nestedSubsections": [
+                {
+                  "title": "a. Humbled with a broken and contrite heart over my sin before a holy God",
+                  "content": "Genuine sorrow and humility over sin in the presence of God's holiness.",
+                  "scriptureReferences": [
+                    { "favorite": false, "reference": "Matthew 5:3–5" },
+                    { "favorite": false, "reference": "Luke 15:18–19" },
+                    { "favorite": false, "reference": "Luke 18:13–14" }
+                  ]
+                },
+                {
+                  "title": "b. Overwhelmed by God's undeserved goodness",
+                  "content": "Recognizing and being amazed by God's grace and mercy.",
+                  "scriptureReferences": [
+                    { "favorite": false, "reference": "Romans 11:33–36" }
+                  ]
+                }
+              ],
+              "scriptureReferences": [
+                { "favorite": false, "reference": "Matthew 5:3–5" },
+                { "favorite": false, "reference": "Luke 15:18–19" },
+                { "favorite": false, "reference": "Luke 18:13–14" },
+                { "favorite": false, "reference": "Romans 11:33–36" }
+              ]
+            },
+            {
+              "title": "2. With the right intentions—Jesus Christ as Lord",
+              "content": "Coming to Christ with the proper understanding of His lordship and what following Him means.",
+              "nestedSubsections": [
+                {
+                  "title": "a. With a true desire and determination to turn from my sin and from living for myself",
+                  "content": "Genuine repentance and commitment to turn from self-centered living.",
+                  "scriptureReferences": [
+                    { "favorite": false, "reference": "2 Corinthians 5:15" },
+                    { "favorite": false, "reference": "2 Corinthians 7:9–11" },
+                    { "favorite": false, "reference": "1 Thessalonians 1:9" }
+                  ]
+                },
+                {
+                  "title": "b. With a true desire and determination to depend on Christ's righteousness and to live for him",
+                  "content": "Commitment to rely on Christ alone and live for His glory.",
+                  "scriptureReferences": [
+                    { "favorite": false, "reference": "2 Corinthians 5:15" },
+                    { "favorite": false, "reference": "1 Thessalonians 1:9" }
+                  ]
+                },
+                {
+                  "title": "c. To whose advantage (\"for\" whom) am I living?",
+                  "content": "The fundamental question of lordship - who are we truly living for?",
+                  "nestedSubsections": [
+                    {
+                      "title": "i. World",
+                      "content": "Living according to worldly values rather than God's values.",
+                      "scriptureReferences": [
+                        { "favorite": false, "reference": "Romans 12:1–2" },
+                        { "favorite": false, "reference": "2 Corinthians 10:5" },
+                        { "favorite": false, "reference": "1 John 2:15–17" }
+                      ]
+                    },
+                    {
+                      "title": "ii. Sex",
+                      "content": "Living according to God's design for sexuality and purity.",
+                      "scriptureReferences": [
+                        { "favorite": false, "reference": "1 Corinthians 7:1" },
+                        { "favorite": false, "reference": "1 Thessalonians 4:3–8" },
+                        { "favorite": false, "reference": "1 Timothy 5:1–2" }
+                      ]
+                    },
+                    {
+                      "title": "iii. Work",
+                      "content": "Working for God's glory rather than merely personal advancement.",
+                      "scriptureReferences": [
+                        { "favorite": false, "reference": "Colossians 3:23–25" },
+                        { "favorite": false, "reference": "2 Thessalonians 3:6–9" }
+                      ]
+                    },
+                    {
+                      "title": "iv. Future",
+                      "content": "Planning and hoping according to God's will rather than selfish ambition.",
+                      "scriptureReferences": [
+                        { "favorite": false, "reference": "Matthew 6:33" },
+                        { "favorite": false, "reference": "James 4:15" }
+                      ]
+                    },
+                    {
+                      "title": "v. Church",
+                      "content": "Participating in the body of Christ for mutual edification and God's glory.",
+                      "scriptureReferences": [
+                        { "favorite": false, "reference": "1 Corinthians 12:12" },
+                        { "favorite": false, "reference": "1 Corinthians 12:25" },
+                        { "favorite": false, "reference": "Ephesians 4:11–13" },
+                        { "favorite": false, "reference": "Hebrews 10:24–25" }
+                      ]
+                    },
+                    {
+                      "title": "vi. Bible",
+                      "content": "Loving and obeying God's Word as the foundation for life.",
+                      "scriptureReferences": [
+                        { "favorite": false, "reference": "John 14:21" },
+                        { "favorite": false, "reference": "1 John 5:2–3" }
+                      ]
+                    },
+                    {
+                      "title": "vii. Appearance",
+                      "content": "Focusing on inner character rather than outward appearance.",
+                      "scriptureReferences": [
+                        { "favorite": false, "reference": "1 Samuel 16:7" },
+                        { "favorite": false, "reference": "1 Peter 3:3–4" }
+                      ]
+                    },
+                    {
+                      "title": "viii. Others",
+                      "content": "Loving and serving others for God's glory rather than selfish gain.",
+                      "scriptureReferences": [
+                        { "favorite": false, "reference": "Romans 12:9–13" },
+                        { "favorite": false, "reference": "2 Corinthians 5:18–20" },
+                        { "favorite": false, "reference": "Galatians 5:13" }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "questions": [
+            {
+              "id": "s8b-q1",
+              "question": "The tax collector in Luke 18:13 prayed, 'God, be merciful to me, a sinner!' He came with nothing to offer, only begging for mercy. Is this your posture before God? Can you pray this prayer sincerely right now?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s8b-q2",
+              "question": "2 Corinthians 5:15 says Christ died so that 'those who live might no longer live for themselves but for him who for their sake died and was raised.' Are you willing to stop living for yourself and start living for Christ? What specific areas of your life need to come under His lordship?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s8b-q3",
+              "question": "Consider the eight areas of life listed (world, sex, work, future, church, Bible, appearance, others). In which of these areas are you currently living for your own advantage rather than for Christ? What would need to change?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s8b-q4",
+              "question": "Coming to Christ 'the right way' means coming broken over sin, amazed at grace, and ready to follow Jesus as Lord. On a scale of 1-10, how ready are you to come to Christ in this way? What's holding you back from a 10?",
+              "maxLength": 2000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "9. Understanding Our Reconciliation with God",
+      "section": "9",
+      "subsections": [
+        {
+          "title": "A. He has given us a new heart",
+          "content": "God transforms believers by giving them a new heart and nature.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Ezekiel 11:19–20" },
+            { "favorite": false, "reference": "Ezekiel 36:25–27" },
+            { "favorite": false, "reference": "2 Corinthians 5:17" },
+            { "favorite": false, "reference": "2 Corinthians 5" }
+          ],
+          "questions": [
+            {
+              "id": "s9a-q1",
+              "question": "Ezekiel 36:26 promises God will remove the 'heart of stone' and give a 'heart of flesh.' This is heart surgery only God can perform. Have you experienced this new heart—new desires, new affections, new direction? Or does your heart still feel hard toward God?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s9a-q2",
+              "question": "2 Corinthians 5:17 says if anyone is in Christ, they are a 'new creation—the old has passed away; behold, the new has come.' What old things in your life need to pass away? What new things do you long to see?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "B. God reconciled us (his elect) to himself",
+          "content": "God has restored the broken relationship between Himself and His chosen people.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "2 Corinthians 5:17–18" },
+            { "favorite": false, "reference": "Ephesians 1:4" },
+            { "favorite": false, "reference": "1 Peter 3:18" }
+          ],
+          "questions": [
+            {
+              "id": "s9b-q1",
+              "question": "Reconciliation means the hostility is over—you who were an enemy are now brought near. How does it feel to know that God is not against you but for you in Christ? How should this change how you relate to Him?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s9b-q2",
+              "question": "1 Peter 3:18 says Christ died 'that he might bring us to God.' Salvation isn't just about escaping hell—it's about being brought to God. Do you want God Himself, or just what He can give you?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "C. He is our God, and we are his people",
+          "content": "Believers have been brought into a covenant relationship as God's own people.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Romans 9:23–26" },
+            { "favorite": false, "reference": "1 Peter 2:24–25" },
+            { "favorite": false, "reference": "Revelation 21:3" }
+          ],
+          "questions": [
+            {
+              "id": "s9c-q1",
+              "question": "1 Peter 2:10 says, 'Once you were not a people, but now you are God's people; once you had not received mercy, but now you have received mercy.' What does it mean to belong to God's people? How should this identity shape how you live?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s9c-q2",
+              "question": "God says, 'I will be their God, and they shall be my people' (Revelation 21:3). This covenant relationship is personal and permanent. How does knowing you belong to God give you security and purpose?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "D. He is our shepherd, high priest, comforter, and guide",
+          "content": "God fulfills multiple caring roles in the lives of believers.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Psalms 23" },
+            { "favorite": false, "reference": "John 10:27–28" },
+            { "favorite": false, "reference": "2 Corinthians 1:3–4" },
+            { "favorite": false, "reference": "Hebrews 4:14–16" }
+          ],
+          "questions": [
+            {
+              "id": "s9d-q1",
+              "question": "Jesus is your Shepherd (Psalm 23), your High Priest (Hebrews 4:14-16), your Comforter (2 Corinthians 1:3-4), and your Guide. Which of these roles do you most need Him to be for you right now? Why?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s9d-q2",
+              "question": "Hebrews 4:16 invites you to 'draw near to the throne of grace with confidence.' Because Jesus is your High Priest, you have access to God. Are you drawing near with confidence, or do you still feel like you must earn access? What needs to change?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "E. We are to be his ambassadors to others",
+          "content": "Believers are called to represent Christ and share the gospel with others.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Matthew 28:19–20" },
+            { "favorite": false, "reference": "2 Corinthians 5:18" },
+            { "favorite": false, "reference": "2 Corinthians 5:20" }
+          ],
+          "questions": [
+            {
+              "id": "s9e-q1",
+              "question": "2 Corinthians 5:20 says you are an 'ambassador for Christ, God making his appeal through us.' An ambassador represents another. Who in your life needs to hear the gospel from you? What is keeping you from sharing it?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s9e-q2",
+              "question": "The Great Commission (Matthew 28:19-20) commands disciples to make disciples. This isn't optional for believers. Are you actively seeking to help others come to know and follow Christ? If not, what needs to change?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "F. He will take us home to live with him forever",
+          "content": "God promises eternal life with Him, which believers eagerly await, worshiping Him forever.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "John 14:1–3" },
+            { "favorite": false, "reference": "Colossians 3:1–4" },
+            { "favorite": false, "reference": "1 Thessalonians 1:9–10" },
+            { "favorite": false, "reference": "Revelation 22:1–3" }
+          ],
+          "questions": [
+            {
+              "id": "s9f-q1",
+              "question": "Jesus promised, 'I go to prepare a place for you... I will come again and will take you to myself' (John 14:2-3). Does the hope of heaven feel real to you? How does this future hope affect how you live today?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s9f-q2",
+              "question": "Revelation 22 describes the new heavens and new earth where there is no more curse, no more death, and we see God's face. What excites you most about eternity with God? What in this life are you clinging to that you need to hold loosely in light of eternity?",
+              "maxLength": 2000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "10. Warning to Those Who Reject the Gospel",
+      "section": "10",
+      "subsections": [
+        {
+          "title": "A. Because of unbelief",
+          "content": "Rejection of the gospel stems from unbelief and results in continued condemnation.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "John 3:36" },
+            { "favorite": false, "reference": "John 5:24" },
+            { "favorite": false, "reference": "1 John 2:19" }
+          ],
+          "questions": [
+            {
+              "id": "s10a-q1",
+              "question": "John 3:36 says 'Whoever believes in the Son has eternal life; whoever does not obey the Son shall not see life, but the wrath of God remains on him.' There is no neutral ground. As of right now, which category describes you—believer or unbeliever?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s10a-q2",
+              "question": "What specific unbelief is keeping you from trusting Christ? Is it doubting He exists? Doubting He is who He claimed to be? Doubting you need Him? Doubting He would accept you? Name the obstacle.",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "B. Because of abandoning the only hope",
+          "content": "Jesus Christ is the only way of salvation, and rejecting Him means rejecting the only hope.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "John 14:6" },
+            { "favorite": false, "reference": "Acts 4:12" },
+            { "favorite": false, "reference": "Hebrews 6:4–8" },
+            { "favorite": false, "reference": "Hebrews 10:26–31" }
+          ],
+          "questions": [
+            {
+              "id": "s10b-q1",
+              "question": "Hebrews 10:26-27 warns against 'sinning deliberately after receiving the knowledge of the truth'—there 'no longer remains a sacrifice for sins, but a fearful expectation of judgment.' You have now heard the truth. What will you do with it?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s10b-q2",
+              "question": "If Jesus is the ONLY way (John 14:6) and there is NO OTHER NAME by which we can be saved (Acts 4:12), rejecting Him means rejecting your only hope. Do you understand the weight of this? What 'other hopes' are you tempted to cling to instead of Christ?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "C. Their way is treacherous",
+          "content": "The path of rejecting God leads to spiritual danger and hardship.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Proverbs 13:15" },
+            { "favorite": false, "reference": "Hebrews 3:12–19" }
+          ],
+          "questions": [
+            {
+              "id": "s10c-q1",
+              "question": "Proverbs 13:15 says 'the way of the treacherous is their ruin.' The path of unbelief leads to destruction, not just at death but in this life as well. What destruction have you already seen from living apart from God—in yourself or others?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s10c-q2",
+              "question": "Hebrews 3:12 warns, 'Take care, brothers, lest there be in any of you an evil, unbelieving heart, leading you to fall away from the living God.' Are you drifting toward unbelief or toward faith? What direction is your heart moving?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "D. They will never experience what a life of worshiping God is like",
+          "content": "Those who reject Christ miss out on the abundant life and joy found in worshiping God.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Matthew 19:16–22" },
+            { "favorite": false, "reference": "John 10:10" }
+          ],
+          "questions": [
+            {
+              "id": "s10d-q1",
+              "question": "Jesus said, 'I came that they may have life and have it abundantly' (John 10:10). Those who reject Him miss this abundant life. What 'abundant life' have you been chasing apart from Christ? Has it delivered what it promised?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s10d-q2",
+              "question": "The rich young ruler in Matthew 19 walked away from Jesus sad because he loved his wealth more than Christ. What are you unwilling to give up that might cause you to walk away from Jesus?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "E. They will be separated from God and his grace forever",
+          "content": "The ultimate consequence of rejecting the gospel is eternal separation from God.",
+          "scriptureReferences": [
+            { "favorite": false, "reference": "Revelation 20:12–15" },
+            { "favorite": false, "reference": "Revelation 21:8" }
+          ],
+          "questions": [
+            {
+              "id": "s10e-q1",
+              "question": "Revelation 20:15 says 'if anyone's name was not found written in the book of life, he was thrown into the lake of fire.' This is eternal, conscious separation from God. Is your name in the book of life? How do you know?",
+              "maxLength": 2000
+            },
+            {
+              "id": "s10e-q2",
+              "question": "Hell is not just punishment—it's the eternal absence of everything good, because all good comes from God. Are you willing to spend eternity without God's goodness, light, love, and presence? If that thought is terrifying, what are you going to do about it?",
+              "maxLength": 2000
+            }
+          ]
+        },
+        {
+          "title": "Final Response",
+          "content": "",
+          "scriptureReferences": [],
+          "questions": [
+            {
+              "id": "s10-final-q1",
+              "question": "You have now heard the full gospel presentation. What is your response? Will you repent of your sin, trust in Christ alone for salvation, and submit to Him as Lord of your life? Write out your response to God.",
+              "maxLength": 2000
+            },
+            {
+              "id": "s10-final-q2",
+              "question": "If you are ready to trust Christ, express that to God in prayer now. Confess your sin, acknowledge your need for a Savior, thank Him for the gift of His Son, and commit to following Jesus as Lord. Write out your prayer.",
+              "maxLength": 2000
+            },
+            {
+              "id": "s10-final-q3",
+              "question": "If you are not yet ready to trust Christ, what specific questions, doubts, or obstacles remain? Be honest about what is holding you back so these can be addressed.",
+              "maxLength": 2000
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
