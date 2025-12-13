@@ -49,9 +49,41 @@ export default function ScriptureModal({
   // Touch/swipe state for mobile navigation
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
-
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
+    // Load sound preference from localStorage
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('scripturePageTurnSound')
+      return saved !== null ? saved === 'true' : true // Default to enabled
+    }
+    return true
+  })
+  
   // Minimum swipe distance (in px) to trigger navigation
   const minSwipeDistance = 50
+
+  // Toggle sound preference
+  const toggleSound = () => {
+    const newValue = !soundEnabled
+    setSoundEnabled(newValue)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('scripturePageTurnSound', String(newValue))
+    }
+  }
+
+  // Play page-turning sound effect
+  const playPageTurnSound = () => {
+    if (!soundEnabled) return
+    
+    try {
+      const audio = new Audio('/page-flipping.mp3')
+      // Add randomness for more natural sound variation
+      audio.volume = 0.3 + Math.random() * 0.5  // Random volume between 0.3 and 0.8
+      audio.playbackRate = 1.1 + Math.random() * 0.8  // Random speed between 1.1 and 1.9
+      audio.play().catch((err: Error) => console.debug('Audio playback failed:', err))
+    } catch (error) {
+      console.debug('Audio playback not available:', error)
+    }
+  }
 
   // Extract chapter reference from verse reference
   const getChapterReference = (verseRef: string): string => {
@@ -216,7 +248,7 @@ export default function ScriptureModal({
     if (isRange) {
       // For a range: Find and wrap everything from first verse to end of last verse
       const rangePattern = new RegExp(
-        `(<sup[^>]*>${firstVerse}</sup>[\\s\\S]*?<sup[^>]*>${lastVerse}</sup>[\\s\\S]*?)(?=<sup[^>]*>\\d+</sup>|$)`,
+        `(<sup[^>]*>${firstVerse}</sup>[\\s\\S]*?<sup[^>]*>${lastVerse}</sup>[^<]*?)(?=<sup[^>]*>\\d+</sup>|$)`,
         'g'
       )
       
@@ -254,8 +286,10 @@ export default function ScriptureModal({
     const isRightSwipe = distance < -minSwipeDistance
 
     if (isLeftSwipe && hasNext && onNext) {
+      playPageTurnSound()
       onNext()
     } else if (isRightSwipe && hasPrevious && onPrevious) {
+      playPageTurnSound()
       onPrevious()
     }
   }
@@ -270,7 +304,12 @@ export default function ScriptureModal({
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-1 flex-1">
               <button
-                onClick={onPrevious}
+                onClick={() => {
+                  if (hasPrevious && onPrevious) {
+                    playPageTurnSound()
+                    onPrevious()
+                  }
+                }}
                 disabled={!hasPrevious}
                 className={`min-h-[48px] min-w-[48px] p-2 rounded-lg transition-colors flex items-center justify-center text-xl font-bold ${
                   hasPrevious 
@@ -284,14 +323,19 @@ export default function ScriptureModal({
               </button>
               <div className="text-center flex-1 px-2">
                 <h3 className="text-lg md:text-xl font-semibold text-slate-800 leading-tight">{reference}</h3>
-                                {totalReferences > 0 && (
+                {totalReferences > 0 && (
                   <span className="text-sm text-gray-600">
                     {currentIndex + 1} of {totalReferences} {totalFavorites > 0 ? 'favorites' : 'verses'}
                   </span>
                 )}
               </div>
               <button
-                onClick={onNext}
+                onClick={() => {
+                  if (hasNext && onNext) {
+                    playPageTurnSound()
+                    onNext()
+                  }
+                }}
                 disabled={!hasNext}
                 className={`min-h-[48px] min-w-[48px] p-2 rounded-lg transition-colors flex items-center justify-center text-xl font-bold ${
                   hasNext 
@@ -304,13 +348,35 @@ export default function ScriptureModal({
                 ▶
               </button>
             </div>
-            <button
-              onClick={onClose}
-              className="text-slate-500 hover:text-slate-700 text-2xl font-bold min-h-[48px] min-w-[48px] rounded-lg hover:bg-slate-200 active:bg-slate-300 flex items-center justify-center ml-2"
-              aria-label="Close modal"
-            >
-              ×
-            </button>
+            <div className="flex items-center gap-2 ml-2">
+              <button
+                onClick={toggleSound}
+                className="text-slate-500 hover:text-slate-700 min-h-[48px] min-w-[48px] rounded-lg hover:bg-slate-200 active:bg-slate-300 flex items-center justify-center"
+                aria-label={soundEnabled ? "Mute page turn sound" : "Unmute page turn sound"}
+                title={soundEnabled ? "Mute" : "Unmute"}
+              >
+                {soundEnabled ? (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                  </svg>
+                ) : (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <line x1="23" y1="9" x2="17" y2="15"></line>
+                    <line x1="17" y1="9" x2="23" y2="15"></line>
+                  </svg>
+                )}
+              </button>
+              <button
+                onClick={onClose}
+                className="text-slate-500 hover:text-slate-700 text-2xl font-bold min-h-[48px] min-w-[48px] rounded-lg hover:bg-slate-200 active:bg-slate-300 flex items-center justify-center"
+                aria-label="Close modal"
+              >
+                ×
+              </button>
+            </div>
           </div>
           
           {/* Context Toggle Buttons - Always Visible */}
