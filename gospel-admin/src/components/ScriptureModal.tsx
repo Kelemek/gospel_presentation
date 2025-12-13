@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from '@/contexts/TranslationContext'
 
 
+
 interface ScriptureModalProps {
   reference: string
   isOpen: boolean
