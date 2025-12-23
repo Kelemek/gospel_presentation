@@ -45,7 +45,7 @@ describe('auth callback route', () => {
   expect(res).toEqual({ redirectedTo: 'https://example.com/login?error=exchange%20failed' })
   })
 
-  it('redirects counselee with single access to that profile', async () => {
+  it('redirects counselee with single access to admin dashboard', async () => {
     // Simulate supabase client behavior for counselee with single profile access
     jest.doMock('@/lib/supabase/server', () => ({
       createClient: async () => ({
@@ -72,6 +72,6 @@ describe('auth callback route', () => {
    
   const handler = require('@/app/auth/callback/route')
   const res = await handler.GET({ url: 'https://example.com/auth/callback?code=abc' })
-  expect(res).toEqual({ redirectedTo: 'https://example.com/myslug' })
+  expect(res).toEqual({ redirectedTo: 'https://example.com/admin' })
   })
 })
