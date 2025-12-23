@@ -49,9 +49,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!role || !['admin', 'counselor'].includes(role)) {
+    if (!role || !['admin', 'counselor', 'counselee'].includes(role)) {
       return NextResponse.json(
-        { error: 'Invalid role. Must be "admin" or "counselor"' },
+        { error: 'Invalid role. Must be "admin", "counselor", or "counselee"' },
         { status: 400 }
       )
     }
