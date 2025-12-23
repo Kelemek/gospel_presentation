@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import AdminHeader from "@/components/AdminHeader";
 import { logger } from "@/lib/logger";
 
 // ============================================================================
@@ -30,7 +30,6 @@ export default function AdminSettingsPage() {
   // Form state
   const [codeLength, setCodeLength] = useState<number>(6);
   const [expiryMinutes, setExpiryMinutes] = useState<number>(15);
-  const [enableLogin, setEnableLogin] = useState<boolean>(false);
 
   // ============================================================================
   // Load Settings
@@ -61,7 +60,6 @@ export default function AdminSettingsPage() {
         setSettings(data as any);
         setCodeLength((data as any).verification_code_length || 6);
         setExpiryMinutes((data as any).verification_code_expiry_minutes || 15);
-        setEnableLogin((data as any).enable_verification_code_login || false);
       }
     } catch (err) {
       logger.error("Failed to load admin settings:", err);
@@ -87,7 +85,6 @@ export default function AdminSettingsPage() {
       const updateData = {
         verification_code_length: codeLength,
         verification_code_expiry_minutes: expiryMinutes,
-        enable_verification_code_login: enableLogin,
       };
 
       const { error: updateError } = await (supabase
@@ -121,17 +118,11 @@ export default function AdminSettingsPage() {
 
   if (isLoading) {
     return (
-      <div>
-        <AdminHeader
-          title="System Settings"
-          description="Configure system-wide authentication and security settings"
-        />
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-            <div className="bg-white rounded-xl shadow-md border border-slate-100 p-8">
-              <div className="flex items-center justify-center">
-                <div className="animate-pulse text-slate-600">Loading...</div>
-              </div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div className="bg-white rounded-xl shadow-md border border-slate-100 p-8">
+            <div className="flex items-center justify-center">
+              <div className="animate-pulse text-slate-600">Loading...</div>
             </div>
           </div>
         </div>
@@ -139,17 +130,31 @@ export default function AdminSettingsPage() {
     );
   }
 
-
   return (
-    <div>
-      <AdminHeader
-        title="System Settings"
-        description="Configure system-wide authentication and security settings"
-      />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {/* Header */}
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-2">
+                System Settings
+              </h1>
+              <p className="text-slate-600">
+                Configure system-wide authentication and security settings
+              </p>
+            </div>
+            <Link
+              href="/admin"
+              className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium w-fit"
+            >
+              ← Back
+            </Link>
+          </div>
+        </div>
 
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
-          {/* Alerts */}
+        {/* Alerts */}
+        <div className="space-y-6">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-800 px-6 py-4 rounded-lg shadow-sm" role="alert">
               <p className="font-semibold">Error</p>
@@ -187,7 +192,7 @@ export default function AdminSettingsPage() {
                   value={codeLength}
                   onChange={(e) => setCodeLength(Number(e.target.value))}
                   disabled={isSaving}
-                  className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 disabled:text-slate-500"
+                  className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 disabled:text-slate-500 appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat pr-10"
                 >
                   <option value={4}>4 digits</option>
                   <option value={6}>6 digits (recommended)</option>
@@ -211,7 +216,7 @@ export default function AdminSettingsPage() {
                   value={expiryMinutes}
                   onChange={(e) => setExpiryMinutes(Number(e.target.value))}
                   disabled={isSaving}
-                  className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 disabled:text-slate-500"
+                  className="px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-slate-100 disabled:text-slate-500 appearance-none cursor-pointer bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat pr-10"
                 >
                   <option value={5}>5 minutes</option>
                   <option value={10}>10 minutes</option>
@@ -223,49 +228,10 @@ export default function AdminSettingsPage() {
 
               {/* Divider */}
               <div className="border-t border-slate-200" />
-
-              {/* Enable Login Toggle */}
-              <div className="flex justify-between items-start gap-6">
-                <div className="flex-1">
-                  <label className="block text-base font-semibold text-slate-900 mb-1">
-                    Enable Verification Code Login
-                  </label>
-                  <p className="text-slate-600 text-sm leading-relaxed">
-                    Activate verification code authentication for users. Ensure all configuration above is correct before enabling.
-                  </p>
-                </div>
-                <div className="flex-shrink-0 flex items-center gap-3">
-                  <button
-                    onClick={() => setEnableLogin(!enableLogin)}
-                    disabled={isSaving}
-                    className={`relative w-14 h-8 rounded-full transition-colors duration-200 ${
-                      enableLogin
-                        ? 'bg-green-500 hover:bg-green-600'
-                        : 'bg-slate-300 hover:bg-slate-400'
-                    } disabled:opacity-50 disabled:cursor-not-allowed flex items-center`}
-                  >
-                    <div
-                      className={`w-6 h-6 bg-white rounded-full shadow-sm transition-transform duration-200 ${
-                        enableLogin ? 'translate-x-7' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                  <span className="text-sm font-semibold text-slate-900 min-w-20">
-                    {enableLogin ? 'Enabled' : 'Disabled'}
-                  </span>
-                </div>
-              </div>
             </div>
 
             {/* Action Buttons */}
-            <div className="border-t border-slate-200 px-6 sm:px-8 py-6 flex justify-end gap-3">
-              <button
-                onClick={loadSettings}
-                disabled={isSaving}
-                className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 disabled:opacity-50 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium"
-              >
-                Reset
-              </button>
+            <div className="border-t border-slate-200 px-6 sm:px-8 py-6 flex justify-end">
               <button
                 onClick={handleSaveSettings}
                 disabled={isSaving}
@@ -280,61 +246,6 @@ export default function AdminSettingsPage() {
                   "Save Changes"
                 )}
               </button>
-            </div>
-          </div>
-
-          {/* Information Card */}
-          <div className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden">
-            <div className="px-6 sm:px-8 py-6 flex items-start gap-4 border-b border-slate-200">
-              <svg className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <h3 className="text-base font-semibold text-slate-900">Setup Requirements</h3>
-            </div>
-            <div className="px-6 sm:px-8 py-6">
-              <p className="text-slate-700 text-sm mb-4">Before enabling verification code login, ensure you have:</p>
-              <ul className="text-slate-700 text-sm space-y-2 mb-4">
-                <li className="flex gap-2">
-                  <span className="text-slate-400">•</span>
-                  <span>Run the database migration: <code className="bg-slate-100 px-2 py-1 rounded text-xs font-mono">20251223_create_verification_codes.sql</code></span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-slate-400">•</span>
-                  <span>Deployed Supabase Edge Functions: <code className="bg-slate-100 px-2 py-1 rounded text-xs font-mono">send-email</code>, <code className="bg-slate-100 px-2 py-1 rounded text-xs font-mono">send-verification-code</code>, <code className="bg-slate-100 px-2 py-1 rounded text-xs font-mono">verify-code</code></span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="text-slate-400">•</span>
-                  <span>
-                    Configured Microsoft Graph API credentials in Supabase Edge Function secrets:
-                    <ul className="text-slate-700 text-sm space-y-1 mt-2 ml-4">
-                      <li className="flex gap-2">
-                        <span className="text-slate-400">◦</span>
-                        <code className="bg-slate-100 px-2 py-1 rounded text-xs font-mono">MICROSOFT_GRAPH_TENANT_ID</code>
-                      </li>
-                      <li className="flex gap-2">
-                        <span className="text-slate-400">◦</span>
-                        <code className="bg-slate-100 px-2 py-1 rounded text-xs font-mono">MICROSOFT_GRAPH_CLIENT_ID</code>
-                      </li>
-                      <li className="flex gap-2">
-                        <span className="text-slate-400">◦</span>
-                        <code className="bg-slate-100 px-2 py-1 rounded text-xs font-mono">MICROSOFT_GRAPH_CLIENT_SECRET</code>
-                      </li>
-                      <li className="flex gap-2">
-                        <span className="text-slate-400">◦</span>
-                        <code className="bg-slate-100 px-2 py-1 rounded text-xs font-mono">EMAIL_FROM_ADDRESS</code>
-                      </li>
-                    </ul>
-                  </span>
-                </li>
-              </ul>
-              <p className="text-slate-600 text-xs italic">
-                See the documentation for detailed setup instructions.
-              </p>
             </div>
           </div>
         </div>

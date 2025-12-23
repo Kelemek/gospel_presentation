@@ -29,6 +29,9 @@ describe('Login form flows', () => {
     // check-user returns exists: true
     // @ts-expect-error mocking incompatible types
     global.fetch = jest.fn((url, opts) => {
+      if (url === '/api/admin/settings') {
+        return Promise.resolve({ ok: true, json: async () => ({ verification_code_length: 6 }) })
+      }
       if (url === '/api/auth/check-user') {
         return Promise.resolve({ ok: true, json: async () => ({ exists: true }) })
       }
@@ -55,6 +58,9 @@ describe('Login form flows', () => {
     // check-user returns exists: false
     // @ts-expect-error mocking incompatible types
     global.fetch = jest.fn((url, opts) => {
+      if (url === '/api/admin/settings') {
+        return Promise.resolve({ ok: true, json: async () => ({ verification_code_length: 6 }) })
+      }
       if (url === '/api/auth/check-user') {
         return Promise.resolve({ ok: true, json: async () => ({ exists: false }) })
       }
@@ -73,3 +79,4 @@ describe('Login form flows', () => {
     await waitFor(() => expect(screen.getByText(/This email is not authorized/i)).toBeInTheDocument())
   })
 })
+

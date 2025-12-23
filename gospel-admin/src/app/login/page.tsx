@@ -23,19 +23,46 @@ function LoginCodeForm() {
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [code, setCode] = useState("");
   
+  // Settings state
+  const [codeLength, setCodeLength] = useState<number>(6); // Default to 6
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+  
   // UI state
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
 
-  // Check for errors from URL parameters
+  // Check for errors from URL parameters and load settings
   useEffect(() => {
     const urlError = searchParams.get("error");
     if (urlError) {
       setError(decodeURIComponent(urlError));
     }
+    
+    // Fetch admin settings for code length
+    loadSettings();
   }, [searchParams]);
+
+  // ============================================================================
+  // Load Admin Settings
+  // ============================================================================
+
+  const loadSettings = async () => {
+    try {
+      const response = await fetch("/api/admin/settings");
+      if (response.ok) {
+        const settings = await response.json();
+        setCodeLength(settings.verification_code_length || 6);
+      }
+    } catch (err) {
+      logger.warn("Failed to load verification code settings, using default:", err);
+      // Use default if fetch fails
+      setCodeLength(6);
+    } finally {
+      setIsLoadingSettings(false);
+    }
+  };
 
   // ============================================================================
   // Step 1: Send Verification Code
@@ -313,10 +340,10 @@ function LoginCodeForm() {
 
               <div className="space-y-4">
                 <label className="block text-sm font-medium text-slate-700 text-center">
-                  Enter 6-digit code
+                  Enter {codeLength}-digit code
                 </label>
                 <VerificationCodeInput
-                  length={6}
+                  length={codeLength}
                   onComplete={handleVerifyCode}
                   onChange={setCode}
                   expiresAt={expiresAt || undefined}
