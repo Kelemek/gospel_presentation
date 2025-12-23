@@ -157,7 +157,7 @@ function LoginCodeForm() {
       
       // Redirect after short delay
       setTimeout(() => {
-        router.push(data.redirectUrl || "/");
+        router.push("/admin");
       }, 1000);
     } catch (err) {
       logger.error("Verification error:", err);
@@ -342,10 +342,10 @@ function LoginCodeForm() {
 
           <div className="mt-6 text-center">
             <Link
-              href="/login/magic-link"
+              href="/"
               className="text-sm text-blue-600 hover:text-blue-700 font-medium"
             >
-              ← Sign in with Magic Link
+              ← Back to Gospel Presentation
             </Link>
           </div>
         </div>
