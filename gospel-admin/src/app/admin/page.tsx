@@ -82,7 +82,7 @@ function AdminPageContent() {
   // Monitor session and auto-logout on expiration
   useSessionMonitor({
     checkInterval: 60000, // Check every minute
-    enabled: !!user, // Only monitor after user is authenticated
+    enabled: false, // Automatic logout disabled - sessions will not be monitored
     onSessionExpired: () => {
       logger.warn('Session expired, redirecting to login')
       router.push('/login')

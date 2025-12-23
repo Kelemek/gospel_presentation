@@ -262,10 +262,11 @@ serve(async (req: Request) => {
 
       // Return the session with the hashed token
       // The client will use this token with setSession or verifyOtp
+      // Increased expires_in to 24 hours (86400 seconds) to reduce token refresh cycles
       session = {
         access_token: hashed_token,
         refresh_token: hashed_token,
-        expires_in: 3600,
+        expires_in: 86400,  // 24 hours (was 3600 = 1 hour)
         token_type: 'bearer',
       };
       user = linkData.user;
