@@ -272,7 +272,9 @@ function LoginCodeForm() {
                   className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-slate-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="you@example.com"
                   disabled={isLoading}
-                  autoComplete="email username"
+                  autoComplete="email"
+                  pattern="[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}"
+                  title="Please enter a valid email address"
                   autoFocus
                 />
               </div>
