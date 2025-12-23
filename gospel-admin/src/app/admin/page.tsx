@@ -800,13 +800,22 @@ function AdminPageContent() {
           actions={
             <div className="flex flex-wrap gap-2">
               {userRole === 'admin' && (
-                <Link
-                  href="/admin/users"
-                  className="px-3 sm:px-4 py-2 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md text-sm inline-flex items-center justify-center"
-                >
-                  <span className="sm:hidden">Users</span>
-                  <span className="hidden sm:inline">Manage Users</span>
-                </Link>
+                <>
+                  <Link
+                    href="/admin/users"
+                    className="px-3 sm:px-4 py-2 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md text-sm inline-flex items-center justify-center"
+                  >
+                    <span className="sm:hidden">Users</span>
+                    <span className="hidden sm:inline">Manage Users</span>
+                  </Link>
+                  <Link
+                    href="/admin/settings"
+                    className="px-3 sm:px-4 py-2 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md text-sm inline-flex items-center justify-center"
+                  >
+                    <span className="sm:hidden">Settings</span>
+                    <span className="hidden sm:inline">Settings</span>
+                  </Link>
+                </>
               )}
               <Link
                 href="/"
