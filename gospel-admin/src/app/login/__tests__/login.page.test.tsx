@@ -25,17 +25,18 @@ describe('Login form flows', () => {
     jest.restoreAllMocks()
   })
 
-  it('shows success state when magic link is sent', async () => {
+  it('shows success state when verification code is sent', async () => {
     // check-user returns exists: true
     // @ts-expect-error mocking incompatible types
     global.fetch = jest.fn((url, opts) => {
       if (url === '/api/auth/check-user') {
         return Promise.resolve({ ok: true, json: async () => ({ exists: true }) })
       }
+      if (url === '/api/auth/send-code') {
+        return Promise.resolve({ ok: true, json: async () => ({ codeId: 'test-id', expiresAt: '2025-12-24' }) })
+      }
       return Promise.resolve({ ok: true, json: async () => ({}) })
     })
-
-    mockSignInWithOtp.mockResolvedValue({ error: null })
 
     const user = userEvent.setup()
     render(<LoginPage />)
@@ -43,11 +44,11 @@ describe('Login form flows', () => {
     const input = await screen.findByLabelText(/Email Address/i)
     await user.type(input, 'test@example.com')
 
-    const submit = screen.getByRole('button', { name: /Send Login Link/i })
+    const submit = screen.getByRole('button', { name: /Send Verification Code/i })
     await user.click(submit)
 
-    // After successful sign-in request, the success UI should appear
-    await waitFor(() => expect(screen.getByText(/Check Your Email/i)).toBeInTheDocument())
+    // After successful code send, should move to code entry step
+    await waitFor(() => expect(screen.getByText(/Verification code sent/i)).toBeInTheDocument())
   })
 
   it('shows an error when user does not exist', async () => {
@@ -60,16 +61,13 @@ describe('Login form flows', () => {
       return Promise.resolve({ ok: true, json: async () => ({}) })
     })
 
-    // Ensure sign-in is not attempted
-    mockSignInWithOtp.mockResolvedValue({ error: null })
-
     const user = userEvent.setup()
     render(<LoginPage />)
 
     const input = await screen.findByLabelText(/Email Address/i)
     await user.type(input, 'nope@example.com')
 
-    const submit = screen.getByRole('button', { name: /Send Login Link/i })
+    const submit = screen.getByRole('button', { name: /Send Verification Code/i })
     await user.click(submit)
 
     await waitFor(() => expect(screen.getByText(/This email is not authorized/i)).toBeInTheDocument())

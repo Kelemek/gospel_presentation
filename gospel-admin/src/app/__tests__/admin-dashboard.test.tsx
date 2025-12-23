@@ -158,7 +158,7 @@ describe('AdminDashboard - Visit Tracking', () => {
     await userEvent.click(firstDetailsButton)
     
     await waitFor(() => {
-      expect(screen.getByText('Settings')).toBeInTheDocument()
+      // Edit button is unique to the expanded profile row
       expect(screen.getByText('Edit')).toBeInTheDocument()
     })
   })
@@ -211,7 +211,7 @@ describe('AdminDashboard - Visit Tracking', () => {
     await userEvent.click(detailsButtons[0])
     
     await waitFor(() => {
-      expect(screen.getByText('Settings')).toBeInTheDocument()
+      // Edit button is unique to the expanded profile row
       expect(screen.getByText('Edit')).toBeInTheDocument()
     })
   })
