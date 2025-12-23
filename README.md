@@ -18,7 +18,9 @@ This platform enables counselors and educators to create, customize, and share p
 - **Print & Share Ready**: Clean URLs and print-friendly formatting
 
 ### 🔐 **Authentication & Access Control**
-- **Supabase Authentication**: Secure, modern authentication with magic link support
+- **Dual Authentication Methods**: 
+  - **Magic Links**: Passwordless email links (existing)
+  - **Verification Codes**: Email-based numeric codes (NEW! ✨)
 - **Multi-User System**: Admin, Counselor, and Counselee roles
 - **Role-Based Access**: 
   - **Admins**: Full access to all profiles and system settings
@@ -26,6 +28,7 @@ This platform enables counselors and educators to create, customize, and share p
   - **Counselees**: View-only access to profiles shared with them
 - **Secure Profile URLs**: UUID-based slugs prevent URL guessing
 - **Row-Level Security**: Database-level access control via Supabase RLS policies
+- **Microsoft Graph Integration**: Enterprise-grade email delivery via O365
 
 ### 👥 **Counselor Features**
 - **Profile Creation**: Create unlimited customized gospel presentations
@@ -75,6 +78,8 @@ docs/                     # Project documentation
 ├── 04-AUTHENTICATION.md          # Magic links, email invitations, sessions
 ├── 05-INFRASTRUCTURE.md          # Supabase setup, security, RLS, deployment
 ├── 06-REFERENCE.md               # Licenses, templates, testing reference
+├── VERIFICATION_CODE_AUTH.md     # Email verification codes (NEW! ✨)
+├── VERIFICATION_CODE_QUICKSTART.md # Quick setup guide for verification codes
 └── README.md                      # Documentation quick start
 
 backups/                  # Profile backup storage
@@ -129,7 +134,8 @@ npm run dev
 **Access the app:**
 - **Public Profiles**: http://localhost:3000
 - **Admin Dashboard**: http://localhost:3000/admin
-- **Login**: http://localhost:3000/login
+- **Login (Magic Link)**: http://localhost:3000/login
+- **Login (Verification Code)**: http://localhost:3000/login-code *(requires setup)*
 
 ### 5. **Create First Admin User**
 1. Visit http://localhost:3000/login
@@ -187,6 +193,61 @@ npm run dev
 - Manage user roles (promote to admin/counselor)
 - Designate profiles as templates
 - View system-wide analytics
+- **Configure verification code login** at `/admin/settings`
+
+## 🆕 Email Verification Code Authentication (NEW!)
+
+An alternative to magic link authentication using numeric codes sent via email.
+
+### Features
+- ✅ 4-8 digit verification codes
+- ✅ Configurable expiration (5-60 minutes)
+- ✅ Real-time countdown timer
+- ✅ Microsoft Graph API email delivery (O365)
+- ✅ Admin toggle to enable/disable
+- ✅ Works alongside existing magic links
+
+### Quick Setup
+
+1. **Run database migration:**
+   ```bash
+   psql $DATABASE_URL -f gospel-admin/sql/migrations/20251223_create_verification_codes.sql
+   ```
+
+2. **Set up Microsoft Graph API:**
+   - Register app in Azure AD: https://portal.azure.com
+   - Grant `Mail.Send` permission
+   - Create client secret
+   - See [Quick Start Guide](docs/VERIFICATION_CODE_QUICKSTART.md)
+
+3. **Deploy Edge Functions:**
+   ```bash
+   supabase functions deploy send-email
+   supabase functions deploy send-verification-code
+   supabase functions deploy verify-code
+   ```
+
+4. **Configure secrets:**
+   ```bash
+   supabase secrets set MICROSOFT_GRAPH_TENANT_ID="your-tenant-id"
+   supabase secrets set MICROSOFT_GRAPH_CLIENT_ID="your-client-id"
+   supabase secrets set MICROSOFT_GRAPH_CLIENT_SECRET="your-secret"
+   supabase secrets set EMAIL_FROM_ADDRESS="noreply@yourdomain.com"
+   ```
+
+5. **Enable in admin settings:**
+   - Go to `/admin/settings`
+   - Toggle "Enable Verification Code Login" to ON
+   - Configure code length and expiry
+   - Save changes
+
+**Documentation:**
+- 📚 [Full Documentation](docs/VERIFICATION_CODE_AUTH.md)
+- ⚡ [Quick Start Guide](docs/VERIFICATION_CODE_QUICKSTART.md)
+
+**User Access:**
+- Login page: `/login-code`
+- Standard magic link still available at `/login`
 
 ## 🔧 Technology Stack
 

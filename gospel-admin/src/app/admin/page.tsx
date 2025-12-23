@@ -91,7 +91,6 @@ function AdminPageContent() {
 
   useEffect(() => {
     checkAuth()
-    loadAvailableUsers()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -168,6 +167,12 @@ function AdminPageContent() {
     setUserRole((userProfile as any)?.role || 'counselor')
     setIsLoading(false)
     fetchProfiles()
+    
+    // Only load available users for admins and counselors
+    const role = (userProfile as any)?.role || 'counselor'
+    if (role === 'admin' || role === 'counselor') {
+      loadAvailableUsers()
+    }
   }
 
   useEffect(() => {
