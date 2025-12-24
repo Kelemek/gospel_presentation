@@ -184,7 +184,13 @@ function LoginCodeForm() {
       
       // Redirect after short delay
       setTimeout(() => {
-        router.push("/admin");
+        // Check if there's a redirect parameter
+        const redirectUrl = searchParams.get("redirect");
+        if (redirectUrl) {
+          router.push(redirectUrl);
+        } else {
+          router.push("/admin");
+        }
       }, 1000);
     } catch (err) {
       logger.error("Verification error:", err);

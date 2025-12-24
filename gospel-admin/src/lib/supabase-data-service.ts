@@ -384,6 +384,57 @@ export async function grantProfileAccess(
     
     logger.debug(`[supabase-data-service] Granted access to ${validEmails.length} users for profile ${profileId}`)
     
+    // Get profile details for notifications (best-effort, don't block on errors)
+    let profileTitle = ''
+    let profileDescription = ''
+    let profileSlug = ''
+    
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('title, description, slug')
+        .eq('id', profileId)
+        .single()
+      
+      if (profile) {
+        profileTitle = profile.title
+        profileDescription = profile.description || ''
+        profileSlug = profile.slug
+      }
+    } catch (profileError) {
+      logger.warn('[supabase-data-service] Failed to fetch profile details for notification:', profileError)
+      // Continue anyway - notifications are best-effort
+    }
+    
+    // Check which emails are existing users
+    let existingUserEmails: string[] = []
+    try {
+      const { createAdminClient } = await import('@/lib/supabase/server')
+      const adminClient = createAdminClient()
+      const { data: existingUsers } = await adminClient.auth.admin.listUsers()
+      const existingEmails = new Set(existingUsers?.users?.map(u => u.email?.toLowerCase()) || [])
+      
+      existingUserEmails = validEmails.filter(email => existingEmails.has(email.toLowerCase()))
+    } catch (adminError) {
+      logger.warn('[supabase-data-service] Failed to check existing users for notification:', adminError)
+      // Continue anyway - notifications are best-effort
+    }
+    
+    // Send assignment notification emails to existing users
+    if (existingUserEmails.length > 0 && profileSlug) {
+      try {
+        await notifyAssignmentEmails(
+          existingUserEmails,
+          profileTitle,
+          profileDescription,
+          profileSlug
+        )
+      } catch (notifyError) {
+        logger.warn('[supabase-data-service] Failed to send assignment notifications:', notifyError)
+        // Continue anyway - notifications are best-effort
+      }
+    }
+    
     // Invite users who don't have accounts yet
     await inviteCounseleeUsers(validEmails, profileId)
   } catch (error) {
@@ -436,6 +487,84 @@ export async function getProfileAccessList(profileId: string): Promise<any[]> {
   } catch (error) {
     logger.error('[supabase-data-service] Error getting profile access list:', error)
     return []
+  }
+}
+
+/**
+ * Sends assignment notification emails to existing users
+ * Notifies them that they've been assigned a new profile/resource
+ */
+async function notifyAssignmentEmails(
+  emails: string[],
+  profileTitle: string,
+  profileDescription: string,
+  profileSlug: string
+): Promise<void> {
+  try {
+    const validEmails = emails.filter(email => {
+      const trimmed = email.trim().toLowerCase()
+      return trimmed && trimmed.includes('@')
+    })
+
+    if (validEmails.length === 0) {
+      logger.debug('[supabase-data-service] No valid emails for assignment notification')
+      return
+    }
+
+    // Get the Supabase URL and service role key
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    
+    if (!supabaseUrl || !serviceRoleKey) {
+      logger.warn('[supabase-data-service] Missing Supabase configuration for sending emails')
+      return
+    }
+
+    // Get the app base URL for the link
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : 'http://localhost:3000'
+    const profileLink = `${appUrl}/${profileSlug}`
+
+    // Create HTML email body
+    const htmlBody = `
+      <h2>You've been assigned: ${profileTitle}</h2>
+      <p>${profileDescription}</p>
+      <p>
+        <a href="${profileLink}" style="background-color: #1f2937; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+          View Assignment
+        </a>
+      </p>
+      <p>Log in to your Gospel Presentation account to access this resource.</p>
+    `
+
+    // Call the Supabase Edge Function directly
+    const edgeFunctionUrl = `${supabaseUrl}/functions/v1/send-email`
+    
+    const response = await fetch(edgeFunctionUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${serviceRoleKey}`,
+      },
+      body: JSON.stringify({
+        to: validEmails,
+        subject: `New Assignment: ${profileTitle}`,
+        body: htmlBody,
+        isHtml: true,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      logger.warn(`[supabase-data-service] Failed to send assignment emails: ${errorText}`)
+      // Don't throw - assignment creation should succeed even if email fails
+    } else {
+      logger.info(`[supabase-data-service] Sent assignment notification to ${validEmails.length} users for: ${profileTitle}`)
+    }
+  } catch (error) {
+    logger.warn('[supabase-data-service] Error sending assignment notifications:', error)
+    // Don't throw - assignment creation should succeed even if email fails
   }
 }
 

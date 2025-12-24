@@ -1,10 +1,11 @@
 // Dynamic route for custom gospel presentation profiles
 // This handles routes like /myprofile, /youthgroup, etc.
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { Metadata } from 'next'
 import ProfileContent from './ProfileContent'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { GospelProfile } from '@/lib/types'
+import { createClient } from '@/lib/supabase/server'
 
 // Configure dynamic routes
 export const dynamic = 'force-dynamic'
@@ -78,8 +79,18 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
   const { slug } = await params
   const profile = await getProfile(slug)
 
-  // If profile doesn't exist, show 404
+  // If profile doesn't exist, check if user is authenticated
   if (!profile) {
+    // Check if user is logged in
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    // If not logged in, redirect to login with return URL
+    if (!user) {
+      redirect(`/login?redirect=/${slug}`)
+    }
+    
+    // If logged in but profile not found, show 404
     notFound()
   }
 

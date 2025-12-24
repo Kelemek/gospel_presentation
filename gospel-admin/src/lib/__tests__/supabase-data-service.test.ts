@@ -531,6 +531,78 @@ describe('supabase-data-service (unit)', () => {
     await expect(svc.revokeProfileAccess('p', 'a@b.com')).rejects.toThrow()
   })
 
+  test('grantProfileAccess sends email notification to existing users', async () => {
+    // Mock fetch for the Edge Function
+    global.fetch = jest.fn()
+    ;(global.fetch as jest.Mock).mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ success: true }),
+      json: async () => ({ success: true }),
+    })
+
+    const fakeMain = {
+      auth: { getUser: async () => ({ data: { user: { id: 'user-id' } } }) },
+      from: (table: string) => {
+        if (table === 'profile_access') {
+          return { 
+            upsert: async () => ({ error: null }),
+            select: async () => ({ data: [], error: null })
+          }
+        }
+        if (table === 'profiles') {
+          return {
+            select: () => ({
+              eq: (_col: string, _val: any) => ({
+                single: async () => ({
+                  data: { title: 'Gospel Presentation', description: 'Learn about salvation', slug: 'gospel' },
+                  error: null
+                })
+              })
+            })
+          }
+        }
+        return {}
+      }
+    }
+
+    const adminClient = {
+      auth: {
+        admin: {
+          listUsers: async () => ({
+            data: {
+              users: [{ email: 'existing@example.com' }]
+            }
+          })
+        }
+      }
+    }
+
+    jest.doMock('../supabase/server', () => ({ createClient: () => fakeMain }))
+    jest.doMock('@/lib/supabase/server', () => ({ createAdminClient: () => adminClient, createClient: () => fakeMain }))
+
+    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://abc123.supabase.co'
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-key'
+
+    const svc = await import('../supabase-data-service')
+
+    await expect(
+      svc.grantProfileAccess('profile-id', ['existing@example.com', 'new@example.com'], 'granter-id')
+    ).resolves.toBeUndefined()
+
+    // Verify email was sent to the Edge Function with existing user email
+    expect(global.fetch).toHaveBeenCalledWith(
+      'https://abc123.supabase.co/functions/v1/send-email',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          'Authorization': 'Bearer test-key',
+        }),
+        body: expect.stringContaining('existing@example.com'),
+      })
+    )
+  })
+
 })
 describe('supabase-data-service', () => {
 	it('dummy', () => {
