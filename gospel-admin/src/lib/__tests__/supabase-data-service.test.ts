@@ -582,7 +582,7 @@ describe('supabase-data-service (unit)', () => {
     jest.doMock('@/lib/supabase/server', () => ({ createAdminClient: () => adminClient, createClient: () => fakeMain }))
 
     process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://abc123.supabase.co'
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-key'
+    process.env.SUPABASE_SERVICE_KEY = 'test-key'
 
     const svc = await import('../supabase-data-service')
 
