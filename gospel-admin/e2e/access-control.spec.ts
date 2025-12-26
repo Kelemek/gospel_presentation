@@ -67,7 +67,7 @@ test.describe('Profile Access Control', () => {
     const response = await page.goto('/non-existent-profile-12345')
     
     // Should return 404 or similar, not error
-    expect([404, 403]).toContain(response?.status())
+    expect([404, 403]).toContain(response?.status() || 0)
   })
 
   test('should handle profile access for different user roles', async ({ page }) => {
@@ -163,8 +163,10 @@ test.describe('Scripture Access Control', () => {
     const scriptureContent = page.locator('[class*="scripture"], [class*="verse"]')
     
     // Should either show scripture or auth error, not server error
-    const status = await page.url()
-    expect(['/default', '/login']).toContain(status.split('?')[0].split('#')[0])
+    const url = page.url()
+    const path = url.split('?')[0].split('#')[0]
+    const isValid = path.includes('/default') || path.includes('/login')
+    expect(isValid).toBe(true)
   })
 
   test('should prevent access to private scripture', async ({ page }) => {
