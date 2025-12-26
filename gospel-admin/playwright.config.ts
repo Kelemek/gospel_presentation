@@ -4,7 +4,7 @@ import path from 'path'
 
 // Load environment variables from .env.local or .env.test
 const envFile = process.env.CI ? '.env.test' : '.env.local'
-dotenv.config({ path: path.resolve(__dirname, envFile) })
+dotenv.config({ path: path.resolve(__dirname, envFile), debug: false })
 
 /**
  * Playwright E2E Test Configuration
@@ -14,8 +14,8 @@ export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  retries: process.env.CI ? 1 : 0,
+  workers: process.env.CI ? 4 : undefined,
   reporter: [
     ['html'],
     ['json', { outputFile: 'test-results/results.json' }],
