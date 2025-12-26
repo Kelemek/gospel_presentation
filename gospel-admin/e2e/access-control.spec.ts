@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 test.describe('Profile Access Control', () => {
-  test('should allow access to public profile', async ({ page }) => {
+  test('[smoke] should allow access to public profile', async ({ page }) => {
     // Try accessing the default profile (should be public)
     await page.goto('/default')
     
@@ -155,7 +155,7 @@ test.describe('Profile Access Control', () => {
 })
 
 test.describe('Scripture Access Control', () => {
-  test('should load scripture content for authorized users', async ({ page }) => {
+  test('[smoke] should load scripture content for authorized users', async ({ page }) => {
     // Navigate to default profile
     await page.goto('/default')
     

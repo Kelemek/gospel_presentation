@@ -8,7 +8,7 @@ test.describe('Profile Management', () => {
     await page.goto('/admin')
   })
 
-  test('should display profile title and slug correctly', async ({ page }) => {
+  test('[smoke] should display profile title and slug correctly', async ({ page }) => {
     // Look for profile title elements
     const profileTitle = page.locator('[class*="title"]').first()
     
@@ -106,7 +106,7 @@ test.describe('Profile Management', () => {
     }
   })
 
-  test('should show profile edit form with all fields', async ({ page }) => {
+  test('[smoke] should show profile edit form with all fields', async ({ page }) => {
     const editButton = page.locator('button:has-text("Edit")').first()
     
     if (await editButton.isVisible().catch(() => false)) {

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { loginWithVerificationCode, logout, ADMIN_EMAIL, COUNSELOR_EMAIL, TEST_CODE } from './helpers'
 
 test.describe('Authentication Flow', () => {
-  test('should display login page', async ({ page }) => {
+  test('[smoke] should display login page', async ({ page }) => {
     await page.goto('/login')
     
     expect(await page.title()).toBeDefined()
@@ -27,7 +27,7 @@ test.describe('Authentication Flow', () => {
     await expect(codeInput).toBeVisible()
   })
 
-  test('should accept valid verification code', async ({ page }) => {
+  test('[smoke] should accept valid verification code', async ({ page }) => {
     await page.goto('/login')
     
     // Enter email
