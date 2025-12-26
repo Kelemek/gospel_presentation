@@ -1,4 +1,10 @@
 import { defineConfig, devices } from '@playwright/test'
+import dotenv from 'dotenv'
+import path from 'path'
+
+// Load environment variables from .env.local or .env.test
+const envFile = process.env.CI ? '.env.test' : '.env.local'
+dotenv.config({ path: path.resolve(__dirname, envFile) })
 
 /**
  * Playwright E2E Test Configuration
@@ -27,6 +33,14 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
     ignoreHTTPSErrors: true,
+    env: {
+      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+      SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY || '',
+      SUPABASE_URL: process.env.SUPABASE_URL || '',
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+      NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN || '',
+    },
   },
   projects: [
     {
