@@ -194,7 +194,7 @@ describe('AdminDashboard - Visit Tracking', () => {
       json: () => Promise.resolve(mockProfiles)
     }), 100)))
     render(<AdminDashboard />)
-    expect(screen.getByText('Loading admin dashboard...')).toBeInTheDocument()
+    expect(screen.getByText('Loading dashboard...')).toBeInTheDocument()
   })
 
   it('should display profile links correctly', async () => {

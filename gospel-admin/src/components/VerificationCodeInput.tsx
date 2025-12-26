@@ -46,22 +46,25 @@ export default function VerificationCodeInput({
   loading = false,
 }: VerificationCodeInputProps) {
   const [code, setCode] = useState<string>("");
-  const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Calculate time remaining until expiration
+  // Calculate initial time remaining
+  const calculateTimeRemaining = useCallback(() => {
+    if (!expiresAt) return null;
+    const now = new Date().getTime();
+    const expires = new Date(expiresAt).getTime();
+    const remaining = Math.max(0, expires - now);
+    return Math.floor(remaining / 1000); // Convert to seconds
+  }, [expiresAt]);
+
+  // Initialize with lazy state
+  const [timeRemaining, setTimeRemaining] = useState<number | null>(() =>
+    calculateTimeRemaining()
+  );
+
+  // Update time remaining on interval
   useEffect(() => {
     if (!expiresAt) return;
-
-    const calculateTimeRemaining = () => {
-      const now = new Date().getTime();
-      const expires = new Date(expiresAt).getTime();
-      const remaining = Math.max(0, expires - now);
-      return Math.floor(remaining / 1000); // Convert to seconds
-    };
-
-    // Initial calculation
-    setTimeRemaining(calculateTimeRemaining());
 
     // Update every second
     const interval = setInterval(() => {
@@ -75,7 +78,7 @@ export default function VerificationCodeInput({
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [expiresAt, onExpired]);
+  }, [expiresAt, onExpired, calculateTimeRemaining]);
 
   // Format time remaining as MM:SS
   const formatTimeRemaining = (seconds: number): string => {
