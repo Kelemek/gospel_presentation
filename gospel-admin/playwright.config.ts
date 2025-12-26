@@ -26,6 +26,7 @@ export default defineConfig({
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
+    ignoreHTTPSErrors: true,
   },
   projects: [
     {
