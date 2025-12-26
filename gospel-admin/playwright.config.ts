@@ -34,12 +34,16 @@ export default defineConfig({
     timeout: 120000,
     ignoreHTTPSErrors: true,
     env: {
+      ...process.env,
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
       SUPABASE_SERVICE_KEY: process.env.SUPABASE_SERVICE_KEY || '',
       SUPABASE_URL: process.env.SUPABASE_URL || '',
       SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
       NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN || '',
+      NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME || '',
+      NEXT_PUBLIC_CLARITY_PROJECT_ID: process.env.NEXT_PUBLIC_CLARITY_PROJECT_ID || '',
+      ESV_API_TOKEN: process.env.ESV_API_TOKEN || '',
     },
   },
   projects: [
