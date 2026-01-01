@@ -36,7 +36,7 @@ CREATE POLICY "Only admins can update translation settings"
   USING (
     EXISTS (
       SELECT 1 FROM user_profiles
-      WHERE user_profiles.id = auth.uid()
+      WHERE user_profiles.id = (SELECT auth.uid())
       AND user_profiles.role = 'admin'
     )
   );

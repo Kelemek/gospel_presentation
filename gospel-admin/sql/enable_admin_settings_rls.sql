@@ -36,7 +36,7 @@ TO authenticated
 WITH CHECK (
   EXISTS (
     SELECT 1 FROM public.user_profiles
-    WHERE user_profiles.id = auth.uid()
+    WHERE user_profiles.id = (SELECT auth.uid())
     AND user_profiles.role = 'admin'
   )
 );
@@ -50,7 +50,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.user_profiles
-    WHERE user_profiles.id = auth.uid()
+    WHERE user_profiles.id = (SELECT auth.uid())
     AND user_profiles.role = 'admin'
   )
 );
@@ -64,7 +64,7 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.user_profiles
-    WHERE user_profiles.id = auth.uid()
+    WHERE user_profiles.id = (SELECT auth.uid())
     AND user_profiles.role = 'admin'
   )
 );

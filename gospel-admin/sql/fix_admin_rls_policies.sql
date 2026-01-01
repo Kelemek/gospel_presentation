@@ -32,7 +32,7 @@ BEGIN
   
   RETURN user_role;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Grant execute permission
 GRANT EXECUTE ON FUNCTION public.get_user_role(UUID) TO authenticated, anon;
@@ -43,8 +43,8 @@ ON public.profiles
 FOR SELECT
 TO authenticated
 USING (
-  get_user_role(auth.uid()) = 'admin'
-  OR created_by = auth.uid()
+  get_user_role((SELECT auth.uid())) = 'admin'
+  OR created_by = (SELECT auth.uid())
   OR is_default = true
 );
 
@@ -54,7 +54,7 @@ ON public.profiles
 FOR INSERT
 TO authenticated
 WITH CHECK (
-  created_by = auth.uid()
+  created_by = (SELECT auth.uid())
 );
 
 -- UPDATE: Admins can update all, counselors can update only their own (not default)
@@ -63,12 +63,12 @@ ON public.profiles
 FOR UPDATE
 TO authenticated
 USING (
-  get_user_role(auth.uid()) = 'admin'
-  OR (created_by = auth.uid() AND is_default = false)
+  get_user_role((SELECT auth.uid())) = 'admin'
+  OR (created_by = (SELECT auth.uid()) AND is_default = false)
 )
 WITH CHECK (
-  get_user_role(auth.uid()) = 'admin'
-  OR (created_by = auth.uid() AND is_default = false)
+  get_user_role((SELECT auth.uid())) = 'admin'
+  OR (created_by = (SELECT auth.uid()) AND is_default = false)
 );
 
 -- DELETE: Admins can delete all, counselors can delete only their own (not default)
@@ -77,8 +77,8 @@ ON public.profiles
 FOR DELETE
 TO authenticated
 USING (
-  get_user_role(auth.uid()) = 'admin'
-  OR (created_by = auth.uid() AND is_default = false)
+  get_user_role((SELECT auth.uid())) = 'admin'
+  OR (created_by = (SELECT auth.uid()) AND is_default = false)
 );
 
 -- Verify policies were created

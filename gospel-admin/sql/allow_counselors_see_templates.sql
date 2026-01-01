@@ -10,10 +10,10 @@ ON public.profiles
 FOR SELECT
 TO authenticated
 USING (
-  get_user_role(auth.uid()) = 'admin'
-  OR created_by = auth.uid()
+  get_user_role((SELECT auth.uid())) = 'admin'
+  OR created_by = (SELECT auth.uid())
   OR is_default = true
-  OR (get_user_role(auth.uid()) = 'counselor' AND is_template = true)
+  OR (get_user_role((SELECT auth.uid())) = 'counselor' AND is_template = true)
 );
 
 -- Update UPDATE policy to ensure only admins can edit templates
@@ -24,12 +24,12 @@ ON public.profiles
 FOR UPDATE
 TO authenticated
 USING (
-  get_user_role(auth.uid()) = 'admin'
-  OR (created_by = auth.uid() AND is_default = false AND is_template = false)
+  get_user_role((SELECT auth.uid())) = 'admin'
+  OR (created_by = (SELECT auth.uid()) AND is_default = false AND is_template = false)
 )
 WITH CHECK (
-  get_user_role(auth.uid()) = 'admin'
-  OR (created_by = auth.uid() AND is_default = false AND is_template = false)
+  get_user_role((SELECT auth.uid())) = 'admin'
+  OR (created_by = (SELECT auth.uid()) AND is_default = false AND is_template = false)
 );
 
 -- Update DELETE policy to ensure only admins can delete templates
@@ -40,8 +40,8 @@ ON public.profiles
 FOR DELETE
 TO authenticated
 USING (
-  get_user_role(auth.uid()) = 'admin'
-  OR (created_by = auth.uid() AND is_default = false AND is_template = false)
+  get_user_role((SELECT auth.uid())) = 'admin'
+  OR (created_by = (SELECT auth.uid()) AND is_default = false AND is_template = false)
 );
 
 -- Verify the policies were updated

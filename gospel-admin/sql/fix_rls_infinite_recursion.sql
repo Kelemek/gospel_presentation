@@ -19,12 +19,12 @@ CREATE POLICY "Users can view access for their profiles"
   FOR SELECT
   USING (
     -- Admins see everything
-    get_user_role(auth.uid()) = 'admin' OR
+    get_user_role((SELECT auth.uid())) = 'admin' OR
     -- Users see their own access records (by email or user_id)
-    user_email = auth.email() OR 
-    user_id = auth.uid() OR
+    user_email = (SELECT auth.email()) OR 
+    user_id = (SELECT auth.uid()) OR
     -- Counselors see access records they granted
-    granted_by = auth.uid()
+    granted_by = (SELECT auth.uid())
   );
 
 -- Allow counselors and admins to grant access to their profiles
@@ -33,9 +33,9 @@ CREATE POLICY "Counselors can grant access to their profiles"
   FOR INSERT
   WITH CHECK (
     -- Admins can grant access to any profile
-    get_user_role(auth.uid()) = 'admin' OR
+    get_user_role((SELECT auth.uid())) = 'admin' OR
     -- Counselors can grant access (profile ownership checked in application layer)
-    get_user_role(auth.uid()) = 'counselor'
+    get_user_role((SELECT auth.uid())) = 'counselor'
   );
 
 -- Allow counselors and admins to revoke access to their profiles
@@ -44,9 +44,9 @@ CREATE POLICY "Counselors can revoke access to their profiles"
   FOR DELETE
   USING (
     -- Admins can revoke any access
-    get_user_role(auth.uid()) = 'admin' OR
+    get_user_role((SELECT auth.uid())) = 'admin' OR
     -- Counselors can revoke access they granted
-    granted_by = auth.uid()
+    granted_by = (SELECT auth.uid())
   );
 
 -- Step 4: Create a simplified profiles SELECT policy
@@ -61,17 +61,17 @@ CREATE POLICY "Profile visibility with counselee access"
     is_default = true OR
     -- Authenticated users
     (
-      auth.uid() IS NOT NULL AND (
+      (SELECT auth.uid()) IS NOT NULL AND (
         -- Admins can view all profiles
-        get_user_role(auth.uid()) = 'admin' OR
+        get_user_role((SELECT auth.uid())) = 'admin' OR
         -- Counselors can view profiles they created
-        created_by = auth.uid() OR
+        created_by = (SELECT auth.uid()) OR
         -- Counselees can view profiles they have access to
         -- Use a direct subquery without triggering RLS
         id IN (
           SELECT profile_id 
           FROM public.profile_access 
-          WHERE (user_email = auth.email() OR user_id = auth.uid())
+          WHERE (user_email = (SELECT auth.email()) OR user_id = (SELECT auth.uid()))
         )
       )
     )

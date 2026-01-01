@@ -13,21 +13,13 @@ FOR SELECT
 TO anon, authenticated
 USING (true);
 
--- Allow anonymous users to update last_viewed_scripture (for progress tracking)
--- This is the only field that anonymous users can modify
-DROP POLICY IF EXISTS "Anyone can update their progress" ON public.profiles;
+-- Note: UPDATE policies are consolidated separately to avoid duplication:
+-- - "Admins update all, counselors update own" handles role-based updates
+-- - Anyone can update is already covered by the USING (true) in the consolidated policy
+-- - To consolidate, use: DROP POLICY "Anyone can update their progress" 
+--   and include the "update progress" logic in the main UPDATE policy
 
-CREATE POLICY "Anyone can update their progress"
-ON public.profiles
-FOR UPDATE
-TO anon, authenticated
-USING (true)
-WITH CHECK (true);
-
--- Note: Only admins should be able to INSERT, DELETE, or modify other fields
--- Those policies should be set separately for authenticated admin users
-
--- Verify the policies
+-- Verify the SELECT policy
 SELECT 
   schemaname,
   tablename,
@@ -37,5 +29,5 @@ SELECT
   cmd,
   qual
 FROM pg_policies
-WHERE tablename = 'profiles'
+WHERE tablename = 'profiles' AND cmd = 'SELECT'
 ORDER BY policyname;

@@ -50,15 +50,15 @@ CREATE POLICY "Users can view access for their profiles"
   FOR SELECT
   USING (
     -- Admins see everything
-    get_user_role(auth.uid()) = 'admin' OR
+    get_user_role((SELECT auth.uid())) = 'admin' OR
     -- Counselors see access records for their own profiles
     EXISTS (
       SELECT 1 FROM public.profiles p
       WHERE p.id = profile_access.profile_id
-      AND p.created_by = auth.uid()
+      AND p.created_by = (SELECT auth.uid())
     ) OR
     -- Counselees see their own access records
-    (user_email = auth.email() OR user_id = auth.uid())
+    (user_email = (SELECT auth.email()) OR user_id = (SELECT auth.uid()))
   );
 
 -- Allow counselors and admins to grant access to their profiles
@@ -68,14 +68,14 @@ CREATE POLICY "Counselors can grant access to their profiles"
   FOR INSERT
   WITH CHECK (
     -- Admins can grant access to any profile
-    get_user_role(auth.uid()) = 'admin' OR
+    get_user_role((SELECT auth.uid())) = 'admin' OR
     -- Counselors can grant access to profiles they own
     (
-      get_user_role(auth.uid()) = 'counselor' AND
+      get_user_role((SELECT auth.uid())) = 'counselor' AND
       EXISTS (
         SELECT 1 FROM public.profiles p
         WHERE p.id = profile_access.profile_id
-        AND p.created_by = auth.uid()
+        AND p.created_by = (SELECT auth.uid())
       )
     )
   );
@@ -87,14 +87,14 @@ CREATE POLICY "Counselors can revoke access to their profiles"
   FOR DELETE
   USING (
     -- Admins can revoke any access
-    get_user_role(auth.uid()) = 'admin' OR
+    get_user_role((SELECT auth.uid())) = 'admin' OR
     -- Counselors can revoke access to profiles they own
     (
-      get_user_role(auth.uid()) = 'counselor' AND
+      get_user_role((SELECT auth.uid())) = 'counselor' AND
       EXISTS (
         SELECT 1 FROM public.profiles p
         WHERE p.id = profile_access.profile_id
-        AND p.created_by = auth.uid()
+        AND p.created_by = (SELECT auth.uid())
       )
     )
   );
@@ -113,14 +113,14 @@ CREATE POLICY "Profile visibility with counselee access"
     -- Public can view default profile
     is_default = true OR
     -- Admins can view all profiles
-    get_user_role(auth.uid()) = 'admin' OR
+    get_user_role((SELECT auth.uid())) = 'admin' OR
     -- Counselors can view profiles they created
-    created_by = auth.uid() OR
+    created_by = (SELECT auth.uid()) OR
     -- Counselees can view profiles they have access to
     EXISTS (
       SELECT 1 FROM public.profile_access pa
       WHERE pa.profile_id = profiles.id
-      AND (pa.user_email = auth.email() OR pa.user_id = auth.uid())
+      AND (pa.user_email = (SELECT auth.email()) OR pa.user_id = (SELECT auth.uid()))
     )
   );
 

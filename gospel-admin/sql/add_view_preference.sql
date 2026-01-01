@@ -14,8 +14,8 @@ BEGIN
   ) THEN
     CREATE POLICY "Users can update own profile" ON user_profiles
     FOR UPDATE
-    USING (auth.uid() = id)
-    WITH CHECK (auth.uid() = id);
+    USING ((SELECT auth.uid()) = id)
+    WITH CHECK ((SELECT auth.uid()) = id);
   END IF;
 END $$;
 

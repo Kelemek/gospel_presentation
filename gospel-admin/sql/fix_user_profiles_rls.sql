@@ -8,7 +8,7 @@ CREATE POLICY "Users can view own profile"
 ON public.user_profiles
 FOR SELECT
 TO authenticated
-USING (id = auth.uid());
+USING (id = (SELECT auth.uid()));
 
 -- Fix the get_user_role function to work with RLS
 DROP FUNCTION IF EXISTS public.get_user_role(UUID) CASCADE;
@@ -27,7 +27,7 @@ BEGIN
   
   RETURN user_role;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Grant execute permission
 GRANT EXECUTE ON FUNCTION public.get_user_role(UUID) TO authenticated, anon;
