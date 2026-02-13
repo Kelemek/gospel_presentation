@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { GospelProfile, GospelSection } from '@/lib/types'
 import AdminHeader from '@/components/AdminHeader'
 import ScriptureHoverModal from '@/components/ScriptureHoverModal'
-import InlineRichTextEditor from '@/components/InlineRichTextEditor'
+import InlineRichTextEditor, { stripParagraphTags } from '@/components/InlineRichTextEditor'
 import RichTextEditor from '@/components/RichTextEditor'
 import { createClient } from '@/lib/supabase/client'
 
@@ -1540,7 +1540,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                                       </div>
                                     </div>
                                   ) : (
-                                    <p className="text-slate-700 font-medium">Q: {question.question}</p>
+                                    <div className="text-slate-700 font-medium" dangerouslySetInnerHTML={{ __html: stripParagraphTags(question.question) || 'Q: ' }} />
                                   )}
                                 </div>
                                 {!isEditing && (
@@ -1554,7 +1554,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                                     </button>
                                     <button
                                       onClick={() => removeQuestion(sectionIndex, subsectionIndex, questionIndex)}
-                                      className="text-slate-600 hover:text-slate-800 text-xs px-2 py-1 rounded hover:bg-slate-100 transition-colors"
+                                      className="text-slate-600 hover:text-slate-800 text-sm px-2 py-1 rounded hover:bg-slate-100 transition-colors"
                                       title="Remove question"
                                     >
                                       ×
@@ -1876,7 +1876,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                                           </div>
                                         </div>
                                       ) : (
-                                        <p className="text-slate-700 font-medium text-xs">Q: {question.question}</p>
+                                        <div className="text-slate-700 font-medium text-xs" dangerouslySetInnerHTML={{ __html: stripParagraphTags(question.question) || 'Q: ' }} />
                                       )}
                                     </div>
                                     {!isEditing && (
@@ -1890,7 +1890,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                                         </button>
                                         <button
                                           onClick={() => removeQuestion(sectionIndex, subsectionIndex, questionIndex, nestedIndex)}
-                                          className="text-slate-600 hover:text-slate-800 text-xs px-1 py-0.5 rounded hover:bg-slate-100 transition-colors"
+                                          className="text-slate-600 hover:text-slate-800 text-sm px-1 py-0.5 rounded hover:bg-slate-100 transition-colors"
                                           title="Remove question"
                                         >
                                           ×

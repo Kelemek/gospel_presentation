@@ -11,12 +11,12 @@ interface InlineRichTextEditorProps {
   as?: 'h1' | 'h2' | 'h3' | 'h4' | 'p' | 'div'
 }
 
-// Strip wrapping <p> tags from HTML since titles shouldn't have paragraph tags
-function stripParagraphTags(html: string): string {
-  // Remove leading <p> and trailing </p>
-  const stripped = html.replace(/^<p>/, '').replace(/<\/p>$/, '')
-  // Also remove <p></p> empty tags
-  return stripped.replace(/<p><\/p>/g, '').trim()
+// Strip all <p> tags from HTML so content is inline-safe and never produces nested <p> when rendered inside a <p> or <div>. Exported for use when displaying stored HTML (e.g. on edit page).
+export function stripParagraphTags(html: string): string {
+  if (!html) return ''
+  // Remove every <p> and </p> so stored content has no paragraph wrappers (avoids invalid nested <p> on display)
+  const stripped = html.replace(/<\/?p>/gi, '').trim()
+  return stripped.replace(/\s+/g, ' ').trim()
 }
 
 // Get display text from HTML (strip all HTML tags for title display)
@@ -99,7 +99,7 @@ export default function InlineRichTextEditor({
       />
       <button
         onClick={handleEdit}
-        className="text-slate-600 hover:text-slate-800 text-xs px-2 py-1 rounded hover:bg-slate-100 transition-colors opacity-0 group-hover:opacity-100"
+        className="text-slate-600 hover:text-slate-800 text-xs px-2 py-1 rounded hover:bg-slate-100 transition-colors"
         title="Edit"
         type="button"
       >

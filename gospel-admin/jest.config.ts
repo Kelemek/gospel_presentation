@@ -18,7 +18,7 @@ const config: Config = {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   moduleDirectories: ['node_modules', '<rootDir>/src'],
-  testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/', '<rootDir>/e2e/'],
+  testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
   collectCoverageFrom: [
     // Narrow collection to the specific server-side files we're testing
     // so we can reach the 80% global threshold quickly. We can expand
