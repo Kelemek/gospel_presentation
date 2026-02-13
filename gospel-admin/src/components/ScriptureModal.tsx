@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type TouchEvent } from 'react'
 import { useTranslation } from '@/contexts/TranslationContext'
 
 
@@ -51,41 +51,9 @@ export default function ScriptureModal({
   // Touch/swipe state for mobile navigation
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
-  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
-    // Load sound preference from localStorage
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('scripturePageTurnSound')
-      return saved !== null ? saved === 'true' : true // Default to enabled
-    }
-    return true
-  })
   
   // Minimum swipe distance (in px) to trigger navigation
   const minSwipeDistance = 50
-
-  // Toggle sound preference
-  const toggleSound = () => {
-    const newValue = !soundEnabled
-    setSoundEnabled(newValue)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('scripturePageTurnSound', String(newValue))
-    }
-  }
-
-  // Play page-turning sound effect
-  const playPageTurnSound = () => {
-    if (!soundEnabled) return
-    
-    try {
-      const audio = new Audio('/page-flipping.mp3')
-      // Add randomness for more natural sound variation
-      audio.volume = 0.3 + Math.random() * 0.5  // Random volume between 0.3 and 0.8
-      audio.playbackRate = 1.1 + Math.random() * 0.8  // Random speed between 1.1 and 1.9
-      audio.play().catch((err: Error) => console.debug('Audio playback failed:', err))
-    } catch (error) {
-      console.debug('Audio playback not available:', error)
-    }
-  }
 
   // Extract chapter reference from verse reference
   const getChapterReference = (verseRef: string): string => {
@@ -256,14 +224,14 @@ export default function ScriptureModal({
       
       processedText = processedText.replace(
         rangePattern,
-        `<div id="verse-range-${firstVerse}-${lastVerse}" class="bg-gradient-to-br from-slate-50 to-slate-100 border-l-4 border-blue-500 px-4 py-3 my-4 rounded-r-md shadow-sm"><div class="font-semibold text-slate-900 text-base leading-relaxed">$1</div></div>`
+        `<div id="verse-range-${firstVerse}-${lastVerse}" class="bg-linear-to-br from-slate-50 to-slate-100 border-l-4 border-blue-500 px-4 py-3 my-4 rounded-r-md shadow-sm"><div class="font-semibold text-slate-900 text-base leading-relaxed">$1</div></div>`
       )
     } else {
       // Single verse - wrap it with Tailwind classes
       const verseNum = firstVerse
       processedText = processedText.replace(
         new RegExp(`(<sup[^>]*>${verseNum}</sup>[\\s\\S]*?)(?=<sup[^>]*>\\d+</sup>|$)`, 'g'),
-        `<div id="verse-${verseNum}" class="bg-gradient-to-br from-slate-50 to-slate-100 border-l-4 border-blue-500 px-4 py-3 my-4 rounded-r-md shadow-sm"><div class="font-semibold text-slate-900 text-base leading-relaxed">$1</div></div>`
+        `<div id="verse-${verseNum}" class="bg-linear-to-br from-slate-50 to-slate-100 border-l-4 border-blue-500 px-4 py-3 my-4 rounded-r-md shadow-sm"><div class="font-semibold text-slate-900 text-base leading-relaxed">$1</div></div>`
       )
     }
     
@@ -271,12 +239,12 @@ export default function ScriptureModal({
   }
 
   // Touch event handlers for mobile swiping
-  const handleTouchStart = (e: React.TouchEvent) => {
+  const handleTouchStart = (e: TouchEvent) => {
     setTouchEnd(null) // Reset touchEnd when a new touch starts
     setTouchStart(e.targetTouches[0].clientX)
   }
 
-  const handleTouchMove = (e: React.TouchEvent) => {
+  const handleTouchMove = (e: TouchEvent) => {
     setTouchEnd(e.targetTouches[0].clientX)
   }
 
@@ -288,10 +256,8 @@ export default function ScriptureModal({
     const isRightSwipe = distance < -minSwipeDistance
 
     if (isLeftSwipe && hasNext && onNext) {
-      playPageTurnSound()
       onNext()
     } else if (isRightSwipe && hasPrevious && onPrevious) {
-      playPageTurnSound()
       onPrevious()
     }
   }
@@ -301,14 +267,13 @@ export default function ScriptureModal({
       <div className="bg-white w-full md:max-w-2xl lg:max-w-4xl xl:max-w-5xl shadow-xl flex flex-col h-full md:h-[80vh] md:rounded-lg">
         
         {/* Fixed Header with Controls - Always Visible */}
-        <div className="bg-slate-100 px-4 pt-safe-or-3 pb-3 border-b flex-shrink-0 relative z-10 md:rounded-t-lg" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}>
+        <div className="bg-slate-100 px-4 pt-safe-or-3 pb-3 border-b shrink-0 relative z-10 md:rounded-t-lg" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}>
           {/* Navigation Controls - Always at Top */}
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-1 flex-1">
               <button
                 onClick={() => {
                   if (hasPrevious && onPrevious) {
-                    playPageTurnSound()
                     onPrevious()
                   }
                 }}
@@ -334,7 +299,6 @@ export default function ScriptureModal({
               <button
                 onClick={() => {
                   if (hasNext && onNext) {
-                    playPageTurnSound()
                     onNext()
                   }
                 }}
@@ -351,26 +315,6 @@ export default function ScriptureModal({
               </button>
             </div>
             <div className="flex items-center gap-2 ml-2">
-              <button
-                onClick={toggleSound}
-                className="text-slate-500 hover:text-slate-700 min-h-[48px] min-w-[48px] rounded-lg hover:bg-slate-200 active:bg-slate-300 flex items-center justify-center"
-                aria-label={soundEnabled ? "Mute page turn sound" : "Unmute page turn sound"}
-                title={soundEnabled ? "Mute" : "Unmute"}
-              >
-                {soundEnabled ? (
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-                  </svg>
-                ) : (
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                    <line x1="23" y1="9" x2="17" y2="15"></line>
-                    <line x1="17" y1="9" x2="23" y2="15"></line>
-                  </svg>
-                )}
-              </button>
               <button
                 onClick={onClose}
                 className="text-slate-500 hover:text-slate-700 text-2xl font-bold min-h-[48px] min-w-[48px] rounded-lg hover:bg-slate-200 active:bg-slate-300 flex items-center justify-center"
@@ -391,11 +335,8 @@ export default function ScriptureModal({
                 setChapterText('')
                 setShowingContext(false)
               }}
-              className="px-6 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border-2 bg-slate-100 text-slate-700 border-slate-400 hover:text-slate-800 hover:bg-slate-150 cursor-pointer appearance-none bg-no-repeat pr-10"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23334155' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'%3E%3C/path%3E%3C/svg%3E")`,
-                backgroundPosition: 'right 10px center'
-              }}
+              aria-label="Select Bible translation"
+              className="px-6 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border-2 bg-slate-100 text-slate-700 border-slate-400 hover:text-slate-800 hover:bg-slate-150 cursor-pointer appearance-none bg-no-repeat pr-10 bg-position-[right_10px_center] [background-image:var(--translation-select-arrow)]"
             >
               {availableTranslations.map((trans) => (
                 <option key={trans} value={trans}>
@@ -431,7 +372,7 @@ export default function ScriptureModal({
 
         {/* Context Information - Only show when available */}
         {context && (
-          <div className="px-4 py-3 bg-slate-50 border-b flex-shrink-0">
+          <div className="px-4 py-3 bg-slate-50 border-b shrink-0">
             <div className="text-slate-700 text-base md:text-lg">
               <div className="flex items-center gap-2 mb-1">
                 <strong className="text-slate-800">Section:</strong> 
@@ -506,7 +447,7 @@ export default function ScriptureModal({
         </div>
         
         {/* Fixed Footer */}
-        <div className="bg-slate-50 px-4 pt-2 border-t flex-shrink-0 md:rounded-b-lg" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
+        <div className="bg-slate-50 px-4 pt-2 border-t shrink-0 md:rounded-b-lg" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
           {translation === 'esv' ? (
             <>
               <p className="text-xs text-slate-500 text-center mb-1">
