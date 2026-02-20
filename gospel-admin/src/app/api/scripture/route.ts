@@ -21,16 +21,16 @@ export async function GET(request: NextRequest) {
   }
 
   // Validate translation
-  if (translation !== 'esv' && translation !== 'kjv' && translation !== 'nasb') {
-    return NextResponse.json({ error: 'Invalid translation. Must be "esv", "kjv", or "nasb"' }, { status: 400 })
+  if (translation !== 'esv' && translation !== 'kjv' && translation !== 'nasb' && translation !== 'lsb') {
+    return NextResponse.json({ error: 'Invalid translation. Must be "esv", "kjv", "nasb", or "lsb"' }, { status: 400 })
   }
 
   // Get session ID for tracking
   const sessionId = getSessionId(request)
 
   try {
-    // KJV and NASB are served directly from database, no caching needed
-    if (translation === 'kjv' || translation === 'nasb') {
+    // KJV, NASB, and LSB are served directly from database, no caching needed
+    if (translation === 'kjv' || translation === 'nasb' || translation === 'lsb') {
       const result = await fetchScripture(reference, translation)
       
       // Log the access (async, non-blocking)

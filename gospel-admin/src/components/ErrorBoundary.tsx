@@ -56,7 +56,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
       // Default fallback UI
       return (
-        <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-linear-to-br from-red-50 to-orange-50 flex items-center justify-center p-4">
           <div className="max-w-md w-full bg-white rounded-xl shadow-lg border border-red-100 p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">

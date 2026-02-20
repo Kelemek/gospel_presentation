@@ -39,14 +39,13 @@ export default function ScriptureModal({
   context,
   onScriptureViewed
 }: ScriptureModalProps) {
-  const { translation, setTranslation } = useTranslation()
+  const { translation, setTranslation, enabledTranslations } = useTranslation()
   const [scriptureText, setScriptureText] = useState<string>('')
   const [chapterText, setChapterText] = useState<string>('')
   const [showingContext, setShowingContext] = useState(false)
   const [loading, setLoading] = useState(false)
   const [contextLoading, setContextLoading] = useState(false)
   const [error, setError] = useState<string>('')
-  const [availableTranslations, setAvailableTranslations] = useState<string[]>(['esv', 'kjv', 'nasb'])
 
   // Touch/swipe state for mobile navigation
   const [touchStart, setTouchStart] = useState<number | null>(null)
@@ -331,14 +330,14 @@ export default function ScriptureModal({
             <select
               value={translation}
               onChange={async (e) => {
-                await setTranslation(e.target.value as 'esv' | 'kjv' | 'nasb')
+                await setTranslation(e.target.value as 'esv' | 'kjv' | 'nasb' | 'lsb')
                 setChapterText('')
                 setShowingContext(false)
               }}
               aria-label="Select Bible translation"
-              className="px-6 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border-2 bg-slate-100 text-slate-700 border-slate-400 hover:text-slate-800 hover:bg-slate-150 cursor-pointer appearance-none bg-no-repeat pr-10 bg-position-[right_10px_center] [background-image:var(--translation-select-arrow)]"
+              className="px-6 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border-2 bg-slate-100 text-slate-700 border-slate-400 hover:text-slate-800 hover:bg-slate-150 cursor-pointer appearance-none bg-no-repeat pr-10 bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1.25rem] bg-position-[right_10px_center]"
             >
-              {availableTranslations.map((trans) => (
+              {enabledTranslations.map((trans) => (
                 <option key={trans} value={trans}>
                   {trans.toUpperCase()}
                 </option>
@@ -466,6 +465,13 @@ export default function ScriptureModal({
           ) : translation === 'nasb' ? (
             <p className="text-xs text-slate-500 text-center">
               Scripture quotations taken from the New American Standard Bible® (NASB), Copyright © 1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation. Used by permission.
+            </p>
+          ) : translation === 'lsb' ? (
+            <p className="text-xs text-slate-500 text-center">
+              Legacy Standard Bible Copyright ©2021 by The Lockman Foundation. All rights reserved. Managed in partnership with Three Sixteen Publishing Inc.{' '}
+              <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">LSBible.org</a>
+              {' '}For Permission to Quote Information visit{' '}
+              <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">www.LSBible.org</a>
             </p>
           ) : null}
         </div>

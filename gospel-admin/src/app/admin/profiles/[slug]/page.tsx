@@ -424,7 +424,7 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
 
   if (!isAuth || isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading profile...</p>
@@ -454,7 +454,7 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50">
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Header */}
         <AdminHeader
@@ -588,7 +588,7 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
                       setUsernameInput(user?.username || '')
                     }
                   }}
-                  className="w-full px-3 py-2 border border-slate-200 hover:border-slate-300 focus:border-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 bg-white text-slate-900 shadow-sm transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat pr-10 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2 border border-slate-200 hover:border-slate-300 focus:border-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 bg-white text-slate-900 shadow-sm transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1.25rem] bg-position-[right_0.5rem_center] bg-no-repeat pr-10 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={isAddingCounselee}
                 >
                   <option value="">Select existing user...</option>

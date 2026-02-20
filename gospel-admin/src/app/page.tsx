@@ -116,7 +116,7 @@ export function GospelPresentationOld() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" role="status" aria-label="Loading"></div>
           <p className="text-slate-600">Loading Gospel Presentation...</p>
@@ -217,7 +217,7 @@ export function GospelPresentationOld() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-gradient-to-br from-slate-700 to-slate-800 text-white text-center py-10 shadow-lg">
+      <header className="bg-linear-to-br from-slate-700 to-slate-800 text-white text-center py-10 shadow-lg">
         <div className="container mx-auto px-5">
           <h1 className="text-4xl md:text-5xl font-bold mb-3">
             The Gospel Presentation
@@ -283,28 +283,37 @@ export function GospelPresentationOld() {
         </div>
       </main>
 
-      <footer className="bg-slate-700 text-white text-center py-8 mt-16">
-        <div className="container mx-auto px-5">
-          <p className="text-sm opacity-80 mb-2">
-            Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission.
-          </p>
-          <p className="text-sm opacity-80 mb-2">
-            King James Version (KJV) scripture quotations are in the public domain.
-          </p>
-          <p className="text-sm opacity-80 mb-2">
-            New American Standard Bible® (NASB), Copyright © 1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation. Used by permission.
-          </p>
-          <p className="text-sm opacity-80">
-            <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline mr-4">
+      <footer className="bg-slate-700 text-white py-10 mt-16">
+        <div className="container mx-auto px-5 max-w-3xl">
+          <div className="space-y-4 text-sm opacity-90 leading-relaxed text-center md:text-left">
+            <p>
+              Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission.
+            </p>
+            <p>King James Version (KJV) scripture quotations are in the public domain.</p>
+            <p>
+              New American Standard Bible® (NASB), Copyright © 1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation. Used by permission.
+            </p>
+            <p>
+              Legacy Standard Bible Copyright ©2021 by The Lockman Foundation. All rights reserved. Managed in partnership with Three Sixteen Publishing Inc.{' '}
+              <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">LSBible.org</a>.
+              {' '}For Permission to Quote Information visit{' '}
+              <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">www.LSBible.org</a>.
+            </p>
+          </div>
+          <div className="mt-8 pt-6 border-t border-slate-600 flex flex-wrap justify-center gap-x-6 gap-y-2">
+            <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">
               www.esv.org
             </a>
-            <a href="https://www.lockman.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline mr-4">
+            <a href="https://www.lockman.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">
               www.lockman.org
+            </a>
+            <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">
+              LSBible.org
             </a>
             <Link href="/copyright" className="text-blue-400 hover:text-blue-300 underline">
               Copyright & Attribution
             </Link>
-          </p>
+          </div>
         </div>
       </footer>
 

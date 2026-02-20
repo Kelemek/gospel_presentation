@@ -238,7 +238,7 @@ function TemplatesPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50">
       <div className="max-w-7xl mx-auto py-6 sm:py-8">
         <div className="px-4 sm:px-6 lg:px-8">
         <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 mb-6 border border-slate-100">
@@ -282,7 +282,7 @@ function TemplatesPageContent() {
         <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 mb-6 border border-slate-100">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg sm:text-xl font-semibold bg-gradient-to-br from-slate-700 to-slate-800 bg-clip-text text-transparent">Available Templates</h2>
+              <h2 className="text-lg sm:text-xl font-semibold bg-linear-to-br from-slate-700 to-slate-800 bg-clip-text text-transparent">Available Templates</h2>
               <p className="text-xs sm:text-sm text-slate-600 mt-1">
                 Templates that can be used as a starting point for new resources
               </p>

@@ -6,7 +6,7 @@ export default function CopyrightPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header matching the main page style */}
-      <header className="bg-gradient-to-br from-slate-700 to-slate-800 text-white text-center py-10 shadow-lg">
+      <header className="bg-linear-to-br from-slate-700 to-slate-800 text-white text-center py-10 shadow-lg">
         <div className="container mx-auto px-5">
           <h1 className="text-4xl md:text-5xl font-bold mb-3">
             Copyright & Attribution
@@ -63,10 +63,22 @@ export default function CopyrightPage() {
               </p>
             </div>
 
-            <div className="bg-purple-50 border-l-4 border-purple-400 rounded-lg p-6">
+            <div className="bg-purple-50 border-l-4 border-purple-400 rounded-lg p-6 mb-6">
               <h3 className="text-xl font-bold text-slate-800 mb-3">New American Standard Bible (NASB)</h3>
               <p className="text-slate-700 leading-relaxed text-base md:text-lg">
                 Scripture quotations taken from the <strong>New American Standard Bible®</strong> (NASB), Copyright © 1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation. Used by permission. <a href="https://www.lockman.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline transition-colors">www.lockman.org</a>
+              </p>
+            </div>
+
+            <div className="bg-amber-50 border-l-4 border-amber-400 rounded-lg p-6">
+              <h3 className="text-xl font-bold text-slate-800 mb-3">Legacy Standard Bible (LSB)</h3>
+              <p className="text-slate-700 leading-relaxed text-base md:text-lg mb-4">
+                Legacy Standard Bible Copyright ©2021 by The Lockman Foundation. All rights reserved. Managed in partnership with Three Sixteen Publishing Inc.{' '}
+                <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline transition-colors">LSBible.org</a>
+              </p>
+              <p className="text-slate-700 leading-relaxed text-base md:text-lg">
+                For Permission to Quote Information visit{' '}
+                <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline transition-colors">www.LSBible.org</a>
               </p>
             </div>
           </section>
@@ -150,9 +162,9 @@ export default function CopyrightPage() {
       </main>
 
       {/* Footer matching the main page style */}
-      <footer className="bg-slate-700 text-white text-center py-8 mt-16">
-        <div className="container mx-auto px-5">
-          <div className="mb-6">
+      <footer className="bg-slate-700 text-white py-10 mt-16">
+        <div className="container mx-auto px-5 max-w-3xl">
+          <div className="mb-8 flex justify-center">
             <Link 
               href="/"
               className="inline-flex items-center gap-2 bg-slate-600 hover:bg-slate-500 text-white px-6 py-4 rounded-lg transition-colors font-medium text-base md:text-lg min-h-[48px]"
@@ -161,23 +173,34 @@ export default function CopyrightPage() {
               Back to Gospel Presentation
             </Link>
           </div>
-          <p className="text-sm opacity-80 mb-2">
-            Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission.
-          </p>
-          <p className="text-sm opacity-80 mb-2">
-            King James Version (KJV) scripture quotations are in the public domain.
-          </p>
-          <p className="text-sm opacity-80 mb-2">
-            New American Standard Bible® (NASB), Copyright © 1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation. Used by permission.
-          </p>
-          <p className="text-sm opacity-80">
-              <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline mr-4 transition-colors">
-                www.esv.org
-              </a>
-              <a href="https://www.lockman.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline mr-4 transition-colors">
-                www.lockman.org
-              </a>
-              <span className="ml-2">All other content © {new Date().getFullYear()} Gospel Presentation Project. All rights reserved.</span>
+          <div className="space-y-4 text-sm opacity-90 leading-relaxed text-center md:text-left">
+            <p>
+              Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission.
+            </p>
+            <p>King James Version (KJV) scripture quotations are in the public domain.</p>
+            <p>
+              New American Standard Bible® (NASB), Copyright © 1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation. Used by permission.
+            </p>
+            <p>
+              Legacy Standard Bible Copyright ©2021 by The Lockman Foundation. All rights reserved. Managed in partnership with Three Sixteen Publishing Inc.{' '}
+              <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">LSBible.org</a>.
+              {' '}For Permission to Quote Information visit{' '}
+              <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">www.LSBible.org</a>.
+            </p>
+          </div>
+          <div className="mt-8 pt-6 border-t border-slate-600 flex flex-wrap justify-center gap-x-6 gap-y-2">
+            <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline transition-colors">
+              www.esv.org
+            </a>
+            <a href="https://www.lockman.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline transition-colors">
+              www.lockman.org
+            </a>
+            <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline transition-colors">
+              LSBible.org
+            </a>
+          </div>
+          <p className="mt-4 text-sm opacity-80 text-center">
+            All other content © {new Date().getFullYear()} Gospel Presentation Project. All rights reserved.
           </p>
         </div>
       </footer>

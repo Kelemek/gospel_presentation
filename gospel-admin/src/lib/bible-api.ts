@@ -1,7 +1,7 @@
 // Bible API service for fetching scripture from multiple translations
 // Supports ESV (api.esv.org) and local database for KJV/NASB
 
-export type BibleTranslation = 'esv' | 'kjv' | 'nasb'
+export type BibleTranslation = 'esv' | 'kjv' | 'nasb' | 'lsb'
 import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/server'
 
@@ -107,7 +107,7 @@ function normalizeBookName(book: string, translation: BibleTranslation): string 
     return kjvNormalizations[key] || book
   }
   
-  // NASB keeps Arabic numerals, just normalize common variations
+  // NASB and LSB keep Arabic numerals, just normalize common variations
   const commonNormalizations: Record<string, string> = {
     'song of songs': 'Song of Solomon',
     'song of sol': 'Song of Solomon',
@@ -186,6 +186,7 @@ export async function fetchScripture(
       return fetchFromESV(reference)
     case 'kjv':
     case 'nasb':
+    case 'lsb':
       // Fetch from local database
       logger.debug(`Fetching ${reference} (${translation}) from local database`)
       return await fetchFromDatabase(reference, translation)

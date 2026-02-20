@@ -16,7 +16,7 @@ export default function AdminErrorBoundary({ children }: AdminErrorBoundaryProps
   return (
     <ErrorBoundary
       fallback={
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50 flex items-center justify-center p-4">
           <div className="max-w-2xl w-full bg-white rounded-xl shadow-lg border border-red-100 p-8">
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">

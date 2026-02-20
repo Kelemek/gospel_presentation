@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { logger } from '@/lib/logger'
 import { createClient } from '@/lib/supabase/client'
 
-export type BibleTranslation = 'esv' | 'kjv' | 'nasb'
+export type BibleTranslation = 'esv' | 'kjv' | 'nasb' | 'lsb'
 
 interface TranslationContextType {
   translation: BibleTranslation
@@ -67,7 +67,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
         } else {
           // Load from sessionStorage for anonymous users
           const stored = sessionStorage.getItem(STORAGE_KEY)
-          if (stored === 'esv' || stored === 'kjv' || stored === 'nasb') {
+          if (stored === 'esv' || stored === 'kjv' || stored === 'nasb' || stored === 'lsb') {
             preferredTranslation = stored
           }
         }

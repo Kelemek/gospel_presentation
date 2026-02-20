@@ -6,9 +6,9 @@ export async function POST(request: NextRequest) {
   try {
     const { translation } = await request.json()
 
-    if (!translation || (translation !== 'esv' && translation !== 'kjv' && translation !== 'nasb')) {
+    if (!translation || (translation !== 'esv' && translation !== 'kjv' && translation !== 'nasb' && translation !== 'lsb')) {
       return NextResponse.json(
-        { error: 'Invalid translation. Must be "esv", "kjv", or "nasb"' },
+        { error: 'Invalid translation. Must be "esv", "kjv", "nasb", or "lsb"' },
         { status: 400 }
       )
     }

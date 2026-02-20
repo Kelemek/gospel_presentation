@@ -779,7 +779,7 @@ function AdminPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50">
       {/* Toast notification */}
       {showCopyToast && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-white text-green-700 px-4 py-2 rounded-lg shadow-lg border-2 border-green-500 z-50 animate-fade-in">
@@ -851,7 +851,7 @@ function AdminPageContent() {
             <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
                 <div className="flex-1 min-w-0">
-                  <h2 className="text-lg sm:text-xl font-semibold bg-gradient-to-br from-slate-700 to-slate-800 bg-clip-text text-transparent">
+                  <h2 className="text-lg sm:text-xl font-semibold bg-linear-to-br from-slate-700 to-slate-800 bg-clip-text text-transparent">
                     {userRole === 'counselee' ? 'My Resources' : 'Resource Management'}
                   </h2>
                   <p className="text-xs sm:text-sm text-slate-600 mt-1">
@@ -962,7 +962,7 @@ function AdminPageContent() {
                   <select
                     value={selectedCounselee}
                     onChange={(e) => setSelectedCounselee(e.target.value)}
-                    className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400 text-sm text-slate-900 bg-white shadow-sm transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat pr-10 min-w-[200px]"
+                    className="px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400 text-sm text-slate-900 bg-white shadow-sm transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1.25rem] bg-position-[right_0.5rem_center] bg-no-repeat pr-10 min-w-[200px]"
                   >
                     <option value="">All Counselees</option>
                     {counseleesWithProfiles.map(email => (
@@ -1013,8 +1013,8 @@ function AdminPageContent() {
             </div>
 
           {showCreateForm && (
-            <div className="mb-6 border border-slate-200 rounded-xl p-4 sm:p-6 bg-gradient-to-br from-white to-slate-50 shadow-md">
-              <h3 className="text-base sm:text-lg font-semibold bg-gradient-to-br from-slate-700 to-slate-800 bg-clip-text text-transparent mb-4">Create New Assingment</h3>
+            <div className="mb-6 border border-slate-200 rounded-xl p-4 sm:p-6 bg-linear-to-br from-white to-slate-50 shadow-md">
+              <h3 className="text-base sm:text-lg font-semibold bg-linear-to-br from-slate-700 to-slate-800 bg-clip-text text-transparent mb-4">Create New Assingment</h3>
               
               <form onSubmit={handleCreateProfile} className="space-y-4">
                 {/* Clone From Field - FIRST */}
@@ -1026,7 +1026,7 @@ function AdminPageContent() {
                     id="cloneFrom"
                     value={createForm.cloneFromSlug}
                     onChange={(e) => handleCloneFromChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 hover:border-slate-300 focus:border-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 text-slate-900 bg-white shadow-sm text-sm transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat pr-10"
+                    className="w-full px-3 py-2 border border-slate-200 hover:border-slate-300 focus:border-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 text-slate-900 bg-white shadow-sm text-sm transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1.25rem] bg-position-[right_0.5rem_center] bg-no-repeat pr-10"
                   >
                     <option value="">Pick a resource template to clone from</option>
                     {profiles.filter(p => {
@@ -1069,7 +1069,7 @@ function AdminPageContent() {
                             setUsernameInput(user?.username || '')
                           }
                         }}
-                        className="w-full px-3 py-2 border border-slate-200 hover:border-slate-300 focus:border-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 bg-white text-slate-900 shadow-sm transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat pr-10 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full px-3 py-2 border border-slate-200 hover:border-slate-300 focus:border-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 bg-white text-slate-900 shadow-sm transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1.25rem] bg-position-[right_0.5rem_center] bg-no-repeat pr-10 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <option value="">Select existing user...</option>
                         {availableUsers.map(user => (

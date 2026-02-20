@@ -292,7 +292,8 @@ jest.mock('@/contexts/TranslationContext', () => {
     BibleTranslation: {
       esv: 'esv',
       kjv: 'kjv',
-      nasb: 'nasb'
+      nasb: 'nasb',
+      lsb: 'lsb'
     }
   }
 })

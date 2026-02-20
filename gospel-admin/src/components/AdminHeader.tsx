@@ -90,7 +90,7 @@ export default function AdminHeader({
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
         <div className="flex-1">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-2">
-            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-br from-slate-700 to-slate-800 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-bold bg-linear-to-br from-slate-700 to-slate-800 bg-clip-text text-transparent">
               {title}
             </h1>
             

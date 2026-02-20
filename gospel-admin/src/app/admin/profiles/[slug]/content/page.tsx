@@ -994,7 +994,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
 
   if (!isAuth || isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
+      <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" role="status" aria-label="Loading"></div>
           <p className="text-slate-600">Loading profile content...</p>
@@ -1005,7 +1005,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
 
   if (error && !profile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50">
         <div className="max-w-6xl mx-auto px-5 py-8">
           <div className="bg-white border border-slate-200 rounded-lg p-8 text-center shadow-lg">
             <div className="text-red-600 text-6xl mb-4">⚠️</div>
@@ -1024,7 +1024,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <AdminHeader
