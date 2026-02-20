@@ -32,9 +32,9 @@ test('create section, add scripture, toggle favorite and save content (success)'
     from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: { role: 'admin' } }) }) }) })
   }))
 
-  // Mock window.confirm and alert to avoid modal dialogs
-  jest.spyOn(window, 'confirm').mockImplementation(() => true)
-  const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {})
+  // Alert modal is mocked in jest.setup; for this test user "confirms" so save proceeds
+  const { showAlert, showConfirm } = (global as any).__alertModalMocks
+  showConfirm.mockImplementationOnce(() => Promise.resolve(true))
 
   // Mock fetch handlers for coma-template, profile GET and profile PUT
   // @ts-expect-error mocking incompatible types
@@ -97,6 +97,6 @@ test('create section, add scripture, toggle favorite and save content (success)'
   const saveBtn = within(adminActions).getByRole('button', { name: /Save Changes|Save/ })
   await userEvent.click(saveBtn)
 
-  // Alert should be called for successful save
-  await waitFor(() => expect(alertSpy).toHaveBeenCalled())
+  // showAlert (from AlertModalContext) should be called for successful save
+  await waitFor(() => expect(showAlert).toHaveBeenCalled())
 })

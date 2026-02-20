@@ -297,3 +297,17 @@ jest.mock('@/contexts/TranslationContext', () => {
     }
   }
 })
+
+// Mock AlertModalContext so components using useAlertModal() do not throw when
+// rendered without AlertModalProvider. Expose mocks on global so tests can
+// assert on showAlert/showConfirm (e.g. expect(global.__alertModalMocks.showAlert).toHaveBeenCalledWith('...')).
+const alertModalMocks = {
+  showAlert: jest.fn(),
+  showConfirm: jest.fn(() => Promise.resolve(false))
+}
+global.__alertModalMocks = alertModalMocks
+jest.mock('@/contexts/AlertModalContext', () => ({
+  __esModule: true,
+  AlertModalProvider: ({ children }) => children,
+  useAlertModal: () => alertModalMocks
+}))

@@ -66,7 +66,7 @@ describe('TemplatesPageContent - additional branches', () => {
     // @ts-expect-error - add clipboard mock
     global.navigator.clipboard = { writeText: writeMock }
 
-    const alertSpy = jest.spyOn(global, 'alert')
+    const { showAlert } = (global as any).__alertModalMocks
 
     const mod = await import('@/app/admin/templates/page')
     const { TemplatesPageContent } = mod
@@ -89,7 +89,7 @@ describe('TemplatesPageContent - additional branches', () => {
     fireEvent.click(copyButton)
 
     await waitFor(() => expect(writeMock).toHaveBeenCalled())
-    expect(alertSpy).toHaveBeenCalled()
+    expect(showAlert).toHaveBeenCalled()
   })
 
   test('delete flow removes template when confirmed', async () => {
@@ -113,9 +113,8 @@ describe('TemplatesPageContent - additional branches', () => {
       return Promise.resolve({ ok: true, json: async () => ({}) })
     })
 
-    // confirm true
-    jest.spyOn(window, 'confirm').mockImplementation(() => true)
-    const alertSpy = jest.spyOn(global, 'alert')
+    const { showAlert, showConfirm } = (global as any).__alertModalMocks
+    showConfirm.mockImplementationOnce(() => Promise.resolve(true))
 
     const mod = await import('@/app/admin/templates/page')
     const { TemplatesPageContent } = mod
@@ -137,7 +136,7 @@ describe('TemplatesPageContent - additional branches', () => {
     const delBtn = await screen.findByRole('button', { name: /Delete/i })
     fireEvent.click(delBtn)
 
-    await waitFor(() => expect(alertSpy).toHaveBeenCalled())
+    await waitFor(() => expect(showAlert).toHaveBeenCalled())
     // After delete, the template title should no longer be in the document
     await waitFor(() => expect(screen.queryByText('Delete Me')).not.toBeInTheDocument())
   })

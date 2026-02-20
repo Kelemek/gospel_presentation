@@ -31,9 +31,6 @@ test('save failure shows alert', async () => {
     from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: { role: 'admin' } }) }) }) })
   }))
 
-  // spy on alert to prevent modal popups; we will assert on error banner instead
-  jest.spyOn(window, 'alert').mockImplementation(() => {})
-
   // Mock fetch: GET profile + GET coma-template, PUT returns not-ok
   // @ts-expect-error mocking incompatible types
   global.fetch = jest.fn((url, opts) => {
@@ -81,8 +78,8 @@ test('delete last subsection triggers confirm and alert', async () => {
     from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: { role: 'admin' } }) }) }) })
   }))
 
-  const confirmSpy = jest.spyOn(window, 'confirm').mockImplementation(() => true)
-  const alertSpy = jest.spyOn(window, 'alert').mockImplementation(() => {})
+  const { showAlert, showConfirm } = (global as any).__alertModalMocks
+  showConfirm.mockImplementationOnce(() => Promise.resolve(true))
 
   // Mock fetch: GET profile + GET coma-template, PUT returns ok true for saves
   // @ts-expect-error mocking incompatible types
@@ -114,7 +111,7 @@ test('delete last subsection triggers confirm and alert', async () => {
   const del = deleteBtns.find(b => b.getAttribute('title') === 'Delete subsection') || deleteBtns[0]
   await userEvent.click(del)
 
-  // confirm was called and alert should be invoked for the deletion outcome
-  await waitFor(() => expect(confirmSpy).toHaveBeenCalled())
-  await waitFor(() => expect(alertSpy).toHaveBeenCalled())
+  // showConfirm was called (delete confirmation) and showAlert for the deletion outcome
+  await waitFor(() => expect(showConfirm).toHaveBeenCalled())
+  await waitFor(() => expect(showAlert).toHaveBeenCalled())
 })

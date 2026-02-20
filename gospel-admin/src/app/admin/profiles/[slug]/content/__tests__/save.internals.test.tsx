@@ -15,7 +15,6 @@ jest.mock('@/lib/supabase/client', () => ({
 }))
 
 beforeAll(() => {
-  global.alert = jest.fn()
   // Provide profile data for the page and a simple COMA template
   ;(global as any).fetch = jest.fn((input: RequestInfo, opts?: any) => {
     const url = typeof input === 'string' ? input : (input as any).url || ''
@@ -43,8 +42,6 @@ beforeAll(() => {
 afterAll(() => {
   // @ts-expect-error mocking incompatible types
   global.fetch = undefined
-  // @ts-expect-error mocking incompatible types
-  global.alert = undefined
 })
 
 test('save content triggers PUT and shows success alert', async () => {
@@ -86,6 +83,6 @@ test('save content triggers PUT and shows success alert', async () => {
   // Wait for PUT request to be made
   await waitFor(() => expect((global.fetch as jest.Mock).mock.calls.some(c => typeof c[0] === 'string' && c[0].includes('/api/profiles/p1') && c[1] && c[1].method === 'PUT')).toBeTruthy())
 
-  // Confirm alert was shown
-  expect(global.alert).toHaveBeenCalledWith('Content saved successfully!')
+  // Confirm showAlert (AlertModalContext) was shown with success message
+  expect((global as any).__alertModalMocks.showAlert).toHaveBeenCalledWith('Content saved successfully!')
 })

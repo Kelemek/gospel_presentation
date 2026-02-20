@@ -146,7 +146,7 @@ describe('GospelSection (extra tests)', () => {
     const user = userEvent.setup({ delay: null })
     const question = { id: 'q1', question: 'Q: Simple', maxLength: 10 }
 
-    const alertSpy = jest.spyOn(global, 'alert').mockImplementation(() => {})
+    const { showAlert } = (global as any).__alertModalMocks
     // @ts-expect-error mocking incompatible types
     global.fetch.mockResolvedValue({ ok: false, json: async () => ({ error: 'boom' }) })
 
@@ -163,8 +163,6 @@ describe('GospelSection (extra tests)', () => {
     const saveBtn = await screen.findByRole('button', { name: /Save Answer/i })
     await user.click(saveBtn)
 
-    await waitFor(() => expect(alertSpy).toHaveBeenCalled())
-
-    alertSpy.mockRestore()
+    await waitFor(() => expect(showAlert).toHaveBeenCalled())
   })
 })
