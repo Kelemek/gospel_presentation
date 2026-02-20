@@ -39,7 +39,7 @@ export default function ProfileCard({
       <Link href={profileUrl} target="_blank" rel="noopener noreferrer" className="block group">
         <div className="bg-white rounded-lg border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col h-full hover:bg-slate-50">
           {/* Header - Title with Blue Background */}
-          <div className="p-4 bg-gradient-to-r from-blue-50 to-slate-50">
+          <div className="p-4 bg-linear-to-r from-blue-50 to-slate-50">
             <h3 className="text-sm sm:text-base font-semibold text-slate-900 group-hover:text-blue-600 truncate transition-colors">
               {profile.title}
             </h3>
@@ -62,7 +62,7 @@ export default function ProfileCard({
     <div className="bg-white rounded-lg border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col h-full">
       {/* Header - Title with Blue Background */}
       <Link href={profileUrl} target="_blank" rel="noopener noreferrer">
-        <div className="p-4 bg-gradient-to-r from-blue-50 to-slate-50">
+        <div className="p-4 bg-linear-to-r from-blue-50 to-slate-50">
           <h3 className="text-sm sm:text-base font-semibold text-slate-900 truncate hover:text-blue-600">
             {profile.title}
           </h3>
@@ -88,7 +88,7 @@ export default function ProfileCard({
               setInternalShowDetails(!internalShowDetails)
             }
           }}
-          className="w-full px-4 py-3 bg-gradient-to-r from-blue-50 to-slate-50 hover:from-blue-100 hover:to-slate-100 border-t border-slate-100 transition-colors cursor-pointer flex items-center justify-between"
+          className="w-full px-4 py-3 bg-linear-to-r from-blue-50 to-slate-50 hover:from-blue-100 hover:to-slate-100 border-t border-slate-100 transition-colors cursor-pointer flex items-center justify-between"
         >
           <span className="text-xs sm:text-sm font-medium text-slate-700">Details...</span>
           <span className="text-xs text-slate-500">{showDetails ? '▼' : '▶'}</span>

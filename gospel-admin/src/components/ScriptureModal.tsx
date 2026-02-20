@@ -262,7 +262,7 @@ export default function ScriptureModal({
   }
 
   return (
-    <div className="fixed top-0 left-0 right-0 bottom-0 bg-black bg-opacity-50 z-50 flex items-start md:items-center justify-center p-0 md:p-4" style={{ minHeight: '100vh', minWidth: '100vw' }}>
+    <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 z-50 flex items-start md:items-center justify-center p-0 md:p-4" style={{ minHeight: '100vh', minWidth: '100vw' }}>
       <div className="bg-white w-full md:max-w-2xl lg:max-w-4xl xl:max-w-5xl shadow-xl flex flex-col h-full md:h-[80vh] md:rounded-lg">
         
         {/* Fixed Header with Controls - Always Visible */}
@@ -335,7 +335,7 @@ export default function ScriptureModal({
                 setShowingContext(false)
               }}
               aria-label="Select Bible translation"
-              className="px-6 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border-2 bg-slate-100 text-slate-700 border-slate-400 hover:text-slate-800 hover:bg-slate-150 cursor-pointer appearance-none bg-no-repeat pr-10 bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1.25rem] bg-position-[right_10px_center]"
+              className="px-6 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border-2 bg-slate-100 text-slate-700 border-slate-400 hover:text-slate-800 hover:bg-slate-200 cursor-pointer appearance-none bg-no-repeat pr-10 bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1.25rem] bg-position-[right_10px_center]"
             >
               {enabledTranslations.map((trans) => (
                 <option key={trans} value={trans}>

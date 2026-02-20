@@ -42,7 +42,7 @@ export default function TemplateCard({
     <div className="bg-white rounded-lg border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col h-full">
       {/* Header - Title */}
       <Link href={profileUrl} target="_blank" rel="noopener noreferrer">
-        <div className="p-4 bg-gradient-to-r from-blue-50 to-slate-50 hover:from-blue-100 hover:to-slate-100 transition-colors">
+        <div className="p-4 bg-linear-to-r from-blue-50 to-slate-50 hover:from-blue-100 hover:to-slate-100 transition-colors">
           <h3 className="text-sm sm:text-base font-semibold text-slate-900 truncate hover:text-blue-600">
             {template.title}
           </h3>
@@ -68,7 +68,7 @@ export default function TemplateCard({
               setInternalShowDetails(!internalShowDetails)
             }
           }}
-          className="w-full px-4 py-3 bg-gradient-to-r from-blue-50 to-slate-50 hover:from-blue-100 hover:to-slate-100 border-t border-slate-100 transition-colors cursor-pointer flex items-center justify-between"
+          className="w-full px-4 py-3 bg-linear-to-r from-blue-50 to-slate-50 hover:from-blue-100 hover:to-slate-100 border-t border-slate-100 transition-colors cursor-pointer flex items-center justify-between"
         >
           <span className="text-xs sm:text-sm font-medium text-slate-700">Details...</span>
           <span className="text-xs text-slate-500">{showDetails ? '▼' : '▶'}</span>

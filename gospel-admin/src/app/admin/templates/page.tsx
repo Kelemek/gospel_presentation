@@ -8,6 +8,7 @@ import ViewToggle from '@/components/ViewToggle'
 import TemplateCard from '@/components/TemplateCard'
 import { createClient } from '@/lib/supabase/client'
 import { useViewPreference } from '@/hooks/useViewPreference'
+import { useAlertModal } from '@/contexts/AlertModalContext'
 
 function TemplatesPageContent() {
   const router = useRouter()
@@ -21,6 +22,7 @@ function TemplatesPageContent() {
   const [searchQuery, setSearchQuery] = useState('')
   const [view, setView] = useViewPreference('list')
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  const { showAlert, showConfirm } = useAlertModal()
 
   useEffect(() => {
     checkAuth()
@@ -82,17 +84,16 @@ function TemplatesPageContent() {
     const url = `${siteUrl}/${profile.slug}`
     try {
       await navigator.clipboard.writeText(url)
-      alert(`URL copied to clipboard: ${url}`)
+      showAlert(`URL copied to clipboard: ${url}`)
     } catch (err) {
       console.error('Failed to copy URL:', err)
-      alert('Failed to copy URL')
+      showAlert('Failed to copy URL')
     }
   }
 
   const handleDeleteProfile = async (slug: string, title: string) => {
-    if (!confirm(`Are you sure you want to delete the template "${title}"? This action cannot be undone.`)) {
-      return
-    }
+    const confirmed = await showConfirm(`Are you sure you want to delete the template "${title}"? This action cannot be undone.`)
+    if (!confirmed) return
 
     try {
       const response = await fetch(`/api/profiles/${slug}`, {
@@ -101,7 +102,7 @@ function TemplatesPageContent() {
 
       if (response.ok) {
         setTemplates(templates.filter(t => t.slug !== slug))
-        alert(`Template "${title}" deleted successfully`)
+        showAlert(`Template "${title}" deleted successfully`)
       } else {
         const errorData = await response.json()
         setError(errorData.error || 'Failed to delete template')
@@ -145,7 +146,7 @@ function TemplatesPageContent() {
       URL.revokeObjectURL(url)
     } catch (error) {
       console.error('Error downloading backup:', error)
-      alert('Failed to download backup')
+      showAlert('Failed to download backup')
     }
   }
 
@@ -153,7 +154,8 @@ function TemplatesPageContent() {
     const file = event.target.files?.[0]
     if (!file) return
 
-    if (!confirm(`Are you sure you want to restore "${profile.title}" from "${file.name}"? This will replace all current content and cannot be undone.`)) {
+    const confirmed = await showConfirm(`Are you sure you want to restore "${profile.title}" from "${file.name}"? This will replace all current content and cannot be undone.`)
+    if (!confirmed) {
       event.target.value = ''
       return
     }
@@ -187,7 +189,7 @@ function TemplatesPageContent() {
       })
 
       if (response.ok) {
-        alert(`Successfully restored content for "${profile.title}" from "${file.name}"!`)
+        showAlert(`Successfully restored content for "${profile.title}" from "${file.name}"!`)
         await fetchTemplates()
       } else {
         const errorData = await response.json()
@@ -195,7 +197,7 @@ function TemplatesPageContent() {
       }
     } catch (error: any) {
       console.error('Error restoring backup:', error)
-      alert(`Failed to restore backup: ${error.message}`)
+      showAlert(`Failed to restore backup: ${error.message}`)
     } finally {
       event.target.value = ''
     }

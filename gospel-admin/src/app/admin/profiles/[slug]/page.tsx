@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { GospelProfile } from '@/lib/types'
 import AdminHeader from '@/components/AdminHeader'
 import { createClient } from '@/lib/supabase/client'
+import { useAlertModal } from '@/contexts/AlertModalContext'
 
 interface ProfileEditPageProps {
   params: Promise<{
@@ -34,6 +35,7 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
   const [availableUsers, setAvailableUsers] = useState<Array<{ email: string; role: string; username?: string }>>([])
   const [isBackingUp, setIsBackingUp] = useState(false)
   const [isRestoringBackup, setIsRestoringBackup] = useState(false)
+  const { showAlert, showConfirm } = useAlertModal()
 
   // Check authentication on mount
   useEffect(() => {
@@ -239,7 +241,8 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
   }
 
   const handleRemoveCounselee = async (email: string) => {
-    if (!confirm(`Remove access for ${email}?`)) return
+    const confirmed = await showConfirm(`Remove access for ${email}?`)
+    if (!confirmed) return
 
     setAccessError('')
 
@@ -350,7 +353,7 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
     } catch (err: any) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to download backup'
       setError(`Backup failed: ${errorMessage}`)
-      alert(`Backup failed: ${errorMessage}`)
+      showAlert(`Backup failed: ${errorMessage}`)
     } finally {
       setIsBackingUp(false)
     }
@@ -360,7 +363,8 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
     const file = event.target.files?.[0]
     if (!file || !profile) return
 
-    if (!confirm(`Are you sure you want to restore "${profile.title}" from "${file.name}"? This will replace all current content and cannot be undone.`)) {
+    const confirmed = await showConfirm(`Are you sure you want to restore "${profile.title}" from "${file.name}"? This will replace all current content and cannot be undone.`)
+    if (!confirmed) {
       event.target.value = '' // Reset the input
       return
     }
@@ -407,7 +411,7 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
       if (response.ok) {
         // Refresh profile to show updated data
         await fetchProfile()
-        alert(`Successfully restored content for "${profile.title}" from "${file.name}"!`)
+        showAlert(`Successfully restored content for "${profile.title}" from "${file.name}"!`)
       } else {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || 'Failed to save restored content')
@@ -415,7 +419,7 @@ function ProfileEditPage({ params }: ProfileEditPageProps) {
     } catch (err: any) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to restore backup'
       setError(`Restore failed: ${errorMessage}`)
-      alert(`Restore failed: ${errorMessage}`)
+      showAlert(`Restore failed: ${errorMessage}`)
     } finally {
       setIsRestoringBackup(false)
       event.target.value = '' // Reset the input

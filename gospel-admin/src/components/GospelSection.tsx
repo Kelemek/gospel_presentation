@@ -4,6 +4,7 @@ import { GospelSection as GospelSectionType, Subsection, NestedSubsection, Scrip
 import ScriptureHoverModal from './ScriptureHoverModal'
 import ComaModal from './ComaModal'
 import React, { useState, useEffect } from 'react'
+import { useAlertModal } from '@/contexts/AlertModalContext'
 
 
 // Helper component to render text with COMA buttons and inline scripture references
@@ -212,7 +213,7 @@ function ScriptureReferences({ references, onScriptureClick, lastViewedScripture
               >
                 <button
                   onClick={() => onScriptureClick(ref.reference)}
-                  className={`inline-block px-4 py-2 text-base md:text-lg rounded-md transition-colors cursor-pointer print-compact min-h-[44px] flex items-center ${
+                  className={`px-4 py-2 text-base md:text-lg rounded-md transition-colors cursor-pointer print-compact min-h-[44px] flex items-center ${
                     isLastViewed
                       ? 'bg-yellow-200 hover:bg-yellow-300 text-yellow-900 border-2 border-yellow-500 hover:border-yellow-600 font-semibold shadow-md pr-10'
                       : ref.favorite 
@@ -253,6 +254,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
   const [isInitialized, setIsInitialized] = useState(false)
   const [expandedQuestions, setExpandedQuestions] = useState<Record<string, boolean>>({})
   const [showComaModal, setShowComaModal] = useState(false)
+  const { showAlert } = useAlertModal()
 
   // Load saved answers from profile data on mount (only once)
   useEffect(() => {
@@ -340,7 +342,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
 
     // Validate length
     if (answer.length > limit) {
-      alert(`Answer must be ${limit} characters or less`)
+      showAlert(`Answer must be ${limit} characters or less`)
       return
     }
 
@@ -377,7 +379,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
       }, 3000)
     } catch (error) {
       console.error('Error saving answer:', error)
-      alert('Failed to save answer. Please try again.')
+      showAlert('Failed to save answer. Please try again.')
     }
   }
 
@@ -401,7 +403,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
         return (
           <div key={question.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3 print:p-2 print:space-y-1">
             <div className="mb-2 flex gap-1 items-baseline">
-              <span className="text-sm text-slate-600 flex-shrink-0 leading-none">{index + 1}. </span>
+              <span className="text-sm text-slate-600 shrink-0 leading-none">{index + 1}. </span>
               <div className="flex-1">
                 {detail ? (
                   <div>

@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
 import AdminErrorBoundary from '@/components/AdminErrorBoundary'
 import Link from 'next/link'
+import { useAlertModal } from '@/contexts/AlertModalContext'
 
 interface UserProfile {
   id: string
@@ -29,7 +30,7 @@ export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'counselor' | 'counselee'>('all')
   const [editingCounselee, setEditingCounselee] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
-
+  const { showAlert, showConfirm } = useAlertModal()
 
   useEffect(() => {
     loadUsers()
@@ -114,7 +115,7 @@ export default function UsersPage() {
       await loadUsers() // Reload users
     } catch (err: any) {
       logger.error('Failed to update user role:', err)
-      alert(`Failed to update role: ${err.message}`)
+      showAlert(`Failed to update role: ${err.message}`)
     }
   }
 
@@ -122,12 +123,12 @@ export default function UsersPage() {
     e.preventDefault()
     
     if (!newUserEmail) {
-      alert('Please enter an email address')
+      showAlert('Please enter an email address')
       return
     }
 
     if (!newUserName.trim()) {
-      alert('Please enter a name')
+      showAlert('Please enter a name')
       return
     }
 
@@ -163,10 +164,10 @@ export default function UsersPage() {
       // Reload users
       await loadUsers()
       
-      alert(`User ${newUserEmail} created successfully! They will receive a login link via email.`)
+      showAlert(`User ${newUserEmail} created successfully! They will receive a login link via email.`)
     } catch (err: any) {
       logger.error('Failed to create user:', err)
-      alert(`Failed to create user: ${err.message}`)
+      showAlert(`Failed to create user: ${err.message}`)
     } finally {
       setIsCreatingUser(false)
     }
@@ -188,9 +189,8 @@ export default function UsersPage() {
   })
 
   const handleDeleteUser = async (userId: string, userEmail: string) => {
-    if (!confirm(`Are you sure you want to delete user ${userEmail}? This action cannot be undone.`)) {
-      return
-    }
+    const confirmed = await showConfirm(`Are you sure you want to delete user ${userEmail}? This action cannot be undone.`)
+    if (!confirmed) return
 
     try {
       const response = await fetch(`/api/users/${userId}`, {
@@ -208,10 +208,10 @@ export default function UsersPage() {
       // Reload users
       await loadUsers()
       
-      alert(`User ${userEmail} deleted successfully!`)
+      showAlert(`User ${userEmail} deleted successfully!`)
     } catch (err: any) {
       logger.error('Failed to delete user:', err)
-      alert(`Failed to delete user: ${err.message}`)
+      showAlert(`Failed to delete user: ${err.message}`)
     }
   }
 
@@ -232,7 +232,7 @@ export default function UsersPage() {
       await loadUsers()
     } catch (err: any) {
       logger.error('Failed to update name:', err)
-      alert(`Failed to update name: ${err.message}`)
+      showAlert(`Failed to update name: ${err.message}`)
     }
   }
 
@@ -443,7 +443,7 @@ export default function UsersPage() {
 
           {/* New User Modal */}
           {showNewUserModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
               <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
                 <h2 className="text-2xl font-bold text-slate-900 mb-4">
                   Create New User

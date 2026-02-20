@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
 import { useSessionMonitor } from '@/hooks/useSessionMonitor'
 import { useViewPreference } from '@/hooks/useViewPreference'
+import { useAlertModal } from '@/contexts/AlertModalContext'
 
 // Small pure helpers exported for testing. Kept additive and isolated from
 // React hooks so they can be unit tested without rendering the client UI.
@@ -78,6 +79,7 @@ function AdminPageContent() {
   const [selectedCounselee, setSelectedCounselee] = useState<string>('')
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
   const [showCopyToast, setShowCopyToast] = useState(false)
+  const { showAlert, showConfirm } = useAlertModal()
 
   // Monitor session and auto-logout on expiration
   useSessionMonitor({
@@ -387,9 +389,8 @@ function AdminPageContent() {
   }
 
   const handleDeleteProfile = async (slug: string, title: string) => {
-    if (!confirm(`Are you sure you want to delete the profile "${title}"? This action cannot be undone.`)) {
-      return
-    }
+    const confirmed = await showConfirm(`Are you sure you want to delete the profile "${title}"? This action cannot be undone.`)
+    if (!confirmed) return
 
     try {
       setError('')
@@ -464,7 +465,7 @@ function AdminPageContent() {
     } catch (err: any) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to download backup'
       setError(`Backup failed: ${errorMessage}`)
-      alert(`Backup failed: ${errorMessage}`)
+      showAlert(`Backup failed: ${errorMessage}`)
     }
   }
 
@@ -473,7 +474,8 @@ function AdminPageContent() {
     const file = event.target.files?.[0]
     if (!file) return
 
-    if (!confirm(`Are you sure you want to restore "${profile.title}" from "${file.name}"? This will replace all current content and cannot be undone.`)) {
+    const confirmed = await showConfirm(`Are you sure you want to restore "${profile.title}" from "${file.name}"? This will replace all current content and cannot be undone.`)
+    if (!confirmed) {
       event.target.value = '' // Reset the input
       return
     }
@@ -519,7 +521,7 @@ function AdminPageContent() {
       if (response.ok) {
         // Refresh profiles to show updated data
         await fetchProfiles()
-        alert(`Successfully restored content for "${profile.title}" from "${file.name}"!`)
+        showAlert(`Successfully restored content for "${profile.title}" from "${file.name}"!`)
       } else {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || 'Failed to save restored content')
@@ -527,7 +529,7 @@ function AdminPageContent() {
     } catch (err: any) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to restore backup'
       setError(`Restore failed: ${errorMessage}`)
-      alert(`Restore failed: ${errorMessage}`)
+      showAlert(`Restore failed: ${errorMessage}`)
     } finally {
       event.target.value = '' // Reset the input
     }
@@ -538,7 +540,8 @@ function AdminPageContent() {
     const file = event.target.files?.[0]
     if (!file) return
 
-    if (!confirm(`Are you sure you want to create a new profile from "${file.name}"?`)) {
+    const confirmed = await showConfirm(`Are you sure you want to create a new profile from "${file.name}"?`)
+    if (!confirmed) {
       event.target.value = ''
       return
     }
@@ -583,7 +586,7 @@ function AdminPageContent() {
 
       if (response.ok) {
         await fetchProfiles()
-        alert(`Successfully created new profile "${profileData.title}" from backup!`)
+        showAlert(`Successfully created new profile "${profileData.title}" from backup!`)
       } else {
         const errorData = await response.json().catch(() => ({}))
         throw new Error(errorData.error || 'Failed to create profile')
@@ -591,7 +594,7 @@ function AdminPageContent() {
     } catch (err: any) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to restore backup'
       setError(`Restore failed: ${errorMessage}`)
-      alert(`Restore failed: ${errorMessage}`)
+      showAlert(`Restore failed: ${errorMessage}`)
     } finally {
       setIsRestoringNew(false)
       event.target.value = ''
@@ -608,10 +611,10 @@ function AdminPageContent() {
         setTimeout(() => setShowCopyToast(false), 2000)
       } else {
         // Fallback for browsers that don't support clipboard API
-        alert(`Profile URL:\n\n${profileUrl}\n\nPlease copy this link manually.`)
+        showAlert(`Profile URL:\n\n${profileUrl}\n\nPlease copy this link manually.`)
       }
     } catch {
-      alert(`Profile URL:\n\n${profileUrl}\n\nPlease copy this link manually.`)
+      showAlert(`Profile URL:\n\n${profileUrl}\n\nPlease copy this link manually.`)
     }
   }
 
@@ -703,7 +706,7 @@ function AdminPageContent() {
             ? `Successfully created profile "${profileData.title}" from backup!\n\nSlug: ${newSlug} (original slug restored)`
             : `Successfully created profile "${profileData.title}" from backup!\n\nOriginal slug was taken, new slug: ${newSlug}`
           
-          alert(message)
+          showAlert(message)
         } else {
           throw new Error('Profile created but failed to restore full data')
         }
@@ -714,7 +717,7 @@ function AdminPageContent() {
     } catch (err: any) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to restore backup'
       setError(`Restore failed: ${errorMessage}`)
-      alert(`Restore failed: ${errorMessage}`)
+      showAlert(`Restore failed: ${errorMessage}`)
     } finally {
       setIsRestoringNew(false)
       event.target.value = '' // Reset the input
@@ -825,13 +828,13 @@ function AdminPageContent() {
                 <span className="hidden sm:inline">View Site</span>
               </Link>
               {userRole === 'admin' && (
-                <div className="order-3 sm:order-none">
+                <div className="order-3 sm:order-0">
                   <TranslationSettings />
                 </div>
               )}
               <button
                 onClick={handleLogout}
-                className="px-3 sm:px-4 py-2 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer order-4 sm:order-none text-sm"
+                className="px-3 sm:px-4 py-2 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer order-4 sm:order-0 text-sm"
               >
                 Logout
               </button>

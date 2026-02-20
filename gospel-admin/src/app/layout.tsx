@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ClarityProvider } from "@/components/ClarityProvider";
 import { TranslationProvider } from "@/contexts/TranslationContext";
+import { AlertModalProvider } from "@/contexts/AlertModalContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -43,7 +44,9 @@ export default function RootLayout({
       >
         <ClarityProvider />
         <TranslationProvider>
-          {children}
+          <AlertModalProvider>
+            {children}
+          </AlertModalProvider>
         </TranslationProvider>
         <Analytics />
         <SpeedInsights />

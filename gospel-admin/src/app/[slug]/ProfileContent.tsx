@@ -10,6 +10,7 @@ import { GospelSection as GospelSectionType, GospelProfile, SavedAnswer } from '
 import { useScriptureProgress } from '@/lib/useScriptureProgress'
 import { logger } from '@/lib/logger'
 import { createClient } from '@/lib/supabase/client'
+import { useAlertModal } from '@/contexts/AlertModalContext'
 
 interface ProfileInfo {
   title: string
@@ -43,6 +44,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
   const [canEdit, setCanEdit] = useState(false)
   const [fromEditor, setFromEditor] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const { showConfirm } = useAlertModal()
 
   // Check authentication and role
   useEffect(() => {
@@ -376,7 +378,8 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                 {userEmail && (
                   <button
                     onClick={async () => {
-                      if (confirm('Are you sure you want to log out?')) {
+                      const confirmed = await showConfirm('Are you sure you want to log out?')
+                      if (confirmed) {
                         const supabase = createClient()
                         await supabase.auth.signOut()
                         // Clear user state immediately before redirecting

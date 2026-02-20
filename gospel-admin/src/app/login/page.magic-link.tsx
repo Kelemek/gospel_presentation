@@ -109,15 +109,15 @@ function LoginForm() {
               <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
                 <ol className="text-left space-y-3 text-slate-700 list-none">
                   <li className="flex items-start">
-                    <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">1</span>
+                    <span className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">1</span>
                     <span className="pt-0.5">Open the email we just sent you</span>
                   </li>
                   <li className="flex items-start">
-                    <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">2</span>
+                    <span className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">2</span>
                     <span className="pt-0.5">Click the &ldquo;Log in&rdquo; button in the email</span>
                   </li>
                   <li className="flex items-start">
-                    <span className="flex-shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">3</span>
+                    <span className="shrink-0 w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold mr-3">3</span>
                     <span className="pt-0.5">You&apos;ll be automatically signed in</span>
                   </li>
                 </ol>

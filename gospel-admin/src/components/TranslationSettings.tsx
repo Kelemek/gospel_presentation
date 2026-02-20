@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
+import { useAlertModal } from '@/contexts/AlertModalContext'
 
 interface TranslationSetting {
   translation_code: string
@@ -19,6 +20,7 @@ export default function TranslationSettings() {
   const [esvVerseCount, setEsvVerseCount] = useState<number | null>(null)
   const [withinLimit, setWithinLimit] = useState<boolean>(true)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const { showAlert } = useAlertModal()
 
   useEffect(() => {
     loadSettings()
@@ -69,7 +71,7 @@ export default function TranslationSettings() {
 
   async function toggleTranslation(code: string, currentlyEnabled: boolean) {
     if (code === 'esv') {
-      alert('ESV cannot be disabled as it is the fallback translation')
+      showAlert('ESV cannot be disabled as it is the fallback translation')
       return
     }
 
@@ -91,11 +93,11 @@ export default function TranslationSettings() {
         ))
       } else {
         const data = await response.json()
-        alert(data.error || 'Failed to update translation setting')
+        showAlert(data.error || 'Failed to update translation setting')
       }
     } catch (error) {
       console.error('Error updating translation:', error)
-      alert('Failed to update translation setting')
+      showAlert('Failed to update translation setting')
     } finally {
       setSaving(null)
     }

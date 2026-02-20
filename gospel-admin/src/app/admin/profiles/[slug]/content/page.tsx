@@ -9,6 +9,7 @@ import ScriptureHoverModal from '@/components/ScriptureHoverModal'
 import InlineRichTextEditor, { stripParagraphTags } from '@/components/InlineRichTextEditor'
 import RichTextEditor from '@/components/RichTextEditor'
 import { createClient } from '@/lib/supabase/client'
+import { useAlertModal } from '@/contexts/AlertModalContext'
 
 interface ContentEditPageProps {
   params: Promise<{
@@ -42,6 +43,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
   
   // COMA questions template
   const [showComaTemplateEditor, setShowComaTemplateEditor] = useState(false)
+  const { showAlert, showConfirm } = useAlertModal()
   const [comaTemplate, setComaTemplate] = useState<string[]>([
     "Context: Who wrote it? Who was it written to? What's happening in the surrounding chapters or book? This step helps you avoid misinterpreting verses by placing them in their proper historical and literary setting.",
     "Observation: Look closely at what the passage says. What words or phrases stand out? Are there repeated ideas, contrasts, or commands? What is the structure or flow? This is about noticing the details before jumping to conclusions.",
@@ -226,7 +228,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
       if (response.ok) {
         setHasChanges(false)
         // Show success message
-        alert('Content saved successfully!')
+        showAlert('Content saved successfully!')
       } else {
         const errorData = await response.json().catch(() => ({}))
         setError(errorData.error || 'Failed to save content')
@@ -896,7 +898,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
     
     // Don't allow deleting the last subsection
     if (newSubsections.length === 0) {
-      alert('Cannot delete the last subsection. A section must have at least one subsection.')
+      showAlert('Cannot delete the last subsection. A section must have at least one subsection.')
       return
     }
 
@@ -1186,12 +1188,11 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                     as="h2"
                   />
                 </div>
-                <div className="flex gap-2 flex-shrink-0">
+                <div className="flex gap-2 shrink-0">
                   <button
-                    onClick={() => {
-                      if (window.confirm(`Are you sure you want to delete section ${section.section}. "${section.title}"? This will delete all subsections, scriptures, and questions within it. This action cannot be undone.`)) {
-                        deleteSection(sectionIndex)
-                      }
+                    onClick={async () => {
+                      const confirmed = await showConfirm(`Are you sure you want to delete section ${section.section}. "${section.title}"? This will delete all subsections, scriptures, and questions within it. This action cannot be undone.`)
+                      if (confirmed) deleteSection(sectionIndex)
                     }}
                     className="text-red-600 hover:text-red-800 text-xs font-medium border border-red-200 hover:border-red-300 px-2 py-1 rounded bg-red-50 hover:bg-red-100 transition-colors"
                     title="Delete section"
@@ -1253,12 +1254,11 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                         as="h3"
                       />
                     </div>
-                    <div className="flex gap-2 flex-shrink-0">
+                    <div className="flex gap-2 shrink-0">
                       <button
-                        onClick={() => {
-                          if (window.confirm(`Are you sure you want to delete the subsection "${subsection.title}"? This will delete all scriptures and questions within it. This action cannot be undone.`)) {
-                            deleteSubsection(sectionIndex, subsectionIndex)
-                          }
+                        onClick={async () => {
+                          const confirmed = await showConfirm(`Are you sure you want to delete the subsection "${subsection.title}"? This will delete all scriptures and questions within it. This action cannot be undone.`)
+                          if (confirmed) deleteSubsection(sectionIndex, subsectionIndex)
                         }}
                         className="text-red-600 hover:text-red-800 text-xs font-medium border border-red-200 hover:border-red-300 px-2 py-1 rounded bg-red-50 hover:bg-red-100 transition-colors"
                         title="Delete subsection"
@@ -1578,7 +1578,7 @@ function ContentEditPage({ params }: ContentEditPageProps) {
 
                   {/* Nested Subsections */}
                   {subsection.nestedSubsections && subsection.nestedSubsections.map((nested, nestedIndex) => (
-                    <div key={nestedIndex} className="ml-4 mt-4 border-l-2 border-slate-300 pl-4 bg-gradient-to-r from-slate-25 to-blue-25 rounded-r-lg py-3">
+                    <div key={nestedIndex} className="ml-4 mt-4 border-l-2 border-slate-300 pl-4 bg-linear-to-r from-slate-25 to-blue-25 rounded-r-lg py-3">
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="flex-1 min-w-0">
                           <InlineRichTextEditor
@@ -1592,12 +1592,11 @@ function ContentEditPage({ params }: ContentEditPageProps) {
                             as="h4"
                           />
                         </div>
-                        <div className="flex gap-1 flex-shrink-0">
+                        <div className="flex gap-1 shrink-0">
                           <button
-                            onClick={() => {
-                              if (window.confirm('Are you sure you want to delete this sub-subsection? This action cannot be undone.')) {
-                                deleteNestedSubsection(sectionIndex, subsectionIndex, nestedIndex)
-                              }
+                            onClick={async () => {
+                              const confirmed = await showConfirm('Are you sure you want to delete this sub-subsection? This action cannot be undone.')
+                              if (confirmed) deleteNestedSubsection(sectionIndex, subsectionIndex, nestedIndex)
                             }}
                             className="text-red-600 hover:text-red-800 text-xs font-medium border border-red-200 hover:border-red-300 px-1.5 py-0.5 rounded bg-red-50 hover:bg-red-100 transition-colors"
                             title="Delete sub-subsection"
