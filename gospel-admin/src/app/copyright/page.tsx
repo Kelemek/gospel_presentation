@@ -126,10 +126,10 @@ export default function CopyrightPage() {
                   <strong className="text-slate-800">Database:</strong> Supabase PostgreSQL with Row-Level Security (RLS)
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
-                  <strong className="text-slate-800">Authentication:</strong> Supabase Auth with passwordless magic links
+                  <strong className="text-slate-800">Authentication:</strong> Supabase Auth with email verification codes
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
-                  <strong className="text-slate-800">User Roles:</strong> Admin (full access) & Counselor (own profiles only)
+                  <strong className="text-slate-800">User Roles:</strong> Admin (full access), Counselor (own profiles only) & Counselee (view-only access)
                 </p>
                 <p className="text-slate-700 text-base md:text-lg">
                   <strong className="text-slate-800">Scripture APIs:</strong> ESV API v3
