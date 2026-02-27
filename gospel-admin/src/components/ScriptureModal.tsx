@@ -543,6 +543,9 @@ export default function ScriptureModal({
             <>
               {/* Left column - Compare translation */}
               <div className="flex flex-col min-w-0">
+                {compareTranslation && (
+                  <span className="text-xs font-bold text-slate-600 uppercase mb-2">{compareTranslation}</span>
+                )}
                 {compareLoading && (
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -601,6 +604,7 @@ export default function ScriptureModal({
 
               {/* Right column - Main translation */}
               <div className="flex flex-col min-w-0">
+                <span className="text-xs font-bold text-slate-600 uppercase mb-2">{translation}</span>
                 {(loading || contextLoading) && (
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
