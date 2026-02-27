@@ -9,12 +9,14 @@ Complete guide to Bible translations, caching, and scripture retrieval.
 | **ESV** | ESV API | Cached in database, free tier available |
 | **KJV** | Local Database | 31,102 verses, no API limit |
 | **NASB** | Local Database | 31,103 verses, no API limit |
+| **LSB** | Local Database | Legacy Standard Bible, LSBible.org |
 
-## Local Database Translations (KJV & NASB)
+## Local Database Translations (KJV, NASB, LSB)
 
-Both KJV and NASB are stored in the local Supabase `bible_verses` table:
+KJV, NASB, and LSB are stored in the local Supabase `bible_verses` table:
 - **31,102 KJV verses** - imported from scrollmapper/bible_databases (MIT licensed)
 - **31,103 NASB verses** - imported from DBL USX files (Lockman Foundation licensed)
+- **LSB verses** - Legacy Standard Bible (LSBible.org)
 - **0 API calls needed** - completely offline capable
 - **Fast lookups** - <5ms per reference
 - **No rate limits** - unlimited access
@@ -24,7 +26,7 @@ Both KJV and NASB are stored in the local Supabase `bible_verses` table:
 ```sql
 bible_verses {
   id: bigint (primary key)
-  translation: 'esv' | 'kjv' | 'nasb'
+  translation: 'esv' | 'kjv' | 'nasb' | 'lsb'
   book: string (normalized book name)
   chapter: integer
   verse: integer
@@ -85,7 +87,7 @@ GET /api/scripture?reference=John%203:16&translation=esv
 ```
 
 ### How It Works
-1. Check local database for KJV/NASB verses
+1. Check local database for KJV/NASB/LSB verses
 2. If found → Return from database immediately
 3. If ESV and not found → Check cache
 4. If ESV and not cached → Call ESV API
@@ -131,6 +133,11 @@ To add a new translation (NIV, NRSV, etc.):
 - Copyright © 2001 by Crossway
 - Free API tier available (max 500 verses cached, enforced via real-time LRU eviction)
 - Attribution: www.esv.org
+
+**LSB** - Licensed content
+- Legacy Standard Bible Copyright ©2021 by The Lockman Foundation
+- Managed in partnership with Three Sixteen Publishing Inc.
+- Attribution: www.LSBible.org
 
 ## Related Documentation
 - Full KJV details: [KJV_DATABASE.md](KJV_DATABASE.md)

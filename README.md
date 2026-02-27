@@ -10,7 +10,7 @@ This platform enables counselors and educators to create, customize, and share p
 
 ### 📖 **Presentation Features**
 - **Dynamic Content**: Rich gospel presentation with sections, subsections, and scripture references
-- **ESV API Integration**: Click any scripture reference to view the full ESV text in a modal
+- **Scripture Modal**: Click any scripture reference to view the full text (ESV, KJV, NASB, LSB); compare two translations side-by-side
 - **Reflection Questions**: Add custom questions to subsections for deeper engagement
 - **Answer Tracking**: Users can answer questions and save responses locally (localStorage)
 - **Favorite Scripture Navigation**: Mark and navigate between key scriptures with keyboard shortcuts

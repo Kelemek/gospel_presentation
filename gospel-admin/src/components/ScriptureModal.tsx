@@ -47,6 +47,15 @@ export default function ScriptureModal({
   const [contextLoading, setContextLoading] = useState(false)
   const [error, setError] = useState<string>('')
 
+  // Compare translation (second column)
+  const [compareTranslation, setCompareTranslation] = useState<string | null>(null)
+  const [compareText, setCompareText] = useState<string>('')
+  const [compareChapterText, setCompareChapterText] = useState<string>('')
+  const [compareLoading, setCompareLoading] = useState(false)
+  const [compareError, setCompareError] = useState<string>('')
+
+  const selectClassName = "w-[140px] px-6 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border-2 bg-slate-100 text-slate-700 border-slate-400 hover:text-slate-800 hover:bg-slate-200 cursor-pointer appearance-none bg-no-repeat pr-10 bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1.25rem] bg-position-[right_10px_center]"
+
   // Touch/swipe state for mobile navigation
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
@@ -153,6 +162,74 @@ export default function ScriptureModal({
     }
   }, [translation])
 
+  // Clear compare when main translation matches compare
+  useEffect(() => {
+    if (compareTranslation && compareTranslation === translation) {
+      setCompareTranslation(null)
+      setCompareText('')
+      setCompareChapterText('')
+    }
+  }, [translation, compareTranslation])
+
+  // Fetch compare content when compareTranslation is set
+  useEffect(() => {
+    if (!isOpen || !reference || !compareTranslation) {
+      setCompareText('')
+      setCompareChapterText('')
+      setCompareError('')
+      return
+    }
+
+    const abortController = new AbortController()
+
+    // Fetch verse for compare
+    setCompareLoading(true)
+    setCompareError('')
+    fetch(`/api/scripture?reference=${encodeURIComponent(reference)}&translation=${compareTranslation}`, {
+      signal: abortController.signal
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          setCompareError(data.error)
+        } else {
+          setCompareText(data.text)
+        }
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          setCompareError('Failed to load compare text')
+        }
+      })
+      .finally(() => setCompareLoading(false))
+
+    return () => abortController.abort()
+  }, [isOpen, reference, compareTranslation])
+
+  // Fetch compare chapter context when showingContext and compareTranslation
+  useEffect(() => {
+    if (!isOpen || !reference || !compareTranslation || !showingContext) {
+      setCompareChapterText('')
+      return
+    }
+
+    const abortController = new AbortController()
+    const chapterRef = getChapterReference(reference)
+
+    fetch(`/api/scripture?reference=${encodeURIComponent(chapterRef)}&translation=${compareTranslation}`, {
+      signal: abortController.signal
+    })
+      .then(response => response.json())
+      .then(data => {
+        if (!data.error) {
+          setCompareChapterText(data.text)
+        }
+      })
+      .catch(() => {})
+
+    return () => abortController.abort()
+  }, [isOpen, reference, compareTranslation, showingContext])
+
   // Fetch scripture when modal opens, reference changes, or translation changes
   useEffect(() => {
     if (isOpen && reference) {
@@ -195,6 +272,50 @@ export default function ScriptureModal({
   }, [isOpen, reference, translation])
 
   if (!isOpen) return null
+
+  const isComparing = !!compareTranslation
+
+  const renderAttribution = (trans: string) => {
+    if (trans === 'esv') {
+      return (
+        <>
+          <p className="text-xs text-slate-500 text-center mb-1">
+            Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission.
+          </p>
+          <p className="text-xs text-slate-500 text-center">
+            <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
+              www.esv.org
+            </a>
+          </p>
+        </>
+      )
+    }
+    if (trans === 'kjv') {
+      return (
+        <p className="text-xs text-slate-500 text-center">
+          Scripture quotations are from the King James Version (KJV), which is in the public domain.
+        </p>
+      )
+    }
+    if (trans === 'nasb') {
+      return (
+        <p className="text-xs text-slate-500 text-center">
+          Scripture quotations taken from the New American Standard Bible® (NASB), Copyright © 1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation. Used by permission.
+        </p>
+      )
+    }
+    if (trans === 'lsb') {
+      return (
+        <p className="text-xs text-slate-500 text-center">
+          Legacy Standard Bible Copyright ©2021 by The Lockman Foundation. All rights reserved. Managed in partnership with Three Sixteen Publishing Inc.{' '}
+          <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">LSBible.org</a>
+          {' '}For Permission to Quote Information visit{' '}
+          <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">www.LSBible.org</a>
+        </p>
+      )
+    }
+    return null
+  }
 
   const processChapterText = (text: string): string => {
     const verseNumbers = getVerseNumbers(reference)
@@ -326,6 +447,31 @@ export default function ScriptureModal({
           
           {/* Context Toggle Buttons - Always Visible */}
           <div className="flex flex-wrap gap-2 justify-center">
+            {/* Compare dropdown - to the left of main translation */}
+            <select
+              value={compareTranslation ?? ''}
+              onChange={(e) => {
+                const val = e.target.value
+                setCompareTranslation(val === '' ? null : val)
+                if (!val) {
+                  setCompareText('')
+                  setCompareChapterText('')
+                  setCompareError('')
+                }
+              }}
+              aria-label="Compare with another translation"
+              className={selectClassName}
+            >
+              <option value="">Compare</option>
+              {enabledTranslations
+                .filter((trans) => trans !== translation)
+                .map((trans) => (
+                  <option key={trans} value={trans}>
+                    {trans.toUpperCase()}
+                  </option>
+                ))}
+            </select>
+
             {/* Translation Selector */}
             <select
               value={translation}
@@ -335,7 +481,7 @@ export default function ScriptureModal({
                 setShowingContext(false)
               }}
               aria-label="Select Bible translation"
-              className="px-6 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border-2 bg-slate-100 text-slate-700 border-slate-400 hover:text-slate-800 hover:bg-slate-200 cursor-pointer appearance-none bg-no-repeat pr-10 bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1.25rem] bg-position-[right_10px_center]"
+              className={selectClassName}
             >
               {enabledTranslations.map((trans) => (
                 <option key={trans} value={trans}>
@@ -388,64 +534,182 @@ export default function ScriptureModal({
         )}
         {/* Scrollable Content Area */}
         <div 
-          className="flex-1 overflow-y-auto px-4 py-4 min-h-0"
+          className={`flex-1 overflow-y-auto px-4 py-4 min-h-0 ${isComparing ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''}`}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {(loading || contextLoading) && (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-slate-600 text-base md:text-lg">
-                {contextLoading ? 'Loading chapter context...' : 'Loading scripture...'}
-              </span>
-            </div>
-          )}
-          
-          {error && (
-            <div className="text-red-600 text-center py-8">
-              <p className="mb-2 text-base md:text-lg">⚠️ {error}</p>
-              <p className="text-sm md:text-base text-slate-500">
-                ESV API may be unavailable or reference format incorrect
-              </p>
-            </div>
-          )}
-          
-          {/* Display verse text */}
-          {!showingContext && scriptureText && (
-            <div className="prose max-w-none">
-              <div 
-                className="text-slate-700 leading-relaxed text-lg md:text-xl"
-                dangerouslySetInnerHTML={{
-                  __html: scriptureText
-                    .replace(/\[(\d+)\]/g, '<sup class="text-blue-600 font-medium">$1</sup>')
-                    .replace(/\n\n/g, '</p><p class="mt-4">')
-                }}
-              />
-            </div>
-          )}
-          
-          {/* Display chapter context with highlighted verse */}
-          {showingContext && chapterText && (
-            <div className="prose max-w-none">
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-slate-700 text-base md:text-lg">
-                <div className="flex items-center gap-2">
-                  <strong className="text-slate-800">Chapter Context:</strong> 
-                  <span className="font-medium text-slate-600">{getChapterReference(reference)}</span>
-                </div>
+          {isComparing ? (
+            <>
+              {/* Left column - Compare translation */}
+              <div className="flex flex-col min-w-0">
+                {compareLoading && (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-3 text-slate-600 text-base md:text-lg">Loading...</span>
+                  </div>
+                )}
+                {showingContext && compareTranslation && !compareChapterText && !compareLoading && (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-3 text-slate-600 text-base md:text-lg">Loading chapter...</span>
+                  </div>
+                )}
+                {compareError && (
+                  <div className="text-red-600 text-center py-8">
+                    <p className="mb-2 text-base md:text-lg">⚠️ {compareError}</p>
+                  </div>
+                )}
+                {!compareLoading && !compareError && (
+                  <>
+                    {!showingContext && compareText && (
+                      <div className="prose max-w-none">
+                        <div 
+                          className="text-slate-700 leading-relaxed text-lg md:text-xl"
+                          dangerouslySetInnerHTML={{
+                            __html: compareText
+                              .replace(/\[(\d+)\]/g, '<sup class="text-blue-600 font-medium">$1</sup>')
+                              .replace(/\n\n/g, '</p><p class="mt-4">')
+                          }}
+                        />
+                      </div>
+                    )}
+                    {showingContext && compareChapterText && (
+                      <div className="prose max-w-none">
+                        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-slate-700 text-base md:text-lg">
+                          <div className="flex items-center gap-2">
+                            <strong className="text-slate-800">Chapter Context:</strong>
+                            <span className="font-medium text-slate-600">{getChapterReference(reference)}</span>
+                          </div>
+                        </div>
+                        <div
+                          className="text-slate-700 leading-relaxed text-lg md:text-xl"
+                          dangerouslySetInnerHTML={{
+                            __html: processChapterText(compareChapterText)
+                          }}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+                {compareTranslation && !compareLoading && !compareError && (compareText || compareChapterText) && (
+                  <div className="mt-4 pt-4 border-t border-slate-200 shrink-0">
+                    {renderAttribution(compareTranslation)}
+                  </div>
+                )}
               </div>
-              <div 
-                id="chapter-content"
-                className="text-slate-700 leading-relaxed text-lg md:text-xl"
-                dangerouslySetInnerHTML={{
-                  __html: processChapterText(chapterText)
-                }}
-              />
-            </div>
+
+              {/* Right column - Main translation */}
+              <div className="flex flex-col min-w-0">
+                {(loading || contextLoading) && (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-3 text-slate-600 text-base md:text-lg">
+                      {contextLoading ? 'Loading chapter...' : 'Loading...'}
+                    </span>
+                  </div>
+                )}
+                {error && (
+                  <div className="text-red-600 text-center py-8">
+                    <p className="mb-2 text-base md:text-lg">⚠️ {error}</p>
+                    <p className="text-sm md:text-base text-slate-500">
+                      ESV API may be unavailable or reference format incorrect
+                    </p>
+                  </div>
+                )}
+                {!loading && !contextLoading && !error && (
+                  <>
+                    {!showingContext && scriptureText && (
+                      <div className="prose max-w-none">
+                        <div
+                          className="text-slate-700 leading-relaxed text-lg md:text-xl"
+                          dangerouslySetInnerHTML={{
+                            __html: scriptureText
+                              .replace(/\[(\d+)\]/g, '<sup class="text-blue-600 font-medium">$1</sup>')
+                              .replace(/\n\n/g, '</p><p class="mt-4">')
+                          }}
+                        />
+                      </div>
+                    )}
+                    {showingContext && chapterText && (
+                      <div className="prose max-w-none">
+                        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-slate-700 text-base md:text-lg">
+                          <div className="flex items-center gap-2">
+                            <strong className="text-slate-800">Chapter Context:</strong>
+                            <span className="font-medium text-slate-600">{getChapterReference(reference)}</span>
+                          </div>
+                        </div>
+                        <div
+                          id="chapter-content"
+                          className="text-slate-700 leading-relaxed text-lg md:text-xl"
+                          dangerouslySetInnerHTML={{
+                            __html: processChapterText(chapterText)
+                          }}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+                {!loading && !contextLoading && !error && (scriptureText || chapterText) && (
+                  <div className="mt-4 pt-4 border-t border-slate-200 shrink-0">
+                    {renderAttribution(translation)}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              {(loading || contextLoading) && (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 text-slate-600 text-base md:text-lg">
+                    {contextLoading ? 'Loading chapter context...' : 'Loading scripture...'}
+                  </span>
+                </div>
+              )}
+              {error && (
+                <div className="text-red-600 text-center py-8">
+                  <p className="mb-2 text-base md:text-lg">⚠️ {error}</p>
+                  <p className="text-sm md:text-base text-slate-500">
+                    ESV API may be unavailable or reference format incorrect
+                  </p>
+                </div>
+              )}
+              {!showingContext && scriptureText && (
+                <div className="prose max-w-none">
+                  <div
+                    className="text-slate-700 leading-relaxed text-lg md:text-xl"
+                    dangerouslySetInnerHTML={{
+                      __html: scriptureText
+                        .replace(/\[(\d+)\]/g, '<sup class="text-blue-600 font-medium">$1</sup>')
+                        .replace(/\n\n/g, '</p><p class="mt-4">')
+                    }}
+                  />
+                </div>
+              )}
+              {showingContext && chapterText && (
+                <div className="prose max-w-none">
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-slate-700 text-base md:text-lg">
+                    <div className="flex items-center gap-2">
+                      <strong className="text-slate-800">Chapter Context:</strong>
+                      <span className="font-medium text-slate-600">{getChapterReference(reference)}</span>
+                    </div>
+                  </div>
+                  <div
+                    id="chapter-content"
+                    className="text-slate-700 leading-relaxed text-lg md:text-xl"
+                    dangerouslySetInnerHTML={{
+                      __html: processChapterText(chapterText)
+                    }}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
         
-        {/* Fixed Footer */}
+        {/* Fixed Footer - hidden when comparing (attributions are in-column) */}
+        {!isComparing && (
         <div className="bg-slate-50 px-4 pt-2 border-t shrink-0 md:rounded-b-lg" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
           {translation === 'esv' ? (
             <>
@@ -475,6 +739,7 @@ export default function ScriptureModal({
             </p>
           ) : null}
         </div>
+        )}
       </div>
     </div>
   )

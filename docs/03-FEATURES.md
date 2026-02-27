@@ -24,6 +24,22 @@ The COMA template provides a structured framework for reflection:
 
 **Status**: RLS policies fixed - now visible to all users including counselees
 
+## Scripture Modal
+
+When users click a scripture reference, a modal displays the full text with these features:
+
+- **Translation selector**: Choose from enabled translations (ESV, KJV, NASB, LSB)
+- **Compare feature**: A second dropdown (default "Compare") lets users select another translation to view side-by-side
+  - Compare translation appears on the left, main translation on the right
+  - Each column shows scripture text plus the appropriate attribution
+  - Works for both verse view and chapter context
+  - Compare options exclude the current main translation
+- **Verse view**: Single verse or verse range
+- **Chapter Context**: Expands to show full chapter with highlighted verse(s)
+- **Attribution**: Footer displays copyright/attribution per translation; when comparing, attributions appear in each column
+
+**Implementation**: `ScriptureModal.tsx` — compare state, fetch logic, and side-by-side grid layout in one component.
+
 ## Scripture Highlighting & Progress
 
 Users can:
