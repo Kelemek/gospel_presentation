@@ -11,7 +11,7 @@ export async function GET() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     const role = user
-      ? (await createAdminClient().from('user_profiles').select('role').eq('id', user.id).single()).data?.role
+      ? ((await createAdminClient().from('user_profiles').select('role').eq('id', user.id).single()).data as any)?.role
       : null
     const clientForLookups = (role === 'admin' || role === 'counselor') ? createAdminClient() : supabase
 
