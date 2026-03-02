@@ -2,7 +2,7 @@
 // @ts-nocheck
 // Supabase data service - replaces blob-data-service.ts
 // Note: Type checking disabled due to Supabase client type inference issues
-import { createClient } from './supabase/server'
+import { createClient, createAdminClient } from './supabase/server'
 import type { GospelProfile, CreateProfileRequest, GospelPresentationData } from './types'
 import { logger } from './logger'
 
@@ -31,84 +31,119 @@ export async function loadGospelData(): Promise<GospelPresentationData> {
 }
 
 /**
+ * Gets all profiles using the provided client (bypasses RLS when admin client used)
+ */
+async function getProfilesWithClient(supabase: any): Promise<GospelProfile[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    logger.error('[supabase-data-service] Error loading profiles:', error)
+    throw error
+  }
+
+  const userIds = [...new Set(data?.map((p: any) => p.created_by).filter(Boolean))]
+  const userMap = new Map()
+  if (userIds.length > 0) {
+    const { data: users } = await supabase
+      .from('user_profiles')
+      .select('id, display_name')
+      .in('id', userIds)
+    if (users) {
+      users.forEach((u: any) => userMap.set(u.id, u.display_name))
+    }
+  }
+
+  const profileIds = data?.map((p: any) => p.id).filter(Boolean) || []
+  const accessMap = new Map()
+  if (profileIds.length > 0) {
+    const { data: accessData } = await supabase
+      .from('profile_access')
+      .select('profile_id, user_email, user_id')
+      .in('profile_id', profileIds)
+    if (accessData) {
+      accessData.forEach((access: any) => {
+        if (!accessMap.has(access.profile_id)) accessMap.set(access.profile_id, [])
+        accessMap.get(access.profile_id).push(access.user_email)
+      })
+    }
+  }
+
+  logger.debug(`[supabase-data-service] Loaded ${(data || []).length} profiles`)
+
+  return (data || []).map((row: any) => ({
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    description: row.description || undefined,
+    isDefault: row.is_default,
+    isTemplate: row.is_template || false,
+    visitCount: row.visit_count,
+    gospelData: row.gospel_data as unknown as GospelPresentationData,
+    lastViewedScripture: row.last_viewed_scripture ? {
+      reference: row.last_viewed_scripture.reference,
+      sectionId: row.last_viewed_scripture.sectionId,
+      subsectionId: row.last_viewed_scripture.subsectionId,
+      viewedAt: new Date(row.last_viewed_scripture.viewedAt)
+    } : undefined,
+    savedAnswers: row.saved_answers || [],
+    createdAt: new Date(row.created_at),
+    updatedAt: new Date(row.updated_at),
+    lastVisited: row.last_visited ? new Date(row.last_visited) : undefined,
+    createdBy: row.created_by,
+    ownerDisplayName: row.created_by ? userMap.get(row.created_by) || null : null,
+    counseleeEmails: accessMap.get(row.id) || []
+  }))
+}
+
+/**
  * Gets all profiles (respects RLS - users only see their own + default)
+ * Admins bypass RLS via admin client to avoid session/verification-code issues
  */
 export async function getProfiles(): Promise<GospelProfile[]> {
   try {
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
     
-    // First get all profiles
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: true })
-    
-    if (error) {
-      logger.error('[supabase-data-service] Error loading profiles:', error)
-      throw error
-    }
-    
-    // Get unique user IDs
-    const userIds = [...new Set(data?.map(p => p.created_by).filter(Boolean))]
-    
-    // Get user display names
-    const userMap = new Map()
-    if (userIds.length > 0) {
-      const { data: users } = await supabase
+    logger.debug('[supabase-data-service] getProfiles called', { userId: user?.id })
+
+    if (user) {
+      const adminClient = createAdminClient()
+      const { data: userProfile } = await adminClient
         .from('user_profiles')
-        .select('id, display_name')
-        .in('id', userIds)
-      
-      if (users) {
-        users.forEach(u => userMap.set(u.id, u.display_name))
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      const role = (userProfile as any)?.role
+      logger.debug('[supabase-data-service] User role:', role)
+
+      if (role === 'admin') {
+        logger.debug('[supabase-data-service] Admin user - bypassing RLS for all profiles')
+        return getProfilesWithClient(adminClient)
+      }
+
+      if (role === 'counselor') {
+        logger.debug('[supabase-data-service] Counselor user - bypassing RLS, filtering to own + default + templates')
+        const allProfiles = await getProfilesWithClient(adminClient)
+        logger.debug(`[supabase-data-service] Total profiles: ${allProfiles.length}, user.id: ${user.id}`)
+        const filtered = allProfiles.filter(
+          (p) =>
+            p.isDefault ||
+            p.isTemplate ||
+            p.createdBy === user.id
+        )
+        logger.debug(`[supabase-data-service] Filtered profiles for counselor: ${filtered.length}`, 
+          filtered.map(p => ({ slug: p.slug, isDefault: p.isDefault, isTemplate: p.isTemplate, createdBy: p.createdBy }))
+        )
+        return filtered
       }
     }
-    
-    // Get profile access (counselees) for all profiles
-    const profileIds = data?.map(p => p.id).filter(Boolean) || []
-    const accessMap = new Map()
-    if (profileIds.length > 0) {
-      const { data: accessData } = await supabase
-        .from('profile_access')
-        .select('profile_id, user_email, user_id')
-        .in('profile_id', profileIds)
-      
-      if (accessData) {
-        // Group by profile_id
-        accessData.forEach(access => {
-          if (!accessMap.has(access.profile_id)) {
-            accessMap.set(access.profile_id, [])
-          }
-          accessMap.get(access.profile_id).push(access.user_email)
-        })
-      }
-    }
-    
-    logger.debug(`[supabase-data-service] Loaded ${data?.length || 0} profiles`)
-    
-    return data.map((row: any) => ({
-      id: row.id,
-      slug: row.slug,
-      title: row.title,
-      description: row.description || undefined,
-      isDefault: row.is_default,
-      isTemplate: row.is_template || false,
-      visitCount: row.visit_count,
-      gospelData: row.gospel_data as unknown as GospelPresentationData,
-      lastViewedScripture: row.last_viewed_scripture ? {
-        reference: row.last_viewed_scripture.reference,
-        sectionId: row.last_viewed_scripture.sectionId,
-        subsectionId: row.last_viewed_scripture.subsectionId,
-        viewedAt: new Date(row.last_viewed_scripture.viewedAt)
-      } : undefined,
-      savedAnswers: row.saved_answers || [],
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at),
-      lastVisited: row.last_visited ? new Date(row.last_visited) : undefined,
-      createdBy: row.created_by,
-      ownerDisplayName: row.created_by ? userMap.get(row.created_by) || null : null,
-      counseleeEmails: accessMap.get(row.id) || []
-    }))
+
+    logger.debug('[supabase-data-service] Using normal client (no user or non-admin/counselor role)')
+    return getProfilesWithClient(supabase)
   } catch (error) {
     logger.error('[supabase-data-service] Error loading profiles:', error)
     return []
@@ -117,11 +152,33 @@ export async function getProfiles(): Promise<GospelProfile[]> {
 
 /**
  * Gets a profile by slug (respects RLS)
+ * Uses admin client for: default profile, and when user is admin/counselor (enables template cloning)
  */
 export async function getProfileBySlug(slug: string): Promise<GospelProfile | null> {
   try {
-    const supabase = await createClient()
-    
+    const userClient = await createClient()
+    const { data: { user } } = await userClient.auth.getUser()
+
+    let supabase: any
+    if (slug === 'default') {
+      supabase = createAdminClient()
+    } else if (user) {
+      const adminClient = createAdminClient()
+      const { data: userProfile } = await adminClient
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+      const role = (userProfile as any)?.role
+      if (role === 'admin' || role === 'counselor') {
+        supabase = adminClient
+      } else {
+        supabase = userClient
+      }
+    } else {
+      supabase = userClient
+    }
+
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -241,6 +298,7 @@ export async function createProfile(request: CreateProfileRequest): Promise<Gosp
 
 /**
  * Updates a profile (RLS ensures users can only update their own)
+ * Counselors use admin client when updating profiles they own (avoids session/RLS issues)
  */
 export async function updateProfile(
   slug: string,
@@ -254,6 +312,32 @@ export async function updateProfile(
 ): Promise<GospelProfile> {
   try {
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    let clientToUse: any = supabase
+    if (user) {
+      const adminClient = createAdminClient()
+      const { data: userProfile } = await adminClient
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+      const role = (userProfile as any)?.role
+      if (role === 'counselor') {
+        const { data: profile } = await adminClient
+          .from('profiles')
+          .select('created_by')
+          .eq('slug', slug)
+          .single()
+        if (profile?.created_by === user.id) {
+          logger.debug('[supabase-data-service] Counselor updating own profile - bypassing RLS')
+          clientToUse = adminClient
+        }
+      } else if (role === 'admin') {
+        logger.debug('[supabase-data-service] Admin updating profile - bypassing RLS')
+        clientToUse = adminClient
+      }
+    }
     
     const updateData: any = {}
     if (updates.title !== undefined) updateData.title = updates.title
@@ -267,7 +351,7 @@ export async function updateProfile(
       updateData.saved_answers = updates.savedAnswers
     }
     
-    const { data, error } = await supabase
+    const { data, error } = await clientToUse
       .from('profiles')
       .update(updateData)
       .eq('slug', slug)

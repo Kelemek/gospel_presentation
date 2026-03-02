@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useLayoutEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import GospelSection from '@/components/GospelSection'
@@ -44,10 +44,18 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
   const [canEdit, setCanEdit] = useState(false)
   const [fromEditor, setFromEditor] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [isHydrated, setIsHydrated] = useState(false)
   const { showConfirm } = useAlertModal()
+
+  // Set hydrated flag immediately on client to avoid hydration mismatch
+  useLayoutEffect(() => {
+    setIsHydrated(true)
+  }, [])
 
   // Check authentication and role
   useEffect(() => {
+    if (!isHydrated) return // Skip until hydrated
+
     const checkAuth = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
@@ -72,7 +80,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     // Check if coming from editor via URL parameter
     const params = new URLSearchParams(window.location.search)
     setFromEditor(params.get('preview') === 'true')
-  }, [])
+  }, [isHydrated])
 
   // Scripture progress tracking
   const { 

@@ -164,70 +164,73 @@ function chainable(data: any) {
   };
 }
 
-jest.mock('../supabase/server', () => ({
-  createClient: async () => ({
-    auth: {
-      getUser: async () => ({ data: { user: { id: 'user-id' } } })
-    },
-    from: () => ({
-      select: () => chainable(profiles.map(ensureProfileShape)),
-      update: (updateData: any) => {
-        if (updateData && updateData.slug) {
-          const idx = profiles.findIndex(p => p.slug === updateData.slug)
-          if (idx !== -1) {
-            profiles[idx] = { ...profiles[idx], ...updateData }
-            return chainable([ensureProfileShape(profiles[idx])])
-          }
-        }
-        return chainable([])
-      },
-      delete: (deleteData: any) => {
-  // Support both chained and direct delete
-  let deleted: AnyProfile | undefined;
-        if (deleteData && deleteData.slug) {
-          const idx = profiles.findIndex(p => p.slug === deleteData.slug)
-          if (idx !== -1) {
-            deleted = profiles[idx]
-            profiles.splice(idx, 1)
-            return chainable([ensureProfileShape(deleted)])
-          }
-        } else if (Array.isArray(profiles) && profiles.length > 0) {
-          // Fallback for chained delete (e.g. .eq().delete())
-          deleted = profiles.find(p => p.slug !== 'default') as AnyProfile | undefined;
-          if (deleted) {
-            profiles = profiles.filter(p => p.slug !== deleted!.slug)
-            return chainable([ensureProfileShape(deleted)])
-          }
-        }
-        return chainable([])
-      },
-      insert: (insertData: any) => {
-        if (insertData && insertData.slug) {
-          if (profiles.some(p => p.slug === insertData.slug)) {
-            return chainable([])
-          }
-          const newProfile = { ...insertData, id: 'profile-id', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
-          profiles.push(newProfile)
-          return chainable([ensureProfileShape(newProfile)])
-        }
-        return chainable([])
-      },
-      eq: (field: string, value: any) => chainable(profiles.filter(p => p[field] === value).map(ensureProfileShape)),
-      in: () => chainable(profiles.map(ensureProfileShape)),
-      single: () => chainable(ensureProfileShape(profiles[0]))
-    }),
-    rpc: (_fn: string, args: any) => {
-      // Support incrementProfileVisitCount
-      if (args && args.slug) {
-        const idx = profiles.findIndex(p => p.slug === args.slug)
+const createMockClient = () => ({
+  auth: {
+    getUser: async () => ({ data: { user: { id: 'user-id' } } })
+  },
+  from: () => ({
+    select: () => chainable(profiles.map(ensureProfileShape)),
+    update: (updateData: any) => {
+      if (updateData && updateData.slug) {
+        const idx = profiles.findIndex(p => p.slug === updateData.slug)
         if (idx !== -1) {
-          profiles[idx].visit_count = (profiles[idx].visit_count || 0) + 1
-          return { data: profiles[idx].visit_count, error: null }
+          profiles[idx] = { ...profiles[idx], ...updateData }
+          return chainable([ensureProfileShape(profiles[idx])])
         }
       }
-      return { data: mockVisitCount, error: null }
+      return chainable([])
+    },
+    delete: (deleteData: any) => {
+// Support both chained and direct delete
+let deleted: AnyProfile | undefined;
+      if (deleteData && deleteData.slug) {
+        const idx = profiles.findIndex(p => p.slug === deleteData.slug)
+        if (idx !== -1) {
+          deleted = profiles[idx]
+          profiles.splice(idx, 1)
+          return chainable([ensureProfileShape(deleted)])
+        }
+      } else if (Array.isArray(profiles) && profiles.length > 0) {
+        // Fallback for chained delete (e.g. .eq().delete())
+        deleted = profiles.find(p => p.slug !== 'default') as AnyProfile | undefined;
+        if (deleted) {
+          profiles = profiles.filter(p => p.slug !== deleted!.slug)
+          return chainable([ensureProfileShape(deleted)])
+        }
+      }
+      return chainable([])
+    },
+    insert: (insertData: any) => {
+      if (insertData && insertData.slug) {
+        if (profiles.some(p => p.slug === insertData.slug)) {
+          return chainable([])
+        }
+        const newProfile = { ...insertData, id: 'profile-id', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+        profiles.push(newProfile)
+        return chainable([ensureProfileShape(newProfile)])
+      }
+      return chainable([])
+    },
+    eq: (field: string, value: any) => chainable(profiles.filter(p => p[field] === value).map(ensureProfileShape)),
+    in: () => chainable(profiles.map(ensureProfileShape)),
+    single: () => chainable(ensureProfileShape(profiles[0]))
+  }),
+  rpc: (_fn: string, args: any) => {
+    // Support incrementProfileVisitCount
+    if (args && args.slug) {
+      const idx = profiles.findIndex(p => p.slug === args.slug)
+      if (idx !== -1) {
+        profiles[idx].visit_count = (profiles[idx].visit_count || 0) + 1
+        return { data: profiles[idx].visit_count, error: null }
+      }
     }
-  })
+    return { data: mockVisitCount, error: null }
+  }
+})
+
+jest.mock('../supabase/server', () => ({
+  createClient: async () => createMockClient(),
+  createAdminClient: () => createMockClient()
 }))
 jest.mock('next/headers', () => ({
   cookies: () => ({

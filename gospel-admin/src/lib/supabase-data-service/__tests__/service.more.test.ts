@@ -1,5 +1,6 @@
 jest.mock('@/lib/supabase/server', () => ({
-  createClient: jest.fn()
+  createClient: jest.fn(),
+  createAdminClient: jest.fn()
 }))
 
 import * as server from '@/lib/supabase/server'
@@ -16,7 +17,8 @@ describe('supabase-data-service additional branches', () => {
     const users = [{ id: 'u1', display_name: 'User One' }]
     const accessData = [{ profile_id: 'p1', user_email: 'x@x.com' }]
 
-    ;(server.createClient as jest.Mock).mockResolvedValueOnce({
+    const mockClient = {
+      auth: { getUser: async () => ({ data: { user: null } }) },
       from: (table: string) => {
         if (table === 'profiles') {
           return {
@@ -35,7 +37,10 @@ describe('supabase-data-service additional branches', () => {
         }
         return { select: () => ({ data: null, error: null }) }
       }
-    })
+    }
+
+    ;(server.createClient as jest.Mock).mockResolvedValueOnce(mockClient)
+    ;(server.createAdminClient as jest.Mock).mockReturnValueOnce(mockClient)
 
     const res = await getProfiles()
     expect(Array.isArray(res)).toBe(true)
@@ -48,9 +53,13 @@ describe('supabase-data-service additional branches', () => {
   it('updateProfile returns mapped profile', async () => {
     const updated = { id: 'p1', slug: 'a', title: 'New', is_default: false, is_template: false, visit_count: 0, gospel_data: [], created_at: Date.now(), updated_at: Date.now() }
 
-    ;(server.createClient as jest.Mock).mockResolvedValueOnce({
+    const mockClient = {
+      auth: { getUser: async () => ({ data: { user: null } }) },
       from: () => ({ update: () => ({ eq: () => ({ select: () => ({ single: async () => ({ data: updated, error: null }) }) }) }) })
-    })
+    }
+
+    ;(server.createClient as jest.Mock).mockResolvedValueOnce(mockClient)
+    ;(server.createAdminClient as jest.Mock).mockReturnValueOnce(mockClient)
 
     const res = await updateProfile('a', { title: 'New' })
     expect(res.title).toBe('New')
@@ -58,9 +67,13 @@ describe('supabase-data-service additional branches', () => {
   })
 
   it('deleteProfile throws on db error', async () => {
-    ;(server.createClient as jest.Mock).mockResolvedValueOnce({
+    const mockClient = {
+      auth: { getUser: async () => ({ data: { user: null } }) },
       from: () => ({ delete: () => ({ eq: () => ({ error: { message: 'fail' } }) }) })
-    })
+    }
+
+    ;(server.createClient as jest.Mock).mockResolvedValueOnce(mockClient)
+    ;(server.createAdminClient as jest.Mock).mockReturnValueOnce(mockClient)
 
     // Import the module after setting the mock so the createClient mockResolvedValueOnce is applied
     const mod = await import('@/lib/supabase-data-service')
@@ -69,7 +82,12 @@ describe('supabase-data-service additional branches', () => {
 
   it('incrementProfileVisitCount swallows errors', async () => {
     const rpc = jest.fn(async () => { throw new Error('rpc fail') })
-    ;(server.createClient as jest.Mock).mockResolvedValueOnce({ rpc })
+    const mockClient = {
+      auth: { getUser: async () => ({ data: { user: null } }) },
+      rpc
+    }
+    ;(server.createClient as jest.Mock).mockResolvedValueOnce(mockClient)
+    ;(server.createAdminClient as jest.Mock).mockReturnValueOnce(mockClient)
 
     // should not throw
     await expect(incrementProfileVisitCount('a')).resolves.toBeUndefined()

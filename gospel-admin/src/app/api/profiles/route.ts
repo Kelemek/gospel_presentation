@@ -7,9 +7,15 @@ import { logger } from '@/lib/logger'
 export async function GET() {
   try {
     logger.debug('[API] GET /api/profiles - loading from supabase-data-service')
-    
-    const profiles = await getProfiles()
+
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const role = user
+      ? (await createAdminClient().from('user_profiles').select('role').eq('id', user.id).single()).data?.role
+      : null
+    const clientForLookups = (role === 'admin' || role === 'counselor') ? createAdminClient() : supabase
+
+    const profiles = await getProfiles()
 
     // Fetch usernames for all counselees and owners
     const usernameMap = new Map<string, string>()
@@ -31,7 +37,7 @@ export async function GET() {
     if (allUserIds.size > 0 || allCounseleeEmails.size > 0) {
       // First get usernames for owners by ID
       if (allUserIds.size > 0) {
-        const { data: userProfiles } = await supabase
+        const { data: userProfiles } = await clientForLookups
           .from('user_profiles')
           .select('id, username')
           .in('id', Array.from(allUserIds))
@@ -65,7 +71,7 @@ export async function GET() {
             .filter(id => id) as string[]
           
           if (counseleeIds.length > 0) {
-            const { data: userProfiles, error } = await supabase
+            const { data: userProfiles, error } = await clientForLookups
               .from('user_profiles')
               .select('id, username')
               .in('id', counseleeIds)

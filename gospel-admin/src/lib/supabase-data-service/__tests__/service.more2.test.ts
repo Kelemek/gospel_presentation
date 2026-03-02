@@ -16,6 +16,15 @@ describe('supabase-data-service load/getProfile edge cases', () => {
             })
           })
         })
+      }),
+      createAdminClient: jest.fn().mockReturnValue({
+        from: (table: string) => ({
+          select: () => ({
+            eq: () => ({
+              single: async () => ({ data: { gospel_data: mockGospel }, error: null })
+            })
+          })
+        })
       })
     }))
 
@@ -28,6 +37,9 @@ describe('supabase-data-service load/getProfile edge cases', () => {
   it('loadGospelData returns empty array on error', async () => {
     jest.doMock('@/lib/supabase/server', () => ({
       createClient: jest.fn().mockResolvedValue({
+        from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: null, error: { message: 'fail' } }) }) }) })
+      }),
+      createAdminClient: jest.fn().mockReturnValue({
         from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: null, error: { message: 'fail' } }) }) }) })
       })
     }))
@@ -42,6 +54,9 @@ describe('supabase-data-service load/getProfile edge cases', () => {
     jest.doMock('@/lib/supabase/server', () => ({
       createClient: jest.fn().mockResolvedValue({
         from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: null, error: { code: 'PGRST116' } }) }) }) })
+      }),
+      createAdminClient: jest.fn().mockReturnValue({
+        from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: null, error: { code: 'PGRST116' } }) }) }) })
       })
     }))
 
@@ -55,6 +70,11 @@ describe('supabase-data-service load/getProfile edge cases', () => {
 
     jest.doMock('@/lib/supabase/server', () => ({
       createClient: jest.fn().mockResolvedValue({
+        auth: { getUser: jest.fn().mockResolvedValue({ data: { user: null } }) },
+        from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: row, error: null }) }) }) })
+      }),
+      createAdminClient: jest.fn().mockReturnValue({
+        auth: { getUser: jest.fn().mockResolvedValue({ data: { user: null } }) },
         from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: row, error: null }) }) }) })
       })
     }))

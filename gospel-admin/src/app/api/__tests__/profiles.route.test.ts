@@ -9,16 +9,22 @@ const mockDataService = dataService as jest.Mocked<typeof dataService>
 describe('/api/profiles', () => {
   beforeEach(() => {
     jest.resetAllMocks()
-    const { createClient: mockCreateClient, createAdminClient: mockCreateAdminClient } = require('@/lib/supabase/server')
-    mockCreateClient.mockResolvedValue({
+    const serverModule = require('@/lib/supabase/server')
+    serverModule.createClient.mockResolvedValue({
+      from: jest.fn(() => ({
+        select: jest.fn(() => ({
+          in: jest.fn(() => Promise.resolve({ data: null, error: null }))
+        }))
+      })),
+      auth: { getUser: jest.fn().mockResolvedValue({ data: { user: null } }) }
+    })
+    serverModule.createAdminClient.mockReturnValue({
+      auth: { admin: { listUsers: jest.fn().mockResolvedValue({ data: { users: [] }, error: null }) }, getUser: jest.fn().mockResolvedValue({ data: { user: null } }) },
       from: jest.fn(() => ({
         select: jest.fn(() => ({
           in: jest.fn(() => Promise.resolve({ data: null, error: null }))
         }))
       }))
-    })
-    mockCreateAdminClient.mockReturnValue({
-      auth: { admin: { listUsers: jest.fn().mockResolvedValue({ data: { users: [] }, error: null }) } }
     })
   })
 
@@ -37,7 +43,7 @@ describe('/api/profiles', () => {
     })
 
     it('fetches owner usernames when profiles have createdBy', async () => {
-      const { createClient: mockCreateClient } = require('@/lib/supabase/server')
+      const { createClient: mockCreateClient, createAdminClient: mockCreateAdminClient } = require('@/lib/supabase/server')
       mockCreateClient.mockResolvedValue({
         from: jest.fn(() => ({
           select: jest.fn(() => ({
@@ -46,7 +52,19 @@ describe('/api/profiles', () => {
               error: null
             }))
           }))
-        }))
+        })),
+        auth: { getUser: jest.fn().mockResolvedValue({ data: { user: null } }) }
+      })
+      mockCreateAdminClient.mockReturnValue({
+        from: jest.fn(() => ({
+          select: jest.fn(() => ({
+            in: jest.fn(() => Promise.resolve({
+              data: [{ id: 'u1', username: 'owner1' }],
+              error: null
+            }))
+          }))
+        })),
+        auth: { admin: { listUsers: jest.fn().mockResolvedValue({ data: { users: [] }, error: null }) } }
       })
       mockDataService.getProfiles.mockResolvedValue([
         { id: 'p1', slug: 's1', title: 'T1', description: '', isDefault: false, isTemplate: false, visitCount: 0, lastVisited: null, createdAt: new Date(), updatedAt: new Date(), createdBy: 'u1', ownerDisplayName: 'Owner' } as any
@@ -69,10 +87,19 @@ describe('/api/profiles', () => {
               error: null
             }))
           }))
-        }))
+        })),
+        auth: { getUser: jest.fn().mockResolvedValue({ data: { user: null } }) }
       })
       mockCreateAdminClient.mockReturnValue({
-        auth: { admin: { listUsers: jest.fn().mockResolvedValue({ data: { users: [{ id: 'c1', email: 'c@x.com' }] }, error: null }) } }
+        auth: { admin: { listUsers: jest.fn().mockResolvedValue({ data: { users: [{ id: 'c1', email: 'c@x.com' }] }, error: null }) } },
+        from: jest.fn(() => ({
+          select: jest.fn(() => ({
+            in: jest.fn(() => Promise.resolve({
+              data: [{ id: 'c1', username: 'counselee1' }],
+              error: null
+            }))
+          }))
+        }))
       })
       mockDataService.getProfiles.mockResolvedValue([
         { id: 'p2', slug: 's2', title: 'T2', description: '', isDefault: false, isTemplate: false, visitCount: 0, lastVisited: null, createdAt: new Date(), updatedAt: new Date(), createdBy: null, ownerDisplayName: '', counseleeEmails: ['c@x.com'] } as any

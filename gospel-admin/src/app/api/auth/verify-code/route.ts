@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
     const { data: userProfile } = await supabase
       .from("user_profiles")
       .select("role")
-      .eq("user_id", sessionData.user.id)
+      .eq("id", sessionData.user.id)
       .single();
 
     // Determine redirect URL based on role

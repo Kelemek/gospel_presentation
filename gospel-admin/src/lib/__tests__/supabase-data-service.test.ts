@@ -86,6 +86,11 @@ describe('supabase-data-service (unit)', () => {
         profiles: { select: profilesRows, selectOrdered: profilesRows },
         user_profiles: { selectIn: users },
         profile_access: { selectIn: accessData }
+      }),
+      createAdminClient: () => makeFakeClient({
+        profiles: { select: profilesRows, selectOrdered: profilesRows },
+        user_profiles: { selectIn: users },
+        profile_access: { selectIn: accessData }
       })
     }))
 
@@ -111,7 +116,10 @@ describe('supabase-data-service (unit)', () => {
     }
 
     // Case: found
-  jest.doMock('../supabase/server', () => ({ createClient: () => makeFakeClient({ profiles: { selectEqSingle: { data: row, error: null } } }) }))
+  jest.doMock('../supabase/server', () => ({ 
+    createClient: () => makeFakeClient({ profiles: { selectEqSingle: { data: row, error: null } } }),
+    createAdminClient: () => makeFakeClient({ profiles: { selectEqSingle: { data: row, error: null } } })
+  }))
     let svc = await import('../supabase-data-service')
     let res = await svc.getProfileBySlug('s2')
     expect(res).not.toBeNull()
@@ -119,7 +127,10 @@ describe('supabase-data-service (unit)', () => {
 
     // Case: not found - simulate PGRST116 error
     jest.resetModules()
-    jest.doMock('../supabase/server', () => ({ createClient: () => makeFakeClient({ profiles: { selectSingle: { data: null, error: { code: 'PGRST116' } } } }) }))
+    jest.doMock('../supabase/server', () => ({ 
+      createClient: () => makeFakeClient({ profiles: { selectSingle: { data: null, error: { code: 'PGRST116' } } } }),
+      createAdminClient: () => makeFakeClient({ profiles: { selectSingle: { data: null, error: { code: 'PGRST116' } } } })
+    }))
     svc = await import('../supabase-data-service')
     res = await svc.getProfileBySlug('missing')
     expect(res).toBeNull()
@@ -197,6 +208,33 @@ describe('supabase-data-service (unit)', () => {
           return {}
         },
         rpc: async () => ({})
+      }),
+      createAdminClient: () => ({
+        auth: { getUser: async () => ({ data: { user: { id: 'user-uid' } } }) },
+        from: (table: string) => {
+          if (table === 'profiles') {
+            return {
+              select: () => ({
+                eq: (_col: string, val: any) => ({
+                  single: async () => {
+                    // first call checks for existing slug -> return null
+                    if (val === 'newslug') return { data: null, error: null }
+                    // second call for source profile 'default'
+                    if (val === 'default') return { data: { id: 'def', slug: 'default', title: 'Default', gospel_data: [] }, error: null }
+                    return { data: null, error: null }
+                  }
+                }),
+                single: async () => ({ data: { gospel_data: [] }, error: null }),
+              }),
+              insert: () => ({ select: () => ({ single: async () => ({ data: created, error: null }) }) })
+            }
+          }
+          if (table === 'profile_access') {
+            return { upsert: async () => ({ error: null }) }
+          }
+          return {}
+        },
+        rpc: async () => ({})
       })
     }))
 
@@ -209,7 +247,8 @@ describe('supabase-data-service (unit)', () => {
 
   test('createProfile throws when user not authenticated', async () => {
     jest.doMock('../supabase/server', () => ({
-      createClient: () => ({ auth: { getUser: async () => ({ data: { user: null } }) }, from: () => ({}) })
+      createClient: () => ({ auth: { getUser: async () => ({ data: { user: null } }) }, from: () => ({}) }),
+      createAdminClient: () => ({ auth: { getUser: async () => ({ data: { user: null } }) }, from: () => ({}) })
     }))
     const svc = await import('../supabase-data-service')
     await expect(svc.createProfile({ slug: 'x', title: 'T' } as any)).rejects.toThrow(/authenticated/)
@@ -225,9 +264,41 @@ describe('supabase-data-service (unit)', () => {
 
     jest.doMock('../supabase/server', () => ({
       createClient: () => ({
+        auth: { getUser: async () => ({ data: { user: { id: 'user-uid' } } }) },
         from: (table: string) => {
           if (table === 'profiles') {
             return {
+              update: (_data: any) => ({
+                eq: (_col: string, _val: any) => ({ select: () => ({ single: async () => ({ data: updated, error: null }) }) })
+              })
+            }
+          }
+          if (table === 'user_profiles') {
+            return {
+              select: () => ({ eq: () => ({ single: async () => ({ data: { role: 'counselor' }, error: null }) }) })
+            }
+          }
+          return { update: () => ({ data: null, error: null }) }
+        }
+      }),
+      createAdminClient: () => ({
+        auth: { getUser: async () => ({ data: { user: { id: 'user-uid' } } }) },
+        from: (table: string) => {
+          if (table === 'user_profiles') {
+            return {
+              select: (cols: string) => ({
+                eq: (col: string, val: any) => ({
+                  single: async () => ({ data: { role: 'counselor' }, error: null })
+                })
+              })
+            }
+          }
+          if (table === 'profiles') {
+            return {
+              select: () => ({ 
+                eq: () => ({ single: async () => ({ data: updated, error: null }) }),
+                order: () => ({ data: [updated], error: null })
+              }),
               update: (_data: any) => ({
                 eq: (_col: string, _val: any) => ({ select: () => ({ single: async () => ({ data: updated, error: null }) }) })
               })
@@ -248,6 +319,12 @@ describe('supabase-data-service (unit)', () => {
   test('deleteProfile resolves on success', async () => {
     jest.doMock('../supabase/server', () => ({
       createClient: () => ({
+        auth: { getUser: async () => ({ data: { user: null } }) },
+        from: (table: string) => ({
+          delete: () => ({ eq: (_col: string, _val: any) => ({ eq: (_c: string, _v: any) => ({ error: null }) }) })
+        })
+      }),
+      createAdminClient: () => ({
         from: (table: string) => ({
           delete: () => ({ eq: (_col: string, _val: any) => ({ eq: (_c: string, _v: any) => ({ error: null }) }) })
         })
@@ -262,6 +339,11 @@ describe('supabase-data-service (unit)', () => {
       createClient: () => ({
         from: (table: string) => ({
           // Support chained .delete().eq(...).eq(...) used by revokeProfileAccess
+          delete: () => ({ eq: (_col: string, _val: any) => ({ eq: (_c: string, _v: any) => ({ error: null }) }) })
+        })
+      }),
+      createAdminClient: () => ({
+        from: (table: string) => ({
           delete: () => ({ eq: (_col: string, _val: any) => ({ eq: (_c: string, _v: any) => ({ error: null }) }) })
         })
       })
