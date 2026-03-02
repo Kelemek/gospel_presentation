@@ -1,0 +1,55 @@
+name: Cleanup Verification Codes
+
+on:
+  # Run daily at 3 AM UTC
+  schedule:
+    - cron: '0 3 * * *'
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          npm install @supabase/supabase-js
+
+      - name: Run verification codes cleanup
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          node -e "
+          const { createClient } = require('@supabase/supabase-js');
+
+          const supabase = createClient(
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
+          );
+
+          (async () => {
+            try {
+              const { error } = await supabase.rpc('cleanup_expired_verification_codes');
+
+              if (error) {
+                console.error('Cleanup failed:', error.message);
+                process.exit(1);
+              }
+
+              console.log('Verification codes cleanup completed successfully');
+            } catch (err) {
+              console.error('Cleanup failed:', err);
+              process.exit(1);
+            }
+          })();
+          "

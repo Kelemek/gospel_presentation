@@ -187,14 +187,10 @@ Expected output: 7 secrets listed
 ## ✅ Monitoring Setup (Optional but Recommended)
 
 ### Database Cleanup
-- [ ] Schedule daily cleanup job:
-  ```sql
-  SELECT cleanup_expired_verification_codes();
-  ```
-- [ ] Options:
-  - Supabase Database Webhooks
-  - Cron job via pg_cron extension
-  - External cron service (GitHub Actions, etc.)
+- [x] Schedule daily cleanup job (implemented via GitHub Action)
+  - Workflow: `.github/workflows/cleanup-verification-codes.yml`
+  - Runs daily at 3 AM UTC and on manual `workflow_dispatch`
+  - Calls `cleanup_expired_verification_codes()` via Supabase RPC
 
 ### Usage Monitoring
 - [ ] Set up query to track usage:
