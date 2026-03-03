@@ -34,3 +34,7 @@ pids
 
 # Optional REPL history
 .node_repl_history
+
+# Capacitor / native build artifacts
+gospel-admin/ios/App/App/public/
+gospel-admin/android/app/src/main/assets/public/

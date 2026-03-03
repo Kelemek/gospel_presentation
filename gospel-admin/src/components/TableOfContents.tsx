@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTranslation, BibleTranslation } from '@/contexts/TranslationContext'
+import { Capacitor } from '@capacitor/core'
+import { Printer } from '@capgo/capacitor-printer'
 
 interface TableOfContentsProps {
   sections: GospelSection[]
@@ -35,8 +37,12 @@ export default function TableOfContents({
     checkAuth()
   }, [])
 
-  const handlePrint = () => {
-    window.print()
+  const handlePrint = async () => {
+    if (Capacitor.isNativePlatform()) {
+      await Printer.printWebView({ name: 'Gospel Presentation' })
+    } else {
+      window.print()
+    }
   }
 
   const handleTranslationChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {

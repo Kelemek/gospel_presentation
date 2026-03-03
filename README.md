@@ -327,6 +327,35 @@ NEXT_PUBLIC_SITE_URL=https://your-domain.vercel.app
 - Update `NEXT_PUBLIC_SITE_URL` environment variable
 - DNS propagation takes 24-48 hours
 
+### Mobile App (Capacitor)
+
+The app can be wrapped for iOS and Android using Capacitor. The native apps load the deployed web app in a WebView.
+
+**Prerequisites:** Xcode (Mac, for iOS), Android Studio, and a deployed production URL.
+
+**1. Configure the Capacitor server URL:**
+Copy `gospel-admin/.env.capacitor.example` to `gospel-admin/.env.capacitor` and set `CAPACITOR_SERVER_URL`:
+- For local dev (iOS Simulator): `http://localhost:3000`
+- For local dev (Android Emulator): `http://10.0.2.2:3000`
+- For production: `https://cp-church.org` (or your deployed URL)
+
+**2. Sync and open native projects:**
+```bash
+cd gospel-admin
+npm run cap:sync
+npm run cap:ios    # Opens Xcode
+npm run cap:android  # Opens Android Studio
+```
+
+**3. Build and run:**
+- In Xcode: select a simulator or device, then Run
+- In Android Studio: sync Gradle, then Run
+
+**Notes:**
+- Run `npm run cap:sync` after any config changes or plugin additions
+- The "Print Version" button uses native print on iOS/Android via `@capgo/capacitor-printer`
+- An offline error page is shown when the device has no network
+
 ## 📚 Documentation
 
 Comprehensive guides available in `/docs`:

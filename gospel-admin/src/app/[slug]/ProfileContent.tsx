@@ -365,7 +365,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
       {/* Unified Layout - Hamburger menu at all screen sizes */}
       <div className="min-h-screen flex-col">
         {/* Header with hamburger menu and optional edit button */}
-        <div className="sticky top-0 z-40 bg-white/70 backdrop-blur-sm shadow-md print-hide">
+        <div className="sticky top-[env(safe-area-inset-top,0px)] z-40 bg-white/70 backdrop-blur-sm shadow-md print-hide">
           <div className="w-full px-5 py-3">
             <div className="flex justify-between items-center gap-3">
               <button
@@ -471,7 +471,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
           
           {/* Menu Panel */}
           <div 
-            className="fixed top-0 left-0 z-50 bg-white w-80 h-full shadow-2xl overflow-y-auto border-r border-gray-200 transform transition-transform duration-300 ease-in-out print-hide"
+            className="fixed top-[env(safe-area-inset-top,0px)] bottom-0 left-0 z-50 bg-white w-80 shadow-2xl overflow-y-auto border-r border-gray-200 transform transition-transform duration-300 ease-in-out print-hide"
             onMouseLeave={() => {
               // Only auto-close on desktop when mouse leaves
               if (window.innerWidth >= 1024) {

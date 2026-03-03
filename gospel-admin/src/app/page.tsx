@@ -226,7 +226,7 @@ export function GospelPresentationOld() {
       </header>
 
       {/* Hamburger Menu Button */}
-      <div className="sticky top-0 z-40 bg-white shadow-md">
+      <div className="sticky top-[env(safe-area-inset-top,0px)] z-40 bg-white shadow-md">
         <div className="container mx-auto px-5 py-3">
           <button
             onClick={toggleMenu}
@@ -249,7 +249,7 @@ export function GospelPresentationOld() {
           <div className="fixed inset-0 z-40" onClick={closeMenu}></div>
           
           {/* Menu Panel */}
-          <div className="fixed top-0 left-0 z-50 bg-white w-64 h-full shadow-2xl overflow-y-auto border-r border-gray-200 transform transition-transform duration-300 ease-in-out">
+          <div className="fixed top-[env(safe-area-inset-top,0px)] bottom-0 left-0 z-50 bg-white w-64 shadow-2xl overflow-y-auto border-r border-gray-200 transform transition-transform duration-300 ease-in-out">
             <div className="p-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-semibold text-slate-700">

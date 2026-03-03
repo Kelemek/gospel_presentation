@@ -2,6 +2,25 @@
 
 body {
   font-family: Arial, Helvetica, sans-serif;
+  /* Respect safe areas in Capacitor app (notch, home indicator) */
+  padding-top: env(safe-area-inset-top, 0);
+  padding-right: env(safe-area-inset-right, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-left: env(safe-area-inset-left, 0);
+  position: relative;
+}
+
+/* Top safe area bar matches header (from-slate-700 to-slate-800) for Capacitor */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 0);
+  background: linear-gradient(to bottom right, #334155, #1e293b);
+  z-index: 39;
+  pointer-events: none;
 }
 
 /* Print Styles - Highly Condensed Format */
@@ -25,6 +44,10 @@ body {
     background: white;
     margin: 0 !important;
     padding: 0 !important;
+  }
+
+  body::before {
+    display: none !important;
   }
 
   /* Container and layout */
