@@ -39,14 +39,19 @@ jobs:
 
           (async () => {
             try {
-              const { error } = await supabase.rpc('cleanup_expired_verification_codes');
+              const { data, error } = await supabase.rpc('cleanup_expired_verification_codes');
 
               if (error) {
                 console.error('Cleanup failed:', error.message);
                 process.exit(1);
               }
 
-              console.log('Verification codes cleanup completed successfully');
+              const deleted = data ?? 0;
+              console.log('Verification codes cleanup completed: deleted', deleted, 'rows');
+              if (deleted === 0) {
+                console.log('Note: Only codes expired/used more than 24 hours ago are removed.');
+                console.log('Verify SUPABASE_URL/SUPABASE_SERVICE_KEY point to the correct project.');
+              }
             } catch (err) {
               console.error('Cleanup failed:', err);
               process.exit(1);

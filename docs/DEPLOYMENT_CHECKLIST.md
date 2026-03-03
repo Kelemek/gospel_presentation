@@ -191,6 +191,8 @@ Expected output: 7 secrets listed
   - Workflow: `.github/workflows/cleanup-verification-codes.yml`
   - Runs daily at 3 AM UTC and on manual `workflow_dispatch`
   - Calls `cleanup_expired_verification_codes()` via Supabase RPC
+  - Only removes codes expired/used **more than 24 hours ago** (audit retention)
+  - Optional: Run `gospel-admin/sql/migrations/20250301_cleanup_return_count.sql` so the workflow logs the deleted row count
 
 ### Usage Monitoring
 - [ ] Set up query to track usage:
