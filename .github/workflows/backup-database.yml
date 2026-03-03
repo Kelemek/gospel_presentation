@@ -30,7 +30,7 @@ jobs:
       - name: Backup database
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
           node -e "
           const { createClient } = require('@supabase/supabase-js');
@@ -39,30 +39,29 @@ jobs:
           
           const supabase = createClient(
             process.env.SUPABASE_URL,
-            process.env.SUPABASE_ANON_KEY
+            process.env.SUPABASE_SERVICE_ROLE_KEY
           );
           
           async function backup() {
             try {
               const timestamp = new Date().toISOString().split('T')[0];
               
-              // Define all tables to backup
-              const tablesToBackup = [
-                'profiles',
-                'user_profiles', 
-                'profile_access',
-                'coma_templates'
-              ];
+              // Discover tables via get_backup_tables() RPC (falls back to default list if function missing)
+              let tablesToBackup;
+              const { data: tableRows, error: rpcError } = await supabase.rpc('get_backup_tables');
+              if (rpcError || !tableRows?.length) {
+                console.log('Using default table list (run 20250303_get_backup_tables.sql to enable discovery)');
+                tablesToBackup = ['admin_settings', 'coma_templates', 'profile_access', 'profiles', 'translation_settings', 'user_profiles'];
+              } else {
+                tablesToBackup = tableRows.map(r => r.table_name);
+                console.log('Discovered tables:', tablesToBackup.join(', '));
+              }
               
-              // Backup all tables dynamically
               const tables = {};
-              let backupStats = {};
+              const backupStats = {};
               
               for (const tableName of tablesToBackup) {
-                const { data, error } = await supabase
-                  .from(tableName)
-                  .select('*');
-                
+                const { data, error } = await supabase.from(tableName).select('*');
                 if (error) {
                   console.log(\`⚠️  Warning: Could not backup table '\${tableName}': \${error.message}\`);
                   tables[tableName] = [];
@@ -74,60 +73,45 @@ jobs:
                 }
               }
               
-              // Create backup object
               const backup = {
                 backup_date: new Date().toISOString(),
                 backup_type: 'automated',
-                version: '1.2',
+                version: '1.3',
                 tables: tables
               };
               
-              // Write backup file
               const filename = \`database-backup-\${timestamp}.json\`;
-              fs.writeFileSync(
-                path.join('backups', filename),
-                JSON.stringify(backup, null, 2)
-              );
+              fs.writeFileSync(path.join('backups', filename), JSON.stringify(backup, null, 2));
+              fs.writeFileSync(path.join('backups', 'latest-backup.json'), JSON.stringify(backup, null, 2));
               
-              // Also create latest backup
-              fs.writeFileSync(
-                path.join('backups', 'latest-backup.json'),
-                JSON.stringify(backup, null, 2)
-              );
-              
-              // Create individual profile backups
+              // Individual profile backups (profiles + user_profiles)
               const profilesDir = path.join('backups', 'profiles');
               fs.mkdirSync(profilesDir, { recursive: true });
-              
-              const userProfiles = tables.user_profiles || [];
-              userProfiles.forEach(profile => {
-                const profileBackup = {
-                  profile: profile,
-                  backup: {
-                    exportedAt: new Date().toISOString(),
-                    exportedBy: 'GitHub Actions',
-                    version: '1.0'
-                  }
-                };
-                
-                const profileFile = \`gospel-profile-\${profile.slug}-backup-\${timestamp}.json\`;
+              const profileRows = tables.profiles || [];
+              profileRows.forEach(p => {
+                const name = p.slug || p.id || 'unknown';
                 fs.writeFileSync(
-                  path.join(profilesDir, profileFile),
-                  JSON.stringify(profileBackup, null, 2)
+                  path.join(profilesDir, \`gospel-profile-\${name}-backup-\${timestamp}.json\`),
+                  JSON.stringify({ profile: p, backup: { exportedAt: new Date().toISOString(), exportedBy: 'GitHub Actions', version: '1.0' } }, null, 2)
+                );
+              });
+              const userProfiles = tables.user_profiles || [];
+              userProfiles.forEach(p => {
+                const name = p.username || p.display_name || p.id || 'unknown';
+                fs.writeFileSync(
+                  path.join(profilesDir, \`user-profile-\${String(name).replace(/[^a-z0-9-]/gi, '_')}-backup-\${timestamp}.json\`),
+                  JSON.stringify({ profile: p, backup: { exportedAt: new Date().toISOString(), exportedBy: 'GitHub Actions', version: '1.0' } }, null, 2)
                 );
               });
               
               console.log(\`\n✅ Backup created: \${filename}\`);
               console.log('   Table Summary:');
-              Object.entries(backupStats).forEach(([table, count]) => {
-                console.log(\`   - \${table}: \${count} rows\`);
-              });
+              Object.entries(backupStats).forEach(([t, c]) => console.log(\`   - \${t}: \${c} rows\`));
             } catch (error) {
               console.error('❌ Backup failed:', error);
               process.exit(1);
             }
           }
-          
           backup();
           "
       
