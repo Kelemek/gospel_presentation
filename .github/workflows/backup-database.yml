@@ -51,7 +51,7 @@ jobs:
               const { data: tableRows, error: rpcError } = await supabase.rpc('get_backup_tables');
               if (rpcError || !tableRows?.length) {
                 console.log('Using default table list (run 20250303_get_backup_tables.sql to enable discovery)');
-                tablesToBackup = ['admin_settings', 'coma_templates', 'profile_access', 'profiles', 'translation_settings', 'user_profiles'];
+                tablesToBackup = ['admin_settings', 'bible_verses', 'coma_templates', 'profile_access', 'profiles', 'translation_settings', 'user_profiles'];
               } else {
                 tablesToBackup = tableRows.map(r => r.table_name);
                 console.log('Discovered tables:', tablesToBackup.join(', '));
@@ -59,17 +59,31 @@ jobs:
               
               const tables = {};
               const backupStats = {};
+              const PAGE_SIZE = 1000;
+              
+              async function fetchAllRows(tableName) {
+                const all = [];
+                let from = 0;
+                while (true) {
+                  const { data, error } = await supabase.from(tableName).select('*').range(from, from + PAGE_SIZE - 1);
+                  if (error) throw error;
+                  all.push(...(data || []));
+                  if (!data || data.length < PAGE_SIZE) break;
+                  from += PAGE_SIZE;
+                }
+                return all;
+              }
               
               for (const tableName of tablesToBackup) {
-                const { data, error } = await supabase.from(tableName).select('*');
-                if (error) {
-                  console.log(\`⚠️  Warning: Could not backup table '\${tableName}': \${error.message}\`);
+                try {
+                  const data = await fetchAllRows(tableName);
+                  tables[tableName] = data;
+                  backupStats[tableName] = data.length;
+                  console.log(\`✓ Backed up '\${tableName}': \${data.length} rows\`);
+                } catch (err) {
+                  console.log(\`⚠️  Warning: Could not backup table '\${tableName}': \${err.message}\`);
                   tables[tableName] = [];
                   backupStats[tableName] = 0;
-                } else {
-                  tables[tableName] = data || [];
-                  backupStats[tableName] = data?.length || 0;
-                  console.log(\`✓ Backed up '\${tableName}': \${data?.length || 0} rows\`);
                 }
               }
               

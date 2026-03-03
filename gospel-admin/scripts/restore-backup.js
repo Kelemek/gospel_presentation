@@ -22,6 +22,14 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
+const INSERT_BATCH_SIZE = 500;
+
+// Tables allowed for restore (must match get_backup_tables)
+const ALLOWED_TABLES = new Set([
+  'admin_settings', 'bible_verses', 'coma_templates', 'profile_access',
+  'profiles', 'translation_settings', 'user_profiles'
+]);
+
 async function restoreBackup(backupFile) {
   try {
     console.log(`📥 Loading backup from: ${backupFile}`);
@@ -50,6 +58,11 @@ async function restoreBackup(backupFile) {
     
     // Restore each table dynamically
     for (const tableName of tablesToRestore) {
+      if (!ALLOWED_TABLES.has(tableName)) {
+        console.warn(`⚠️  Skipping ${tableName} - not in restore whitelist`);
+        skippedCount++;
+        continue;
+      }
       const records = backupData.tables[tableName];
       
       if (!Array.isArray(records)) {
@@ -61,29 +74,35 @@ async function restoreBackup(backupFile) {
       console.log(`\n🔄 Restoring ${tableName} table (${records.length} records)...`);
       
       try {
-        // Delete existing records
-        const { error: deleteError } = await supabase
-          .from(tableName)
-          .delete()
-          .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all
-        
-        if (deleteError) {
-          console.warn(`   Warning deleting ${tableName}:`, deleteError.message);
+        // Clear table: use truncate_backup_table RPC if available, else fallback delete
+        const { error: truncateError } = await supabase.rpc('truncate_backup_table', { tname: tableName });
+        if (truncateError) {
+          const deleteQuery = tableName === 'bible_verses'
+            ? supabase.from(tableName).delete().gte('id', 0)
+            : supabase.from(tableName).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+          const { error: deleteError } = await deleteQuery;
+          if (deleteError) {
+            console.warn(`   Warning clearing ${tableName}:`, deleteError.message);
+          }
         }
         
-        // Insert backup data
+        // Insert backup data in batches
         if (records.length > 0) {
-          const { error: insertError } = await supabase
-            .from(tableName)
-            .insert(records);
-          
-          if (insertError) {
-            console.warn(`   ❌ Failed to restore ${tableName}: ${insertError.message}`);
-            skippedCount++;
-          } else {
-            console.log(`   ✅ Restored ${records.length} records`);
-            restoredCount++;
+          let inserted = 0;
+          for (let i = 0; i < records.length; i += INSERT_BATCH_SIZE) {
+            const batch = records.slice(i, i + INSERT_BATCH_SIZE);
+            const { error: insertError } = await supabase.from(tableName).insert(batch);
+            if (insertError) {
+              throw new Error(insertError.message);
+            }
+            inserted += batch.length;
+            if (records.length > INSERT_BATCH_SIZE) {
+              process.stdout.write(`\r   Inserted ${inserted}/${records.length}...`);
+            }
           }
+          if (records.length > INSERT_BATCH_SIZE) process.stdout.write('\n');
+          console.log(`   ✅ Restored ${records.length} records`);
+          restoredCount++;
         } else {
           console.log(`   ℹ️  No records to restore`);
           restoredCount++;
