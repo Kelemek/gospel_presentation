@@ -73,9 +73,11 @@ export default function TableOfContents({
     await setTranslation(newTranslation)
   }
 
+  const isNative = Capacitor.isNativePlatform()
+
   return (
     <div className="space-y-4 md:space-y-3">
-      {/* Login/Dashboard Button */}
+      {/* Login/Dashboard Button - Login hidden on native apps */}
       {isLoggedIn ? (
         <Link
           href="/admin"
@@ -86,7 +88,7 @@ export default function TableOfContents({
           </svg>
           Dashboard
         </Link>
-      ) : (
+      ) : !isNative ? (
         <Link 
           href="/login"
           className="inline-flex items-center w-full px-4 py-3 text-base md:text-lg font-medium text-white bg-slate-500 hover:bg-slate-600 active:bg-slate-700 border border-slate-600 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px]"
@@ -96,7 +98,7 @@ export default function TableOfContents({
           </svg>
           Login
         </Link>
-      )}
+      ) : null}
 
       {/* Resources dropdown - public templates for anonymous users */}
       {!isLoggedIn && (
