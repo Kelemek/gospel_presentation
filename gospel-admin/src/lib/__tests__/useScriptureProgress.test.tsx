@@ -3,8 +3,8 @@ import { render, screen, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useScriptureProgress } from '../useScriptureProgress'
 
-function TestHarness({ profile }: { profile: any }) {
-  const { trackScriptureView, resetProgress, isLoading, error } = useScriptureProgress(profile)
+function TestHarness({ profile, isLoggedIn = false }: { profile: any; isLoggedIn?: boolean }) {
+  const { trackScriptureView, resetProgress, isLoading, error } = useScriptureProgress(profile, isLoggedIn)
 
   return (
     <div>
@@ -30,11 +30,18 @@ describe('useScriptureProgress', () => {
     await user.click(screen.getByText('track'))
     expect(global.fetch).not.toHaveBeenCalled()
 
-  // default profile (isDefault true) should also not call
-  cleanup()
-  render(<TestHarness profile={{ slug: 'p', isDefault: true }} />)
-  await user.click(screen.getByText('track'))
-  expect(global.fetch).not.toHaveBeenCalled()
+    // default profile (isDefault true) should also not call
+    cleanup()
+    render(<TestHarness profile={{ slug: 'p', isDefault: true }} />)
+    await user.click(screen.getByText('track'))
+    expect(global.fetch).not.toHaveBeenCalled()
+  })
+
+  test('does not call fetch when anonymous (isLoggedIn false) even for non-default profile', async () => {
+    render(<TestHarness profile={{ slug: 'p1', isDefault: false }} />)
+    const user = userEvent.setup()
+    await user.click(screen.getByText('track'))
+    expect(global.fetch).not.toHaveBeenCalled()
   })
 
   test('tracks scripture view successfully for non-default profile', async () => {
@@ -46,7 +53,7 @@ describe('useScriptureProgress', () => {
       return Promise.resolve({ ok: true })
     })
 
-    render(<TestHarness profile={profile} />)
+    render(<TestHarness profile={profile} isLoggedIn />)
     const user = userEvent.setup()
     await user.click(screen.getByText('track'))
 
@@ -60,7 +67,7 @@ describe('useScriptureProgress', () => {
     // @ts-expect-error mocking incompatible types
     global.fetch = jest.fn(() => Promise.resolve({ ok: false, status: 500 }))
 
-    render(<TestHarness profile={profile} />)
+    render(<TestHarness profile={profile} isLoggedIn />)
     const user = userEvent.setup()
     await user.click(screen.getByText('reset'))
 

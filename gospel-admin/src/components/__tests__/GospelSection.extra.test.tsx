@@ -109,6 +109,7 @@ describe('GospelSection (extra tests)', () => {
         onScriptureClick={() => {}}
         profileSlug={'profile-x'}
         savedAnswers={[]}
+        isLoggedIn
       />
     )
 
@@ -155,6 +156,7 @@ describe('GospelSection (extra tests)', () => {
         section={{ section: 's3', title: 'S3', subsections: [{ title: 'sub', content: 'c', questions: [question] }] }}
         onScriptureClick={() => {}}
         profileSlug={'profile-y'}
+        isLoggedIn
       />
     )
 

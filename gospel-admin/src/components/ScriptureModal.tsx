@@ -595,11 +595,6 @@ export default function ScriptureModal({
                     )}
                   </>
                 )}
-                {compareTranslation && !compareLoading && !compareError && (compareText || compareChapterText) && (
-                  <div className="mt-4 pt-4 border-t border-slate-200 shrink-0">
-                    {renderAttribution(compareTranslation)}
-                  </div>
-                )}
               </div>
 
               {/* Right column - Main translation */}
@@ -654,11 +649,13 @@ export default function ScriptureModal({
                     )}
                   </>
                 )}
-                {!loading && !contextLoading && !error && (scriptureText || chapterText) && (
-                  <div className="mt-4 pt-4 border-t border-slate-200 shrink-0">
-                    {renderAttribution(translation)}
-                  </div>
-                )}
+              </div>
+              {/* Attributions - scroll with content */}
+              <div className="mt-4 pt-4 border-t border-slate-200 md:col-span-2">
+                <div className="space-y-2 bg-slate-50 -mx-4 px-4 py-3">
+                  {renderAttribution(translation)}
+                  {compareTranslation && renderAttribution(compareTranslation)}
+                </div>
               </div>
             </>
           ) : (
@@ -708,42 +705,15 @@ export default function ScriptureModal({
                   />
                 </div>
               )}
+              {/* Attributions - scroll with content */}
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <div className="space-y-2 bg-slate-50 -mx-4 px-4 py-3">
+                  {renderAttribution(translation)}
+                </div>
+              </div>
             </>
           )}
         </div>
-        
-        {/* Fixed Footer - hidden when comparing (attributions are in-column) */}
-        {!isComparing && (
-        <div className="bg-slate-50 px-4 pt-2 border-t shrink-0 md:rounded-b-lg" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
-          {translation === 'esv' ? (
-            <>
-              <p className="text-xs text-slate-500 text-center mb-1">
-                Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission.
-              </p>
-              <p className="text-xs text-slate-500 text-center">
-                <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
-                  www.esv.org
-                </a>
-              </p>
-            </>
-          ) : translation === 'kjv' ? (
-            <p className="text-xs text-slate-500 text-center">
-              Scripture quotations are from the King James Version (KJV), which is in the public domain.
-            </p>
-          ) : translation === 'nasb' ? (
-            <p className="text-xs text-slate-500 text-center">
-              Scripture quotations taken from the New American Standard Bible® (NASB), Copyright © 1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation. Used by permission.
-            </p>
-          ) : translation === 'lsb' ? (
-            <p className="text-xs text-slate-500 text-center">
-              Legacy Standard Bible Copyright ©2021 by The Lockman Foundation. All rights reserved. Managed in partnership with Three Sixteen Publishing Inc.{' '}
-              <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">LSBible.org</a>
-              {' '}For Permission to Quote Information visit{' '}
-              <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">www.LSBible.org</a>
-            </p>
-          ) : null}
-        </div>
-        )}
       </div>
     </div>
   )

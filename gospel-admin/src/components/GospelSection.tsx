@@ -6,6 +6,8 @@ import ComaModal from './ComaModal'
 import React, { useState, useEffect } from 'react'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 
+const ANSWERS_STORAGE_KEY_PREFIX = 'gospel-answers-'
+
 
 // Helper component to render text with COMA buttons and inline scripture references
 // Helper component to render text with COMA buttons and inline scripture references
@@ -159,6 +161,7 @@ interface GospelSectionProps {
   onClearProgress?: () => void  // Function to clear progress when pin is clicked
   profileSlug: string
   savedAnswers?: SavedAnswer[]
+  isLoggedIn?: boolean
 }
 
 interface ScriptureReferencesProps {
@@ -177,6 +180,7 @@ interface SubsectionProps {
   onClearProgress?: () => void
   profileSlug: string
   savedAnswers?: SavedAnswer[]
+  isLoggedIn?: boolean
 }
 
 interface NestedSubsectionProps {
@@ -186,6 +190,7 @@ interface NestedSubsectionProps {
   onClearProgress?: () => void
   profileSlug: string
   savedAnswers?: SavedAnswer[]
+  isLoggedIn?: boolean
 }
 
 function ScriptureReferences({ references, onScriptureClick, lastViewedScripture, onClearProgress }: ScriptureReferencesProps) {
@@ -246,9 +251,10 @@ interface QuestionsProps {
   profileSlug: string
   savedAnswers?: Array<{ questionId: string; answer: string; answeredAt: Date }>
   onScriptureClick?: (reference: string) => void
+  isLoggedIn?: boolean
 }
 
-function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick }: QuestionsProps) {
+function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick, isLoggedIn = false }: QuestionsProps) {
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [savedStatus, setSavedStatus] = useState<Record<string, boolean>>({})
   const [isInitialized, setIsInitialized] = useState(false)
@@ -256,20 +262,52 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
   const [showComaModal, setShowComaModal] = useState(false)
   const { showAlert } = useAlertModal()
 
-  // Load saved answers from profile data on mount (only once)
+  const storageKey = `${ANSWERS_STORAGE_KEY_PREFIX}${profileSlug}`
+
+  // Load: localStorage first, then merge with DB if logged in (DB overrides)
   useEffect(() => {
-    if (!isInitialized && savedAnswers.length >= 0) {
-      const loadedAnswers: Record<string, string> = {}
-      questions.forEach(q => {
-        const savedAnswer = savedAnswers.find(sa => sa.questionId === q.id)
-        if (savedAnswer) {
-          loadedAnswers[q.id] = savedAnswer.answer
+    if (!isInitialized && questions.length >= 0) {
+      let loadedAnswers: Record<string, string> = {}
+
+      try {
+        const stored = localStorage.getItem(storageKey)
+        const fromStorage: SavedAnswer[] = stored ? JSON.parse(stored) : []
+
+        if (isLoggedIn && savedAnswers.length > 0) {
+          // Prefer DB when logged in
+          questions.forEach(q => {
+            const fromDb = savedAnswers.find(sa => sa.questionId === q.id)
+            const fromLocal = fromStorage.find(sa => sa.questionId === q.id)
+            loadedAnswers[q.id] = (fromDb?.answer ?? fromLocal?.answer ?? '') as string
+          })
+          // Update localStorage with merged result
+          const merged: SavedAnswer[] = [...fromStorage]
+          savedAnswers.forEach(sa => {
+            const idx = merged.findIndex(m => m.questionId === sa.questionId)
+            const entry: SavedAnswer = { questionId: sa.questionId, answer: sa.answer, answeredAt: sa.answeredAt }
+            if (idx >= 0) merged[idx] = entry
+            else merged.push(entry)
+          })
+          localStorage.setItem(storageKey, JSON.stringify(merged))
+        } else {
+          // Anonymous or no DB data: use localStorage only
+          questions.forEach(q => {
+            const saved = fromStorage.find(sa => sa.questionId === q.id)
+            if (saved) loadedAnswers[q.id] = saved.answer
+          })
         }
-      })
+      } catch {
+        // Fallback to savedAnswers from props if localStorage parse fails
+        questions.forEach(q => {
+          const saved = savedAnswers.find(sa => sa.questionId === q.id)
+          if (saved) loadedAnswers[q.id] = saved.answer
+        })
+      }
+
       setAnswers(loadedAnswers)
       setIsInitialized(true)
     }
-  }, [isInitialized, questions, savedAnswers])
+  }, [isInitialized, questions, savedAnswers, isLoggedIn, storageKey])
 
   const toggleQuestion = (questionId: string) => {
     setExpandedQuestions(prev => ({
@@ -346,40 +384,38 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
       return
     }
 
+    // Always write to localStorage immediately
     try {
-      // Save to database via API
+      const stored = localStorage.getItem(storageKey)
+      const fromStorage: SavedAnswer[] = stored ? JSON.parse(stored) : []
+      const entry: SavedAnswer = { questionId, answer, answeredAt: new Date() }
+      const updated = fromStorage.filter(sa => sa.questionId !== questionId)
+      updated.push(entry)
+      localStorage.setItem(storageKey, JSON.stringify(updated))
+    } catch (e) {
+      console.error('Error saving to localStorage:', e)
+    }
+
+    setSavedStatus(prev => ({ ...prev, [questionId]: true }))
+    setTimeout(() => setSavedStatus(prev => ({ ...prev, [questionId]: false })), 3000)
+
+    // If logged in, sync to DB
+    if (!isLoggedIn) return
+
+    try {
       const response = await fetch(`/api/profiles/${profileSlug}/save-answer`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          questionId,
-          answer
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionId, answer })
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to save answer')
+        const err = await response.json()
+        throw new Error(err.error || 'Failed to save answer')
       }
-
-      // Show saved confirmation
-      setSavedStatus(prev => ({
-        ...prev,
-        [questionId]: true
-      }))
-
-      // Clear confirmation after 3 seconds
-      setTimeout(() => {
-        setSavedStatus(prev => ({
-          ...prev,
-          [questionId]: false
-        }))
-      }, 3000)
     } catch (error) {
-      console.error('Error saving answer:', error)
-      showAlert('Failed to save answer. Please try again.')
+      console.error('Error syncing answer to DB:', error)
+      showAlert('Answer saved locally but could not sync. It will sync when you next log in.')
     }
   }
 
@@ -488,7 +524,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
   )
 }
 
-function NestedSubsectionComponent({ nestedSubsection, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers }: NestedSubsectionProps) {
+function NestedSubsectionComponent({ nestedSubsection, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers, isLoggedIn }: NestedSubsectionProps) {
   const [showComaModal, setShowComaModal] = useState(false)
   
   return (
@@ -520,11 +556,12 @@ function NestedSubsectionComponent({ nestedSubsection, onScriptureClick, lastVie
           />
         )}
         {nestedSubsection.questions && (
-          <Questions 
+          <Questions
             questions={nestedSubsection.questions}
             profileSlug={profileSlug}
             savedAnswers={savedAnswers}
             onScriptureClick={onScriptureClick}
+            isLoggedIn={isLoggedIn}
           />
         )}
       </div>
@@ -532,7 +569,7 @@ function NestedSubsectionComponent({ nestedSubsection, onScriptureClick, lastVie
   )
 }
 
-function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers }: SubsectionProps) {
+function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers, isLoggedIn }: SubsectionProps) {
   const [showComaModal, setShowComaModal] = useState(false)
   
   return (
@@ -566,11 +603,12 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
         )}
       
       {subsection.questions && (
-        <Questions 
+        <Questions
           questions={subsection.questions}
           profileSlug={profileSlug}
           savedAnswers={savedAnswers}
           onScriptureClick={onScriptureClick}
+          isLoggedIn={isLoggedIn}
         />
       )}
       
@@ -585,6 +623,7 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
               onClearProgress={onClearProgress}
               profileSlug={profileSlug}
               savedAnswers={savedAnswers}
+              isLoggedIn={isLoggedIn}
             />
           ))}
         </div>
@@ -594,7 +633,7 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
   )
 }
 
-export default function GospelSection({ section, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers }: GospelSectionProps) {
+export default function GospelSection({ section, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers, isLoggedIn }: GospelSectionProps) {
   const sectionId = `section-${section.section}`
   const [showComaModal, setShowComaModal] = useState(false)
   
@@ -637,6 +676,7 @@ export default function GospelSection({ section, onScriptureClick, lastViewedScr
             onClearProgress={onClearProgress}
             profileSlug={profileSlug}
             savedAnswers={savedAnswers}
+            isLoggedIn={isLoggedIn}
           />
         ))}
       </div>

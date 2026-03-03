@@ -89,7 +89,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     lastViewedScripture, 
     isLoading: progressLoading,
     error: progressError 
-  } = useScriptureProgress(profile || null)
+  } = useScriptureProgress(profile || null, !!userEmail)
   
   // Local state to track the current progress for immediate UI updates
   const [localLastViewed, setLocalLastViewed] = useState<string | null>(null)
@@ -220,8 +220,8 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     // Find the context for this reference
     const refWithContext = allScriptureRefs.find(ref => ref.reference === reference)
     
-    // Track scripture progress for non-default profiles
-    if (profile && !profile.isDefault) {
+    // Track scripture progress (localStorage for all; DB sync only for logged-in + non-default)
+    if (profile) {
       try {
         // Find section and subsection IDs for tracking
         let sectionId = ''
@@ -337,7 +337,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
 
   // Simplified scripture tracking for modal (doesn't need section/subsection IDs)
   const handleModalScriptureViewed = async (reference: string) => {
-    if (profile && !profile.isDefault) {
+    if (profile) {
       try {
         // For modal views, use generic section/subsection IDs
         await trackScriptureView(reference, 'modal-view', 'modal-view')
@@ -455,6 +455,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                     onClearProgress={handleClearProgress}
                     profileSlug={profileInfo.slug}
                     savedAnswers={profileInfo.savedAnswers}
+                    isLoggedIn={!!userEmail}
                   />
                 </div>
               ))}
@@ -509,8 +510,8 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                   </div>
                 )}
                 
-                {/* Scripture Progress Section */}
-                {profile && !profile.isDefault && (
+                {/* Scripture Progress Section - show when profile exists (localStorage for anonymous/default) */}
+                {profile && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   {currentLastViewed ? (
                     <div className="space-y-2">

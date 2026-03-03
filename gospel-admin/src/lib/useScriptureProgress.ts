@@ -1,6 +1,8 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { GospelProfile } from './types'
 import { logger } from './logger'
+
+const SCRIPTURE_PROGRESS_KEY_PREFIX = 'gospel-scripture-progress-'
 
 interface ScriptureProgress {
   reference: string
@@ -17,41 +19,102 @@ interface UseScriptureProgressReturn {
   error: string | null
 }
 
+function parseStoredProgress(value: string | null): ScriptureProgress | null {
+  if (!value) return null
+  try {
+    const parsed = JSON.parse(value)
+    if (parsed?.reference) {
+      return {
+        reference: parsed.reference,
+        sectionId: parsed.sectionId || '',
+        subsectionId: parsed.subsectionId || '',
+        viewedAt: parsed.viewedAt ? new Date(parsed.viewedAt) : new Date()
+      }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 /**
- * Hook for tracking scripture reading progress for non-default profiles
+ * Hook for tracking scripture reading progress for non-default profiles.
+ * Uses localStorage first; syncs to DB when logged in.
  */
 export function useScriptureProgress(
-  profile: GospelProfile | null
+  profile: GospelProfile | null,
+  isLoggedIn = false
 ): UseScriptureProgressReturn {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [localProgress, setLocalProgress] = useState<ScriptureProgress | null>(null)
 
-  // Don't track progress for default profile or when no profile
   const shouldTrack = profile && !profile.isDefault
+  const storageKey = profile?.slug ? `${SCRIPTURE_PROGRESS_KEY_PREFIX}${profile.slug}` : null
+
+  // Load: localStorage first; if logged in and profile.lastViewedScripture exists, prefer DB and update localStorage
+  useEffect(() => {
+    if (!storageKey) return
+
+    const fromStorage = parseStoredProgress(typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null)
+
+    if (isLoggedIn && profile?.lastViewedScripture) {
+      const fromDb: ScriptureProgress = {
+        reference: profile.lastViewedScripture.reference,
+        sectionId: profile.lastViewedScripture.sectionId || '',
+        subsectionId: profile.lastViewedScripture.subsectionId || '',
+        viewedAt: profile.lastViewedScripture.viewedAt instanceof Date
+          ? profile.lastViewedScripture.viewedAt
+          : new Date(profile.lastViewedScripture.viewedAt as string)
+      }
+      setLocalProgress(fromDb)
+      try {
+        localStorage.setItem(storageKey, JSON.stringify({
+          reference: fromDb.reference,
+          sectionId: fromDb.sectionId,
+          subsectionId: fromDb.subsectionId,
+          viewedAt: fromDb.viewedAt
+        }))
+      } catch {
+        // ignore
+      }
+    } else {
+      setLocalProgress(fromStorage)
+    }
+  }, [storageKey, isLoggedIn, profile?.lastViewedScripture, profile?.slug])
 
   const trackScriptureView = useCallback(async (
     reference: string,
     sectionId: string,
     subsectionId: string
   ) => {
-    if (!shouldTrack) return
+    const progressData: ScriptureProgress = {
+      reference,
+      sectionId,
+      subsectionId,
+      viewedAt: new Date()
+    }
+
+    // Always write to localStorage
+    if (storageKey) {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(progressData))
+        setLocalProgress(progressData)
+      } catch {
+        // ignore
+      }
+    }
+
+    // If logged in and should track, also sync to DB
+    if (!shouldTrack || !profile || !isLoggedIn) return
 
     setIsLoading(true)
     setError(null)
 
     try {
-      const progressData: ScriptureProgress = {
-        reference,
-        sectionId,
-        subsectionId,
-        viewedAt: new Date()
-      }
-
       const response = await fetch(`/api/profiles/${profile.slug}/scripture-progress`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(progressData)
       })
 
@@ -67,10 +130,21 @@ export function useScriptureProgress(
     } finally {
       setIsLoading(false)
     }
-  }, [profile, shouldTrack])
+  }, [profile, shouldTrack, isLoggedIn, storageKey])
 
   const resetProgress = useCallback(async () => {
-    if (!shouldTrack) return
+    // Always clear localStorage
+    if (storageKey) {
+      try {
+        localStorage.removeItem(storageKey)
+        setLocalProgress(null)
+      } catch {
+        // ignore
+      }
+    }
+
+    // If logged in and should track, also call DELETE API
+    if (!shouldTrack || !profile || !isLoggedIn) return
 
     setIsLoading(true)
     setError(null)
@@ -92,12 +166,15 @@ export function useScriptureProgress(
     } finally {
       setIsLoading(false)
     }
-  }, [profile, shouldTrack])
+  }, [profile, shouldTrack, isLoggedIn, storageKey])
+
+  // Merged lastViewedScripture: localProgress (from localStorage) || profile?.lastViewedScripture
+  const lastViewedScripture = localProgress || profile?.lastViewedScripture || null
 
   return {
     trackScriptureView,
     resetProgress,
-    lastViewedScripture: profile?.lastViewedScripture || null,
+    lastViewedScripture,
     isLoading,
     error
   }

@@ -34,6 +34,7 @@ function TestConsumer() {
 describe('TranslationContext', () => {
   beforeEach(() => {
     sessionStorage.clear()
+    localStorage.clear()
     global.fetch = jest.fn()
   })
 
@@ -70,7 +71,7 @@ describe('TranslationContext', () => {
     expect(screen.getByTestId('enabled')).toHaveTextContent('esv')
   })
 
-  it('setTranslation updates state and for anonymous user saves to sessionStorage', async () => {
+  it('setTranslation updates state and for anonymous user saves to localStorage', async () => {
     ;(global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({ translations: [{ translation_code: 'esv' }, { translation_code: 'kjv' }] }) })
     render(
       <TranslationProvider>
@@ -81,7 +82,7 @@ describe('TranslationContext', () => {
     const user = userEvent.setup({ delay: null })
     await user.click(screen.getByRole('button', { name: /Set KJV/i }))
     await waitFor(() => expect(screen.getByTestId('translation')).toHaveTextContent('kjv'))
-    expect(sessionStorage.getItem('gospel-preferred-translation')).toBe('kjv')
+    expect(localStorage.getItem('gospel-preferred-translation')).toBe('kjv')
   })
 
   it('loads preferred translation from user profile when logged in', async () => {
@@ -104,7 +105,7 @@ describe('TranslationContext', () => {
     await waitFor(() => expect(screen.getByTestId('translation')).toHaveTextContent('lsb'))
   })
 
-  it('setTranslation with logged-in user calls API and falls back to sessionStorage on failure', async () => {
+  it('setTranslation with logged-in user saves to localStorage and calls API', async () => {
     mockGetUser.mockResolvedValue({ data: { user: { id: 'u1' } } })
     const { createClient } = require('@/lib/supabase/client')
     createClient.mockReturnValue({
@@ -124,6 +125,6 @@ describe('TranslationContext', () => {
     await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'))
     await userEvent.setup({ delay: null }).click(screen.getByRole('button', { name: /Set KJV/i }))
     await waitFor(() => expect(screen.getByTestId('translation')).toHaveTextContent('kjv'))
-    expect(sessionStorage.getItem('gospel-preferred-translation')).toBe('kjv')
+    expect(localStorage.getItem('gospel-preferred-translation')).toBe('kjv')
   })
 })

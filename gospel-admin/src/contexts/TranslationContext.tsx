@@ -41,42 +41,42 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
     loadEnabledTranslations()
   }, [])
 
-  // Load translation preference on mount
+  // Load translation preference on mount (localStorage-first; DB overrides when logged in)
   useEffect(() => {
     async function loadTranslation() {
       try {
-        // First get enabled translations
         const response = await fetch('/api/translations/enabled')
         const data = await response.json()
         const enabled = data.translations?.map((t: any) => t.translation_code) || ['esv']
-        
-        // Check if user is logged in
+
+        // 1. Read from localStorage first (instant)
+        const fromStorage = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null
+        const validStorage = fromStorage === 'esv' || fromStorage === 'kjv' || fromStorage === 'nasb' || fromStorage === 'lsb' ? fromStorage : null
+
         const { data: { user } } = await supabase.auth.getUser()
-        
+
         let preferredTranslation: string | null = null
-        
+
         if (user) {
-          // Load from user profile
+          // Logged in: prefer DB, fall back to localStorage
           const { data: profile } = await supabase
             .from('user_profiles')
             .select('preferred_translation')
             .eq('id', user.id)
             .single() as { data: { preferred_translation: string | null } | null }
-          
-          preferredTranslation = profile?.preferred_translation || null
-        } else {
-          // Load from sessionStorage for anonymous users
-          const stored = sessionStorage.getItem(STORAGE_KEY)
-          if (stored === 'esv' || stored === 'kjv' || stored === 'nasb' || stored === 'lsb') {
-            preferredTranslation = stored
+          const fromDb = profile?.preferred_translation || null
+          preferredTranslation = (fromDb === 'esv' || fromDb === 'kjv' || fromDb === 'nasb' || fromDb === 'lsb') ? fromDb : validStorage
+          if (preferredTranslation) {
+            localStorage.setItem(STORAGE_KEY, preferredTranslation)
           }
+        } else {
+          // Anonymous: localStorage only
+          preferredTranslation = validStorage
         }
-        
-        // If preferred translation is disabled, fall back to ESV
+
         if (preferredTranslation && enabled.includes(preferredTranslation)) {
           setTranslationState(preferredTranslation as BibleTranslation)
         } else if (preferredTranslation) {
-          // Preferred translation is disabled, use ESV
           logger.debug(`Translation ${preferredTranslation} is disabled, falling back to ESV`)
           setTranslationState('esv')
         }
@@ -91,34 +91,24 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Save translation preference
+  // Save translation preference (always localStorage; API sync when logged in)
   const setTranslation = async (newTranslation: BibleTranslation) => {
     try {
       setTranslationState(newTranslation)
-      
-      // Check if user is logged in
+      localStorage.setItem(STORAGE_KEY, newTranslation)
+
       const { data: { user }, error: userError } = await supabase.auth.getUser()
-      
-      if (user && !userError) {
-        // Save to user profile using direct API call
-        try {
-          const response = await fetch('/api/user/translation', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ translation: newTranslation })
-          })
-          
-          if (!response.ok) {
-            // Fall back to sessionStorage if API call fails
-            sessionStorage.setItem(STORAGE_KEY, newTranslation)
-          }
-        } catch {
-          // Fall back to sessionStorage on API error
-          sessionStorage.setItem(STORAGE_KEY, newTranslation)
-        }
-      } else {
-        // Save to sessionStorage for anonymous users
-        sessionStorage.setItem(STORAGE_KEY, newTranslation)
+      if (!user || userError) return
+
+      try {
+        const response = await fetch('/api/user/translation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ translation: newTranslation })
+        })
+        if (!response.ok) logger.warn('Translation saved locally but API sync failed')
+      } catch {
+        logger.warn('Translation saved locally but API sync failed')
       }
     } catch (error) {
       logger.error('Error saving translation preference:', error)
