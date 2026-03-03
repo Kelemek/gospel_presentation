@@ -78,6 +78,7 @@ export async function PUT(
     if (body.title !== undefined) updates.title = body.title
     if (body.description !== undefined) updates.description = body.description
     if (body.gospelData !== undefined) updates.gospelData = body.gospelData
+    if (body.isPublic !== undefined) updates.isPublic = body.isPublic
 
     const updatedProfile = await updateProfile(slug, updates)
 

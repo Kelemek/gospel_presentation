@@ -174,8 +174,10 @@ export function createDefaultProfile(gospelData: GospelPresentationData): Omit<G
 
 /**
  * Sanitizes profile data for public consumption (removes sensitive fields)
+ * Includes updatedAt for client-side cache validation
  */
-export function sanitizeProfileForPublic(profile: GospelProfile): Omit<GospelProfile, 'id' | 'createdAt' | 'updatedAt'> {
+export function sanitizeProfileForPublic(profile: GospelProfile): Omit<GospelProfile, 'id' | 'createdAt' | 'updatedAt'> & { updatedAt: string } {
+  const updatedAt = profile.updatedAt instanceof Date ? profile.updatedAt.toISOString() : String(profile.updatedAt)
   return {
     slug: profile.slug,
     title: profile.title,
@@ -183,7 +185,11 @@ export function sanitizeProfileForPublic(profile: GospelProfile): Omit<GospelPro
     gospelData: profile.gospelData,
     isDefault: profile.isDefault,
     isTemplate: profile.isTemplate,
-    visitCount: profile.visitCount
+    isPublic: profile.isPublic,
+    visitCount: profile.visitCount,
+    lastViewedScripture: profile.lastViewedScripture,
+    savedAnswers: profile.savedAnswers,
+    updatedAt
   }
 }
 

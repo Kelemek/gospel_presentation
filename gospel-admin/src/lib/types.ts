@@ -67,6 +67,7 @@ export interface GospelProfile {
   gospelData: GospelSection[]     // Complete copy of gospel presentation data
   isDefault: boolean              // True for the / route
   isTemplate: boolean             // True for template profiles (editable only by admins)
+  isPublic?: boolean             // When true and isTemplate, anonymous users can view via Resources dropdown
   visitCount: number              // Analytics counter
   createdAt: Date
   updatedAt: Date

@@ -112,7 +112,7 @@ describe('profile-service', () => {
 		expect(p.isTemplate).toBe(true)
 	})
 
-	test('sanitizeProfileForPublic removes id and timestamps', () => {
+	test('sanitizeProfileForPublic removes id and createdAt, includes updatedAt for cache', () => {
 		const now = new Date()
 		const profile: any = {
 			id: 'uuid',
@@ -129,7 +129,8 @@ describe('profile-service', () => {
 		const publicProfile = sanitizeProfileForPublic(profile)
 		expect((publicProfile as any).id).toBeUndefined()
 		expect((publicProfile as any).createdAt).toBeUndefined()
-		expect((publicProfile as any).updatedAt).toBeUndefined()
+		expect(typeof publicProfile.updatedAt).toBe('string')
+		expect(publicProfile.updatedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
 		expect(publicProfile.slug).toBe('s')
 	})
 

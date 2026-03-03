@@ -10,6 +10,7 @@ interface TemplateCardProps {
   onDelete: (slug: string, title: string) => void
   onDownloadBackup: (template: any) => void
   onRestoreBackup: (template: any, event: React.ChangeEvent<HTMLInputElement>) => void
+  onTogglePublic?: (template: any, isPublic: boolean) => void
   userRole?: 'admin' | 'counselor' | null
   canManage?: boolean
   isExpanded?: boolean
@@ -29,6 +30,7 @@ export default function TemplateCard({
   onDownloadBackup: _onDownloadBackup,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onRestoreBackup: _onRestoreBackup,
+  onTogglePublic,
   userRole,
   canManage = true,
   isExpanded = false,
@@ -83,7 +85,25 @@ export default function TemplateCard({
             <span className="bg-slate-200 text-slate-700 text-xs px-2 py-1 rounded-full font-medium">
               Template
             </span>
+            {template.isPublic && (
+              <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
+                Public
+              </span>
+            )}
           </div>
+
+          {/* Public toggle - admins only */}
+          {userRole === 'admin' && onTogglePublic && (
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={!!template.isPublic}
+                onChange={(e) => onTogglePublic(template, e.target.checked)}
+                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-slate-700 text-xs">Public (show in Resources for anonymous users)</span>
+            </label>
+          )}
 
           {/* Metadata */}
           <div className="space-y-2">

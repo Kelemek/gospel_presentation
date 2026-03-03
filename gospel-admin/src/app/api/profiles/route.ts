@@ -106,6 +106,7 @@ export async function GET() {
       description: p.description,
       isDefault: p.isDefault,
       isTemplate: p.isTemplate,
+      isPublic: p.isPublic ?? false,
       visitCount: p.visitCount,
       lastVisited: p.lastVisited ? (p.lastVisited instanceof Date ? p.lastVisited.toISOString() : p.lastVisited) : undefined,
       createdAt: p.createdAt.toISOString(),

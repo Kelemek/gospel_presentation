@@ -57,6 +57,19 @@ describe('/api/profiles/[slug]', () => {
       expect(body.slug).toBe('s1')
     })
 
+    it('passes isPublic to updateProfile when provided', async () => {
+      const updated = { id: 'p1', slug: 't1', title: 'Template', isPublic: true } as any
+      mockDataService.updateProfile.mockResolvedValue(updated)
+
+      const req = ({ json: async () => ({ isPublic: true }) } as unknown) as any
+      const res = await PUT(req, { params: Promise.resolve({ slug: 't1' }) })
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(mockDataService.updateProfile).toHaveBeenCalledWith('t1', expect.objectContaining({ isPublic: true }))
+      expect(body.slug).toBe('t1')
+    })
+
     it('returns 404 when updateProfile throws not found', async () => {
       mockDataService.updateProfile.mockRejectedValue(new Error('not found'))
 

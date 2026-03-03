@@ -30,16 +30,37 @@ describe('TableOfContents additional behaviors', () => {
     expect(mockPrint).toHaveBeenCalled()
   })
 
-  it('renders View Profiles when user is logged in', async () => {
-    // Spy on the already-loaded supabase client module and mock createClient
-    // (avoids resetModules or doMock which can create a second React instance).
-     
+  it('shows Resources dropdown when user is not logged in', async () => {
     const clientMod = require('@/lib/supabase/client')
     jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({
-      auth: { getUser: async () => ({ data: { user: { id: 'u1' } } }) },
+      auth: { getUser: async () => ({ data: { user: null } }) }
     }))
 
-    // Ensure an authenticated localStorage marker (some helpers rely on this)
+    const fetchSpy = jest.fn((input: RequestInfo) => {
+      const url = typeof input === 'string' ? input : (input as Request).url
+      if (String(url).includes('/api/profiles/public-templates')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ profiles: [{ slug: 't1', title: 'Template One' }] })
+        }) as any
+      }
+      return Promise.resolve({ ok: false }) as any
+    })
+    global.fetch = fetchSpy
+
+    const TableOfContents = require('../TableOfContents').default
+    render(<TableOfContents sections={[]} />)
+
+    await waitFor(() => expect(screen.getByText(/Resources/i)).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument()
+  })
+
+  it('renders Dashboard link when user is logged in', async () => {
+    const clientMod = require('@/lib/supabase/client')
+    jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({
+      auth: { getUser: async () => ({ data: { user: { id: 'u1' } } }) }
+    }))
+
     ;(global as any).localStorage = {
       getItem: jest.fn((k: string) => (k === 'gospel-admin-auth' ? JSON.stringify({ isAuthenticated: true, sessionToken: 't' }) : null)),
       setItem: jest.fn(),
@@ -50,13 +71,11 @@ describe('TableOfContents additional behaviors', () => {
     const TableOfContents = require('../TableOfContents').default
     render(<TableOfContents sections={[]} />)
 
-    // Wait for the effect to run and set isLoggedIn
     await waitFor(() => {
-      expect(screen.getByText(/View Profiles|Login/)).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /Dashboard/i })).toBeInTheDocument()
     })
 
-    // When supabase returns a user, the header link should point to /admin
-    const link = screen.getByRole('link', { name: /View Profiles|Login/ })
-    expect(link).toHaveAttribute('href', expect.stringContaining('/'))
+    const link = screen.getByRole('link', { name: /Dashboard/i })
+    expect(link).toHaveAttribute('href', '/admin')
   })
 })

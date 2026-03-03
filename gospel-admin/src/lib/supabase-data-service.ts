@@ -80,6 +80,7 @@ async function getProfilesWithClient(supabase: any): Promise<GospelProfile[]> {
     description: row.description || undefined,
     isDefault: row.is_default,
     isTemplate: row.is_template || false,
+    isPublic: row.is_public || false,
     visitCount: row.visit_count,
     gospelData: row.gospel_data as unknown as GospelPresentationData,
     lastViewedScripture: row.last_viewed_scripture ? {
@@ -151,6 +152,93 @@ export async function getProfiles(): Promise<GospelProfile[]> {
 }
 
 /**
+ * Gets public template profiles (slug, title) for anonymous Resources dropdown.
+ * Uses regular client - RLS allows anon to see is_template AND is_public rows.
+ */
+export async function getPublicTemplateProfiles(): Promise<{ slug: string; title: string }[]> {
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('slug, title')
+      .eq('is_template', true)
+      .eq('is_public', true)
+      .order('title', { ascending: true })
+
+    if (error) {
+      logger.error('[supabase-data-service] Error loading public templates:', error)
+      return []
+    }
+
+    return (data || []).map((row: any) => ({ slug: row.slug, title: row.title || row.slug }))
+  } catch (error) {
+    logger.error('[supabase-data-service] Error loading public templates:', error)
+    return []
+  }
+}
+
+/**
+ * Lightweight metadata fetch for SEO - avoids loading full gospelData
+ */
+export async function getProfileMeta(slug: string): Promise<{ title: string; description?: string; updatedAt: Date } | null> {
+  try {
+    const userClient = await createClient()
+    const { data: { user } } = await userClient.auth.getUser()
+
+    let supabase: any
+    if (slug === 'default') {
+      supabase = createAdminClient()
+    } else if (user) {
+      const adminClient = createAdminClient()
+      const { data: userProfile } = await adminClient
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+      const role = (userProfile as any)?.role
+      if (role === 'admin' || role === 'counselor') {
+        supabase = adminClient
+      } else {
+        supabase = userClient
+      }
+    } else {
+      supabase = userClient
+    }
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('title, description, updated_at')
+      .eq('slug', slug)
+      .single()
+
+    if (error || !data) {
+      if (error?.code === 'PGRST116') return null
+      throw error
+    }
+    return {
+      title: data.title,
+      description: data.description || undefined,
+      updatedAt: new Date(data.updated_at)
+    }
+  } catch (error) {
+    logger.error('[supabase-data-service] Error loading profile meta:', error)
+    return null
+  }
+}
+
+/**
+ * Returns profile updated_at only - for cache validation (lightweight, minimal DB hit)
+ */
+export async function getProfileUpdatedAt(slug: string): Promise<Date | null> {
+  try {
+    const meta = await getProfileMeta(slug)
+    return meta?.updatedAt ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
  * Gets a profile by slug (respects RLS)
  * Uses admin client for: default profile, and when user is admin/counselor (enables template cloning)
  */
@@ -203,6 +291,7 @@ export async function getProfileBySlug(slug: string): Promise<GospelProfile | nu
       description: row.description || undefined,
       isDefault: row.is_default,
       isTemplate: row.is_template || false,
+      isPublic: row.is_public || false,
       visitCount: row.visit_count,
       gospelData: row.gospel_data as unknown as GospelPresentationData,
       lastViewedScripture: row.last_viewed_scripture ? {
@@ -308,6 +397,7 @@ export async function updateProfile(
     gospelData: GospelPresentationData
     lastViewedScripture: any
     savedAnswers: any[]
+    isPublic: boolean
   }>
 ): Promise<GospelProfile> {
   try {
@@ -350,7 +440,10 @@ export async function updateProfile(
     if (updates.savedAnswers !== undefined) {
       updateData.saved_answers = updates.savedAnswers
     }
-    
+    if (updates.isPublic !== undefined) {
+      updateData.is_public = updates.isPublic
+    }
+
     const { data, error } = await clientToUse
       .from('profiles')
       .update(updateData)
@@ -369,6 +462,7 @@ export async function updateProfile(
       description: data.description || undefined,
       isDefault: data.is_default,
       isTemplate: data.is_template || false,
+      isPublic: data.is_public || false,
       visitCount: data.visit_count,
       gospelData: data.gospel_data as GospelPresentationData,
       lastViewedScripture: data.last_viewed_scripture ? {

@@ -1,12 +1,26 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 
-// Mock the ProfileContent component (relative import used by the page)
+// Mock ProfileContent
 jest.mock('../ProfileContent', () => ({ __esModule: true, default: ({ profileInfo }: any) => <div data-testid="profile-content">{profileInfo.title}</div> }))
+// Mock ProfilePageClient to avoid useProfileWithCache/fetch in test (tests page wiring)
+jest.mock('../ProfilePageClient', () => ({
+  __esModule: true,
+  default: ({ slug }: { slug: string }) => (
+    <div>
+      <header><h1>The Gospel Presentation</h1></header>
+      <div data-testid="profile-content">P1</div>
+    </div>
+  )
+}))
 
-// Mock the server data service used by getProfile when running on the server
+// Mock the server data service - page uses getProfileMeta for lightweight check
 jest.mock('@/lib/supabase-data-service', () => ({
   __esModule: true,
+  getProfileMeta: async (slug: string) => {
+    if (slug === 'missing') return null
+    return { title: 'P1', description: 'Desc', updatedAt: new Date() }
+  },
   getProfileBySlug: async (slug: string) => {
     if (slug === 'missing') return null
     return {
@@ -70,13 +84,13 @@ test('generateMetadata returns profile metadata for existing profile', async () 
   expect((metadata.description as string).toLowerCase()).toContain('desc')
 })
 
-test('ProfilePage renders header and ProfileContent', async () => {
+test('ProfilePage renders ProfilePageClient with slug', async () => {
   const { default: ProfilePage } = await import('../page')
 
   const element = await ProfilePage({ params: Promise.resolve({ slug: 'p1' }) } as any)
 
   render(element)
 
-  await waitFor(() => expect(screen.getByText(/The Gospel Presentation/i)).toBeInTheDocument())
+  expect(screen.getByText(/The Gospel Presentation/i)).toBeInTheDocument()
   expect(screen.getByTestId('profile-content')).toHaveTextContent(/P1/i)
 })

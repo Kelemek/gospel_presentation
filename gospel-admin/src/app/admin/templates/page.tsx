@@ -209,6 +209,27 @@ function TemplatesPageContent() {
     router.push('/login')
   }
 
+  const handleTogglePublic = async (slug: string, isPublic: boolean) => {
+    try {
+      const response = await fetch(`/api/profiles/${slug}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPublic })
+      })
+      if (response.ok) {
+        setTemplates(prev =>
+          prev.map((t: any) => (t.slug === slug ? { ...t, isPublic } : t))
+        )
+        showAlert(isPublic ? 'Template is now public' : 'Template is no longer public')
+      } else {
+        const err = await response.json()
+        showAlert(err.error || 'Failed to update')
+      }
+    } catch (e: any) {
+      showAlert(e?.message || 'Failed to update')
+    }
+  }
+
   // Filter templates based on search query and sort by description A-Z
   const filteredTemplates = templates
     .filter(template => {
@@ -381,6 +402,7 @@ function TemplatesPageContent() {
                   onDelete={handleDeleteProfile}
                   onDownloadBackup={handleDownloadBackup}
                   onRestoreBackup={handleRestoreBackup}
+                  onTogglePublic={userRole === 'admin' ? (t, isPublic) => handleTogglePublic(t.slug, isPublic) : undefined}
                   userRole={userRole}
                   canManage={userRole === 'admin'}
                   isExpanded={expandedRows.has(template.id)}
@@ -464,10 +486,24 @@ function TemplatesPageContent() {
                         {/* Details/Info */}
                         <div className="space-y-2 text-xs sm:text-sm">
                           {/* Badges */}
-                          <div className="flex flex-wrap gap-1.5 pb-2">
+                          <div className="flex flex-wrap gap-1.5 pb-2 items-center">
                             <span className="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded-full font-medium">
                               Template
                             </span>
+                            {template.isPublic && (
+                              <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
+                                Public
+                              </span>
+                            )}
+                            <label className="flex items-center gap-2 cursor-pointer ml-2">
+                              <input
+                                type="checkbox"
+                                checked={!!template.isPublic}
+                                onChange={(e) => handleTogglePublic(template.slug, e.target.checked)}
+                                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-slate-600">Public (Resources)</span>
+                            </label>
                           </div>
 
                           <p className="text-slate-600">
