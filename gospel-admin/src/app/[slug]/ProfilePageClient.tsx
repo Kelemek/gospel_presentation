@@ -66,9 +66,9 @@ export default function ProfilePageClient({ slug }: ProfilePageClientProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-linear-to-br from-slate-700 to-slate-800 text-white text-center py-10 shadow-lg">
+      <header className="bg-linear-to-br from-slate-700 to-slate-800 text-white text-center py-5 shadow-lg">
         <div className="container mx-auto px-5">
-          <h1 className="text-4xl md:text-5xl font-bold mb-3">
+          <h1 className="text-4xl md:text-5xl font-bold mb-1">
             The Gospel Presentation
           </h1>
         </div>

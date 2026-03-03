@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Gospel Presentation</string>
-    <string name="title_activity_main">Gospel Presentation</string>
+    <string name="app_name">Gospel</string>
+    <string name="title_activity_main">Gospel</string>
     <string name="package_name">org.cpchurch.gospelpresentation</string>
     <string name="custom_url_scheme">org.cpchurch.gospelpresentation</string>
 </resources>
