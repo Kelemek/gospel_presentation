@@ -14,6 +14,12 @@ interface AdminSettings {
   verification_code_length: number;
   verification_code_expiry_minutes: number;
   enable_verification_code_login: boolean;
+  public_template_order?: string[] | null;
+}
+
+interface PublicTemplate {
+  slug: string;
+  title: string;
 }
 
 // ============================================================================
@@ -21,7 +27,7 @@ interface AdminSettings {
 // ============================================================================
 
 export default function AdminSettingsPage() {
-  const [settings, setSettings] = useState<AdminSettings | null>(null);
+  const [, setSettings] = useState<AdminSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +36,14 @@ export default function AdminSettingsPage() {
   // Form state
   const [codeLength, setCodeLength] = useState<number>(6);
   const [expiryMinutes, setExpiryMinutes] = useState<number>(15);
+
+  // Public template order (Resources dropdown)
+  const [publicTemplates, setPublicTemplates] = useState<PublicTemplate[]>([]);
+  const [orderedTemplates, setOrderedTemplates] = useState<PublicTemplate[]>([]);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState<string | null>(null);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   // ============================================================================
   // Load Settings
@@ -46,6 +60,7 @@ export default function AdminSettingsPage() {
     try {
       const supabase = createClient();
 
+      // Load core settings first (no public_template_order so page works before migration)
       const { data, error: fetchError } = await supabase
         .from("admin_settings")
         .select("verification_code_length, verification_code_expiry_minutes, enable_verification_code_login")
@@ -60,6 +75,52 @@ export default function AdminSettingsPage() {
         setSettings(data as any);
         setCodeLength((data as any).verification_code_length || 6);
         setExpiryMinutes((data as any).verification_code_expiry_minutes || 15);
+      }
+
+      // Load public templates for Resources dropdown order
+      const { data: templatesData } = await supabase
+        .from("profiles")
+        .select("slug, title")
+        .eq("is_template", true)
+        .eq("is_public", true);
+
+      const templates: PublicTemplate[] = (templatesData || []).map((r: any) => ({
+        slug: r.slug,
+        title: r.title || r.slug,
+      })).sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
+
+      setPublicTemplates(templates);
+
+      // Load order separately; if column does not exist (migration not run), use empty order
+      let orderSlugs: string[] = [];
+      try {
+        const { data } = await supabase
+          .from("admin_settings")
+          .select("public_template_order")
+          .eq("id", 1)
+          .single();
+        const orderData = data as { public_template_order?: string[] | null } | null;
+        if (orderData?.public_template_order != null && Array.isArray(orderData.public_template_order)) {
+          orderSlugs = orderData.public_template_order;
+        }
+      } catch {
+        // Column may not exist yet; ignore
+      }
+
+      if (orderSlugs.length > 0) {
+        const bySlug = new Map(templates.map((t) => [t.slug, t]));
+        const ordered: PublicTemplate[] = [];
+        for (const slug of orderSlugs) {
+          const t = bySlug.get(slug);
+          if (t) {
+            ordered.push(t);
+            bySlug.delete(slug);
+          }
+        }
+        const rest = Array.from(bySlug.values()).sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
+        setOrderedTemplates([...ordered, ...rest]);
+      } else {
+        setOrderedTemplates(templates);
       }
     } catch (err) {
       logger.error("Failed to load admin settings:", err);
@@ -111,6 +172,56 @@ export default function AdminSettingsPage() {
       setIsSaving(false);
     }
   };
+
+  const handleSaveOrder = async () => {
+    setIsSavingOrder(true);
+    setError(null);
+    setOrderSuccess(null);
+    try {
+      const supabase = createClient();
+      const slugs = orderedTemplates.map((t) => t.slug);
+      const { error: updateError } = await (supabase.from("admin_settings") as any)
+        .update({ public_template_order: slugs })
+        .eq("id", 1);
+      if (updateError) throw updateError;
+      setOrderSuccess("Resources order saved.");
+      setTimeout(() => setOrderSuccess(null), 3000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to save resources order. Please try again.";
+      logger.error("Failed to save resources order:", err);
+      setError(message);
+    } finally {
+      setIsSavingOrder(false);
+    }
+  };
+
+  const handleDragStart = (index: number) => setDragIndex(index);
+  const handleDragEnd = () => {
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
+  const handleDragLeave = () => setDragOverIndex(null);
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    setDragOverIndex(null);
+    if (dragIndex === null || dragIndex === dropIndex) return;
+    const next = [...orderedTemplates];
+    const [removed] = next.splice(dragIndex, 1);
+    next.splice(dropIndex, 0, removed);
+    setOrderedTemplates(next);
+    setDragIndex(null);
+  };
+
+  // Grip icon (six dots) for drag handle
+  const GripIcon = () => (
+    <svg className="w-4 h-4 text-slate-400 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
+      <path d="M7 2a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM7 10a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM7 18a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM13 2a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM13 10a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM13 18a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+    </svg>
+  );
 
   // ============================================================================
   // Render
@@ -166,6 +277,12 @@ export default function AdminSettingsPage() {
             <div className="bg-green-50 border border-green-200 text-green-800 px-6 py-4 rounded-lg shadow-sm" role="alert">
               <p className="font-semibold">Success</p>
               <p className="text-sm mt-1">{success}</p>
+            </div>
+          )}
+
+          {orderSuccess && (
+            <div className="bg-green-50 border border-green-200 text-green-800 px-6 py-4 rounded-lg shadow-sm" role="alert">
+              <p className="text-sm">{orderSuccess}</p>
             </div>
           )}
 
@@ -247,6 +364,66 @@ export default function AdminSettingsPage() {
                 )}
               </button>
             </div>
+          </div>
+
+          {/* Resources dropdown order */}
+          <div className="bg-white rounded-xl shadow-md border border-slate-100 overflow-hidden">
+            <div className="border-b border-slate-200 px-6 sm:px-8 py-6">
+              <h2 className="text-2xl font-bold text-slate-900">Resources dropdown order</h2>
+              <p className="text-slate-600 text-sm mt-2">
+                Order of public templates in the Resources menu on the main page. Drag to reorder.
+              </p>
+            </div>
+            <div className="px-6 sm:px-8 py-6">
+              {publicTemplates.length === 0 ? (
+                <div className="w-80 border border-slate-200 rounded-lg bg-white shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 text-sm text-slate-500">
+                    No public templates. Mark templates as public on the Templates page.
+                  </div>
+                </div>
+              ) : (
+                <div className="w-80 border border-slate-200 rounded-lg bg-white shadow-sm overflow-hidden" role="listbox">
+                  {orderedTemplates.map((t, index) => (
+                    <div
+                      key={t.slug}
+                      draggable
+                      onDragStart={() => handleDragStart(index)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, index)}
+                      className={`flex items-center gap-2 px-4 py-3 text-sm text-slate-700 border-b border-slate-100 last:border-b-0 transition-colors cursor-grab active:cursor-grabbing ${dragOverIndex === index ? "bg-slate-50" : "hover:bg-slate-50"}`}
+                      role="option"
+                      aria-selected={dragOverIndex === index}
+                    >
+                      <span className="shrink-0" aria-hidden>
+                        <GripIcon />
+                      </span>
+                      <span className="min-w-0 truncate">{t.title}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {publicTemplates.length > 0 && (
+              <div className="border-t border-slate-200 px-6 sm:px-8 py-6 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleSaveOrder}
+                  disabled={isSavingOrder}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white border border-blue-600 hover:border-blue-700 disabled:opacity-50 disabled:bg-slate-400 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium flex items-center gap-2"
+                >
+                  {isSavingOrder ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    "Save order"
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

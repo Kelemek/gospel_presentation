@@ -3,9 +3,10 @@
 jest.mock('@/lib/data-service')
 jest.mock('@/lib/auth')
 
+import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import AdminContentPage from '../page'
+import { ContentEditPage } from '../page'
 import * as dataService from '@/lib/data-service'
 import * as auth from '@/lib/auth'
 
@@ -14,7 +15,6 @@ const mockAuth = auth as jest.Mocked<typeof auth>
 
 // Mock next/navigation
 const mockPush = jest.fn()
-const mockParams = Promise.resolve({ slug: 'test-profile' })
 
 // Provide a focused next/navigation mock used by this test file. We include
 // useRouter, useParams and usePathname (AdminHeader uses usePathname).
@@ -50,6 +50,7 @@ describe('Admin Content Page - Drag and Drop', () => {
       }
     ],
     isDefault: false,
+    isTemplate: false,
     visitCount: 0,
     createdAt: new Date(),
     updatedAt: new Date()
@@ -78,7 +79,7 @@ describe('Admin Content Page - Drag and Drop', () => {
     // Enable drag-and-drop tests — these are pure DOM interactions and use
     // mocked data-service/auth; they should run deterministically under jsdom.
     it('should handle drag start event', async () => {
-    render(<AdminContentPage params={mockParams} />)
+    render(<ContentEditPage slug="test-profile" />)
 
     await waitFor(() => {
       expect(screen.getAllByText('Test Profile').length).toBeGreaterThan(0)
@@ -103,7 +104,7 @@ describe('Admin Content Page - Drag and Drop', () => {
   })
 
   it('should handle drag over event', async () => {
-    render(<AdminContentPage params={mockParams} />)
+    render(<ContentEditPage slug="test-profile" />)
 
     await waitFor(() => {
       expect(screen.getAllByText('Test Profile').length).toBeGreaterThan(0)
@@ -159,7 +160,7 @@ describe('Admin Content Page - Drag and Drop', () => {
       return Promise.resolve({ ok: true, json: async () => ({}) })
     })
 
-    render(<AdminContentPage params={mockParams} />)
+    render(<ContentEditPage slug="test-profile" />)
 
     await waitFor(() => {
       expect(screen.getAllByText('Test Profile').length).toBeGreaterThan(0)
@@ -184,7 +185,7 @@ describe('Admin Content Page - Drag and Drop', () => {
   it('should save changes when save button is clicked', async () => {
     const user = userEvent.setup()
 
-    render(<AdminContentPage params={mockParams} />)
+    render(<ContentEditPage slug="test-profile" />)
 
     await waitFor(() => {
       expect(screen.getAllByText('Test Profile').length).toBeGreaterThan(0)
@@ -205,7 +206,7 @@ describe('Admin Content Page - Drag and Drop', () => {
   })
 
   it('should show section save buttons', async () => {
-    render(<AdminContentPage params={mockParams} />)
+    render(<ContentEditPage slug="test-profile" />)
 
     await waitFor(() => {
       expect(screen.getAllByText('Test Profile').length).toBeGreaterThan(0)
@@ -221,7 +222,7 @@ describe('Admin Content Page - Drag and Drop', () => {
   it('should handle favorite toggling', async () => {
     const user = userEvent.setup()
     
-    render(<AdminContentPage params={mockParams} />)
+    render(<ContentEditPage slug="test-profile" />)
 
     await waitFor(() => {
       expect(screen.getAllByText('Test Profile').length).toBeGreaterThan(0)

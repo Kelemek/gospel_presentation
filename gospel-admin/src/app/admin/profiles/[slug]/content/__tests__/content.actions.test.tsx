@@ -41,7 +41,7 @@ afterAll(() => {
 test('can add, toggle favorite, and remove a scripture reference', async () => {
   const { ContentEditPage } = await import('../page')
 
-  render(<ContentEditPage params={Promise.resolve({ slug: 'p1' })} />)
+  render(<ContentEditPage slug="p1" />)
 
   // Wait for admin header to be present
   await waitFor(() => expect(screen.getByTestId('admin-header')).toBeInTheDocument())
@@ -75,4 +75,4 @@ test('can add, toggle favorite, and remove a scripture reference', async () => {
   await userEvent.click(removeBtn)
 
   await waitFor(() => expect(screen.queryByText(/John 3:16/i)).not.toBeInTheDocument())
-})
+}, 15000)

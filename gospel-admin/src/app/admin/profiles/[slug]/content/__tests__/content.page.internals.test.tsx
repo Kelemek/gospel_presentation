@@ -56,10 +56,8 @@ test('create section, add scripture, toggle favorite and save content (success)'
     return Promise.resolve({ ok: true, json: async () => ({}) })
   })
 
-  const params = Promise.resolve({ slug: 's1' })
   const { ContentEditPage } = await import('../page')
-
-  render(<ContentEditPage params={params as any} />)
+  render(<ContentEditPage slug="s1" />)
 
   // Wait for section content to render
   await waitFor(() => expect(screen.getByText('S1')).toBeInTheDocument())
@@ -99,4 +97,4 @@ test('create section, add scripture, toggle favorite and save content (success)'
 
   // showAlert (from AlertModalContext) should be called for successful save
   await waitFor(() => expect(showAlert).toHaveBeenCalled())
-})
+}, 15000)

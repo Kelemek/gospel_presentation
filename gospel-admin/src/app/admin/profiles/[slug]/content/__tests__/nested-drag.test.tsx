@@ -2,9 +2,10 @@
 jest.mock('@/lib/data-service')
 jest.mock('@/lib/auth')
 
+import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import AdminContentPage from '../page'
+import { ContentEditPage } from '../page'
 import * as dataService from '@/lib/data-service'
 import * as auth from '@/lib/auth'
 
@@ -12,7 +13,6 @@ const mockDataService = dataService as jest.Mocked<typeof dataService>
 const mockAuth = auth as jest.Mocked<typeof auth>
 
 const mockPush = jest.fn()
-const mockParams = Promise.resolve({ slug: 'nested-profile' })
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
@@ -45,6 +45,7 @@ describe('Admin Content Page - Nested Drag/Drop', () => {
       }
     ],
     isDefault: false,
+    isTemplate: false,
     visitCount: 0,
     createdAt: new Date(),
     updatedAt: new Date()
@@ -69,7 +70,7 @@ describe('Admin Content Page - Nested Drag/Drop', () => {
   })
 
   it('moves a scripture from nested subsection N1 to N2 (different nested sections)', async () => {
-    render(<AdminContentPage params={mockParams} />)
+    render(<ContentEditPage slug="nested-profile" />)
 
     await waitFor(() => expect(screen.getByText('Nested')).toBeInTheDocument())
 
@@ -113,7 +114,7 @@ describe('Admin Content Page - Nested Drag/Drop', () => {
       return Promise.resolve({ ok: true, json: async () => ({}) })
     })
 
-    render(<AdminContentPage params={mockParams} />)
+    render(<ContentEditPage slug="nested-profile" />)
 
     await waitFor(() => expect(screen.getByText('Nested')).toBeInTheDocument())
     await waitFor(() => expect(screen.getByText('N1')).toBeInTheDocument())

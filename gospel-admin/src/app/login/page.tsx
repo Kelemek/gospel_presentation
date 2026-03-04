@@ -19,13 +19,13 @@ function LoginCodeForm() {
   const [step, setStep] = useState<"email" | "code">("email");
   
   // Code verification state
-  const [codeId, setCodeId] = useState<string | null>(null);
+  const [, setCodeId] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
-  const [code, setCode] = useState("");
+  const [, setCode] = useState("");
   
   // Settings state
   const [codeLength, setCodeLength] = useState<number>(6); // Default to 6
-  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+  const [, setIsLoadingSettings] = useState(true);
   
   // UI state
   const [error, setError] = useState<string | null>(null);

@@ -47,10 +47,9 @@ test('save failure shows alert', async () => {
     return Promise.resolve({ ok: true, json: async () => ({}) })
   })
 
-  const params = Promise.resolve({ slug: 's1' })
   const { ContentEditPage } = await import('../page')
 
-  render(<ContentEditPage params={params as any} />)
+  render(<ContentEditPage slug="s1" />)
 
   // Wait for section content to render
   await waitFor(() => expect(screen.getByText('S1')).toBeInTheDocument())
@@ -97,10 +96,9 @@ test('delete last subsection triggers confirm and alert', async () => {
     return Promise.resolve({ ok: true, json: async () => ({}) })
   })
 
-  const params = Promise.resolve({ slug: 's1' })
   const { ContentEditPage } = await import('../page')
 
-  render(<ContentEditPage params={params as any} />)
+  render(<ContentEditPage slug="s1" />)
 
   // Wait for section content to render
   await waitFor(() => expect(screen.getByText('S1')).toBeInTheDocument())

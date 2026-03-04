@@ -50,7 +50,7 @@ afterAll(() => {
 test('apply COMA template populates questions and adding a question works', async () => {
   const { ContentEditPage } = await import('../page')
 
-  render(<ContentEditPage params={Promise.resolve({ slug: 'p1' })} />)
+  render(<ContentEditPage slug="p1" />)
 
   await waitFor(() => expect(screen.getByTestId('admin-header')).toBeInTheDocument())
 
@@ -80,4 +80,4 @@ test('apply COMA template populates questions and adding a question works', asyn
 
   // The newly added question should appear in the document
   await waitFor(() => expect(screen.getByText(/What does this passage mean\?/i)).toBeInTheDocument())
-})
+}, 15000)

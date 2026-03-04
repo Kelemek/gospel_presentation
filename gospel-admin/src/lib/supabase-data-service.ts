@@ -154,23 +154,50 @@ export async function getProfiles(): Promise<GospelProfile[]> {
 /**
  * Gets public template profiles (slug, title) for anonymous Resources dropdown.
  * Uses regular client - RLS allows anon to see is_template AND is_public rows.
+ * Order follows admin_settings.public_template_order when set; otherwise title A-Z.
  */
 export async function getPublicTemplateProfiles(): Promise<{ slug: string; title: string }[]> {
   try {
     const supabase = await createClient()
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('slug, title')
-      .eq('is_template', true)
-      .eq('is_public', true)
-      .order('title', { ascending: true })
 
-    if (error) {
-      logger.error('[supabase-data-service] Error loading public templates:', error)
+    const [profilesResult, orderResult] = await Promise.all([
+      supabase
+        .from('profiles')
+        .select('slug, title')
+        .eq('is_template', true)
+        .eq('is_public', true),
+      supabase
+        .from('admin_settings')
+        .select('public_template_order')
+        .eq('id', 1)
+        .single()
+    ])
+
+    if (profilesResult.error) {
+      logger.error('[supabase-data-service] Error loading public templates:', profilesResult.error)
       return []
     }
 
-    return (data || []).map((row: any) => ({ slug: row.slug, title: row.title || row.slug }))
+    const rows = (profilesResult.data || []).map((row: any) => ({ slug: row.slug, title: row.title || row.slug }))
+
+    const raw = orderResult.data?.public_template_order
+    const orderSlugs: string[] = Array.isArray(raw) ? raw : []
+
+    if (orderSlugs.length === 0) {
+      return rows.sort((a, b) => (a.title || a.slug).localeCompare(b.title || b.slug, undefined, { sensitivity: 'base' }))
+    }
+
+    const bySlug = new Map(rows.map((r) => [r.slug, r]))
+    const ordered: { slug: string; title: string }[] = []
+    for (const slug of orderSlugs) {
+      const p = bySlug.get(slug)
+      if (p) {
+        ordered.push(p)
+        bySlug.delete(slug)
+      }
+    }
+    const rest = Array.from(bySlug.values()).sort((a, b) => (a.title || a.slug).localeCompare(b.title || b.slug, undefined, { sensitivity: 'base' }))
+    return [...ordered, ...rest]
   } catch (error) {
     logger.error('[supabase-data-service] Error loading public templates:', error)
     return []

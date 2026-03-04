@@ -92,15 +92,27 @@ describe('supabase-data-service load/getProfile edge cases', () => {
     ]
     jest.doMock('@/lib/supabase/server', () => ({
       createClient: jest.fn().mockResolvedValue({
-        from: () => ({
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                order: () => Promise.resolve({ data: rows, error: null })
+        from: (table: string) => {
+          if (table === 'profiles') {
+            return {
+              select: () => ({
+                eq: () => ({
+                  eq: () => Promise.resolve({ data: rows, error: null })
+                })
               })
-            })
-          })
-        })
+            }
+          }
+          if (table === 'admin_settings') {
+            return {
+              select: () => ({
+                eq: () => ({
+                  single: () => Promise.resolve({ data: { public_template_order: [] }, error: null })
+                })
+              })
+            }
+          return {}
+        }
+      }
       }),
       createAdminClient: jest.fn().mockReturnValue({})
     }))
@@ -116,15 +128,27 @@ describe('supabase-data-service load/getProfile edge cases', () => {
   it('getPublicTemplateProfiles returns empty array on error', async () => {
     jest.doMock('@/lib/supabase/server', () => ({
       createClient: jest.fn().mockResolvedValue({
-        from: () => ({
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                order: () => Promise.resolve({ data: null, error: { message: 'fail' } })
+        from: (table: string) => {
+          if (table === 'profiles') {
+            return {
+              select: () => ({
+                eq: () => ({
+                  eq: () => Promise.resolve({ data: null, error: { message: 'fail' } })
+                })
               })
-            })
-          })
-        })
+            }
+          }
+          if (table === 'admin_settings') {
+            return {
+              select: () => ({
+                eq: () => ({
+                  single: () => Promise.resolve({ data: { public_template_order: [] }, error: null })
+                })
+              })
+            }
+          return {}
+        }
+      }
       }),
       createAdminClient: jest.fn().mockReturnValue({})
     }))

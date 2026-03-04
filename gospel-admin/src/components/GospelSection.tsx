@@ -536,7 +536,7 @@ function NestedSubsectionComponent({ nestedSubsection, nestedId, onScriptureClic
   return (
     <>
       <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
-      <div id={nestedId} className="ml-6 mt-4 pl-4 print-subsection">
+      <div id={nestedId} className="scroll-mt-20 ml-6 mt-4 pl-4 print-subsection">
         <h5 
           className="font-medium text-slate-800 mb-2 print-subsection-title text-lg md:text-xl"
         >
@@ -581,7 +581,7 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
   return (
     <>
       <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
-      <div id={`${sectionId}-${subsectionIndex}`} className="mb-6 print-subsection">
+      <div id={`${sectionId}-${subsectionIndex}`} className="scroll-mt-20 mb-6 print-subsection">
         <h4 
           className="text-xl md:text-2xl font-semibold text-slate-800 mb-3 print-subsection-title"
         >
@@ -656,7 +656,7 @@ export default function GospelSection({ section, onScriptureClick, lastViewedScr
   const [showComaModal, setShowComaModal] = useState(false)
   
   return (
-    <section id={sectionId} className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 print-section">
+    <section id={sectionId} className="scroll-mt-20 bg-white rounded-lg shadow-sm border border-gray-200 p-8 print-section">
       <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
       <h3 
         className="text-3xl md:text-4xl font-bold text-slate-800 mb-6 pb-3 border-b border-gray-200 print-section-header"

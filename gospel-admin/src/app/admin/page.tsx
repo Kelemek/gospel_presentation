@@ -1017,7 +1017,7 @@ function AdminPageContent() {
 
           {showCreateForm && (
             <div className="mb-6 border border-slate-200 rounded-xl p-4 sm:p-6 bg-linear-to-br from-white to-slate-50 shadow-md">
-              <h3 className="text-base sm:text-lg font-semibold bg-linear-to-br from-slate-700 to-slate-800 bg-clip-text text-transparent mb-4">Create New Assingment</h3>
+              <h3 className="text-base sm:text-lg font-semibold bg-linear-to-br from-slate-700 to-slate-800 bg-clip-text text-transparent mb-4">Create New Assignment</h3>
               
               <form onSubmit={handleCreateProfile} className="space-y-4">
                 {/* Clone From Field - FIRST */}

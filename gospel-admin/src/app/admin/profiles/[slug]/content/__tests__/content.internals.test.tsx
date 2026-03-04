@@ -32,7 +32,7 @@ afterAll(() => {
 test('ContentEditPage renders header and loads coma template', async () => {
   const { ContentEditPage } = await import('../page')
 
-  render(<ContentEditPage params={Promise.resolve({ slug: 'test' })} />)
+  render(<ContentEditPage slug="test" />)
 
   await waitFor(() => expect(screen.getByTestId('admin-header')).toBeInTheDocument())
   expect(screen.getByTestId('admin-header')).toHaveTextContent(/Content/i)

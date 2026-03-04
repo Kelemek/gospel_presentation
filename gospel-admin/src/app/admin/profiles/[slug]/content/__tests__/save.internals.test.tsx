@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { Suspense } from 'react'
 import { render, screen, waitFor, within, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -47,7 +47,7 @@ afterAll(() => {
 test('save content triggers PUT and shows success alert', async () => {
   const { ContentEditPage } = await import('../page')
 
-  render(<ContentEditPage params={Promise.resolve({ slug: 'p1' })} />)
+  render(<ContentEditPage slug="p1" />)
 
   // Wait for page to load
   await waitFor(() => expect(screen.getByTestId('admin-header')).toBeInTheDocument())

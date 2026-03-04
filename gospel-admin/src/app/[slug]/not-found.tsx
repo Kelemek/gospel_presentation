@@ -16,7 +16,7 @@ export default function NotFound() {
         <div className="space-y-4">
           <Link 
             href="/"
-            className="inline-block bg-blue-600 text-white px-6 py-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-base md:text-lg min-h-[48px] flex items-center"
+            className="bg-blue-600 text-white px-6 py-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-base md:text-lg min-h-[48px] flex items-center"
           >
             View Default Presentation
           </Link>
