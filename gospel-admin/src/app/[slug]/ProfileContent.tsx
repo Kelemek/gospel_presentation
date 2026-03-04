@@ -496,7 +496,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                 </button>
               </div>
               
-              <TableOfContents sections={sections} currentProfileSlug={profileInfo.slug} />
+              <TableOfContents sections={sections} currentProfileSlug={profileInfo.slug} onNavigate={closeMenu} />
               
               {/* Profile Info in Sidebar */}
               <div className="mt-8 pt-6 border-t border-gray-200">

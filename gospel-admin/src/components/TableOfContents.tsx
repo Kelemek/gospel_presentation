@@ -16,6 +16,8 @@ interface PublicTemplate {
 interface TableOfContentsProps {
   sections: GospelSection[]
   currentProfileSlug?: string
+  /** Called when a TOC link is clicked (e.g. to close the side menu) */
+  onNavigate?: () => void
 }
 
 // Helper function to strip HTML tags from text
@@ -32,9 +34,25 @@ function isTitleBlank(title: string | undefined): boolean {
   return !stripHtmlTags(title ?? '').trim()
 }
 
+// Scroll to in-page section by id (used so TOC links stay in-app on native instead of opening browser)
+function handleTocClick(
+  e: React.MouseEvent<HTMLAnchorElement>,
+  href: string,
+  onNavigate?: () => void
+) {
+  if (!href.startsWith('#')) return
+  const id = href.slice(1)
+  const el = document.getElementById(id)
+  if (el) {
+    e.preventDefault()
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    onNavigate?.()
+  }
+}
+
 export default function TableOfContents({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  sections, currentProfileSlug: _currentProfileSlug
+  sections, currentProfileSlug: _currentProfileSlug, onNavigate
 }: TableOfContentsProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [publicTemplates, setPublicTemplates] = useState<PublicTemplate[]>([])
@@ -191,6 +209,7 @@ export default function TableOfContents({
         <div key={section.section} className="mb-4 md:mb-3">
           <a 
             href={`#section-${section.section}`}
+            onClick={(e) => handleTocClick(e, `#section-${section.section}`, onNavigate)}
             className="text-blue-600 hover:text-blue-800 active:text-blue-900 font-medium text-xl md:text-lg mb-3 md:mb-2 py-3 md:py-2 px-4 md:px-3 rounded-md hover:bg-blue-50 active:bg-blue-100 transition-colors min-h-[52px] flex items-center"
           >
             {stripHtmlTags(section.title)}
@@ -207,6 +226,7 @@ export default function TableOfContents({
                   {!subsectionTitleBlank && (
                     <a 
                       href={`#section-${section.section}-${index}`}
+                      onClick={(e) => handleTocClick(e, `#section-${section.section}-${index}`, onNavigate)}
                       className="text-blue-600 hover:text-blue-800 active:text-blue-900 text-base md:text-sm py-3 md:py-2 px-4 md:px-3 rounded-md hover:bg-blue-50 active:bg-blue-100 transition-colors min-h-[48px] flex items-center leading-relaxed"
                     >
                       {stripHtmlTags(subsection.title)}
@@ -220,6 +240,7 @@ export default function TableOfContents({
                           <li key={nestedIndex}>
                             <a 
                               href={`#section-${section.section}-${index}-${originalNestedIndex}`}
+                              onClick={(e) => handleTocClick(e, `#section-${section.section}-${index}-${originalNestedIndex}`, onNavigate)}
                               className="text-blue-600 hover:text-blue-800 active:text-blue-900 text-sm py-2 md:py-1.5 px-3 md:px-2 rounded-md hover:bg-blue-50 active:bg-blue-100 transition-colors min-h-[40px] flex items-center leading-relaxed"
                             >
                               {stripHtmlTags(nested.title)}
