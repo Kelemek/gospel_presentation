@@ -20,10 +20,16 @@ interface TableOfContentsProps {
 
 // Helper function to strip HTML tags from text
 function stripHtmlTags(html: string): string {
+  if (html == null || typeof html !== 'string') return ''
   // Create a temporary DOM element and use textContent to extract plain text
   const temp = document.createElement('div')
   temp.innerHTML = html
   return temp.textContent || temp.innerText || ''
+}
+
+// Helper to check if a title is blank (used to filter out empty TOC entries)
+function isTitleBlank(title: string | undefined): boolean {
+  return !stripHtmlTags(title ?? '').trim()
 }
 
 export default function TableOfContents({
@@ -190,16 +196,42 @@ export default function TableOfContents({
             {stripHtmlTags(section.title)}
           </a>
           <ul className="ml-2 md:ml-4 space-y-2 md:space-y-1">
-            {section.subsections.map((subsection, index) => (
-              <li key={index}>
-                <a 
-                  href={`#section-${section.section}-${index}`}
-                  className="text-blue-600 hover:text-blue-800 active:text-blue-900 text-base md:text-sm py-3 md:py-2 px-4 md:px-3 rounded-md hover:bg-blue-50 active:bg-blue-100 transition-colors min-h-[48px] flex items-center leading-relaxed"
-                >
-                  {stripHtmlTags(subsection.title)}
-                </a>
-              </li>
-            ))}
+            {section.subsections.map((subsection, index) => {
+              const nestedSubsections = subsection.nestedSubsections?.filter((n) => !isTitleBlank(n.title)) ?? []
+              const hasVisibleNested = nestedSubsections.length > 0
+              const subsectionTitleBlank = isTitleBlank(subsection.title)
+              // Skip subsections that have neither a title nor visible nested items
+              if (subsectionTitleBlank && !hasVisibleNested) return null
+              return (
+                <li key={index}>
+                  {!subsectionTitleBlank && (
+                    <a 
+                      href={`#section-${section.section}-${index}`}
+                      className="text-blue-600 hover:text-blue-800 active:text-blue-900 text-base md:text-sm py-3 md:py-2 px-4 md:px-3 rounded-md hover:bg-blue-50 active:bg-blue-100 transition-colors min-h-[48px] flex items-center leading-relaxed"
+                    >
+                      {stripHtmlTags(subsection.title)}
+                    </a>
+                  )}
+                  {hasVisibleNested && (
+                    <ul className="ml-2 md:ml-4 mt-1 space-y-1">
+                      {nestedSubsections.map((nested, nestedIndex) => {
+                        const originalNestedIndex = subsection.nestedSubsections!.indexOf(nested)
+                        return (
+                          <li key={nestedIndex}>
+                            <a 
+                              href={`#section-${section.section}-${index}-${originalNestedIndex}`}
+                              className="text-blue-600 hover:text-blue-800 active:text-blue-900 text-sm py-2 md:py-1.5 px-3 md:px-2 rounded-md hover:bg-blue-50 active:bg-blue-100 transition-colors min-h-[40px] flex items-center leading-relaxed"
+                            >
+                              {stripHtmlTags(nested.title)}
+                            </a>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </li>
+              )
+            })}
           </ul>
         </div>
       ))}

@@ -94,7 +94,7 @@ describe('TableOfContents Component', () => {
     expect(() => fireEvent.click(sectionLink)).not.toThrow()
   })
 
-  it('should render nested subsections if present', () => {
+  it('should render nested subsections (level 3) if present', () => {
     const sectionsWithNested: GospelSection[] = [
       {
         section: '1',
@@ -120,8 +120,9 @@ describe('TableOfContents Component', () => {
 
     render(<TableOfContents sections={sectionsWithNested} />)
 
-    // component does not render nestedSubsections - ensure nested content isn't rendered
-    expect(screen.queryByText('i. Definition of Holiness')).not.toBeInTheDocument()
+    expect(screen.getByText('i. Definition of Holiness')).toBeInTheDocument()
+    const nestedLink = screen.getByText('i. Definition of Holiness')
+    expect(nestedLink).toHaveAttribute('href', '#section-1-0-0')
   })
 
   it('should apply correct styling classes', () => {

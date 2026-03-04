@@ -16,7 +16,10 @@
     "cap:sync": "npx cap sync",
     "cap:ios": "npx cap open ios",
     "cap:android": "npx cap open android",
-    "cap:icons": "node scripts/generate-icons.js"
+    "cap:icons": "node scripts/generate-icons.js",
+    "physical-intimacy:export": "node scripts/export-physical-intimacy-profile.js",
+    "physical-intimacy:transform": "node scripts/transform-physical-intimacy-outline.js",
+    "physical-intimacy:migrations": "node scripts/generate-physical-intimacy-migrations.js"
   },
   "dependencies": {
     "@capacitor/android": "^8.1.0",

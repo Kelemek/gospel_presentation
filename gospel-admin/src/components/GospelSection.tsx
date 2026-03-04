@@ -17,7 +17,8 @@ function TextWithComaButtons({ text, onComaClick, onScriptureClick }: {
   onScriptureClick?: (reference: string) => void;
 }) {
   const containerRef = React.useRef<HTMLSpanElement>(null)
-  
+  const safeText = text ?? ''
+
   // Bible book names lookup table - covers all 66 canonical books with common variations
   const BIBLE_BOOKS = new Set([
     // Old Testament - Pentateuch
@@ -60,8 +61,8 @@ function TextWithComaButtons({ text, onComaClick, onScriptureClick }: {
   
   // First, handle COMA markers
   const comaMarker = '___COMA_BUTTON___'
-  let processedText = text.replace(/(C\.O\.M\.A\.|COMA)/gi, comaMarker)
-  const comaMatches = text.match(/(C\.O\.M\.A\.|COMA)/gi) || []
+  let processedText = safeText.replace(/(C\.O\.M\.A\.|COMA)/gi, comaMarker)
+  const comaMatches = safeText.match(/(C\.O\.M\.A\.|COMA)/gi) || []
   
   // Then, handle scripture references - match directly in the HTML text
   const scriptureMarker = '___SCRIPTURE_REF___'
@@ -185,6 +186,7 @@ interface SubsectionProps {
 
 interface NestedSubsectionProps {
   nestedSubsection: NestedSubsection
+  nestedId: string
   onScriptureClick: (reference: string) => void
   lastViewedScripture?: string
   onClearProgress?: () => void
@@ -318,6 +320,9 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
 
   // Parse question to extract prefix and detail (e.g., "Context:" and the rest)
   const parseQuestion = (questionText: string) => {
+    if (!questionText || typeof questionText !== 'string') {
+      return { prefix: '', detail: null }
+    }
     // Extract plain text from HTML to check for collapsible patterns
     const hasHtmlTags = /<[^>]+>/.test(questionText)
     let plainText = questionText
@@ -428,16 +433,17 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
       <h5 className="text-base font-semibold text-slate-700 border-b border-slate-200 pb-1">
         Reflection Questions
       </h5>
-      {questions.map((question, index) => {
-        const currentAnswer = answers[question.id] || ''
+      {(questions || []).filter((q): q is QuestionAnswer => q && typeof q === 'object' && !Array.isArray(q)).map((question, index) => {
+        const currentAnswer = answers[question.id] ?? ''
         const maxLength = question.maxLength || PROFILE_VALIDATION.ANSWER_MAX_LENGTH
         const isSaved = savedStatus[question.id]
         const isExpanded = expandedQuestions[question.id]
-        const { prefix, detail } = parseQuestion(question.question)
-        const hasHtmlTags = /<[^>]+>/.test(question.question)
+        const questionContent = question.question ?? ''
+        const { prefix, detail } = parseQuestion(questionContent)
+        const hasHtmlTags = /<[^>]+>/.test(questionContent)
         
         return (
-          <div key={question.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3 print:p-2 print:space-y-1">
+          <div key={question.id ?? `q-${index}`} className="bg-slate-50 border border-slate-200 rounded-lg p-3 print:p-2 print:space-y-1">
             <div className="mb-2 flex gap-1 items-baseline">
               <span className="text-sm text-slate-600 shrink-0 leading-none">{index + 1}. </span>
               <div className="flex-1">
@@ -479,14 +485,14 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
                     className="question-content font-medium text-slate-800 text-sm max-w-none mt-0"
                   >
                     <TextWithComaButtons 
-                      text={question.question} 
+                      text={questionContent} 
                       onComaClick={() => setShowComaModal(true)}
                       onScriptureClick={onScriptureClick}
                     />
                   </div>
                 ) : (
                   <span className="font-medium text-slate-800 text-sm">
-                    <TextWithComaButtons text={question.question} onComaClick={() => setShowComaModal(true)} />
+                    <TextWithComaButtons text={questionContent} onComaClick={() => setShowComaModal(true)} />
                   </span>
                 )}
               </div>
@@ -524,13 +530,13 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
   )
 }
 
-function NestedSubsectionComponent({ nestedSubsection, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers, isLoggedIn }: NestedSubsectionProps) {
+function NestedSubsectionComponent({ nestedSubsection, nestedId, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers, isLoggedIn }: NestedSubsectionProps) {
   const [showComaModal, setShowComaModal] = useState(false)
   
   return (
     <>
       <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
-      <div className="ml-6 mt-4 border-l-2 border-gray-200 pl-4 print-subsection">
+      <div id={nestedId} className="ml-6 mt-4 pl-4 print-subsection">
         <h5 
           className="font-medium text-slate-800 mb-2 print-subsection-title text-lg md:text-xl"
         >
@@ -585,13 +591,15 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
             onScriptureClick={onScriptureClick}
           />
         </h4>
-        <div className="text-slate-700 mb-3 leading-relaxed print-content text-base md:text-lg">
-          <TextWithComaButtons 
-            text={subsection.content} 
-            onComaClick={() => setShowComaModal(true)}
-            onScriptureClick={onScriptureClick}
-          />
-        </div>
+        {subsection.content && !subsection.nestedSubsections?.length && (
+          <div className="text-slate-700 mb-3 leading-relaxed print-content text-base md:text-lg">
+            <TextWithComaButtons 
+              text={subsection.content} 
+              onComaClick={() => setShowComaModal(true)}
+              onScriptureClick={onScriptureClick}
+            />
+          </div>
+        )}
       
         {subsection.scriptureReferences && (
           <ScriptureReferences 
@@ -618,6 +626,7 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
             <NestedSubsectionComponent
               key={nestedIndex}
               nestedSubsection={nestedSub}
+              nestedId={`${sectionId}-${subsectionIndex}-${nestedIndex}`}
               onScriptureClick={onScriptureClick}
               lastViewedScripture={lastViewedScripture}
               onClearProgress={onClearProgress}
@@ -626,6 +635,15 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
               isLoggedIn={isLoggedIn}
             />
           ))}
+        </div>
+      )}
+      {subsection.content && subsection.nestedSubsections?.length > 0 && (
+        <div className="text-slate-700 mt-6 pt-4 border-t border-slate-200 print-content text-base md:text-lg leading-relaxed">
+          <TextWithComaButtons 
+            text={subsection.content} 
+            onComaClick={() => setShowComaModal(true)}
+            onScriptureClick={onScriptureClick}
+          />
         </div>
       )}
       </div>
