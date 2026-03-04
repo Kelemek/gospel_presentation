@@ -13,15 +13,16 @@ export default function Icon() {
     (
       <div
         style={{
-          background: 'linear-gradient(45deg, #1a1a1a 0%, #2d2d2d 100%)',
+          // Solid slate background similar to header but a bit lighter so it doesn't read as black at small sizes
+          background: '#475569',
           width: '100%',
           height: '100%',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
-          borderRadius: '3px',
-          border: '1px solid #333',
+          borderRadius: '6px',
+          border: '1px solid #0f172a',
         }}
       >
         {/* Bible book shape */}
@@ -31,7 +32,7 @@ export default function Icon() {
             width: '24px',
             height: '20px',
             background: '#1a1a1a',
-            borderRadius: '1px',
+            borderRadius: '2px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',

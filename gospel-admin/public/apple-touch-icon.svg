@@ -1,12 +1,6 @@
 <svg width="180" height="180" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="headerBg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#334155"/>
-      <stop offset="100%" stop-color="#1e293b"/>
-    </linearGradient>
-  </defs>
-  <!-- Background - matches header (from-slate-700 to-slate-800) -->
-  <rect width="180" height="180" fill="url(#headerBg)" rx="20"/>
+  <!-- Solid slate background similar to header but a bit lighter so it doesn't read as black at small sizes -->
+  <rect width="180" height="180" fill="#475569" rx="20"/>
   
   <!-- Bible cover (dark brown/black book) - centered -->
   <rect x="45" y="25" width="90" height="130" rx="5" fill="#1a1a1a" stroke="#333" stroke-width="2"/>
