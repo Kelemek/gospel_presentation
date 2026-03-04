@@ -146,7 +146,7 @@ describe('ScriptureHoverModal', () => {
     jest.useRealTimers()
   })
 
-  it('on touch-only device opens modal on long press and closes via backdrop', async () => {
+  it('on touch-only device opens modal on long press and closes when finger lifts', async () => {
     ;(window as any).matchMedia = jest.fn(() => ({ matches: true }))
     const Capacitor = require('@capacitor/core').Capacitor
     Capacitor.isNativePlatform = () => true
@@ -160,8 +160,27 @@ describe('ScriptureHoverModal', () => {
     const wrapper = screen.getByText('Touch me').parentElement!
     fireEvent.touchStart(wrapper, { changedTouches: [{ clientX: 100, clientY: 200 }] })
     act(() => { jest.advanceTimersByTime(500) })
-    fireEvent.touchEnd(wrapper, { preventDefault: jest.fn(), stopPropagation: jest.fn() })
     await waitFor(() => expect(global.fetch).toHaveBeenCalled())
+    await waitFor(() => expect(screen.getByText('Touch verse')).toBeInTheDocument())
+    fireEvent.touchEnd(wrapper, { preventDefault: jest.fn(), stopPropagation: jest.fn() })
+    await waitFor(() => expect(screen.queryByText('Touch verse')).not.toBeInTheDocument())
+    jest.useRealTimers()
+  })
+
+  it('on touch-only device backdrop closes modal when tapping outside', async () => {
+    ;(window as any).matchMedia = jest.fn(() => ({ matches: true }))
+    const Capacitor = require('@capacitor/core').Capacitor
+    Capacitor.isNativePlatform = () => true
+    jest.useFakeTimers()
+    ;(global.fetch as jest.Mock).mockResolvedValue({ ok: true, json: async () => ({ reference: 'John 3:16', text: 'Touch verse' }) })
+    render(
+      <ScriptureHoverModal reference="John 3:16">
+        <span>Touch me</span>
+      </ScriptureHoverModal>
+    )
+    const wrapper = screen.getByText('Touch me').parentElement!
+    fireEvent.touchStart(wrapper, { changedTouches: [{ clientX: 100, clientY: 200 }] })
+    act(() => { jest.advanceTimersByTime(500) })
     await waitFor(() => expect(screen.getByText('Touch verse')).toBeInTheDocument())
     const backdrop = document.querySelector('.fixed.inset-0.z-40')
     expect(backdrop).toBeInTheDocument()

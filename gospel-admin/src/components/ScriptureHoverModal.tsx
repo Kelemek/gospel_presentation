@@ -154,6 +154,9 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
       e.preventDefault()
       e.stopPropagation()
       longPressTriggeredRef.current = false
+      // Close verse when finger lifts after long-press
+      setIsVisible(false)
+      setOpenedByLongPress(false)
     }
   }
 
@@ -189,7 +192,7 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchCancel}
-        className="relative"
+        className="relative select-none"
       >
         {children}
       </div>
