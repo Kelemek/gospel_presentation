@@ -365,7 +365,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
       {/* Unified Layout - Hamburger menu at all screen sizes */}
       <div className="min-h-screen flex-col">
         {/* Header with hamburger menu and optional edit button */}
-        <div className="sticky top-[env(safe-area-inset-top,0px)] z-40 bg-white/70 backdrop-blur-sm shadow-md print-hide">
+        <div data-profile-sticky-header className="sticky top-[env(safe-area-inset-top,0px)] z-40 bg-white/70 backdrop-blur-sm shadow-md print-hide">
           <div className="w-full px-5 py-3">
             <div className="flex justify-between items-center gap-3">
               <button

@@ -34,7 +34,9 @@ function isTitleBlank(title: string | undefined): boolean {
   return !stripHtmlTags(title ?? '').trim()
 }
 
-// Scroll to in-page section by id (used so TOC links stay in-app on native instead of opening browser)
+// Scroll offset so target appears just below the sticky header (works for all viewport sizes and native safe area)
+const FALLBACK_HEADER_OFFSET = 80
+
 function handleTocClick(
   e: React.MouseEvent<HTMLAnchorElement>,
   href: string,
@@ -45,7 +47,10 @@ function handleTocClick(
   const el = document.getElementById(id)
   if (el) {
     e.preventDefault()
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const header = document.querySelector('[data-profile-sticky-header]')
+    const offset = header instanceof HTMLElement ? header.offsetHeight : FALLBACK_HEADER_OFFSET
+    const top = el.getBoundingClientRect().top + window.scrollY - offset
+    window.scrollTo({ top, behavior: 'smooth' })
     onNavigate?.()
   }
 }
