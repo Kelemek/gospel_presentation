@@ -637,7 +637,7 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
           ))}
         </div>
       )}
-      {subsection.content && subsection.nestedSubsections?.length > 0 && (
+      {subsection.content && Array.isArray(subsection.nestedSubsections) && subsection.nestedSubsections.length > 0 && (
         <div className="text-slate-700 mt-6 pt-4 border-t border-slate-200 print-content text-base md:text-lg leading-relaxed">
           <TextWithComaButtons 
             text={subsection.content} 
