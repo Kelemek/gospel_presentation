@@ -15,13 +15,10 @@ describe('ScriptureModal Component', () => {
   beforeEach(() => {
     mockFetch.mockClear()
     jest.clearAllMocks()
-    
-    // Default mock for fetch - can be overridden in individual tests
+    // Default: success with data.text (component uses data.text)
     mockFetch.mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({
-        passages: ['Sample scripture text']
-      })
+      json: () => Promise.resolve({ text: 'Sample scripture text' })
     } as Response)
   })
 
@@ -200,5 +197,62 @@ describe('ScriptureModal Component', () => {
     render(<ScriptureModal {...defaultProps} />)
     
     expect(screen.getByText(/Loading scripture/)).toBeInTheDocument()
+  })
+
+  it('should show error when main fetch returns data.error', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ error: 'Verse not found' })
+    } as Response)
+    render(<ScriptureModal {...defaultProps} />)
+    await waitFor(() => {
+      expect(screen.getByText(/Verse not found/)).toBeInTheDocument()
+    })
+  })
+
+  it('should show error when chapter context fetch returns data.error', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ text: 'Main verse' }) } as Response)
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ error: 'Chapter not found' }) } as Response)
+    const user = userEvent.setup()
+    render(<ScriptureModal {...defaultProps} reference="Genesis 1:1" />)
+    await waitFor(() => expect(screen.getByText(/Genesis 1:1/)).toBeInTheDocument())
+    await user.click(screen.getByText(/Chapter Context/))
+    await waitFor(() => expect(screen.getByText(/Chapter not found/)).toBeInTheDocument())
+  })
+
+  it('should show error when chapter context fetch throws', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ text: 'Main verse' }) } as Response)
+      .mockRejectedValueOnce(new Error('Network error'))
+    const user = userEvent.setup()
+    render(<ScriptureModal {...defaultProps} reference="Genesis 1:2" />)
+    await waitFor(() => expect(screen.getByText(/Genesis 1:2/)).toBeInTheDocument())
+    await user.click(screen.getByText(/Chapter Context/))
+    await waitFor(() => expect(screen.getByText(/Failed to load chapter context/)).toBeInTheDocument())
+  })
+
+  it('should fetch and show compare translation when Compare dropdown is selected', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ text: 'Main verse ESV' }) } as Response)
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ text: 'Compare verse KJV' }) } as Response)
+    const user = userEvent.setup()
+    render(<ScriptureModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText(/John 3:16/)).toBeInTheDocument())
+    const compareSelect = screen.getByLabelText(/Compare with another translation/i)
+    await user.selectOptions(compareSelect, 'kjv')
+    await waitFor(() => expect(screen.getByText(/Compare verse KJV/)).toBeInTheDocument())
+  })
+
+  it('should show compare error when compare fetch returns data.error', async () => {
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ text: 'Main' }) } as Response)
+      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ error: 'Compare translation unavailable' }) } as Response)
+    const user = userEvent.setup()
+    render(<ScriptureModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText(/John 3:16/)).toBeInTheDocument())
+    const compareSelect = screen.getByLabelText(/Compare with another translation/i)
+    await user.selectOptions(compareSelect, 'kjv')
+    await waitFor(() => expect(screen.getByText(/Compare translation unavailable/)).toBeInTheDocument())
   })
 })

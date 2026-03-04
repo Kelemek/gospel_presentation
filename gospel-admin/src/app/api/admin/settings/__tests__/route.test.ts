@@ -1,18 +1,21 @@
-import { GET } from '../route'
-import { NextRequest } from 'next/server'
+import { GET, POST } from '../route'
+import { createClient } from '@/lib/supabase/server'
 
-// Mock Supabase
 jest.mock('@/lib/supabase/server', () => ({
-  createClient: jest.fn(() => ({
-    from: jest.fn((table) => ({
+  createClient: jest.fn(),
+}))
+
+function makeSupabaseMock(singleImpl: jest.Mock) {
+  return {
+    from: jest.fn(() => ({
       select: jest.fn(() => ({
         eq: jest.fn(() => ({
-          single: jest.fn(),
+          single: singleImpl,
         })),
       })),
     })),
-  })),
-}))
+  }
+}
 
 describe('/api/admin/settings', () => {
   beforeEach(() => {
@@ -20,15 +23,14 @@ describe('/api/admin/settings', () => {
   })
 
   it('should return settings from database', async () => {
+    const mockSingle = jest.fn()
+    ;(createClient as jest.Mock).mockResolvedValue(makeSupabaseMock(mockSingle))
     const mockSettings = {
       verification_code_length: 6,
       verification_code_expiry_minutes: 15,
       enable_verification_code_login: true,
     }
-
-    const { createClient } = require('@/lib/supabase/server')
-    const mockSupabase = createClient()
-    mockSupabase.from('admin_settings').select().eq().single.mockResolvedValue({
+    mockSingle.mockResolvedValue({
       data: mockSettings,
       error: null,
     })
@@ -40,12 +42,12 @@ describe('/api/admin/settings', () => {
     expect(data).toEqual(mockSettings)
   })
 
-  it('should return default settings when not found', async () => {
-    const { createClient } = require('@/lib/supabase/server')
-    const mockSupabase = createClient()
-    mockSupabase.from('admin_settings').select().eq().single.mockResolvedValue({
+  it('should return default settings when Supabase returns error', async () => {
+    const mockSingle = jest.fn()
+    ;(createClient as jest.Mock).mockResolvedValue(makeSupabaseMock(mockSingle))
+    mockSingle.mockResolvedValue({
       data: null,
-      error: new Error('Not found'),
+      error: { message: 'Not found' },
     })
 
     const response = await GET()
@@ -59,12 +61,24 @@ describe('/api/admin/settings', () => {
     })
   })
 
-  it('should return default settings on error', async () => {
-    const { createClient } = require('@/lib/supabase/server')
-    const mockSupabase = createClient()
-    mockSupabase.from('admin_settings').select().eq().single.mockRejectedValue(
-      new Error('Database error')
-    )
+  it('should return default settings when .single() throws', async () => {
+    const mockSingle = jest.fn()
+    ;(createClient as jest.Mock).mockResolvedValue(makeSupabaseMock(mockSingle))
+    mockSingle.mockRejectedValue(new Error('Database error'))
+
+    const response = await GET()
+    const data = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(data).toEqual({
+      verification_code_length: 6,
+      verification_code_expiry_minutes: 15,
+      enable_verification_code_login: true,
+    })
+  })
+
+  it('should return default settings when createClient throws', async () => {
+    ;(createClient as jest.Mock).mockRejectedValueOnce(new Error('Auth failed'))
 
     const response = await GET()
     const data = await response.json()
@@ -78,7 +92,6 @@ describe('/api/admin/settings', () => {
   })
 
   it('should reject POST requests', async () => {
-    const { POST } = await import('../route')
     const response = await POST()
     const data = await response.json()
 

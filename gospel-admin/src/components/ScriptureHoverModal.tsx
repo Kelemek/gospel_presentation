@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from '@/contexts/TranslationContext'
+import { Capacitor } from '@capacitor/core'
 
 interface ScriptureHoverModalProps {
   reference: string
@@ -25,7 +26,10 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
   
   const { translation } = useTranslation()
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const longPressTriggeredRef = useRef(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  const [openedByLongPress, setOpenedByLongPress] = useState(false)
 
   // Clear cached scripture when translation changes
   useEffect(() => {
@@ -54,53 +58,56 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
     }
   }
 
-  const handleMouseEnter = (e: React.MouseEvent) => {
-    // Clear any existing timeout
-    if (hoverTimeoutRef.current) {
-      clearTimeout(hoverTimeoutRef.current)
-    }
-
-    // Calculate position with edge detection
-    const rect = e.currentTarget.getBoundingClientRect()
+  const setPositionFromPoint = (centerX: number, centerY: number) => {
     const screenWidth = window.innerWidth
     const screenHeight = window.innerHeight
-    const modalWidth = Math.min(320, screenWidth - 40) // max-w-md but constrained to screen width minus padding
-    const modalHeight = 150 // estimated modal height
-    const padding = 20 // padding from screen edge
+    const modalWidth = Math.min(320, screenWidth - 40)
+    const modalHeight = 150
+    const padding = 20
 
-    let x = rect.left + rect.width / 2
-    let y = rect.top - 10
+    let x = centerX
+    let y = centerY - 10
 
-    // Check horizontal bounds
     if (x - modalWidth / 2 < padding) {
-      // Too far left, align to left edge with padding
       x = modalWidth / 2 + padding
     } else if (x + modalWidth / 2 > window.innerWidth - padding) {
-      // Too far right, align to right edge with padding
       x = window.innerWidth - modalWidth / 2 - padding
     }
 
-    // Check vertical bounds
     let positionAbove = true
     if (y - modalHeight < padding) {
-      // Not enough space above, try positioning below
-      const belowY = rect.bottom + 10
+      const belowY = centerY + 10
       if (belowY + modalHeight + padding < screenHeight) {
-        // Enough space below
         y = belowY
         positionAbove = false
       } else {
-        // Not enough space above or below, keep above but adjust to fit
-        y = Math.max(modalHeight + padding, rect.top - 10)
+        y = Math.max(modalHeight + padding, centerY - 10)
       }
     }
 
     setPosition({ x, y })
     setIsAbove(positionAbove)
+  }
 
-    // Start timer with custom delay
+  const isTouchOnly =
+    typeof window !== 'undefined' &&
+    (Capacitor.isNativePlatform() || (typeof window.matchMedia === 'function' && window.matchMedia('(hover: none)').matches))
+
+  const handleMouseEnter = (e: React.MouseEvent) => {
+    if (isTouchOnly) return
+
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+    }
+
+    const rect = e.currentTarget.getBoundingClientRect()
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+    setPositionFromPoint(centerX, centerY)
+
     hoverTimeoutRef.current = setTimeout(() => {
       setIsVisible(true)
+      setOpenedByLongPress(false)
       if (!scriptureData && !loading) {
         fetchScriptureText()
       }
@@ -108,22 +115,68 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
   }
 
   const handleMouseLeave = () => {
-    // Clear timeout if mouse leaves before 1 second
     if (hoverTimeoutRef.current) {
       clearTimeout(hoverTimeoutRef.current)
       hoverTimeoutRef.current = null
     }
-    
-    // Hide modal
     setIsVisible(false)
+    setOpenedByLongPress(false)
   }
 
-  // Cleanup timeout on unmount
+  const LONG_PRESS_MS = 500
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!isTouchOnly) return
+    const touch = e.changedTouches[0] ?? e.touches[0]
+    if (!touch) return
+    longPressTriggeredRef.current = false
+    if (longPressTimeoutRef.current) clearTimeout(longPressTimeoutRef.current)
+    const clientX = touch.clientX
+    const clientY = touch.clientY
+    longPressTimeoutRef.current = setTimeout(() => {
+      longPressTimeoutRef.current = null
+      longPressTriggeredRef.current = true
+      setPositionFromPoint(clientX, clientY)
+      setIsVisible(true)
+      setOpenedByLongPress(true)
+      if (!scriptureData && !loading) {
+        fetchScriptureText()
+      }
+    }, LONG_PRESS_MS)
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current)
+      longPressTimeoutRef.current = null
+    }
+    if (longPressTriggeredRef.current) {
+      e.preventDefault()
+      e.stopPropagation()
+      longPressTriggeredRef.current = false
+    }
+  }
+
+  const handleTouchCancel = () => {
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current)
+      longPressTimeoutRef.current = null
+    }
+    longPressTriggeredRef.current = false
+  }
+
+  const closeLongPressPopup = () => {
+    if (openedByLongPress) {
+      setIsVisible(false)
+      setOpenedByLongPress(false)
+    }
+  }
+
+  // Cleanup timeouts on unmount
   useEffect(() => {
     return () => {
-      if (hoverTimeoutRef.current) {
-        clearTimeout(hoverTimeoutRef.current)
-      }
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
+      if (longPressTimeoutRef.current) clearTimeout(longPressTimeoutRef.current)
     }
   }, [])
 
@@ -133,20 +186,36 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
         ref={containerRef}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchCancel}
         className="relative"
       >
         {children}
       </div>
 
+      {/* Backdrop to close long-press popup when tapping outside */}
+      {isVisible && openedByLongPress && (
+        <div
+          className="fixed inset-0 z-40"
+          aria-hidden
+          onClick={closeLongPressPopup}
+          onTouchEnd={(e) => {
+            e.preventDefault()
+            closeLongPressPopup()
+          }}
+        />
+      )}
+
       {/* Modal */}
       {isVisible && (
         <div
-          className="fixed z-50 bg-white border border-slate-300 rounded-lg shadow-xl p-6 max-w-6xl w-96 max-w-[calc(100vw-40px)] min-h-[60px]"
+          className="fixed z-50 bg-white border border-slate-300 rounded-lg shadow-xl p-6 w-96 max-w-[calc(100vw-40px)] min-h-[60px]"
           style={{
             left: `${position.x}px`,
             top: `${position.y}px`,
             transform: isAbove ? 'translate(-50%, -100%)' : 'translate(-50%, 0%)',
-            pointerEvents: 'none' // Prevent modal from interfering with hover
+            pointerEvents: openedByLongPress ? 'auto' : 'none'
           }}
         >
           {loading ? (

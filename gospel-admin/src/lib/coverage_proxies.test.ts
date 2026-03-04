@@ -2,6 +2,15 @@
 // to ensure the coverage collector counts the files referenced in
 // jest.coverage.cjs's collectCoverageFrom (module identity alignment).
 
+jest.mock('@/lib/data-service', () => ({
+  getProfileBySlug: jest.fn(async (slug: string) => ({ slug, title: 'Test', savedAnswers: [] })),
+  updateProfile: jest.fn(async () => ({})),
+  getProfiles: jest.fn(),
+  createProfile: jest.fn(),
+  deleteProfile: jest.fn(),
+  incrementProfileVisitCount: jest.fn(),
+}))
+
 jest.mock('@/lib/supabase-data-service', () => ({
   getProfileBySlug: jest.fn(async (slug: string) => {
     if (slug === 'missing') return null
@@ -32,6 +41,7 @@ import { GET as faviconGET } from '@/app/favicon.ico/route'
 import { GET as scriptureGET } from '@/app/api/scripture/route'
 import { GET as profileGET, PUT as profilePUT, DELETE as profileDELETE } from '@/app/api/profiles/[slug]/route'
 import { GET as accessGET, POST as accessPOST, DELETE as accessDELETE } from '@/app/api/profiles/[slug]/access/route'
+import { POST as saveAnswerPOST } from '@/app/api/profiles/[slug]/save-answer/route'
 
 describe('coverage proxy imports (mapper-aligned)', () => {
   it('favicon GET redirects', async () => {
@@ -75,5 +85,17 @@ describe('coverage proxy imports (mapper-aligned)', () => {
     const dReq: any = { json: async () => ({ email: 'a@b.com' }) }
     const d = await accessDELETE(dReq, { params: Promise.resolve({ slug: 'test' }) } as any)
     expect(d.status).toBe(200)
+  })
+
+  it('save-answer POST success path', async () => {
+    const { NextRequest } = await import('next/server')
+    const req = new NextRequest('http://localhost/api', {
+      method: 'POST',
+      body: JSON.stringify({ questionId: 'q1', answer: 'My answer' }),
+    })
+    const res = await saveAnswerPOST(req, { params: Promise.resolve({ slug: 'test' }) })
+    const data = await res.json()
+    expect(res.status).toBe(200)
+    expect(data.success).toBe(true)
   })
 })

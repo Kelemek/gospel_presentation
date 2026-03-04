@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { useScriptureProgress } from '../useScriptureProgress'
 
 function TestHarness({ profile, isLoggedIn = false }: { profile: any; isLoggedIn?: boolean }) {
-  const { trackScriptureView, resetProgress, isLoading, error } = useScriptureProgress(profile, isLoggedIn)
+  const { trackScriptureView, resetProgress, lastViewedScripture, isLoading, error } = useScriptureProgress(profile, isLoggedIn)
 
   return (
     <div>
@@ -12,6 +12,7 @@ function TestHarness({ profile, isLoggedIn = false }: { profile: any; isLoggedIn
       <button onClick={() => resetProgress()}>reset</button>
       <div data-testid="loading">{isLoading ? 'loading' : 'idle'}</div>
       <div data-testid="error">{error || ''}</div>
+      <div data-testid="last">{lastViewedScripture ? lastViewedScripture.reference : 'none'}</div>
     </div>
   )
 }
@@ -74,5 +75,79 @@ describe('useScriptureProgress', () => {
     // error should appear
     const err = await screen.findByTestId('error')
     expect(err.textContent).toMatch(/Failed to reset progress|Failed to track scripture progress|Failed to reset progress/i)
+  })
+
+  test('when logged in with profile.lastViewedScripture, initializes from DB and syncs to localStorage', async () => {
+    const profile = {
+      slug: 'p1',
+      isDefault: false,
+      lastViewedScripture: {
+        reference: 'Gen 1:1',
+        sectionId: 's1',
+        subsectionId: 'ss1',
+        viewedAt: new Date('2024-01-01')
+      }
+    }
+    const getItem = jest.fn(() => null)
+    const setItem = jest.fn()
+    Object.defineProperty(global, 'localStorage', { value: { getItem, setItem, removeItem: jest.fn(), clear: jest.fn() }, writable: true })
+
+    render(<TestHarness profile={profile} isLoggedIn />)
+    expect(screen.getByTestId('last')).toHaveTextContent('Gen 1:1')
+    expect(setItem).toHaveBeenCalled()
+  })
+
+  test('trackScriptureView sets error when POST fails', async () => {
+    const profile = { slug: 'p3', isDefault: false }
+    // @ts-expect-error mocking incompatible types
+    global.fetch = jest.fn(() => Promise.resolve({ ok: false, status: 500 }))
+    Object.defineProperty(global, 'localStorage', {
+      value: { getItem: jest.fn(() => null), setItem: jest.fn(), removeItem: jest.fn(), clear: jest.fn() },
+      writable: true
+    })
+
+    render(<TestHarness profile={profile} isLoggedIn />)
+    const user = userEvent.setup()
+    await user.click(screen.getByText('track'))
+    const err = await screen.findByTestId('error')
+    expect(err.textContent).toMatch(/Failed to track/)
+  })
+
+  test('resetProgress calls DELETE when logged in and non-default profile', async () => {
+    const profile = { slug: 'p4', isDefault: false }
+    const fetchMock = jest.fn((url: string, opts?: any) => {
+      if (opts?.method === 'DELETE') return Promise.resolve({ ok: true })
+      return Promise.resolve({ ok: true })
+    })
+    // @ts-expect-error mocking incompatible types
+    global.fetch = fetchMock
+    Object.defineProperty(global, 'localStorage', {
+      value: { getItem: jest.fn(() => null), setItem: jest.fn(), removeItem: jest.fn(), clear: jest.fn() },
+      writable: true
+    })
+
+    render(<TestHarness profile={profile} isLoggedIn />)
+    const user = userEvent.setup()
+    await user.click(screen.getByText('reset'))
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/profiles/p4/scripture-progress'),
+      expect.objectContaining({ method: 'DELETE' })
+    )
+  })
+
+  test('lastViewedScripture comes from localStorage when no profile lastViewedScripture', async () => {
+    const stored = { reference: 'Rom 8:28', sectionId: 's1', subsectionId: 'ss1', viewedAt: new Date().toISOString() }
+    Object.defineProperty(global, 'localStorage', {
+      value: {
+        getItem: jest.fn((key: string) => (key.includes('p5') ? JSON.stringify(stored) : null)),
+        setItem: jest.fn(),
+        removeItem: jest.fn(),
+        clear: jest.fn()
+      },
+      writable: true
+    })
+    const profile = { slug: 'p5', isDefault: false }
+    render(<TestHarness profile={profile} isLoggedIn={false} />)
+    expect(screen.getByTestId('last')).toHaveTextContent('Rom 8:28')
   })
 })
