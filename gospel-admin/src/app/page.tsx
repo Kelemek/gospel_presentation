@@ -313,6 +313,9 @@ export function GospelPresentationOld() {
             <Link href="/copyright" className="text-blue-400 hover:text-blue-300 underline">
               Copyright & Attribution
             </Link>
+            <Link href="/privacy" className="text-blue-400 hover:text-blue-300 underline">
+              Privacy Policy
+            </Link>
           </div>
         </div>
       </footer>

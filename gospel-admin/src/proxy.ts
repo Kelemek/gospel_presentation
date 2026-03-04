@@ -10,6 +10,7 @@ export async function proxy(request: NextRequest) {
     pathname === '/login' ||
     pathname === '/' ||
     pathname === '/copyright' ||
+    pathname === '/privacy' ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/public')
   ) {
