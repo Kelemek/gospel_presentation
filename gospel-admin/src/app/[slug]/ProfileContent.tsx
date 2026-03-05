@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import GospelSection from '@/components/GospelSection'
 import ScriptureModal from '@/components/ScriptureModal'
 import TableOfContents from '@/components/TableOfContents'
+import ThemeToggle from '@/components/ThemeToggle'
 import { GospelSection as GospelSectionType, GospelProfile, SavedAnswer } from '@/lib/types'
 import { useScriptureProgress } from '@/lib/useScriptureProgress'
 import { logger } from '@/lib/logger'
@@ -365,7 +366,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
       {/* Unified Layout - Hamburger menu at all screen sizes */}
       <div className="min-h-screen flex-col">
         {/* Header with hamburger menu and optional edit button */}
-        <div data-profile-sticky-header className="sticky top-[env(safe-area-inset-top,0px)] z-40 bg-white/70 backdrop-blur-sm shadow-md print-hide">
+        <div data-profile-sticky-header className="sticky top-[env(safe-area-inset-top,0px)] z-40 bg-white/70 dark:bg-slate-800/90 backdrop-blur-sm shadow-md print-hide">
           <div className="w-full px-5 py-3">
             <div className="flex justify-between items-center gap-3">
               <button
@@ -396,14 +397,14 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                         router.push('/default')
                       }
                     }}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-md hover:bg-green-100 transition-colors cursor-pointer"
+                    className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-700 rounded-md hover:bg-green-100 dark:hover:bg-green-900/60 transition-colors cursor-pointer"
                     title="Click to log out"
                   >
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-xs text-green-700 font-medium hidden sm:inline">
+                    <span className="text-xs text-green-700 dark:text-green-300 font-medium hidden sm:inline">
                       {userEmail}
                     </span>
-                    <span className="text-xs text-green-700 font-medium sm:hidden">
+                    <span className="text-xs text-green-700 dark:text-green-300 font-medium sm:hidden">
                       Logged in
                     </span>
                   </button>
@@ -414,9 +415,9 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                   <>
                     {/* Profile Info */}
                     <div className="text-right">
-                      <div className="text-sm font-medium text-slate-700">{profileInfo?.title || 'Gospel Profile'}</div>
+                      <div className="text-sm font-medium text-slate-700 dark:text-slate-200">{profileInfo?.title || 'Gospel Profile'}</div>
                       {profileInfo?.favoriteScriptures && profileInfo.favoriteScriptures.length > 0 && (
-                        <div className="text-xs text-blue-600">
+                        <div className="text-xs text-blue-600 dark:text-blue-400">
                           📖 {profileInfo.favoriteScriptures.length} favorite{profileInfo.favoriteScriptures.length !== 1 ? 's' : ''}
                         </div>
                       )}
@@ -431,6 +432,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                     </Link>
                   </>
                 )}
+                <ThemeToggle />
               </div>
             </div>
           </div>
@@ -443,7 +445,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
         />
 
         {/* Main Content Area */}
-        <div className="bg-gray-50">
+        <div className="bg-gray-50 dark:bg-gray-900">
           <main className="container mx-auto px-5 py-10">
             <div className="space-y-12">
               {sections.map((section) => (
@@ -472,7 +474,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
           
           {/* Menu Panel */}
           <div 
-            className="fixed top-[env(safe-area-inset-top,0px)] bottom-0 left-0 z-50 bg-white w-80 shadow-2xl overflow-y-auto border-r border-gray-200 transform transition-transform duration-300 ease-in-out print-hide"
+            className="fixed top-[env(safe-area-inset-top,0px)] bottom-0 left-0 z-50 bg-white dark:bg-slate-800 w-80 shadow-2xl overflow-y-auto border-r border-gray-200 dark:border-slate-600 transform transition-transform duration-300 ease-in-out print-hide"
             onMouseLeave={() => {
               // Only auto-close on desktop when mouse leaves
               if (window.innerWidth >= 1024) {
@@ -481,13 +483,13 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
             }}
           >
             <div className="p-6">
-              <div className="flex items-center justify-between mb-6 pb-3 border-b border-gray-200">
-                <h3 className="text-xl font-semibold text-slate-700">
+              <div className="flex items-center justify-between mb-6 pb-3 border-b border-gray-200 dark:border-slate-600">
+                <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-200">
                   Table of Contents
                 </h3>
                 <button
                   onClick={closeMenu}
-                  className="lg:hidden p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors"
+                  className="lg:hidden p-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors"
                   aria-label="Close menu"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -499,24 +501,24 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
               <TableOfContents sections={sections} currentProfileSlug={profileInfo.slug} onNavigate={closeMenu} />
               
               {/* Profile Info in Sidebar */}
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <div className="text-sm font-medium text-slate-700 mb-2">{profileInfo?.title || 'Gospel Profile'}</div>
+              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-slate-600">
+                <div className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">{profileInfo?.title || 'Gospel Profile'}</div>
                 {profileInfo?.description && (
-                  <div className="text-xs text-slate-500 mb-2">{profileInfo.description}</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">{profileInfo.description}</div>
                 )}
                 {profileInfo?.favoriteScriptures && profileInfo.favoriteScriptures.length > 0 && (
-                  <div className="text-xs text-blue-600 mb-2">
+                  <div className="text-xs text-blue-600 dark:text-blue-400 mb-2">
                     📖 {profileInfo.favoriteScriptures.length} favorite{profileInfo.favoriteScriptures.length !== 1 ? 's' : ''}
                   </div>
                 )}
                 
                 {/* Scripture Progress Section - show when profile exists (localStorage for anonymous/default) */}
                 {profile && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-600">
                   {currentLastViewed ? (
                     <div className="space-y-2">
-                      <div className="text-xs font-medium text-slate-600">Reading Progress</div>
-                      <div className="text-xs text-yellow-700 bg-yellow-50 p-2 rounded border">
+                      <div className="text-xs font-medium text-slate-600 dark:text-slate-300">Reading Progress</div>
+                      <div className="text-xs text-yellow-700 dark:text-yellow-200 bg-yellow-50 dark:bg-yellow-900/30 p-2 rounded border dark:border-yellow-700">
                         📍 Last: {currentLastViewed}
                       </div>
                       <button
@@ -526,13 +528,13 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                           router.refresh()
                         }}
                         disabled={progressLoading}
-                        className="text-xs px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded transition-colors disabled:opacity-50 w-full"
+                        className="text-xs px-3 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded transition-colors disabled:opacity-50 w-full"
                       >
                         {progressLoading ? 'Resetting...' : 'Reset Progress'}
                       </button>
                     </div>
                   ) : (
-                    <div className="text-xs text-slate-500 italic">
+                    <div className="text-xs text-slate-500 dark:text-slate-400 italic">
                       Click any scripture to start tracking your progress
                     </div>
                   )}
@@ -551,7 +553,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
       )}
 
       {/* Footer */}
-      <footer className="bg-slate-700 text-white py-10 mt-16 print-hide">
+      <footer className="bg-slate-700 dark:bg-slate-900 text-white py-10 mt-16 print-hide">
         <div className="container mx-auto px-5 max-w-3xl">
           <div className="space-y-4 text-sm opacity-90 leading-relaxed text-center md:text-left">
             <p>

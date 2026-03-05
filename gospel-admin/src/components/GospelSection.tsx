@@ -222,10 +222,10 @@ function ScriptureReferences({ references, onScriptureClick, lastViewedScripture
                   onClick={() => onScriptureClick(ref.reference)}
                   className={`px-4 py-2 text-base md:text-lg rounded-md transition-colors cursor-pointer print-compact min-h-[44px] flex items-center ${
                     isLastViewed
-                      ? 'bg-yellow-200 hover:bg-yellow-300 text-yellow-900 border-2 border-yellow-500 hover:border-yellow-600 font-semibold shadow-md pr-10'
+                      ? 'bg-yellow-200 dark:bg-yellow-900/50 hover:bg-yellow-300 dark:hover:bg-yellow-900/70 text-yellow-900 dark:text-yellow-100 border-2 border-yellow-500 dark:border-yellow-600 hover:border-yellow-600 dark:hover:border-yellow-500 font-semibold shadow-md pr-10'
                       : ref.favorite 
-                        ? 'bg-blue-200 hover:bg-blue-300 text-blue-900 border-2 border-blue-400 hover:border-blue-500 font-medium' 
-                        : 'bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-200 hover:border-blue-300'
+                        ? 'bg-blue-200 dark:bg-blue-900/50 hover:bg-blue-300 dark:hover:bg-blue-900/70 text-blue-900 dark:text-blue-100 border-2 border-blue-400 dark:border-blue-600 hover:border-blue-500 dark:hover:border-blue-500 font-medium' 
+                        : 'bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600'
                   }`}
                 >
                   {ref.reference}
@@ -234,7 +234,7 @@ function ScriptureReferences({ references, onScriptureClick, lastViewedScripture
               {isLastViewed && (
                 <button
                   onClick={handlePinClick}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-yellow-700 hover:text-yellow-800 cursor-pointer transition-colors p-1 z-10"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-yellow-700 dark:text-yellow-300 hover:text-yellow-800 dark:hover:text-yellow-200 cursor-pointer transition-colors p-1 z-10"
                   title="Click to clear progress"
                 >
                   📍
@@ -430,7 +430,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
     <>
       <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
       <div className="mt-4 space-y-3">
-      <h5 className="text-base font-semibold text-slate-700 border-b border-slate-200 pb-1">
+      <h5 className="text-base font-semibold text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-600 pb-1">
         Reflection Questions
       </h5>
       {(questions || []).filter((q): q is QuestionAnswer => q && typeof q === 'object' && !Array.isArray(q)).map((question, index) => {
@@ -443,15 +443,15 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
         const hasHtmlTags = /<[^>]+>/.test(questionContent)
         
         return (
-          <div key={question.id ?? `q-${index}`} className="bg-slate-50 border border-slate-200 rounded-lg p-3 print:p-2 print:space-y-1">
+          <div key={question.id ?? `q-${index}`} className="bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-lg p-3 print:p-2 print:space-y-1">
             <div className="mb-2 flex gap-1 items-baseline">
-              <span className="text-sm text-slate-600 shrink-0 leading-none">{index + 1}. </span>
+              <span className="text-sm text-slate-600 dark:text-slate-300 shrink-0 leading-none">{index + 1}. </span>
               <div className="flex-1">
                 {detail ? (
                   <div>
                     <button
                       onClick={() => toggleQuestion(question.id)}
-                      className="inline-flex items-center gap-1 px-2 py-1 text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors"
+                      className="inline-flex items-center gap-1 px-2 py-1 text-sm font-medium text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-700 rounded transition-colors"
                     >
                       {hasHtmlTags ? (
                         <span dangerouslySetInnerHTML={{ __html: prefix }} />
@@ -468,7 +468,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
                       </svg>
                     </button>
                     {isExpanded && (
-                      <div className="mt-2 text-sm text-slate-700 pl-4 border-l-2 border-blue-200">
+                      <div className="mt-2 text-sm text-slate-700 dark:text-slate-300 pl-4 border-l-2 border-blue-200 dark:border-blue-700">
                         {hasHtmlTags ? (
                           <div 
                             className="prose prose-slate max-w-none"
@@ -482,7 +482,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
                   </div>
                 ) : hasHtmlTags ? (
                   <div 
-                    className="question-content font-medium text-slate-800 text-sm max-w-none mt-0"
+                    className="question-content font-medium text-slate-800 dark:text-slate-100 text-sm max-w-none mt-0"
                   >
                     <TextWithComaButtons 
                       text={questionContent} 
@@ -491,7 +491,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
                     />
                   </div>
                 ) : (
-                  <span className="font-medium text-slate-800 text-sm">
+                  <span className="font-medium text-slate-800 dark:text-slate-100 text-sm">
                     <TextWithComaButtons text={questionContent} onComaClick={() => setShowComaModal(true)} />
                   </span>
                 )}
@@ -504,10 +504,10 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
                 placeholder="Type your answer here..."
                 maxLength={maxLength}
                 rows={3}
-                className="w-full px-3 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent resize-y bg-white print:px-2 print:py-1 print:min-h-[60px] print:placeholder:text-transparent"
+                className="w-full px-3 py-2.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 focus:border-transparent resize-y bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 print:px-2 print:py-1 print:min-h-[60px] print:placeholder:text-transparent"
               />
               <div className="flex items-center justify-between print:hidden">
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
                   {currentAnswer.length}/{maxLength} characters
                 </span>
                 <button
@@ -538,7 +538,7 @@ function NestedSubsectionComponent({ nestedSubsection, nestedId, onScriptureClic
       <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
       <div id={nestedId} className="scroll-mt-20 ml-6 mt-4 pl-4 print-subsection">
         <h5 
-          className="font-medium text-slate-800 mb-2 print-subsection-title text-lg md:text-xl"
+          className="font-medium text-slate-800 dark:text-slate-100 mb-2 print-subsection-title text-lg md:text-xl"
         >
           <TextWithComaButtons 
             text={nestedSubsection.title} 
@@ -546,7 +546,7 @@ function NestedSubsectionComponent({ nestedSubsection, nestedId, onScriptureClic
             onScriptureClick={onScriptureClick}
           />
         </h5>
-        <div className="text-slate-700 mb-2 print-content text-base md:text-lg leading-relaxed">
+        <div className="text-slate-700 dark:text-slate-300 mb-2 print-content text-base md:text-lg leading-relaxed">
           <TextWithComaButtons 
             text={nestedSubsection.content} 
             onComaClick={() => setShowComaModal(true)}
@@ -583,7 +583,7 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
       <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
       <div id={`${sectionId}-${subsectionIndex}`} className="scroll-mt-20 mb-6 print-subsection">
         <h4 
-          className="text-xl md:text-2xl font-semibold text-slate-800 mb-3 print-subsection-title"
+          className="text-xl md:text-2xl font-semibold text-slate-800 dark:text-slate-100 mb-3 print-subsection-title"
         >
           <TextWithComaButtons 
             text={subsection.title} 
@@ -592,7 +592,7 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
           />
         </h4>
         {subsection.content && !subsection.nestedSubsections?.length && (
-          <div className="text-slate-700 mb-3 leading-relaxed print-content text-base md:text-lg">
+          <div className="text-slate-700 dark:text-slate-300 mb-3 leading-relaxed print-content text-base md:text-lg">
             <TextWithComaButtons 
               text={subsection.content} 
               onComaClick={() => setShowComaModal(true)}
@@ -638,7 +638,7 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
         </div>
       )}
       {subsection.content && Array.isArray(subsection.nestedSubsections) && subsection.nestedSubsections.length > 0 && (
-        <div className="text-slate-700 mt-6 pt-4 border-t border-slate-200 print-content text-base md:text-lg leading-relaxed">
+        <div className="text-slate-700 dark:text-slate-300 mt-6 pt-4 border-t border-slate-200 dark:border-slate-600 print-content text-base md:text-lg leading-relaxed">
           <TextWithComaButtons 
             text={subsection.content} 
             onComaClick={() => setShowComaModal(true)}
@@ -656,10 +656,10 @@ export default function GospelSection({ section, onScriptureClick, lastViewedScr
   const [showComaModal, setShowComaModal] = useState(false)
   
   return (
-    <section id={sectionId} className="scroll-mt-20 bg-white rounded-lg shadow-sm border border-gray-200 p-8 print-section">
+    <section id={sectionId} className="scroll-mt-20 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-600 p-8 print-section">
       <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
       <h3 
-        className="text-3xl md:text-4xl font-bold text-slate-800 mb-6 pb-3 border-b border-gray-200 print-section-header"
+        className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-6 pb-3 border-b border-gray-200 dark:border-slate-600 print-section-header"
       >
         <TextWithComaButtons 
           text={section.title} 
@@ -675,7 +675,7 @@ export default function GospelSection({ section, onScriptureClick, lastViewedScr
             href={section.linkUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-base md:text-lg rounded-md bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-200 hover:border-blue-300 transition-colors min-h-[44px]"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-base md:text-lg rounded-md bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors min-h-[44px]"
           >
             {section.linkDescription || 'Visit Link'} ⧉
           </a>

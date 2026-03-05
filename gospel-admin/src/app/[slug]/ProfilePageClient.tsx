@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect } from 'react'
+import React, { useEffect } from 'react'
 import { useRouter, notFound } from 'next/navigation'
 import ProfileContent from './ProfileContent'
 import { useProfileWithCache } from '@/lib/useProfileWithCache'
 import { createClient } from '@/lib/supabase/client'
+import { ThemeProvider, useTheme } from '@/contexts/ThemeContext'
 
 interface ProfilePageClientProps {
   slug: string
@@ -48,12 +49,16 @@ export default function ProfilePageClient({ slug }: ProfilePageClientProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-600 mx-auto mb-4" />
-          <p className="text-slate-600">Loading...</p>
-        </div>
-      </div>
+      <ThemeProvider>
+        <ProfileThemeWrapper>
+          <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-600 dark:border-slate-400 mx-auto mb-4" />
+              <p className="text-slate-600 dark:text-slate-300">Loading...</p>
+            </div>
+          </div>
+        </ProfileThemeWrapper>
+      </ThemeProvider>
     )
   }
 
@@ -65,26 +70,35 @@ export default function ProfilePageClient({ slug }: ProfilePageClientProps) {
   const favoriteScriptures = extractFavoriteScriptures(gospelData || [])
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-linear-to-br from-slate-700 to-slate-800 text-white text-center py-5 shadow-lg">
-        <div className="container mx-auto px-5">
-          <h1 className="text-4xl md:text-5xl font-bold mb-1">
-            The Gospel Presentation
-          </h1>
-        </div>
-      </header>
+    <ThemeProvider>
+      <ProfileThemeWrapper>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+          <header className="bg-linear-to-br from-slate-700 to-slate-800 text-white text-center py-5 shadow-lg">
+            <div className="container mx-auto px-5">
+              <h1 className="text-4xl md:text-5xl font-bold mb-1">
+                The Gospel Presentation
+              </h1>
+            </div>
+          </header>
 
-      <ProfileContent
-        sections={gospelData || []}
-        profileInfo={{
-          title: profile.title,
-          description: profile.description,
-          slug,
-          favoriteScriptures,
-          savedAnswers: profile.savedAnswers
-        }}
-        profile={profile}
-      />
-    </div>
+          <ProfileContent
+            sections={gospelData || []}
+            profileInfo={{
+              title: profile.title,
+              description: profile.description,
+              slug,
+              favoriteScriptures,
+              savedAnswers: profile.savedAnswers
+            }}
+            profile={profile}
+          />
+        </div>
+      </ProfileThemeWrapper>
+    </ThemeProvider>
   )
+}
+
+function ProfileThemeWrapper({ children }: { children: React.ReactNode }) {
+  const { theme } = useTheme()
+  return <div className={theme === 'dark' ? 'dark' : ''}>{children}</div>
 }

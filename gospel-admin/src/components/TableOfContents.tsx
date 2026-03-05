@@ -159,7 +159,7 @@ export default function TableOfContents({
           <button
             type="button"
             onClick={() => setIsResourcesOpen(!isResourcesOpen)}
-            className="inline-flex items-center w-full px-4 py-3 text-base md:text-lg font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 border border-slate-300 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px] cursor-pointer"
+            className="inline-flex items-center w-full px-4 py-3 text-base md:text-lg font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500 border border-slate-300 dark:border-slate-600 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px] cursor-pointer"
             aria-expanded={isResourcesOpen}
             aria-haspopup="listbox"
           >
@@ -174,9 +174,9 @@ export default function TableOfContents({
             </span>
           </button>
           {isResourcesOpen && (
-            <div className="mt-2 border border-slate-200 rounded-lg bg-white shadow-sm overflow-hidden" role="listbox">
+            <div className="mt-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-sm overflow-hidden" role="listbox">
               {publicTemplates.length === 0 ? (
-                <div className="px-4 py-3 text-sm text-slate-500">
+                <div className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
                   No resources available
                 </div>
               ) : (
@@ -184,7 +184,7 @@ export default function TableOfContents({
                   <Link
                     key={t.slug}
                     href={`/${t.slug}`}
-                    className="block px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 border-b border-slate-100 last:border-b-0 transition-colors"
+                    className="block px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors"
                     role="option"
                   >
                     {t.title}
@@ -197,11 +197,11 @@ export default function TableOfContents({
       )}
 
       {/* Print Button - hidden on Android */}
-      <div className="pb-4 border-b border-slate-200">
+      <div className="pb-4 border-b border-slate-200 dark:border-slate-600">
         {!isAndroid && (
           <button
             onClick={handlePrint}
-            className="inline-flex items-center w-full px-4 py-3 text-base md:text-lg font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 active:bg-slate-300 border border-slate-300 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px] cursor-pointer"
+            className="inline-flex items-center w-full px-4 py-3 text-base md:text-lg font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500 border border-slate-300 dark:border-slate-600 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px] cursor-pointer"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -212,14 +212,14 @@ export default function TableOfContents({
         
         {/* Bible Translation Selector */}
         <div className="mt-3">
-          <label htmlFor="bible-translation" className="block text-sm font-medium text-slate-700 mb-2">
+          <label htmlFor="bible-translation" className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
             Bible Translation
           </label>
           <select
             id="bible-translation"
             value={translation}
             onChange={handleTranslationChange}
-            className="w-full px-3 py-2 border border-slate-200 hover:border-slate-300 focus:border-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 text-slate-900 bg-white shadow-sm text-sm transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1.25rem] bg-position-[right_0.5rem_center] bg-no-repeat pr-10"
+            className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 focus:border-slate-400 dark:focus:border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-600 text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 shadow-sm text-sm transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1.25rem] bg-position-[right_0.5rem_center] bg-no-repeat pr-10"
           >
             {enabledTranslations.includes('esv') && (
               <option value="esv">ESV (English Standard Version)</option>
@@ -241,7 +241,7 @@ export default function TableOfContents({
           <a 
             href={`#section-${section.section}`}
             onClick={(e) => handleTocClick(e, `#section-${section.section}`, onNavigate)}
-            className="text-blue-600 hover:text-blue-800 active:text-blue-900 font-medium text-xl md:text-lg mb-3 md:mb-2 py-3 md:py-2 px-4 md:px-3 rounded-md hover:bg-blue-50 active:bg-blue-100 transition-colors min-h-[52px] flex items-center"
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 active:text-blue-900 dark:active:text-blue-200 font-medium text-xl md:text-lg mb-3 md:mb-2 py-3 md:py-2 px-4 md:px-3 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 active:bg-blue-100 dark:active:bg-blue-900/50 transition-colors min-h-[52px] flex items-center"
           >
             {stripHtmlTags(section.title)}
           </a>
@@ -258,7 +258,7 @@ export default function TableOfContents({
                     <a 
                       href={`#section-${section.section}-${index}`}
                       onClick={(e) => handleTocClick(e, `#section-${section.section}-${index}`, onNavigate)}
-                      className="text-blue-600 hover:text-blue-800 active:text-blue-900 text-base md:text-sm py-3 md:py-2 px-4 md:px-3 rounded-md hover:bg-blue-50 active:bg-blue-100 transition-colors min-h-[48px] flex items-center leading-relaxed"
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 active:text-blue-900 dark:active:text-blue-200 text-base md:text-sm py-3 md:py-2 px-4 md:px-3 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 active:bg-blue-100 dark:active:bg-blue-900/50 transition-colors min-h-[48px] flex items-center leading-relaxed"
                     >
                       {stripHtmlTags(subsection.title)}
                     </a>
@@ -272,7 +272,7 @@ export default function TableOfContents({
                             <a 
                               href={`#section-${section.section}-${index}-${originalNestedIndex}`}
                               onClick={(e) => handleTocClick(e, `#section-${section.section}-${index}-${originalNestedIndex}`, onNavigate)}
-                              className="text-blue-600 hover:text-blue-800 active:text-blue-900 text-sm py-2 md:py-1.5 px-3 md:px-2 rounded-md hover:bg-blue-50 active:bg-blue-100 transition-colors min-h-[40px] flex items-center leading-relaxed"
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 active:text-blue-900 dark:active:text-blue-200 text-sm py-2 md:py-1.5 px-3 md:px-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 active:bg-blue-100 dark:active:bg-blue-900/50 transition-colors min-h-[40px] flex items-center leading-relaxed"
                             >
                               {stripHtmlTags(nested.title)}
                             </a>

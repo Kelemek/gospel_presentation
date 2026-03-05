@@ -213,7 +213,7 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
       {/* Modal */}
       {isVisible && (
         <div
-          className="fixed z-50 bg-white border border-slate-300 rounded-lg shadow-xl p-6 w-96 max-w-[calc(100vw-40px)] min-h-[60px]"
+          className="fixed z-50 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg shadow-xl p-6 w-96 max-w-[calc(100vw-40px)] min-h-[60px]"
           style={{
             left: `${position.x}px`,
             top: `${position.y}px`,
@@ -222,18 +222,18 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
           }}
         >
           {loading ? (
-            <div className="flex items-center gap-2 text-slate-600">
-              <div className="w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+              <div className="w-5 h-5 border-2 border-slate-400 dark:border-slate-500 border-t-transparent rounded-full animate-spin" />
               <span className="text-base md:text-lg">Loading verse...</span>
             </div>
           ) : error ? (
-            <div className="text-red-600 text-base md:text-lg">
+            <div className="text-red-600 dark:text-red-400 text-base md:text-lg">
               <p className="font-medium">Error loading verse:</p>
               <p>{error}</p>
             </div>
           ) : scriptureData ? (
-            <div className="text-slate-700">
-              <div className="font-medium text-slate-900 mb-2 text-base md:text-lg">
+            <div className="text-slate-700 dark:text-slate-200">
+              <div className="font-medium text-slate-900 dark:text-slate-100 mb-2 text-base md:text-lg">
                 {scriptureData.reference}
               </div>
               <div className="text-base md:text-lg leading-relaxed">
@@ -241,7 +241,7 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
               </div>
             </div>
           ) : (
-            <div className="text-slate-600 text-base md:text-lg">
+            <div className="text-slate-600 dark:text-slate-400 text-base md:text-lg">
               Hover for 1 second to load verse text
             </div>
           )}
@@ -249,12 +249,12 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
           {/* Arrow - points down when above, points up when below */}
           {isAbove ? (
             <div 
-              className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white"
+              className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white dark:border-t-slate-800"
               style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.1))' }}
             />
           ) : (
             <div 
-              className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-white"
+              className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-white dark:border-b-slate-800"
               style={{ filter: 'drop-shadow(0 -1px 1px rgba(0,0,0,0.1))' }}
             />
           )}

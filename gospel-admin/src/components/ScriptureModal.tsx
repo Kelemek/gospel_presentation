@@ -54,7 +54,7 @@ export default function ScriptureModal({
   const [compareLoading, setCompareLoading] = useState(false)
   const [compareError, setCompareError] = useState<string>('')
 
-  const selectClassName = "w-[140px] pl-4 pr-10 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border-2 bg-slate-100 text-slate-700 border-slate-400 hover:text-slate-800 hover:bg-slate-200 cursor-pointer appearance-none bg-no-repeat bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1.25rem] bg-position-[right_10px_center]"
+  const selectClassName = "w-[140px] pl-4 pr-10 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-600 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 cursor-pointer appearance-none bg-no-repeat bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1.25rem] bg-position-[right_10px_center]"
 
   // Touch/swipe state for mobile navigation
   const [touchStart, setTouchStart] = useState<number | null>(null)
@@ -279,11 +279,11 @@ export default function ScriptureModal({
     if (trans === 'esv') {
       return (
         <>
-          <p className="text-xs text-slate-500 text-center mb-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 text-center mb-1">
             Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission.
           </p>
-          <p className="text-xs text-slate-500 text-center">
-            <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
+          <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+            <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline">
               www.esv.org
             </a>
           </p>
@@ -292,25 +292,25 @@ export default function ScriptureModal({
     }
     if (trans === 'kjv') {
       return (
-        <p className="text-xs text-slate-500 text-center">
+        <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
           Scripture quotations are from the King James Version (KJV), which is in the public domain.
         </p>
       )
     }
     if (trans === 'nasb') {
       return (
-        <p className="text-xs text-slate-500 text-center">
+        <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
           Scripture quotations taken from the New American Standard Bible® (NASB), Copyright © 1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation. Used by permission.
         </p>
       )
     }
     if (trans === 'lsb') {
       return (
-        <p className="text-xs text-slate-500 text-center">
+        <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
           Legacy Standard Bible Copyright ©2021 by The Lockman Foundation. All rights reserved. Managed in partnership with Three Sixteen Publishing Inc.{' '}
-          <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">LSBible.org</a>
+          <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline">LSBible.org</a>
           {' '}For Permission to Quote Information visit{' '}
-          <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">www.LSBible.org</a>
+          <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline">www.LSBible.org</a>
         </p>
       )
     }
@@ -344,14 +344,14 @@ export default function ScriptureModal({
       
       processedText = processedText.replace(
         rangePattern,
-        `<div id="verse-range-${firstVerse}-${lastVerse}" class="bg-linear-to-br from-slate-50 to-slate-100 border-l-4 border-blue-500 px-4 py-3 my-4 rounded-r-md shadow-sm"><div class="font-semibold text-slate-900 text-base leading-relaxed">$1</div></div>`
+        `<div id="verse-range-${firstVerse}-${lastVerse}" class="bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-800 border-l-4 border-blue-500 dark:border-blue-400 px-4 py-3 my-4 rounded-r-md shadow-sm"><div class="font-semibold text-slate-900 dark:text-slate-100 text-base leading-relaxed">$1</div></div>`
       )
     } else {
       // Single verse - wrap it with Tailwind classes
       const verseNum = firstVerse
       processedText = processedText.replace(
         new RegExp(`(<sup[^>]*>${verseNum}</sup>[\\s\\S]*?)(?=<sup[^>]*>\\d+</sup>|$)`, 'g'),
-        `<div id="verse-${verseNum}" class="bg-linear-to-br from-slate-50 to-slate-100 border-l-4 border-blue-500 px-4 py-3 my-4 rounded-r-md shadow-sm"><div class="font-semibold text-slate-900 text-base leading-relaxed">$1</div></div>`
+        `<div id="verse-${verseNum}" class="bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-800 border-l-4 border-blue-500 dark:border-blue-400 px-4 py-3 my-4 rounded-r-md shadow-sm"><div class="font-semibold text-slate-900 dark:text-slate-100 text-base leading-relaxed">$1</div></div>`
       )
     }
     
@@ -384,10 +384,10 @@ export default function ScriptureModal({
 
   return (
     <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 z-50 flex items-start md:items-center justify-center p-0 md:p-4" style={{ minHeight: '100vh', minWidth: '100vw' }}>
-      <div className="bg-white w-full md:max-w-2xl lg:max-w-4xl xl:max-w-5xl shadow-xl flex flex-col h-full md:h-[80vh] md:rounded-lg">
+      <div className="bg-white dark:bg-slate-800 w-full md:max-w-2xl lg:max-w-4xl xl:max-w-5xl shadow-xl flex flex-col h-full md:h-[80vh] md:rounded-lg">
         
         {/* Fixed Header with Controls - Always Visible */}
-        <div className="bg-slate-100 px-4 pt-safe-or-3 pb-3 border-b shrink-0 relative z-10 md:rounded-t-lg" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}>
+        <div className="bg-slate-100 dark:bg-slate-700 px-4 pt-safe-or-3 pb-3 border-b dark:border-slate-600 shrink-0 relative z-10 md:rounded-t-lg" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}>
           {/* Navigation Controls - Always at Top */}
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center gap-1 flex-1">
@@ -400,8 +400,8 @@ export default function ScriptureModal({
                 disabled={!hasPrevious}
                 className={`min-h-[48px] min-w-[48px] p-2 rounded-lg transition-colors flex items-center justify-center text-xl font-bold ${
                   hasPrevious 
-                    ? 'text-slate-600 hover:text-slate-800 hover:bg-slate-200 active:bg-slate-300' 
-                    : 'text-slate-300 cursor-not-allowed'
+                    ? 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500' 
+                    : 'text-slate-300 dark:text-slate-500 cursor-not-allowed'
                 }`}
                 title="Previous Scripture"
                 aria-label="Previous Scripture"
@@ -409,9 +409,9 @@ export default function ScriptureModal({
                 ◀
               </button>
               <div className="text-center flex-1 px-2">
-                <h3 className="text-lg md:text-xl font-semibold text-slate-800 leading-tight">{reference}</h3>
+                <h3 className="text-lg md:text-xl font-semibold text-slate-800 dark:text-slate-100 leading-tight">{reference}</h3>
                 {totalReferences > 0 && (
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-gray-600 dark:text-slate-400">
                     {currentIndex + 1} of {totalReferences} {totalFavorites > 0 ? 'favorites' : 'verses'}
                   </span>
                 )}
@@ -425,8 +425,8 @@ export default function ScriptureModal({
                 disabled={!hasNext}
                 className={`min-h-[48px] min-w-[48px] p-2 rounded-lg transition-colors flex items-center justify-center text-xl font-bold ${
                   hasNext 
-                    ? 'text-slate-600 hover:text-slate-800 hover:bg-slate-200 active:bg-slate-300' 
-                    : 'text-slate-300 cursor-not-allowed'
+                    ? 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500' 
+                    : 'text-slate-300 dark:text-slate-500 cursor-not-allowed'
                 }`}
                 title="Next Scripture"
                 aria-label="Next Scripture"
@@ -437,7 +437,7 @@ export default function ScriptureModal({
             <div className="flex items-center gap-2 ml-2">
               <button
                 onClick={onClose}
-                className="text-slate-500 hover:text-slate-700 text-2xl font-bold min-h-[48px] min-w-[48px] rounded-lg hover:bg-slate-200 active:bg-slate-300 flex items-center justify-center"
+                className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-2xl font-bold min-h-[48px] min-w-[48px] rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500 flex items-center justify-center"
                 aria-label="Close modal"
               >
                 ×
@@ -494,8 +494,8 @@ export default function ScriptureModal({
               onClick={() => setShowingContext(false)}
               className={`px-4 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border-2 ${
                 !showingContext 
-                  ? 'bg-blue-100 text-blue-700 border-blue-400' 
-                  : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100 border-slate-400'
+                  ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border-blue-400 dark:border-blue-600' 
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 border-slate-400 dark:border-slate-500'
               }`}
             >
               Verse
@@ -506,8 +506,8 @@ export default function ScriptureModal({
               disabled={contextLoading}
               className={`px-4 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border-2 ${
                 showingContext 
-                  ? 'bg-blue-100 text-blue-700 border-blue-400' 
-                  : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100 border-slate-400'
+                  ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border-blue-400 dark:border-blue-600' 
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 border-slate-400 dark:border-slate-500'
               } ${contextLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {contextLoading ? 'Loading...' : 'Chapter Context'}
@@ -517,16 +517,16 @@ export default function ScriptureModal({
 
         {/* Context Information - Only show when available */}
         {context && (
-          <div className="px-4 py-3 bg-slate-50 border-b shrink-0">
-            <div className="text-slate-700 text-base md:text-lg">
+          <div className="px-4 py-3 bg-slate-50 dark:bg-slate-700/50 border-b dark:border-slate-600 shrink-0">
+            <div className="text-slate-700 dark:text-slate-200 text-base md:text-lg">
               <div className="flex items-center gap-2 mb-1">
-                <strong className="text-slate-800">Section:</strong> 
-                <span className="font-medium text-slate-600">{context.sectionTitle}</span>
+                <strong className="text-slate-800 dark:text-slate-100">Section:</strong> 
+                <span className="font-medium text-slate-600 dark:text-slate-300">{context.sectionTitle}</span>
               </div>
-              <div className="flex items-center gap-2 mb-2 text-slate-600">
+              <div className="flex items-center gap-2 mb-2 text-slate-600 dark:text-slate-300">
                 <span className="font-medium">{context.subsectionTitle}</span>
               </div>
-              <div className="prose prose-sm max-w-none text-slate-600 text-sm md:text-base leading-relaxed">
+              <div className="prose prose-sm max-w-none text-slate-600 dark:text-slate-300 text-sm md:text-base leading-relaxed">
                 <div dangerouslySetInnerHTML={{ __html: context.content }} />
               </div>
             </div>
@@ -544,18 +544,18 @@ export default function ScriptureModal({
               {/* Left column - Compare translation */}
               <div className="flex flex-col min-w-0">
                 {compareTranslation && (
-                  <span className="text-xs font-bold text-slate-600 uppercase mb-2">{compareTranslation}</span>
+                  <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-2">{compareTranslation}</span>
                 )}
                 {compareLoading && (
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    <span className="ml-3 text-slate-600 text-base md:text-lg">Loading...</span>
+                    <span className="ml-3 text-slate-600 dark:text-slate-300 text-base md:text-lg">Loading...</span>
                   </div>
                 )}
                 {showingContext && compareTranslation && !compareChapterText && !compareLoading && (
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                    <span className="ml-3 text-slate-600 text-base md:text-lg">Loading chapter...</span>
+                    <span className="ml-3 text-slate-600 dark:text-slate-300 text-base md:text-lg">Loading chapter...</span>
                   </div>
                 )}
                 {compareError && (
@@ -568,7 +568,7 @@ export default function ScriptureModal({
                     {!showingContext && compareText && (
                       <div className="prose max-w-none">
                         <div 
-                          className="text-slate-700 leading-relaxed text-lg md:text-xl"
+                          className="text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl"
                           dangerouslySetInnerHTML={{
                             __html: compareText
                               .replace(/\[(\d+)\]/g, '<sup class="text-blue-600 font-medium">$1</sup>')
@@ -579,14 +579,14 @@ export default function ScriptureModal({
                     )}
                     {showingContext && compareChapterText && (
                       <div className="prose max-w-none">
-                        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-slate-700 text-base md:text-lg">
+                        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg text-slate-700 dark:text-slate-200 text-base md:text-lg">
                           <div className="flex items-center gap-2">
-                            <strong className="text-slate-800">Chapter Context:</strong>
-                            <span className="font-medium text-slate-600">{getChapterReference(reference)}</span>
+                            <strong className="text-slate-800 dark:text-slate-100">Chapter Context:</strong>
+                            <span className="font-medium text-slate-600 dark:text-slate-200">{getChapterReference(reference)}</span>
                           </div>
                         </div>
                         <div
-                          className="text-slate-700 leading-relaxed text-lg md:text-xl"
+                          className="text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl"
                           dangerouslySetInnerHTML={{
                             __html: processChapterText(compareChapterText)
                           }}
@@ -599,7 +599,7 @@ export default function ScriptureModal({
 
               {/* Right column - Main translation */}
               <div className="flex flex-col min-w-0">
-                <span className="text-xs font-bold text-slate-600 uppercase mb-2">{translation}</span>
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-2">{translation}</span>
                 {(loading || contextLoading) && (
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -621,7 +621,7 @@ export default function ScriptureModal({
                     {!showingContext && scriptureText && (
                       <div className="prose max-w-none">
                         <div
-                          className="text-slate-700 leading-relaxed text-lg md:text-xl"
+                          className="text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl"
                           dangerouslySetInnerHTML={{
                             __html: scriptureText
                               .replace(/\[(\d+)\]/g, '<sup class="text-blue-600 font-medium">$1</sup>')
@@ -632,15 +632,15 @@ export default function ScriptureModal({
                     )}
                     {showingContext && chapterText && (
                       <div className="prose max-w-none">
-                        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-slate-700 text-base md:text-lg">
+                        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg text-slate-700 dark:text-slate-200 text-base md:text-lg">
                           <div className="flex items-center gap-2">
-                            <strong className="text-slate-800">Chapter Context:</strong>
-                            <span className="font-medium text-slate-600">{getChapterReference(reference)}</span>
+                            <strong className="text-slate-800 dark:text-slate-100">Chapter Context:</strong>
+                            <span className="font-medium text-slate-600 dark:text-slate-200">{getChapterReference(reference)}</span>
                           </div>
                         </div>
                         <div
                           id="chapter-content"
-                          className="text-slate-700 leading-relaxed text-lg md:text-xl"
+                          className="text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl"
                           dangerouslySetInnerHTML={{
                             __html: processChapterText(chapterText)
                           }}
@@ -651,8 +651,8 @@ export default function ScriptureModal({
                 )}
               </div>
               {/* Attributions - scroll with content */}
-              <div className="mt-4 pt-4 border-t border-slate-200 md:col-span-2">
-                <div className="space-y-2 bg-slate-50 -mx-4 px-4 py-3">
+              <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-600 md:col-span-2">
+                <div className="space-y-2 bg-slate-50 dark:bg-slate-700/50 -mx-4 px-4 py-3">
                   {renderAttribution(translation)}
                   {compareTranslation && renderAttribution(compareTranslation)}
                 </div>
@@ -679,7 +679,7 @@ export default function ScriptureModal({
               {!showingContext && scriptureText && (
                 <div className="prose max-w-none">
                   <div
-                    className="text-slate-700 leading-relaxed text-lg md:text-xl"
+                    className="text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl"
                     dangerouslySetInnerHTML={{
                       __html: scriptureText
                         .replace(/\[(\d+)\]/g, '<sup class="text-blue-600 font-medium">$1</sup>')
@@ -690,15 +690,15 @@ export default function ScriptureModal({
               )}
               {showingContext && chapterText && (
                 <div className="prose max-w-none">
-                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-slate-700 text-base md:text-lg">
+                  <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg text-slate-700 dark:text-slate-200 text-base md:text-lg">
                     <div className="flex items-center gap-2">
-                      <strong className="text-slate-800">Chapter Context:</strong>
-                      <span className="font-medium text-slate-600">{getChapterReference(reference)}</span>
+                      <strong className="text-slate-800 dark:text-slate-100">Chapter Context:</strong>
+                      <span className="font-medium text-slate-600 dark:text-slate-200">{getChapterReference(reference)}</span>
                     </div>
                   </div>
                   <div
                     id="chapter-content"
-                    className="text-slate-700 leading-relaxed text-lg md:text-xl"
+                    className="text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl"
                     dangerouslySetInnerHTML={{
                       __html: processChapterText(chapterText)
                     }}
@@ -706,8 +706,8 @@ export default function ScriptureModal({
                 </div>
               )}
               {/* Attributions - scroll with content */}
-              <div className="mt-4 pt-4 border-t border-slate-200">
-                <div className="space-y-2 bg-slate-50 -mx-4 px-4 py-3">
+              <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-600">
+                <div className="space-y-2 bg-slate-50 dark:bg-slate-700/50 -mx-4 px-4 py-3">
                   {renderAttribution(translation)}
                 </div>
               </div>

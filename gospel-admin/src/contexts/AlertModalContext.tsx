@@ -1,6 +1,15 @@
 'use client'
 
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react'
+import React, { createContext, useContext, useState, useCallback, useRef, useLayoutEffect } from 'react'
+
+const THEME_STORAGE_KEY = 'gospel-profile-theme'
+
+function getTheme(): 'light' | 'dark' {
+  if (typeof window === 'undefined') return 'light'
+  const stored = localStorage.getItem(THEME_STORAGE_KEY)
+  if (stored === 'light' || stored === 'dark') return stored
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
 
 type AlertModalVariant = 'alert' | 'confirm'
 
@@ -23,7 +32,24 @@ export function AlertModalProvider({ children }: { children: React.ReactNode }) 
     message: '',
     variant: 'alert'
   })
+  const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const resolveRef = useRef<(value: boolean) => void | null>(null)
+
+  useLayoutEffect(() => {
+    setTheme(getTheme())
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const onStorage = () => setTheme(getTheme())
+    window.addEventListener('storage', onStorage)
+    media.addEventListener('change', onStorage)
+    return () => {
+      window.removeEventListener('storage', onStorage)
+      media.removeEventListener('change', onStorage)
+    }
+  }, [])
+
+  useLayoutEffect(() => {
+    if (state.isOpen) setTheme(getTheme())
+  }, [state.isOpen])
 
   const showAlert = useCallback((message: string) => {
     setState({ isOpen: true, message, variant: 'alert' })
@@ -57,27 +83,27 @@ export function AlertModalProvider({ children }: { children: React.ReactNode }) 
       {children}
       {state.isOpen && (
         <div
-          className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/50"
+          className={`fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/50 ${theme === 'dark' ? 'dark' : ''}`}
           role="dialog"
           aria-modal="true"
           aria-labelledby="alert-modal-title"
           onClick={state.variant === 'alert' ? handleClose : undefined}
         >
           <div
-            className="bg-white rounded-lg shadow-xl max-w-md w-full border border-slate-200 overflow-hidden"
+            className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full border border-slate-200 dark:border-slate-600 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-6 py-5 border-b border-slate-200 bg-slate-50">
-              <p id="alert-modal-title" className="text-slate-800 text-base leading-relaxed whitespace-pre-wrap">
+            <div className="px-6 py-5 border-b border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50">
+              <p id="alert-modal-title" className="text-slate-800 dark:text-slate-100 text-base leading-relaxed whitespace-pre-wrap">
                 {state.message}
               </p>
             </div>
-            <div className="px-6 py-4 bg-white flex justify-end gap-3">
+            <div className="px-6 py-4 bg-white dark:bg-slate-800 flex justify-end gap-3">
               {state.variant === 'confirm' && (
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 font-medium transition-colors"
+                  className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 font-medium transition-colors"
                 >
                   Cancel
                 </button>
@@ -85,7 +111,7 @@ export function AlertModalProvider({ children }: { children: React.ReactNode }) 
               <button
                 type="button"
                 onClick={state.variant === 'alert' ? handleClose : handleConfirm}
-                className="px-4 py-2 rounded-lg bg-slate-700 text-white hover:bg-slate-800 font-medium transition-colors"
+                className="px-4 py-2 rounded-lg bg-slate-700 dark:bg-slate-600 text-white hover:bg-slate-800 dark:hover:bg-slate-500 font-medium transition-colors"
               >
                 {state.variant === 'alert' ? 'OK' : 'Confirm'}
               </button>
