@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useLayoutEffect } from 'react'
 import { useRouter, notFound } from 'next/navigation'
 import ProfileContent from './ProfileContent'
 import { useProfileWithCache } from '@/lib/useProfileWithCache'
@@ -98,7 +98,19 @@ export default function ProfilePageClient({ slug }: ProfilePageClientProps) {
   )
 }
 
+const BODY_DARK_CLASS = 'profile-dark'
+
 function ProfileThemeWrapper({ children }: { children: React.ReactNode }) {
   const { theme } = useTheme()
+
+  useLayoutEffect(() => {
+    if (theme === 'dark') {
+      document.body.classList.add(BODY_DARK_CLASS)
+    } else {
+      document.body.classList.remove(BODY_DARK_CLASS)
+    }
+    return () => document.body.classList.remove(BODY_DARK_CLASS)
+  }, [theme])
+
   return <div className={theme === 'dark' ? 'dark' : ''}>{children}</div>
 }
