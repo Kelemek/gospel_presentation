@@ -32,6 +32,18 @@ body.profile-dark::before {
   background: linear-gradient(to bottom right, #1e293b, #0f172a);
 }
 
+/* Scripture modal attribution block - dark mode via selector so it always applies when inside .dark */
+.dark .scripture-modal-attribution {
+  background-color: #334155; /* slate-700 */
+  color: #cbd5e1; /* slate-300 */
+}
+.dark .scripture-modal-attribution a {
+  color: #60a5fa; /* blue-400 */
+}
+.dark .scripture-modal-attribution a:hover {
+  color: #93c5fd; /* blue-300 */
+}
+
 /* Print Styles - Highly Condensed Format */
 @media print {
   /* Hide non-essential elements for print */

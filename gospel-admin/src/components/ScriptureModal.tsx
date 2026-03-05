@@ -55,6 +55,7 @@ export default function ScriptureModal({
   const [compareError, setCompareError] = useState<string>('')
 
   const selectClassName = "w-[140px] pl-4 pr-10 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-600 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 cursor-pointer appearance-none bg-no-repeat bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1.25rem] bg-position-[right_10px_center]"
+  const selectClassNameCompact = "w-[100px] pl-2 pr-8 py-1.5 text-sm font-medium rounded-md transition-colors min-h-[36px] border-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-600 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 cursor-pointer appearance-none bg-no-repeat bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1rem] bg-position-[right_6px_center]"
 
   // Touch/swipe state for mobile navigation
   const [touchStart, setTouchStart] = useState<number | null>(null)
@@ -383,14 +384,14 @@ export default function ScriptureModal({
   }
 
   return (
-    <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 z-50 flex items-start md:items-center justify-center p-0 md:p-4" style={{ minHeight: '100vh', minWidth: '100vw' }}>
-      <div className="bg-white dark:bg-slate-800 w-full md:max-w-2xl lg:max-w-4xl xl:max-w-5xl shadow-xl flex flex-col h-full md:h-[80vh] md:rounded-lg">
+    <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 z-50 flex items-start lg:items-center justify-center p-0 lg:p-4" style={{ minHeight: '100vh', minWidth: '100vw' }}>
+      <div className="bg-white dark:bg-slate-800 w-full lg:max-w-2xl xl:max-w-4xl 2xl:max-w-5xl shadow-xl flex flex-col h-full lg:h-[80vh] lg:rounded-lg">
         
         {/* Fixed Header with Controls - Always Visible */}
-        <div className="bg-slate-100 dark:bg-slate-700 px-4 pt-safe-or-3 pb-3 border-b dark:border-slate-600 shrink-0 relative z-10 md:rounded-t-lg" style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}>
+        <div className="bg-slate-100 dark:bg-slate-700 px-4 pt-safe-or-2 pb-2 border-b dark:border-slate-600 shrink-0 relative z-10 lg:rounded-t-lg" style={{ paddingTop: 'max(env(safe-area-inset-top), 8px)' }}>
           {/* Navigation Controls - Always at Top */}
-          <div className="flex justify-between items-center mb-3">
-            <div className="flex items-center gap-1 flex-1">
+          <div className="flex justify-between items-center mb-2">
+            <div className="flex items-center gap-0.5 flex-1">
               <button
                 onClick={() => {
                   if (hasPrevious && onPrevious) {
@@ -398,7 +399,7 @@ export default function ScriptureModal({
                   }
                 }}
                 disabled={!hasPrevious}
-                className={`min-h-[48px] min-w-[48px] p-2 rounded-lg transition-colors flex items-center justify-center text-xl font-bold ${
+                className={`min-h-[36px] min-w-[36px] p-1.5 rounded-md transition-colors flex items-center justify-center text-lg font-bold ${
                   hasPrevious 
                     ? 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500' 
                     : 'text-slate-300 dark:text-slate-500 cursor-not-allowed'
@@ -408,13 +409,8 @@ export default function ScriptureModal({
               >
                 ◀
               </button>
-              <div className="text-center flex-1 px-2">
-                <h3 className="text-lg md:text-xl font-semibold text-slate-800 dark:text-slate-100 leading-tight">{reference}</h3>
-                {totalReferences > 0 && (
-                  <span className="text-sm text-gray-600 dark:text-slate-400">
-                    {currentIndex + 1} of {totalReferences} {totalFavorites > 0 ? 'favorites' : 'verses'}
-                  </span>
-                )}
+              <div className="text-center flex-1 px-1">
+                <h3 className="text-base md:text-lg font-semibold text-slate-800 dark:text-slate-100 leading-tight">{reference}</h3>
               </div>
               <button
                 onClick={() => {
@@ -423,7 +419,7 @@ export default function ScriptureModal({
                   }
                 }}
                 disabled={!hasNext}
-                className={`min-h-[48px] min-w-[48px] p-2 rounded-lg transition-colors flex items-center justify-center text-xl font-bold ${
+                className={`min-h-[36px] min-w-[36px] p-1.5 rounded-md transition-colors flex items-center justify-center text-lg font-bold ${
                   hasNext 
                     ? 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500' 
                     : 'text-slate-300 dark:text-slate-500 cursor-not-allowed'
@@ -434,10 +430,10 @@ export default function ScriptureModal({
                 ▶
               </button>
             </div>
-            <div className="flex items-center gap-2 ml-2">
+            <div className="flex items-center gap-1 ml-1">
               <button
                 onClick={onClose}
-                className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-2xl font-bold min-h-[48px] min-w-[48px] rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500 flex items-center justify-center"
+                className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-xl font-bold min-h-[36px] min-w-[36px] rounded-md hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500 flex items-center justify-center"
                 aria-label="Close modal"
               >
                 ×
@@ -446,7 +442,7 @@ export default function ScriptureModal({
           </div>
           
           {/* Context Toggle Buttons - Always Visible */}
-          <div className="flex flex-wrap gap-2 justify-center">
+          <div className="flex flex-wrap gap-1.5 justify-center items-center">
             {/* Compare dropdown - to the left of main translation */}
             <select
               value={compareTranslation ?? ''}
@@ -460,7 +456,7 @@ export default function ScriptureModal({
                 }
               }}
               aria-label="Compare with another translation"
-              className={selectClassName}
+              className={selectClassNameCompact}
             >
               <option value="">Compare</option>
               {enabledTranslations
@@ -481,7 +477,7 @@ export default function ScriptureModal({
                 setShowingContext(false)
               }}
               aria-label="Select Bible translation"
-              className={selectClassName}
+              className={selectClassNameCompact}
             >
               {enabledTranslations.map((trans) => (
                 <option key={trans} value={trans}>
@@ -492,7 +488,7 @@ export default function ScriptureModal({
 
             <button
               onClick={() => setShowingContext(false)}
-              className={`px-4 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border-2 ${
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors min-h-[36px] border-2 ${
                 !showingContext 
                   ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border-blue-400 dark:border-blue-600' 
                   : 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 border-slate-400 dark:border-slate-500'
@@ -504,7 +500,7 @@ export default function ScriptureModal({
             <button
               onClick={fetchChapterContext}
               disabled={contextLoading}
-              className={`px-4 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border-2 ${
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors min-h-[36px] border-2 ${
                 showingContext 
                   ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border-blue-400 dark:border-blue-600' 
                   : 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 border-slate-400 dark:border-slate-500'
@@ -650,13 +646,6 @@ export default function ScriptureModal({
                   </>
                 )}
               </div>
-              {/* Attributions - scroll with content */}
-              <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-600 md:col-span-2">
-                <div className="space-y-2 bg-slate-50 dark:bg-slate-700/50 -mx-4 px-4 py-3">
-                  {renderAttribution(translation)}
-                  {compareTranslation && renderAttribution(compareTranslation)}
-                </div>
-              </div>
             </>
           ) : (
             <>
@@ -705,14 +694,15 @@ export default function ScriptureModal({
                   />
                 </div>
               )}
-              {/* Attributions - scroll with content */}
-              <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-600">
-                <div className="space-y-2 bg-slate-50 dark:bg-slate-700/50 -mx-4 px-4 py-3">
-                  {renderAttribution(translation)}
-                </div>
-              </div>
             </>
           )}
+        </div>
+        {/* Attribution - fixed at bottom of modal, not sticky */}
+        <div className="shrink-0 border-t border-slate-200 dark:border-slate-600">
+          <div className="scripture-modal-attribution space-y-2 bg-slate-50 px-4 py-3">
+            {renderAttribution(translation)}
+            {compareTranslation && renderAttribution(compareTranslation)}
+          </div>
         </div>
       </div>
     </div>
