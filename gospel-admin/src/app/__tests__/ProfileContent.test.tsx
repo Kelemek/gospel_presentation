@@ -55,6 +55,8 @@ jest.mock('@/components/TableOfContents', () => {
   }
 })
 
+jest.mock('@/components/ThemeToggle', () => ({ __esModule: true, default: () => null }))
+
 // Mock fetch for visit tracking
 global.fetch = jest.fn()
 

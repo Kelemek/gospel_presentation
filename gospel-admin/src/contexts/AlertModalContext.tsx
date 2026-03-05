@@ -8,6 +8,7 @@ function getTheme(): 'light' | 'dark' {
   if (typeof window === 'undefined') return 'light'
   const stored = localStorage.getItem(THEME_STORAGE_KEY)
   if (stored === 'light' || stored === 'dark') return stored
+  if (typeof window.matchMedia !== 'function') return 'light'
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
@@ -36,19 +37,19 @@ export function AlertModalProvider({ children }: { children: React.ReactNode }) 
   const resolveRef = useRef<(value: boolean) => void | null>(null)
 
   useLayoutEffect(() => {
-    setTheme(getTheme())
-    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    queueMicrotask(() => setTheme(getTheme()))
     const onStorage = () => setTheme(getTheme())
     window.addEventListener('storage', onStorage)
-    media.addEventListener('change', onStorage)
+    const media = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: dark)') : null
+    if (media) media.addEventListener('change', onStorage)
     return () => {
       window.removeEventListener('storage', onStorage)
-      media.removeEventListener('change', onStorage)
+      if (media) media.removeEventListener('change', onStorage)
     }
   }, [])
 
   useLayoutEffect(() => {
-    if (state.isOpen) setTheme(getTheme())
+    if (state.isOpen) queueMicrotask(() => setTheme(getTheme()))
   }, [state.isOpen])
 
   const showAlert = useCallback((message: string) => {

@@ -1,13 +1,13 @@
 'use client'
 
-import React, { createContext, useContext, useState, useLayoutEffect, useCallback } from 'react'
+import React, { createContext, useContext, useSyncExternalStore, useCallback, useMemo } from 'react'
 
 const STORAGE_KEY = 'gospel-profile-theme'
 
 export type Theme = 'light' | 'dark'
 
 function getSystemTheme(): Theme {
-  if (typeof window === 'undefined') return 'light'
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return 'light'
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
@@ -18,6 +18,51 @@ function getStoredTheme(): Theme | null {
   return null
 }
 
+function getSnapshot(): Theme {
+  const stored = getStoredTheme()
+  return stored ?? getSystemTheme()
+}
+
+function getServerSnapshot(): Theme {
+  return 'light'
+}
+
+const listeners = new Set<() => void>()
+let storageListenerAdded = false
+
+function notify() {
+  listeners.forEach((l) => l())
+}
+
+function onStorage() {
+  notify()
+}
+
+function addStorageListeners() {
+  if (typeof window === 'undefined' || storageListenerAdded) return
+  storageListenerAdded = true
+  window.addEventListener('storage', onStorage)
+  const media = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: dark)') : null
+  if (media) media.addEventListener('change', onStorage)
+}
+
+function removeStorageListeners() {
+  if (typeof window === 'undefined' || !storageListenerAdded) return
+  storageListenerAdded = false
+  window.removeEventListener('storage', onStorage)
+  const media = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: dark)') : null
+  if (media) media.removeEventListener('change', onStorage)
+}
+
+function subscribe(listener: () => void): () => void {
+  listeners.add(listener)
+  addStorageListeners()
+  return () => {
+    listeners.delete(listener)
+    if (listeners.size === 0) removeStorageListeners()
+  }
+}
+
 interface ThemeContextType {
   theme: Theme
   setTheme: (theme: Theme) => void
@@ -26,22 +71,16 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | null>(null)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('light')
-
-  useLayoutEffect(() => {
-    const stored = getStoredTheme()
-    const resolved = stored ?? getSystemTheme()
-    setThemeState(resolved)
-  }, [])
+  const theme = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 
   const setTheme = useCallback((next: Theme) => {
-    setThemeState(next)
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEY, next)
+      notify()
     }
   }, [])
 
-  const value: ThemeContextType = { theme, setTheme }
+  const value = useMemo<ThemeContextType>(() => ({ theme, setTheme }), [theme, setTheme])
   return (
     <ThemeContext.Provider value={value}>
       {children}

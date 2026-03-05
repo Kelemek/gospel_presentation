@@ -29,6 +29,8 @@ jest.mock('@/lib/useScriptureProgress', () => ({
 const refreshMock = jest.fn()
 jest.mock('next/navigation', () => ({ useRouter: () => ({ refresh: refreshMock, push: jest.fn() }) }))
 
+jest.mock('@/components/ThemeToggle', () => ({ __esModule: true, default: () => null }))
+
 beforeEach(() => {
   jest.clearAllMocks()
   // Default fetch mock to accept visit tracking and other calls

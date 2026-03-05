@@ -27,6 +27,8 @@ jest.mock('@/lib/useScriptureProgress', () => ({
   })
 }))
 
+jest.mock('@/components/ThemeToggle', () => ({ __esModule: true, default: () => null }))
+
 beforeEach(() => {
   jest.clearAllMocks()
   // Basic fetch mock used for visit tracking in the component
@@ -37,11 +39,8 @@ beforeEach(() => {
 afterEach(() => {
   // restore any modified location
   try {
-    // @ts-expect-error mocking incompatible types
     if ((global as any).__origLocation) {
-      // @ts-expect-error mocking incompatible types
       window.location = (global as any).__origLocation
-      // @ts-expect-error mocking incompatible types
       delete (global as any).__origLocation
     }
   } catch (e) {
@@ -69,12 +68,9 @@ test('shows Edit button when user is admin and preview param present', async () 
 
   // Simulate preview=true in the URL so fromEditor becomes true
   // window.location is read-only in JSDOM; temporarily replace it
-  // @ts-expect-error mocking incompatible types
   if (!(global as any).__origLocation) (global as any).__origLocation = window.location
-  // @ts-expect-error mocking incompatible types
   delete (window as any).location
-  // @ts-expect-error mocking incompatible types
-  window.location = { search: '?preview=true' } as any
+  ;(window as any).location = { search: '?preview=true' }
 
   const { ProfileContent } = await import('../ProfileContent')
 
