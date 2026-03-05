@@ -37,6 +37,20 @@ function isTitleBlank(title: string | undefined): boolean {
 // Scroll offset so target appears just below the sticky header (works for all viewport sizes and native safe area)
 const FALLBACK_HEADER_OFFSET = 80
 
+function getSafeAreaInsetTop(): number {
+  if (typeof window === 'undefined') return 0
+  // Create a temporary element to measure the safe area inset
+  const div = document.createElement('div')
+  div.style.paddingTop = 'env(safe-area-inset-top)'
+  div.style.position = 'fixed'
+  div.style.visibility = 'hidden'
+  document.body.appendChild(div)
+  const computed = window.getComputedStyle(div)
+  const inset = parseInt(computed.paddingTop) || 0
+  document.body.removeChild(div)
+  return inset
+}
+
 function handleTocClick(
   e: React.MouseEvent<HTMLAnchorElement>,
   href: string,
@@ -48,7 +62,16 @@ function handleTocClick(
   if (el) {
     e.preventDefault()
     const header = document.querySelector('[data-profile-sticky-header]')
-    const offset = header instanceof HTMLElement ? header.offsetHeight : FALLBACK_HEADER_OFFSET
+    
+    let offset = FALLBACK_HEADER_OFFSET
+    if (header instanceof HTMLElement) {
+      const headerHeight = header.offsetHeight
+      // On web this will be 0, on native it will be the safe area inset (e.g. 47px)
+      const safeAreaTop = getSafeAreaInsetTop()
+      // Add safe area offset and a small buffer (8px) only if safe area is present
+      offset = headerHeight + safeAreaTop + (safeAreaTop > 0 ? 8 : 0)
+    }
+    
     const top = el.getBoundingClientRect().top + window.scrollY - offset
     window.scrollTo({ top, behavior: 'smooth' })
     onNavigate?.()
