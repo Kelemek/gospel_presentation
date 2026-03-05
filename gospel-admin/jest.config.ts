@@ -1,21 +1,21 @@
 import type { Config } from 'jest'
-import nextJest from 'next/jest.js'
 
-const createJestConfig = nextJest({
-  // Provide the path to your Next.js app to load next.config.js and .env files
-  dir: './',
-})
-
-// Add any custom config to be passed to Jest
+// Use ts-jest so tests run without Next.js SWC native binary (@next/swc-darwin-arm64).
+// To use Next's transformer instead (faster, needs SWC installed), switch back to nextJest.
 const config: Config = {
   coverageProvider: 'v8',
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  transform: {
+    '^.+\\.(ts|tsx)$': ['ts-jest', { useESM: false }],
+  },
   moduleNameMapper: {
     '^@/components/(.*)$': '<rootDir>/src/components/$1',
     '^@/lib/(.*)$': '<rootDir>/src/lib/$1',
-  '^@/app/(.*)$': '<rootDir>/src/app/$1',
+    '^@/app/(.*)$': '<rootDir>/src/app/$1',
     '^@/(.*)$': '<rootDir>/src/$1',
+    '\\.(css|scss|sass|less)$': '<rootDir>/__mocks__/styleMock.js',
+    '^next/font/google$': '<rootDir>/__mocks__/next-font-google.js',
   },
   moduleDirectories: ['node_modules', '<rootDir>/src'],
   testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
@@ -67,5 +67,4 @@ const config: Config = {
   },
 }
 
-// createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
-export default createJestConfig(config)
+export default config

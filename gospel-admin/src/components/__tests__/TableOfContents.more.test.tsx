@@ -9,6 +9,18 @@ jest.mock('next/navigation', () => ({
   }),
 }))
 
+// Mock Capacitor so Print button is visible in tests (hidden on Android only)
+jest.mock('@capacitor/core', () => ({
+  Capacitor: {
+    getPlatform: () => 'web',
+    isNativePlatform: () => false,
+  },
+}))
+
+jest.mock('@capgo/capacitor-printer', () => ({
+  Printer: { printWebView: jest.fn().mockResolvedValue(undefined) },
+}))
+
 describe('TableOfContents additional behaviors', () => {
   beforeEach(() => {
     jest.clearAllMocks()

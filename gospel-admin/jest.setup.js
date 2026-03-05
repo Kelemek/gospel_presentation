@@ -1,6 +1,6 @@
 // jest.setup.js
 /* eslint-disable @typescript-eslint/no-require-imports */
-import '@testing-library/jest-dom'
+require('@testing-library/jest-dom')
 
 // Mock Vercel analytics and speed-insights to avoid .mjs ESM parse issues
 // when Jest imports the app `layout.tsx`. Tests don't need the real
@@ -12,31 +12,27 @@ jest.mock('@vercel/speed-insights/next', () => ({
   SpeedInsights: () => null,
 }))
 
-// Mock Next.js router and expose the push mock so tests can assert redirects
-jest.mock('next/navigation', () => {
-  const pushMock = jest.fn()
-  // expose the push mock to tests via global so assertions can observe redirects
-  try {
-    // global may not be writable in some transformer contexts; ignore failures
-    // eslint-disable-next-line no-undef
-    global.__mockNextPush = pushMock
-  } catch (e) {
-    // ignore
-  }
+// Create push mock once so it can be assigned to global before any test file reads it
+const nextRouterPushMock = jest.fn()
+try {
+  global.__mockNextPush = nextRouterPushMock
+} catch (e) {
+  // ignore
+}
 
-  return {
-    useRouter: () => ({
-      push: pushMock,
+// Mock Next.js router and expose the push mock so tests can assert redirects
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: nextRouterPushMock,
       replace: jest.fn(),
       back: jest.fn(),
       forward: jest.fn(),
       refresh: jest.fn(),
       prefetch: jest.fn(),
     }),
-    useSearchParams: () => new URLSearchParams(),
-    usePathname: () => '/',
-  }
-})
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => '/',
+}))
 
 // Mock Next.js server components
 jest.mock('next/server', () => ({

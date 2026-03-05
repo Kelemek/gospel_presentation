@@ -7,9 +7,9 @@ jest.mock('@/lib/auth', () => ({
   getSessionToken: jest.fn()
 }))
 
-// Use the shared next/navigation mock push exposed by jest.setup.js
-// (global.__mockNextPush) so assertions reliably observe redirects.
-const mockPush = (global as any).__mockNextPush
+// Use the shared next/navigation mock push from jest.setup.js (global.__mockNextPush).
+// Read at test time so we get the mock that was set when the setup ran.
+const getMockPush = () => (global as any).__mockNextPush as jest.Mock
 
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -32,7 +32,7 @@ describe('Admin Authentication E2E Tests', () => {
     render(<AdminPage />)
     
     // Should redirect to login when not authenticated (effect is async)
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/login'))
+    await waitFor(() => expect(getMockPush()).toHaveBeenCalledWith('/login'))
   })
 
   it('should show admin interface when user is authenticated', async () => {
@@ -90,7 +90,7 @@ describe('Admin Authentication E2E Tests', () => {
     const { unmount } = render(<AdminPage />)
     
   // Should have redirected to login when unauthenticated
-  await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/login'))
+  await waitFor(() => expect(getMockPush()).toHaveBeenCalledWith('/login'))
     
     // Unmount and simulate successful authentication
     unmount()
@@ -184,7 +184,7 @@ describe('Admin Authentication E2E Tests', () => {
     
     render(<AdminPage />)
     
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/login'))
+    await waitFor(() => expect(getMockPush()).toHaveBeenCalledWith('/login'))
   })
 })
 
@@ -322,7 +322,7 @@ describe('Admin Access Control', () => {
     expect(screen.queryByText('Commit History')).not.toBeInTheDocument()
     
     // Should show login form instead (redirect happens asynchronously)
-    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/login'))
+    await waitFor(() => expect(getMockPush()).toHaveBeenCalledWith('/login'))
   })
 
   it('should show all admin features when authenticated', async () => {
@@ -426,7 +426,7 @@ describe('Admin Access Control', () => {
       await user.click(logoutButton)
       // After logout, should redirect to login
         await waitFor(() => {
-          expect(mockPush).toHaveBeenCalledWith('/login')
+          expect(getMockPush()).toHaveBeenCalledWith('/login')
         })
     }
   })
