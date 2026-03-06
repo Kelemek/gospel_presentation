@@ -701,10 +701,8 @@ export default function ScriptureModal({
               )}
             </>
           )}
-        </div>
-        {/* Attribution - fixed at bottom of modal, not sticky */}
-        <div className="shrink-0 border-t border-slate-200 dark:border-slate-600">
-          <div className="scripture-modal-attribution space-y-2 bg-slate-50 px-4 py-3">
+          {/* Attribution - inside scrollable area; same bg as section block (bg-slate-50 dark:bg-slate-700/50) */}
+          <div className="scripture-modal-attribution space-y-2 bg-slate-50 dark:bg-slate-700/50 px-4 py-3 mt-4 border-y border-slate-200 dark:border-slate-600 md:col-span-2">
             {renderAttribution(translation)}
             {compareTranslation && renderAttribution(compareTranslation)}
           </div>
