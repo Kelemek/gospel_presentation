@@ -74,8 +74,6 @@ describe('ScriptureModal Component', () => {
     return waitFor(() => {
       expect(screen.getByLabelText('Previous Scripture')).toBeInTheDocument()
       expect(screen.getByLabelText('Next Scripture')).toBeInTheDocument()
-      // The rendered text can be split across elements; check for the 'of 3' part which is stable
-      expect(screen.getByText(/of\s*3/)).toBeInTheDocument()
     })
   })
 

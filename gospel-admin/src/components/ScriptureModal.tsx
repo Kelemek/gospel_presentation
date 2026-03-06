@@ -279,16 +279,12 @@ export default function ScriptureModal({
   const renderAttribution = (trans: string) => {
     if (trans === 'esv') {
       return (
-        <>
-          <p className="text-xs text-slate-500 dark:text-slate-400 text-center mb-1">
-            Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission.
-          </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
-            <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline">
-              www.esv.org
-            </a>
-          </p>
-        </>
+        <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+          Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission.{' '}
+          <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline">
+            www.esv.org
+          </a>
+        </p>
       )
     }
     if (trans === 'kjv') {
@@ -384,14 +380,25 @@ export default function ScriptureModal({
   }
 
   return (
-    <div className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 z-50 flex items-start lg:items-center justify-center p-0 lg:p-4" style={{ minHeight: '100vh', minWidth: '100vw' }}>
-      <div className="bg-white dark:bg-slate-800 w-full lg:max-w-2xl xl:max-w-4xl 2xl:max-w-5xl shadow-xl flex flex-col h-full lg:h-[80vh] lg:rounded-lg">
+    <div
+      className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 z-50 flex items-start lg:items-center justify-center p-0 lg:p-4"
+      style={{
+        minHeight: '100vh',
+        minWidth: '100vw',
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingRight: 'env(safe-area-inset-right)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        paddingLeft: 'env(safe-area-inset-left)',
+      }}
+    >
+      <div className="bg-white dark:bg-slate-800 w-full lg:max-w-2xl xl:max-w-4xl 2xl:max-w-5xl shadow-xl flex flex-col h-full lg:h-[80vh] lg:rounded-lg min-h-0">
         
         {/* Fixed Header with Controls - Always Visible */}
         <div className="bg-slate-100 dark:bg-slate-700 px-4 pt-safe-or-2 pb-2 border-b dark:border-slate-600 shrink-0 relative z-10 lg:rounded-t-lg" style={{ paddingTop: 'max(env(safe-area-inset-top), 8px)' }}>
           {/* Navigation Controls - Always at Top */}
           <div className="flex justify-between items-center mb-2">
-            <div className="flex items-center gap-0.5 flex-1">
+            <div className="flex-1 min-w-0" aria-hidden />
+            <div className="flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => {
                   if (hasPrevious && onPrevious) {
@@ -409,9 +416,7 @@ export default function ScriptureModal({
               >
                 ◀
               </button>
-              <div className="text-center flex-1 px-1">
-                <h3 className="text-base md:text-lg font-semibold text-slate-800 dark:text-slate-100 leading-tight">{reference}</h3>
-              </div>
+              <h3 className="text-base md:text-lg font-semibold text-slate-800 dark:text-slate-100 leading-tight px-1 min-w-0 max-w-[50vw] truncate" title={reference}>{reference}</h3>
               <button
                 onClick={() => {
                   if (hasNext && onNext) {
@@ -430,7 +435,7 @@ export default function ScriptureModal({
                 ▶
               </button>
             </div>
-            <div className="flex items-center gap-1 ml-1">
+            <div className="flex-1 flex justify-end items-center">
               <button
                 onClick={onClose}
                 className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-xl font-bold min-h-[36px] min-w-[36px] rounded-md hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500 flex items-center justify-center"
@@ -513,7 +518,7 @@ export default function ScriptureModal({
 
         {/* Context Information - Only show when available */}
         {context && (
-          <div className="px-4 py-3 bg-slate-50 dark:bg-slate-700/50 border-b dark:border-slate-600 shrink-0">
+          <div className="px-4 py-2 bg-slate-50 dark:bg-slate-700/50 border-b dark:border-slate-600 shrink-0">
             <div className="text-slate-700 dark:text-slate-200 text-base md:text-lg">
               <div className="flex items-center gap-2 mb-1">
                 <strong className="text-slate-800 dark:text-slate-100">Section:</strong> 
