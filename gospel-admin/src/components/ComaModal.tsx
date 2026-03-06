@@ -56,16 +56,16 @@ export default function ComaModal({ isOpen, onClose }: ComaModalProps) {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/70" onClick={onClose}>
       <div 
-        className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+        className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-slate-800">C.O.M.A. Method</h2>
+        <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-600 px-6 py-4 flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">C.O.M.A. Method</h2>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 transition-colors"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
             aria-label="Close modal"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -74,23 +74,23 @@ export default function ComaModal({ isOpen, onClose }: ComaModalProps) {
           </button>
         </div>
         
-        <div className="px-6 py-6">
+        <div className="px-6 py-6 text-slate-700 dark:text-slate-200">
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
             </div>
           ) : (
             <div 
-              className="prose prose-slate max-w-none"
+              className="prose prose-slate dark:prose-invert max-w-none prose-p:text-slate-700 dark:prose-p:text-slate-200 prose-headings:text-slate-900 dark:prose-headings:text-slate-100 prose-li:text-slate-700 dark:prose-li:text-slate-200 prose-ol:text-slate-700 dark:prose-ol:text-slate-200 prose-ul:text-slate-700 dark:prose-ul:text-slate-200 dark:[&_.text-gray-700]:text-slate-200 dark:[&_.text-gray-600]:text-slate-200 dark:[&_.text-gray-800]:text-slate-100 dark:[&_.text-gray-900]:text-slate-100"
               dangerouslySetInnerHTML={{ __html: instructions }}
             />
           )}
         </div>
 
-        <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4">
+        <div className="sticky bottom-0 bg-gray-50 dark:bg-slate-700/50 border-t border-gray-200 dark:border-slate-600 px-6 py-4">
           <button
             onClick={onClose}
-            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
           >
             Close
           </button>

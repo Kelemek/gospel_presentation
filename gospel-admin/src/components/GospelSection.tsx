@@ -102,15 +102,15 @@ function TextWithComaButtons({ text, onComaClick, onScriptureClick }: {
     if (part === comaMarker && comaMatches[comaIndex]) {
       // Add COMA button as HTML - match scripture styling exactly
       const comaText = comaMatches[comaIndex]
-      htmlString += `<a href="#" data-coma="true" class="px-1.5 py-0.5 font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors cursor-pointer whitespace-nowrap no-underline" style="display: inline; margin: 0 2px; vertical-align: baseline; font-size: inherit;" title="Learn about the C.O.M.A. method">${comaText}</a>`
+      htmlString += `<a href="#" data-coma="true" class="px-1.5 py-0.5 font-medium text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-800/50 border border-blue-200 dark:border-blue-700 rounded transition-colors cursor-pointer whitespace-nowrap no-underline" style="display: inline; margin: 0 2px; vertical-align: baseline; font-size: inherit;" title="Learn about the C.O.M.A. method">${comaText}</a>`
       comaIndex++
     } else if (part === scriptureMarker && scriptureIndex < cleanReferences.length) {
       // Add inline scripture reference as HTML string using clean reference
       const reference = cleanReferences[scriptureIndex]
       if (onScriptureClick) {
-        htmlString += `<a href="#" data-scripture="${reference}" class="px-1.5 py-0.5 font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded transition-colors cursor-pointer whitespace-nowrap no-underline" style="display: inline; margin: 0 2px; vertical-align: baseline; font-size: inherit;" title="Click to view ${reference}">${reference}</a>`
+        htmlString += `<a href="#" data-scripture="${reference}" class="px-1.5 py-0.5 font-medium text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-800/50 border border-blue-200 dark:border-blue-700 rounded transition-colors cursor-pointer whitespace-nowrap no-underline" style="display: inline; margin: 0 2px; vertical-align: baseline; font-size: inherit;" title="Click to view ${reference}">${reference}</a>`
       } else {
-        htmlString += `<span class="px-1.5 py-0.5 font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded whitespace-nowrap" style="display: inline; margin: 0 2px; vertical-align: baseline; font-size: inherit;">${reference}</span>`
+        htmlString += `<span class="px-1.5 py-0.5 font-medium text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded whitespace-nowrap" style="display: inline; margin: 0 2px; vertical-align: baseline; font-size: inherit;">${reference}</span>`
       }
       scriptureIndex++
     } else if (part) {
