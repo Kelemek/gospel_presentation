@@ -24,11 +24,13 @@ body::before {
   pointer-events: none;
 }
 
-/* Profile dark mode: body and safe-area bar when profile page is in dark theme */
-body.profile-dark {
+/* Dark mode: body and safe-area bar when theme is dark (set site-wide from root) */
+html.dark body,
+body.dark {
   background-color: #0f172a; /* slate-900 */
 }
-body.profile-dark::before {
+html.dark body::before,
+body.dark::before {
   background: linear-gradient(to bottom right, #1e293b, #0f172a);
 }
 

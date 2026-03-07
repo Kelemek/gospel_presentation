@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ClarityProvider } from "@/components/ClarityProvider";
+import { ApplyTheme } from "@/components/ApplyTheme";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { TranslationProvider } from "@/contexts/TranslationContext";
 import { AlertModalProvider } from "@/contexts/AlertModalContext";
 import "./globals.css";
@@ -43,17 +45,36 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const themeScript = `
+(function() {
+  var key = 'gospel-profile-theme';
+  var stored = typeof localStorage !== 'undefined' && (localStorage.getItem(key) === 'light' || localStorage.getItem(key) === 'dark')
+    ? localStorage.getItem(key)
+    : null;
+  var theme = stored || (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  var isDark = theme === 'dark';
+  document.documentElement.classList.toggle('dark', isDark);
+  if (document.body) document.body.classList.toggle('dark', isDark);
+})();
+  `.trim()
+
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ClarityProvider />
-        <TranslationProvider>
-          <AlertModalProvider>
-            {children}
-          </AlertModalProvider>
-        </TranslationProvider>
+        <ThemeProvider>
+          <ApplyTheme />
+          <ClarityProvider />
+          <TranslationProvider>
+            <AlertModalProvider>
+              {children}
+            </AlertModalProvider>
+          </TranslationProvider>
+        </ThemeProvider>
         <Analytics />
         <SpeedInsights />
       </body>
