@@ -1,0 +1,27 @@
+---
+description: Remind to redeploy Capacitor apps when native/shell changes are made
+globs:
+  - "**/capacitor.config.ts"
+  - "**/ios/**"
+  - "**/android/**"
+alwaysApply: false
+---
+
+# Capacitor app updates
+
+When you change any of the following, the native iOS/Android apps must be **rebuilt and redeployed** (store updates). Backend and normal web-app changes do **not** require a native update (the WebView loads from the server).
+
+## Changes that require a native app update
+
+- **capacitor.config.ts** — e.g. `server.url`, `appId`, `appName`, `webDir`
+- **ios/** or **android/** — native project files (Info.plist, AndroidManifest, icons, splash, permissions)
+- **Capacitor or native plugins** — adding/removing `@capacitor/*` or `@capgo/*` (or other native plugins), or changing native-only plugin usage
+- **Capacitor major upgrade** or native build/config changes
+
+## After making such changes
+
+1. From `gospel-admin`: `npx cap sync`
+2. Build and run: `npx cap open ios` or `npx cap open android` (then archive / build in Xcode or Android Studio)
+3. Submit new builds to the App Store / Play Store as needed
+
+**Note:** This rule is shown when editing `capacitor.config.ts`, `ios/`, or `android/`. The same redeploy steps apply when you add or change Capacitor-related dependencies in package.json.
