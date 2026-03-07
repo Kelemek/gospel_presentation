@@ -1,0 +1,23 @@
+---
+description: React components and UI patterns including dark mode
+globs: gospel-admin/src/**/*.tsx
+alwaysApply: false
+---
+
+# React & UI Conventions
+
+## Components
+- Prefer functional components and hooks.
+- Colocate component tests in `__tests__/` next to the component (e.g. `ScriptureModal.test.tsx`).
+
+## Styling (Tailwind)
+- Use Tailwind utility classes; support **dark mode** for any user-facing UI.
+- Pair light and dark variants: e.g. `bg-white dark:bg-slate-800`, `text-slate-800 dark:text-slate-100`, `border-gray-200 dark:border-slate-600`.
+- For prose/HTML from API (e.g. COMA modal): use `dark:prose-invert` and override API gray classes with e.g. `dark:[&_.text-gray-700]:text-slate-200` so text stays light in dark mode.
+
+## Modals
+- ScriptureModal and ComaModal: fixed overlay with safe-area padding where relevant; content in a centered panel with rounded corners on large screens.
+- Backdrop: `bg-black/50 dark:bg-black/70`; panel: `bg-white dark:bg-slate-800`.
+
+## Inline scripture/COMA pills (GospelSection)
+- Use matching light/dark classes: `text-blue-700 dark:text-blue-200`, `bg-blue-50 dark:bg-blue-900/50`, `border-blue-200 dark:border-blue-700`.

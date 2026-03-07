@@ -1,0 +1,37 @@
+---
+description: Next.js API route patterns and error handling
+globs: gospel-admin/src/app/api/**/*.ts
+alwaysApply: false
+---
+
+# API Routes
+
+## Structure
+- Export named handlers: `GET`, `POST`, `PUT`, `DELETE` etc. from `route.ts`.
+- Use `NextRequest` / `NextResponse` from `next/server`.
+- For dynamic segments use `params: Promise<{ slug: string }>` and `await params` in Next 16.
+
+## Responses
+- Success: `return NextResponse.json({ ...data })` with appropriate status (default 200).
+- Errors: `return NextResponse.json({ error: string, details?: string }, { status })`.
+- Use correct status codes: `400` validation, `401` unauthorized, `403` forbidden, `404` not found, `500` server error.
+
+## Error handling
+- Wrap handler logic in try/catch.
+- Log with `logger.error(...)` from `@/lib/logger`; avoid leaking stack traces in JSON.
+- Map known errors to status (e.g. "not found" → 404, "token not configured" → 500).
+- Return a stable `error` message for clients; optional `details` for debugging.
+
+```typescript
+// Example
+try {
+  const profile = await getProfileBySlug(slug)
+  if (!profile) {
+    return NextResponse.json({ error: `Profile '${slug}' not found` }, { status: 404 })
+  }
+  return NextResponse.json({ profile })
+} catch (error) {
+  logger.error('Error fetching profile:', error)
+  return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 })
+}
+```

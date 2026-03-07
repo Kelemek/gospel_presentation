@@ -1,0 +1,22 @@
+---
+description: Jest and React Testing Library patterns
+globs: gospel-admin/src/**/*.test.{ts,tsx}
+alwaysApply: false
+---
+
+# Testing
+
+## Setup
+- Jest + React Testing Library; tests in `__tests__/` next to source or in `*.test.ts(x)`.
+- Run: `npm test` (from gospel-admin). No `--run` flag for Jest.
+
+## Patterns
+- Use `render()`, `screen`, `waitFor`, `userEvent` from RTL; avoid testing implementation details.
+- Mock `fetch` or external APIs when testing components that load data (e.g. ScriptureModal, ComaModal).
+- For components that use theme or modal context, mock the context or provider (e.g. `ThemeContext`, `AlertModalContext`) when they cause act() warnings or missing providers.
+
+## Snapshots
+- Prefer asserting on behavior and visible text over snapshot tests. If snapshots are used, update them only when the intended output changes.
+
+## API route tests
+- Use `NextRequest` and call the exported handler; assert on `NextResponse` status and JSON body.

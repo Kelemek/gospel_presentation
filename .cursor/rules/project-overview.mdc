@@ -1,0 +1,28 @@
+---
+description: Gospel Presentation project structure, stack, and conventions
+alwaysApply: true
+---
+
+# Gospel Presentation – Project Overview
+
+## What this is
+Next.js 16 app for "The Gospel in its Context" (Dr. Stuart Scott): counselor/counselee profiles, scripture modals (ESV/KJV/NASB/LSB), reflection questions, COMA method, print/share. Main app lives in **gospel-admin/**.
+
+## Tech stack
+- **Next.js 16** (App Router), **React 19**, **TypeScript**
+- **Tailwind CSS 4** for styling
+- **Supabase** (PostgreSQL, Auth, RLS)
+- **Jest** + **React Testing Library** for tests
+- **Capacitor** for iOS/Android (WebView of deployed site)
+
+## Key paths
+- `gospel-admin/src/app/` – App Router pages and API routes
+- `gospel-admin/src/components/` – React components (e.g. ScriptureModal, GospelSection, ComaModal)
+- `gospel-admin/src/lib/` – auth, Supabase, logger, data services
+- `gospel-admin/sql/` – migrations and schema
+- `docs/` – project documentation
+
+## Conventions
+- Use **logger** from `@/lib/logger` for server/API logging; avoid `console.log` in production paths.
+- Sensitive config in env vars (Supabase, ESV API); never commit secrets.
+- New UI must support **dark mode** (Tailwind `dark:` variants) to match existing components.
