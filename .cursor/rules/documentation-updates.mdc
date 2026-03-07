@@ -1,0 +1,24 @@
+---
+description: Update existing documentation when adding or changing features
+alwaysApply: true
+---
+
+# Documentation updates
+
+When you add a **new feature** or **change existing behavior**, update the relevant docs so they stay accurate. Do not leave documentation outdated.
+
+## Where to update
+
+- **Feature behavior / UX** — [docs/03-FEATURES.md](docs/03-FEATURES.md): add or edit sections for the feature (e.g. how it works, where it lives in the codebase).
+- **Users, roles, access** — [docs/01-USERS_AND_ACCESS.md](docs/01-USERS_AND_ACCESS.md).
+- **Auth, login, sessions** — [docs/04-AUTHENTICATION.md](docs/04-AUTHENTICATION.md) (and VERIFICATION_CODE_* if relevant).
+- **Scripture / Bible** — [docs/02-BIBLE_AND_SCRIPTURE.md](docs/02-BIBLE_AND_SCRIPTURE.md); [gospel-admin/docs/SCRIPTURE_ACCESS_LOGGING.md](gospel-admin/docs/SCRIPTURE_ACCESS_LOGGING.md) if logging changes.
+- **Deployment / infra** — [docs/05-INFRASTRUCTURE.md](docs/05-INFRASTRUCTURE.md), [docs/DEPLOYMENT_CHECKLIST.md](docs/DEPLOYMENT_CHECKLIST.md).
+- **Capacitor / native app** — note in [gospel-admin/README.md](gospel-admin/README.md) or the Capacitor rule if it affects when native apps must be redeployed.
+- **Index** — if a new doc is added or a topic moves, update [docs/README.md](docs/README.md) (Core Topics table / Quick Start).
+
+## Practice
+
+- Prefer **editing existing docs** over creating new ones unless the topic is large and separate.
+- Keep prose short; link to code or other docs where helpful.
+- When changing behavior, remove or rewrite outdated sentences instead of leaving them in place.
