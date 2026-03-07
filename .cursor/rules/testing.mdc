@@ -1,22 +1,25 @@
 ---
-description: Jest and React Testing Library patterns
-globs: gospel-admin/src/**/*.test.{ts,tsx}
-alwaysApply: false
+description: Write and update tests for new code; ensure all tests pass
+alwaysApply: true
 ---
 
 # Testing
 
-## Setup
-- Jest + React Testing Library; tests in `__tests__/` next to source or in `*.test.ts(x)`.
-- Run: `npm test` (from gospel-admin). No `--run` flag for Jest.
+## When Adding or Changing Code
 
-## Patterns
-- Use `render()`, `screen`, `waitFor`, `userEvent` from RTL; avoid testing implementation details.
-- Mock `fetch` or external APIs when testing components that load data (e.g. ScriptureModal, ComaModal).
-- For components that use theme or modal context, mock the context or provider (e.g. `ThemeContext`, `AlertModalContext`) when they cause act() warnings or missing providers.
+1. **New code**: Write tests for all new code (components, hooks, utilities, API routes, pages). Place tests next to the code they cover (e.g. `__tests__/ComponentName.test.tsx` in the same directory or under `components/__tests__/`).
+2. **Changed behavior**: Update existing tests that are affected by your changes so expectations match the new behavior.
+3. **Before finishing**: Run the test suite and fix any failures. In `gospel-admin`, run `npm test` (or `npm test -- <name>` for a subset). Do not leave with failing or skipped tests unless there is an explicit, documented reason.
 
-## Snapshots
-- Prefer asserting on behavior and visible text over snapshot tests. If snapshots are used, update them only when the intended output changes.
+## Test Conventions (gospel-admin)
 
-## API route tests
-- Use `NextRequest` and call the exported handler; assert on `NextResponse` status and JSON body.
+- Use **Jest** and **React Testing Library** for components and hooks.
+- Mock external deps (e.g. `next/navigation`, `@capacitor/core`, Supabase) in tests so they are fast and deterministic.
+- Prefer testing behavior and user-visible outcomes over implementation details.
+- For new components/hooks, include at least: render (or mount), main user flows, and edge cases relevant to the feature.
+
+## Commands
+
+- `npm test` — run all tests
+- `npm test -- <pattern>` — run tests matching the pattern (e.g. `CapacitorKeepLinksInApp`, `usePageTheme`)
+- `npm run test:ci` — run tests in CI mode with coverage

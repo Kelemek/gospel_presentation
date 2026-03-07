@@ -71,7 +71,7 @@ export default function PrivacyPage() {
           <section className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-600 p-8">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-6 border-b border-gray-200 dark:border-slate-600 pb-3">Contact</h2>
             <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg">
-              For questions about this Privacy Policy or your data, contact: <a href="mailto:markdlarson@me.com" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors">markdlarson@me.com</a>.
+              For questions about this Privacy Policy or your data, contact: <a href="mailto:larsonm@cp-church.org" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors">larsonm@cp-church.org</a>.
             </p>
           </section>
         </div>

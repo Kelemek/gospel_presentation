@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ClarityProvider } from "@/components/ClarityProvider";
 import { ApplyTheme } from "@/components/ApplyTheme";
+import { CapacitorKeepLinksInApp } from "@/components/CapacitorKeepLinksInApp";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { TranslationProvider } from "@/contexts/TranslationContext";
 import { AlertModalProvider } from "@/contexts/AlertModalContext";
@@ -68,6 +69,7 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <ApplyTheme />
+          <CapacitorKeepLinksInApp />
           <ClarityProvider />
           <TranslationProvider>
             <AlertModalProvider>

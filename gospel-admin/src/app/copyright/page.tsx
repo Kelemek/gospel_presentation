@@ -157,7 +157,7 @@ export default function CopyrightPage() {
                   <strong className="text-slate-800 dark:text-slate-100">Source Control:</strong> <a href="https://github.com/Kelemek/gospel_presentation" target="_blank" rel="noopener noreferrer" className="text-blue-500 dark:text-blue-400 underline">GitHub Repository</a>
                 </p>
                 <p className="text-slate-700 dark:text-slate-200 text-base md:text-lg">
-                  <strong className="text-slate-800 dark:text-slate-100">Author & Maintainer:</strong> Mark Larson (<a href="mailto:markdlarson@me.com" className="text-blue-500 dark:text-blue-400 underline">markdlarson@me.com</a>)
+                  <strong className="text-slate-800 dark:text-slate-100">Author & Maintainer:</strong> Mark Larson (<a href="mailto:larsonm@cp-church.org" className="text-blue-500 dark:text-blue-400 underline">larsonm@cp-church.org</a>)
                 </p>
               </div>
             </div>
