@@ -15,7 +15,7 @@ export default function PrivacyPage() {
             Privacy Policy
           </h1>
           <p className="text-xl md:text-2xl opacity-80">
-            How the Gospel Presentation app collects, uses, and protects your information
+            How the Gospel Presentation native app collects, uses, and protects your information
           </p>
         </div>
       </header>
@@ -25,7 +25,7 @@ export default function PrivacyPage() {
           <section className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-600 p-8">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-6 border-b border-gray-200 dark:border-slate-600 pb-3">Introduction</h2>
             <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg mb-4">
-              This Privacy Policy applies to the <strong className="text-slate-800 dark:text-slate-100">Gospel Presentation</strong> app, including the web application and native mobile apps (Android and iOS). It describes what data we collect, how we use it, and your choices.
+              This Privacy Policy applies to the <strong className="text-slate-800 dark:text-slate-100">Gospel Presentation</strong> native mobile app (Android and iOS). It describes what data the app uses, how it is stored, and your choices. This app does not require an account or sign-in.
             </p>
           </section>
 
@@ -34,15 +34,11 @@ export default function PrivacyPage() {
             <ul className="text-slate-700 dark:text-slate-200 space-y-3 leading-relaxed text-base md:text-lg">
               <li className="flex items-start">
                 <span className="text-slate-600 dark:text-slate-400 font-bold mr-3">•</span>
-                <span><strong className="text-slate-800 dark:text-slate-100">If you sign in:</strong> email address and account information for authentication and access control.</span>
+                <span><strong className="text-slate-800 dark:text-slate-100">Usage data:</strong> which gospel profile you view, scripture reading progress, and saved answers to questions—all stored only on your device.</span>
               </li>
               <li className="flex items-start">
                 <span className="text-slate-600 dark:text-slate-400 font-bold mr-3">•</span>
-                <span><strong className="text-slate-800 dark:text-slate-100">Usage data:</strong> which gospel profiles you view, scripture reading progress, and saved answers to questions when you use a non-default profile.</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-slate-600 dark:text-slate-400 font-bold mr-3">•</span>
-                <span><strong className="text-slate-800 dark:text-slate-100">Device and local storage:</strong> we cache profile content and progress on your device (e.g. in your browser or app storage) to improve load times and support offline-style use.</span>
+                <span><strong className="text-slate-800 dark:text-slate-100">Device and local storage:</strong> the app caches profile content and progress on your device to improve load times and support offline use.</span>
               </li>
               <li className="flex items-start">
                 <span className="text-slate-600 dark:text-slate-400 font-bold mr-3">•</span>
@@ -54,21 +50,21 @@ export default function PrivacyPage() {
           <section className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-600 p-8">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-6 border-b border-gray-200 dark:border-slate-600 pb-3">How We Use Data</h2>
             <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg mb-4">
-              We use the data above to provide the gospel presentation content, save your progress and answers when you are signed in, manage access to admin and counselor features, and improve the service. Cached data on your device is used to load content faster and to check for updates without re-downloading everything.
+              We use the data above to provide the gospel presentation content and to improve the app. Cached data on your device is used to load content faster and to check for updates without re-downloading everything. Your progress and answers stay on your device unless you clear app data.
             </p>
           </section>
 
           <section className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-600 p-8">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-6 border-b border-gray-200 dark:border-slate-600 pb-3">Storage and Third Parties</h2>
             <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg mb-4">
-              Account and profile data, saved answers, and scripture progress (when signed in) are stored using <strong className="text-slate-800 dark:text-slate-100">Supabase</strong> (database and authentication). Scripture text is fetched from external Bible APIs (e.g. ESV API) when you view a passage; we do not store full scripture text long-term. We do not sell your data to third parties.
+              Your progress, saved answers, and cached content are stored locally on your device. Scripture text is fetched from external Bible APIs (e.g. ESV API) when you view a passage; we do not store full scripture text long-term. We do not sell your data to third parties.
             </p>
           </section>
 
           <section className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-600 p-8">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-6 border-b border-gray-200 dark:border-slate-600 pb-3">Data Retention and Your Choices</h2>
             <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg mb-4">
-              Account data is retained while your account exists. Cached data on your device can be cleared through your browser or device settings. You can sign out at any time from within the app. If you have questions about accessing or deleting your data, please contact us using the information below.
+              Data stored by the app remains on your device until you clear it (e.g. via your device settings or by uninstalling the app). If you have questions about this Privacy Policy or your data, please contact us using the information below.
             </p>
           </section>
 
