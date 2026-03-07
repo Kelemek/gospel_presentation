@@ -2,6 +2,8 @@
 description: Remind to redeploy Capacitor apps when native/shell changes are made
 globs:
   - "**/capacitor.config.ts"
+  - "**/.env.capacitor"
+  - "**/public/capacitor-offline.html"
   - "**/ios/**"
   - "**/android/**"
 alwaysApply: false
@@ -13,9 +15,12 @@ When you change any of the following, the native iOS/Android apps must be **rebu
 
 ## Changes that require a native app update
 
-- **capacitor.config.ts** — e.g. `server.url`, `appId`, `appName`, `webDir`
-- **ios/** or **android/** — native project files (Info.plist, AndroidManifest, icons, splash, permissions)
+- **capacitor.config.ts** — e.g. `server.url`, `appId`, `appName`, `webDir`, `errorPath`
+- **.env.capacitor** — e.g. `CAPACITOR_SERVER_URL`; values are used at `cap sync` and get baked into the native app
+- **public/capacitor-offline.html** — the offline/error page is bundled from `webDir`; changes require a rebuild
+- **ios/** or **android/** — native project files (Info.plist, AndroidManifest, icons, splash, permissions, signing)
 - **Capacitor or native plugins** — adding/removing `@capacitor/*` or `@capgo/*` (or other native plugins), or changing native-only plugin usage
+- **@capacitor/core, @capacitor/ios, @capacitor/android** (or major native deps) — version upgrades often require `cap sync` and a new build
 - **Capacitor major upgrade** or native build/config changes
 
 ## After making such changes
@@ -24,4 +29,6 @@ When you change any of the following, the native iOS/Android apps must be **rebu
 2. Build and run: `npx cap open ios` or `npx cap open android` (then archive / build in Xcode or Android Studio)
 3. Submit new builds to the App Store / Play Store as needed
 
-**Note:** This rule is shown when editing `capacitor.config.ts`, `ios/`, or `android/`. The same redeploy steps apply when you add or change Capacitor-related dependencies in package.json.
+**When a rebuild is *not* needed:** Changes to the Next.js app (pages, API, styles, content) that are served from the server. The WebView loads that URL, so users get updates without a new app store release.
+
+**Note:** This rule is shown when editing `capacitor.config.ts`, `ios/`, or `android/`. The same redeploy steps apply when you change `.env.capacitor`, `public/capacitor-offline.html`, or Capacitor-related dependencies in package.json.
