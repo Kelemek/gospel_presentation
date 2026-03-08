@@ -1,17 +1,13 @@
 'use client'
 
 import { GospelSection } from '@/lib/types'
+import type { PublicResourceItem } from '@/lib/supabase-data-service'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTranslation, BibleTranslation } from '@/contexts/TranslationContext'
 import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
-
-interface PublicTemplate {
-  slug: string
-  title: string
-}
 
 interface TableOfContentsProps {
   sections: GospelSection[]
@@ -83,9 +79,19 @@ export default function TableOfContents({
   sections, currentProfileSlug: _currentProfileSlug, onNavigate
 }: TableOfContentsProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
-  const [publicTemplates, setPublicTemplates] = useState<PublicTemplate[]>([])
+  const [resourceItems, setResourceItems] = useState<PublicResourceItem[]>([])
   const [isResourcesOpen, setIsResourcesOpen] = useState(false)
+  const [expandedCategoryIds, setExpandedCategoryIds] = useState<Set<string>>(new Set())
   const { translation, setTranslation, enabledTranslations } = useTranslation()
+
+  const toggleCategory = useCallback((id: string) => {
+    setExpandedCategoryIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -97,19 +103,19 @@ export default function TableOfContents({
   }, [])
 
   useEffect(() => {
-    if (isLoggedIn) return
-    const fetchPublicTemplates = async () => {
+    if (isLoggedIn && Capacitor.isNativePlatform()) return
+    const fetchResources = async () => {
       try {
         const res = await fetch('/api/profiles/public-templates')
         if (res.ok) {
           const data = await res.json()
-          setPublicTemplates(data.profiles || [])
+          setResourceItems(data.items || [])
         }
       } catch {
-        setPublicTemplates([])
+        setResourceItems([])
       }
     }
-    fetchPublicTemplates()
+    fetchResources()
   }, [isLoggedIn])
 
   const handlePrint = async () => {
@@ -153,8 +159,8 @@ export default function TableOfContents({
         </Link>
       ) : null}
 
-      {/* Resources dropdown - public templates for anonymous users */}
-      {!isLoggedIn && (
+      {/* Resources dropdown - on web always; on native only when not logged in */}
+      {(!isNative || !isLoggedIn) && (
         <div>
           <button
             type="button"
@@ -174,22 +180,52 @@ export default function TableOfContents({
             </span>
           </button>
           {isResourcesOpen && (
-            <div className="mt-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-sm overflow-hidden" role="listbox">
-              {publicTemplates.length === 0 ? (
+            <div className="mt-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-sm overflow-hidden" role="list">
+              {resourceItems.length === 0 ? (
                 <div className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
                   No resources available
                 </div>
               ) : (
-                publicTemplates.map((t) => (
-                  <Link
-                    key={t.slug}
-                    href={`/${t.slug}`}
-                    className="block px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors"
-                    role="option"
-                  >
-                    {t.title}
-                  </Link>
-                ))
+                resourceItems.map((item) =>
+                  item.type === 'template' ? (
+                    <Link
+                      key={item.slug}
+                      href={`/${item.slug}`}
+                      className="block px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors"
+                    >
+                      {item.title}
+                    </Link>
+                  ) : (
+                    <div key={item.id} className="border-b border-slate-100 dark:border-slate-600 last:border-b-0">
+                      <button
+                        type="button"
+                        onClick={() => toggleCategory(item.id)}
+                        className="flex w-full items-center gap-2 px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-left"
+                        aria-expanded={expandedCategoryIds.has(item.id)}
+                      >
+                        <span className={`shrink-0 transition-transform ${expandedCategoryIds.has(item.id) ? 'rotate-90' : ''}`}>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </span>
+                        <span className="font-medium">{item.name}</span>
+                      </button>
+                      {expandedCategoryIds.has(item.id) && item.templates.length > 0 && (
+                        <div className="bg-slate-50 dark:bg-slate-700/50">
+                          {item.templates.map((t) => (
+                            <Link
+                              key={t.slug}
+                              href={`/${t.slug}`}
+                              className="block py-2 pl-8 pr-4 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors"
+                            >
+                              {t.title}
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                )
               )}
             </div>
           )}

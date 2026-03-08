@@ -61,6 +61,11 @@ Users can:
 - Share templates across counselors
 - Template access controlled via RLS
 
+### Resources dropdown (public templates)
+- The main page sidebar shows a Resources menu with public templates.
+- Admins can create categories and assign templates to them (Admin → Settings → Resources dropdown order).
+- Categories expand on click to show their templates; top-level items and categories can be reordered by drag-and-drop.
+
 ### Backup & Restore
 - Export profiles to JSON
 - Import profiles from backup

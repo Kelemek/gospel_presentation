@@ -4,6 +4,7 @@
 // Note: Type checking disabled due to Supabase client type inference issues
 import { createClient, createAdminClient } from './supabase/server'
 import type { GospelProfile, CreateProfileRequest, GospelPresentationData } from './types'
+import { parseResourceOrder } from './types'
 import { logger } from './logger'
 
 /**
@@ -151,12 +152,16 @@ export async function getProfiles(): Promise<GospelProfile[]> {
   }
 }
 
+export type PublicResourceItem =
+  | { type: 'template'; slug: string; title: string }
+  | { type: 'category'; id: string; name: string; templates: { slug: string; title: string }[] }
+
 /**
- * Gets public template profiles (slug, title) for anonymous Resources dropdown.
+ * Gets public resources structure for the Resources dropdown (categories + templates with titles).
  * Uses regular client - RLS allows anon to see is_template AND is_public rows.
- * Order follows admin_settings.public_template_order when set; otherwise title A-Z.
+ * Order and categories come from admin_settings.public_template_order (new format only).
  */
-export async function getPublicTemplateProfiles(): Promise<{ slug: string; title: string }[]> {
+export async function getPublicResourcesStructure(): Promise<PublicResourceItem[]> {
   try {
     const supabase = await createClient()
 
@@ -178,28 +183,43 @@ export async function getPublicTemplateProfiles(): Promise<{ slug: string; title
       return []
     }
 
-    const rows = (profilesResult.data || []).map((row: any) => ({ slug: row.slug, title: row.title || row.slug }))
+    const bySlug = new Map(
+      (profilesResult.data || []).map((row: any) => [row.slug, { slug: row.slug, title: row.title || row.slug }])
+    )
+    const order = parseResourceOrder(orderResult.data?.public_template_order)
+    const usedSlugs = new Set<string>()
+    const items: PublicResourceItem[] = []
 
-    const raw = orderResult.data?.public_template_order
-    const orderSlugs: string[] = Array.isArray(raw) ? raw : []
-
-    if (orderSlugs.length === 0) {
-      return rows.sort((a, b) => (a.title || a.slug).localeCompare(b.title || b.slug, undefined, { sensitivity: 'base' }))
-    }
-
-    const bySlug = new Map(rows.map((r) => [r.slug, r]))
-    const ordered: { slug: string; title: string }[] = []
-    for (const slug of orderSlugs) {
-      const p = bySlug.get(slug)
-      if (p) {
-        ordered.push(p)
-        bySlug.delete(slug)
+    for (const item of order) {
+      if (item.type === 'template') {
+        const p = bySlug.get(item.slug)
+        if (p) {
+          items.push({ type: 'template', slug: p.slug, title: p.title })
+          usedSlugs.add(p.slug)
+        }
+      } else {
+        const templates: { slug: string; title: string }[] = []
+        for (const slug of item.templateSlugs) {
+          const p = bySlug.get(slug)
+          if (p) {
+            templates.push({ slug: p.slug, title: p.title })
+            usedSlugs.add(p.slug)
+          }
+        }
+        items.push({ type: 'category', id: item.id, name: item.name, templates })
       }
     }
-    const rest = Array.from(bySlug.values()).sort((a, b) => (a.title || a.slug).localeCompare(b.title || b.slug, undefined, { sensitivity: 'base' }))
-    return [...ordered, ...rest]
+
+    const rest = Array.from(bySlug.values())
+      .filter((p) => !usedSlugs.has(p.slug))
+      .sort((a, b) => (a.title || a.slug).localeCompare(b.title || b.slug, undefined, { sensitivity: 'base' }))
+    for (const p of rest) {
+      items.push({ type: 'template', slug: p.slug, title: p.title })
+    }
+
+    return items
   } catch (error) {
-    logger.error('[supabase-data-service] Error loading public templates:', error)
+    logger.error('[supabase-data-service] Error loading public resources structure:', error)
     return []
   }
 }

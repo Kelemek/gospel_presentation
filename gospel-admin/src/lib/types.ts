@@ -139,3 +139,56 @@ export const PROFILE_VALIDATION = {
   MAX_PROFILES_PER_USER: 50,
   RESERVED_SLUGS: ['admin', 'api', 'auth', '_next', 'favicon']
 } as const
+
+// Resources dropdown order (admin_settings.public_template_order)
+export interface ResourceOrderItemTemplate {
+  type: 'template'
+  slug: string
+}
+
+export interface ResourceOrderItemCategory {
+  type: 'category'
+  id: string
+  name: string
+  templateSlugs: string[]
+}
+
+export type ResourceOrderItem = ResourceOrderItemTemplate | ResourceOrderItemCategory
+
+export function isResourceOrderItemCategory(
+  item: ResourceOrderItem
+): item is ResourceOrderItemCategory {
+  return item.type === 'category'
+}
+
+export function isResourceOrderItemTemplate(
+  item: ResourceOrderItem
+): item is ResourceOrderItemTemplate {
+  return item.type === 'template'
+}
+
+/** Parse public_template_order JSON from DB into ResourceOrderItem[] (new format only). */
+export function parseResourceOrder(raw: unknown): ResourceOrderItem[] {
+  if (!Array.isArray(raw)) return []
+  const out: ResourceOrderItem[] = []
+  for (const el of raw) {
+    if (el && typeof el === 'object' && 'type' in el) {
+      if ((el as any).type === 'template' && typeof (el as any).slug === 'string') {
+        out.push({ type: 'template', slug: (el as any).slug })
+      } else if (
+        (el as any).type === 'category' &&
+        typeof (el as any).id === 'string' &&
+        typeof (el as any).name === 'string' &&
+        Array.isArray((el as any).templateSlugs)
+      ) {
+        out.push({
+          type: 'category',
+          id: (el as any).id,
+          name: (el as any).name,
+          templateSlugs: (el as any).templateSlugs.filter((s: unknown) => typeof s === 'string')
+        })
+      }
+    }
+  }
+  return out
+}

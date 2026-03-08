@@ -53,7 +53,9 @@ describe('TableOfContents additional behaviors', () => {
       if (String(url).includes('/api/profiles/public-templates')) {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ profiles: [{ slug: 't1', title: 'Template One' }] })
+          json: async () => ({
+            items: [{ type: 'template', slug: 't1', title: 'Template One' }]
+          })
         }) as any
       }
       return Promise.resolve({ ok: false }) as any
@@ -65,6 +67,47 @@ describe('TableOfContents additional behaviors', () => {
 
     await waitFor(() => expect(screen.getByText(/Resources/i)).toBeInTheDocument())
     expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument()
+  })
+
+  it('shows category in Resources and expands to show template links', async () => {
+    const clientMod = require('@/lib/supabase/client')
+    jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({
+      auth: { getUser: async () => ({ data: { user: null } }) }
+    }))
+
+    const fetchSpy = jest.fn((input: RequestInfo) => {
+      const url = typeof input === 'string' ? input : (input as Request).url
+      if (String(url).includes('/api/profiles/public-templates')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            items: [
+              {
+                type: 'category',
+                id: 'cat-1',
+                name: 'My Category',
+                templates: [{ slug: 'inner', title: 'Inner Template' }]
+              }
+            ]
+          })
+        }) as any
+      }
+      return Promise.resolve({ ok: false }) as any
+    })
+    global.fetch = fetchSpy
+
+    const TableOfContents = require('../TableOfContents').default
+    render(<TableOfContents sections={[]} />)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /Resources/i }))
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /My Category/i })).toBeInTheDocument())
+    expect(screen.queryByRole('link', { name: /Inner Template/i })).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /My Category/i }))
+    await waitFor(() => expect(screen.getByRole('link', { name: /Inner Template/i })).toBeInTheDocument())
+    expect(screen.getByRole('link', { name: /Inner Template/i })).toHaveAttribute('href', '/inner')
   })
 
   it('renders Dashboard link when user is logged in', async () => {
@@ -89,5 +132,8 @@ describe('TableOfContents additional behaviors', () => {
 
     const link = screen.getByRole('link', { name: /Dashboard/i })
     expect(link).toHaveAttribute('href', '/admin')
+
+    // On web, Resources is always shown below Dashboard (even when logged in)
+    expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument()
   })
 })

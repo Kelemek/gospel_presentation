@@ -13,6 +13,7 @@ Templates and miscellaneous reference materials.
 - COMA method templates
 - Email templates
 - Profile templates for cloning
+- **Resources dropdown**: On the main page sidebar, the Resources menu lists public templates. Admins can group them into categories (Admin → Settings → Resources dropdown order). Categories expand on click to show their templates; order and categories are stored in `admin_settings.public_template_order`.
 
 See [DBL_LICENSE_REQUEST_TEMPLATE.md](DBL_LICENSE_REQUEST_TEMPLATE.md) for license requests.
 

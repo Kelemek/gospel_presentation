@@ -85,7 +85,7 @@ describe('supabase-data-service load/getProfile edge cases', () => {
     expect(res?.slug).toBe('s')
   })
 
-  it('getPublicTemplateProfiles returns slug and title for public templates', async () => {
+  it('getPublicResourcesStructure returns template items when order empty', async () => {
     const rows = [
       { slug: 't1', title: 'Template One' },
       { slug: 't2', title: 'Template Two' }
@@ -118,14 +118,14 @@ describe('supabase-data-service load/getProfile edge cases', () => {
     }))
 
     const mod = await import('@/lib/supabase-data-service')
-    const res = await mod.getPublicTemplateProfiles()
+    const res = await mod.getPublicResourcesStructure()
     expect(Array.isArray(res)).toBe(true)
     expect(res).toHaveLength(2)
-    expect(res[0]).toEqual({ slug: 't1', title: 'Template One' })
-    expect(res[1]).toEqual({ slug: 't2', title: 'Template Two' })
+    expect(res[0]).toEqual({ type: 'template', slug: 't1', title: 'Template One' })
+    expect(res[1]).toEqual({ type: 'template', slug: 't2', title: 'Template Two' })
   })
 
-  it('getPublicTemplateProfiles returns empty array on error', async () => {
+  it('getPublicResourcesStructure returns empty array when profiles error', async () => {
     jest.doMock('@/lib/supabase/server', () => ({
       createClient: jest.fn().mockResolvedValue({
         from: (table: string) => {
@@ -154,7 +154,7 @@ describe('supabase-data-service load/getProfile edge cases', () => {
     }))
 
     const mod = await import('@/lib/supabase-data-service')
-    const res = await mod.getPublicTemplateProfiles()
+    const res = await mod.getPublicResourcesStructure()
     expect(res).toEqual([])
   })
 

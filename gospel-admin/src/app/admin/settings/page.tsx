@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { logger } from "@/lib/logger";
+import type { ResourceOrderItem } from "@/lib/types";
+import { parseResourceOrder } from "@/lib/types";
 
 // ============================================================================
 // Types & Interfaces
@@ -14,7 +16,7 @@ interface AdminSettings {
   verification_code_length: number;
   verification_code_expiry_minutes: number;
   enable_verification_code_login: boolean;
-  public_template_order?: string[] | null;
+  public_template_order?: unknown;
 }
 
 interface PublicTemplate {
@@ -37,13 +39,20 @@ export default function AdminSettingsPage() {
   const [codeLength, setCodeLength] = useState<number>(6);
   const [expiryMinutes, setExpiryMinutes] = useState<number>(15);
 
-  // Public template order (Resources dropdown)
+  // Resources dropdown order (categories + top-level templates)
   const [publicTemplates, setPublicTemplates] = useState<PublicTemplate[]>([]);
-  const [orderedTemplates, setOrderedTemplates] = useState<PublicTemplate[]>([]);
+  const [orderItems, setOrderItems] = useState<ResourceOrderItem[]>([]);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState<string | null>(null);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  type DragSource =
+    | { kind: "top-level"; index: number }
+    | { kind: "template"; slug: string; topLevelIndex?: number; categoryId?: string; indexInCategory?: number };
+  type DropTarget =
+    | { kind: "top-level"; index: number }
+    | { kind: "category"; categoryId: string; indexInCategory?: number };
+  const [dragSource, setDragSource] = useState<DragSource | null>(null);
+  const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
+  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
 
   // ============================================================================
   // Load Settings
@@ -91,36 +100,17 @@ export default function AdminSettingsPage() {
 
       setPublicTemplates(templates);
 
-      // Load order separately; if column does not exist (migration not run), use empty order
-      let orderSlugs: string[] = [];
+      // Load Resources order (categories + templates, new format only)
       try {
         const { data } = await supabase
           .from("admin_settings")
           .select("public_template_order")
           .eq("id", 1)
           .single();
-        const orderData = data as { public_template_order?: string[] | null } | null;
-        if (orderData?.public_template_order != null && Array.isArray(orderData.public_template_order)) {
-          orderSlugs = orderData.public_template_order;
-        }
+        const raw = (data as { public_template_order?: unknown } | null)?.public_template_order;
+        setOrderItems(parseResourceOrder(raw));
       } catch {
-        // Column may not exist yet; ignore
-      }
-
-      if (orderSlugs.length > 0) {
-        const bySlug = new Map(templates.map((t) => [t.slug, t]));
-        const ordered: PublicTemplate[] = [];
-        for (const slug of orderSlugs) {
-          const t = bySlug.get(slug);
-          if (t) {
-            ordered.push(t);
-            bySlug.delete(slug);
-          }
-        }
-        const rest = Array.from(bySlug.values()).sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
-        setOrderedTemplates([...ordered, ...rest]);
-      } else {
-        setOrderedTemplates(templates);
+        setOrderItems([]);
       }
     } catch (err) {
       logger.error("Failed to load admin settings:", err);
@@ -179,9 +169,8 @@ export default function AdminSettingsPage() {
     setOrderSuccess(null);
     try {
       const supabase = createClient();
-      const slugs = orderedTemplates.map((t) => t.slug);
       const { error: updateError } = await (supabase.from("admin_settings") as any)
-        .update({ public_template_order: slugs })
+        .update({ public_template_order: orderItems })
         .eq("id", 1);
       if (updateError) throw updateError;
       setOrderSuccess("Resources order saved.");
@@ -195,26 +184,186 @@ export default function AdminSettingsPage() {
     }
   };
 
-  const handleDragStart = (index: number) => setDragIndex(index);
+  const handleDragStartTopLevel = (index: number) => {
+    const item = orderItems[index];
+    if (item.type === "template") {
+      setDragSource({ kind: "template", slug: item.slug, topLevelIndex: index });
+    } else {
+      setDragSource({ kind: "top-level", index });
+    }
+  };
+  const handleDragStartCategoryTemplate = (e: React.DragEvent, categoryId: string, slug: string, indexInCategory: number) => {
+    e.stopPropagation();
+    setDragSource({ kind: "template", slug, categoryId, indexInCategory });
+  };
   const handleDragEnd = () => {
-    setDragIndex(null);
-    setDragOverIndex(null);
+    setDragSource(null);
+    setDropTarget(null);
   };
-  const handleDragOver = (e: React.DragEvent, index: number) => {
+  const handleDragOverTopLevel = (e: React.DragEvent, index: number) => {
     e.preventDefault();
-    setDragOverIndex(index);
+    e.stopPropagation();
+    if (dragSource?.kind === "top-level") setDropTarget({ kind: "top-level", index });
+    else if (dragSource?.kind === "template") setDropTarget({ kind: "top-level", index });
   };
-  const handleDragLeave = () => setDragOverIndex(null);
-  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+  const handleDragOverCategoryHeader = (e: React.DragEvent, categoryId: string) => {
     e.preventDefault();
-    setDragOverIndex(null);
-    if (dragIndex === null || dragIndex === dropIndex) return;
-    const next = [...orderedTemplates];
-    const [removed] = next.splice(dragIndex, 1);
-    next.splice(dropIndex, 0, removed);
-    setOrderedTemplates(next);
-    setDragIndex(null);
+    e.stopPropagation();
+    if (dragSource?.kind === "template") setDropTarget({ kind: "category", categoryId });
   };
+  const handleDragOverCategoryTemplate = (e: React.DragEvent, categoryId: string, indexInCategory: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (dragSource?.kind === "template") setDropTarget({ kind: "category", categoryId, indexInCategory });
+  };
+  const handleDragLeave = () => setDropTarget(null);
+
+  const applyDrop = (target: DropTarget) => {
+    const source = dragSource;
+    if (!source) return;
+    setDropTarget(null);
+    setDragSource(null);
+
+    if (source.kind === "top-level" && target.kind === "top-level") {
+      if (source.index === target.index) return;
+      const next = [...orderItems];
+      const [removed] = next.splice(source.index, 1);
+      next.splice(target.index, 0, removed);
+      setOrderItems(next);
+      return;
+    }
+
+    if (source.kind === "template") {
+      const slug = source.slug;
+      const removeFromOrder = (prev: ResourceOrderItem[]): ResourceOrderItem[] => {
+        if (source.topLevelIndex != null) {
+          return prev.filter((_, i) => i !== source.topLevelIndex);
+        }
+        if (source.categoryId != null) {
+          return prev.map((item) =>
+            item.type === "category" && item.id === source.categoryId
+              ? { ...item, templateSlugs: item.templateSlugs.filter((s) => s !== slug) }
+              : item
+          );
+        }
+        return prev;
+      };
+
+      if (target.kind === "top-level") {
+        setOrderItems((prev) => {
+          const afterRemove = removeFromOrder(prev);
+          const insertIndex = Math.min(target.index, afterRemove.length);
+          return [
+            ...afterRemove.slice(0, insertIndex),
+            { type: "template" as const, slug },
+            ...afterRemove.slice(insertIndex),
+          ];
+        });
+        return;
+      }
+
+      if (target.kind === "category") {
+        const toIndex = target.indexInCategory ?? -1;
+        setOrderItems((prev) => {
+          const afterRemove = removeFromOrder(prev);
+          const catIdx = afterRemove.findIndex((i) => i.type === "category" && i.id === target.categoryId);
+          if (catIdx === -1) return afterRemove;
+          const cat = afterRemove[catIdx];
+          if (cat.type !== "category") return afterRemove;
+          const isSameCategory = source.categoryId === target.categoryId;
+          const newSlugs = isSameCategory
+            ? cat.templateSlugs.filter((s) => s !== slug)
+            : [...cat.templateSlugs];
+          const insertAt =
+            toIndex >= 0 ? Math.min(toIndex, newSlugs.length) : newSlugs.length;
+          newSlugs.splice(insertAt, 0, slug);
+          const next = [...afterRemove];
+          next[catIdx] = { ...cat, templateSlugs: newSlugs };
+          return next;
+        });
+      }
+    }
+  };
+
+  const handleDropTopLevel = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    applyDrop({ kind: "top-level", index });
+  };
+  const handleDropCategoryHeader = (e: React.DragEvent, categoryId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    applyDrop({ kind: "category", categoryId });
+  };
+  const handleDropCategoryTemplate = (e: React.DragEvent, categoryId: string, indexInCategory: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    applyDrop({ kind: "category", categoryId, indexInCategory });
+  };
+
+  const slugsInOrder = new Set<string>();
+  orderItems.forEach((item) => {
+    if (item.type === "template") slugsInOrder.add(item.slug);
+    else item.templateSlugs.forEach((s) => slugsInOrder.add(s));
+  });
+  const availableTemplates = publicTemplates.filter((t) => !slugsInOrder.has(t.slug));
+
+  const addCategory = () => {
+    setOrderItems((prev) => [
+      ...prev,
+      { type: "category", id: crypto.randomUUID(), name: "New category", templateSlugs: [] },
+    ]);
+  };
+
+  const addTemplateToTopLevel = (slug: string) => {
+    setOrderItems((prev) => [...prev, { type: "template", slug }]);
+  };
+
+  const updateCategoryName = (categoryId: string, name: string) => {
+    setOrderItems((prev) =>
+      prev.map((item) =>
+        item.type === "category" && item.id === categoryId ? { ...item, name } : item
+      )
+    );
+  };
+
+  const addTemplateToCategory = (categoryId: string, slug: string) => {
+    setOrderItems((prev) =>
+      prev.map((item) =>
+        item.type === "category" && item.id === categoryId
+          ? { ...item, templateSlugs: [...item.templateSlugs, slug] }
+          : item
+      )
+    );
+  };
+
+  const removeTemplateFromCategory = (categoryId: string, slug: string) => {
+    setOrderItems((prev) =>
+      prev.map((item) =>
+        item.type === "category" && item.id === categoryId
+          ? { ...item, templateSlugs: item.templateSlugs.filter((s) => s !== slug) }
+          : item
+      )
+    );
+  };
+
+  const removeTopLevelTemplate = (index: number) => {
+    setOrderItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeCategory = (categoryId: string) => {
+    setOrderItems((prev) => {
+      const cat = prev.find((i) => i.type === "category" && i.id === categoryId);
+      if (cat?.type !== "category") return prev.filter((i) => !(i.type === "category" && i.id === categoryId));
+      const templates = cat.templateSlugs.map((slug) => ({ type: "template" as const, slug }));
+      const idx = prev.findIndex((i) => i.type === "category" && i.id === categoryId);
+      const next = [...prev];
+      next.splice(idx, 1, ...templates);
+      return next;
+    });
+  };
+
+  const templateBySlug = new Map(publicTemplates.map((t) => [t.slug, t]));
 
   // Grip icon (six dots) for drag handle
   const GripIcon = () => (
@@ -371,38 +520,177 @@ export default function AdminSettingsPage() {
             <div className="border-b border-slate-200 px-6 sm:px-8 py-6">
               <h2 className="text-2xl font-bold text-slate-900">Resources dropdown order</h2>
               <p className="text-slate-600 text-sm mt-2">
-                Order of public templates in the Resources menu on the main page. Drag to reorder.
+                Categories and templates in the Resources menu. Drag to reorder. Add categories and drag templates into them.
               </p>
             </div>
-            <div className="px-6 sm:px-8 py-6">
+            <div className="px-6 sm:px-8 py-6 space-y-4">
               {publicTemplates.length === 0 ? (
-                <div className="w-80 border border-slate-200 rounded-lg bg-white shadow-sm overflow-hidden">
+                <div className="w-full max-w-xl border border-slate-200 rounded-lg bg-white shadow-sm overflow-hidden">
                   <div className="px-4 py-3 text-sm text-slate-500">
                     No public templates. Mark templates as public on the Templates page.
                   </div>
                 </div>
               ) : (
-                <div className="w-80 border border-slate-200 rounded-lg bg-white shadow-sm overflow-hidden" role="listbox">
-                  {orderedTemplates.map((t, index) => (
-                    <div
-                      key={t.slug}
-                      draggable
-                      onDragStart={() => handleDragStart(index)}
-                      onDragEnd={handleDragEnd}
-                      onDragOver={(e) => handleDragOver(e, index)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, index)}
-                      className={`flex items-center gap-2 px-4 py-3 text-sm text-slate-700 border-b border-slate-100 last:border-b-0 transition-colors cursor-grab active:cursor-grabbing ${dragOverIndex === index ? "bg-slate-50" : "hover:bg-slate-50"}`}
-                      role="option"
-                      aria-selected={dragOverIndex === index}
+                <>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={addCategory}
+                      className="px-3 py-1.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors"
                     >
-                      <span className="shrink-0" aria-hidden>
-                        <GripIcon />
-                      </span>
-                      <span className="min-w-0 truncate">{t.title}</span>
-                    </div>
-                  ))}
-                </div>
+                      Add category
+                    </button>
+                    {availableTemplates.length > 0 && (
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          const slug = e.target.value;
+                          if (slug) addTemplateToTopLevel(slug);
+                          e.target.value = "";
+                        }}
+                        className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg bg-white text-slate-700"
+                      >
+                        <option value="">Add template to list...</option>
+                        {availableTemplates.map((t) => (
+                          <option key={t.slug} value={t.slug}>
+                            {t.title}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  <div className="w-full max-w-xl border border-slate-200 rounded-lg bg-white shadow-sm overflow-hidden" role="list">
+                    {orderItems.length === 0 ? (
+                      <div className="px-4 py-3 text-sm text-slate-500">
+                        No items yet. Add a category or add a template above.
+                      </div>
+                    ) : (
+                      orderItems.map((item, index) =>
+                        item.type === "template" ? (
+                          <div
+                            key={`t-${item.slug}`}
+                            draggable
+                            onDragStart={() => handleDragStartTopLevel(index)}
+                            onDragEnd={handleDragEnd}
+                            onDragOver={(e) => handleDragOverTopLevel(e, index)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDropTopLevel(e, index)}
+                            className={`flex items-center gap-2 px-4 py-3 text-sm text-slate-700 border-b border-slate-100 last:border-b-0 transition-colors cursor-grab active:cursor-grabbing ${dropTarget?.kind === "top-level" && dropTarget.index === index ? "bg-blue-100 ring-1 ring-blue-300" : "hover:bg-slate-50"}`}
+                          >
+                            <span className="shrink-0" aria-hidden>
+                              <GripIcon />
+                            </span>
+                            <span className="min-w-0 truncate flex-1">
+                              {templateBySlug.get(item.slug)?.title ?? item.slug}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => removeTopLevelTemplate(index)}
+                              className="text-slate-400 hover:text-red-600 text-xs px-1"
+                              aria-label="Remove"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ) : (
+                          <div
+                            key={`c-${item.id}`}
+                            draggable
+                            onDragStart={() => handleDragStartTopLevel(index)}
+                            onDragEnd={handleDragEnd}
+                            onDragOver={(e) => handleDragOverTopLevel(e, index)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDropTopLevel(e, index)}
+                            className={`border-b border-slate-100 last:border-b-0 ${dropTarget?.kind === "top-level" && dropTarget.index === index ? "bg-blue-100 ring-1 ring-blue-300" : ""}`}
+                          >
+                            <div
+                              className={`flex items-center gap-2 px-4 py-3 text-sm text-slate-700 transition-colors cursor-grab active:cursor-grabbing ${dropTarget?.kind === "category" && dropTarget.categoryId === item.id && dropTarget.indexInCategory === undefined ? "bg-blue-100 ring-1 ring-blue-300" : "hover:bg-slate-50"}`}
+                              onDragOver={(e) => handleDragOverCategoryHeader(e, item.id)}
+                              onDragLeave={handleDragLeave}
+                              onDrop={(e) => handleDropCategoryHeader(e, item.id)}
+                            >
+                              <span className="shrink-0" aria-hidden>
+                                <GripIcon />
+                              </span>
+                              {editingCategoryId === item.id ? (
+                                <input
+                                  type="text"
+                                  value={item.name}
+                                  onChange={(e) => updateCategoryName(item.id, e.target.value)}
+                                  onBlur={() => setEditingCategoryId(null)}
+                                  onKeyDown={(e) => e.key === "Enter" && setEditingCategoryId(null)}
+                                  className="flex-1 min-w-0 px-2 py-1 border border-slate-300 rounded text-slate-900"
+                                  autoFocus
+                                />
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingCategoryId(item.id)}
+                                  className="flex-1 min-w-0 truncate text-left font-medium"
+                                >
+                                  {item.name}
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => removeCategory(item.id)}
+                                className="text-slate-400 hover:text-red-600 text-xs px-1"
+                                aria-label="Remove category"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                            <div className="bg-slate-50 pl-6 pr-4 pb-2">
+                              {item.templateSlugs.map((slug, idx) => (
+                                <div
+                                  key={slug}
+                                  draggable
+                                  onDragStart={(e) => handleDragStartCategoryTemplate(e, item.id, slug, idx)}
+                                  onDragEnd={handleDragEnd}
+                                  onDragOver={(e) => handleDragOverCategoryTemplate(e, item.id, idx)}
+                                  onDragLeave={handleDragLeave}
+                                  onDrop={(e) => handleDropCategoryTemplate(e, item.id, idx)}
+                                  className={`flex items-center justify-between py-1.5 text-sm text-slate-600 cursor-grab active:cursor-grabbing ${dropTarget?.kind === "category" && dropTarget.categoryId === item.id && dropTarget.indexInCategory === idx ? "bg-blue-100 ring-1 ring-blue-300 rounded" : ""}`}
+                                >
+                                  <span className="shrink-0 text-slate-400 mr-1" aria-hidden>
+                                    <GripIcon />
+                                  </span>
+                                  <span className="truncate flex-1">{templateBySlug.get(slug)?.title ?? slug}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeTemplateFromCategory(item.id, slug)}
+                                    className="text-slate-400 hover:text-red-600 text-xs px-1"
+                                    aria-label="Remove from category"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              ))}
+                              {availableTemplates.length > 0 && (
+                                <select
+                                  value=""
+                                  onChange={(e) => {
+                                    const slug = e.target.value;
+                                    if (slug) addTemplateToCategory(item.id, slug);
+                                    e.target.value = "";
+                                  }}
+                                  className="mt-1 text-xs px-2 py-1 border border-slate-300 rounded bg-white text-slate-600"
+                                >
+                                  <option value="">Add template to category...</option>
+                                  {availableTemplates.map((t) => (
+                                    <option key={t.slug} value={t.slug}>
+                                      {t.title}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      )
+                    )}
+                  </div>
+                </>
               )}
             </div>
             {publicTemplates.length > 0 && (
