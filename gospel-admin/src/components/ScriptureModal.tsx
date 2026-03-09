@@ -446,73 +446,77 @@ export default function ScriptureModal({
             </div>
           </div>
           
-          {/* Context Toggle Buttons - Always Visible */}
+          {/* Context Toggle Buttons - Always Visible. Small: row1 = selects, row2 = Verse + Chapter Context */}
           <div className="flex flex-wrap gap-1.5 justify-center items-center">
-            {/* Compare dropdown - to the left of main translation */}
-            <select
-              value={compareTranslation ?? ''}
-              onChange={(e) => {
-                const val = e.target.value
-                setCompareTranslation(val === '' ? null : val)
-                if (!val) {
-                  setCompareText('')
-                  setCompareChapterText('')
-                  setCompareError('')
-                }
-              }}
-              aria-label="Compare with another translation"
-              className={selectClassNameCompact}
-            >
-              <option value="">Compare</option>
-              {enabledTranslations
-                .filter((trans) => trans !== translation)
-                .map((trans) => (
+            <div className="w-full sm:w-auto flex flex-wrap gap-1.5 justify-center sm:justify-start items-center">
+              {/* Compare dropdown - to the left of main translation */}
+              <select
+                value={compareTranslation ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setCompareTranslation(val === '' ? null : val)
+                  if (!val) {
+                    setCompareText('')
+                    setCompareChapterText('')
+                    setCompareError('')
+                  }
+                }}
+                aria-label="Compare with another translation"
+                className={selectClassNameCompact}
+              >
+                <option value="">Compare</option>
+                {enabledTranslations
+                  .filter((trans) => trans !== translation)
+                  .map((trans) => (
+                    <option key={trans} value={trans}>
+                      {trans.toUpperCase()}
+                    </option>
+                  ))}
+              </select>
+
+              {/* Translation Selector */}
+              <select
+                value={translation}
+                onChange={async (e) => {
+                  await setTranslation(e.target.value as 'esv' | 'kjv' | 'nasb' | 'lsb')
+                  setChapterText('')
+                  setShowingContext(false)
+                }}
+                aria-label="Select Bible translation"
+                className={selectClassNameCompact}
+              >
+                {enabledTranslations.map((trans) => (
                   <option key={trans} value={trans}>
                     {trans.toUpperCase()}
                   </option>
                 ))}
-            </select>
+              </select>
+            </div>
 
-            {/* Translation Selector */}
-            <select
-              value={translation}
-              onChange={async (e) => {
-                await setTranslation(e.target.value as 'esv' | 'kjv' | 'nasb' | 'lsb')
-                setChapterText('')
-                setShowingContext(false)
-              }}
-              aria-label="Select Bible translation"
-              className={selectClassNameCompact}
-            >
-              {enabledTranslations.map((trans) => (
-                <option key={trans} value={trans}>
-                  {trans.toUpperCase()}
-                </option>
-              ))}
-            </select>
+            <div className="w-full sm:w-auto flex flex-wrap gap-1.5 justify-center sm:justify-start items-center">
+              <button
+                onClick={() => setShowingContext(false)}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors min-h-[36px] border-2 ${
+                  !showingContext 
+                    ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border-blue-400 dark:border-blue-600' 
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 border-slate-400 dark:border-slate-500'
+                }`}
+              >
+                Verse
+              </button>
 
-            <button
-              onClick={() => setShowingContext(false)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors min-h-[36px] border-2 ${
-                !showingContext 
-                  ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border-blue-400 dark:border-blue-600' 
-                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 border-slate-400 dark:border-slate-500'
-              }`}
-            >
-              Verse
-            </button>
-
-            <button
-              onClick={fetchChapterContext}
-              disabled={contextLoading}
-              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors min-h-[36px] border-2 ${
-                showingContext 
-                  ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border-blue-400 dark:border-blue-600' 
-                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 border-slate-400 dark:border-slate-500'
-              } ${contextLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-            >
-              {contextLoading ? 'Loading...' : 'Chapter Context'}
-            </button>
+              <button
+                onClick={fetchChapterContext}
+                disabled={contextLoading}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors min-h-[36px] border-2 ${
+                  showingContext 
+                    ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border-blue-400 dark:border-blue-600' 
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 border-slate-400 dark:border-slate-500'
+                } ${contextLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {contextLoading ? 'Loading...' : 'Chapter Context'}
+              </button>
+            </div>
           </div>
         </div>
 
