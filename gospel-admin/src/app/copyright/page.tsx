@@ -36,9 +36,27 @@ export default function CopyrightPage() {
               </p>
             </div>
 
-            <div className="bg-purple-50 dark:bg-purple-900/30 border-l-4 border-purple-400 dark:border-purple-600 rounded-lg p-6">
+            <div className="bg-purple-50 dark:bg-purple-900/30 border-l-4 border-purple-400 dark:border-purple-600 rounded-lg p-6 mb-6">
               <p className="text-slate-700 dark:text-slate-200 mb-3 leading-relaxed text-base md:text-lg">
                 <strong className="text-slate-800 dark:text-slate-100">Marriage Enrichment Content:</strong> &ldquo;God-Centered Marriage: A Marriage Enrichment Seminar from a Biblical Perspective&rdquo; by Dr. Randy Westerberg
+              </p>
+            </div>
+
+            <div className="bg-teal-50 dark:bg-teal-900/30 border-l-4 border-teal-400 dark:border-teal-600 rounded-lg p-6 mb-6">
+              <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg">
+                <strong className="text-slate-800 dark:text-slate-100">Praying As A Couple:</strong> by Jared Johnson
+              </p>
+            </div>
+
+            <div className="bg-amber-50 dark:bg-amber-900/30 border-l-4 border-amber-400 dark:border-amber-600 rounded-lg p-6 mb-6">
+              <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg">
+                <strong className="text-slate-800 dark:text-slate-100">The Four Rules of Communication (A Practical Application to Good Communication):</strong> by Robert Smith
+              </p>
+            </div>
+
+            <div className="bg-indigo-50 dark:bg-indigo-900/30 border-l-4 border-indigo-400 dark:border-indigo-600 rounded-lg p-6">
+              <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg">
+                <strong className="text-slate-800 dark:text-slate-100">The Conference Table:</strong> by Jay Adams
               </p>
             </div>
           </section>
