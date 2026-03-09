@@ -6,7 +6,11 @@
     "dev": "cd gospel-admin && npm run dev",
     "build": "cd gospel-admin && npm run build",
     "start": "cd gospel-admin && npm run start",
-    "install-deps": "cd gospel-admin && npm install"
+    "install-deps": "cd gospel-admin && npm install",
+    "resize-appstore": "node scripts/resize-appstore-images.js"
+  },
+  "devDependencies": {
+    "sharp": "^0.33.5"
   },
   "keywords": ["gospel", "presentation", "nextjs", "admin"],
   "author": "Dr. Stuart Scott",
