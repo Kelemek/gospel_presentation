@@ -54,9 +54,15 @@ export default function CopyrightPage() {
               </p>
             </div>
 
-            <div className="bg-indigo-50 dark:bg-indigo-900/30 border-l-4 border-indigo-400 dark:border-indigo-600 rounded-lg p-6">
+            <div className="bg-indigo-50 dark:bg-indigo-900/30 border-l-4 border-indigo-400 dark:border-indigo-600 rounded-lg p-6 mb-6">
               <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg">
                 <strong className="text-slate-800 dark:text-slate-100">The Conference Table:</strong> by Jay Adams
+              </p>
+            </div>
+
+            <div className="bg-rose-50 dark:bg-rose-900/30 border-l-4 border-rose-400 dark:border-rose-600 rounded-lg p-6">
+              <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg">
+                <strong className="text-slate-800 dark:text-slate-100">The Doctrine of Repentance:</strong> by Thomas Watson; compilation and arrangement by Mark Larson
               </p>
             </div>
           </section>
