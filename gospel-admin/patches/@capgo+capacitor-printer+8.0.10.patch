@@ -1,0 +1,30 @@
+diff --git a/node_modules/@capgo/capacitor-printer/android/src/main/java/com/capgo/printer/PrinterPlugin.java b/node_modules/@capgo/capacitor-printer/android/src/main/java/com/capgo/printer/PrinterPlugin.java
+index 6304d69..f124fd0 100644
+--- a/node_modules/@capgo/capacitor-printer/android/src/main/java/com/capgo/printer/PrinterPlugin.java
++++ b/node_modules/@capgo/capacitor-printer/android/src/main/java/com/capgo/printer/PrinterPlugin.java
+@@ -100,13 +100,19 @@ public class PrinterPlugin extends Plugin {
+     @PluginMethod
+     public void printWebView(PluginCall call) {
+         String name = call.getString("name", "Document");
+-
+-        try {
+-            implementation.printWebView(getBridge().getWebView(), name);
+-            call.resolve();
+-        } catch (Exception e) {
+-            call.reject("Failed to print web view: " + e.getMessage(), e);
++        android.app.Activity activity = getActivity();
++        if (activity == null) {
++            call.reject("Activity not available");
++            return;
+         }
++        activity.runOnUiThread(() -> {
++            try {
++                implementation.printWebView(getBridge().getWebView(), name);
++                call.resolve();
++            } catch (Exception e) {
++                call.reject("Failed to print web view: " + e.getMessage(), e);
++            }
++        });
+     }
+ 
+     @PluginMethod
