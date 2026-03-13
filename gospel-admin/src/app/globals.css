@@ -48,6 +48,19 @@ body.dark::before {
 
 /* Print Styles - Highly Condensed Format */
 @media print {
+  /* Force light scheme and dark-on-white so print is readable (fixes Android in dark mode) */
+  html {
+    color-scheme: only light;
+    background: white !important;
+    color: black !important;
+  }
+
+  html.dark *,
+  body.dark * {
+    background-color: white !important;
+    color: black !important;
+  }
+
   /* Hide non-essential elements for print */
   .print-hide {
     display: none !important;

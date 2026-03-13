@@ -81,6 +81,10 @@ Users can:
 - Counselee access tracked in descriptions
 - Helps with quick user identification
 
+## Print
+- Print Version (Table of Contents) produces a condensed, letter-sized layout; non-essential UI is hidden.
+- **Output is always dark text on white**, regardless of app theme (light/dark). This avoids unreadable white-on-black when printing from the Android app in dark mode.
+
 ## Related Documentation
 - Questions: [QUESTIONS_FEATURE.md](QUESTIONS_FEATURE.md)
 - Answers: [ANSWERS_TO_DATABASE.md](ANSWERS_TO_DATABASE.md)
