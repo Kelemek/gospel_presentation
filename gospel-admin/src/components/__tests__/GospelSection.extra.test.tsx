@@ -11,6 +11,14 @@ jest.mock('@/components/ComaModal', () => {
   return Component
 })
 
+jest.mock('@/components/FourRulesModal', () => {
+  const Component = ({ isOpen, onClose }: any) => (
+    <div data-testid="four-rules-modal" data-open={isOpen ? 'true' : 'false'} onClick={onClose}>Four Rules</div>
+  )
+  Component.displayName = 'FourRulesModal'
+  return Component
+})
+
 jest.mock('@/components/ScriptureHoverModal', () => {
   const Component = ({ children }: any) => <div>{children}</div>
   Component.displayName = 'ScriptureHoverModal'
@@ -141,6 +149,32 @@ describe('GospelSection (extra tests)', () => {
 
     // after timers run, ensure no errors and fetch was called
     expect(global.fetch).toHaveBeenCalled()
+  })
+
+  it('renders Four Rules of Communication as button and opens Four Rules modal on click', async () => {
+    const section = {
+      section: 's4',
+      title: 'Section',
+      subsections: [
+        { title: 'Sub', content: 'Review the Four Rules of Communication with your spouse.' }
+      ]
+    }
+
+    render(
+      <GospelSection
+        section={section}
+        onScriptureClick={() => {}}
+        profileSlug="test"
+      />
+    )
+
+    const fourRulesLink = await screen.findByText('Four Rules of Communication')
+    expect(fourRulesLink).toBeInTheDocument()
+
+    fireEvent.click(fourRulesLink)
+    const modals = screen.getAllByTestId('four-rules-modal')
+    const openModal = modals.find((el) => el.getAttribute('data-open') === 'true')
+    expect(openModal).toBeDefined()
   })
 
   it('shows alert when save fails', async () => {

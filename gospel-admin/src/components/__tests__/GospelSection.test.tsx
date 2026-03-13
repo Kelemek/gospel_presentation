@@ -31,4 +31,27 @@ describe('GospelSection TextWithComaButtons', () => {
     fireEvent.click(comaButton)
     await waitFor(() => expect(screen.getByText(/C\.O\.M\.A\. Method/i)).toBeInTheDocument())
   })
+
+  it('renders Four Rules of Communication as button and opens modal on click', async () => {
+    const section = {
+      section: 1,
+      title: 'Test Section',
+      subsections: [
+        {
+          title: 'Sub',
+          content: 'Learn the Four Rules of Communication here.',
+        }
+      ]
+    }
+
+    render(<GospelSection section={section as any} onScriptureClick={() => {}} profileSlug="test" />)
+
+    const fourRulesLink = await screen.findByText('Four Rules of Communication')
+    expect(fourRulesLink).toBeInTheDocument()
+    expect(fourRulesLink).toHaveAttribute('data-four-rules', 'true')
+
+    fireEvent.click(fourRulesLink)
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Four Rules of Communication' })).toBeInTheDocument())
+    expect(screen.getByText('Rule One - Be Honest')).toBeInTheDocument()
+  })
 })

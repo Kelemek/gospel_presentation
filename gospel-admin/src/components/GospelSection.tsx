@@ -3,18 +3,22 @@
 import { GospelSection as GospelSectionType, Subsection, NestedSubsection, ScriptureReference, QuestionAnswer, PROFILE_VALIDATION, SavedAnswer } from '@/lib/types'
 import ScriptureHoverModal from './ScriptureHoverModal'
 import ComaModal from './ComaModal'
+import FourRulesModal from './FourRulesModal'
 import React, { useState, useEffect } from 'react'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 
 const ANSWERS_STORAGE_KEY_PREFIX = 'gospel-answers-'
 
 
-// Helper component to render text with COMA buttons and inline scripture references
-// Helper component to render text with COMA buttons and inline scripture references
-function TextWithComaButtons({ text, onComaClick, onScriptureClick }: { 
-  text: string; 
+const PILL_LINK_CLASS = 'px-1.5 py-0.5 font-medium text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-800/50 border border-blue-200 dark:border-blue-700 rounded transition-colors cursor-pointer whitespace-nowrap no-underline'
+const PILL_STYLE = 'display: inline; margin: 0 2px; vertical-align: baseline; font-size: inherit;'
+
+// Helper component to render text with COMA buttons, Four Rules button, and inline scripture references
+function TextWithComaButtons({ text, onComaClick, onScriptureClick, onFourRulesClick }: {
+  text: string;
   onComaClick: () => void;
   onScriptureClick?: (reference: string) => void;
+  onFourRulesClick?: () => void;
 }) {
   const containerRef = React.useRef<HTMLSpanElement>(null)
   const safeText = text ?? ''
@@ -63,12 +67,19 @@ function TextWithComaButtons({ text, onComaClick, onScriptureClick }: {
   const comaMarker = '___COMA_BUTTON___'
   let processedText = safeText.replace(/(C\.O\.M\.A\.|COMA)/gi, comaMarker)
   const comaMatches = safeText.match(/(C\.O\.M\.A\.|COMA)/gi) || []
-  
+
+  // Then, handle Four Rules of Communication (exact string, F/R/C capitalized)
+  const fourRulesMarker = '___FOUR_RULES_BUTTON___'
+  const fourRulesPhrase = 'Four Rules of Communication'
+  const fourRulesRegex = new RegExp(fourRulesPhrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
+  const fourRulesMatches = processedText.match(fourRulesRegex) || []
+  processedText = processedText.replace(fourRulesRegex, fourRulesMarker)
+
   // Then, handle scripture references - match directly in the HTML text
   const scriptureMarker = '___SCRIPTURE_REF___'
   const scriptureMatches: string[] = []
   const cleanReferences: string[] = []  // Store clean references without HTML tags
-  
+
   // Find all verse references in the text (with HTML tags)
   let match
   while ((match = scripturePattern.exec(processedText)) !== null) {
@@ -90,31 +101,32 @@ function TextWithComaButtons({ text, onComaClick, onScriptureClick }: {
     }
   }
   
-  // Split by both markers and reconstruct
-  const parts = processedText.split(new RegExp(`(${comaMarker}|${scriptureMarker})`))
-  
+  // Split by all three markers and reconstruct
+  const parts = processedText.split(new RegExp(`(${comaMarker}|${fourRulesMarker}|${scriptureMarker})`))
+
   // Build everything as HTML string for true inline flow
   let htmlString = ''
   let comaIndex = 0
+  let fourRulesIndex = 0
   let scriptureIndex = 0
-  
+
   parts.forEach((part) => {
     if (part === comaMarker && comaMatches[comaIndex]) {
-      // Add COMA button as HTML - match scripture styling exactly
       const comaText = comaMatches[comaIndex]
-      htmlString += `<a href="#" data-coma="true" class="px-1.5 py-0.5 font-medium text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-800/50 border border-blue-200 dark:border-blue-700 rounded transition-colors cursor-pointer whitespace-nowrap no-underline" style="display: inline; margin: 0 2px; vertical-align: baseline; font-size: inherit;" title="Learn about the C.O.M.A. method">${comaText}</a>`
+      htmlString += `<a href="#" data-coma="true" class="${PILL_LINK_CLASS}" style="${PILL_STYLE}" title="Learn about the C.O.M.A. method">${comaText}</a>`
       comaIndex++
+    } else if (part === fourRulesMarker && fourRulesMatches[fourRulesIndex]) {
+      htmlString += `<a href="#" data-four-rules="true" class="${PILL_LINK_CLASS}" style="${PILL_STYLE}" title="View the Four Rules of Communication">Four Rules of Communication</a>`
+      fourRulesIndex++
     } else if (part === scriptureMarker && scriptureIndex < cleanReferences.length) {
-      // Add inline scripture reference as HTML string using clean reference
       const reference = cleanReferences[scriptureIndex]
       if (onScriptureClick) {
-        htmlString += `<a href="#" data-scripture="${reference}" class="px-1.5 py-0.5 font-medium text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-800/50 border border-blue-200 dark:border-blue-700 rounded transition-colors cursor-pointer whitespace-nowrap no-underline" style="display: inline; margin: 0 2px; vertical-align: baseline; font-size: inherit;" title="Click to view ${reference}">${reference}</a>`
+        htmlString += `<a href="#" data-scripture="${reference}" class="${PILL_LINK_CLASS}" style="${PILL_STYLE}" title="Click to view ${reference}">${reference}</a>`
       } else {
-        htmlString += `<span class="px-1.5 py-0.5 font-medium text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded whitespace-nowrap" style="display: inline; margin: 0 2px; vertical-align: baseline; font-size: inherit;">${reference}</span>`
+        htmlString += `<span class="px-1.5 py-0.5 font-medium text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded whitespace-nowrap" style="${PILL_STYLE}">${reference}</span>`
       }
       scriptureIndex++
     } else if (part) {
-      // Add the HTML part
       htmlString += part
     }
   })
@@ -134,7 +146,15 @@ function TextWithComaButtons({ text, onComaClick, onScriptureClick }: {
         onComaClick()
         return
       }
-      
+
+      // Handle Four Rules clicks - only if it's an anchor with data-four-rules
+      if (target.tagName === 'A' && target.hasAttribute('data-four-rules')) {
+        e.preventDefault()
+        e.stopPropagation()
+        onFourRulesClick?.()
+        return
+      }
+
       // Handle scripture clicks - only if it's an anchor with data-scripture
       if (target.tagName === 'A' && target.hasAttribute('data-scripture')) {
         e.preventDefault()
@@ -149,7 +169,7 @@ function TextWithComaButtons({ text, onComaClick, onScriptureClick }: {
     
     container.addEventListener('click', handleClick)
     return () => container.removeEventListener('click', handleClick)
-  }, [onComaClick, onScriptureClick])
+  }, [onComaClick, onScriptureClick, onFourRulesClick])
   
   return <span ref={containerRef} dangerouslySetInnerHTML={{ __html: htmlString }} />
 
@@ -262,6 +282,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
   const [isInitialized, setIsInitialized] = useState(false)
   const [expandedQuestions, setExpandedQuestions] = useState<Record<string, boolean>>({})
   const [showComaModal, setShowComaModal] = useState(false)
+  const [showFourRulesModal, setShowFourRulesModal] = useState(false)
   const { showAlert } = useAlertModal()
 
   const storageKey = `${ANSWERS_STORAGE_KEY_PREFIX}${profileSlug}`
@@ -429,6 +450,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
   return (
     <>
       <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
+      <FourRulesModal isOpen={showFourRulesModal} onClose={() => setShowFourRulesModal(false)} />
       <div className="mt-4 space-y-3">
       <h5 className="text-base font-semibold text-slate-700 dark:text-slate-200 border-b border-slate-200 dark:border-slate-600 pb-1">
         Reflection Questions
@@ -475,7 +497,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
                             dangerouslySetInnerHTML={{ __html: detail }}
                           />
                         ) : (
-                          <TextWithComaButtons text={detail} onComaClick={() => setShowComaModal(true)} />
+                          <TextWithComaButtons text={detail} onComaClick={() => setShowComaModal(true)} onFourRulesClick={() => setShowFourRulesModal(true)} />
                         )}
                       </div>
                     )}
@@ -488,11 +510,12 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
                       text={questionContent} 
                       onComaClick={() => setShowComaModal(true)}
                       onScriptureClick={onScriptureClick}
+                      onFourRulesClick={() => setShowFourRulesModal(true)}
                     />
                   </div>
                 ) : (
                   <span className="font-medium text-slate-800 dark:text-slate-100 text-sm">
-                    <TextWithComaButtons text={questionContent} onComaClick={() => setShowComaModal(true)} />
+                    <TextWithComaButtons text={questionContent} onComaClick={() => setShowComaModal(true)} onFourRulesClick={() => setShowFourRulesModal(true)} />
                   </span>
                 )}
               </div>
@@ -532,10 +555,12 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
 
 function NestedSubsectionComponent({ nestedSubsection, nestedId, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers, isLoggedIn }: NestedSubsectionProps) {
   const [showComaModal, setShowComaModal] = useState(false)
-  
+  const [showFourRulesModal, setShowFourRulesModal] = useState(false)
+
   return (
     <>
       <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
+      <FourRulesModal isOpen={showFourRulesModal} onClose={() => setShowFourRulesModal(false)} />
       <div id={nestedId} className="scroll-mt-20 ml-6 mt-4 pl-4 print-subsection">
         <h5 
           className="font-medium text-slate-800 dark:text-slate-100 mb-2 print-subsection-title text-lg md:text-xl"
@@ -544,6 +569,7 @@ function NestedSubsectionComponent({ nestedSubsection, nestedId, onScriptureClic
             text={nestedSubsection.title} 
             onComaClick={() => setShowComaModal(true)}
             onScriptureClick={onScriptureClick}
+            onFourRulesClick={() => setShowFourRulesModal(true)}
           />
         </h5>
         <div className="text-slate-700 dark:text-slate-300 mb-2 print-content text-base md:text-lg leading-relaxed">
@@ -551,6 +577,7 @@ function NestedSubsectionComponent({ nestedSubsection, nestedId, onScriptureClic
             text={nestedSubsection.content} 
             onComaClick={() => setShowComaModal(true)}
             onScriptureClick={onScriptureClick}
+            onFourRulesClick={() => setShowFourRulesModal(true)}
           />
         </div>
         {nestedSubsection.scriptureReferences && (
@@ -577,10 +604,12 @@ function NestedSubsectionComponent({ nestedSubsection, nestedId, onScriptureClic
 
 function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers, isLoggedIn }: SubsectionProps) {
   const [showComaModal, setShowComaModal] = useState(false)
-  
+  const [showFourRulesModal, setShowFourRulesModal] = useState(false)
+
   return (
     <>
       <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
+      <FourRulesModal isOpen={showFourRulesModal} onClose={() => setShowFourRulesModal(false)} />
       <div id={`${sectionId}-${subsectionIndex}`} className="scroll-mt-20 mb-6 print-subsection">
         <h4 
           className="text-xl md:text-2xl font-semibold text-slate-800 dark:text-slate-100 mb-3 print-subsection-title"
@@ -589,6 +618,7 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
             text={subsection.title} 
             onComaClick={() => setShowComaModal(true)}
             onScriptureClick={onScriptureClick}
+            onFourRulesClick={() => setShowFourRulesModal(true)}
           />
         </h4>
         {subsection.content && !subsection.nestedSubsections?.length && (
@@ -597,6 +627,7 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
               text={subsection.content} 
               onComaClick={() => setShowComaModal(true)}
               onScriptureClick={onScriptureClick}
+              onFourRulesClick={() => setShowFourRulesModal(true)}
             />
           </div>
         )}
@@ -643,6 +674,7 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
             text={subsection.content} 
             onComaClick={() => setShowComaModal(true)}
             onScriptureClick={onScriptureClick}
+            onFourRulesClick={() => setShowFourRulesModal(true)}
           />
         </div>
       )}
@@ -654,10 +686,12 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
 export default function GospelSection({ section, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers, isLoggedIn }: GospelSectionProps) {
   const sectionId = `section-${section.section}`
   const [showComaModal, setShowComaModal] = useState(false)
-  
+  const [showFourRulesModal, setShowFourRulesModal] = useState(false)
+
   return (
     <section id={sectionId} className="scroll-mt-20 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-600 p-8 print-section">
       <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
+      <FourRulesModal isOpen={showFourRulesModal} onClose={() => setShowFourRulesModal(false)} />
       <h3 
         className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-6 pb-3 border-b border-gray-200 dark:border-slate-600 print-section-header"
       >
@@ -665,6 +699,7 @@ export default function GospelSection({ section, onScriptureClick, lastViewedScr
           text={section.title} 
           onComaClick={() => setShowComaModal(true)}
           onScriptureClick={onScriptureClick}
+          onFourRulesClick={() => setShowFourRulesModal(true)}
         />
       </h3>
       

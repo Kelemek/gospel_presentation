@@ -24,6 +24,10 @@ The COMA template provides a structured framework for reflection:
 
 **Status**: RLS policies fixed - now visible to all users including counselees
 
+### Four Rules of Communication
+
+When the exact phrase "Four Rules of Communication" (F, R, C capitalized) appears in profile content (titles, subsection content, or questions), it is rendered as a pill-style button. Clicking it opens a modal that lists the four rule headers only: Rule One - Be Honest; Rule Two - Keep Current; Rule Three – Attack the Problem, Not the Person; Rule Four – Act, Don't React. The modal content is static (no API). Same pattern as the COMA link: implemented in `TextWithComaButtons` and `FourRulesModal.tsx` in `gospel-admin/src/components/`.
+
 ## Scripture Modal
 
 When users click a scripture reference, a modal displays the full text with these features:
