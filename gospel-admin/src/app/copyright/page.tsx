@@ -31,8 +31,16 @@ export default function CopyrightPage() {
               <p className="text-slate-700 dark:text-slate-200 mb-3 leading-relaxed text-base md:text-lg">
                 <strong className="text-slate-800 dark:text-slate-100">Gospel Presentation Content:</strong> &ldquo;Presenting the Gospel in its Context&rdquo; by Dr. Stuart Scott
               </p>
-              <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg">
-                <strong className="text-slate-800 dark:text-slate-100">Original Resource:</strong> <a href="https://oneeightyministries.org/resources/the-gospel-in-context/" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors">oneeightyministries.org/resources/the-gospel-in-context/</a>
+              <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg min-w-0">
+                <strong className="text-slate-800 dark:text-slate-100">Original Resource:</strong>{' '}
+                <a
+                  href="https://oneeightyministries.org/resources/the-gospel-in-context/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors break-all inline-block max-w-full"
+                >
+                  oneeightyministries.org/resources/the-gospel-in-context/
+                </a>
               </p>
             </div>
 
