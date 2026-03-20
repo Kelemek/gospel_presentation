@@ -85,6 +85,18 @@ Users can:
 - Print Version (Table of Contents) produces a condensed, letter-sized layout; non-essential UI is hidden.
 - **Output is always dark text on white**, regardless of app theme (light/dark). This avoids unreadable white-on-black when printing from the Android app in dark mode.
 
+## Text size (presentation site)
+
+- In the sidebar below **Resources**, a **Text size** dropdown matches the Resources styling and offers **Normal**, **Larger**, and **Largest**.
+- The choice is saved in `localStorage` (`gospel-profile-text-size`) and scales root font size on the main site via `TextSizeContext`, `ApplyTextSize`, and `html.text-size-*` classes in `globals.css`.
+- **`/admin` routes are excluded**: text scaling is not applied on admin pages so the admin UI stays at default size.
+
+## Native app (Capacitor)
+
+The app is wrapped for iOS and Android via Capacitor (WebView loads the deployed site).
+
+- **Splash screen (iOS)**: On launch, the iOS app shows a centered app icon on a solid background (Launch Screen) and keeps it visible until the web app has loaded. This avoids a black screen between the system launch screen and the first painted content. Implemented with `@capacitor/splash-screen` (`launchAutoHide: false`) and `SplashScreenController` calling `SplashScreen.hide()` once the app is ready; the launch screen is defined in `ios/App/App/Base.lproj/LaunchScreen.storyboard` and uses the `LaunchIcon` image set (same graphic as the app icon). Changing the launch screen or splash behavior requires a **native rebuild** (e.g. `npx cap sync` then build in Xcode).
+
 ## Related Documentation
 - Questions: [QUESTIONS_FEATURE.md](QUESTIONS_FEATURE.md)
 - Answers: [ANSWERS_TO_DATABASE.md](ANSWERS_TO_DATABASE.md)

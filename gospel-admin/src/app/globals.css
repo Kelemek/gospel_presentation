@@ -1,6 +1,17 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Main site text size (non-admin); ApplyTextSize sets html class */
+html.text-size-normal {
+  font-size: 100%;
+}
+html.text-size-larger {
+  font-size: 112.5%;
+}
+html.text-size-largest {
+  font-size: 125%;
+}
+
 body {
   font-family: Arial, Helvetica, sans-serif;
   /* Respect safe areas in Capacitor app (notch, home indicator) */

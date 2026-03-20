@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useTranslation, BibleTranslation } from '@/contexts/TranslationContext'
+import { useTextSize } from '@/contexts/TextSizeContext'
 import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
 
@@ -81,6 +82,8 @@ export default function TableOfContents({
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [resourceItems, setResourceItems] = useState<PublicResourceItem[]>([])
   const [isResourcesOpen, setIsResourcesOpen] = useState(false)
+  const [isTextSizeOpen, setIsTextSizeOpen] = useState(false)
+  const { textSize, setTextSize } = useTextSize()
   const [expandedCategoryIds, setExpandedCategoryIds] = useState<Set<string>>(new Set())
   const { translation, setTranslation, enabledTranslations } = useTranslation()
 
@@ -230,6 +233,61 @@ export default function TableOfContents({
           )}
         </div>
       )}
+
+      {/* Text size dropdown — same design as Resources */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setIsTextSizeOpen(!isTextSizeOpen)}
+          className="inline-flex items-center w-full px-4 py-3 text-base md:text-lg font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500 border border-slate-300 dark:border-slate-600 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px] cursor-pointer"
+          aria-expanded={isTextSizeOpen}
+          aria-haspopup="listbox"
+        >
+          <span className="mr-2 font-serif font-semibold text-lg leading-none" aria-hidden>
+            Aa
+          </span>
+          Text size
+          <span className={`ml-auto transition-transform ${isTextSizeOpen ? 'rotate-180' : ''}`}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </span>
+        </button>
+        {isTextSizeOpen && (
+          <div className="mt-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-sm overflow-hidden" role="listbox" aria-label="Text size">
+            {(
+              [
+                { value: 'normal' as const, label: 'Normal' },
+                { value: 'larger' as const, label: 'Larger' },
+                { value: 'largest' as const, label: 'Largest' },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                role="option"
+                aria-selected={textSize === opt.value}
+                onClick={() => {
+                  setTextSize(opt.value)
+                  setIsTextSizeOpen(false)
+                }}
+                className={`flex w-full items-center gap-2 px-4 py-3 text-sm text-left transition-colors border-b border-slate-100 dark:border-slate-600 last:border-b-0 ${
+                  textSize === opt.value
+                    ? 'bg-slate-100 dark:bg-slate-700 font-semibold text-slate-900 dark:text-slate-50'
+                    : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
+                }`}
+              >
+                {textSize === opt.value && (
+                  <svg className="w-4 h-4 shrink-0 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+                <span className={textSize === opt.value ? '' : 'pl-6'}>{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Print Button */}
       <div className="pb-4 border-b border-slate-200 dark:border-slate-600">

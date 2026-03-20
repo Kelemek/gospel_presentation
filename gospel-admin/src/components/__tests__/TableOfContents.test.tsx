@@ -1,6 +1,12 @@
+import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import TableOfContents from '../TableOfContents'
 import { GospelSection } from '@/lib/types'
+import { TextSizeProvider } from '@/contexts/TextSizeContext'
+
+function renderToc(ui: React.ReactElement) {
+  return render(<TextSizeProvider>{ui}</TextSizeProvider>)
+}
 
 // Mock Next.js router
 const mockPush = jest.fn()
@@ -70,7 +76,7 @@ describe('TableOfContents Component', () => {
   })
 
   it('should render all sections and subsections', () => {
-    render(<TableOfContents sections={mockSections} />)
+    renderToc(<TableOfContents sections={mockSections} />)
 
   // Check main sections (title text may be rendered without numeric prefix)
   expect(screen.getByText('God')).toBeInTheDocument()
@@ -83,7 +89,7 @@ describe('TableOfContents Component', () => {
   })
 
   it('should handle section clicks and scroll to section', () => {
-    render(<TableOfContents sections={mockSections} />)
+    renderToc(<TableOfContents sections={mockSections} />)
 
   const sectionLink = screen.getByText('God')
     // component renders anchor links with fragment hrefs
@@ -91,14 +97,14 @@ describe('TableOfContents Component', () => {
   })
 
   it('should handle subsection clicks and scroll to subsection', () => {
-    render(<TableOfContents sections={mockSections} />)
+    renderToc(<TableOfContents sections={mockSections} />)
 
     const subsectionLink = screen.getByText('A. God is Holy')
     expect(subsectionLink).toHaveAttribute('href', '#section-1-0')
   })
 
   it('should handle missing DOM elements gracefully', () => {
-    render(<TableOfContents sections={mockSections} />)
+    renderToc(<TableOfContents sections={mockSections} />)
     // The component renders section titles without numeric prefixes; click
     // the visible link text instead of expecting a prefixed label.
     const sectionLink = screen.getByText('God')
@@ -130,7 +136,7 @@ describe('TableOfContents Component', () => {
       }
     ]
 
-    render(<TableOfContents sections={sectionsWithNested} />)
+    renderToc(<TableOfContents sections={sectionsWithNested} />)
 
     expect(screen.getByText('i. Definition of Holiness')).toBeInTheDocument()
     const nestedLink = screen.getByText('i. Definition of Holiness')
@@ -138,7 +144,7 @@ describe('TableOfContents Component', () => {
   })
 
   it('should apply correct styling classes', () => {
-    const { container } = render(<TableOfContents sections={mockSections} />)
+    const { container } = renderToc(<TableOfContents sections={mockSections} />)
 
     const tocContainer = container.firstChild as HTMLElement
     // component now renders a root div with spacing classes
@@ -150,7 +156,7 @@ describe('TableOfContents Component', () => {
   })
 
   it('should handle empty sections array', () => {
-    const { container } = render(<TableOfContents sections={[]} />)
+    const { container } = renderToc(<TableOfContents sections={[]} />)
 
     const tocContainer = container.firstChild as HTMLElement
     expect(tocContainer).toBeInTheDocument()
@@ -160,7 +166,7 @@ describe('TableOfContents Component', () => {
   })
 
   it('should render with proper accessibility attributes', () => {
-    const { container } = render(<TableOfContents sections={mockSections} />)
+    const { container } = renderToc(<TableOfContents sections={mockSections} />)
 
     const root = container.firstChild as HTMLElement
     expect(root).toBeInTheDocument()

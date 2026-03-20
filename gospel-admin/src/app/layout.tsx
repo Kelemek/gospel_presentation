@@ -5,7 +5,10 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { ClarityProvider } from "@/components/ClarityProvider";
 import { ApplyTheme } from "@/components/ApplyTheme";
 import { CapacitorKeepLinksInApp } from "@/components/CapacitorKeepLinksInApp";
+import { SplashScreenController } from "@/components/SplashScreenController";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { TextSizeProvider } from "@/contexts/TextSizeContext";
+import { ApplyTextSize } from "@/components/ApplyTextSize";
 import { TranslationProvider } from "@/contexts/TranslationContext";
 import { AlertModalProvider } from "@/contexts/AlertModalContext";
 import "./globals.css";
@@ -69,13 +72,17 @@ export default function RootLayout({
       >
         <ThemeProvider>
           <ApplyTheme />
-          <CapacitorKeepLinksInApp />
+          <TextSizeProvider>
+            <ApplyTextSize />
+            <CapacitorKeepLinksInApp />
+          <SplashScreenController />
           <ClarityProvider />
           <TranslationProvider>
             <AlertModalProvider>
               {children}
             </AlertModalProvider>
           </TranslationProvider>
+          </TextSizeProvider>
         </ThemeProvider>
         <Analytics />
         <SpeedInsights />

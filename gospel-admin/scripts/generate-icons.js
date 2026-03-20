@@ -31,7 +31,7 @@ try {
   }
 }
 
-// iOS: 1024x1024
+// iOS: 1024x1024 app icon
 const iosDir = path.join(root, 'ios', 'App', 'App', 'Assets.xcassets', 'AppIcon.appiconset');
 const iosIcon = path.join(iosDir, 'AppIcon-512@2x.png');
 execSync(
@@ -39,6 +39,16 @@ execSync(
   { stdio: 'inherit' }
 );
 console.log('iOS icon generated:', iosIcon);
+
+// iOS: Launch screen icon (original app icon, centered on white splash)
+const launchIconDir = path.join(root, 'ios', 'App', 'App', 'Assets.xcassets', 'LaunchIcon.imageset');
+if (!fs.existsSync(launchIconDir)) fs.mkdirSync(launchIconDir, { recursive: true });
+const launchIcon = path.join(launchIconDir, 'LaunchIcon.png');
+execSync(
+  `"${magickCmd}" "${src}" -resize 1024x1024 "${launchIcon}"`,
+  { stdio: 'inherit' }
+);
+console.log('iOS launch icon generated:', launchIcon);
 
 // Android mipmap sizes (nominal dp -> pixel at that density)
 const androidSizes = [

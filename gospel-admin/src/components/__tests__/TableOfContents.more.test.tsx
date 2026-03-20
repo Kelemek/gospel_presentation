@@ -1,5 +1,10 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { TextSizeProvider } from '@/contexts/TextSizeContext'
+
+function renderToc(ui: React.ReactElement) {
+  return render(<TextSizeProvider>{ui}</TextSizeProvider>)
+}
 
 // Mock Next.js router like the primary TableOfContents tests do
 const mockPush = jest.fn()
@@ -34,7 +39,7 @@ describe('TableOfContents additional behaviors', () => {
     // Import the component (router is mocked above) and render
     // require here so module uses the same cached React instance as the test harness
     const TableOfContents = require('../TableOfContents').default
-    render(<TableOfContents sections={[]} />)
+    renderToc(<TableOfContents sections={[]} />)
 
     const printButton = screen.getByText(/Print Version/i)
     fireEvent.click(printButton)
@@ -63,7 +68,7 @@ describe('TableOfContents additional behaviors', () => {
     global.fetch = fetchSpy
 
     const TableOfContents = require('../TableOfContents').default
-    render(<TableOfContents sections={[]} />)
+    renderToc(<TableOfContents sections={[]} />)
 
     await waitFor(() => expect(screen.getByText(/Resources/i)).toBeInTheDocument())
     expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument()
@@ -97,7 +102,7 @@ describe('TableOfContents additional behaviors', () => {
     global.fetch = fetchSpy
 
     const TableOfContents = require('../TableOfContents').default
-    render(<TableOfContents sections={[]} />)
+    renderToc(<TableOfContents sections={[]} />)
 
     await waitFor(() => expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /Resources/i }))
@@ -124,7 +129,7 @@ describe('TableOfContents additional behaviors', () => {
     }
 
     const TableOfContents = require('../TableOfContents').default
-    render(<TableOfContents sections={[]} />)
+    renderToc(<TableOfContents sections={[]} />)
 
     await waitFor(() => {
       expect(screen.getByRole('link', { name: /Dashboard/i })).toBeInTheDocument()
@@ -135,5 +140,21 @@ describe('TableOfContents additional behaviors', () => {
 
     // On web, Resources is always shown below Dashboard (even when logged in)
     expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument()
+  })
+
+  it('Text size dropdown opens and saves Larger to localStorage', async () => {
+    const clientMod = require('@/lib/supabase/client')
+    jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({
+      auth: { getUser: async () => ({ data: { user: null } }) }
+    }))
+    global.fetch = jest.fn().mockResolvedValue({ ok: false })
+
+    const TableOfContents = require('../TableOfContents').default
+    localStorage.removeItem('gospel-profile-text-size')
+    renderToc(<TableOfContents sections={[]} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /Text size/i }))
+    fireEvent.click(screen.getByRole('option', { name: /^Larger$/i }))
+    expect(localStorage.getItem('gospel-profile-text-size')).toBe('larger')
   })
 })
