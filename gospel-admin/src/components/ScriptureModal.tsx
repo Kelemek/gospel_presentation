@@ -2,6 +2,7 @@
 
 import { useState, useEffect, type TouchEvent } from 'react'
 import { useTranslation } from '@/contexts/TranslationContext'
+import { splitScriptureReferenceForHeader } from '@/lib/splitScriptureReferenceForHeader'
 
 
 
@@ -276,6 +277,9 @@ export default function ScriptureModal({
 
   if (!isOpen) return null
 
+  const { book: headerBook, referenceSuffix: headerSuffix } =
+    splitScriptureReferenceForHeader(reference)
+
   const isComparing = !!compareTranslation
 
   const renderAttribution = (trans: string) => {
@@ -418,7 +422,20 @@ export default function ScriptureModal({
               >
                 ◀
               </button>
-              <h3 className="text-base md:text-lg font-semibold text-slate-800 dark:text-slate-100 leading-tight px-1 min-w-0 max-w-[50vw] truncate" title={reference}>{reference}</h3>
+              <h3
+                className="text-base md:text-lg font-semibold text-slate-800 dark:text-slate-100 leading-tight px-1 min-w-0 max-w-[50vw] flex items-baseline gap-1 min-h-0"
+                title={reference}
+                aria-label={reference}
+              >
+                {!headerSuffix ? (
+                  <span className="min-w-0 truncate">{headerBook}</span>
+                ) : (
+                  <>
+                    <span className="min-w-0 truncate">{headerBook}</span>
+                    <span className="shrink-0 whitespace-nowrap">{headerSuffix}</span>
+                  </>
+                )}
+              </h3>
               <button
                 onClick={() => {
                   if (hasNext && onNext) {

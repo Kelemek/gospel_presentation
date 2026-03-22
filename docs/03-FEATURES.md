@@ -41,8 +41,9 @@ When users click a scripture reference, a modal displays the full text with thes
 - **Verse view**: Single verse or verse range
 - **Chapter Context**: Expands to show full chapter with highlighted verse(s)
 - **Attribution**: Footer displays copyright/attribution per translation; when comparing, attributions appear in each column
+- **Header title**: On narrow widths, the modal title truncates the **book name** (ellipsis) and keeps **chapter:verse** visible; full reference is in `title` and `aria-label` (so assistive tech and tests see the complete string)
 
-**Implementation**: `ScriptureModal.tsx` — compare state, fetch logic, and side-by-side grid layout in one component.
+**Implementation**: `ScriptureModal.tsx` — compare state, fetch logic, and side-by-side grid layout in one component. Reference splitting for the header uses `gospel-admin/src/lib/splitScriptureReferenceForHeader.ts`.
 
 ## Scripture Highlighting & Progress
 

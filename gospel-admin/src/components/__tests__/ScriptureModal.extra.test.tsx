@@ -30,7 +30,9 @@ describe('ScriptureModal additional behaviors', () => {
   const { container } = render(<ScriptureModal {...defaultProps} />)
 
     // Wait for component to mount and show controls
-    await waitFor(() => expect(screen.getByText(/Genesis 1:1-2/)).toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /Genesis 1:1-2/ })).toBeInTheDocument()
+    )
 
     const chapterButton = screen.getByText(/Chapter Context/)
     await user.click(chapterButton)
@@ -71,7 +73,9 @@ describe('ScriptureModal additional behaviors', () => {
       />
     )
 
-    await waitFor(() => expect(screen.getByText(/Genesis 1:1-2/)).toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /Genesis 1:1-2/ })).toBeInTheDocument()
+    )
 
   // the scrollable content area uses the class 'overflow-y-auto'
   const scrollArea = container.querySelector('.overflow-y-auto') as HTMLElement

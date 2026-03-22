@@ -27,7 +27,7 @@ describe('ScriptureModal Component', () => {
 
     // Wait for async fetch effect to settle to avoid act() warnings
     return waitFor(() => {
-      expect(screen.getByText('John 3:16')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'John 3:16' })).toBeInTheDocument()
       expect(screen.getByLabelText('Close modal')).toBeInTheDocument()
     })
   })
@@ -35,7 +35,7 @@ describe('ScriptureModal Component', () => {
   it('should not render modal when closed', () => {
     render(<ScriptureModal {...defaultProps} isOpen={false} />)
     
-    expect(screen.queryByText('John 3:16')).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'John 3:16' })).not.toBeInTheDocument()
   })
 
   it('should call onClose when close button is clicked', async () => {
@@ -214,7 +214,9 @@ describe('ScriptureModal Component', () => {
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ error: 'Chapter not found' }) } as Response)
     const user = userEvent.setup()
     render(<ScriptureModal {...defaultProps} reference="Genesis 1:1" />)
-    await waitFor(() => expect(screen.getByText(/Genesis 1:1/)).toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /Genesis 1:1/ })).toBeInTheDocument()
+    )
     await user.click(screen.getByText(/Chapter Context/))
     await waitFor(() => expect(screen.getByText(/Chapter not found/)).toBeInTheDocument())
   })
@@ -225,7 +227,9 @@ describe('ScriptureModal Component', () => {
       .mockRejectedValueOnce(new Error('Network error'))
     const user = userEvent.setup()
     render(<ScriptureModal {...defaultProps} reference="Genesis 1:2" />)
-    await waitFor(() => expect(screen.getByText(/Genesis 1:2/)).toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /Genesis 1:2/ })).toBeInTheDocument()
+    )
     await user.click(screen.getByText(/Chapter Context/))
     await waitFor(() => expect(screen.getByText(/Failed to load chapter context/)).toBeInTheDocument())
   })
@@ -236,7 +240,9 @@ describe('ScriptureModal Component', () => {
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ text: 'Compare verse KJV' }) } as Response)
     const user = userEvent.setup()
     render(<ScriptureModal {...defaultProps} />)
-    await waitFor(() => expect(screen.getByText(/John 3:16/)).toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /John 3:16/ })).toBeInTheDocument()
+    )
     const compareSelect = screen.getByLabelText(/Compare with another translation/i)
     await user.selectOptions(compareSelect, 'kjv')
     await waitFor(() => expect(screen.getByText(/Compare verse KJV/)).toBeInTheDocument())
@@ -248,7 +254,9 @@ describe('ScriptureModal Component', () => {
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ error: 'Compare translation unavailable' }) } as Response)
     const user = userEvent.setup()
     render(<ScriptureModal {...defaultProps} />)
-    await waitFor(() => expect(screen.getByText(/John 3:16/)).toBeInTheDocument())
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /John 3:16/ })).toBeInTheDocument()
+    )
     const compareSelect = screen.getByLabelText(/Compare with another translation/i)
     await user.selectOptions(compareSelect, 'kjv')
     await waitFor(() => expect(screen.getByText(/Compare translation unavailable/)).toBeInTheDocument())
