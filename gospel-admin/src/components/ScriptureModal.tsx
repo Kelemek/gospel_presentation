@@ -55,7 +55,6 @@ export default function ScriptureModal({
   const [compareLoading, setCompareLoading] = useState(false)
   const [compareError, setCompareError] = useState<string>('')
 
-  const selectClassName = "w-[140px] pl-4 pr-10 py-2 text-base md:text-lg font-medium rounded-lg transition-colors min-h-[48px] border-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-600 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 cursor-pointer appearance-none bg-no-repeat bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1.25rem] bg-position-[right_10px_center]"
   // min-w in rem so width scales with global text-size (html); fits "Compare" at Normal/Larger/Largest
   const selectClassNameCompact =
     "min-w-[7.5rem] w-auto max-w-[min(100%,14rem)] shrink-0 pl-2 pr-8 py-1.5 text-sm font-medium rounded-md transition-colors min-h-[2.25rem] border-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-600 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 cursor-pointer appearance-none bg-no-repeat bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1rem] bg-position-[right_6px_center]"
@@ -464,6 +463,18 @@ export default function ScriptureModal({
               </button>
             </div>
           </div>
+          {totalReferences > 0 && (
+            <p
+              className="text-center text-xs text-slate-500 dark:text-slate-400 mb-2 tabular-nums"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {currentIndex + 1} of {totalReferences}
+              {totalFavorites > 0 ? (
+                <span className="text-slate-400 dark:text-slate-500"> · {totalFavorites} saved</span>
+              ) : null}
+            </p>
+          )}
           
           {/* Context Toggle Buttons - Always Visible. Small: row1 = selects, row2 = Verse + Chapter Context */}
           <div className="flex flex-wrap gap-1.5 justify-center items-center">
@@ -693,34 +704,38 @@ export default function ScriptureModal({
                   </p>
                 </div>
               )}
-              {!showingContext && scriptureText && (
-                <div className="prose max-w-none">
-                  <div
-                    className="text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl"
-                    dangerouslySetInnerHTML={{
-                      __html: scriptureText
-                        .replace(/\[(\d+)\]/g, '<sup class="text-blue-600 font-medium">$1</sup>')
-                        .replace(/\n\n/g, '</p><p class="mt-4">')
-                    }}
-                  />
-                </div>
-              )}
-              {showingContext && chapterText && (
-                <div className="prose max-w-none">
-                  <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg text-slate-700 dark:text-slate-200 text-base md:text-lg">
-                    <div className="flex items-center gap-2">
-                      <strong className="text-slate-800 dark:text-slate-100">Chapter Context:</strong>
-                      <span className="font-medium text-slate-600 dark:text-slate-200">{getChapterReference(reference)}</span>
+              {!loading && !contextLoading && !error && (
+                <>
+                  {!showingContext && scriptureText && (
+                    <div className="prose max-w-none">
+                      <div
+                        className="text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl"
+                        dangerouslySetInnerHTML={{
+                          __html: scriptureText
+                            .replace(/\[(\d+)\]/g, '<sup class="text-blue-600 font-medium">$1</sup>')
+                            .replace(/\n\n/g, '</p><p class="mt-4">')
+                        }}
+                      />
                     </div>
-                  </div>
-                  <div
-                    id="chapter-content"
-                    className="text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl"
-                    dangerouslySetInnerHTML={{
-                      __html: processChapterText(chapterText)
-                    }}
-                  />
-                </div>
+                  )}
+                  {showingContext && chapterText && (
+                    <div className="prose max-w-none">
+                      <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg text-slate-700 dark:text-slate-200 text-base md:text-lg">
+                        <div className="flex items-center gap-2">
+                          <strong className="text-slate-800 dark:text-slate-100">Chapter Context:</strong>
+                          <span className="font-medium text-slate-600 dark:text-slate-200">{getChapterReference(reference)}</span>
+                        </div>
+                      </div>
+                      <div
+                        id="chapter-content"
+                        className="text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl"
+                        dangerouslySetInnerHTML={{
+                          __html: processChapterText(chapterText)
+                        }}
+                      />
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
