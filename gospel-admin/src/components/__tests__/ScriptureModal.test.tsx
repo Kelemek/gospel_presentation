@@ -64,9 +64,6 @@ describe('ScriptureModal Component', () => {
         onNext={mockOnNext}
         hasPrevious={true}
         hasNext={true}
-        currentIndex={1}
-        totalFavorites={3}
-        totalReferences={3}
       />
     )
     

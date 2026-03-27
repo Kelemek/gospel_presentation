@@ -14,9 +14,6 @@ interface ScriptureModalProps {
   onNext?: () => void
   hasPrevious?: boolean
   hasNext?: boolean
-  currentIndex?: number
-  totalFavorites?: number
-  totalReferences?: number
   context?: {
     sectionTitle: string
     subsectionTitle: string
@@ -34,9 +31,6 @@ export default function ScriptureModal({
   onNext, 
   hasPrevious = false, 
   hasNext = false,
-  currentIndex = 0,
-  totalFavorites = 0,
-  totalReferences = 0,
   context,
   onScriptureViewed
 }: ScriptureModalProps) {
@@ -463,18 +457,6 @@ export default function ScriptureModal({
               </button>
             </div>
           </div>
-          {totalReferences > 0 && (
-            <p
-              className="text-center text-xs text-slate-500 dark:text-slate-400 mb-2 tabular-nums"
-              aria-live="polite"
-              aria-atomic="true"
-            >
-              {currentIndex + 1} of {totalReferences}
-              {totalFavorites > 0 ? (
-                <span className="text-slate-400 dark:text-slate-500"> · {totalFavorites} saved</span>
-              ) : null}
-            </p>
-          )}
           
           {/* Context Toggle Buttons - Always Visible. Small: row1 = selects, row2 = Verse + Chapter Context */}
           <div className="flex flex-wrap gap-1.5 justify-center items-center">

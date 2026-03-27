@@ -599,9 +599,6 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
         onNext={hasNext ? navigateToNext : undefined}
         hasPrevious={hasPrevious}
         hasNext={hasNext}
-        currentIndex={currentReferenceIndex}
-        totalFavorites={favoriteReferences.length}
-        totalReferences={navigationRefs.length}
         context={selectedScripture.context}
         onScriptureViewed={handleModalScriptureViewed}
       />

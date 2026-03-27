@@ -328,8 +328,6 @@ export function GospelPresentationOld() {
         onNext={navigateToNext}
         hasPrevious={hasPrevious}
         hasNext={hasNext}
-        currentIndex={currentReferenceIndex}
-        totalFavorites={favoriteReferences.length}
         context={selectedScripture.context}
       />
     </div>
