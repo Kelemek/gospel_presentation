@@ -29,6 +29,8 @@ jest.mock('@/lib/useScriptureProgress', () => ({
 
 jest.mock('@/components/ThemeToggle', () => ({ __esModule: true, default: () => null }))
 
+jest.mock('@/components/BookmarksDropdown', () => ({ __esModule: true, default: () => null }))
+
 beforeEach(() => {
   jest.clearAllMocks()
   // Basic fetch mock used for visit tracking in the component

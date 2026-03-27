@@ -25,6 +25,8 @@ jest.mock('@/lib/useScriptureProgress', () => ({
 
 jest.mock('@/components/ThemeToggle', () => ({ __esModule: true, default: () => null }))
 
+jest.mock('@/components/BookmarksDropdown', () => ({ __esModule: true, default: () => null }))
+
 // Import after mocking hooks
 import ProfileContent from '@/app/[slug]/ProfileContent'
 

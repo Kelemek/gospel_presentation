@@ -7,11 +7,13 @@ import GospelSection from '@/components/GospelSection'
 import ScriptureModal from '@/components/ScriptureModal'
 import TableOfContents from '@/components/TableOfContents'
 import ThemeToggle from '@/components/ThemeToggle'
+import BookmarksDropdown from '@/components/BookmarksDropdown'
 import { GospelSection as GospelSectionType, GospelProfile, SavedAnswer } from '@/lib/types'
 import { useScriptureProgress } from '@/lib/useScriptureProgress'
 import { logger } from '@/lib/logger'
 import { createClient } from '@/lib/supabase/client'
 import { useAlertModal } from '@/contexts/AlertModalContext'
+import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
 
 interface ProfileInfo {
   title: string
@@ -82,6 +84,26 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     const params = new URLSearchParams(window.location.search)
     setFromEditor(params.get('preview') === 'true')
   }, [isHydrated])
+
+  const sectionCount = sections?.length ?? 0
+
+  // Deep-link / bookmark: scroll to #section-* when hash is present after paint
+  useEffect(() => {
+    if (!isHydrated || sectionCount === 0 || !profileInfo?.slug) return
+
+    const scrollIfHash = () => {
+      const raw = window.location.hash.slice(1)
+      if (!raw || !raw.startsWith('section-')) return
+      scrollToTocAnchor(decodeURIComponent(raw), { behavior: 'auto' })
+    }
+
+    const timer = window.setTimeout(scrollIfHash, 0)
+    window.addEventListener('hashchange', scrollIfHash)
+    return () => {
+      window.clearTimeout(timer)
+      window.removeEventListener('hashchange', scrollIfHash)
+    }
+  }, [isHydrated, sectionCount, profileInfo?.slug])
 
   // Scripture progress tracking
   const { 
@@ -371,12 +393,12 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
             <div className="flex justify-between items-center gap-3">
               <button
                 onClick={toggleMenu}
-                className="flex items-center gap-3 px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-md transition-colors cursor-pointer"
+                className="flex items-center gap-3 px-4 py-2 rounded-md transition-colors cursor-pointer bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white"
               >
                 <div className="flex flex-col gap-1">
-                  <div className={`w-5 h-0.5 bg-white transition-transform ${isMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`}></div>
-                  <div className={`w-5 h-0.5 bg-white transition-opacity ${isMenuOpen ? 'opacity-0' : ''}`}></div>
-                  <div className={`w-5 h-0.5 bg-white transition-transform ${isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></div>
+                  <div className={`w-5 h-0.5 bg-slate-800 dark:bg-white transition-transform ${isMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`}></div>
+                  <div className={`w-5 h-0.5 bg-slate-800 dark:bg-white transition-opacity ${isMenuOpen ? 'opacity-0' : ''}`}></div>
+                  <div className={`w-5 h-0.5 bg-slate-800 dark:bg-white transition-transform ${isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></div>
                 </div>
                 <span className="font-medium">Menu</span>
               </button>
@@ -432,6 +454,11 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                     </Link>
                   </>
                 )}
+                <BookmarksDropdown
+                  sections={sections}
+                  profileTitle={profileInfo.title}
+                  profileSlug={profileInfo.slug}
+                />
                 <ThemeToggle />
               </div>
             </div>

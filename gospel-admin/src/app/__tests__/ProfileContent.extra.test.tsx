@@ -31,6 +31,8 @@ jest.mock('next/navigation', () => ({ useRouter: () => ({ refresh: refreshMock, 
 
 jest.mock('@/components/ThemeToggle', () => ({ __esModule: true, default: () => null }))
 
+jest.mock('@/components/BookmarksDropdown', () => ({ __esModule: true, default: () => null }))
+
 beforeEach(() => {
   jest.clearAllMocks()
   // Default fetch mock to accept visit tracking and other calls

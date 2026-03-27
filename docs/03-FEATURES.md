@@ -92,6 +92,13 @@ Users can:
 - The choice is saved in `localStorage` (`gospel-profile-text-size`) and scales root font size on the main site via `TextSizeContext`, `ApplyTextSize`, and `html.text-size-*` classes in `globals.css`.
 - **`/admin` routes are excluded**: text scaling is not applied on admin pages so the admin UI stays at default size.
 
+## Bookmarks (presentation profile pages)
+
+- **Header control**: On `[slug]` profile views, a **bookmark** icon sits to the left of the theme toggle. The bookmark and theme controls match the **Menu** button: **light mode** uses soft **slate-200 / hover slate-300** with **slate-800** icons and label; **dark mode** uses **slate-600 / hover slate-700** with white icons. The dropdown panel (styling aligned with the TOC text-size controls) opens **directly under the icon**, with the panel’s **right edge aligned to the icon** so it opens **leftward**; position updates on scroll/resize while open. While open, a **dimmed full-viewport backdrop** (fades in) is rendered via a **portal to `document.body`** so it covers the whole page (the sticky header’s `backdrop-blur` would otherwise clip `position: fixed` children to the header); tap/click outside closes it on all breakpoints.
+- **Add**: **+ Add bookmark** saves the current resource (`profile` title and slug) and the best-matching **table-of-contents anchor** (same `section-*` ids as the TOC) plus a short location label. Data is stored only in **`localStorage`** (`gospel-profile-bookmarks`); duplicate slug + anchor is ignored (“Already saved”).
+- **Open**: Tapping a bookmark scrolls to that anchor on the current page, or **`router.push`/`#hash`** to another saved resource; deep links scroll after load via the same offset logic as TOC links ([`scrollToTocAnchor`](gospel-admin/src/lib/scrollToTocAnchor.ts)).
+- **Remove**: Each row has a remove control; confirmation uses the same app confirm modal as other actions.
+
 ## Native app (Capacitor)
 
 The app is wrapped for iOS and Android via Capacitor (WebView loads the deployed site).

@@ -955,3 +955,25 @@ em {
 s {
   text-decoration: line-through;
 }
+
+/* BookmarksDropdown: dim page behind panel */
+@keyframes bookmarks-backdrop-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.bookmarks-dropdown-backdrop {
+  opacity: 0;
+  animation: bookmarks-backdrop-fade-in 0.2s ease-out forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bookmarks-dropdown-backdrop {
+    opacity: 1;
+    animation: none;
+  }
+}

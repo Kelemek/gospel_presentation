@@ -9,6 +9,8 @@ import { useTranslation, BibleTranslation } from '@/contexts/TranslationContext'
 import { useTextSize } from '@/contexts/TextSizeContext'
 import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
+import { stripHtmlTags } from '@/lib/stripHtmlTags'
+import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
 
 interface TableOfContentsProps {
   sections: GospelSection[]
@@ -17,35 +19,9 @@ interface TableOfContentsProps {
   onNavigate?: () => void
 }
 
-// Helper function to strip HTML tags from text
-function stripHtmlTags(html: string): string {
-  if (html == null || typeof html !== 'string') return ''
-  // Create a temporary DOM element and use textContent to extract plain text
-  const temp = document.createElement('div')
-  temp.innerHTML = html
-  return temp.textContent || temp.innerText || ''
-}
-
 // Helper to check if a title is blank (used to filter out empty TOC entries)
 function isTitleBlank(title: string | undefined): boolean {
   return !stripHtmlTags(title ?? '').trim()
-}
-
-// Scroll offset so target appears just below the sticky header (works for all viewport sizes and native safe area)
-const FALLBACK_HEADER_OFFSET = 80
-
-function getSafeAreaInsetTop(): number {
-  if (typeof window === 'undefined') return 0
-  // Create a temporary element to measure the safe area inset
-  const div = document.createElement('div')
-  div.style.paddingTop = 'env(safe-area-inset-top)'
-  div.style.position = 'fixed'
-  div.style.visibility = 'hidden'
-  document.body.appendChild(div)
-  const computed = window.getComputedStyle(div)
-  const inset = parseInt(computed.paddingTop) || 0
-  document.body.removeChild(div)
-  return inset
 }
 
 function handleTocClick(
@@ -55,22 +31,8 @@ function handleTocClick(
 ) {
   if (!href.startsWith('#')) return
   const id = href.slice(1)
-  const el = document.getElementById(id)
-  if (el) {
+  if (scrollToTocAnchor(id)) {
     e.preventDefault()
-    const header = document.querySelector('[data-profile-sticky-header]')
-    
-    let offset = FALLBACK_HEADER_OFFSET
-    if (header instanceof HTMLElement) {
-      const headerHeight = header.offsetHeight
-      // On web this will be 0, on native it will be the safe area inset (e.g. 47px)
-      const safeAreaTop = getSafeAreaInsetTop()
-      // Add safe area offset and a small buffer (8px) only if safe area is present
-      offset = headerHeight + safeAreaTop + (safeAreaTop > 0 ? 8 : 0)
-    }
-    
-    const top = el.getBoundingClientRect().top + window.scrollY - offset
-    window.scrollTo({ top, behavior: 'smooth' })
     onNavigate?.()
   }
 }
