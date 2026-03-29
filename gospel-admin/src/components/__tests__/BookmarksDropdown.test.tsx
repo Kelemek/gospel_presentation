@@ -180,7 +180,7 @@ describe('bookmarksPanelStyleFromTrigger', () => {
     })
   })
 
-  it('sits below the trigger with the panel right edge aligned to the trigger (opens left)', () => {
+  it('on narrow viewports, centers the panel horizontally below the trigger', () => {
     Object.defineProperty(window, 'innerWidth', {
       configurable: true,
       writable: true,
@@ -190,15 +190,29 @@ describe('bookmarksPanelStyleFromTrigger', () => {
     const s = bookmarksPanelStyleFromTrigger(rect)
     expect(s.top).toBe(52)
     expect(s.width).toBe(320)
+    expect(s.left).toBe(40)
+    expect(s.right).toBe('auto')
+  })
+
+  it('on md+ viewports, aligns panel right edge to the trigger (opens left)', () => {
+    Object.defineProperty(window, 'innerWidth', {
+      configurable: true,
+      writable: true,
+      value: 900,
+    })
+    const rect = { right: 390, bottom: 44 } as DOMRectReadOnly
+    const s = bookmarksPanelStyleFromTrigger(rect)
+    expect(s.top).toBe(52)
+    expect(s.width).toBe(320)
     expect(s.left).toBe(70)
     expect(s.right).toBe('auto')
   })
 
-  it('narrows the panel when the trigger is too far left for full width while keeping right edge on the trigger', () => {
+  it('on md+ narrows the panel when the trigger is too far left for full width', () => {
     Object.defineProperty(window, 'innerWidth', {
       configurable: true,
       writable: true,
-      value: 400,
+      value: 900,
     })
     const rect = { right: 100, bottom: 10 } as DOMRectReadOnly
     const s = bookmarksPanelStyleFromTrigger(rect)

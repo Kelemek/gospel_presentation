@@ -22,11 +22,30 @@ const TRIGGER_CLASS =
   'p-2 rounded-md flex items-center justify-center min-h-[36px] min-w-[36px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white transition-colors cursor-pointer'
 
 const PANEL_MARGIN = 8
+/** Below this width (Tailwind `md`), center the panel horizontally on the screen. */
+const BOOKMARKS_PANEL_CENTER_BELOW_PX = 768
 
-/** Panel sits just below the trigger; its right edge aligns with the trigger (opens leftward). */
+/** Panel sits just below the trigger. On mobile, centered horizontally; on md+, right edge aligns with the trigger. */
 export function bookmarksPanelStyleFromTrigger(rect: DOMRectReadOnly): CSSProperties {
   const vw = window.innerWidth
   const maxPreferred = Math.min(320, vw - 2 * PANEL_MARGIN)
+  const top = rect.bottom + PANEL_MARGIN
+  const maxHeight = 'min(70vh, 480px)'
+
+  if (vw < BOOKMARKS_PANEL_CENTER_BELOW_PX) {
+    const width = maxPreferred
+    const left = Math.max(PANEL_MARGIN, (vw - width) / 2)
+    return {
+      position: 'fixed',
+      zIndex: 60,
+      top,
+      left,
+      width,
+      maxHeight,
+      right: 'auto',
+    }
+  }
+
   let width = maxPreferred
   let left = rect.right - width
   if (left < PANEL_MARGIN) {
@@ -36,10 +55,10 @@ export function bookmarksPanelStyleFromTrigger(rect: DOMRectReadOnly): CSSProper
   return {
     position: 'fixed',
     zIndex: 60,
-    top: rect.bottom + PANEL_MARGIN,
+    top,
     left,
     width,
-    maxHeight: 'min(70vh, 480px)',
+    maxHeight,
     right: 'auto',
   }
 }
