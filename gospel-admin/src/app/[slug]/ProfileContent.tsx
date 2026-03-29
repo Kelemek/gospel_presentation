@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useLayoutEffect } from 'react'
+import { useState, useEffect, useCallback, useLayoutEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import GospelSection from '@/components/GospelSection'
@@ -8,7 +8,7 @@ import ScriptureModal from '@/components/ScriptureModal'
 import TableOfContents from '@/components/TableOfContents'
 import ThemeToggle from '@/components/ThemeToggle'
 import BookmarksDropdown from '@/components/BookmarksDropdown'
-import { GospelSection as GospelSectionType, GospelProfile, SavedAnswer } from '@/lib/types'
+import { GospelSection as GospelSectionType, GospelProfile, SavedAnswer, ScriptureProgressPin } from '@/lib/types'
 import { useScriptureProgress } from '@/lib/useScriptureProgress'
 import { logger } from '@/lib/logger'
 import { createClient } from '@/lib/supabase/client'
@@ -124,6 +124,20 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
   
   // Current last viewed scripture (use local state for immediate updates)
   const currentLastViewed = localLastViewed || lastViewedScripture?.reference
+
+  // Prefer hook state for pin shape: it updates synchronously when tracking writes localProgress,
+  // while localLastViewed may still be stale until after await trackScriptureView (e.g. logged-in fetch).
+  const lastViewedScripturePin: ScriptureProgressPin | undefined = useMemo(() => {
+    if (lastViewedScripture?.reference) {
+      return {
+        reference: lastViewedScripture.reference,
+        sectionId: lastViewedScripture.sectionId ?? '',
+        subsectionId: lastViewedScripture.subsectionId ?? '',
+      }
+    }
+    if (localLastViewed) return localLastViewed
+    return undefined
+  }, [localLastViewed, lastViewedScripture])
   
   // Wrapper function to reset progress and update local state immediately
   const handleClearProgress = useCallback(async () => {
@@ -239,46 +253,46 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     ])
   ) : []
 
-  const handleScriptureClick = async (reference: string) => {
+  const handleScriptureClick = async (
+    reference: string,
+    anchorSectionId?: string,
+    anchorSubsectionId?: string
+  ) => {
     // Find the context for this reference
     const refWithContext = allScriptureRefs.find(ref => ref.reference === reference)
     
     // Track scripture progress (localStorage for all; DB sync only for logged-in + non-default)
     if (profile) {
       try {
-        // Find section and subsection IDs for tracking
-        let sectionId = ''
-        let subsectionId = ''
-        
-        for (const section of sections) {
-          for (let subIndex = 0; subIndex < section.subsections.length; subIndex++) {
-            const subsection = section.subsections[subIndex]
-            
-            // Check main subsection references
-            if (subsection.scriptureReferences?.some(ref => ref.reference === reference)) {
-              sectionId = `section-${section.section}`
-              subsectionId = `${sectionId}-${subIndex}`
-              break
-            }
-            
-            // Check nested subsection references
-            if (subsection.nestedSubsections) {
-              for (const nested of subsection.nestedSubsections) {
-                if (nested.scriptureReferences?.some(ref => ref.reference === reference)) {
-                  sectionId = `section-${section.section}`
-                  subsectionId = `${sectionId}-${subIndex}`
-                  break
+        let sectionId = anchorSectionId?.trim() ?? ''
+        let subsectionId = anchorSubsectionId?.trim() ?? ''
+        if (!sectionId || !subsectionId) {
+          outer: for (const section of sections) {
+            const sid = `section-${section.section}`
+            for (let subIndex = 0; subIndex < section.subsections.length; subIndex++) {
+              const subsection = section.subsections[subIndex]
+              if (subsection.scriptureReferences?.some(ref => ref.reference === reference)) {
+                sectionId = sid
+                subsectionId = `${sid}-${subIndex}`
+                break outer
+              }
+              if (subsection.nestedSubsections) {
+                for (let n = 0; n < subsection.nestedSubsections.length; n++) {
+                  const nested = subsection.nestedSubsections[n]
+                  if (nested.scriptureReferences?.some(ref => ref.reference === reference)) {
+                    sectionId = sid
+                    subsectionId = `${sid}-${subIndex}-${n}`
+                    break outer
+                  }
                 }
               }
             }
           }
-          if (sectionId) break
         }
         
         if (sectionId && subsectionId) {
-          await trackScriptureView(reference, sectionId, subsectionId)
-          // Immediately update local state for visual feedback
           setLocalLastViewed(reference)
+          await trackScriptureView(reference, sectionId, subsectionId)
         }
       } catch (error) {
         console.warn('Failed to track scripture progress:', error)
@@ -363,9 +377,8 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     if (profile) {
       try {
         // For modal views, use generic section/subsection IDs
-        await trackScriptureView(reference, 'modal-view', 'modal-view')
-        // Immediately update local state for visual feedback
         setLocalLastViewed(reference)
+        await trackScriptureView(reference, 'modal-view', 'modal-view')
       } catch (error) {
         console.warn('Failed to track scripture progress from modal:', error)
         // Don't break the user experience
@@ -480,7 +493,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                   <GospelSection 
                     section={section}
                     onScriptureClick={handleScriptureClick}
-                    lastViewedScripture={currentLastViewed}
+                    lastViewedScripture={lastViewedScripturePin}
                     onClearProgress={handleClearProgress}
                     profileSlug={profileInfo.slug}
                     savedAnswers={profileInfo.savedAnswers}

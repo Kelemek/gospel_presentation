@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useScriptureProgress } from '../useScriptureProgress'
 
@@ -149,5 +149,86 @@ describe('useScriptureProgress', () => {
     const profile = { slug: 'p5', isDefault: false }
     render(<TestHarness profile={profile} isLoggedIn={false} />)
     expect(screen.getByTestId('last')).toHaveTextContent('Rom 8:28')
+  })
+
+  test('modal-view track does not overwrite same reference with real anchors (anonymous localStorage)', async () => {
+    const setItem = jest.fn()
+    Object.defineProperty(global, 'localStorage', {
+      value: {
+        getItem: jest.fn(() => null),
+        setItem,
+        removeItem: jest.fn(),
+        clear: jest.fn(),
+      },
+      writable: true,
+    })
+    const profile = { slug: 'pModalSkip', isDefault: false }
+
+    function Harness() {
+      const { trackScriptureView, lastViewedScripture } = useScriptureProgress(profile, false)
+      return (
+        <div>
+          <button
+            type="button"
+            onClick={async () => {
+              await trackScriptureView('John 3:16', 'section-1', 'section-1-0')
+              await trackScriptureView('John 3:16', 'modal-view', 'modal-view')
+            }}
+          >
+            track-same-ref-then-modal
+          </button>
+          <div data-testid="sub">{lastViewedScripture?.subsectionId ?? 'none'}</div>
+        </div>
+      )
+    }
+
+    render(<Harness />)
+    await userEvent.setup().click(screen.getByText('track-same-ref-then-modal'))
+    await waitFor(() => expect(screen.getByTestId('sub')).toHaveTextContent('section-1-0'))
+    for (const call of setItem.mock.calls) {
+      const payload = JSON.parse(call[1] as string)
+      expect(payload.sectionId).not.toBe('modal-view')
+      expect(payload.subsectionId).not.toBe('modal-view')
+    }
+  })
+
+  test('modal-view track for a new reference updates stored verse (anonymous localStorage)', async () => {
+    const setItem = jest.fn()
+    Object.defineProperty(global, 'localStorage', {
+      value: {
+        getItem: jest.fn(() => null),
+        setItem,
+        removeItem: jest.fn(),
+        clear: jest.fn(),
+      },
+      writable: true,
+    })
+    const profile = { slug: 'pModalNewRef', isDefault: false }
+
+    function Harness() {
+      const { trackScriptureView, lastViewedScripture } = useScriptureProgress(profile, false)
+      return (
+        <div>
+          <button
+            type="button"
+            onClick={async () => {
+              await trackScriptureView('Rom 1:1', 'section-1', 'section-1-0')
+              await trackScriptureView('Rom 8:28', 'modal-view', 'modal-view')
+            }}
+          >
+            track-then-new-modal-ref
+          </button>
+          <div data-testid="ref">{lastViewedScripture?.reference ?? 'none'}</div>
+        </div>
+      )
+    }
+
+    render(<Harness />)
+    await userEvent.setup().click(screen.getByText('track-then-new-modal-ref'))
+    await waitFor(() => expect(screen.getByTestId('ref')).toHaveTextContent('Rom 8:28'))
+    const lastPayload = JSON.parse(setItem.mock.calls[setItem.mock.calls.length - 1][1] as string)
+    expect(lastPayload.reference).toBe('Rom 8:28')
+    expect(lastPayload.sectionId).toBe('modal-view')
+    expect(lastPayload.subsectionId).toBe('modal-view')
   })
 })

@@ -57,6 +57,8 @@ Users can:
 - Pin-click to clear progress
 - Progress persisted per user/profile
 - Integrated with profile navigation
+- **Anonymous visitors**: last-viewed verse is stored in the browser (`localStorage` per profile slug). Logged-in users on non-default profiles can also sync progress to the server.
+- The last verse updates when you open a reference from the page **or** move to another verse inside the scripture modal (e.g. prev/next). The yellow highlight and pin target the **scripture pill you used** when the same reference appears in more than one place (section/subsection anchors). If progress only has a reference (e.g. some modal-only paths), every pill with that reference is highlighted.
 
 ## Profile Features
 

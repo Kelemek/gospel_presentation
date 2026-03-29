@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { GospelProfile } from './types'
 import { logger } from './logger'
 
@@ -48,6 +48,10 @@ export function useScriptureProgress(
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [localProgress, setLocalProgress] = useState<ScriptureProgress | null>(null)
+  const localProgressRef = useRef<ScriptureProgress | null>(null)
+  useEffect(() => {
+    localProgressRef.current = localProgress
+  }, [localProgress])
 
   const shouldTrack = profile && !profile.isDefault
   const storageKey = profile?.slug ? `${SCRIPTURE_PROGRESS_KEY_PREFIX}${profile.slug}` : null
@@ -88,6 +92,21 @@ export function useScriptureProgress(
     sectionId: string,
     subsectionId: string
   ) => {
+    // ScriptureModal calls onScriptureViewed after fetch with placeholder anchors. Do not overwrite
+    // a row we just wrote from a page scripture click (real section ids)—especially for anonymous users
+    // where localStorage is the only store.
+    const isModalPlaceholder = sectionId === 'modal-view' && subsectionId === 'modal-view'
+    const prevSnap = localProgressRef.current
+    if (
+      isModalPlaceholder &&
+      prevSnap &&
+      prevSnap.reference === reference &&
+      prevSnap.sectionId !== 'modal-view' &&
+      prevSnap.subsectionId !== 'modal-view'
+    ) {
+      return
+    }
+
     const progressData: ScriptureProgress = {
       reference,
       sectionId,
@@ -100,6 +119,7 @@ export function useScriptureProgress(
       try {
         localStorage.setItem(storageKey, JSON.stringify(progressData))
         setLocalProgress(progressData)
+        localProgressRef.current = progressData
       } catch {
         // ignore
       }
@@ -138,6 +158,7 @@ export function useScriptureProgress(
       try {
         localStorage.removeItem(storageKey)
         setLocalProgress(null)
+        localProgressRef.current = null
       } catch {
         // ignore
       }

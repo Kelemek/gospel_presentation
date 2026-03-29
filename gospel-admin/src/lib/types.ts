@@ -84,6 +84,11 @@ export interface GospelProfile {
   accessList?: ProfileAccess[]    // List of users with access to this profile
 }
 
+/** GospelSection pill highlight: string = match any pill with that reference; object = match that reference only in the given section/subsection anchors */
+export type ScriptureProgressPin =
+  | string
+  | Pick<NonNullable<GospelProfile['lastViewedScripture']>, 'reference' | 'sectionId' | 'subsectionId'>
+
 // Lightweight profile metadata for index operations
 export interface ProfileMetadata {
   id: string

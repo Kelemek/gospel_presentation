@@ -76,16 +76,20 @@ describe('GospelSection (extra tests)', () => {
     const btn = await screen.findByRole('button', { name: /John 3:16/i })
     expect(btn).toBeInTheDocument()
 
-    // click scripture button
+    // click scripture button (pills pass section/subsection anchors for progress)
     fireEvent.click(btn)
-    expect(onScriptureClick).toHaveBeenCalledWith('John 3:16')
+    expect(onScriptureClick).toHaveBeenCalledWith('John 3:16', 'section-s1', 'section-s1-0')
 
-    // re-render with lastViewedScripture to display the pin; pass onClearProgress
+    // re-render with anchored lastViewedScripture (same ids the pill passes on click) so pin renders
     rerender(
       <GospelSection
         section={section}
         onScriptureClick={onScriptureClick}
-        lastViewedScripture={'John 3:16'}
+        lastViewedScripture={{
+          reference: 'John 3:16',
+          sectionId: 'section-s1',
+          subsectionId: 'section-s1-0',
+        }}
         onClearProgress={onClearProgress}
         profileSlug={'test-profile'}
       />
@@ -96,6 +100,33 @@ describe('GospelSection (extra tests)', () => {
     expect(pin).toBeInTheDocument()
     fireEvent.click(pin)
     expect(onClearProgress).toHaveBeenCalled()
+  })
+
+  it('highlights only one pill when the same reference appears in two subsections and pin has anchors', async () => {
+    const section = {
+      section: 'dup',
+      title: 'Dup',
+      subsections: [
+        { title: 'A', content: '', scriptureReferences: [{ reference: 'Rom 8:28', favorite: false }] },
+        { title: 'B', content: '', scriptureReferences: [{ reference: 'Rom 8:28', favorite: false }] },
+      ],
+    }
+
+    render(
+      <GospelSection
+        section={section}
+        onScriptureClick={() => {}}
+        lastViewedScripture={{
+          reference: 'Rom 8:28',
+          sectionId: 'section-dup',
+          subsectionId: 'section-dup-1',
+        }}
+        profileSlug="profile-dup"
+      />
+    )
+
+    const pins = screen.queryAllByTitle('Click to clear progress')
+    expect(pins).toHaveLength(1)
   })
 
   it('loads saved answers, expands detail, saves successfully and clears saved state after timeout', async () => {

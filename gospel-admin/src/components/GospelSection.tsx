@@ -1,6 +1,6 @@
 'use client'
 
-import { GospelSection as GospelSectionType, Subsection, NestedSubsection, ScriptureReference, QuestionAnswer, PROFILE_VALIDATION, SavedAnswer } from '@/lib/types'
+import { GospelSection as GospelSectionType, Subsection, NestedSubsection, ScriptureReference, QuestionAnswer, PROFILE_VALIDATION, SavedAnswer, ScriptureProgressPin } from '@/lib/types'
 import ScriptureHoverModal from './ScriptureHoverModal'
 import ComaModal from './ComaModal'
 import FourRulesModal from './FourRulesModal'
@@ -13,11 +13,33 @@ const ANSWERS_STORAGE_KEY_PREFIX = 'gospel-answers-'
 const PILL_LINK_CLASS = 'px-1.5 py-0.5 font-medium text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-800/50 border border-blue-200 dark:border-blue-700 rounded transition-colors cursor-pointer whitespace-nowrap no-underline'
 const PILL_STYLE = 'display: inline; margin: 0 2px; vertical-align: baseline; font-size: inherit;'
 
+export type ScriptureClickHandler = (reference: string, sectionId?: string, subsectionId?: string) => void
+
+function scripturePinMatchesRow(
+  pin: ScriptureProgressPin | undefined,
+  ref: ScriptureReference,
+  anchorSectionId: string,
+  anchorSubsectionId: string
+): boolean {
+  if (pin == null || pin === '') return false
+  if (typeof pin === 'string') {
+    return pin === ref.reference
+  }
+  if (pin.reference !== ref.reference) return false
+  const isModalPlaceholder =
+    pin.sectionId === 'modal-view' && pin.subsectionId === 'modal-view'
+  const missingAnchors = !pin.sectionId?.trim() || !pin.subsectionId?.trim()
+  if (missingAnchors || isModalPlaceholder) {
+    return true
+  }
+  return pin.sectionId === anchorSectionId && pin.subsectionId === anchorSubsectionId
+}
+
 // Helper component to render text with COMA buttons, Four Rules button, and inline scripture references
 function TextWithComaButtons({ text, onComaClick, onScriptureClick, onFourRulesClick }: {
   text: string;
   onComaClick: () => void;
-  onScriptureClick?: (reference: string) => void;
+  onScriptureClick?: ScriptureClickHandler;
   onFourRulesClick?: () => void;
 }) {
   const containerRef = React.useRef<HTMLSpanElement>(null)
@@ -177,8 +199,8 @@ function TextWithComaButtons({ text, onComaClick, onScriptureClick, onFourRulesC
 
 interface GospelSectionProps {
   section: GospelSectionType
-  onScriptureClick: (reference: string) => void
-  lastViewedScripture?: string  // Reference of the last viewed scripture
+  onScriptureClick: ScriptureClickHandler
+  lastViewedScripture?: ScriptureProgressPin
   onClearProgress?: () => void  // Function to clear progress when pin is clicked
   profileSlug: string
   savedAnswers?: SavedAnswer[]
@@ -187,8 +209,10 @@ interface GospelSectionProps {
 
 interface ScriptureReferencesProps {
   references: ScriptureReference[]
-  onScriptureClick: (reference: string) => void
-  lastViewedScripture?: string
+  onScriptureClick: ScriptureClickHandler
+  anchorSectionId: string
+  anchorSubsectionId: string
+  lastViewedScripture?: ScriptureProgressPin
   onClearProgress?: () => void
 }
 
@@ -196,8 +220,8 @@ interface SubsectionProps {
   subsection: Subsection
   sectionId: string
   subsectionIndex: number
-  onScriptureClick: (reference: string) => void
-  lastViewedScripture?: string
+  onScriptureClick: ScriptureClickHandler
+  lastViewedScripture?: ScriptureProgressPin
   onClearProgress?: () => void
   profileSlug: string
   savedAnswers?: SavedAnswer[]
@@ -206,16 +230,17 @@ interface SubsectionProps {
 
 interface NestedSubsectionProps {
   nestedSubsection: NestedSubsection
+  sectionAnchorId: string
   nestedId: string
-  onScriptureClick: (reference: string) => void
-  lastViewedScripture?: string
+  onScriptureClick: ScriptureClickHandler
+  lastViewedScripture?: ScriptureProgressPin
   onClearProgress?: () => void
   profileSlug: string
   savedAnswers?: SavedAnswer[]
   isLoggedIn?: boolean
 }
 
-function ScriptureReferences({ references, onScriptureClick, lastViewedScripture, onClearProgress }: ScriptureReferencesProps) {
+function ScriptureReferences({ references, onScriptureClick, anchorSectionId, anchorSubsectionId, lastViewedScripture, onClearProgress }: ScriptureReferencesProps) {
   if (!references || references.length === 0) return null
 
   const handlePinClick = (e: React.MouseEvent) => {
@@ -230,7 +255,7 @@ function ScriptureReferences({ references, onScriptureClick, lastViewedScripture
     <div className="mt-3 print-scripture">
       <div className="flex flex-wrap gap-2">
         {references.map((ref, index) => {
-          const isLastViewed = lastViewedScripture === ref.reference
+          const isLastViewed = scripturePinMatchesRow(lastViewedScripture, ref, anchorSectionId, anchorSubsectionId)
           
           return (
             <div key={index} className="relative inline-block">
@@ -239,7 +264,7 @@ function ScriptureReferences({ references, onScriptureClick, lastViewedScripture
                 hoverDelayMs={2000} // 2 seconds
               >
                 <button
-                  onClick={() => onScriptureClick(ref.reference)}
+                  onClick={() => onScriptureClick(ref.reference, anchorSectionId, anchorSubsectionId)}
                   className={`px-4 py-2 text-base md:text-lg rounded-md transition-colors cursor-pointer print-compact min-h-[44px] flex items-center ${
                     isLastViewed
                       ? 'bg-yellow-200 dark:bg-yellow-900/50 hover:bg-yellow-300 dark:hover:bg-yellow-900/70 text-yellow-900 dark:text-yellow-100 border-2 border-yellow-500 dark:border-yellow-600 hover:border-yellow-600 dark:hover:border-yellow-500 font-semibold shadow-md pr-10'
@@ -272,7 +297,7 @@ interface QuestionsProps {
   questions: QuestionAnswer[]
   profileSlug: string
   savedAnswers?: Array<{ questionId: string; answer: string; answeredAt: Date }>
-  onScriptureClick?: (reference: string) => void
+  onScriptureClick?: ScriptureClickHandler
   isLoggedIn?: boolean
 }
 
@@ -553,7 +578,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
   )
 }
 
-function NestedSubsectionComponent({ nestedSubsection, nestedId, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers, isLoggedIn }: NestedSubsectionProps) {
+function NestedSubsectionComponent({ nestedSubsection, sectionAnchorId, nestedId, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers, isLoggedIn }: NestedSubsectionProps) {
   const [showComaModal, setShowComaModal] = useState(false)
   const [showFourRulesModal, setShowFourRulesModal] = useState(false)
 
@@ -584,6 +609,8 @@ function NestedSubsectionComponent({ nestedSubsection, nestedId, onScriptureClic
           <ScriptureReferences 
             references={nestedSubsection.scriptureReferences} 
             onScriptureClick={onScriptureClick} 
+            anchorSectionId={sectionAnchorId}
+            anchorSubsectionId={nestedId}
             lastViewedScripture={lastViewedScripture}
             onClearProgress={onClearProgress}
           />
@@ -636,6 +663,8 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
           <ScriptureReferences 
             references={subsection.scriptureReferences} 
             onScriptureClick={onScriptureClick} 
+            anchorSectionId={sectionId}
+            anchorSubsectionId={`${sectionId}-${subsectionIndex}`}
             lastViewedScripture={lastViewedScripture}
             onClearProgress={onClearProgress}
           />
@@ -657,6 +686,7 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
             <NestedSubsectionComponent
               key={nestedIndex}
               nestedSubsection={nestedSub}
+              sectionAnchorId={sectionId}
               nestedId={`${sectionId}-${subsectionIndex}-${nestedIndex}`}
               onScriptureClick={onScriptureClick}
               lastViewedScripture={lastViewedScripture}
