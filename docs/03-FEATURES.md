@@ -58,7 +58,7 @@ Users can:
 - Progress persisted per user/profile
 - Integrated with profile navigation
 - **Anonymous visitors**: last-viewed verse is stored in the browser (`localStorage` per profile slug). Logged-in users on non-default profiles can also sync progress to the server.
-- The last verse updates when you open a reference from the page **or** move to another verse inside the scripture modal (e.g. prev/next). The yellow highlight and pin target the **scripture pill you used** when the same reference appears in more than one place (section/subsection anchors). If progress only has a reference (e.g. some modal-only paths), every pill with that reference is highlighted.
+- The last verse updates when you open a reference from the page **or** move to another verse inside the scripture modal (e.g. prev/next). The yellow highlight and pin use **section/subsection anchors** tied to scripture *cards* (pill lists). The pill you clicked is remembered while the modal stays on that verse. **Modal prev/next** walks the profile’s ordered list of scripture cards (each card is a step even when the reference text repeats), so the pin follows the **same subsection** as the card you navigated to—not always the first duplicate on the page. With **favorite** verses only, prev/next still uses each favorite once (first matching card if a favorite appears in multiple places). If a verse exists only as inline text (not on a card), progress may still use a generic anchor and match every pill with that reference.
 
 ## Profile Features
 

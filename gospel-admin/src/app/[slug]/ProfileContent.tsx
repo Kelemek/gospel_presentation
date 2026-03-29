@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useLayoutEffect, useMemo } from 'react'
+import { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import GospelSection from '@/components/GospelSection'
@@ -14,6 +14,7 @@ import { logger } from '@/lib/logger'
 import { createClient } from '@/lib/supabase/client'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
+import { findFirstScriptureCardAnchors } from '@/lib/findFirstScriptureCardAnchors'
 
 interface ProfileInfo {
   title: string
@@ -27,6 +28,18 @@ interface ProfileContentProps {
   sections: GospelSectionType[]
   profileInfo: ProfileInfo
   profile?: GospelProfile | null  // Full profile for scripture progress tracking
+}
+
+/** One scripture card in profile order (for modal prev/next without collapsing duplicate references). */
+interface ScriptureRefNav {
+  reference: string
+  sectionId: string
+  subsectionId: string
+  context: {
+    sectionTitle: string
+    subsectionTitle: string
+    content: string
+  }
 }
 
 function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps) {
@@ -113,6 +126,13 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     isLoading: progressLoading,
     error: progressError 
   } = useScriptureProgress(profile || null, !!userEmail)
+
+  /** Anchors for the verse that opened the modal (exact pill); used so modal onScriptureViewed does not fall back to modal-view. */
+  const modalOpenAnchorsRef = useRef<{
+    reference: string
+    sectionId: string
+    subsectionId: string
+  } | null>(null)
   
   // Local state to track the current progress for immediate UI updates
   const [localLastViewed, setLocalLastViewed] = useState<string | null>(null)
@@ -138,11 +158,54 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     if (localLastViewed) return localLastViewed
     return undefined
   }, [localLastViewed, lastViewedScripture])
+
+  const handleModalScriptureViewed = useCallback(
+    async (
+      reference: string,
+      explicitAnchors?: { sectionId: string; subsectionId: string }
+    ) => {
+      if (!profile) return
+      try {
+        let sectionId = ''
+        let subsectionId = ''
+        if (explicitAnchors?.sectionId && explicitAnchors?.subsectionId) {
+          sectionId = explicitAnchors.sectionId
+          subsectionId = explicitAnchors.subsectionId
+        } else {
+          const pinned = modalOpenAnchorsRef.current
+          if (pinned?.reference === reference) {
+            sectionId = pinned.sectionId
+            subsectionId = pinned.subsectionId
+          } else if (sections) {
+            const found = findFirstScriptureCardAnchors(sections, reference)
+            if (found) {
+              sectionId = found.sectionId
+              subsectionId = found.subsectionId
+            }
+          }
+        }
+        setLocalLastViewed(reference)
+        // Pin ref before await so ScriptureModal's onScriptureViewed (after fetch) sees the right anchors
+        // (e.g. favorites prev/next + duplicate refs).
+        if (sectionId && subsectionId) {
+          modalOpenAnchorsRef.current = { reference, sectionId, subsectionId }
+          await trackScriptureView(reference, sectionId, subsectionId)
+        } else {
+          modalOpenAnchorsRef.current = null
+          await trackScriptureView(reference, 'modal-view', 'modal-view')
+        }
+      } catch (error) {
+        console.warn('Failed to track scripture progress from modal:', error)
+      }
+    },
+    [profile, sections, trackScriptureView]
+  )
   
   // Wrapper function to reset progress and update local state immediately
   const handleClearProgress = useCallback(async () => {
     await resetProgress()
     setLocalLastViewed(null)
+    modalOpenAnchorsRef.current = null
     // Refresh the page data to get updated profile from server
     router.refresh()
   }, [resetProgress, router])
@@ -229,67 +292,74 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedScripture.isOpen, favoriteReferences, currentReferenceIndex])
 
-  // Collect all scripture references with context in order (conditional on sections being available)
-  const allScriptureRefs = sections ? sections.flatMap(section => 
-    section.subsections.flatMap(subsection => [
-      ...(subsection.scriptureReferences || []).map(ref => ({
-        reference: ref.reference,
-        context: {
-          sectionTitle: section.title,
-          subsectionTitle: subsection.title,
-          content: subsection.content
-        }
-      })),
-      ...(subsection.nestedSubsections?.flatMap(nested => 
-        (nested.scriptureReferences || []).map(ref => ({
-          reference: ref.reference,
-          context: {
-            sectionTitle: section.title,
-            subsectionTitle: `${subsection.title} - ${nested.title}`,
-            content: nested.content
-          }
-        }))
-      ) || [])
-    ])
-  ) : []
+  // All scripture *cards* in profile order, with DOM anchors (duplicate references = separate entries).
+  const allScriptureRefs: ScriptureRefNav[] = sections
+    ? sections.flatMap(section => {
+        const sid = `section-${section.section}`
+        return section.subsections.flatMap((subsection, subIndex) => {
+          const subId = `${sid}-${subIndex}`
+          const main: ScriptureRefNav[] = (subsection.scriptureReferences || []).map(ref => ({
+            reference: ref.reference,
+            sectionId: sid,
+            subsectionId: subId,
+            context: {
+              sectionTitle: section.title,
+              subsectionTitle: subsection.title,
+              content: subsection.content ?? '',
+            },
+          }))
+          const nested: ScriptureRefNav[] = (subsection.nestedSubsections || []).flatMap((nested, n) => {
+            const nestedId = `${sid}-${subIndex}-${n}`
+            return (nested.scriptureReferences || []).map(ref => ({
+              reference: ref.reference,
+              sectionId: sid,
+              subsectionId: nestedId,
+              context: {
+                sectionTitle: section.title,
+                subsectionTitle: `${subsection.title} - ${nested.title}`,
+                content: nested.content ?? '',
+              },
+            }))
+          })
+          return [...main, ...nested]
+        })
+      })
+    : []
 
   const handleScriptureClick = async (
     reference: string,
     anchorSectionId?: string,
     anchorSubsectionId?: string
   ) => {
-    // Find the context for this reference
-    const refWithContext = allScriptureRefs.find(ref => ref.reference === reference)
+    let sectionId = anchorSectionId?.trim() ?? ''
+    let subsectionId = anchorSubsectionId?.trim() ?? ''
+    if (!sectionId || !subsectionId) {
+      if (sections) {
+        const found = findFirstScriptureCardAnchors(sections, reference)
+        if (found) {
+          sectionId = found.sectionId
+          subsectionId = found.subsectionId
+        }
+      }
+    }
+
+    const navEntry =
+      sectionId && subsectionId
+        ? allScriptureRefs.find(
+            r => r.reference === reference && r.sectionId === sectionId && r.subsectionId === subsectionId
+          )
+        : undefined
+    const refForModal = navEntry ?? allScriptureRefs.find(ref => ref.reference === reference)
+
+    if (sectionId && subsectionId) {
+      modalOpenAnchorsRef.current = { reference, sectionId, subsectionId }
+    } else {
+      modalOpenAnchorsRef.current = null
+    }
     
     // Track scripture progress (localStorage for all; DB sync only for logged-in + non-default)
     if (profile) {
       try {
-        let sectionId = anchorSectionId?.trim() ?? ''
-        let subsectionId = anchorSubsectionId?.trim() ?? ''
-        if (!sectionId || !subsectionId) {
-          outer: for (const section of sections) {
-            const sid = `section-${section.section}`
-            for (let subIndex = 0; subIndex < section.subsections.length; subIndex++) {
-              const subsection = section.subsections[subIndex]
-              if (subsection.scriptureReferences?.some(ref => ref.reference === reference)) {
-                sectionId = sid
-                subsectionId = `${sid}-${subIndex}`
-                break outer
-              }
-              if (subsection.nestedSubsections) {
-                for (let n = 0; n < subsection.nestedSubsections.length; n++) {
-                  const nested = subsection.nestedSubsections[n]
-                  if (nested.scriptureReferences?.some(ref => ref.reference === reference)) {
-                    sectionId = sid
-                    subsectionId = `${sid}-${subIndex}-${n}`
-                    break outer
-                  }
-                }
-              }
-            }
-          }
-        }
-        
         if (sectionId && subsectionId) {
           setLocalLastViewed(reference)
           await trackScriptureView(reference, sectionId, subsectionId)
@@ -300,67 +370,117 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
       }
     }
     
-    // Update current reference index based on navigation array
-    const navigationRefs = favoriteReferences.length > 0 ? favoriteReferences : allScriptureRefs.map(ref => ref.reference)
-    const navIndex = navigationRefs.indexOf(reference)
-    if (navIndex !== -1) {
-      setCurrentReferenceIndex(navIndex)
+    if (favoriteReferences.length > 0) {
+      const favIndex = favoriteReferences.indexOf(reference)
+      if (favIndex !== -1) setCurrentReferenceIndex(favIndex)
+    } else {
+      const allIndex = navEntry
+        ? allScriptureRefs.indexOf(navEntry)
+        : allScriptureRefs.findIndex(r => r.reference === reference)
+      if (allIndex !== -1) setCurrentReferenceIndex(allIndex)
     }
     
     setSelectedScripture({ 
       reference, 
       isOpen: true,
-      context: refWithContext?.context
+      context: refForModal?.context
     })
   }
 
-  // Determine navigation array: use favorites if available, otherwise use all references
-  const navigationRefs = favoriteReferences.length > 0 ? favoriteReferences : allScriptureRefs.map(ref => ref.reference)
+  const navListLength =
+    favoriteReferences.length > 0 ? favoriteReferences.length : allScriptureRefs.length
   
   // Navigation functions for favorite references or all references if no favorites
   const navigateToPrevious = useCallback(() => {
-    if (navigationRefs.length === 0) return
-    
-    const newIndex = (currentReferenceIndex - 1 + navigationRefs.length) % navigationRefs.length
+    if (navListLength === 0) return
+
+    if (favoriteReferences.length > 0) {
+      const newIndex = (currentReferenceIndex - 1 + navListLength) % navListLength
+      setCurrentReferenceIndex(newIndex)
+      const reference = favoriteReferences[newIndex]!
+      const entry = allScriptureRefs.find(r => r.reference === reference)
+      void handleModalScriptureViewed(
+        reference,
+        entry
+          ? { sectionId: entry.sectionId, subsectionId: entry.subsectionId }
+          : undefined
+      )
+      setSelectedScripture({
+        reference,
+        isOpen: true,
+        context: entry?.context,
+      })
+      return
+    }
+
+    const newIndex = (currentReferenceIndex - 1 + allScriptureRefs.length) % allScriptureRefs.length
     setCurrentReferenceIndex(newIndex)
-    const reference = navigationRefs[newIndex]
-    const refWithContext = allScriptureRefs.find(ref => ref.reference === reference)
-    
-    // Track the new scripture being viewed
-    handleModalScriptureViewed(reference)
-    
-    setSelectedScripture({ 
-      reference, 
-      isOpen: true,
-      context: refWithContext?.context
+    const item = allScriptureRefs[newIndex]!
+    void handleModalScriptureViewed(item.reference, {
+      sectionId: item.sectionId,
+      subsectionId: item.subsectionId,
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigationRefs, currentReferenceIndex, allScriptureRefs])
+    setSelectedScripture({
+      reference: item.reference,
+      isOpen: true,
+      context: item.context,
+    })
+  }, [
+    favoriteReferences,
+    navListLength,
+    currentReferenceIndex,
+    allScriptureRefs,
+    handleModalScriptureViewed,
+  ])
 
   const navigateToNext = useCallback(() => {
-    if (navigationRefs.length === 0) return
-    
-    const newIndex = (currentReferenceIndex + 1) % navigationRefs.length
+    if (navListLength === 0) return
+
+    if (favoriteReferences.length > 0) {
+      const newIndex = (currentReferenceIndex + 1) % navListLength
+      setCurrentReferenceIndex(newIndex)
+      const reference = favoriteReferences[newIndex]!
+      const entry = allScriptureRefs.find(r => r.reference === reference)
+      void handleModalScriptureViewed(
+        reference,
+        entry
+          ? { sectionId: entry.sectionId, subsectionId: entry.subsectionId }
+          : undefined
+      )
+      setSelectedScripture({
+        reference,
+        isOpen: true,
+        context: entry?.context,
+      })
+      return
+    }
+
+    const newIndex = (currentReferenceIndex + 1) % allScriptureRefs.length
     setCurrentReferenceIndex(newIndex)
-    const reference = navigationRefs[newIndex]
-    const refWithContext = allScriptureRefs.find(ref => ref.reference === reference)
-    
-    // Track the new scripture being viewed
-    handleModalScriptureViewed(reference)
-    
-    setSelectedScripture({ 
-      reference, 
-      isOpen: true,
-      context: refWithContext?.context
+    const item = allScriptureRefs[newIndex]!
+    void handleModalScriptureViewed(item.reference, {
+      sectionId: item.sectionId,
+      subsectionId: item.subsectionId,
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigationRefs, currentReferenceIndex, allScriptureRefs])
+    setSelectedScripture({
+      reference: item.reference,
+      isOpen: true,
+      context: item.context,
+    })
+  }, [
+    favoriteReferences,
+    navListLength,
+    currentReferenceIndex,
+    allScriptureRefs,
+    handleModalScriptureViewed,
+  ])
 
   // Navigation state: enabled if more than one reference available
-  const hasPrevious = navigationRefs.length > 1
-  const hasNext = navigationRefs.length > 1
+  const hasPrevious = navListLength > 1
+  const hasNext = navListLength > 1
 
   const closeModal = () => {
+    modalOpenAnchorsRef.current = null
     setSelectedScripture({ reference: '', isOpen: false })
   }
 
@@ -370,20 +490,6 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
 
   const closeMenu = () => {
     setIsMenuOpen(false)
-  }
-
-  // Simplified scripture tracking for modal (doesn't need section/subsection IDs)
-  const handleModalScriptureViewed = async (reference: string) => {
-    if (profile) {
-      try {
-        // For modal views, use generic section/subsection IDs
-        setLocalLastViewed(reference)
-        await trackScriptureView(reference, 'modal-view', 'modal-view')
-      } catch (error) {
-        console.warn('Failed to track scripture progress from modal:', error)
-        // Don't break the user experience
-      }
-    }
   }
 
   // Early return if required props are missing - moved after all hooks
