@@ -393,7 +393,8 @@ export default function ScriptureModal({
       <div className="bg-white dark:bg-slate-800 w-full lg:max-w-2xl xl:max-w-4xl 2xl:max-w-5xl shadow-xl flex flex-col h-full lg:h-[80vh] lg:rounded-lg min-h-0">
         
         {/* Fixed Header with Controls - Always Visible */}
-        <div className="bg-slate-100 dark:bg-slate-700 px-4 pt-safe-or-2 pb-2 border-b dark:border-slate-600 shrink-0 relative z-10 lg:rounded-t-lg" style={{ paddingTop: 'max(env(safe-area-inset-top), 8px)' }}>
+        {/* Top safe area is on the full-screen overlay only; do not repeat here (doubles inset in Capacitor/iOS). */}
+        <div className="bg-slate-100 dark:bg-slate-700 px-4 pt-2 pb-2 border-b dark:border-slate-600 shrink-0 relative z-10 lg:rounded-t-lg">
           {/* Navigation Controls - Always at Top */}
           <div className="flex justify-between items-center mb-2">
             <div className="flex-1 min-w-0" aria-hidden />
