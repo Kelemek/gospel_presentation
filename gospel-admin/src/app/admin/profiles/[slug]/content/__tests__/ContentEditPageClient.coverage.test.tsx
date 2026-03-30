@@ -63,6 +63,26 @@ const defaultProfile = {
   updatedAt: new Date().toISOString(),
 }
 
+const twoSectionProfile = {
+  ...defaultProfile,
+  gospelData: [
+    defaultProfile.gospelData[0],
+    {
+      section: '2',
+      title: 'Section Two',
+      subsections: [
+        {
+          title: 'Sub Two',
+          content: 'More content',
+          scriptureReferences: [],
+          nestedSubsections: [],
+          questions: [],
+        },
+      ],
+    },
+  ],
+}
+
 function defaultFetch(url: string | Request, opts?: RequestInit) {
   const u = typeof url === 'string' ? url : (url as Request).url ?? ''
   const method = opts?.method || 'GET'
@@ -84,6 +104,31 @@ function defaultFetch(url: string | Request, opts?: RequestInit) {
     }
   }
   return Promise.resolve({ ok: false, json: async () => ({}) })
+}
+
+function fetchWithProfile(profile: typeof defaultProfile) {
+  return (url: string | Request, opts?: RequestInit) => {
+    const u = typeof url === 'string' ? url : (url as Request).url ?? ''
+    const method = opts?.method || 'GET'
+    if (u.includes('/api/coma-template') && method === 'GET') {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ template: { questions: ['q1'], instructions: 'i' } }),
+      })
+    }
+    if (u.includes('/api/profiles/cov')) {
+      if (method === 'GET') {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ profile }),
+        })
+      }
+      if (method === 'PUT') {
+        return Promise.resolve({ ok: true, json: async () => ({}) })
+      }
+    }
+    return Promise.resolve({ ok: false, json: async () => ({}) })
+  }
 }
 
 describe('ContentEditPageClient coverage', () => {
@@ -193,7 +238,7 @@ describe('ContentEditPageClient coverage', () => {
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
     await waitFor(() => expect(screen.getByText('Section One')).toBeInTheDocument())
-    const addSectionBtn = screen.getByText('+ Add Section')
+    const addSectionBtn = screen.getByRole('button', { name: /Add section below/i })
     await userEvent.click(addSectionBtn)
     await waitFor(() => expect(screen.getByText('New Section 2')).toBeInTheDocument())
     const adminActions = screen.getByTestId('admin-actions')
@@ -492,7 +537,7 @@ describe('ContentEditPageClient coverage', () => {
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
     await waitFor(() => expect(screen.getByText('Section One')).toBeInTheDocument())
-    const addSectionBtn = screen.getByText('+ Add Section')
+    const addSectionBtn = screen.getByRole('button', { name: /Add section below/i })
     await userEvent.click(addSectionBtn)
     await waitFor(() => expect(screen.getByText('New Section 2')).toBeInTheDocument())
     const actions = screen.getByTestId('admin-actions')
@@ -500,6 +545,44 @@ describe('ContentEditPageClient coverage', () => {
     await userEvent.click(saveBtn)
     await waitFor(() => expect(showAlert).toHaveBeenCalledWith('Content saved successfully!'))
     await waitFor(() => expect(within(actions).getByText(/No Changes/)).toBeInTheDocument())
+  })
+
+  it('move section down reorders top-level sections', async () => {
+    global.fetch = jest.fn(fetchWithProfile(twoSectionProfile)) as any
+    const { ContentEditPage } = await import('../page')
+    render(<ContentEditPage slug="cov" />)
+    await waitFor(() => expect(screen.getByText('Section Two')).toBeInTheDocument())
+    const downs = screen.getAllByRole('button', { name: /Move section down/i })
+    await userEvent.click(downs[0])
+    const headings = screen.getAllByRole('heading', { level: 2 })
+    expect(headings[0]).toHaveTextContent('Section Two')
+    expect(headings[1]).toHaveTextContent('Section One')
+  })
+
+  it('add section below inserts a section after the first', async () => {
+    global.fetch = jest.fn(fetchWithProfile(twoSectionProfile)) as any
+    const { ContentEditPage } = await import('../page')
+    render(<ContentEditPage slug="cov" />)
+    await waitFor(() => expect(screen.getByText('Section Two')).toBeInTheDocument())
+    const belowBtns = screen.getAllByRole('button', { name: /Add section below/i })
+    await userEvent.click(belowBtns[0])
+    await waitFor(() => expect(screen.getByText('New Section 3')).toBeInTheDocument())
+    const headings = screen.getAllByRole('heading', { level: 2 })
+    expect(headings).toHaveLength(3)
+    expect(headings[1]).toHaveTextContent('New Section 3')
+  })
+
+  it('move section up and down are disabled at list ends', async () => {
+    global.fetch = jest.fn(fetchWithProfile(twoSectionProfile)) as any
+    const { ContentEditPage } = await import('../page')
+    render(<ContentEditPage slug="cov" />)
+    await waitFor(() => expect(screen.getByText('Section Two')).toBeInTheDocument())
+    const ups = screen.getAllByRole('button', { name: /Move section up/i })
+    const downs = screen.getAllByRole('button', { name: /Move section down/i })
+    expect(ups[0]).toBeDisabled()
+    expect(downs[downs.length - 1]).toBeDisabled()
+    expect(ups[1]).not.toBeDisabled()
+    expect(downs[0]).not.toBeDisabled()
   })
 
   it('delete second subsection removes it', async () => {

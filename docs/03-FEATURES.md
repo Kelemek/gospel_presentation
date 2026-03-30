@@ -84,6 +84,11 @@ Users can:
 - Counselee access tracked in descriptions
 - Helps with quick user identification
 
+### Content editor (admin)
+- Admins edit presentation structure at **`/admin/profiles/[slug]/content`** ([`ContentEditPageClient.tsx`](gospel-admin/src/app/admin/profiles/[slug]/content/ContentEditPageClient.tsx)).
+- **Reorder sections**: Each top-level section header includes **Up** and **Down** to swap position with the adjacent section. After any move (and after insert/delete), section numbers in stored data are renumbered in order (`"1"`, `"2"`, …) so TOC anchors stay consistent.
+- **Insert sections**: **+ Add Section** under each section card adds a new section **immediately after** that one (not only at the end). If `gospelData` is empty, a single **+ Add Section** control is shown to create the first section; there is no second duplicate control at the bottom once sections exist.
+
 ## Print
 - Print Version (Table of Contents) produces a condensed, letter-sized layout; non-essential UI is hidden.
 - **Output is always dark text on white**, regardless of app theme (light/dark). This avoids unreadable white-on-black when printing from the Android app in dark mode.

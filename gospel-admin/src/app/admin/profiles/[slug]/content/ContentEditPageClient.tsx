@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { GospelProfile, GospelSection } from '@/lib/types'
@@ -584,28 +584,38 @@ export function ContentEditPage({ slug }: ContentEditPageProps) {
   }
 
   // Functions to create new content
-  const createNewSection = () => {
+  const createNewSectionAfter = (afterSectionIndex: number) => {
     if (!profile) return
 
-    const newSectionNumber = profile.gospelData.length + 1
+    const newGospelData = [...profile.gospelData]
+    const newSectionNumber = newGospelData.length + 1
     const newSection: GospelSection = {
-      section: newSectionNumber.toString(),
+      section: '0',
       title: `New Section ${newSectionNumber}`,
       subsections: [
         {
           title: 'New Subsection',
           content: 'Add your content here...',
-          scriptureReferences: []
-        }
-      ]
+          scriptureReferences: [],
+        },
+      ],
     }
 
-    const newGospelData = [...profile.gospelData, newSection]
+    newGospelData.splice(afterSectionIndex + 1, 0, newSection)
+    newGospelData.forEach((s, i) => {
+      s.section = (i + 1).toString()
+    })
+
     setProfile({
       ...profile,
-      gospelData: newGospelData
+      gospelData: newGospelData,
     })
     setHasChanges(true)
+  }
+
+  const createNewSection = () => {
+    if (!profile) return
+    createNewSectionAfter(profile.gospelData.length - 1)
   }
 
   const createNewSubsection = (sectionIndex: number) => {
@@ -875,6 +885,44 @@ export function ContentEditPage({ slug }: ContentEditPageProps) {
     setProfile({
       ...profile,
       gospelData: newGospelData
+    })
+    setHasChanges(true)
+  }
+
+  const moveSectionUp = (sectionIndex: number) => {
+    if (!profile || sectionIndex <= 0) return
+
+    const newGospelData = [...profile.gospelData]
+    ;[newGospelData[sectionIndex - 1], newGospelData[sectionIndex]] = [
+      newGospelData[sectionIndex],
+      newGospelData[sectionIndex - 1],
+    ]
+    newGospelData.forEach((s, i) => {
+      s.section = (i + 1).toString()
+    })
+
+    setProfile({
+      ...profile,
+      gospelData: newGospelData,
+    })
+    setHasChanges(true)
+  }
+
+  const moveSectionDown = (sectionIndex: number) => {
+    if (!profile || sectionIndex >= profile.gospelData.length - 1) return
+
+    const newGospelData = [...profile.gospelData]
+    ;[newGospelData[sectionIndex], newGospelData[sectionIndex + 1]] = [
+      newGospelData[sectionIndex + 1],
+      newGospelData[sectionIndex],
+    ]
+    newGospelData.forEach((s, i) => {
+      s.section = (i + 1).toString()
+    })
+
+    setProfile({
+      ...profile,
+      gospelData: newGospelData,
     })
     setHasChanges(true)
   }
@@ -1162,8 +1210,10 @@ export function ContentEditPage({ slug }: ContentEditPageProps) {
         )}
 
         {/* Content Editor */}
-        {profile && profile.gospelData.map((section, sectionIndex) => (
-          <div key={section.section} className="bg-white border border-slate-200 rounded-lg p-4 sm:p-6 mb-6 shadow-lg">
+        {profile &&
+          profile.gospelData.map((section, sectionIndex) => (
+            <Fragment key={section.section}>
+          <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-6 mb-6 shadow-lg">
             <div className="mb-6">
               <div className="flex items-start justify-between gap-3 mb-4">
                 <div className="flex-1 min-w-0">
@@ -1178,8 +1228,29 @@ export function ContentEditPage({ slug }: ContentEditPageProps) {
                     as="h2"
                   />
                 </div>
-                <div className="flex gap-2 shrink-0">
+                <div className="flex flex-wrap gap-2 shrink-0 items-center">
                   <button
+                    type="button"
+                    onClick={() => moveSectionUp(sectionIndex)}
+                    disabled={sectionIndex === 0}
+                    className="text-slate-600 hover:text-slate-800 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium border border-slate-200 hover:border-slate-300 px-2 py-1 rounded bg-slate-50 hover:bg-slate-100 transition-colors"
+                    title="Move section up"
+                    aria-label="Move section up"
+                  >
+                    Up
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveSectionDown(sectionIndex)}
+                    disabled={sectionIndex === profile.gospelData.length - 1}
+                    className="text-slate-600 hover:text-slate-800 disabled:opacity-40 disabled:pointer-events-none text-xs font-medium border border-slate-200 hover:border-slate-300 px-2 py-1 rounded bg-slate-50 hover:bg-slate-100 transition-colors"
+                    title="Move section down"
+                    aria-label="Move section down"
+                  >
+                    Down
+                  </button>
+                  <button
+                    type="button"
                     onClick={async () => {
                       const confirmed = await showConfirm(`Are you sure you want to delete section ${section.section}. "${section.title}"? This will delete all subsections, scriptures, and questions within it. This action cannot be undone.`)
                       if (confirmed) deleteSection(sectionIndex)
@@ -1952,14 +2023,27 @@ export function ContentEditPage({ slug }: ContentEditPageProps) {
               </div>
             </div>
           </div>
-        ))}
+              <div className="text-center mt-2 mb-2 px-4">
+                <button
+                  type="button"
+                  onClick={() => createNewSectionAfter(sectionIndex)}
+                  className="text-green-600 hover:text-green-800 text-sm font-medium border border-green-200 hover:border-green-300 px-3 py-1.5 rounded bg-green-50 hover:bg-green-100 transition-colors"
+                  aria-label="Add section below"
+                >
+                  + Add Section
+                </button>
+              </div>
+            </Fragment>
+          ))}
 
-        {/* Add New Section Button */}
-        {profile && (
+        {/* First section only: no interstitial above until one exists */}
+        {profile && profile.gospelData.length === 0 && (
           <div className="text-center mt-8 mb-4 px-4">
             <button
+              type="button"
               onClick={createNewSection}
               className="text-green-600 hover:text-green-800 text-sm font-medium border border-green-200 hover:border-green-300 px-3 py-1.5 rounded bg-green-50 hover:bg-green-100 transition-colors"
+              aria-label="Add first section"
             >
               + Add Section
             </button>
