@@ -6,7 +6,10 @@ Complete guide to Bible translations, caching, and scripture retrieval.
 
 | Translation | Source | Notes |
 |-------------|--------|-------|
-| **ESV** | ESV API | Cached in database, free tier available |
+| **ESV** | ESV API | Cached in `scripture_cache`, 500-verse LRU cap |
+| **NIV** | [API.Bible](https://rest.api.bible) | Cached like ESV; requires Bible ID + API key |
+| **NLT** | API.Bible | Same as NIV |
+| **CSB** | API.Bible | Same as NIV |
 | **KJV** | Local Database | 31,102 verses, no API limit |
 | **NASB** | Local Database | 31,103 verses, no API limit |
 | **LSB** | Local Database | Legacy Standard Bible, LSBible.org |
@@ -59,15 +62,35 @@ node scripts/import-nasb-bible.js
 
 The `normalizeBookName()` function handles automatic conversion for both formats.
 
-## ESV Caching System
+## Remote API caching (ESV, NIV, NLT, CSB)
 
-ESV API responses are cached in the `scripture_cache` table to:
+ESV and API.Bible translations store responses in the `scripture_cache` table to:
 - Reduce API calls and costs
-- Stay within free tier rate limits
+- Stay within provider limits (ESV free tier: max **500 verses** in cache at once, enforced via `enforce_esv_cache_limit`; NIV/NLT/CSB each use `enforce_translation_cache_limit` with the same 500-verse cap per translation code)
 - Speed up repeated requests
-- Handle offline scenarios
 
-**Cache expires**: Configurable (typically 30 days)
+**TTL**: `ESV_CACHE_TTL_DAYS` (default 30). API.Bible rows use `API_BIBLE_CACHE_TTL_DAYS` (default **14**, per provider refresh guidance).
+
+**Setup (Supabase)**: Run [gospel-admin/sql/enable_api_bible_translations.sql](../gospel-admin/sql/enable_api_bible_translations.sql) to add `translation_settings` rows, widen `user_profiles.valid_translation`, and create `enforce_translation_cache_limit`. Enable each translation in Admin when ready.
+
+**Admin UI**: On **Admin → Usage Reports** (`/admin/reports`), the **Server scripture cache** section shows per-translation reference counts and verse totals vs. the 500-verse limit for **ESV** and each **API.Bible** translation (NIV, NLT, CSB), backed by `GET /api/admin/scripture-cache-stats`. The Translations dropdown links to that page for usage and cache details.
+
+**Env (`gospel-admin/.env.local`)**:
+- `API_BIBLE_KEY` — API.Bible token (sent as HTTP header `api-key`)
+- `API_BIBLE_BIBLE_ID_NIV`, `API_BIBLE_BIBLE_ID_NLT`, `API_BIBLE_BIBLE_ID_CSB` — each Bible’s **`id`** from the list below (not `dblId`)
+- Optional: `API_BIBLE_BASE_URL` (default `https://rest.api.bible`)
+
+**Finding Bible IDs** ([API.Bible Getting Started](https://api.bible/getting-started)): your key only returns Bibles you are licensed to use. List them with:
+
+```bash
+curl --request GET \
+  --url https://rest.api.bible/v1/bibles \
+  --header 'api-key: YOUR_API_BIBLE_KEY'
+```
+
+In the JSON response, each item in `data` includes `id` (use this in URLs as `bibles/{id}/passages/...`), plus `name` and `abbreviation` / `abbreviationLocal` so you can pick the right NIV, NLT, and CSB editions. If NIV/NLT/CSB do not appear, add those translations to your API.Bible account/plan first, then call the endpoint again.
+
+Passage requests use USFM-style IDs (e.g. `JHN.3.16`); mapping lives in `gospel-admin/src/lib/api-bible-passage-id.ts`.
 
 ## Scripture API
 
@@ -87,11 +110,9 @@ GET /api/scripture?reference=John%203:16&translation=esv
 ```
 
 ### How It Works
-1. Check local database for KJV/NASB/LSB verses
-2. If found → Return from database immediately
-3. If ESV and not found → Check cache
-4. If ESV and not cached → Call ESV API
-5. Cache result → Return to user
+1. **KJV / NASB / LSB** — Load from `bible_verses` (no `scripture_cache`).
+2. **ESV / NIV / NLT / CSB** — If cache row exists and is newer than the TTL for that provider → return cached text.
+3. On cache miss → call ESV API or API.Bible → upsert `scripture_cache` → run the matching LRU RPC (`enforce_esv_cache_limit` or `enforce_translation_cache_limit`).
 
 ### Verse Range Handling
 Scripture references can include verse ranges using hyphens or en-dashes:
@@ -102,20 +123,19 @@ The parser handles both ASCII hyphens (-) and Unicode en-dashes (–) for proper
 
 ## Adding Translations
 
-To add a new translation (NIV, NRSV, etc.):
-1. Acquire licensed data in USX format or JSON structure
-2. Create import script following the KJV/NASB pattern:
-   - Parse verses into `{translation, book, chapter, verse, text}` objects
-   - Batch insert into `bible_verses` table (500 records per batch)
-3. Update translation constants in `bible-api.ts`
-4. Add book name normalization if needed in `normalizeBookName()`
-5. Configure in translation settings UI
+**API.Bible (already wired for NIV, NLT, CSB)** — Add env vars and Bible IDs, run the SQL migration, enable rows in `translation_settings`.
+
+**New local translation (e.g. bulk import)**:
+1. Acquire licensed data in USX or similar
+2. Import into `bible_verses` (see KJV/NASB scripts)
+3. Extend `BibleTranslation` in `gospel-admin/src/lib/bible-translations.ts`, `fetchScripture` in `bible-api.ts`, and translation settings / `user_profiles` constraint via SQL
+4. Add book normalization in `normalizeBookName()` if needed
 
 ## Performance
 
 - **Local database (KJV/NASB)**: <5ms per lookup
-- **Cached ESV**: <10ms per lookup
-- **Fresh ESV API call**: 500-2000ms
+- **Cached ESV / API.Bible**: <10ms per lookup
+- **Fresh ESV or API.Bible call**: ~500–2000ms
 
 ## Attribution & Licensing
 
@@ -138,6 +158,9 @@ To add a new translation (NIV, NRSV, etc.):
 - Legacy Standard Bible Copyright ©2021 by The Lockman Foundation
 - Managed in partnership with Three Sixteen Publishing Inc.
 - Attribution: www.LSBible.org
+
+**NIV / NLT / CSB** (via API.Bible)
+- Text served under API.Bible and publisher terms; follow [API.Bible](https://rest.api.bible) and publisher attribution (shown in the scripture modal footer).
 
 ## Related Documentation
 - Full KJV details: [KJV_DATABASE.md](KJV_DATABASE.md)

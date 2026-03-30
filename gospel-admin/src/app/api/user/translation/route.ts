@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
+import { isBibleTranslation } from '@/lib/bible-translations'
 
 export async function POST(request: NextRequest) {
   try {
     const { translation } = await request.json()
 
-    if (!translation || (translation !== 'esv' && translation !== 'kjv' && translation !== 'nasb' && translation !== 'lsb')) {
+    if (!translation || !isBibleTranslation(translation)) {
       return NextResponse.json(
-        { error: 'Invalid translation. Must be "esv", "kjv", "nasb", or "lsb"' },
+        {
+          error:
+            'Invalid translation. Must be one of: esv, kjv, nasb, lsb, niv, nlt, csb',
+        },
         { status: 400 }
       )
     }

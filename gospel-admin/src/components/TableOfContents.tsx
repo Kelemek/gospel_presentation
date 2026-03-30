@@ -286,6 +286,15 @@ export default function TableOfContents({
             {enabledTranslations.includes('lsb') && (
               <option value="lsb">LSB (Legacy Standard Bible)</option>
             )}
+            {enabledTranslations.includes('niv') && (
+              <option value="niv">NIV (New International Version)</option>
+            )}
+            {enabledTranslations.includes('nlt') && (
+              <option value="nlt">NLT (New Living Translation)</option>
+            )}
+            {enabledTranslations.includes('csb') && (
+              <option value="csb">CSB (Christian Standard Bible)</option>
+            )}
           </select>
         </div>
       </div>

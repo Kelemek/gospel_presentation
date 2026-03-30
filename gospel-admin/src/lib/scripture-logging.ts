@@ -7,8 +7,9 @@
 import { NextRequest } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
+import type { BibleTranslation } from '@/lib/bible-translations'
 
-export type BibleTranslation = 'esv' | 'kjv' | 'nasb' | 'lsb'
+export type { BibleTranslation }
 
 interface ScriptureAccessLogData {
   reference: string

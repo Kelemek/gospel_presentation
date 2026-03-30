@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { BIBLE_TRANSLATION_CODES, REMOTE_SCRIPTURE_CACHE_CODES } from '@/lib/bible-translations'
+import { logger } from '@/lib/logger'
 
 interface ReportResult {
   columns: string[]
@@ -16,6 +18,13 @@ interface ReportDefinition {
 
 type SortDirection = 'asc' | 'desc' | null
 
+type CacheStatRow = {
+  count: number
+  totalVerses: number
+  verseLimit: number
+  withinLimit: boolean
+}
+
 export default function ReportsPage() {
   const [translations, setTranslations] = useState<string[]>([])
   const [selectedReport, setSelectedReport] = useState<string>('')
@@ -24,6 +33,32 @@ export default function ReportsPage() {
   const [results, setResults] = useState<ReportResult | null>(null)
   const [sortColumn, setSortColumn] = useState<string | null>(null)
   const [sortDirection, setSortDirection] = useState<SortDirection>(null)
+  const [cacheStats, setCacheStats] = useState<Record<string, CacheStatRow> | null>(null)
+  const [cacheStatsLoading, setCacheStatsLoading] = useState(true)
+  const [cacheStatsError, setCacheStatsError] = useState<string | null>(null)
+
+  async function loadCacheStats() {
+    setCacheStatsLoading(true)
+    setCacheStatsError(null)
+    try {
+      const response = await fetch('/api/admin/scripture-cache-stats')
+      const data = await response.json()
+      if (!response.ok) {
+        setCacheStatsError(data.error || 'Failed to load cache stats')
+        setCacheStats(null)
+        return
+      }
+      if (data.translations) {
+        setCacheStats(data.translations as Record<string, CacheStatRow>)
+      }
+    } catch (e) {
+      logger.error('Error loading scripture cache stats:', e)
+      setCacheStatsError('Failed to load cache stats')
+      setCacheStats(null)
+    } finally {
+      setCacheStatsLoading(false)
+    }
+  }
 
   // Fetch available translations from database on mount
   useEffect(() => {
@@ -42,22 +77,24 @@ export default function ReportsPage() {
             setSelectedReport(`${data.translations[0]}_summary`)
           } else {
             // Fallback to defaults if no translations found
-            setTranslations(['esv', 'kjv', 'nasb'])
+            setTranslations([...BIBLE_TRANSLATION_CODES])
             setSelectedReport('esv_summary')
           }
         } else {
-          // Fallback to defaults on error
-          setTranslations(['esv', 'kjv', 'nasb'])
+          setTranslations([...BIBLE_TRANSLATION_CODES])
           setSelectedReport('esv_summary')
         }
       } catch (err) {
-        // Fallback to defaults on error
-        setTranslations(['esv', 'kjv', 'nasb'])
+        setTranslations([...BIBLE_TRANSLATION_CODES])
         setSelectedReport('esv_summary')
       }
     }
 
     fetchTranslations()
+  }, [])
+
+  useEffect(() => {
+    loadCacheStats()
   }, [])
 
   // Build report list from available translations and generic reports
@@ -220,6 +257,61 @@ export default function ReportsPage() {
               ← Back
             </button>
           </div>
+        </div>
+
+        {/* Server scripture cache (ESV + API.Bible) */}
+        <div className="mb-6 bg-white rounded-lg shadow-sm border border-slate-200 p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Server scripture cache</h2>
+              <p className="text-sm text-slate-600 mt-1">
+                ESV and each API.Bible translation (NIV, NLT, CSB) store passages in{' '}
+                <code className="text-xs bg-slate-100 px-1 rounded">scripture_cache</code> with a{' '}
+                <strong>500-verse</strong> limit per translation (LRU eviction).
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => loadCacheStats()}
+              disabled={cacheStatsLoading}
+              className="shrink-0 px-3 py-1.5 text-sm font-medium bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-800 rounded-lg transition-colors"
+            >
+              {cacheStatsLoading ? 'Refreshing…' : 'Refresh'}
+            </button>
+          </div>
+          {cacheStatsError && (
+            <p className="text-sm text-red-700 mb-3">{cacheStatsError}</p>
+          )}
+          {cacheStatsLoading && !cacheStats ? (
+            <p className="text-sm text-slate-500">Loading cache stats…</p>
+          ) : cacheStats ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              {REMOTE_SCRIPTURE_CACHE_CODES.map((code) => {
+                const row = cacheStats[code]
+                if (!row) return null
+                const label = code === 'esv' ? 'ESV' : `${code.toUpperCase()} (API.Bible)`
+                return (
+                  <div
+                    key={code}
+                    className="rounded-lg border border-slate-200 bg-slate-50 p-4"
+                  >
+                    <h3 className="text-sm font-semibold text-slate-900">{label}</h3>
+                    <p className="text-sm text-slate-700 mt-2">
+                      <span className="text-slate-500">References:</span> {row.count}
+                    </p>
+                    <p
+                      className={`text-sm font-medium mt-1 ${
+                        row.withinLimit ? 'text-green-700' : 'text-red-700'
+                      }`}
+                    >
+                      Verses cached: {row.totalVerses}/{row.verseLimit}
+                      {row.withinLimit ? ' — Compliant' : ' — Over limit'}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+          ) : null}
         </div>
 
         {/* Main Content */}

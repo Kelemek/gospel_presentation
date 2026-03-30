@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { BIBLE_TRANSLATION_CODES } from '@/lib/bible-translations'
 import { createAdminClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
@@ -92,9 +93,8 @@ export async function POST(request: NextRequest) {
         .select('translation')
       
       if (fetchError) {
-        // If table doesn't exist, return defaults
         return NextResponse.json({
-          translations: ['esv', 'kjv', 'nasb']
+          translations: [...BIBLE_TRANSLATION_CODES],
         })
       }
       
@@ -108,7 +108,8 @@ export async function POST(request: NextRequest) {
       ).sort()
       
       return NextResponse.json({
-        translations: uniqueTranslations.length > 0 ? uniqueTranslations : ['esv', 'kjv', 'nasb']
+        translations:
+          uniqueTranslations.length > 0 ? uniqueTranslations : [...BIBLE_TRANSLATION_CODES],
       })
     }
 

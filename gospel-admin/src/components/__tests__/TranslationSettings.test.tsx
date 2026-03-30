@@ -9,9 +9,8 @@ describe('TranslationSettings', () => {
     ;(global as any).fetch = jest.fn()
   })
 
-  it('loads settings and ESV count then shows panel', async () => {
+  it('loads settings then shows panel', async () => {
     ;(global.fetch as jest.Mock).mockImplementation((url: string) => {
-      if (url.includes('esv-cache-count')) return Promise.resolve({ ok: true, json: async () => ({ count: 5, totalVerses: 100, withinLimit: true }) })
       if (url.includes('translation-settings')) return Promise.resolve({ ok: true, json: async () => ({ settings: [{ translation_code: 'esv', translation_name: 'ESV', is_enabled: true, display_order: 1 }] }) })
       return Promise.resolve({ ok: false })
     })
@@ -22,8 +21,7 @@ describe('TranslationSettings', () => {
 
   it('handles load errors and still shows UI', async () => {
     ;(global.fetch as jest.Mock).mockImplementation((url: string) => {
-      if (url.includes('esv-cache-count')) return Promise.reject(new Error('net'))
-      if (url.includes('translation-settings')) return Promise.resolve({ ok: true, json: async () => ({ settings: [] }) })
+      if (url.includes('translation-settings')) return Promise.reject(new Error('net'))
       return Promise.resolve({ ok: false })
     })
     render(<TranslationSettings />)
@@ -33,7 +31,6 @@ describe('TranslationSettings', () => {
   it('opens dropdown and toggles LSB; shows alert on PUT failure', async () => {
     const { showAlert } = (global as any).__alertModalMocks
     ;(global.fetch as jest.Mock).mockImplementation((url: string, opts?: RequestInit) => {
-      if (url.includes('esv-cache-count')) return Promise.resolve({ ok: true, json: async () => ({ count: 0, totalVerses: 0, withinLimit: true }) })
       if (url.includes('translation-settings') && opts?.method === 'PUT') return Promise.resolve({ ok: false, json: async () => ({ error: 'Forbidden' }) })
       if (url.includes('translation-settings')) return Promise.resolve({ ok: true, json: async () => ({ settings: [{ translation_code: 'esv', translation_name: 'ESV', is_enabled: true, display_order: 1 }, { translation_code: 'lsb', translation_name: 'LSB', is_enabled: true, display_order: 2 }] }) })
       return Promise.resolve({ ok: false })
@@ -48,7 +45,6 @@ describe('TranslationSettings', () => {
 
   it('updates local state when PUT succeeds', async () => {
     ;(global.fetch as jest.Mock).mockImplementation((url: string, opts?: RequestInit) => {
-      if (url.includes('esv-cache-count')) return Promise.resolve({ ok: true, json: async () => ({ count: 0, totalVerses: 0, withinLimit: true }) })
       if (url.includes('translation-settings') && opts?.method === 'PUT') return Promise.resolve({ ok: true })
       if (url.includes('translation-settings')) return Promise.resolve({ ok: true, json: async () => ({ settings: [{ translation_code: 'esv', translation_name: 'ESV', is_enabled: true, display_order: 1 }, { translation_code: 'lsb', translation_name: 'LSB', is_enabled: true, display_order: 2 }] }) })
       return Promise.resolve({ ok: false })

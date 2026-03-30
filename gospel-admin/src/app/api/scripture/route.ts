@@ -1,66 +1,77 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { fetchScripture, BibleTranslation } from '@/lib/bible-api'
+import { fetchScripture } from '@/lib/bible-api'
+import type { BibleTranslation } from '@/lib/bible-translations'
+import { isApiBibleTranslation, isBibleTranslation } from '@/lib/bible-translations'
 import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/server'
-import { getTotalEsvCacheVerseCount } from '@/lib/verse-counter'
+import { getTotalCacheVerseCountForTranslation, getTotalEsvCacheVerseCount } from '@/lib/verse-counter'
 import { logScriptureAccess, getSessionId } from '@/lib/scripture-logging'
 
-// Cache configuration
-// ESV API free tier: max 500 verses (we cache to stay compliant)
-// KJV/NASB are served directly from bible_verses table (no caching needed)
-const CACHE_TTL_DAYS = 30 // Number of days to keep cached entries
+const ESV_CACHE_TTL_DAYS = parseInt(process.env.ESV_CACHE_TTL_DAYS || '30', 10)
+const API_BIBLE_CACHE_TTL_DAYS = parseInt(process.env.API_BIBLE_CACHE_TTL_DAYS || '14', 10)
+
+function cacheTtlDaysForTranslation(translation: BibleTranslation): number {
+  if (translation === 'esv') return ESV_CACHE_TTL_DAYS
+  if (isApiBibleTranslation(translation)) return API_BIBLE_CACHE_TTL_DAYS
+  return ESV_CACHE_TTL_DAYS
+}
+
+function isDbTranslation(t: BibleTranslation): boolean {
+  return t === 'kjv' || t === 'nasb' || t === 'lsb'
+}
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const reference = searchParams.get('reference')
-  const translation = (searchParams.get('translation') || 'esv') as BibleTranslation
-  const profileSlug = searchParams.get('profile') || undefined
+  const rawTranslation = searchParams.get('translation') || 'esv'
+  const translation = rawTranslation as BibleTranslation
 
   if (!reference) {
     return NextResponse.json({ error: 'Scripture reference is required' }, { status: 400 })
   }
 
-  // Validate translation
-  if (translation !== 'esv' && translation !== 'kjv' && translation !== 'nasb' && translation !== 'lsb') {
-    return NextResponse.json({ error: 'Invalid translation. Must be "esv", "kjv", "nasb", or "lsb"' }, { status: 400 })
+  if (!isBibleTranslation(translation)) {
+    return NextResponse.json(
+      {
+        error:
+          'Invalid translation. Must be one of: esv, kjv, nasb, lsb, niv, nlt, csb',
+      },
+      { status: 400 }
+    )
   }
 
-  // Get session ID for tracking
   const sessionId = getSessionId(request)
 
   try {
-    // KJV, NASB, and LSB are served directly from database, no caching needed
-    if (translation === 'kjv' || translation === 'nasb' || translation === 'lsb') {
+    if (isDbTranslation(translation)) {
       const result = await fetchScripture(reference, translation)
-      
-      // Log the access (async, non-blocking)
+
       logScriptureAccess({
         reference,
-        translation: translation as BibleTranslation,
+        translation,
         sessionId,
-        request
-      }).catch(err => logger.warn('Failed to log scripture access:', err))
-      
+        request,
+      }).catch((err) => logger.warn('Failed to log scripture access:', err))
+
       return NextResponse.json(
-        { 
+        {
           reference: result.reference,
           text: result.text,
           translation: result.translation,
-          cached: false
+          cached: false,
         },
         {
           headers: {
-            'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800'
-          }
+            'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
+          },
         }
       )
     }
 
-    // ESV: Check cache first (use admin client to bypass RLS)
     const supabase = createAdminClient()
-    
+    const ttlDays = cacheTtlDaysForTranslation(translation)
     const cutoffDate = new Date()
-    cutoffDate.setDate(cutoffDate.getDate() - CACHE_TTL_DAYS)
+    cutoffDate.setDate(cutoffDate.getDate() - ttlDays)
 
     const { data: cachedData, error: cacheError } = await supabase
       .from('scripture_cache' as any)
@@ -72,111 +83,138 @@ export async function GET(request: NextRequest) {
 
     if (cachedData && !cacheError) {
       logger.debug(`✅ Cache hit: ${reference} (${translation})`)
-      
-      // Log the access (async, non-blocking)
+
       logScriptureAccess({
         reference,
-        translation: translation as BibleTranslation,
+        translation,
         sessionId,
-        request
-      }).catch(err => logger.warn('Failed to log scripture access:', err))
-      
+        request,
+      }).catch((err) => logger.warn('Failed to log scripture access:', err))
+
       return NextResponse.json(
-        { 
+        {
           reference,
-          text: (cachedData as any).text,
+          text: (cachedData as { text: string }).text,
           translation,
-          cached: true
+          cached: true,
         },
         {
           headers: {
-            'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800'
-          }
+            'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
+          },
         }
       )
     }
 
-    // Cache miss - fetch from ESV API
-    logger.debug(`❌ Cache miss: ${reference} (${translation}) - fetching from ESV API`)
+    logger.debug(`❌ Cache miss: ${reference} (${translation}) - fetching from remote API`)
     const result = await fetchScripture(reference, translation)
-    
-    // Store in cache (upsert to handle duplicates)
-    const { error: insertError } = await (supabase
-      .from('scripture_cache' as any)
-      .upsert as any)(
-        {
-          reference,
-          translation,
-          text: result.text,
-          cached_at: new Date().toISOString()
-        },
-        {
-          onConflict: 'reference,translation'
-        }
-      )
+
+    const { error: insertError } = await (supabase.from('scripture_cache' as any).upsert as any)(
+      {
+        reference,
+        translation,
+        text: result.text,
+        cached_at: new Date().toISOString(),
+      },
+      {
+        onConflict: 'reference,translation',
+      }
+    )
 
     if (insertError) {
       logger.error('Failed to cache scripture:', insertError)
-      // Continue anyway - caching failure shouldn't break the request
     } else {
       logger.info(`💾 Cached: ${reference} (${translation})`)
-      
-      // Enforce 500-verse limit for ESV (free tier restriction)
-      // Get actual verse count from cache
-      const totalVerses = await getTotalEsvCacheVerseCount(supabase)
-      
-      const { data: evictedCount, error: lruError } = await (supabase.rpc as any)(
-        'enforce_esv_cache_limit',
-        { 
-          p_current_total_verses: totalVerses,
-          p_max_verses: 500
+
+      if (translation === 'esv') {
+        const totalVerses = await getTotalEsvCacheVerseCount(supabase)
+        const { data: evictedCount, error: lruError } = await (supabase.rpc as any)(
+          'enforce_esv_cache_limit',
+          {
+            p_current_total_verses: totalVerses,
+            p_max_verses: 500,
+          }
+        )
+        if (lruError) {
+          logger.error('Failed to enforce ESV cache limit:', lruError)
+        } else if (evictedCount > 0) {
+          logger.info(
+            `🗑️ Evicted ${evictedCount} old ESV cache entries (was ${totalVerses} verses, limit 500)`
+          )
         }
-      )
-      if (lruError) {
-        logger.error('Failed to enforce cache limit:', lruError)
-      } else if (evictedCount > 0) {
-        logger.info(`🗑️ Evicted ${evictedCount} old ESV cache entries (was ${totalVerses} verses, limit 500)`)
+      } else {
+        const totalVerses = await getTotalCacheVerseCountForTranslation(supabase, translation)
+        const { data: evictedCount, error: lruError } = await (supabase.rpc as any)(
+          'enforce_translation_cache_limit',
+          {
+            p_translation: translation,
+            p_current_total_verses: totalVerses,
+            p_max_verses: 500,
+          }
+        )
+        if (lruError) {
+          logger.error(`Failed to enforce ${translation} cache limit:`, lruError)
+        } else if (evictedCount > 0) {
+          logger.info(
+            `🗑️ Evicted ${evictedCount} old ${translation} cache entries (was ${totalVerses} verses, limit 500)`
+          )
+        }
       }
     }
-    
-    // Log the ESV access (async, non-blocking)
+
     logScriptureAccess({
       reference,
-      translation: translation as BibleTranslation,
+      translation,
       sessionId,
-      request
-    }).catch(err => logger.warn('Failed to log scripture access:', err))
-    
+      request,
+    }).catch((err) => logger.warn('Failed to log scripture access:', err))
+
     return NextResponse.json(
-      { 
+      {
         reference: result.reference,
         text: result.text,
         translation: result.translation,
-        cached: false
+        cached: false,
       },
       {
         headers: {
-          'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800'
-        }
+          'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
+        },
       }
     )
   } catch (error) {
-  logger.error('Scripture API error:', error)
-    // Preserve specific error messages and map them to expected HTTP status codes
+    logger.error('Scripture API error:', error)
     if (error instanceof Error) {
       const msg = error.message || 'Failed to fetch scripture text'
       if (/ESV API token not configured/i.test(msg)) {
         return NextResponse.json({ error: msg }, { status: 500 })
       }
+      if (/API\.Bible key not configured|API\.Bible Bible ID not configured/i.test(msg)) {
+        return NextResponse.json({ error: msg }, { status: 500 })
+      }
       if (/Scripture text not found|Make sure the translation has been imported/i.test(msg)) {
         return NextResponse.json({ error: msg }, { status: 404 })
+      }
+      if (/Invalid scripture reference format:/i.test(msg)) {
+        return NextResponse.json({ error: msg }, { status: 400 })
+      }
+      if (/^ESV API error:/i.test(msg)) {
+        return NextResponse.json({ error: msg }, { status: 500 })
+      }
+      if (/^API\.Bible error:/i.test(msg)) {
+        return NextResponse.json({ error: msg }, { status: 500 })
       }
       if (/Database error/i.test(msg)) {
         return NextResponse.json({ error: 'Database error occurred', details: msg }, { status: 500 })
       }
-      return NextResponse.json({ error: 'Failed to fetch scripture text', details: msg }, { status: 500 })
+      return NextResponse.json(
+        { error: 'Failed to fetch scripture text', details: msg },
+        { status: 500 }
+      )
     }
-    // Non-Error thrown values (e.g. throw 'boom') should return a stable details message
-    return NextResponse.json({ error: 'Failed to fetch scripture text', details: 'Unknown error' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Failed to fetch scripture text', details: 'Unknown error' },
+      { status: 500 }
+    )
   }
 }

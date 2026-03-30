@@ -1,9 +1,14 @@
 // Bible API service for fetching scripture from multiple translations
-// Supports ESV (api.esv.org) and local database for KJV/NASB
+// Supports ESV (api.esv.org), API.Bible (NIV/NLT/CSB), and local database for KJV/NASB/LSB
 
-export type BibleTranslation = 'esv' | 'kjv' | 'nasb' | 'lsb'
+import type { ApiBibleTranslation, BibleTranslation } from '@/lib/bible-translations'
+import { formatApiBiblePassageText } from '@/lib/api-bible-format'
+import { referenceToApiBiblePassageId } from '@/lib/api-bible-passage-id'
+import { parseReference } from '@/lib/parse-scripture-reference'
 import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/server'
+
+export type { BibleTranslation } from '@/lib/bible-translations'
 
 interface ScriptureResult {
   reference: string
@@ -26,7 +31,7 @@ async function fetchFromESV(reference: string): Promise<ScriptureResult> {
     `https://api.esv.org/v3/passage/text/?q=${encodeURIComponent(cleanReference)}&include-headings=false&include-footnotes=false&include-verse-numbers=true&include-short-copyright=false&include-passage-references=false`,
     {
       headers: {
-        'Authorization': `Token ${apiToken}`,
+        Authorization: `Token ${apiToken}`,
         'Content-Type': 'application/json',
       },
     }
@@ -37,37 +42,72 @@ async function fetchFromESV(reference: string): Promise<ScriptureResult> {
   }
 
   const data = await response.json()
-  
+
   if (data.passages && data.passages.length > 0) {
     return {
       reference: cleanReference,
       text: data.passages[0].trim(),
-      translation: 'esv'
+      translation: 'esv',
     }
-  } else {
-    throw new Error('Scripture text not found')
   }
+  throw new Error('Scripture text not found')
+}
+
+const API_BIBLE_ID_ENV: Record<ApiBibleTranslation, string> = {
+  niv: 'API_BIBLE_BIBLE_ID_NIV',
+  nlt: 'API_BIBLE_BIBLE_ID_NLT',
+  csb: 'API_BIBLE_BIBLE_ID_CSB',
 }
 
 /**
- * Parse a scripture reference into components
- * Examples: "John 3:16", "Genesis 1:1-3", "Psalm 23", "Isaiah 40:25–26", "Isaiah 44:6–7a"
- * Handles both hyphens (-) and en dashes (–) in verse ranges
- * Strips letter suffixes like "a", "b" from verse numbers
+ * Fetch scripture from API.Bible (NIV, NLT, CSB).
  */
-function parseReference(reference: string): { book: string; chapter: number; verseStart: number | null; verseEnd: number | null } | null {
-  // Normalize en dashes to hyphens and remove letter suffixes
-  const normalized = reference.replace(/–/g, '-').replace(/(\d+)[a-z]+/g, '$1')
-  
-  // Handle formats like "John 3:16" or "Genesis 1:1-3" or "Psalm 23"
-  const match = normalized.match(/^(.+?)\s+(\d+)(?::(\d+)(?:-(\d+))?)?$/)
-  if (!match) return null
-  
+async function fetchFromApiBible(
+  reference: string,
+  translation: ApiBibleTranslation
+): Promise<ScriptureResult> {
+  const apiKey = process.env.API_BIBLE_KEY
+  if (!apiKey) {
+    throw new Error('API.Bible key not configured')
+  }
+
+  const envName = API_BIBLE_ID_ENV[translation]
+  const bibleId = process.env[envName]
+  if (!bibleId) {
+    throw new Error(`API.Bible Bible ID not configured (${envName})`)
+  }
+
+  const passageId = referenceToApiBiblePassageId(reference)
+  if (!passageId) {
+    throw new Error(`Invalid scripture reference format: ${reference}`)
+  }
+
+  const base = (process.env.API_BIBLE_BASE_URL || 'https://rest.api.bible').replace(/\/$/, '')
+  const url = `${base}/v1/bibles/${encodeURIComponent(bibleId)}/passages/${encodeURIComponent(passageId)}?content-type=text&include-verse-numbers=true`
+
+  const response = await fetch(url, {
+    headers: {
+      'api-key': apiKey,
+    },
+  })
+
+  if (response.status === 404) {
+    throw new Error('Scripture text not found')
+  }
+  if (!response.ok) {
+    throw new Error(`API.Bible error: ${response.status}`)
+  }
+
+  const payload = (await response.json()) as { data?: { content?: string } }
+  const content = payload?.data?.content
+  if (typeof content !== 'string' || !content.trim()) {
+    throw new Error('Scripture text not found')
+  }
+
   return {
-    book: match[1].trim(),
-    chapter: parseInt(match[2]),
-    verseStart: match[3] ? parseInt(match[3]) : null,
-    verseEnd: match[4] ? parseInt(match[4]) : null
+    reference: reference.trim(),
+    text: formatApiBiblePassageText(content),
+    translation,
   }
 }
 
@@ -79,8 +119,7 @@ function parseReference(reference: string): { book: string; chapter: number; ver
  */
 function normalizeBookName(book: string, translation: BibleTranslation): string {
   const key = book.toLowerCase()
-  
-  // KJV-specific normalizations (uses Roman numerals)
+
   if (translation === 'kjv') {
     const kjvNormalizations: Record<string, string> = {
       '1 samuel': 'I Samuel',
@@ -100,19 +139,18 @@ function normalizeBookName(book: string, translation: BibleTranslation): string 
       '1 john': 'I John',
       '2 john': 'II John',
       '3 john': 'III John',
-      'revelation': 'Revelation of John',
+      revelation: 'Revelation of John',
       'song of songs': 'Song of Solomon',
       'song of sol': 'Song of Solomon',
     }
     return kjvNormalizations[key] || book
   }
-  
-  // NASB and LSB keep Arabic numerals, just normalize common variations
+
   const commonNormalizations: Record<string, string> = {
     'song of songs': 'Song of Solomon',
     'song of sol': 'Song of Solomon',
   }
-  
+
   return commonNormalizations[key] || book
 }
 
@@ -122,19 +160,16 @@ function normalizeBookName(book: string, translation: BibleTranslation): string 
  */
 async function fetchFromDatabase(reference: string, translation: BibleTranslation): Promise<ScriptureResult> {
   const supabase = createAdminClient()
-  
-  // Parse the reference (e.g., "John 3:16" or "Genesis 1:1-3")
+
   const parsed = parseReference(reference)
   if (!parsed) {
     throw new Error(`Invalid scripture reference format: ${reference}`)
   }
-  
+
   const { book, chapter, verseStart, verseEnd } = parsed
-  
-  // Normalize book name for database lookup
+
   const normalizedBook = normalizeBookName(book, translation)
-  
-  // Fetch verses from database
+
   let query = supabase
     .from('bible_verses')
     .select('verse, text')
@@ -142,7 +177,7 @@ async function fetchFromDatabase(reference: string, translation: BibleTranslatio
     .eq('book', normalizedBook)
     .eq('chapter', chapter)
     .order('verse', { ascending: true })
-  
+
   if (verseStart !== null) {
     query = query.gte('verse', verseStart)
     if (verseEnd !== null) {
@@ -151,26 +186,25 @@ async function fetchFromDatabase(reference: string, translation: BibleTranslatio
       query = query.eq('verse', verseStart)
     }
   }
-  
+
   const { data, error } = await query
-  
+
   if (error) {
     throw new Error(`Database error: ${error.message}`)
   }
-  
+
   if (!data || data.length === 0) {
-    throw new Error(`Scripture text not found in database for ${translation.toUpperCase()}. Make sure the translation has been imported.`)
+    throw new Error(
+      `Scripture text not found in database for ${translation.toUpperCase()}. Make sure the translation has been imported.`
+    )
   }
-  
-  // Format the verses with verse numbers
-  const formattedText = data
-    .map((v: any) => `[${v.verse}] ${v.text}`)
-    .join(' ')
-  
+
+  const formattedText = data.map((v: { verse: number; text: string }) => `[${v.verse}] ${v.text}`).join(' ')
+
   return {
     reference: reference.trim(),
     text: formattedText,
-    translation
+    translation,
   }
 }
 
@@ -178,19 +212,21 @@ async function fetchFromDatabase(reference: string, translation: BibleTranslatio
  * Fetch scripture text from the specified translation
  */
 export async function fetchScripture(
-  reference: string, 
+  reference: string,
   translation: BibleTranslation = 'esv'
 ): Promise<ScriptureResult> {
   switch (translation) {
     case 'esv':
       return fetchFromESV(reference)
+    case 'niv':
+    case 'nlt':
+    case 'csb':
+      logger.debug(`Fetching ${reference} (${translation}) from API.Bible`)
+      return fetchFromApiBible(reference, translation)
     case 'kjv':
     case 'nasb':
     case 'lsb':
-      // Fetch from local database
       logger.debug(`Fetching ${reference} (${translation}) from local database`)
       return await fetchFromDatabase(reference, translation)
-    default:
-      throw new Error(`Unsupported translation: ${translation}`)
   }
 }

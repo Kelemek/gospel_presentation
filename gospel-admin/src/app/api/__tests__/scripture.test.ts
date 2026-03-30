@@ -34,7 +34,8 @@ jest.mock('@/lib/supabase/server', () => ({
 }))
 
 jest.mock('@/lib/verse-counter', () => ({
-  getTotalEsvCacheVerseCount: jest.fn().mockResolvedValue(250)
+  getTotalEsvCacheVerseCount: jest.fn().mockResolvedValue(250),
+  getTotalCacheVerseCountForTranslation: jest.fn().mockResolvedValue(120),
 }))
 
 jest.mock('@/lib/bible-api', () => ({
@@ -44,6 +45,12 @@ jest.mock('@/lib/bible-api', () => ({
         reference: 'John 3:16',
         text: 'For God so loved the world...',
         translation: 'esv'
+      }
+    } else if (translation === 'niv' || translation === 'nlt' || translation === 'csb') {
+      return {
+        reference: reference || 'John 3:16',
+        text: '[16] For God so loved the world...',
+        translation
       }
     } else if (translation === 'kjv') {
       return {
@@ -140,6 +147,37 @@ describe('/api/scripture', () => {
     expect(data.reference).toBe('John 3:16')
     expect(data.translation).toBe('esv')
     expect(data.cached).toBe(false)
+  })
+
+  it('returns scripture when NIV responds on cache miss and enforces cache limit', async () => {
+    process.env.ESV_API_TOKEN = 'test-token'
+
+    const req = new NextRequest('http://localhost:3000/api/scripture?reference=John+3:16&translation=niv')
+    const res = await GET(req as any)
+    const data = await res.json()
+    expect(res.status).toBe(200)
+    expect(data.translation).toBe('niv')
+    expect(data.cached).toBe(false)
+    expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+      'enforce_translation_cache_limit',
+      expect.objectContaining({
+        p_translation: 'niv',
+        p_current_total_verses: 120,
+        p_max_verses: 500,
+      })
+    )
+  })
+
+  it('returns 500 when API.Bible is not configured for NIV', async () => {
+    process.env.ESV_API_TOKEN = 'test-token'
+    const { fetchScripture } = require('@/lib/bible-api')
+    fetchScripture.mockRejectedValueOnce(new Error('API.Bible key not configured'))
+
+    const req = new NextRequest('http://localhost:3000/api/scripture?reference=John+3:16&translation=niv')
+    const res = await GET(req as any)
+    const data = await res.json()
+    expect(res.status).toBe(500)
+    expect(data.error).toMatch(/API\.Bible key not configured/i)
   })
 
 

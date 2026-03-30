@@ -3,8 +3,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { logger } from '@/lib/logger'
 import { createClient } from '@/lib/supabase/client'
+import type { BibleTranslation } from '@/lib/bible-translations'
+import { isBibleTranslation } from '@/lib/bible-translations'
 
-export type BibleTranslation = 'esv' | 'kjv' | 'nasb' | 'lsb'
+export type { BibleTranslation }
 
 interface TranslationContextType {
   translation: BibleTranslation
@@ -51,34 +53,57 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
 
         // 1. Read from localStorage first (instant)
         const fromStorage = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null
-        const validStorage = fromStorage === 'esv' || fromStorage === 'kjv' || fromStorage === 'nasb' || fromStorage === 'lsb' ? fromStorage : null
+        const validStorage = isBibleTranslation(fromStorage) ? fromStorage : null
 
         const { data: { user } } = await supabase.auth.getUser()
 
         let preferredTranslation: string | null = null
 
         if (user) {
-          // Logged in: prefer DB, fall back to localStorage
           const { data: profile } = await supabase
             .from('user_profiles')
             .select('preferred_translation')
             .eq('id', user.id)
             .single() as { data: { preferred_translation: string | null } | null }
           const fromDb = profile?.preferred_translation || null
-          preferredTranslation = (fromDb === 'esv' || fromDb === 'kjv' || fromDb === 'nasb' || fromDb === 'lsb') ? fromDb : validStorage
-          if (preferredTranslation) {
-            localStorage.setItem(STORAGE_KEY, preferredTranslation)
-          }
+          preferredTranslation = isBibleTranslation(fromDb) ? fromDb : validStorage
         } else {
-          // Anonymous: localStorage only
           preferredTranslation = validStorage
         }
 
-        if (preferredTranslation && enabled.includes(preferredTranslation)) {
-          setTranslationState(preferredTranslation as BibleTranslation)
-        } else if (preferredTranslation) {
-          logger.debug(`Translation ${preferredTranslation} is disabled, falling back to ESV`)
-          setTranslationState('esv')
+        const resolveTranslation = (): BibleTranslation => {
+          if (preferredTranslation && enabled.includes(preferredTranslation)) {
+            return preferredTranslation as BibleTranslation
+          }
+          if (preferredTranslation) {
+            logger.debug(
+              `Translation ${preferredTranslation} is disabled in admin, using an enabled translation instead`
+            )
+          }
+          if (enabled.includes('esv')) return 'esv'
+          const first = enabled[0]
+          return isBibleTranslation(first) ? first : 'esv'
+        }
+
+        const resolved = resolveTranslation()
+        setTranslationState(resolved)
+        localStorage.setItem(STORAGE_KEY, resolved)
+
+        if (
+          user &&
+          preferredTranslation &&
+          !enabled.includes(preferredTranslation) &&
+          resolved !== preferredTranslation
+        ) {
+          try {
+            await fetch('/api/user/translation', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ translation: resolved }),
+            })
+          } catch {
+            logger.warn('Could not sync profile after disabled translation fallback')
+          }
         }
       } catch (error) {
         logger.error('Error loading translation preference:', error)

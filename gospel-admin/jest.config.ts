@@ -44,6 +44,7 @@ const config: Config = {
     '!src/app/admin/users/page.tsx',
     '!src/app/api/admin/reports/**',
     '!src/app/api/admin/esv-cache-count/**',
+    '!src/app/api/admin/scripture-cache-stats/**',
     '!src/app/api/admin/translation-settings/**',
     '!src/app/api/auth/send-code/**',
     '!src/app/api/auth/verify-code/**',

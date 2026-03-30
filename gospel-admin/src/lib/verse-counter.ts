@@ -88,23 +88,80 @@ export function parseVerseRange(reference: string): number {
   return 1;
 }
 
-export async function getTotalEsvCacheVerseCount(supabase: any): Promise<number> {
-  // Get all ESV cache entries
+/** Max cached verses per remote translation (ESV free tier; API.Bible per-translation cap). */
+export const SCRIPTURE_CACHE_VERSE_LIMIT = 500
+
+export type ScriptureCacheTranslationStats = {
+  referenceCount: number
+  totalVerses: number
+  verseLimit: number
+  withinLimit: boolean
+}
+
+export function scriptureCacheStatsFromRows(rows: { reference: string }[]): ScriptureCacheTranslationStats {
+  if (!rows.length) {
+    return {
+      referenceCount: 0,
+      totalVerses: 0,
+      verseLimit: SCRIPTURE_CACHE_VERSE_LIMIT,
+      withinLimit: true,
+    }
+  }
+
+  const uniqueReferences = new Set<string>()
+  let totalVerses = 0
+  for (const entry of rows) {
+    if (!entry.reference) continue
+    uniqueReferences.add(entry.reference)
+    totalVerses += parseVerseRange(entry.reference)
+  }
+
+  return {
+    referenceCount: uniqueReferences.size,
+    totalVerses,
+    verseLimit: SCRIPTURE_CACHE_VERSE_LIMIT,
+    withinLimit: totalVerses <= SCRIPTURE_CACHE_VERSE_LIMIT,
+  }
+}
+
+/**
+ * Row count + verse total for one `scripture_cache.translation` (ESV, NIV, NLT, CSB).
+ * Returns `null` if the database query fails (callers that need silent fallback should use `??` empty stats).
+ */
+export async function getScriptureCacheStatsForTranslation(
+  supabase: any,
+  translation: string
+): Promise<ScriptureCacheTranslationStats | null> {
   const { data, error } = await supabase
     .from('scripture_cache')
     .select('reference')
-    .eq('translation', 'esv');
+    .eq('translation', translation)
 
-  if (error || !data) {
-    return 0;
+  if (error) {
+    return null
   }
 
-  let totalVerses = 0;
-  data.forEach((entry: { reference: string }) => {
-    if (entry.reference) {
-      totalVerses += parseVerseRange(entry.reference);
+  if (!data || data.length === 0) {
+    return {
+      referenceCount: 0,
+      totalVerses: 0,
+      verseLimit: SCRIPTURE_CACHE_VERSE_LIMIT,
+      withinLimit: true,
     }
-  });
+  }
 
-  return totalVerses;
+  return scriptureCacheStatsFromRows(data as { reference: string }[])
+}
+
+export async function getTotalEsvCacheVerseCount(supabase: any): Promise<number> {
+  const s = await getScriptureCacheStatsForTranslation(supabase, 'esv')
+  return s?.totalVerses ?? 0
+}
+
+export async function getTotalCacheVerseCountForTranslation(
+  supabase: any,
+  translation: string
+): Promise<number> {
+  const s = await getScriptureCacheStatsForTranslation(supabase, translation)
+  return s?.totalVerses ?? 0
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useAlertModal } from '@/contexts/AlertModalContext'
+import { logger } from '@/lib/logger'
 
 interface TranslationSetting {
   translation_code: string
@@ -16,30 +17,12 @@ export default function TranslationSettings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
   const [isOpen, setIsOpen] = useState(false)
-  const [esvCacheCount, setEsvCacheCount] = useState<number | null>(null)
-  const [esvVerseCount, setEsvVerseCount] = useState<number | null>(null)
-  const [withinLimit, setWithinLimit] = useState<boolean>(true)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { showAlert } = useAlertModal()
 
   useEffect(() => {
     loadSettings()
-    loadEsvCacheCount()
   }, [])
-
-  async function loadEsvCacheCount() {
-    try {
-      const response = await fetch('/api/admin/esv-cache-count')
-      const data = await response.json()
-      if (data.count !== undefined) {
-        setEsvCacheCount(data.count)
-        setEsvVerseCount(data.totalVerses)
-        setWithinLimit(data.withinLimit ?? true)
-      }
-    } catch (error) {
-      console.error('Error loading ESV cache count:', error)
-    }
-  }
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -63,7 +46,7 @@ export default function TranslationSettings() {
         setSettings(data.settings)
       }
     } catch (error) {
-      console.error('Error loading translation settings:', error)
+      logger.error('Error loading translation settings:', error)
     } finally {
       setLoading(false)
     }
@@ -96,7 +79,7 @@ export default function TranslationSettings() {
         showAlert(data.error || 'Failed to update translation setting')
       }
     } catch (error) {
-      console.error('Error updating translation:', error)
+      logger.error('Error updating translation:', error)
       showAlert('Failed to update translation setting')
     } finally {
       setSaving(null)
@@ -180,27 +163,15 @@ export default function TranslationSettings() {
             ))}
           </div>
 
-          <div className="px-4 py-2 border-t border-slate-200 bg-blue-50">
-            <p className="text-xs text-blue-800">
+          <div className="px-4 py-2 border-t border-slate-200 bg-slate-50">
+            <p className="text-xs text-slate-700">
               <strong>Note:</strong> ESV is the fallback and cannot be disabled.
             </p>
-            {esvCacheCount !== null && esvVerseCount !== null && (
-              <div className="mt-2 space-y-1">
-                <p className="text-xs text-blue-700">
-                  <strong>ESV Cache:</strong> {esvCacheCount} references
-                </p>
-                <p className={`text-xs font-medium ${withinLimit ? 'text-green-700' : 'text-red-700'}`}>
-                  <strong>Verses Cached:</strong> {esvVerseCount}/500 
-                  {withinLimit ? ' ✓ Compliant' : ' ⚠ EXCEEDS LIMIT'}
-                </p>
-              </div>
-            )}
-            
             <Link
               href="/admin/reports"
-              className="block mt-4 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg text-center transition-colors"
+              className="mt-4 block w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-lg text-center transition-colors dark:bg-blue-600 dark:hover:bg-blue-500"
             >
-              📊 View Usage Reports
+              Usage Reports
             </Link>
           </div>
         </div>

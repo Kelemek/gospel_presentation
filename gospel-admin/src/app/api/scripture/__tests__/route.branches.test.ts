@@ -1,5 +1,3 @@
-import { jest } from '@jest/globals'
-
 // Mock Supabase admin client for cache operations
 jest.mock('@/lib/supabase/server', () => ({
   createAdminClient: jest.fn(() => ({
@@ -61,17 +59,17 @@ describe('scripture route branches', () => {
     expect(body.error).toMatch(/esv api token not configured/i)
   })
 
-  it('returns 500 with details when fetch returns non-ok', async () => {
+  it('returns 500 with ESV error message when fetch returns non-ok', async () => {
     process.env.ESV_API_TOKEN = 'token'
     jest.spyOn(global, 'fetch').mockResolvedValueOnce({ ok: false, status: 502 } as any)
 
     const mod = await import('../route')
     const { GET } = mod
 
-    const res = await GET({ url: 'http://localhost?reference=John 3:16' } as any)
+    const res = await GET({ url: 'http://localhost?reference=John+3%3A16' } as any)
     expect(res.status).toBe(500)
     const body = await res.json()
-    expect(body.details).toMatch(/ESV API error: 502/i)
+    expect(body.error).toMatch(/ESV API error: 502/i)
   })
 
   it('returns 500 with Unknown error when fetch throws non-Error', async () => {

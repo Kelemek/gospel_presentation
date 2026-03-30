@@ -4,7 +4,7 @@
 
 ### Project overview
 
-Single-product repo: a **Next.js 16** app in `gospel-admin/` for biblical counseling gospel presentations. Uses hosted Supabase (no local DB), ESV Bible API, Tailwind CSS 4, Jest + React Testing Library.
+Single-product repo: a **Next.js 16** app in `gospel-admin/` for biblical counseling gospel presentations. Uses hosted Supabase (no local DB), ESV Bible API, optional API.Bible (NIV/NLT/CSB), Tailwind CSS 4, Jest + React Testing Library.
 
 ### Node version
 
@@ -27,8 +27,10 @@ source /home/ubuntu/.nvm/nvm.sh && nvm use 20.9.0
 ### Caveats
 
 - **No local database.** The app uses hosted Supabase. Features requiring Supabase (auth, profile CRUD) need `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_KEY` in `gospel-admin/.env.local`.
-- **ESV API.** Scripture modal (ESV translation) requires `ESV_API_TOKEN` in `gospel-admin/.env.local`. Other translations (KJV, NASB, LSB) are fetched from Supabase's `bible_verses` table.
-- **Tests are fully mocked.** All 748 tests run without any live services or env vars. Just `npm test`.
+- **ESV API.** ESV requires `ESV_API_TOKEN` in `gospel-admin/.env.local`.
+- **API.Bible (NIV, NLT, CSB).** When those translations are enabled in `translation_settings`, set `API_BIBLE_KEY` plus `API_BIBLE_BIBLE_ID_NIV`, `API_BIBLE_BIBLE_ID_NLT`, and `API_BIBLE_BIBLE_ID_CSB` (from `GET /v1/bibles`). Optional: `API_BIBLE_BASE_URL` (default `https://rest.api.bible`), `API_BIBLE_CACHE_TTL_DAYS` (default 14), `ESV_CACHE_TTL_DAYS` (default 30). Run `gospel-admin/sql/enable_api_bible_translations.sql` in Supabase for settings rows, `user_profiles` constraint, and `enforce_translation_cache_limit`.
+- **KJV, NASB, LSB** are served from Supabase `bible_verses` (no API.Bible).
+- **Tests are fully mocked.** The Jest suite runs without live services or env vars. Just `npm test`.
 - **Lint errors are pre-existing.** `npm run lint` exits non-zero due to `@typescript-eslint/no-require-imports` violations in `scripts/*.js` utility files and a few other pre-existing issues. These are not caused by new changes.
 - **Dual lockfiles warning.** Next.js Turbopack warns about both `/workspace/package-lock.json` and `/workspace/gospel-admin/package-lock.json`. This is harmless and can be ignored.
 - **Root `package.json`** is a thin wrapper that delegates `dev`/`build`/`start` to `gospel-admin/`. Always run commands from `gospel-admin/` directly.

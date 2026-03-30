@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, type TouchEvent } from 'react'
-import { useTranslation } from '@/contexts/TranslationContext'
+import { useTranslation, type BibleTranslation } from '@/contexts/TranslationContext'
 import { splitScriptureReferenceForHeader } from '@/lib/splitScriptureReferenceForHeader'
+import { formatScriptureApiError } from '@/lib/format-scripture-api-error'
 
 
 
@@ -93,9 +94,10 @@ export default function ScriptureModal({
     try {
       const response = await fetch(`/api/scripture?reference=${encodeURIComponent(chapterRef)}&translation=${translation}`)
       const data = await response.json()
-      
-      if (data.error) {
-        setError(data.error)
+
+      const errMsg = formatScriptureApiError(data)
+      if (errMsg) {
+        setError(errMsg)
       } else {
         setChapterText(data.text)
         setShowingContext(true)
@@ -187,8 +189,9 @@ export default function ScriptureModal({
     })
       .then(response => response.json())
       .then(data => {
-        if (data.error) {
-          setCompareError(data.error)
+        const errMsg = formatScriptureApiError(data)
+        if (errMsg) {
+          setCompareError(errMsg)
         } else {
           setCompareText(data.text)
         }
@@ -218,7 +221,7 @@ export default function ScriptureModal({
     })
       .then(response => response.json())
       .then(data => {
-        if (!data.error) {
+        if (!formatScriptureApiError(data)) {
           setCompareChapterText(data.text)
         }
       })
@@ -241,8 +244,9 @@ export default function ScriptureModal({
       })
         .then(response => response.json())
         .then(data => {
-          if (data.error) {
-            setError(data.error)
+          const errMsg = formatScriptureApiError(data)
+          if (errMsg) {
+            setError(errMsg)
           } else {
             setScriptureText(data.text)
             // Track scripture progress when successfully viewed in modal
@@ -307,6 +311,36 @@ export default function ScriptureModal({
           <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline">LSBible.org</a>
           {' '}For Permission to Quote Information visit{' '}
           <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline">www.LSBible.org</a>
+        </p>
+      )
+    }
+    if (trans === 'niv') {
+      return (
+        <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+          Scripture quotations taken from THE HOLY BIBLE, NEW INTERNATIONAL VERSION®, NIV® Copyright © 1973, 1978, 1984, 2011 by Biblica, Inc.® Used by permission.{' '}
+          <a href="https://www.biblica.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline">
+            Biblica.com
+          </a>
+        </p>
+      )
+    }
+    if (trans === 'nlt') {
+      return (
+        <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+          Scripture quotations marked NLT are taken from the Holy Bible, New Living Translation, copyright © 1996, 2004, 2015 by Tyndale House Foundation. Used by permission of Tyndale House Publishers, Inc.{' '}
+          <a href="https://www.tyndale.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline">
+            Tyndale.com
+          </a>
+        </p>
+      )
+    }
+    if (trans === 'csb') {
+      return (
+        <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+          Scripture quotations taken from the Christian Standard Bible®, Copyright © 2017 by Holman Bible Publishers. Used by permission.{' '}
+          <a href="https://csbible.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline">
+            CSBible.com
+          </a>
         </p>
       )
     }
@@ -491,7 +525,7 @@ export default function ScriptureModal({
               <select
                 value={translation}
                 onChange={async (e) => {
-                  await setTranslation(e.target.value as 'esv' | 'kjv' | 'nasb' | 'lsb')
+                  await setTranslation(e.target.value as BibleTranslation)
                   setChapterText('')
                   setShowingContext(false)
                 }}

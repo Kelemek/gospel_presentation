@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from '@/contexts/TranslationContext'
 import { Capacitor } from '@capacitor/core'
+import { formatScriptureApiError } from '@/lib/format-scripture-api-error'
 
 interface ScriptureHoverModalProps {
   reference: string
@@ -49,7 +50,7 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
       if (response.ok) {
         setScriptureData(data)
       } else {
-        setError(data.error || 'Failed to fetch scripture text')
+        setError(formatScriptureApiError(data) || 'Failed to fetch scripture text')
       }
     } catch {
       setError('Network error while fetching scripture')

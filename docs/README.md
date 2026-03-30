@@ -7,7 +7,7 @@ Welcome to the Gospel Presentation project documentation. Choose a topic below t
 | Topic | Description |
 |-------|-------------|
 | **[01-USERS_AND_ACCESS.md](01-USERS_AND_ACCESS.md)** | User roles, counselee assignment, access control |
-| **[02-BIBLE_AND_SCRIPTURE.md](02-BIBLE_AND_SCRIPTURE.md)** | Bible translations, KJV database, ESV caching |
+| **[02-BIBLE_AND_SCRIPTURE.md](02-BIBLE_AND_SCRIPTURE.md)** | Bible translations, KJV/NASB/LSB DB, ESV + API.Bible (NIV/NLT/CSB) caching |
 | **[03-FEATURES.md](03-FEATURES.md)** | Questions, answers, COMA, profiles, backup |
 | **[04-AUTHENTICATION.md](04-AUTHENTICATION.md)** | Magic links, email invitations, sessions |
 | **[05-INFRASTRUCTURE.md](05-INFRASTRUCTURE.md)** | Supabase setup, security, RLS, deployment |
