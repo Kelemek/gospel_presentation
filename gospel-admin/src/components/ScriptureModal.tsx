@@ -300,7 +300,10 @@ export default function ScriptureModal({
     if (trans === 'nasb') {
       return (
         <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
-          Scripture quotations taken from the New American Standard Bible® (NASB), Copyright © 1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation. Used by permission.
+          Scripture quotations taken from the New American Standard Bible® (NASB), Copyright © 1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation. Used by permission.{' '}
+          <a href="https://www.lockman.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline">
+            www.lockman.org
+          </a>
         </p>
       )
     }

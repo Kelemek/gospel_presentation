@@ -28,6 +28,16 @@ describe('Copyright page', () => {
     const scriptureHeading = screen.getByRole('heading', { name: /Scripture Attribution/i })
     expect(scriptureHeading).toBeInTheDocument()
 
+    expect(screen.getByRole('heading', { name: /Usage Terms/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /API\.Bible terms and conditions/i })).toHaveAttribute(
+      'href',
+      'https://docs.api.bible/terms-and-conditions'
+    )
+
+    expect(screen.getByRole('heading', { name: /New International Version \(NIV\)/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /New Living Translation \(NLT\)/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Christian Standard Bible \(CSB\)/i })).toBeInTheDocument()
+
     const techHeading = screen.getByRole('heading', { name: /Technical Implementation/i })
     expect(techHeading).toBeInTheDocument()
 

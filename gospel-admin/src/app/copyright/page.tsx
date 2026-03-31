@@ -1,11 +1,16 @@
 'use client'
 
 import Link from 'next/link'
+import { CopyrightScriptureAttributionSections } from '@/components/CopyrightScriptureAttributionSections'
+import { ScriptureFooterAttributionParagraphs } from '@/components/ScriptureFooterAttributionParagraphs'
+import { useTranslation } from '@/contexts/TranslationContext'
 import { useApplyPageThemeToDocument, usePageTheme } from '@/lib/usePageTheme'
 
 export default function CopyrightPage() {
   const theme = usePageTheme()
   useApplyPageThemeToDocument(theme)
+  const { enabledTranslations, isLoading } = useTranslation()
+  const attributionEnabledCodes = isLoading ? null : enabledTranslations
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -44,31 +49,31 @@ export default function CopyrightPage() {
               </p>
             </div>
 
-            <div className="bg-purple-50 dark:bg-purple-900/30 border-l-4 border-purple-400 dark:border-purple-600 rounded-lg p-6 mb-6">
+            <div className="bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-400 dark:border-blue-600 rounded-lg p-6 mb-6">
               <p className="text-slate-700 dark:text-slate-200 mb-3 leading-relaxed text-base md:text-lg">
                 <strong className="text-slate-800 dark:text-slate-100">Marriage Enrichment Content:</strong> &ldquo;God-Centered Marriage: A Marriage Enrichment Seminar from a Biblical Perspective&rdquo; by Dr. Randy Westerberg
               </p>
             </div>
 
-            <div className="bg-teal-50 dark:bg-teal-900/30 border-l-4 border-teal-400 dark:border-teal-600 rounded-lg p-6 mb-6">
+            <div className="bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-400 dark:border-blue-600 rounded-lg p-6 mb-6">
               <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg">
                 <strong className="text-slate-800 dark:text-slate-100">Praying As A Couple:</strong> by Jared Johnson
               </p>
             </div>
 
-            <div className="bg-amber-50 dark:bg-amber-900/30 border-l-4 border-amber-400 dark:border-amber-600 rounded-lg p-6 mb-6">
+            <div className="bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-400 dark:border-blue-600 rounded-lg p-6 mb-6">
               <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg">
                 <strong className="text-slate-800 dark:text-slate-100">The Four Rules of Communication (A Practical Application to Good Communication):</strong> by Robert Smith
               </p>
             </div>
 
-            <div className="bg-indigo-50 dark:bg-indigo-900/30 border-l-4 border-indigo-400 dark:border-indigo-600 rounded-lg p-6 mb-6">
+            <div className="bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-400 dark:border-blue-600 rounded-lg p-6 mb-6">
               <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg">
                 <strong className="text-slate-800 dark:text-slate-100">The Conference Table:</strong> by Jay Adams
               </p>
             </div>
 
-            <div className="bg-rose-50 dark:bg-rose-900/30 border-l-4 border-rose-400 dark:border-rose-600 rounded-lg p-6">
+            <div className="bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-400 dark:border-blue-600 rounded-lg p-6">
               <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg">
                 <strong className="text-slate-800 dark:text-slate-100">The Doctrine of Repentance:</strong> by Thomas Watson; compilation and arrangement by Mark Larson
               </p>
@@ -78,67 +83,76 @@ export default function CopyrightPage() {
           {/* Scripture Attribution Section */}
           <section className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-600 p-8">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-6 border-b border-gray-200 dark:border-slate-600 pb-3">Scripture Attribution</h2>
-            
-            <div className="bg-green-50 dark:bg-green-900/30 border-l-4 border-green-400 dark:border-green-600 rounded-lg p-6 mb-6">
-              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-3">English Standard Version (ESV)</h3>
-              <p className="text-slate-700 dark:text-slate-200 mb-4 leading-relaxed text-base md:text-lg">
-                Scripture quotations are from the <strong>ESV® Bible</strong> (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission. All rights reserved. The ESV text may not be quoted in any publication made available to the public by a Creative Commons license. The ESV may not be translated into any other language.
-              </p>
-              <p className="text-slate-700 dark:text-slate-200 mb-4 leading-relaxed text-base md:text-lg">
-                Users may not copy or download more than 500 verses of the ESV Bible or more than one half of any book of the ESV Bible.
-              </p>
-              <p className="text-slate-700 dark:text-slate-200 text-base md:text-lg">
-                <strong className="text-slate-800 dark:text-slate-100">ESV API:</strong> <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors">www.esv.org</a>
-              </p>
-            </div>
-
-            <div className="bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-400 dark:border-blue-600 rounded-lg p-6 mb-6">
-              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-3">King James Version (KJV)</h3>
-              <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg">
-                Scripture quotations from the King James Version (KJV) are in the public domain.
-              </p>
-            </div>
-
-            <div className="bg-purple-50 dark:bg-purple-900/30 border-l-4 border-purple-400 dark:border-purple-600 rounded-lg p-6 mb-6">
-              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-3">New American Standard Bible (NASB)</h3>
-              <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg">
-                Scripture quotations taken from the <strong>New American Standard Bible®</strong> (NASB), Copyright © 1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation. Used by permission. <a href="https://www.lockman.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors">www.lockman.org</a>
-              </p>
-            </div>
-
-            <div className="bg-amber-50 dark:bg-amber-900/30 border-l-4 border-amber-400 dark:border-amber-600 rounded-lg p-6">
-              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-3">Legacy Standard Bible (LSB)</h3>
-              <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg mb-4">
-                Legacy Standard Bible Copyright ©2021 by The Lockman Foundation. All rights reserved. Managed in partnership with Three Sixteen Publishing Inc.{' '}
-                <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors">LSBible.org</a>
-              </p>
-              <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg">
-                For Permission to Quote Information visit{' '}
-                <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors">www.LSBible.org</a>
-              </p>
-            </div>
+            <CopyrightScriptureAttributionSections enabledTranslationCodes={attributionEnabledCodes} />
           </section>
 
           {/* Usage Terms Section */}
           <section className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-600 p-8">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-6 border-b border-gray-200 dark:border-slate-600 pb-3">Usage Terms</h2>
-            <div className="bg-amber-50 dark:bg-amber-900/30 border-l-4 border-amber-400 dark:border-amber-600 rounded-lg p-6">
+            <div className="bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-400 dark:border-blue-600 rounded-lg p-6">
               <ul className="text-slate-700 dark:text-slate-200 space-y-3 leading-relaxed text-base md:text-lg">
                 <li className="flex items-start">
-                  <span className="text-amber-600 dark:text-amber-400 font-bold mr-3">•</span>
+                  <span className="text-blue-600 dark:text-blue-400 font-bold mr-3">•</span>
                   <span>This site is for non-commercial, ministry use only</span>
                 </li>
                 <li className="flex items-start">
-                  <span className="text-amber-600 dark:text-amber-400 font-bold mr-3">•</span>
-                  <span>Scripture text is fetched dynamically via the ESV API</span>
+                  <span className="text-blue-600 dark:text-blue-400 font-bold mr-3">•</span>
+                  <span>
+                    Scripture text is loaded dynamically via the ESV API, via{' '}
+                    <a
+                      href="https://rest.api.bible"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors"
+                    >
+                      API.Bible
+                    </a>{' '}
+                    when NIV, NLT, or CSB are enabled, or from a local database for KJV, NASB, and LSB
+                  </span>
                 </li>
                 <li className="flex items-start">
-                  <span className="text-amber-600 dark:text-amber-400 font-bold mr-3">•</span>
-                  <span>No scripture text is stored locally beyond temporary display</span>
+                  <span className="text-blue-600 dark:text-blue-400 font-bold mr-3">•</span>
+                  <span>
+                    ESV and API.Bible translations may be held in a bounded server cache (under 500 verses per
+                    translation, refreshed on a rolling schedule) to follow provider guidance; KJV, NASB, and LSB
+                    are stored in full in the application database
+                  </span>
                 </li>
                 <li className="flex items-start">
-                  <span className="text-amber-600 dark:text-amber-400 font-bold mr-3">•</span>
+                  <span className="text-blue-600 dark:text-blue-400 font-bold mr-3">•</span>
                   <span>Users are limited to viewing individual passages as displayed</span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-600 dark:text-blue-400 font-bold mr-3">•</span>
+                  <span>
+                    <strong className="text-slate-800 dark:text-slate-100">API.Bible (NIV, NLT, CSB):</strong> Use is
+                    governed by{' '}
+                    <a
+                      href="https://docs.api.bible/terms-and-conditions"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors"
+                    >
+                      API.Bible terms and conditions
+                    </a>
+                    , publisher licenses, and non-commercial use expectations described in their documentation.
+                    Commercial use requires separate approval from API.Bible.
+                  </span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-600 dark:text-blue-400 font-bold mr-3">•</span>
+                  <span>
+                    API.Bible access is rate-limited by the provider (for example, a daily query cap per API key and
+                    limits on consecutive verses per request); this application uses caching to reduce repeat API
+                    calls.
+                  </span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-600 dark:text-blue-400 font-bold mr-3">•</span>
+                  <span>
+                    NIV, NLT, and CSB must be shown with the publisher copyright / attribution text required by
+                    API.Bible and the respective publishers (see Scripture Attribution above and the scripture modal).
+                  </span>
                 </li>
               </ul>
             </div>
@@ -147,7 +161,7 @@ export default function CopyrightPage() {
           {/* Technical Implementation Section */}
           <section className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-600 p-8">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-6 border-b border-gray-200 dark:border-slate-600 pb-3">Technical Implementation</h2>
-            <div className="bg-slate-50 dark:bg-slate-700/50 border-l-4 border-slate-400 dark:border-slate-500 rounded-lg p-6">
+            <div className="bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-400 dark:border-blue-600 rounded-lg p-6">
               <div className="space-y-3">
                 <p className="text-slate-700 dark:text-slate-200 text-base md:text-lg">
                   <strong className="text-slate-800 dark:text-slate-100">Framework:</strong> Next.js 16 (React 19, App Router)
@@ -168,7 +182,7 @@ export default function CopyrightPage() {
                   <strong className="text-slate-800 dark:text-slate-100">User Roles:</strong> Admin (full access), Counselor (own profiles only) & Counselee (view-only access)
                 </p>
                 <p className="text-slate-700 dark:text-slate-200 text-base md:text-lg">
-                  <strong className="text-slate-800 dark:text-slate-100">Scripture APIs:</strong> ESV API v3
+                  <strong className="text-slate-800 dark:text-slate-100">Scripture APIs:</strong> ESV API v3; API.Bible (REST) for NIV, NLT, and CSB when configured; KJV, NASB, and LSB from a local database
                 </p>
                 <p className="text-slate-700 dark:text-slate-200 text-base md:text-lg">
                   <strong className="text-slate-800 dark:text-slate-100">Rich Text Editor:</strong> <a href="https://tiptap.dev" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors">Tiptap Editor</a> (MIT License)
@@ -210,32 +224,12 @@ export default function CopyrightPage() {
             </Link>
           </div>
           <div className="space-y-4 text-sm opacity-90 leading-relaxed text-center md:text-left">
-            <p>
-              Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard Version®), © 2001 by Crossway, a publishing ministry of Good News Publishers. Used by permission.
-            </p>
-            <p>King James Version (KJV) scripture quotations are in the public domain.</p>
-            <p>
-              New American Standard Bible® (NASB), Copyright © 1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation. Used by permission.
-            </p>
-            <p>
-              Legacy Standard Bible Copyright ©2021 by The Lockman Foundation. All rights reserved. Managed in partnership with Three Sixteen Publishing Inc.{' '}
-              <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">LSBible.org</a>.
-              {' '}For Permission to Quote Information visit{' '}
-              <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">www.LSBible.org</a>.
-            </p>
+            <ScriptureFooterAttributionParagraphs
+              anchorClassName="text-blue-400 hover:text-blue-300 underline transition-colors"
+              enabledTranslationCodes={attributionEnabledCodes}
+            />
           </div>
-          <div className="mt-8 pt-6 border-t border-slate-600 dark:border-slate-700 flex flex-wrap justify-center gap-x-6 gap-y-2">
-            <a href="https://www.esv.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline transition-colors">
-              www.esv.org
-            </a>
-            <a href="https://www.lockman.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline transition-colors">
-              www.lockman.org
-            </a>
-            <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline transition-colors">
-              LSBible.org
-            </a>
-          </div>
-          <p className="mt-4 text-sm opacity-80 text-center">
+          <p className="mt-8 pt-6 border-t border-slate-600 dark:border-slate-700 text-sm opacity-80 text-center">
             All other content © {new Date().getFullYear()} Gospel Presentation Project. All rights reserved.
           </p>
         </div>

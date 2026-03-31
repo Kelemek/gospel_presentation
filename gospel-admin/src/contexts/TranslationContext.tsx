@@ -19,6 +19,8 @@ const TranslationContext = createContext<TranslationContextType | undefined>(und
 
 const STORAGE_KEY = 'gospel-preferred-translation'
 
+const FALLBACK_ENABLED_TRANSLATIONS = ['esv'] as const
+
 export function TranslationProvider({ children }: { children: ReactNode }) {
   const [translation, setTranslationState] = useState<BibleTranslation>('esv')
   const [isLoading, setIsLoading] = useState(true)
@@ -31,13 +33,13 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
       try {
         const response = await fetch('/api/translations/enabled')
         const data = await response.json()
-        const codes = data.translations?.map((t: any) => t.translation_code) || ['esv']
+        const codes = data.translations?.map((t: any) => t.translation_code) || [...FALLBACK_ENABLED_TRANSLATIONS]
         setEnabledTranslations(codes)
         return codes
       } catch (error) {
         logger.error('Error loading enabled translations:', error)
-        setEnabledTranslations(['esv'])
-        return ['esv']
+        setEnabledTranslations([...FALLBACK_ENABLED_TRANSLATIONS])
+        return [...FALLBACK_ENABLED_TRANSLATIONS]
       }
     }
     loadEnabledTranslations()
@@ -46,10 +48,13 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
   // Load translation preference on mount (localStorage-first; DB overrides when logged in)
   useEffect(() => {
     async function loadTranslation() {
+      let enabledListCommitted = false
       try {
         const response = await fetch('/api/translations/enabled')
         const data = await response.json()
-        const enabled = data.translations?.map((t: any) => t.translation_code) || ['esv']
+        const enabled = data.translations?.map((t: any) => t.translation_code) || [...FALLBACK_ENABLED_TRANSLATIONS]
+        setEnabledTranslations(enabled)
+        enabledListCommitted = true
 
         // 1. Read from localStorage first (instant)
         const fromStorage = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null
@@ -107,6 +112,9 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         logger.error('Error loading translation preference:', error)
+        if (!enabledListCommitted) {
+          setEnabledTranslations([...FALLBACK_ENABLED_TRANSLATIONS])
+        }
       } finally {
         setIsLoading(false)
       }

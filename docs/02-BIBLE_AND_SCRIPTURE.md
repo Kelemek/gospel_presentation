@@ -160,7 +160,7 @@ The parser handles both ASCII hyphens (-) and Unicode en-dashes (–) for proper
 - Attribution: www.LSBible.org
 
 **NIV / NLT / CSB** (via API.Bible)
-- Text served under API.Bible and publisher terms; follow [API.Bible](https://rest.api.bible) and publisher attribution (shown in the scripture modal footer).
+- Text served under API.Bible and publisher terms; follow [API.Bible](https://rest.api.bible) and publisher attribution. Full publisher blurbs appear in the scripture modal footer, the gospel presentation footer, and the in-app Copyright & Attribution page (`/copyright`). **Which** translations get a blurb there follows **admin translation settings** (`translation_settings` / `GET /api/translations/enabled`): only enabled codes are shown; while the enabled list is loading, all known blurbs render to avoid a flash of missing legal text. Shared UI: `ScriptureFooterAttributionParagraphs`, `CopyrightScriptureAttributionSections`, helper `gospel-admin/src/lib/scripture-attribution-visibility.ts`.
 
 ## Related Documentation
 - Full KJV details: [KJV_DATABASE.md](KJV_DATABASE.md)

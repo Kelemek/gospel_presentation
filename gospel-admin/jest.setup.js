@@ -275,7 +275,7 @@ jest.mock('@/contexts/TranslationContext', () => {
     translation: 'esv',
     setTranslation: jest.fn(),
     isLoading: false,
-    enabledTranslations: ['esv', 'kjv', 'nasb'],
+    enabledTranslations: ['esv', 'kjv', 'nasb', 'lsb', 'niv', 'nlt', 'csb'],
   }
 
   return {
