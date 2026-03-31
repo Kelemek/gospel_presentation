@@ -712,6 +712,9 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
             />
           </div>
           <div className="mt-8 pt-6 border-t border-slate-600 flex flex-wrap justify-center gap-x-6 gap-y-2">
+            <Link href="/info" className="text-blue-400 hover:text-blue-300 underline">
+              App Info & QR Codes
+            </Link>
             <Link href="/copyright" className="text-blue-400 hover:text-blue-300 underline">
               Copyright & Attribution
             </Link>

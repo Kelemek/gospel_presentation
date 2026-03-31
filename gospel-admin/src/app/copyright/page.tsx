@@ -215,13 +215,21 @@ export default function CopyrightPage() {
       <footer className="bg-slate-700 dark:bg-slate-800 text-white py-10 mt-16">
         <div className="container mx-auto px-5 max-w-3xl">
           <div className="mb-8 flex justify-center">
-            <Link 
-              href="/"
-              className="inline-flex items-center gap-2 bg-slate-600 dark:bg-slate-700 hover:bg-slate-500 dark:hover:bg-slate-600 text-white px-6 py-4 rounded-lg transition-colors font-medium text-base md:text-lg min-h-[48px]"
-            >
-              <span>←</span>
-              Back to Gospel Presentation
-            </Link>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-2 bg-slate-600 dark:bg-slate-700 hover:bg-slate-500 dark:hover:bg-slate-600 text-white px-6 py-4 rounded-lg transition-colors font-medium text-base md:text-lg min-h-[48px]"
+              >
+                <span>←</span>
+                Back to Gospel Presentation
+              </Link>
+              <Link
+                href="/info"
+                className="inline-flex items-center gap-2 bg-slate-600 dark:bg-slate-700 hover:bg-slate-500 dark:hover:bg-slate-600 text-white px-6 py-4 rounded-lg transition-colors font-medium text-base md:text-lg min-h-[48px]"
+              >
+                App Info & QR Codes
+              </Link>
+            </div>
           </div>
           <div className="space-y-4 text-sm opacity-90 leading-relaxed text-center md:text-left">
             <ScriptureFooterAttributionParagraphs
