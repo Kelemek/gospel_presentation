@@ -53,13 +53,13 @@ export default function InfoPage() {
     <div className="min-h-screen bg-gray-50 px-3 py-4 dark:bg-gray-900 print:p-0 xl:flex xl:min-h-dvh xl:items-center xl:justify-center xl:px-6 xl:py-4">
       <main
         className={[
-          'mx-auto w-full max-w-[4.25in] rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-600 dark:bg-slate-800',
+          'mx-auto w-full max-w-[5.5in] rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-600 dark:bg-slate-800',
           'h-[8.5in] overflow-hidden flex flex-col justify-start pb-3',
           `xl:aspect-video xl:h-auto xl:max-w-none xl:w-[min(96vw,1920px,calc((100dvh-2rem)*16/9))] xl:min-h-0 xl:overflow-x-hidden xl:overflow-y-hidden xl:rounded-3xl xl:border-2 xl:pb-0 xl:shadow-2xl`,
           `xl:grid xl:grid-cols-5 xl:grid-rows-[minmax(0,1fr)]`,
         ].join(' ')}
       >
-        <div className="flex min-h-0 min-w-0 flex-col xl:col-span-4 xl:h-full xl:min-h-0 xl:max-h-full xl:overflow-hidden xl:rounded-bl-3xl xl:rounded-tl-3xl">
+        <div className="flex min-h-0 min-w-0 flex-col gap-y-5 xl:gap-y-0 xl:col-span-4 xl:h-full xl:min-h-0 xl:max-h-full xl:overflow-hidden xl:rounded-bl-3xl xl:rounded-tl-3xl">
           <section
             className={`relative shrink-0 bg-linear-to-br from-slate-700 to-slate-800 px-4 pb-5 pt-5 text-white dark:from-slate-800 dark:to-slate-900 xl:px-8 xl:py-5 xl:pb-5`}
           >
@@ -83,7 +83,7 @@ export default function InfoPage() {
           </section>
 
           <section
-            className={`flex min-h-0 min-w-0 flex-col gap-1.5 px-3 pt-3 pb-0 xl:grid xl:h-full xl:min-h-0 xl:min-w-0 xl:flex-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:grid-rows-[minmax(0,1fr)] xl:items-stretch xl:overflow-hidden xl:overflow-x-hidden xl:gap-x-12 xl:gap-y-0 xl:px-6 xl:pb-2.5 xl:pt-2.5`}
+            className={`flex min-h-0 min-w-0 flex-col gap-1.5 px-3 pt-0 pb-0 xl:grid xl:h-full xl:min-h-0 xl:min-w-0 xl:flex-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:grid-rows-[minmax(0,1fr)] xl:items-stretch xl:overflow-hidden xl:overflow-x-hidden xl:gap-x-12 xl:gap-y-0 xl:px-6 xl:pb-2.5 xl:pt-2.5`}
           >
             <div
               className={`mb-2 min-h-0 rounded-xl border border-blue-100 bg-linear-to-b from-blue-50/80 to-white p-1.5 dark:border-blue-700/60 dark:from-blue-900/25 dark:to-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-800 xl:mb-0 xl:flex xl:h-full xl:min-h-0 xl:min-w-0 xl:w-full xl:flex-col xl:overflow-hidden xl:rounded-xl xl:border xl:px-7 xl:pb-6 xl:pt-6 xl:shadow-sm`}
@@ -165,7 +165,7 @@ export default function InfoPage() {
         </div>
 
         <aside
-          className={`mt-1 min-h-0 min-w-0 px-3 pb-0 pt-1 xl:col-span-1 xl:col-start-5 xl:row-start-1 xl:mt-0 xl:flex xl:h-full xl:min-h-0 xl:max-h-full xl:flex-col xl:justify-center xl:overflow-y-auto xl:overflow-x-hidden xl:rounded-br-3xl xl:rounded-tr-3xl xl:border-l-2 xl:border-slate-200 xl:bg-linear-to-b xl:from-slate-100 xl:to-slate-50 xl:px-3 xl:py-2 xl:dark:border-slate-600 xl:dark:from-slate-900/90 xl:dark:to-slate-800/90`}
+          className={`mt-5 min-h-0 min-w-0 px-3 pb-0 pt-1 xl:col-span-1 xl:col-start-5 xl:row-start-1 xl:mt-0 xl:flex xl:h-full xl:min-h-0 xl:max-h-full xl:flex-col xl:justify-center xl:overflow-y-auto xl:overflow-x-hidden xl:rounded-br-3xl xl:rounded-tr-3xl xl:border-l-2 xl:border-slate-200 xl:bg-linear-to-b xl:from-slate-100 xl:to-slate-50 xl:px-3 xl:py-2 xl:dark:border-slate-600 xl:dark:from-slate-900/90 xl:dark:to-slate-800/90`}
         >
           <div
             className={`grid w-full min-w-0 grid-cols-3 gap-1 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col xl:justify-center xl:gap-y-5 xl:py-1`}
