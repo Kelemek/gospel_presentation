@@ -54,7 +54,7 @@ export default function InfoPage() {
       <main
         className={[
           'mx-auto w-full max-w-[5.5in] rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-600 dark:bg-slate-800',
-          'h-[8.5in] overflow-hidden flex flex-col justify-start pb-3',
+          'flex flex-col justify-start overflow-x-hidden pb-3',
           `xl:aspect-video xl:h-auto xl:max-w-none xl:w-[min(96vw,1920px,calc((100dvh-2rem)*16/9))] xl:min-h-0 xl:overflow-x-hidden xl:overflow-y-hidden xl:rounded-3xl xl:border-2 xl:pb-0 xl:shadow-2xl`,
           `xl:grid xl:grid-cols-5 xl:grid-rows-[minmax(0,1fr)]`,
         ].join(' ')}
