@@ -22,13 +22,16 @@ describe('InfoQrBlock', () => {
     expect(screen.getByText('Example')).toBeInTheDocument()
     expect(screen.getByText('example.com')).toBeInTheDocument()
 
-    const scaleWrap = container.querySelector('a span.inline-block')
-    expect(scaleWrap).toBeTruthy()
-    expect(scaleWrap).toHaveClass(
-      '[&_svg]:h-22',
-      '[&_svg]:w-22',
-      'xl:[&_svg]:h-[128px]',
-      'xl:[&_svg]:w-[128px]'
+    const qrLink = screen.getByRole('link', { name: /Example: open link/i })
+    expect(qrLink).toHaveClass(
+      'aspect-square',
+      'xl:max-w-full',
+      'xl:max-h-full',
+      'xl:w-auto',
+      'xl:h-full'
     )
+
+    const root = container.firstElementChild as HTMLElement
+    expect(root).toHaveClass('w-full', 'h-full', 'min-h-0')
   })
 })

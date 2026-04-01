@@ -83,92 +83,78 @@ export default function InfoPage() {
           </section>
 
           <section
-            className={`flex min-h-0 min-w-0 flex-col gap-1.5 px-3 pt-0 pb-0 xl:grid xl:h-full xl:min-h-0 xl:min-w-0 xl:flex-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:grid-rows-[minmax(0,1fr)] xl:items-stretch xl:overflow-hidden xl:overflow-x-hidden xl:gap-x-12 xl:gap-y-0 xl:px-6 xl:pb-2.5 xl:pt-2.5`}
+            className={`flex min-h-0 min-w-0 flex-col gap-1.5 px-3 pt-0 pb-0 xl:grid xl:h-full xl:min-h-0 xl:min-w-0 xl:flex-1 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:grid-rows-[minmax(0,1fr)] xl:items-stretch xl:overflow-hidden xl:overflow-x-hidden xl:gap-x-6 xl:gap-y-0 xl:px-6 xl:pb-2.5 xl:pt-2.5 xl:dark:bg-slate-600/50`}
           >
             <div
-              className={`mb-2 min-h-0 rounded-xl border border-blue-100 bg-linear-to-b from-blue-50/80 to-white p-1.5 dark:border-blue-700/60 dark:from-blue-900/25 dark:to-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-800 xl:mb-0 xl:flex xl:h-full xl:min-h-0 xl:min-w-0 xl:w-full xl:flex-col xl:overflow-hidden xl:rounded-xl xl:border xl:px-7 xl:pb-6 xl:pt-6 xl:shadow-sm`}
+              className="mb-2 min-h-0 rounded-xl border border-blue-100 bg-linear-to-br from-blue-50/80 to-white p-1.5 dark:border-blue-800/60 dark:from-blue-950/30 dark:to-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-800 xl:mb-0 xl:flex xl:h-full xl:min-h-0 xl:min-w-0 xl:w-full xl:flex-col xl:overflow-hidden xl:rounded-2xl xl:border-blue-200/70 xl:px-8 xl:pb-8 xl:pt-7 xl:shadow-md xl:dark:border-blue-800/50"
               tabIndex={0}
               role="region"
               aria-label="App features list"
             >
               <h2
-                className={`shrink-0 text-[13px] font-bold text-slate-800 dark:text-slate-100 xl:text-[clamp(1.65rem,2.55vw,2.2rem)] xl:leading-[1.08]`}
+                className="shrink-0 text-[13px] font-bold text-slate-800 dark:text-slate-100 xl:text-[clamp(1.65rem,2.55vw,2.2rem)] xl:font-extrabold xl:leading-[1.08] xl:tracking-tight"
               >
                 App Features
               </h2>
-              <div
-                className={`mt-0.5 min-h-0 touch-pan-y outline-none overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] xl:mt-3 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col xl:overflow-x-hidden xl:overflow-y-auto xl:pb-0`}
+              <ul
+                className="mt-0.5 grid grid-cols-1 gap-y-1 text-[11.5px] leading-snug text-slate-700 dark:text-slate-200 xl:mt-4 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col xl:justify-between xl:gap-y-0 xl:text-[clamp(1.2rem,1.88vw,1.62rem)] xl:[&_li]:leading-[1.28]"
               >
-                <ul
-                  className={`grid grid-cols-1 gap-y-1 text-[11.5px] leading-snug text-slate-700 dark:text-slate-200 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col xl:justify-between xl:gap-y-0 xl:py-1 xl:text-[clamp(1.2rem,1.88vw,1.62rem)] xl:[&_li]:leading-[1.28]`}
-                >
-                  {APP_FEATURES.map((text) => (
-                    <li key={text} className={`flex items-start gap-1.5 xl:gap-2.5`}>
-                      <span className="shrink-0 font-bold text-blue-600 dark:text-blue-400">•</span>
-                      <span className="min-w-0">{text}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                {APP_FEATURES.map((text) => (
+                  <li key={text} className="flex items-start gap-1.5 xl:gap-3">
+                    <span className="mt-[0.15em] shrink-0 text-blue-500 dark:text-blue-400 xl:mt-[0.18em]" aria-hidden="true">▸</span>
+                    <span className="min-w-0">{text}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
 
-            <div
-              className={`flex min-h-0 min-w-0 flex-col gap-1.5 xl:h-full xl:max-h-full xl:min-h-0 xl:justify-center xl:overflow-y-auto xl:overscroll-y-contain`}
-            >
-              <div
-                className={`flex w-full min-w-0 max-w-full flex-col gap-1.5 xl:my-auto xl:max-h-full xl:min-h-0 xl:grow-0 xl:gap-2.5`}
+            <div className="flex min-h-0 min-w-0 flex-col gap-1.5 xl:h-full xl:max-h-full xl:min-h-0 xl:gap-0 xl:overflow-hidden">
+              <h2
+                className="shrink-0 px-1 text-[11px] font-bold uppercase leading-none tracking-wider text-slate-500 dark:text-slate-400 xl:px-0 xl:text-xs xl:tracking-wide xl:text-slate-600 xl:dark:text-slate-300 xl:mb-2 2xl:text-sm 2xl:mb-3"
               >
-                <h2
-                  className={`shrink-0 px-1 text-[11px] font-bold uppercase leading-none tracking-wider text-slate-500 dark:text-slate-400 xl:px-0 xl:text-left xl:text-xs xl:font-bold xl:leading-tight xl:tracking-wide xl:text-slate-600 xl:dark:text-slate-300`}
-                >
-                  Included Content & Resources
-                </h2>
-                <div
-                  className={`flex min-h-0 min-w-0 flex-col touch-pan-y outline-none xl:min-h-0 xl:min-w-0 xl:flex-1 xl:overflow-y-auto xl:overscroll-y-contain xl:pb-2 xl:pt-0.5 xl:[-webkit-overflow-scrolling:touch] xl:focus-visible:ring-2 xl:focus-visible:ring-blue-500 xl:focus-visible:ring-offset-2`}
-                  tabIndex={0}
-                  role="region"
-                  aria-label="Included content and resources"
-                >
+                Included Content & Resources
+              </h2>
+              <div
+                className="flex min-h-0 flex-1 flex-col gap-y-2 xl:grid xl:min-h-0 xl:grid-rows-[minmax(0,1fr)_minmax(0,3fr)_minmax(0,2fr)] xl:gap-y-2.5 2xl:gap-y-4"
+                role="region"
+                tabIndex={0}
+                aria-label="Included content and resources"
+              >
+                {CONTENT_SECTIONS.map((section) => (
                   <div
-                    className={`flex min-h-0 w-full min-w-0 flex-col gap-y-5 xl:min-h-full xl:justify-center`}
+                    key={section.title}
+                    className="flex flex-col rounded-xl border border-blue-100 bg-linear-to-br from-blue-50/80 to-white p-1.5 dark:border-blue-800/60 dark:from-blue-950/30 dark:to-slate-800 xl:min-h-0 xl:rounded-xl xl:border-blue-200/70 xl:px-3 xl:py-2 xl:shadow-sm xl:dark:border-blue-800/50"
                   >
-                    {CONTENT_SECTIONS.map((section) => (
-                      <div
-                        key={section.title}
-                        className={`shrink-0 rounded-xl border border-slate-200/60 bg-slate-50/50 p-1.5 dark:border-slate-700/50 dark:bg-slate-800/50 xl:rounded-xl xl:border xl:px-3.5 xl:py-2.5 xl:shadow-sm`}
-                      >
-                        <h3
-                          className={`text-[13px] font-bold text-slate-800 dark:text-slate-100 xl:text-sm xl:font-bold xl:leading-tight`}
+                    <h3
+                      className="shrink-0 text-[13px] font-bold text-slate-800 dark:text-slate-100 xl:text-sm xl:leading-tight 2xl:text-base"
+                    >
+                      {section.title}
+                    </h3>
+                    <ul
+                      className="mt-0.5 grid grid-cols-2 gap-x-1.5 gap-y-1 xl:mt-1 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col xl:justify-evenly xl:gap-y-0"
+                    >
+                      {section.items.map((item) => (
+                        <li
+                          key={item}
+                          className="min-w-0 flex items-start gap-0.5 text-[11px] leading-normal text-slate-700 dark:text-slate-300 xl:gap-1 xl:text-xs xl:leading-snug 2xl:text-sm"
                         >
-                          {section.title}
-                        </h3>
-                        <ul
-                          className={`mt-0.5 grid grid-cols-2 gap-x-1.5 gap-y-1 xl:mt-1.5 xl:grid-cols-1 xl:gap-x-0 xl:gap-y-0.5 xl:text-[clamp(0.75rem,0.92vw,0.92rem)]`}
-                        >
-                          {section.items.map((item) => (
-                            <li
-                              key={item}
-                              className={`min-w-0 flex items-start gap-0.5 text-[11px] leading-normal text-slate-700 dark:text-slate-300 xl:gap-1 xl:leading-snug`}
-                            >
-                              <span className="shrink-0 text-blue-500 dark:text-blue-400">▹</span>
-                              <span>{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
+                          <span className="shrink-0 text-blue-500 dark:text-blue-400">▹</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                </div>
+                ))}
               </div>
             </div>
           </section>
         </div>
 
         <aside
-          className={`mt-5 min-h-0 min-w-0 px-3 pb-0 pt-1 xl:col-span-1 xl:col-start-5 xl:row-start-1 xl:mt-0 xl:flex xl:h-full xl:min-h-0 xl:max-h-full xl:flex-col xl:justify-center xl:overflow-y-auto xl:overflow-x-hidden xl:rounded-br-3xl xl:rounded-tr-3xl xl:border-l-2 xl:border-slate-200 xl:bg-linear-to-b xl:from-slate-100 xl:to-slate-50 xl:px-3 xl:py-2 xl:dark:border-slate-600 xl:dark:from-slate-900/90 xl:dark:to-slate-800/90`}
+          className={`mt-5 min-h-0 min-w-0 px-3 pb-0 pt-1 xl:col-span-1 xl:col-start-5 xl:row-start-1 xl:mt-0 xl:flex xl:h-full xl:min-h-0 xl:max-h-full xl:flex-col xl:overflow-hidden xl:rounded-br-3xl xl:rounded-tr-3xl xl:border-l-2 xl:border-slate-200 xl:bg-linear-to-b xl:from-slate-100 xl:to-slate-50 xl:px-5 xl:py-4 2xl:px-8 2xl:py-6 xl:dark:border-slate-600 xl:dark:from-slate-900/90 xl:dark:to-slate-800/90`}
         >
           <div
-            className={`grid w-full min-w-0 grid-cols-3 gap-1 xl:flex xl:min-h-0 xl:flex-1 xl:flex-col xl:justify-center xl:gap-y-5 xl:py-1`}
+            className={`grid w-full min-w-0 grid-cols-3 gap-2 xl:grid-cols-1 xl:grid-rows-3 xl:gap-y-3 2xl:gap-y-5 xl:h-full xl:flex-1`}
           >
             {INFO_PAGE_LINKS.map((item) => (
               <InfoQrBlock
@@ -176,9 +162,9 @@ export default function InfoPage() {
                 href={item.href}
                 label={item.label}
                 shortUrl={item.shortUrl}
-                size={128}
+                size={500}
                 showShortUrl={false}
-                className={`max-w-full rounded-lg border border-slate-200 bg-white/90 px-1 py-1 dark:border-slate-600 dark:bg-slate-900/70 xl:rounded-xl xl:border xl:px-2.5 xl:py-2.5 xl:shadow-sm [&_a]:max-w-full [&_a]:xl:p-2.5 [&_p]:xl:mt-2 [&_p]:xl:text-lg [&_p]:xl:font-semibold`}
+                className={`min-h-0 min-w-0`}
               />
             ))}
           </div>

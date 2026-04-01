@@ -20,24 +20,28 @@ export function InfoQrBlock({
   showShortUrl = true,
 }: InfoQrBlockProps) {
   return (
-    <div className={`flex flex-col items-center text-center ${className}`}>
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="rounded-lg border border-gray-200 bg-white p-1.5 shadow-sm transition-opacity hover:opacity-90 dark:border-slate-600 dark:bg-slate-900 print:border-gray-300 xl:p-2"
-        aria-label={`${label}: open link`}
-      >
-        <span className="inline-block shrink-0 [&_svg]:h-22 [&_svg]:w-22 [&_svg]:max-w-full xl:[&_svg]:h-[128px] xl:[&_svg]:w-[128px]">
-          <QRCodeSVG value={href} size={size} level="M" />
-        </span>
-      </a>
-      <p className="mt-1.5 text-sm font-semibold leading-snug text-slate-800 dark:text-slate-100 xl:mt-2 xl:text-sm">
-        {label}
-      </p>
-      {showShortUrl ? (
-        <p className="mt-0.5 max-w-56 wrap-break-word text-xs text-slate-600 dark:text-slate-400">{shortUrl}</p>
-      ) : null}
+    <div className={`flex flex-col items-center justify-center w-full h-full min-h-0 ${className}`}>
+      <div className="flex-1 min-h-0 w-full flex flex-col items-center justify-center">
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center aspect-square w-full max-w-[100px] xl:w-auto xl:h-full xl:max-w-full xl:max-h-full rounded-xl border border-gray-200 bg-white p-2 shadow-md transition-transform hover:scale-[1.02] dark:border-slate-600 dark:bg-slate-800 print:border-gray-300 xl:p-3 xl:rounded-2xl xl:shadow-lg"
+          aria-label={`${label}: open link`}
+        >
+          <QRCodeSVG value={href} size={size} level="M" style={{ width: '100%', height: '100%' }} />
+        </a>
+      </div>
+      <div className="shrink-0 flex flex-col items-center mt-2 xl:mt-2 2xl:mt-3">
+        <p className="shrink-0 text-xs font-bold leading-tight text-slate-800 dark:text-slate-100 xl:text-lg 2xl:text-xl xl:tracking-tight">
+          {label}
+        </p>
+        {showShortUrl ? (
+          <p className="mt-0.5 max-w-56 wrap-break-word text-[10px] xl:text-xs 2xl:text-sm text-slate-600 dark:text-slate-400">
+            {shortUrl}
+          </p>
+        ) : null}
+      </div>
     </div>
   )
 }
