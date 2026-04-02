@@ -129,6 +129,52 @@ describe('GospelSection (extra tests)', () => {
     expect(pins).toHaveLength(1)
   })
 
+  it('shows pin features for inline scripture references in subsection content', async () => {
+    const onScriptureClick = jest.fn()
+    const onClearProgress = jest.fn()
+
+    const section = {
+      section: 'inline',
+      title: 'Inline',
+      subsections: [
+        {
+          title: 'Sub',
+          content: 'God is faithful (Genesis 2:18).',
+        },
+      ],
+    }
+
+    const { rerender } = render(
+      <GospelSection
+        section={section}
+        onScriptureClick={onScriptureClick}
+        profileSlug="profile-inline"
+      />
+    )
+
+    const inlineBtn = await screen.findByRole('button', { name: /Genesis 2:18/i })
+    fireEvent.click(inlineBtn)
+    expect(onScriptureClick).toHaveBeenCalledWith('Genesis 2:18', 'section-inline', 'section-inline-0')
+
+    rerender(
+      <GospelSection
+        section={section}
+        onScriptureClick={onScriptureClick}
+        profileSlug="profile-inline"
+        lastViewedScripture={{
+          reference: 'Genesis 2:18',
+          sectionId: 'section-inline',
+          subsectionId: 'section-inline-0',
+        }}
+        onClearProgress={onClearProgress}
+      />
+    )
+
+    const pin = await screen.findByTitle('Click to clear progress')
+    fireEvent.click(pin)
+    expect(onClearProgress).toHaveBeenCalled()
+  })
+
   it('loads saved answers, expands detail, saves successfully and clears saved state after timeout', async () => {
     const user = userEvent.setup({ delay: null })
 

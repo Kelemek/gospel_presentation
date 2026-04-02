@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useTranslation } from '@/contexts/TranslationContext'
 import { Capacitor } from '@capacitor/core'
 import { formatScriptureApiError } from '@/lib/format-scripture-api-error'
@@ -9,6 +9,7 @@ interface ScriptureHoverModalProps {
   reference: string
   children: React.ReactNode
   hoverDelayMs?: number // Optional hover delay in milliseconds, defaults to 500ms
+  inline?: boolean // Render wrapper as <span> for inline text flow instead of <div>
 }
 
 interface ScriptureData {
@@ -17,7 +18,7 @@ interface ScriptureData {
   translation?: string
 }
 
-export default function ScriptureHoverModal({ reference, children, hoverDelayMs = 500 }: ScriptureHoverModalProps) {
+export default function ScriptureHoverModal({ reference, children, hoverDelayMs = 500, inline = false }: ScriptureHoverModalProps) {
   const [isVisible, setIsVisible] = useState(false)
   const [scriptureData, setScriptureData] = useState<ScriptureData | null>(null)
   const [loading, setLoading] = useState(false)
@@ -29,7 +30,7 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const longPressTriggeredRef = useRef(false)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement | HTMLSpanElement>(null)
   const [openedByLongPress, setOpenedByLongPress] = useState(false)
 
   // Clear cached scripture when translation changes
@@ -184,19 +185,75 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
     }
   }, [])
 
+  // Prevent hover-opened popovers from getting "stuck" on screen.
+  // If pointer-leave doesn't fire (e.g., scroll/blur/layout shift), force-close on common context changes.
+  useEffect(() => {
+    if (!isVisible || openedByLongPress) return
+
+    const hide = () => {
+      setIsVisible(false)
+      setOpenedByLongPress(false)
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target
+      if (!(target instanceof Node)) return
+      if (containerRef.current?.contains(target)) return
+      hide()
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') hide()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) hide()
+    }
+
+    window.addEventListener('scroll', hide, true)
+    window.addEventListener('resize', hide)
+    window.addEventListener('blur', hide)
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('scroll', hide, true)
+      window.removeEventListener('resize', hide)
+      window.removeEventListener('blur', hide)
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [isVisible, openedByLongPress])
+
+  const wrapperEvents = {
+    onMouseEnter: handleMouseEnter,
+    onMouseLeave: handleMouseLeave,
+    onTouchStart: handleTouchStart,
+    onTouchEnd: handleTouchEnd,
+    onTouchCancel: handleTouchCancel,
+  }
+
   return (
     <>
-      <div
-        ref={containerRef}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchCancel}
-        className="relative select-none"
-      >
-        {children}
-      </div>
+      {inline ? (
+        <span
+          ref={containerRef}
+          {...wrapperEvents}
+          className="inline select-none"
+        >
+          {children}
+        </span>
+      ) : (
+        <div
+          ref={containerRef}
+          {...wrapperEvents}
+          className="relative select-none"
+        >
+          {children}
+        </div>
+      )}
 
       {/* Backdrop to close long-press popup when tapping outside */}
       {isVisible && openedByLongPress && (

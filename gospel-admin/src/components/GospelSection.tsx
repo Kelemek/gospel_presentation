@@ -11,7 +11,7 @@ const ANSWERS_STORAGE_KEY_PREFIX = 'gospel-answers-'
 
 
 const PILL_LINK_CLASS = 'px-1.5 py-0.5 font-medium text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-800/50 border border-blue-200 dark:border-blue-700 rounded transition-colors cursor-pointer whitespace-nowrap no-underline'
-const PILL_STYLE = 'display: inline; margin: 0 2px; vertical-align: baseline; font-size: inherit;'
+const PILL_STYLE: React.CSSProperties = { display: 'inline', margin: '0 2px', verticalAlign: 'baseline', fontSize: 'inherit' }
 
 export type ScriptureClickHandler = (reference: string, sectionId?: string, subsectionId?: string) => void
 
@@ -36,13 +36,25 @@ function scripturePinMatchesRow(
 }
 
 // Helper component to render text with COMA buttons, Four Rules button, and inline scripture references
-function TextWithComaButtons({ text, onComaClick, onScriptureClick, onFourRulesClick }: {
+function TextWithComaButtons({
+  text,
+  onComaClick,
+  onScriptureClick,
+  onFourRulesClick,
+  anchorSectionId,
+  anchorSubsectionId,
+  lastViewedScripture,
+  onClearProgress,
+}: {
   text: string;
   onComaClick: () => void;
   onScriptureClick?: ScriptureClickHandler;
   onFourRulesClick?: () => void;
+  anchorSectionId?: string;
+  anchorSubsectionId?: string;
+  lastViewedScripture?: ScriptureProgressPin;
+  onClearProgress?: () => void;
 }) {
-  const containerRef = React.useRef<HTMLSpanElement>(null)
   const safeText = text ?? ''
 
   // Bible book names lookup table - covers all 66 canonical books with common variations
@@ -94,7 +106,6 @@ function TextWithComaButtons({ text, onComaClick, onScriptureClick, onFourRulesC
   const fourRulesMarker = '___FOUR_RULES_BUTTON___'
   const fourRulesPhrase = 'Four Rules of Communication'
   const fourRulesRegex = new RegExp(fourRulesPhrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
-  const fourRulesMatches = processedText.match(fourRulesRegex) || []
   processedText = processedText.replace(fourRulesRegex, fourRulesMarker)
 
   // Then, handle scripture references - match directly in the HTML text
@@ -126,74 +137,107 @@ function TextWithComaButtons({ text, onComaClick, onScriptureClick, onFourRulesC
   // Split by all three markers and reconstruct
   const parts = processedText.split(new RegExp(`(${comaMarker}|${fourRulesMarker}|${scriptureMarker})`))
 
-  // Build everything as HTML string for true inline flow
-  let htmlString = ''
+  // Build React node array for true inline flow with hover support on scripture refs
   let comaIndex = 0
-  let fourRulesIndex = 0
   let scriptureIndex = 0
 
-  parts.forEach((part) => {
-    if (part === comaMarker && comaMatches[comaIndex]) {
-      const comaText = comaMatches[comaIndex]
-      htmlString += `<a href="#" data-coma="true" class="${PILL_LINK_CLASS}" style="${PILL_STYLE}" title="Learn about the C.O.M.A. method">${comaText}</a>`
-      comaIndex++
-    } else if (part === fourRulesMarker && fourRulesMatches[fourRulesIndex]) {
-      htmlString += `<a href="#" data-four-rules="true" class="${PILL_LINK_CLASS}" style="${PILL_STYLE}" title="View the Four Rules of Communication">Four Rules of Communication</a>`
-      fourRulesIndex++
+  const nodes = parts.map((part, i) => {
+    if (part === comaMarker && comaMatches[comaIndex] !== undefined) {
+      const comaText = comaMatches[comaIndex++]
+      return (
+        <a
+          key={i}
+          href="#"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onComaClick() }}
+          className={PILL_LINK_CLASS}
+          style={PILL_STYLE}
+          title="Learn about the C.O.M.A. method"
+        >
+          {comaText}
+        </a>
+      )
+    } else if (part === fourRulesMarker) {
+      return (
+        <a
+          key={i}
+          href="#"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onFourRulesClick?.() }}
+          className={PILL_LINK_CLASS}
+          style={PILL_STYLE}
+          title="View the Four Rules of Communication"
+        >
+          Four Rules of Communication
+        </a>
+      )
     } else if (part === scriptureMarker && scriptureIndex < cleanReferences.length) {
-      const reference = cleanReferences[scriptureIndex]
+      const reference = cleanReferences[scriptureIndex++]
+      const isLastViewedInline =
+        anchorSectionId != null &&
+        anchorSubsectionId != null &&
+        scripturePinMatchesRow(
+          lastViewedScripture,
+          { reference, favorite: false },
+          anchorSectionId,
+          anchorSubsectionId
+        )
+
       if (onScriptureClick) {
-        htmlString += `<a href="#" data-scripture="${reference}" class="${PILL_LINK_CLASS}" style="${PILL_STYLE}" title="Click to view ${reference}">${reference}</a>`
+        return (
+          <ScriptureHoverModal key={i} reference={reference} hoverDelayMs={2000} inline>
+            <span
+              className="relative inline-flex items-center"
+              style={{ margin: '0 2px', verticalAlign: 'baseline' }}
+            >
+              <button
+                type="button"
+                className={
+                  isLastViewedInline
+                    ? 'px-1.5 py-0.5 font-semibold text-yellow-900 dark:text-yellow-100 bg-yellow-200 dark:bg-yellow-900/50 hover:bg-yellow-300 dark:hover:bg-yellow-900/70 border-2 border-yellow-500 dark:border-yellow-600 hover:border-yellow-600 dark:hover:border-yellow-500 rounded transition-colors cursor-pointer whitespace-nowrap no-underline pr-5'
+                    : PILL_LINK_CLASS
+                }
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onScriptureClick(reference, anchorSectionId, anchorSubsectionId)
+                }}
+                style={{ fontSize: 'inherit' }}
+                title={`Click to view ${reference}`}
+              >
+                {reference}
+              </button>
+              {isLastViewedInline && onClearProgress && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onClearProgress()
+                  }}
+                  className="absolute right-0 top-1/2 -translate-y-1/2 text-yellow-700 dark:text-yellow-300 hover:text-yellow-800 dark:hover:text-yellow-200 transition-colors p-0.5"
+                  title="Click to clear progress"
+                >
+                  📍
+                </button>
+              )}
+            </span>
+          </ScriptureHoverModal>
+        )
       } else {
-        htmlString += `<span class="px-1.5 py-0.5 font-medium text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded whitespace-nowrap" style="${PILL_STYLE}">${reference}</span>`
+        return (
+          <span
+            key={i}
+            className="px-1.5 py-0.5 font-medium text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded whitespace-nowrap"
+            style={PILL_STYLE}
+          >
+            {reference}
+          </span>
+        )
       }
-      scriptureIndex++
     } else if (part) {
-      htmlString += part
+      return <span key={i} dangerouslySetInnerHTML={{ __html: part }} />
     }
+    return null
   })
-  
-  // Add click handlers for both COMA and scripture links - scoped to this component's container
-  React.useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
-    
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement
-      
-      // Handle COMA clicks - only if it's an anchor with data-coma
-      if (target.tagName === 'A' && target.hasAttribute('data-coma')) {
-        e.preventDefault()
-        e.stopPropagation()
-        onComaClick()
-        return
-      }
 
-      // Handle Four Rules clicks - only if it's an anchor with data-four-rules
-      if (target.tagName === 'A' && target.hasAttribute('data-four-rules')) {
-        e.preventDefault()
-        e.stopPropagation()
-        onFourRulesClick?.()
-        return
-      }
-
-      // Handle scripture clicks - only if it's an anchor with data-scripture
-      if (target.tagName === 'A' && target.hasAttribute('data-scripture')) {
-        e.preventDefault()
-        e.stopPropagation()
-        const reference = target.getAttribute('data-scripture')
-        if (reference && onScriptureClick) {
-          onScriptureClick(reference)
-        }
-        return
-      }
-    }
-    
-    container.addEventListener('click', handleClick)
-    return () => container.removeEventListener('click', handleClick)
-  }, [onComaClick, onScriptureClick, onFourRulesClick])
-  
-  return <span ref={containerRef} dangerouslySetInnerHTML={{ __html: htmlString }} />
+  return <span>{nodes}</span>
 
 }
 
@@ -595,6 +639,10 @@ function NestedSubsectionComponent({ nestedSubsection, sectionAnchorId, nestedId
             onComaClick={() => setShowComaModal(true)}
             onScriptureClick={onScriptureClick}
             onFourRulesClick={() => setShowFourRulesModal(true)}
+            anchorSectionId={sectionAnchorId}
+            anchorSubsectionId={nestedId}
+            lastViewedScripture={lastViewedScripture}
+            onClearProgress={onClearProgress}
           />
         </h5>
         <div className="text-slate-700 dark:text-slate-300 mb-2 print-content text-base md:text-lg leading-relaxed">
@@ -603,6 +651,10 @@ function NestedSubsectionComponent({ nestedSubsection, sectionAnchorId, nestedId
             onComaClick={() => setShowComaModal(true)}
             onScriptureClick={onScriptureClick}
             onFourRulesClick={() => setShowFourRulesModal(true)}
+            anchorSectionId={sectionAnchorId}
+            anchorSubsectionId={nestedId}
+            lastViewedScripture={lastViewedScripture}
+            onClearProgress={onClearProgress}
           />
         </div>
         {nestedSubsection.scriptureReferences && (
@@ -646,6 +698,10 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
             onComaClick={() => setShowComaModal(true)}
             onScriptureClick={onScriptureClick}
             onFourRulesClick={() => setShowFourRulesModal(true)}
+            anchorSectionId={sectionId}
+            anchorSubsectionId={`${sectionId}-${subsectionIndex}`}
+            lastViewedScripture={lastViewedScripture}
+            onClearProgress={onClearProgress}
           />
         </h4>
         {subsection.content && !subsection.nestedSubsections?.length && (
@@ -655,6 +711,10 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
               onComaClick={() => setShowComaModal(true)}
               onScriptureClick={onScriptureClick}
               onFourRulesClick={() => setShowFourRulesModal(true)}
+              anchorSectionId={sectionId}
+              anchorSubsectionId={`${sectionId}-${subsectionIndex}`}
+              lastViewedScripture={lastViewedScripture}
+              onClearProgress={onClearProgress}
             />
           </div>
         )}
@@ -705,6 +765,10 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
             onComaClick={() => setShowComaModal(true)}
             onScriptureClick={onScriptureClick}
             onFourRulesClick={() => setShowFourRulesModal(true)}
+            anchorSectionId={sectionId}
+            anchorSubsectionId={`${sectionId}-${subsectionIndex}`}
+            lastViewedScripture={lastViewedScripture}
+            onClearProgress={onClearProgress}
           />
         </div>
       )}
@@ -730,6 +794,10 @@ export default function GospelSection({ section, onScriptureClick, lastViewedScr
           onComaClick={() => setShowComaModal(true)}
           onScriptureClick={onScriptureClick}
           onFourRulesClick={() => setShowFourRulesModal(true)}
+          anchorSectionId={sectionId}
+          anchorSubsectionId={sectionId}
+          lastViewedScripture={lastViewedScripture}
+          onClearProgress={onClearProgress}
         />
       </h3>
       
@@ -740,7 +808,7 @@ export default function GospelSection({ section, onScriptureClick, lastViewedScr
             href={section.linkUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-base md:text-lg rounded-md bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors min-h-[44px]"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-base md:text-lg rounded-md bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors min-h-[44px] whitespace-nowrap"
           >
             {section.linkDescription || 'Visit Link'} ⧉
           </a>

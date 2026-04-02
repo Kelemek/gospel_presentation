@@ -48,7 +48,6 @@ describe('GospelSection TextWithComaButtons', () => {
 
     const fourRulesLink = await screen.findByText('Four Rules of Communication')
     expect(fourRulesLink).toBeInTheDocument()
-    expect(fourRulesLink).toHaveAttribute('data-four-rules', 'true')
 
     fireEvent.click(fourRulesLink)
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Four Rules of Communication' })).toBeInTheDocument())
