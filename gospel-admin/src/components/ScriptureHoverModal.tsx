@@ -30,7 +30,7 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const longPressTriggeredRef = useRef(false)
-  const containerRef = useRef<HTMLDivElement | HTMLSpanElement>(null)
+  const containerRef = useRef<HTMLElement | null>(null)
   const [openedByLongPress, setOpenedByLongPress] = useState(false)
 
   // Clear cached scripture when translation changes
@@ -239,7 +239,9 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
     <>
       {inline ? (
         <span
-          ref={containerRef}
+          ref={(el) => {
+            containerRef.current = el
+          }}
           {...wrapperEvents}
           className="inline select-none"
         >
@@ -247,7 +249,9 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
         </span>
       ) : (
         <div
-          ref={containerRef}
+          ref={(el) => {
+            containerRef.current = el
+          }}
           {...wrapperEvents}
           className="relative select-none"
         >
