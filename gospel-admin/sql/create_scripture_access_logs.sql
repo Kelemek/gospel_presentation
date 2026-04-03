@@ -1,5 +1,5 @@
 -- Create scripture_access_logs table for tracking all scripture requests
--- Tracks ESV (API), KJV (database), NASB (database), and any future translations
+-- Tracks every translation served via GET /api/scripture (ESV API, API.Bible, cache, DB fallback)
 -- Supports both authenticated and anonymous users via session IDs
 
 CREATE TABLE scripture_access_logs (

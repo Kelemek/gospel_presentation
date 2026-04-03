@@ -17,4 +17,10 @@ describe('CopyrightScriptureAttributionSections', () => {
 
     expect(screen.getByRole('heading', { name: /Christian Standard Bible \(CSB\)/i })).toBeInTheDocument()
   })
+
+  it('includes API.Bible delivery note for NLT and CSB when shown', () => {
+    render(<CopyrightScriptureAttributionSections enabledTranslationCodes={['nlt', 'csb']} />)
+
+    expect(screen.getAllByRole('link', { name: 'API.Bible' })).toHaveLength(2)
+  })
 })

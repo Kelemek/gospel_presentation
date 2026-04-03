@@ -2,15 +2,15 @@
 
 ## Overview
 
-This system tracks all scripture access by **unique session ID** for all Bible translations (ESV, KJV, NASB). This enables annual reporting on translation usage (particularly NASB for Lockman agreements) without storing personally identifiable information about users.
+This system tracks all scripture access by **unique session ID** for every translation the app serves. This enables annual reporting on translation usage (particularly NASB for Lockman agreements) without storing personally identifiable information about users.
 
 ## Features
 
 - ✅ Logs all scripture requests by unique session
 - ✅ Tracks both authenticated and anonymous visitors transparently
 - ✅ No user identity stored - only session IDs
-- ✅ Supports all translations: ESV (API), KJV (database), NASB (database)
-- ✅ Tracks profile context (which presentation accessed scripture)
+- ✅ Supports all translations: ESV (ESV API), KJV/NASB/LSB/NIV/NLT/CSB (API.Bible when configured, with optional DB fallback for KJV/NASB/LSB)
+- ✅ **Logging is independent of upstream source**: each successful `GET /api/scripture` is logged whether the verse was served from cache, ESV API, API.Bible, or DB fallback
 - ✅ Comprehensive reporting queries included
 - ✅ Non-blocking logging (doesn't impact response time)
 
@@ -33,7 +33,7 @@ This creates:
 
 The logging is automatically integrated into `/api/scripture`:
 
-- **All translations logged**: ESV (API), KJV (database), NASB (database)
+- **All translations logged**: Every enabled translation code (`esv`, `kjv`, `nasb`, `lsb`, `niv`, `nlt`, `csb`) records a row on each successful response, including cache hits
 - **Session ID generation**: Creates unique identifier for all users
 - **No user tracking**: Anonymous and logged-in users treated identically
 - **Non-blocking**: Logging is async and won't slow down scripture delivery
@@ -47,11 +47,11 @@ User requests scripture
   ↓
 GET /api/scripture?reference=...&translation=nasb
   ↓
-Fetch scripture (API or database)
+Fetch scripture (cache, ESV API, API.Bible, or DB fallback)
   ↓
 Log access asynchronously:
   - session_id (unique per user/browser)
-  - translation (esv, kjv, or nasb)
+  - translation (esv, kjv, nasb, lsb, niv, nlt, csb)
   - scripture_reference
   - timestamp
   ↓
@@ -85,7 +85,7 @@ WHERE translation = 'nasb'
 **Use**: Annual NASB usage reporting to Lockman. Shows how many unique sessions accessed NASB scripture each year.
 
 ### Report 3: Detailed Breakdown - All Translations
-Shows all three translations with session counts, view totals, and unique scriptures accessed
+Shows every translation present in logs with session counts, view totals, and unique scriptures accessed
 
 ### Report 4: Monthly Trend for NASB
 Shows usage pattern throughout the year
@@ -119,26 +119,20 @@ A built-in reports page is available at `/admin/reports` (or via the "📊 View 
 
 ## Database Schema
 
+Matches `sql/create_scripture_access_logs.sql` (current production shape):
+
 ```sql
 CREATE TABLE scripture_access_logs (
   id BIGSERIAL PRIMARY KEY,
-  profile_slug TEXT,                  -- Which profile accessed scripture
-  scripture_reference TEXT NOT NULL,  -- e.g., "Matthew 3:16"
-  translation TEXT NOT NULL,          -- 'esv', 'kjv', or 'nasb'
-  session_id TEXT NOT NULL,           -- Unique identifier for user/browser
-  ip_address TEXT,                    -- For analytics
-  user_agent TEXT,                    -- Browser info
-  timestamp TIMESTAMP DEFAULT NOW(),  -- When accessed
-  year_accessed INTEGER GENERATED,    -- For faster filtering
-  
-  CONSTRAINT translation_check CHECK (translation IN ('esv', 'kjv', 'nasb'))
-)
-
--- Key indexes:
-- idx_scripture_access_translation_year (for annual reporting)
-- idx_scripture_access_session (for session grouping)
-- idx_scripture_access_reporting (composite for common queries)
+  scripture_reference TEXT NOT NULL,
+  translation TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  timestamp TIMESTAMP DEFAULT NOW(),
+  year_accessed INTEGER GENERATED ALWAYS AS (EXTRACT(YEAR FROM timestamp)) STORED
+);
 ```
+
+Key indexes: `idx_scripture_access_translation_year`, `idx_scripture_access_session`, `idx_scripture_access_reporting`.
 
 ## Annual Reporting (for Lockman)
 
@@ -163,10 +157,8 @@ This gives you:
 ## Privacy & Security
 
 - ✅ Only admins can view logs (RLS policy)
-- ✅ No personally identifiable information stored
-- ✅ Session IDs are non-reversible fingerprints
-- ✅ IP address stored for analytics only
-- ✅ Can be deleted per user request (just delete by session)
+- ✅ No personally identifiable information stored in log rows (reference, translation, session id only)
+- ✅ Session IDs may be client-supplied (`x-session-id` / cookie) or a short-lived fingerprint
 
 ## Implementation Notes
 

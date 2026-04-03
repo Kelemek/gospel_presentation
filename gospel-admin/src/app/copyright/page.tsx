@@ -107,15 +107,14 @@ export default function CopyrightPage() {
                     >
                       API.Bible
                     </a>{' '}
-                    when NIV, NLT, or CSB are enabled, or from a local database for KJV, NASB, and LSB
+                    when API.Bible-backed translations are enabled (KJV, NASB, LSB, NIV, NLT, CSB)
                   </span>
                 </li>
                 <li className="flex items-start">
                   <span className="text-blue-600 dark:text-blue-400 font-bold mr-3">•</span>
                   <span>
                     ESV and API.Bible translations may be held in a bounded server cache (under 500 verses per
-                    translation, refreshed on a rolling schedule) to follow provider guidance; KJV, NASB, and LSB
-                    are stored in full in the application database
+                    translation, refreshed on a rolling schedule) to follow provider guidance
                   </span>
                 </li>
                 <li className="flex items-start">
@@ -125,8 +124,8 @@ export default function CopyrightPage() {
                 <li className="flex items-start">
                   <span className="text-blue-600 dark:text-blue-400 font-bold mr-3">•</span>
                   <span>
-                    <strong className="text-slate-800 dark:text-slate-100">API.Bible (NIV, NLT, CSB):</strong> Use is
-                    governed by{' '}
+                    <strong className="text-slate-800 dark:text-slate-100">API.Bible (KJV, NASB, LSB, NIV, NLT, CSB):</strong>{' '}
+                    Use is governed by{' '}
                     <a
                       href="https://docs.api.bible/terms-and-conditions"
                       target="_blank"
@@ -150,7 +149,7 @@ export default function CopyrightPage() {
                 <li className="flex items-start">
                   <span className="text-blue-600 dark:text-blue-400 font-bold mr-3">•</span>
                   <span>
-                    NIV, NLT, and CSB must be shown with the publisher copyright / attribution text required by
+                    API.Bible-backed translations must be shown with the publisher copyright / attribution text required by
                     API.Bible and the respective publishers (see Scripture Attribution above and the scripture modal).
                   </span>
                 </li>
@@ -182,7 +181,7 @@ export default function CopyrightPage() {
                   <strong className="text-slate-800 dark:text-slate-100">User Roles:</strong> Admin (full access), Counselor (own profiles only) & Counselee (view-only access)
                 </p>
                 <p className="text-slate-700 dark:text-slate-200 text-base md:text-lg">
-                  <strong className="text-slate-800 dark:text-slate-100">Scripture APIs:</strong> ESV API v3; API.Bible (REST) for NIV, NLT, and CSB when configured; KJV, NASB, and LSB from a local database
+                  <strong className="text-slate-800 dark:text-slate-100">Scripture APIs:</strong> ESV API v3; API.Bible (REST) for KJV, NASB, LSB, NIV, NLT, and CSB when configured
                 </p>
                 <p className="text-slate-700 dark:text-slate-200 text-base md:text-lg">
                   <strong className="text-slate-800 dark:text-slate-100">Rich Text Editor:</strong> <a href="https://tiptap.dev" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors">Tiptap Editor</a> (MIT License)

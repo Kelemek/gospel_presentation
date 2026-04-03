@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchScripture } from '@/lib/bible-api'
 import type { BibleTranslation } from '@/lib/bible-translations'
-import { isApiBibleTranslation, isBibleTranslation } from '@/lib/bible-translations'
+import { isBibleTranslation } from '@/lib/bible-translations'
 import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getTotalCacheVerseCountForTranslation, getTotalEsvCacheVerseCount } from '@/lib/verse-counter'
@@ -10,14 +10,9 @@ import { logScriptureAccess, getSessionId } from '@/lib/scripture-logging'
 const ESV_CACHE_TTL_DAYS = parseInt(process.env.ESV_CACHE_TTL_DAYS || '30', 10)
 const API_BIBLE_CACHE_TTL_DAYS = parseInt(process.env.API_BIBLE_CACHE_TTL_DAYS || '14', 10)
 
+/** ESV uses its own TTL; every other supported translation is API.Bible-backed and uses the shared cache TTL. */
 function cacheTtlDaysForTranslation(translation: BibleTranslation): number {
-  if (translation === 'esv') return ESV_CACHE_TTL_DAYS
-  if (isApiBibleTranslation(translation)) return API_BIBLE_CACHE_TTL_DAYS
-  return ESV_CACHE_TTL_DAYS
-}
-
-function isDbTranslation(t: BibleTranslation): boolean {
-  return t === 'kjv' || t === 'nasb' || t === 'lsb'
+  return translation === 'esv' ? ESV_CACHE_TTL_DAYS : API_BIBLE_CACHE_TTL_DAYS
 }
 
 export async function GET(request: NextRequest) {
@@ -43,31 +38,7 @@ export async function GET(request: NextRequest) {
   const sessionId = getSessionId(request)
 
   try {
-    if (isDbTranslation(translation)) {
-      const result = await fetchScripture(reference, translation)
-
-      logScriptureAccess({
-        reference,
-        translation,
-        sessionId,
-        request,
-      }).catch((err) => logger.warn('Failed to log scripture access:', err))
-
-      return NextResponse.json(
-        {
-          reference: result.reference,
-          text: result.text,
-          translation: result.translation,
-          cached: false,
-        },
-        {
-          headers: {
-            'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
-          },
-        }
-      )
-    }
-
+    // Every valid translation uses scripture_cache + remote fetch (ESV API or API.Bible; KJV/NASB/LSB may DB-fallback inside fetchScripture).
     const supabase = createAdminClient()
     const ttlDays = cacheTtlDaysForTranslation(translation)
     const cutoffDate = new Date()

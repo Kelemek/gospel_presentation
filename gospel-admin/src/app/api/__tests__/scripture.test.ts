@@ -64,6 +64,12 @@ jest.mock('@/lib/bible-api', () => ({
         text: 'In the beginning was the Word...',
         translation: 'nasb'
       }
+    } else if (translation === 'lsb') {
+      return {
+        reference: 'Genesis 1:1',
+        text: 'In the beginning God created the heavens and the earth.',
+        translation: 'lsb'
+      }
     }
     throw new Error('Scripture text not found')
   })
@@ -200,6 +206,10 @@ describe('/api/scripture', () => {
                 })
               })
             })
+          }),
+          upsert: jest.fn().mockResolvedValue({
+            data: null,
+            error: null
           })
         }
       }
@@ -215,7 +225,7 @@ describe('/api/scripture', () => {
     expect(data.text).toBe('For God so loved the world...')
   })
 
-  it('serves KJV directly from database without caching', async () => {
+  it('caches KJV response and enforces translation cache limit', async () => {
     process.env.ESV_API_TOKEN = 'test-token'
 
     const req = new NextRequest('http://localhost:3000/api/scripture?reference=Genesis+1:1&translation=kjv')
@@ -224,9 +234,17 @@ describe('/api/scripture', () => {
     expect(res.status).toBe(200)
     expect(data.translation).toBe('kjv')
     expect(data.cached).toBe(false)
+    expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+      'enforce_translation_cache_limit',
+      expect.objectContaining({
+        p_translation: 'kjv',
+        p_current_total_verses: 120,
+        p_max_verses: 500,
+      })
+    )
   })
 
-  it('serves NASB directly from database without caching', async () => {
+  it('caches NASB response and enforces translation cache limit', async () => {
     process.env.ESV_API_TOKEN = 'test-token'
 
     const req = new NextRequest('http://localhost:3000/api/scripture?reference=Genesis+1:1&translation=nasb')
@@ -235,6 +253,33 @@ describe('/api/scripture', () => {
     expect(res.status).toBe(200)
     expect(data.translation).toBe('nasb')
     expect(data.cached).toBe(false)
+    expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+      'enforce_translation_cache_limit',
+      expect.objectContaining({
+        p_translation: 'nasb',
+        p_current_total_verses: 120,
+        p_max_verses: 500,
+      })
+    )
+  })
+
+  it('caches LSB response and enforces translation cache limit', async () => {
+    process.env.ESV_API_TOKEN = 'test-token'
+
+    const req = new NextRequest('http://localhost:3000/api/scripture?reference=Genesis+1:1&translation=lsb')
+    const res = await GET(req as any)
+    const data = await res.json()
+    expect(res.status).toBe(200)
+    expect(data.translation).toBe('lsb')
+    expect(data.cached).toBe(false)
+    expect(mockSupabaseClient.rpc).toHaveBeenCalledWith(
+      'enforce_translation_cache_limit',
+      expect.objectContaining({
+        p_translation: 'lsb',
+        p_current_total_verses: 120,
+        p_max_verses: 500,
+      })
+    )
   })
 
   it('returns 404 for scripture not found', async () => {

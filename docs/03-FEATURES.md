@@ -32,7 +32,7 @@ When the exact phrase "Four Rules of Communication" (F, R, C capitalized) appear
 
 When users click a scripture reference, a modal displays the full text with these features:
 
-- **Translation selector**: Choose from enabled translations (ESV, KJV, NASB, LSB, and optionally NIV, NLT, CSB via API.Bible when configured and enabled in admin)
+- **Translation selector**: Choose from enabled translations (ESV and optionally KJV, NASB, LSB, NIV, NLT, CSB via API.Bible when configured and enabled in admin)
 - **Compare feature**: A second dropdown (default "Compare") lets users select another translation to view side-by-side
   - Compare translation appears on the left, main translation on the right
   - Each column shows scripture text plus the appropriate attribution

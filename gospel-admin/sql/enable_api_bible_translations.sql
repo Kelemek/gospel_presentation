@@ -1,5 +1,6 @@
--- NIV, NLT, CSB via API.Bible (rest.api.bible). Run in Supabase SQL editor after deploy.
--- Requires env: API_BIBLE_KEY, API_BIBLE_BIBLE_ID_NIV, API_BIBLE_BIBLE_ID_NLT, API_BIBLE_BIBLE_ID_CSB
+-- KJV, NASB, LSB, NIV, NLT, CSB via API.Bible (rest.api.bible). Run in Supabase SQL editor after deploy.
+-- Requires env: API_BIBLE_KEY, API_BIBLE_BIBLE_ID_KJV, API_BIBLE_BIBLE_ID_NASB, API_BIBLE_BIBLE_ID_LSB,
+--               API_BIBLE_BIBLE_ID_NIV, API_BIBLE_BIBLE_ID_NLT, API_BIBLE_BIBLE_ID_CSB
 
 INSERT INTO translation_settings (translation_code, translation_name, is_enabled, display_order)
 VALUES
@@ -85,7 +86,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.enforce_translation_cache_limit IS
-  'LRU eviction for scripture_cache rows for a given translation (API.Bible NIV/NLT/CSB). Max verses default 500.';
+  'LRU eviction for scripture_cache rows for a given API-backed translation. Max verses default 500.';
 
 SELECT translation_code, translation_name, is_enabled, display_order
 FROM translation_settings

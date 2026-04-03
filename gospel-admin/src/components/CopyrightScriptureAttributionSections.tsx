@@ -49,6 +49,13 @@ export function CopyrightScriptureAttributionSections({ enabledTranslationCodes 
           <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg">
             Scripture quotations from the King James Version (KJV) are in the public domain.
           </p>
+          <p className="text-slate-700 dark:text-slate-200 mt-4 leading-relaxed text-base md:text-lg">
+            <strong className="text-slate-800 dark:text-slate-100">API:</strong> Text may be retrieved via{' '}
+            <a href="https://rest.api.bible" target="_blank" rel="noopener noreferrer" className={link}>
+              API.Bible
+            </a>{' '}
+            under their terms; this application caches responses subject to provider guidance.
+          </p>
         </div>
       )}
 
@@ -64,6 +71,13 @@ export function CopyrightScriptureAttributionSections({ enabledTranslationCodes 
             <a href="https://www.lockman.org" target="_blank" rel="noopener noreferrer" className={link}>
               www.lockman.org
             </a>
+          </p>
+          <p className="text-slate-700 dark:text-slate-200 mt-4 leading-relaxed text-base md:text-lg">
+            <strong className="text-slate-800 dark:text-slate-100">API:</strong> Text may be retrieved via{' '}
+            <a href="https://rest.api.bible" target="_blank" rel="noopener noreferrer" className={link}>
+              API.Bible
+            </a>{' '}
+            under their terms; this application caches responses subject to provider guidance.
           </p>
         </div>
       )}
@@ -83,6 +97,13 @@ export function CopyrightScriptureAttributionSections({ enabledTranslationCodes 
             <a href="https://www.LSBible.org" target="_blank" rel="noopener noreferrer" className={link}>
               www.LSBible.org
             </a>
+          </p>
+          <p className="text-slate-700 dark:text-slate-200 mt-4 leading-relaxed text-base md:text-lg">
+            <strong className="text-slate-800 dark:text-slate-100">API:</strong> Text may be retrieved via{' '}
+            <a href="https://rest.api.bible" target="_blank" rel="noopener noreferrer" className={link}>
+              API.Bible
+            </a>{' '}
+            under their terms; this application caches responses subject to provider guidance.
           </p>
         </div>
       )}
@@ -121,6 +142,13 @@ export function CopyrightScriptureAttributionSections({ enabledTranslationCodes 
               Tyndale.com
             </a>
           </p>
+          <p className="text-slate-700 dark:text-slate-200 mt-4 leading-relaxed text-base md:text-lg">
+            <strong className="text-slate-800 dark:text-slate-100">API:</strong> Text may be retrieved via{' '}
+            <a href="https://rest.api.bible" target="_blank" rel="noopener noreferrer" className={link}>
+              API.Bible
+            </a>{' '}
+            under their terms; this application caches responses subject to provider guidance.
+          </p>
         </div>
       )}
 
@@ -135,6 +163,13 @@ export function CopyrightScriptureAttributionSections({ enabledTranslationCodes 
             <a href="https://csbible.com" target="_blank" rel="noopener noreferrer" className={link}>
               CSBible.com
             </a>
+          </p>
+          <p className="text-slate-700 dark:text-slate-200 mt-4 leading-relaxed text-base md:text-lg">
+            <strong className="text-slate-800 dark:text-slate-100">API:</strong> Text may be retrieved via{' '}
+            <a href="https://rest.api.bible" target="_blank" rel="noopener noreferrer" className={link}>
+              API.Bible
+            </a>{' '}
+            under their terms; this application caches responses subject to provider guidance.
           </p>
         </div>
       )}

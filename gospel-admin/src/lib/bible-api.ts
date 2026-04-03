@@ -1,5 +1,5 @@
 // Bible API service for fetching scripture from multiple translations
-// Supports ESV (api.esv.org), API.Bible (NIV/NLT/CSB), and local database for KJV/NASB/LSB
+// Supports ESV (api.esv.org), API.Bible (KJV/NASB/LSB/NIV/NLT/CSB), and temporary DB fallback for KJV/NASB/LSB
 
 import type { ApiBibleTranslation, BibleTranslation } from '@/lib/bible-translations'
 import { formatApiBiblePassageText } from '@/lib/api-bible-format'
@@ -54,13 +54,16 @@ async function fetchFromESV(reference: string): Promise<ScriptureResult> {
 }
 
 const API_BIBLE_ID_ENV: Record<ApiBibleTranslation, string> = {
+  kjv: 'API_BIBLE_BIBLE_ID_KJV',
+  nasb: 'API_BIBLE_BIBLE_ID_NASB',
+  lsb: 'API_BIBLE_BIBLE_ID_LSB',
   niv: 'API_BIBLE_BIBLE_ID_NIV',
   nlt: 'API_BIBLE_BIBLE_ID_NLT',
   csb: 'API_BIBLE_BIBLE_ID_CSB',
 }
 
 /**
- * Fetch scripture from API.Bible (NIV, NLT, CSB).
+ * Fetch scripture from API.Bible.
  */
 async function fetchFromApiBible(
   reference: string,
@@ -155,8 +158,8 @@ function normalizeBookName(book: string, translation: BibleTranslation): string 
 }
 
 /**
- * Fetch scripture text from local database
- * Currently supports: KJV, NASB (when imported)
+ * Fetch scripture text from local database.
+ * Used as temporary fallback for KJV/NASB/LSB rollout.
  */
 async function fetchFromDatabase(reference: string, translation: BibleTranslation): Promise<ScriptureResult> {
   const supabase = createAdminClient()
@@ -218,15 +221,24 @@ export async function fetchScripture(
   switch (translation) {
     case 'esv':
       return fetchFromESV(reference)
+    case 'kjv':
+    case 'nasb':
+    case 'lsb':
     case 'niv':
     case 'nlt':
     case 'csb':
       logger.debug(`Fetching ${reference} (${translation}) from API.Bible`)
-      return fetchFromApiBible(reference, translation)
-    case 'kjv':
-    case 'nasb':
-    case 'lsb':
-      logger.debug(`Fetching ${reference} (${translation}) from local database`)
-      return await fetchFromDatabase(reference, translation)
+      try {
+        return await fetchFromApiBible(reference, translation)
+      } catch (error) {
+        if (translation === 'kjv' || translation === 'nasb' || translation === 'lsb') {
+          logger.warn(
+            `API.Bible failed for ${reference} (${translation}); falling back to local DB`,
+            error
+          )
+          return await fetchFromDatabase(reference, translation)
+        }
+        throw error
+      }
   }
 }

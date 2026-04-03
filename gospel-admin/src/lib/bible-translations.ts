@@ -12,7 +12,7 @@ export const BIBLE_TRANSLATION_CODES = [
 export type BibleTranslation = (typeof BIBLE_TRANSLATION_CODES)[number]
 
 /** Translations fetched from API.Bible (server cache + verse limit, like ESV). */
-export const API_BIBLE_TRANSLATION_CODES = ['niv', 'nlt', 'csb'] as const
+export const API_BIBLE_TRANSLATION_CODES = ['kjv', 'nasb', 'lsb', 'niv', 'nlt', 'csb'] as const
 
 export type ApiBibleTranslation = (typeof API_BIBLE_TRANSLATION_CODES)[number]
 
