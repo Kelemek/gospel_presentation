@@ -47,7 +47,7 @@ export default function TableOfContents({
   const [isTextSizeOpen, setIsTextSizeOpen] = useState(false)
   const { textSize, setTextSize } = useTextSize()
   const [expandedCategoryIds, setExpandedCategoryIds] = useState<Set<string>>(new Set())
-  const { translation, setTranslation, enabledTranslations } = useTranslation()
+  const { translation, setTranslation, enabledTranslationOptions } = useTranslation()
 
   const toggleCategory = useCallback((id: string) => {
     setExpandedCategoryIds((prev) => {
@@ -274,27 +274,11 @@ export default function TableOfContents({
             onChange={handleTranslationChange}
             className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 focus:border-slate-400 dark:focus:border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-600 text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 shadow-sm text-sm transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1.25rem] bg-position-[right_0.5rem_center] bg-no-repeat pr-10"
           >
-            {enabledTranslations.includes('esv') && (
-              <option value="esv">ESV (English Standard Version)</option>
-            )}
-            {enabledTranslations.includes('kjv') && (
-              <option value="kjv">KJV (King James Version)</option>
-            )}
-            {enabledTranslations.includes('nasb') && (
-              <option value="nasb">NASB (New American Standard Bible)</option>
-            )}
-            {enabledTranslations.includes('lsb') && (
-              <option value="lsb">LSB (Legacy Standard Bible)</option>
-            )}
-            {enabledTranslations.includes('niv') && (
-              <option value="niv">NIV (New International Version)</option>
-            )}
-            {enabledTranslations.includes('nlt') && (
-              <option value="nlt">NLT (New Living Translation)</option>
-            )}
-            {enabledTranslations.includes('csb') && (
-              <option value="csb">CSB (Christian Standard Bible)</option>
-            )}
+            {enabledTranslationOptions.map(({ translation_code, translation_name }) => (
+              <option key={translation_code} value={translation_code}>
+                {translation_name}
+              </option>
+            ))}
           </select>
         </div>
       </div>

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react'
 import { logger } from '@/lib/logger'
 import { createClient } from '@/lib/supabase/client'
 import type { BibleTranslation } from '@/lib/bible-translations'
@@ -8,24 +8,55 @@ import { isBibleTranslation } from '@/lib/bible-translations'
 
 export type { BibleTranslation }
 
+/** One enabled row from `/api/translations/enabled` (order matches `translation_settings.display_order`). */
+export interface EnabledTranslationOption {
+  translation_code: string
+  translation_name: string
+}
+
 interface TranslationContextType {
   translation: BibleTranslation
   setTranslation: (translation: BibleTranslation) => Promise<void>
   isLoading: boolean
   enabledTranslations: string[]
+  enabledTranslationOptions: EnabledTranslationOption[]
 }
 
 const TranslationContext = createContext<TranslationContextType | undefined>(undefined)
 
 const STORAGE_KEY = 'gospel-preferred-translation'
 
-const FALLBACK_ENABLED_TRANSLATIONS = ['esv'] as const
+const DEFAULT_ENABLED_OPTIONS: EnabledTranslationOption[] = [
+  { translation_code: 'esv', translation_name: 'ESV (English Standard Version)' },
+]
+
+function parseEnabledTranslationsPayload(data: unknown): EnabledTranslationOption[] {
+  const raw = data as { translations?: unknown } | null | undefined
+  const list = raw?.translations
+  if (!Array.isArray(list) || list.length === 0) {
+    return DEFAULT_ENABLED_OPTIONS
+  }
+  return list.map((t: { translation_code?: string; translation_name?: string }) => {
+    const code = String(t.translation_code ?? '')
+    const name =
+      typeof t.translation_name === 'string' && t.translation_name.trim() !== ''
+        ? t.translation_name
+        : code.toUpperCase()
+    return { translation_code: code, translation_name: name }
+  })
+}
 
 export function TranslationProvider({ children }: { children: ReactNode }) {
   const [translation, setTranslationState] = useState<BibleTranslation>('esv')
   const [isLoading, setIsLoading] = useState(true)
-  const [enabledTranslations, setEnabledTranslations] = useState<string[]>(['esv'])
+  const [enabledTranslationOptions, setEnabledTranslationOptions] =
+    useState<EnabledTranslationOption[]>(DEFAULT_ENABLED_OPTIONS)
   const supabase = createClient()
+
+  const enabledTranslations = useMemo(
+    () => enabledTranslationOptions.map((o) => o.translation_code),
+    [enabledTranslationOptions]
+  )
 
   // Load enabled translations
   useEffect(() => {
@@ -33,13 +64,10 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
       try {
         const response = await fetch('/api/translations/enabled')
         const data = await response.json()
-        const codes = data.translations?.map((t: any) => t.translation_code) || [...FALLBACK_ENABLED_TRANSLATIONS]
-        setEnabledTranslations(codes)
-        return codes
+        setEnabledTranslationOptions(parseEnabledTranslationsPayload(data))
       } catch (error) {
         logger.error('Error loading enabled translations:', error)
-        setEnabledTranslations([...FALLBACK_ENABLED_TRANSLATIONS])
-        return [...FALLBACK_ENABLED_TRANSLATIONS]
+        setEnabledTranslationOptions(DEFAULT_ENABLED_OPTIONS)
       }
     }
     loadEnabledTranslations()
@@ -52,8 +80,9 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
       try {
         const response = await fetch('/api/translations/enabled')
         const data = await response.json()
-        const enabled = data.translations?.map((t: any) => t.translation_code) || [...FALLBACK_ENABLED_TRANSLATIONS]
-        setEnabledTranslations(enabled)
+        const options = parseEnabledTranslationsPayload(data)
+        setEnabledTranslationOptions(options)
+        const enabled = options.map((o) => o.translation_code)
         enabledListCommitted = true
 
         // 1. Read from localStorage first (instant)
@@ -113,7 +142,7 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         logger.error('Error loading translation preference:', error)
         if (!enabledListCommitted) {
-          setEnabledTranslations([...FALLBACK_ENABLED_TRANSLATIONS])
+          setEnabledTranslationOptions(DEFAULT_ENABLED_OPTIONS)
         }
       } finally {
         setIsLoading(false)
@@ -149,7 +178,15 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <TranslationContext.Provider value={{ translation, setTranslation, isLoading, enabledTranslations }}>
+    <TranslationContext.Provider
+      value={{
+        translation,
+        setTranslation,
+        isLoading,
+        enabledTranslations,
+        enabledTranslationOptions,
+      }}
+    >
       {children}
     </TranslationContext.Provider>
   )

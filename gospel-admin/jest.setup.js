@@ -276,6 +276,15 @@ jest.mock('@/contexts/TranslationContext', () => {
     setTranslation: jest.fn(),
     isLoading: false,
     enabledTranslations: ['esv', 'kjv', 'nasb', 'lsb', 'niv', 'nlt', 'csb'],
+    enabledTranslationOptions: [
+      { translation_code: 'esv', translation_name: 'ESV (English Standard Version)' },
+      { translation_code: 'kjv', translation_name: 'KJV (King James Version)' },
+      { translation_code: 'nasb', translation_name: 'NASB (New American Standard Bible)' },
+      { translation_code: 'lsb', translation_name: 'LSB (Legacy Standard Bible)' },
+      { translation_code: 'niv', translation_name: 'NIV (New International Version)' },
+      { translation_code: 'nlt', translation_name: 'NLT (New Living Translation)' },
+      { translation_code: 'csb', translation_name: 'CSB (Christian Standard Bible)' },
+    ],
   }
 
   return {
