@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import GospelSection from '@/components/GospelSection'
 import ScriptureModal from '@/components/ScriptureModal'
 import TableOfContents from '@/components/TableOfContents'
+import SidebarAuthNav from '@/components/SidebarAuthNav'
 import ThemeToggle from '@/components/ThemeToggle'
 import BookmarksDropdown from '@/components/BookmarksDropdown'
 import { ScriptureFooterAttributionParagraphs } from '@/components/ScriptureFooterAttributionParagraphs'
@@ -697,8 +698,10 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                 </div>
               )}
             </div>
+
+              <SidebarAuthNav />
+            </div>
           </div>
-        </div>
         </>
       )}
 

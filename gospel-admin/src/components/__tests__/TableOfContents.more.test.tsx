@@ -1,6 +1,7 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TextSizeProvider } from '@/contexts/TextSizeContext'
+import SidebarAuthNav from '@/components/SidebarAuthNav'
 
 function renderToc(ui: React.ReactElement) {
   return render(<TextSizeProvider>{ui}</TextSizeProvider>)
@@ -33,8 +34,7 @@ describe('TableOfContents additional behaviors', () => {
 
   it('calls window.print when Print Version is clicked', async () => {
     const mockPrint = jest.fn()
-    // @ts-expect-error mocking incompatible types
-    window.print = mockPrint
+    const printSpy = jest.spyOn(window, 'print').mockImplementation(mockPrint)
 
     // Import the component (router is mocked above) and render
     // require here so module uses the same cached React instance as the test harness
@@ -45,6 +45,7 @@ describe('TableOfContents additional behaviors', () => {
     fireEvent.click(printButton)
 
     expect(mockPrint).toHaveBeenCalled()
+    printSpy.mockRestore()
   })
 
   it('shows Resources dropdown when user is not logged in', async () => {
@@ -53,8 +54,13 @@ describe('TableOfContents additional behaviors', () => {
       auth: { getUser: async () => ({ data: { user: null } }) }
     }))
 
-    const fetchSpy = jest.fn((input: RequestInfo) => {
-      const url = typeof input === 'string' ? input : (input as Request).url
+    const fetchSpy = jest.fn((input: RequestInfo | URL) => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.href
+            : (input as Request).url
       if (String(url).includes('/api/profiles/public-templates')) {
         return Promise.resolve({
           ok: true,
@@ -65,7 +71,7 @@ describe('TableOfContents additional behaviors', () => {
       }
       return Promise.resolve({ ok: false }) as any
     })
-    global.fetch = fetchSpy
+    global.fetch = fetchSpy as typeof fetch
 
     const TableOfContents = require('../TableOfContents').default
     renderToc(<TableOfContents sections={[]} />)
@@ -80,8 +86,13 @@ describe('TableOfContents additional behaviors', () => {
       auth: { getUser: async () => ({ data: { user: null } }) }
     }))
 
-    const fetchSpy = jest.fn((input: RequestInfo) => {
-      const url = typeof input === 'string' ? input : (input as Request).url
+    const fetchSpy = jest.fn((input: RequestInfo | URL) => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.href
+            : (input as Request).url
       if (String(url).includes('/api/profiles/public-templates')) {
         return Promise.resolve({
           ok: true,
@@ -99,7 +110,7 @@ describe('TableOfContents additional behaviors', () => {
       }
       return Promise.resolve({ ok: false }) as any
     })
-    global.fetch = fetchSpy
+    global.fetch = fetchSpy as typeof fetch
 
     const TableOfContents = require('../TableOfContents').default
     renderToc(<TableOfContents sections={[]} />)
@@ -129,7 +140,12 @@ describe('TableOfContents additional behaviors', () => {
     }
 
     const TableOfContents = require('../TableOfContents').default
-    renderToc(<TableOfContents sections={[]} />)
+    renderToc(
+      <>
+        <TableOfContents sections={[]} />
+        <SidebarAuthNav />
+      </>
+    )
 
     await waitFor(() => {
       expect(screen.getByRole('link', { name: /Dashboard/i })).toBeInTheDocument()
@@ -138,8 +154,10 @@ describe('TableOfContents additional behaviors', () => {
     const link = screen.getByRole('link', { name: /Dashboard/i })
     expect(link).toHaveAttribute('href', '/admin')
 
-    // On web, Resources is always shown below Dashboard (even when logged in)
-    expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument()
+    const resources = screen.getByRole('button', { name: /Resources/i })
+    expect(
+      resources.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
   })
 
   it('Text size dropdown opens and saves Larger to localStorage', async () => {
@@ -147,7 +165,7 @@ describe('TableOfContents additional behaviors', () => {
     jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({
       auth: { getUser: async () => ({ data: { user: null } }) }
     }))
-    global.fetch = jest.fn().mockResolvedValue({ ok: false })
+    global.fetch = jest.fn().mockResolvedValue({ ok: false }) as typeof fetch
 
     const TableOfContents = require('../TableOfContents').default
     localStorage.removeItem('gospel-profile-text-size')

@@ -95,6 +95,7 @@ Users can:
 
 ## Text size (presentation site)
 
+- On **`[slug]`** gospel profile pages, the slide-out **Table of Contents** drawer lists **Resources**, **Text size**, **Print** / **Bible Translation**, section links, then profile summary; **Login** / **Dashboard** appear last at the bottom (`SidebarAuthNav.tsx`). **Login** is hidden on **Capacitor** native builds (same as before).
 - In the sidebar below **Resources**, a **Text size** dropdown matches the Resources styling and offers **Normal**, **Larger**, and **Largest**.
 - The choice is saved in `localStorage` (`gospel-profile-text-size`) and scales root font size on the main site via `TextSizeContext`, `ApplyTextSize`, and `html.text-size-*` classes in `globals.css`.
 - **`/admin` routes are excluded**: text scaling is not applied on admin pages so the admin UI stays at default size.
