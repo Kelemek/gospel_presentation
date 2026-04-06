@@ -327,8 +327,13 @@ export type ProfileFeatureTourOptions = {
    */
   onComplete?: () => void
   /**
-   * When true (full walkthrough), disables the close button, Escape, and overlay dismiss so the chain
-   * only advances after the user finishes each segment with Next/Done.
+   * When the user cancels a **chained** segment (× on the popover) before finishing, this runs instead of
+   * `onComplete` so cleanup happens without starting the next segment (e.g. close bookmarks panel, restore theme).
+   */
+  onAborted?: () => void
+  /**
+   * When true (full walkthrough), overlay taps do not dismiss the tour; the popover **×** still cancels.
+   * Escape is disabled only while `onComplete` is set (mid-chain), so accidental key presses do not skip ahead.
    */
   captive?: boolean
   /**
@@ -377,9 +382,19 @@ function prependSegmentIntroIfAny(
 
 function baseProfileHelpDriverConfig(options?: ProfileFeatureTourOptions): Omit<Config, 'steps'> {
   const captive = options?.captive === true
+  const chainContinues = typeof options?.onComplete === 'function'
+  const suppressChainOnUserClose = captive && chainContinues
+  const cancelRef = { cancelled: false }
+
   return {
     ...tourMotionConfig(),
-    allowClose: !captive,
+    allowClose: true,
+    overlayClickBehavior: captive ? () => {} : 'close',
+    allowKeyboardControl: !suppressChainOnUserClose,
+    onCloseClick: (_e, _s, { driver: drv }) => {
+      if (suppressChainOnUserClose) cancelRef.cancelled = true
+      drv.destroy()
+    },
     showProgress: true,
     popoverClass: 'profile-help-tour-popover',
     nextBtnText: 'Next',
@@ -389,7 +404,12 @@ function baseProfileHelpDriverConfig(options?: ProfileFeatureTourOptions): Omit<
     onDestroyed: () => {
       clearDriverBodyClasses()
       closeProfileSlideoutMenuIfOpen()
-      options?.onComplete?.()
+      if (cancelRef.cancelled) {
+        options?.onAborted?.()
+      } else {
+        options?.onComplete?.()
+      }
+      cancelRef.cancelled = false
       window.requestAnimationFrame(() => {
         closeProfileSlideoutMenuIfOpen()
       })
@@ -406,6 +426,13 @@ export function runBookmarksFeatureTour(options?: ProfileFeatureTourOptions): vo
   const d = driver({
     ...baseProfileHelpDriverConfig({
       ...options,
+      onAborted: () => {
+        closeBookmarksPanelIfOpen()
+        window.requestAnimationFrame(() => {
+          closeBookmarksPanelIfOpen()
+        })
+        options?.onAborted?.()
+      },
       onComplete: () => {
         closeBookmarksPanelIfOpen()
         window.requestAnimationFrame(() => {
@@ -584,6 +611,10 @@ export function runThemeFeatureTour(options?: ProfileFeatureTourOptions): void {
   const d = driver({
     ...baseProfileHelpDriverConfig({
       ...options,
+      onAborted: () => {
+        applyThemePersistenceSnapshot(themeSnapshot)
+        options?.onAborted?.()
+      },
       onComplete: () => {
         applyThemePersistenceSnapshot(themeSnapshot)
         options?.onComplete?.()
@@ -1718,6 +1749,16 @@ async function runMarriageSeminarResourcesTourAsync(options?: ProfileFeatureTour
   const d = driver({
     ...baseProfileHelpDriverConfig({
       ...options,
+      onAborted: () => {
+        if (!navigationScheduled) {
+          try {
+            sessionStorage.removeItem(MARRIAGE_SEMINAR_TOUR_RESUME_STORAGE_KEY)
+          } catch {
+            /* ignore */
+          }
+        }
+        options?.onAborted?.()
+      },
       onComplete: () => {
         if (!navigationScheduled) {
           try {

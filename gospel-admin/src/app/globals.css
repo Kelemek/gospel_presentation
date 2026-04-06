@@ -1003,6 +1003,26 @@ s {
   }
 }
 
+/* driver.js help tour popover — iOS/Android safe areas (viewport-fit=cover in layout.tsx).
+   Popovers are position:fixed on body; driver.js clamps to innerWidth/innerHeight without env(). */
+.profile-help-tour-popover.driver-popover {
+  box-sizing: border-box;
+  max-width: min(
+    300px,
+    calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 16px)
+  );
+  max-height: calc(
+    100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 16px
+  );
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  margin-top: env(safe-area-inset-top, 0px);
+  margin-right: env(safe-area-inset-right, 0px);
+  margin-bottom: env(safe-area-inset-bottom, 0px);
+  margin-left: env(safe-area-inset-left, 0px);
+}
+
 /* driver.js help tour popover — match site dark mode (popover is attached to body) */
 html.dark .profile-help-tour-popover.driver-popover,
 body.dark .profile-help-tour-popover.driver-popover {
