@@ -977,3 +977,97 @@ s {
     animation: none;
   }
 }
+
+@keyframes profile-help-welcome-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(251 191 36 / 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgb(251 191 36 / 0.2);
+  }
+}
+
+.profile-help-welcome-highlight {
+  position: relative;
+  z-index: 45;
+  animation: profile-help-welcome-pulse 2s ease-in-out infinite;
+  border-radius: 0.375rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-help-welcome-highlight {
+    animation: none;
+    outline: 2px solid rgb(251 191 36);
+    outline-offset: 2px;
+  }
+}
+
+/* driver.js help tour popover — match site dark mode (popover is attached to body) */
+html.dark .profile-help-tour-popover.driver-popover,
+body.dark .profile-help-tour-popover.driver-popover {
+  background-color: rgb(30 41 59);
+  color: rgb(241 245 249);
+  border: 1px solid rgb(71 85 105);
+  box-shadow: 0 4px 24px rgb(0 0 0 / 0.45);
+}
+
+html.dark .profile-help-tour-popover .driver-popover-title,
+body.dark .profile-help-tour-popover .driver-popover-title {
+  color: rgb(248 250 252);
+}
+
+html.dark .profile-help-tour-popover .driver-popover-description,
+body.dark .profile-help-tour-popover .driver-popover-description {
+  color: rgb(203 213 225);
+}
+
+html.dark .profile-help-tour-popover .driver-popover-progress-text,
+body.dark .profile-help-tour-popover .driver-popover-progress-text {
+  color: rgb(148 163 184);
+}
+
+html.dark .profile-help-tour-popover .driver-popover-footer button,
+body.dark .profile-help-tour-popover .driver-popover-footer button {
+  background-color: rgb(51 65 85);
+  color: rgb(241 245 249);
+  border-color: rgb(71 85 105);
+  text-shadow: none;
+}
+
+html.dark .profile-help-tour-popover .driver-popover-footer button:hover,
+html.dark .profile-help-tour-popover .driver-popover-footer button:focus,
+body.dark .profile-help-tour-popover .driver-popover-footer button:hover,
+body.dark .profile-help-tour-popover .driver-popover-footer button:focus {
+  background-color: rgb(71 85 105);
+}
+
+html.dark .profile-help-tour-popover .driver-popover-close-btn,
+body.dark .profile-help-tour-popover .driver-popover-close-btn {
+  color: rgb(148 163 184);
+}
+
+html.dark .profile-help-tour-popover .driver-popover-close-btn:hover,
+body.dark .profile-help-tour-popover .driver-popover-close-btn:focus {
+  color: rgb(248 250 252);
+}
+
+html.dark .profile-help-tour-popover .driver-popover-arrow-side-bottom,
+body.dark .profile-help-tour-popover .driver-popover-arrow-side-bottom {
+  border-top-color: rgb(30 41 59);
+}
+
+html.dark .profile-help-tour-popover .driver-popover-arrow-side-top,
+body.dark .profile-help-tour-popover .driver-popover-arrow-side-top {
+  border-bottom-color: rgb(30 41 59);
+}
+
+html.dark .profile-help-tour-popover .driver-popover-arrow-side-left,
+body.dark .profile-help-tour-popover .driver-popover-arrow-side-left {
+  border-right-color: rgb(30 41 59);
+}
+
+html.dark .profile-help-tour-popover .driver-popover-arrow-side-right,
+body.dark .profile-help-tour-popover .driver-popover-arrow-side-right {
+  border-left-color: rgb(30 41 59);
+}

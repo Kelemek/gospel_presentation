@@ -9,6 +9,8 @@ import TableOfContents from '@/components/TableOfContents'
 import SidebarAuthNav from '@/components/SidebarAuthNav'
 import ThemeToggle from '@/components/ThemeToggle'
 import BookmarksDropdown from '@/components/BookmarksDropdown'
+import ProfileHelpMenu from '@/components/ProfileHelpMenu'
+import PresentationFirstVisitWelcome from '@/components/PresentationFirstVisitWelcome'
 import { ScriptureFooterAttributionParagraphs } from '@/components/ScriptureFooterAttributionParagraphs'
 import { GospelSection as GospelSectionType, GospelProfile, SavedAnswer, ScriptureProgressPin } from '@/lib/types'
 import { useScriptureProgress } from '@/lib/useScriptureProgress'
@@ -16,6 +18,7 @@ import { logger } from '@/lib/logger'
 import { createClient } from '@/lib/supabase/client'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import { useTranslation } from '@/contexts/TranslationContext'
+import { GOSPEL_CLOSE_PROFILE_SLIDEOUT_MENU_EVENT } from '@/lib/bookmarksPanelCloseEvent'
 import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
 import { findFirstScriptureCardAnchors } from '@/lib/findFirstScriptureCardAnchors'
 
@@ -497,6 +500,14 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     setIsMenuOpen(false)
   }
 
+  useEffect(() => {
+    const onTourCloseMenu = (): void => {
+      setIsMenuOpen(false)
+    }
+    window.addEventListener(GOSPEL_CLOSE_PROFILE_SLIDEOUT_MENU_EVENT, onTourCloseMenu)
+    return () => window.removeEventListener(GOSPEL_CLOSE_PROFILE_SLIDEOUT_MENU_EVENT, onTourCloseMenu)
+  }, [])
+
   // Early return if required props are missing - moved after all hooks
   if (!sections || !profileInfo) {
     return <div>Loading...</div>
@@ -504,18 +515,21 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
 
   return (
     <>
+      <PresentationFirstVisitWelcome />
       {/* Print-only header - appears at top of first page */}
       <div className="print-header" style={{ display: 'none' }}>
         <h1 className="print-title">The Gospel Presentation</h1>
       </div>
 
       {/* Unified Layout - Hamburger menu at all screen sizes */}
-      <div className="min-h-screen flex-col">
+      <div className="flex min-h-screen flex-col">
         {/* Header with hamburger menu and optional edit button */}
         <div data-profile-sticky-header className="sticky top-[env(safe-area-inset-top,0px)] z-40 bg-white/70 dark:bg-slate-800/90 backdrop-blur-sm shadow-md print-hide">
           <div className="w-full px-5 py-3">
             <div className="flex justify-between items-center gap-3">
               <button
+                type="button"
+                data-tour="profile-menu-button"
                 onClick={toggleMenu}
                 className="flex items-center gap-3 px-4 py-2 rounded-md transition-colors cursor-pointer bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white"
               >
@@ -578,6 +592,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                     </Link>
                   </>
                 )}
+                <ProfileHelpMenu />
                 <BookmarksDropdown
                   sections={sections}
                   profileTitle={profileInfo.title}
@@ -595,8 +610,11 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
           onMouseEnter={() => setIsMenuOpen(true)}
         />
 
-        {/* Main Content Area */}
-        <div className="bg-gray-50 dark:bg-gray-900">
+        {/* Main Content Area — flex-1 so the column fills the viewport; click closes slide-out on desktop (mobile uses full-screen overlay) */}
+        <div
+          className="flex-1 bg-gray-50 dark:bg-gray-900"
+          onClick={isMenuOpen ? closeMenu : undefined}
+        >
           <main className="container mx-auto px-5 py-10">
             <div className="space-y-12">
               {sections.map((section) => (
@@ -625,8 +643,13 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
           
           {/* Menu Panel */}
           <div 
+            data-tour="profile-slideout-menu"
             className="fixed top-[env(safe-area-inset-top,0px)] bottom-0 left-0 z-50 bg-white dark:bg-slate-800 w-80 shadow-2xl overflow-y-auto border-r border-gray-200 dark:border-slate-600 transform transition-transform duration-300 ease-in-out print-hide"
             onMouseLeave={() => {
+              // Keep menu open during driver.js tours so the slide-out stays mounted on desktop hover-close
+              if (typeof document !== 'undefined' && document.body.classList.contains('driver-active')) {
+                return
+              }
               // Only auto-close on desktop when mouse leaves
               if (window.innerWidth >= 1024) {
                 closeMenu()
@@ -665,7 +688,10 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                 
                 {/* Scripture Progress Section - show when profile exists (localStorage for anonymous/default) */}
                 {profile && (
-                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-600">
+                <div
+                  className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-600"
+                  data-tour="toc-reading-progress"
+                >
                   {currentLastViewed ? (
                     <div className="space-y-2">
                       <div className="text-xs font-medium text-slate-600 dark:text-slate-300">Reading Progress</div>
@@ -673,6 +699,8 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                         📍 Last: {currentLastViewed}
                       </div>
                       <button
+                        type="button"
+                        data-tour="toc-reset-progress"
                         onClick={async () => {
                           await resetProgress()
                           setLocalLastViewed(null)
@@ -680,6 +708,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                         }}
                         disabled={progressLoading}
                         className="text-xs px-3 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded transition-colors disabled:opacity-50 w-full"
+                        aria-label="Reset scripture reading progress for this presentation"
                       >
                         {progressLoading ? 'Resetting...' : 'Reset Progress'}
                       </button>

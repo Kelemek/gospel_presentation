@@ -16,6 +16,7 @@ import {
   removeBookmark,
   type ProfileBookmark,
 } from '@/lib/profileBookmarksStorage'
+import { GOSPEL_CLOSE_BOOKMARKS_PANEL_EVENT } from '@/lib/bookmarksPanelCloseEvent'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 
 const TRIGGER_CLASS =
@@ -118,6 +119,14 @@ export default function BookmarksDropdown({
   }, [open])
 
   useEffect(() => {
+    const onTourClose = (): void => {
+      setOpen(false)
+    }
+    window.addEventListener(GOSPEL_CLOSE_BOOKMARKS_PANEL_EVENT, onTourClose)
+    return () => window.removeEventListener(GOSPEL_CLOSE_BOOKMARKS_PANEL_EVENT, onTourClose)
+  }, [])
+
+  useEffect(() => {
     if (!addHint) return
     const t = window.setTimeout(() => setAddHint(null), 2500)
     return () => window.clearTimeout(t)
@@ -167,6 +176,7 @@ export default function BookmarksDropdown({
       <button
         ref={triggerRef}
         type="button"
+        data-tour="bookmarks-trigger"
         className={TRIGGER_CLASS}
         aria-expanded={open}
         aria-haspopup="true"
@@ -199,12 +209,14 @@ export default function BookmarksDropdown({
         createPortal(
           <>
             <div
+              data-bookmarks-dropdown-backdrop="true"
               className="bookmarks-dropdown-backdrop fixed inset-0 z-55 print-hide cursor-pointer bg-slate-950/55 dark:bg-slate-950/70"
               aria-hidden
               onClick={() => setOpen(false)}
             />
             <div
               ref={panelRef}
+              data-tour="bookmarks-panel"
               className="flex flex-col overflow-hidden rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-xl"
               style={panelStyle}
               role="dialog"
@@ -218,6 +230,7 @@ export default function BookmarksDropdown({
               <div className="overflow-y-auto p-2 space-y-2">
                 <button
                   type="button"
+                  data-tour="bookmarks-add"
                   onClick={handleAdd}
                   className="inline-flex w-full items-center justify-center gap-2 px-4 py-3 text-base font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500 border border-slate-300 dark:border-slate-600 rounded-lg transition-colors shadow-sm min-h-[48px] cursor-pointer"
                 >
@@ -240,6 +253,8 @@ export default function BookmarksDropdown({
                       <div
                         key={b.id}
                         role="listitem"
+                        data-tour="bookmarks-row"
+                        data-bookmark-id={b.id}
                         className="flex border-b border-slate-100 dark:border-slate-600 last:border-b-0"
                       >
                         <button
@@ -256,6 +271,8 @@ export default function BookmarksDropdown({
                         </button>
                         <button
                           type="button"
+                          data-tour="bookmarks-remove"
+                          data-bookmark-id={b.id}
                           onClick={(e) => handleRemove(e, b.id)}
                           className="shrink-0 flex cursor-pointer items-center justify-center px-3 min-h-[48px] text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 hover:bg-slate-50 dark:hover:bg-slate-700/80"
                           aria-label="Remove bookmark"

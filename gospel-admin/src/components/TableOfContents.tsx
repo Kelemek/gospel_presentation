@@ -11,6 +11,7 @@ import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
 import { stripHtmlTags } from '@/lib/stripHtmlTags'
 import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
+import { groupPublicResourceItems } from '@/lib/groupPublicResourceItems'
 
 interface TableOfContentsProps {
   sections: GospelSection[]
@@ -43,6 +44,7 @@ export default function TableOfContents({
 }: TableOfContentsProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [resourceItems, setResourceItems] = useState<PublicResourceItem[]>([])
+  const [resourcesRequestDone, setResourcesRequestDone] = useState(false)
   const [isResourcesOpen, setIsResourcesOpen] = useState(false)
   const [isTextSizeOpen, setIsTextSizeOpen] = useState(false)
   const { textSize, setTextSize } = useTextSize()
@@ -69,18 +71,24 @@ export default function TableOfContents({
 
   useEffect(() => {
     if (isLoggedIn && Capacitor.isNativePlatform()) return
+    let cancelled = false
     const fetchResources = async () => {
       try {
         const res = await fetch('/api/profiles/public-templates')
-        if (res.ok) {
+        if (!cancelled && res.ok) {
           const data = await res.json()
           setResourceItems(data.items || [])
         }
       } catch {
-        setResourceItems([])
+        if (!cancelled) setResourceItems([])
+      } finally {
+        if (!cancelled) setResourcesRequestDone(true)
       }
     }
     fetchResources()
+    return () => {
+      cancelled = true
+    }
   }, [isLoggedIn])
 
   const handlePrint = async () => {
@@ -105,6 +113,7 @@ export default function TableOfContents({
         <div>
           <button
             type="button"
+            data-tour="toc-resources-toggle"
             onClick={() => setIsResourcesOpen(!isResourcesOpen)}
             className="inline-flex items-center w-full px-4 py-3 text-base md:text-lg font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500 border border-slate-300 dark:border-slate-600 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px] cursor-pointer"
             aria-expanded={isResourcesOpen}
@@ -121,42 +130,63 @@ export default function TableOfContents({
             </span>
           </button>
           {isResourcesOpen && (
-            <div className="mt-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-sm overflow-hidden" role="list">
+            <div
+              data-tour="resources-list-panel"
+              data-resources-loaded={resourcesRequestDone ? 'true' : 'false'}
+              className="mt-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-sm overflow-hidden"
+              role="list"
+            >
               {resourceItems.length === 0 ? (
                 <div className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
                   No resources available
                 </div>
               ) : (
-                resourceItems.map((item) =>
-                  item.type === 'template' ? (
-                    <Link
-                      key={item.slug}
-                      href={`/${item.slug}`}
-                      className="block px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors"
+                groupPublicResourceItems(resourceItems).map((group, groupIndex) =>
+                  group.kind === 'templates' ? (
+                    <div
+                      key={`resource-templates-${groupIndex}`}
+                      data-resource-templates-block={String(groupIndex)}
+                      className="border-b border-slate-100 dark:border-slate-600 last:border-b-0"
                     >
-                      {item.title}
-                    </Link>
+                      {group.items.map((item) => (
+                        <Link
+                          key={item.slug}
+                          href={`/${item.slug}`}
+                          data-resource-template-slug={item.slug}
+                          className="block px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors"
+                        >
+                          {item.title}
+                        </Link>
+                      ))}
+                    </div>
                   ) : (
-                    <div key={item.id} className="border-b border-slate-100 dark:border-slate-600 last:border-b-0">
+                    <div
+                      key={group.item.id}
+                      data-resource-category-id={group.item.id}
+                      className="border-b border-slate-100 dark:border-slate-600 last:border-b-0"
+                    >
                       <button
                         type="button"
-                        onClick={() => toggleCategory(item.id)}
+                        data-tour="resource-category"
+                        data-resource-category-label={group.item.name}
+                        onClick={() => toggleCategory(group.item.id)}
                         className="flex w-full items-center gap-2 px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-left"
-                        aria-expanded={expandedCategoryIds.has(item.id)}
+                        aria-expanded={expandedCategoryIds.has(group.item.id)}
                       >
-                        <span className="font-medium">{item.name}</span>
-                        <span className={`ml-auto shrink-0 transition-transform ${expandedCategoryIds.has(item.id) ? 'rotate-180' : ''}`}>
+                        <span className="font-medium">{group.item.name}</span>
+                        <span className={`ml-auto shrink-0 transition-transform ${expandedCategoryIds.has(group.item.id) ? 'rotate-180' : ''}`}>
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                           </svg>
                         </span>
                       </button>
-                      {expandedCategoryIds.has(item.id) && item.templates.length > 0 && (
+                      {expandedCategoryIds.has(group.item.id) && group.item.templates.length > 0 && (
                         <div className="bg-slate-50 dark:bg-slate-700/50">
-                          {item.templates.map((t) => (
+                          {group.item.templates.map((t) => (
                             <Link
                               key={t.slug}
                               href={`/${t.slug}`}
+                              data-resource-template-slug={t.slug}
                               className="block py-2 pl-8 pr-4 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors"
                             >
                               {t.title}
@@ -177,6 +207,7 @@ export default function TableOfContents({
       <div>
         <button
           type="button"
+          data-tour="toc-text-size-toggle"
           onClick={() => setIsTextSizeOpen(!isTextSizeOpen)}
           className="inline-flex items-center w-full px-4 py-3 text-base md:text-lg font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500 border border-slate-300 dark:border-slate-600 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px] cursor-pointer"
           aria-expanded={isTextSizeOpen}
@@ -193,7 +224,12 @@ export default function TableOfContents({
           </span>
         </button>
         {isTextSizeOpen && (
-          <div className="mt-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-sm overflow-hidden" role="listbox" aria-label="Text size">
+          <div
+            data-tour="text-size-panel"
+            className="mt-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-sm overflow-hidden"
+            role="listbox"
+            aria-label="Text size"
+          >
             {(
               [
                 { value: 'normal' as const, label: 'Normal' },
@@ -231,6 +267,8 @@ export default function TableOfContents({
       {/* Print Button */}
       <div className="pb-4 border-b border-slate-200 dark:border-slate-600">
         <button
+          type="button"
+          data-tour="toc-print-version"
           onClick={handlePrint}
           className="inline-flex items-center w-full px-4 py-3 text-base md:text-lg font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500 border border-slate-300 dark:border-slate-600 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px] cursor-pointer"
         >
@@ -241,7 +279,7 @@ export default function TableOfContents({
         </button>
 
         {/* Bible Translation Selector */}
-        <div className="mt-3">
+        <div className="mt-3" data-tour="toc-bible-translation">
           <label htmlFor="bible-translation" className="block text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">
             Bible Translation
           </label>
@@ -259,6 +297,7 @@ export default function TableOfContents({
           </select>
         </div>
       </div>
+      <div data-tour="toc-section-links">
       {sections.map((section) => (
         <div key={section.section} className="mb-4 md:mb-3">
           <a 
@@ -310,6 +349,7 @@ export default function TableOfContents({
           </ul>
         </div>
       ))}
+      </div>
     </div>
   )
 }

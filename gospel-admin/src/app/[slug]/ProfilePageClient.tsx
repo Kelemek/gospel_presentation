@@ -5,6 +5,10 @@ import { useRouter, notFound } from 'next/navigation'
 import ProfileContent from './ProfileContent'
 import { useProfileWithCache } from '@/lib/useProfileWithCache'
 import { createClient } from '@/lib/supabase/client'
+import {
+  tryStartMarriageSeminarTourAfterNavigation,
+  tryStartScriptureReaderTourAfterNavigation,
+} from '@/lib/profileHelpTours'
 
 interface ProfilePageClientProps {
   slug: string
@@ -45,6 +49,12 @@ export default function ProfilePageClient({ slug }: ProfilePageClientProps) {
     }
     run()
   }, [profile, isLoading, slug, router])
+
+  useEffect(() => {
+    if (!profile) return
+    tryStartScriptureReaderTourAfterNavigation(slug)
+    tryStartMarriageSeminarTourAfterNavigation(slug)
+  }, [profile, slug])
 
   if (isLoading) {
     return (

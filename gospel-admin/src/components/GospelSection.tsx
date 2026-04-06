@@ -308,6 +308,9 @@ function ScriptureReferences({ references, onScriptureClick, anchorSectionId, an
                 hoverDelayMs={2000} // 2 seconds
               >
                 <button
+                  type="button"
+                  data-tour="scripture-card"
+                  data-scripture-last-viewed={isLastViewed ? 'true' : undefined}
                   onClick={() => onScriptureClick(ref.reference, anchorSectionId, anchorSubsectionId)}
                   className={`px-4 py-2 text-base md:text-lg rounded-md transition-colors cursor-pointer print-compact min-h-[44px] flex items-center ${
                     isLastViewed
@@ -322,9 +325,12 @@ function ScriptureReferences({ references, onScriptureClick, anchorSectionId, an
               </ScriptureHoverModal>
               {isLastViewed && (
                 <button
+                  type="button"
+                  data-tour="scripture-progress-unpin"
                   onClick={handlePinClick}
                   className="absolute right-2 top-1/2 transform -translate-y-1/2 text-yellow-700 dark:text-yellow-300 hover:text-yellow-800 dark:hover:text-yellow-200 cursor-pointer transition-colors p-1 z-10"
                   title="Click to clear progress"
+                  aria-label="Clear reading progress for this passage"
                 >
                   📍
                 </button>
@@ -534,7 +540,11 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
         const hasHtmlTags = /<[^>]+>/.test(questionContent)
         
         return (
-          <div key={question.id ?? `q-${index}`} className="bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-lg p-3 print:p-2 print:space-y-1">
+          <div
+            key={question.id ?? `q-${index}`}
+            data-tour="profile-question-block"
+            className="bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-lg p-3 print:p-2 print:space-y-1"
+          >
             <div className="mb-2 flex gap-1 items-baseline">
               <span className="text-sm text-slate-600 dark:text-slate-300 shrink-0 leading-none">{index + 1}. </span>
               <div className="flex-1">
@@ -603,6 +613,8 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
                   {currentAnswer.length}/{maxLength} characters
                 </span>
                 <button
+                  type="button"
+                  data-tour="profile-save-answer"
                   onClick={() => handleSaveAnswer(question.id, question.maxLength)}
                   className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-all ${
                     isSaved
@@ -808,6 +820,7 @@ export default function GospelSection({ section, onScriptureClick, lastViewedScr
             href={section.linkUrl}
             target="_blank"
             rel="noopener noreferrer"
+            data-tour="profile-section-external-link"
             className="inline-flex items-center gap-1.5 px-4 py-2 text-base md:text-lg rounded-md bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors min-h-[44px] whitespace-nowrap"
           >
             {section.linkDescription || 'Visit Link'} ⧉

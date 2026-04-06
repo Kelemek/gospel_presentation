@@ -34,6 +34,30 @@ function notify() {
   listeners.forEach((l) => l())
 }
 
+/** Whether the user saved light/dark in localStorage or follows system preference (no key). */
+export type ThemePersistenceSnapshot =
+  | { kind: 'explicit'; theme: Theme }
+  | { kind: 'system' }
+
+/** Read current persistence state (for help tours that temporarily change theme). */
+export function readThemePersistenceSnapshot(): ThemePersistenceSnapshot {
+  if (typeof window === 'undefined') return { kind: 'system' }
+  const stored = getStoredTheme()
+  if (stored) return { kind: 'explicit', theme: stored }
+  return { kind: 'system' }
+}
+
+/** Restore persistence after a tour; reuses the same key and notifies subscribers as `setTheme` would. */
+export function applyThemePersistenceSnapshot(snapshot: ThemePersistenceSnapshot): void {
+  if (typeof window === 'undefined') return
+  if (snapshot.kind === 'explicit') {
+    localStorage.setItem(STORAGE_KEY, snapshot.theme)
+  } else {
+    localStorage.removeItem(STORAGE_KEY)
+  }
+  notify()
+}
+
 function onStorage() {
   notify()
 }

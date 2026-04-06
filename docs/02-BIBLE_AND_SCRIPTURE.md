@@ -14,6 +14,10 @@ Complete guide to Bible translations, caching, and scripture retrieval.
 | **NASB** | Local Database | 31,103 verses, no API limit |
 | **LSB** | Local Database | Legacy Standard Bible, LSBible.org |
 
+## Presentation menu (readers)
+
+On gospel **profile** pages (`[slug]`), the slide-out **Menu** includes a **Bible Translation** dropdown (`TableOfContents`, `data-tour="toc-bible-translation"`). The listed versions match **admin-enabled** translations; the visitor’s choice is stored for that browser and drives scripture modals and quoted text on presentation routes. **Help → Tutorials → Bible translation** runs a short driver.js tour (`runBibleTranslationFeatureTour` in `profileHelpTours.ts`) that prefetches `/api/translations/enabled` and **lists every enabled translation by name** in the popover (same order and labels as the dropdown). **Help → Tutorials → Scripture reader** tours **ScriptureModal** from the first blue scripture card, spotlights the **pin** on the highlighted card (`data-tour="scripture-progress-unpin"` on `GospelSection`, explained only—no automatic unpin), then (with progress still pinned) the bottom-of-menu **Reading progress** / **Reset Progress** block (`runScriptureModalFeatureTour`; `ProfileContent` `data-tour="toc-reading-progress"` / `toc-reset-progress`).
+
 ## Local Database Translations (KJV, NASB, LSB)
 
 KJV, NASB, and LSB are stored in the local Supabase `bible_verses` table:

@@ -1,9 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import BookmarksDropdown, {
   bookmarksPanelStyleFromTrigger,
 } from '../BookmarksDropdown'
 import type { GospelSection } from '@/lib/types'
+import { GOSPEL_CLOSE_BOOKMARKS_PANEL_EVENT } from '@/lib/bookmarksPanelCloseEvent'
 import { loadBookmarks, PROFILE_BOOKMARKS_STORAGE_KEY } from '@/lib/profileBookmarksStorage'
 import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
 
@@ -64,6 +65,27 @@ describe('BookmarksDropdown', () => {
     })
     expect(loadBookmarks()[0].resourceTitle).toBe('My Resource')
     expect(loadBookmarks()[0].slug).toBe('slug-a')
+  })
+
+  it('closes panel when gospel tour close event is dispatched', async () => {
+    const user = userEvent.setup()
+    render(
+      <BookmarksDropdown
+        sections={sections}
+        profileTitle="My Resource"
+        profileSlug="slug-a"
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: 'Bookmarks' }))
+    expect(screen.getByRole('dialog', { name: 'Bookmarks' })).toBeInTheDocument()
+
+    await act(async () => {
+      window.dispatchEvent(new Event(GOSPEL_CLOSE_BOOKMARKS_PANEL_EVENT))
+    })
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: 'Bookmarks' })).not.toBeInTheDocument()
+    })
   })
 
   it('shows Already saved on duplicate add', async () => {

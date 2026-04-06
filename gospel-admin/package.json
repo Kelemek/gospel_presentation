@@ -41,6 +41,7 @@
     "@vercel/analytics": "^1.5.0",
     "@vercel/speed-insights": "^1.2.0",
     "clarity-js": "^0.8.41",
+    "driver.js": "^1.4.0",
     "next": "^16.0.7",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.1",

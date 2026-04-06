@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, type TouchEvent } from 'react'
+import { useState, useEffect, useRef, type TouchEvent } from 'react'
 import { useTranslation, type BibleTranslation } from '@/contexts/TranslationContext'
 import { splitScriptureReferenceForHeader } from '@/lib/splitScriptureReferenceForHeader'
 import { formatScriptureApiError } from '@/lib/format-scripture-api-error'
@@ -42,6 +42,7 @@ export default function ScriptureModal({
   const [loading, setLoading] = useState(false)
   const [contextLoading, setContextLoading] = useState(false)
   const [error, setError] = useState<string>('')
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
 
   // Compare translation (second column)
   const [compareTranslation, setCompareTranslation] = useState<string | null>(null)
@@ -126,30 +127,55 @@ export default function ScriptureModal({
     }
   }, [isOpen])
 
-  // Auto-scroll to highlighted verse when chapter context is displayed
+  // Auto-scroll to highlighted verse when chapter context is displayed (scroll the modal pane, not the window)
   useEffect(() => {
-    if (showingContext && chapterText) {
-      setTimeout(() => {
-        const verseNumbers = getVerseNumbers(reference)
-        if (verseNumbers.length > 0) {
-          // For verse ranges, use the range ID; for single verses, use verse-specific ID
-          let elementId = ''
-          if (verseNumbers.length > 1) {
-            const lastVerse = verseNumbers[verseNumbers.length - 1]
-            elementId = `verse-range-${verseNumbers[0]}-${lastVerse}`
-          } else {
-            elementId = `verse-${verseNumbers[0]}`
-          }
-          
-          const highlightedElement = document.getElementById(elementId)
-          if (highlightedElement) {
-            highlightedElement.scrollIntoView({
-              behavior: 'smooth',
-              block: 'center'
-            })
-          }
-        }
-      }, 100)
+    if (!showingContext || !chapterText) return
+
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const behavior: ScrollBehavior = reduceMotion ? 'auto' : 'smooth'
+
+    const scrollPane = scrollAreaRef.current
+    const verseNumbers = getVerseNumbers(reference)
+    if (verseNumbers.length === 0) return
+
+    let elementId = ''
+    if (verseNumbers.length > 1) {
+      const lastVerse = verseNumbers[verseNumbers.length - 1]
+      elementId = `verse-range-${verseNumbers[0]}-${lastVerse}`
+    } else {
+      elementId = `verse-${verseNumbers[0]}`
+    }
+
+    const scrollHighlightedIntoPane = (): void => {
+      const pane = scrollAreaRef.current
+      const highlightedElement = document.getElementById(elementId)
+      if (!pane || !highlightedElement) return
+      const paneRect = pane.getBoundingClientRect()
+      const verseRect = highlightedElement.getBoundingClientRect()
+      const delta =
+        verseRect.top - paneRect.top - paneRect.height / 2 + verseRect.height / 2
+      pane.scrollBy({ top: delta, behavior })
+    }
+
+    let cancelled = false
+    const run = (): void => {
+      if (!cancelled) scrollHighlightedIntoPane()
+    }
+
+    const t0 = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(run)
+    })
+    const t1 = window.setTimeout(run, 120)
+    const t2 = window.setTimeout(run, 400)
+
+    return () => {
+      cancelled = true
+      window.cancelAnimationFrame(t0)
+      window.clearTimeout(t1)
+      window.clearTimeout(t2)
     }
   }, [showingContext, chapterText, reference])
 
@@ -431,12 +457,17 @@ export default function ScriptureModal({
         
         {/* Fixed Header with Controls - Always Visible */}
         {/* Top safe area is on the full-screen overlay only; do not repeat here (doubles inset in Capacitor/iOS). */}
-        <div className="bg-slate-100 dark:bg-slate-700 px-4 pt-2 pb-2 border-b dark:border-slate-600 shrink-0 relative z-10 lg:rounded-t-lg">
+        <div
+          className="bg-slate-100 dark:bg-slate-700 px-4 pt-2 pb-2 border-b dark:border-slate-600 shrink-0 relative z-10 lg:rounded-t-lg"
+          data-tour="scripture-modal-toolbar"
+        >
           {/* Navigation Controls - Always at Top */}
           <div className="flex justify-between items-center mb-2">
             <div className="flex-1 min-w-0" aria-hidden />
             <div className="flex items-center gap-1.5 shrink-0">
               <button
+                type="button"
+                data-tour="scripture-modal-prev"
                 onClick={() => {
                   if (hasPrevious && onPrevious) {
                     onPrevious()
@@ -468,6 +499,8 @@ export default function ScriptureModal({
                 )}
               </h3>
               <button
+                type="button"
+                data-tour="scripture-modal-next"
                 onClick={() => {
                   if (hasNext && onNext) {
                     onNext()
@@ -487,6 +520,8 @@ export default function ScriptureModal({
             </div>
             <div className="flex-1 flex justify-end items-center">
               <button
+                type="button"
+                data-tour="scripture-modal-close"
                 onClick={onClose}
                 className="text-slate-600 dark:text-slate-200 text-xl font-bold min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center bg-white dark:bg-slate-600 shadow-sm ring-1 ring-slate-300/80 dark:ring-slate-500/60 hover:bg-slate-50 dark:hover:bg-slate-500 hover:ring-slate-400 dark:hover:ring-slate-400 active:bg-slate-100 dark:active:bg-slate-400"
                 aria-label="Close modal"
@@ -501,6 +536,7 @@ export default function ScriptureModal({
             <div className="w-full sm:w-auto flex flex-wrap gap-1.5 justify-center sm:justify-start items-center">
               {/* Compare dropdown - to the left of main translation */}
               <select
+                data-tour="scripture-modal-compare"
                 value={compareTranslation ?? ''}
                 onChange={(e) => {
                   const val = e.target.value
@@ -526,6 +562,7 @@ export default function ScriptureModal({
 
               {/* Translation Selector */}
               <select
+                data-tour="scripture-modal-translation"
                 value={translation}
                 onChange={async (e) => {
                   await setTranslation(e.target.value as BibleTranslation)
@@ -545,6 +582,8 @@ export default function ScriptureModal({
 
             <div className="w-full sm:w-auto flex flex-wrap gap-1.5 justify-center sm:justify-start items-center">
               <button
+                type="button"
+                data-tour="scripture-modal-verse-tab"
                 onClick={() => setShowingContext(false)}
                 className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors min-h-[36px] border-2 ${
                   !showingContext 
@@ -556,6 +595,8 @@ export default function ScriptureModal({
               </button>
 
               <button
+                type="button"
+                data-tour="scripture-modal-chapter-context"
                 onClick={fetchChapterContext}
                 disabled={contextLoading}
                 className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors min-h-[36px] border-2 ${
@@ -572,7 +613,10 @@ export default function ScriptureModal({
 
         {/* Context Information - Only show when available */}
         {context && (
-          <div className="px-4 py-2 bg-slate-50 dark:bg-slate-700/50 border-b dark:border-slate-600 shrink-0">
+          <div
+            className="px-4 py-2 bg-slate-50 dark:bg-slate-700/50 border-b dark:border-slate-600 shrink-0"
+            data-tour="scripture-modal-context"
+          >
             <div className="text-slate-700 dark:text-slate-200 text-base md:text-lg">
               <div className="flex items-center gap-2 mb-1">
                 <strong className="text-slate-800 dark:text-slate-100">Section:</strong> 
@@ -587,9 +631,11 @@ export default function ScriptureModal({
             </div>
           </div>
         )}
-        {/* Scrollable Content Area */}
+        {/* Scrollable Content Area — data-tour scroll-area when single column so driver.js can spotlight this pane (pointer-events); compare mode uses compare-columns */}
         <div 
+          ref={scrollAreaRef}
           className={`flex-1 overflow-y-auto px-4 py-4 min-h-0 ${isComparing ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''}`}
+          data-tour={isComparing ? 'scripture-modal-compare-columns' : 'scripture-modal-scroll-area'}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
@@ -674,7 +720,7 @@ export default function ScriptureModal({
                 {!loading && !contextLoading && !error && (
                   <>
                     {!showingContext && scriptureText && (
-                      <div className="prose max-w-none">
+                      <div className="prose max-w-none" data-tour="scripture-modal-verse-body">
                         <div
                           className="text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl"
                           dangerouslySetInnerHTML={{
@@ -695,6 +741,7 @@ export default function ScriptureModal({
                         </div>
                         <div
                           id="chapter-content"
+                          data-tour="scripture-modal-chapter-body"
                           className="text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl"
                           dangerouslySetInnerHTML={{
                             __html: processChapterText(chapterText)
@@ -727,7 +774,7 @@ export default function ScriptureModal({
               {!loading && !contextLoading && !error && (
                 <>
                   {!showingContext && scriptureText && (
-                    <div className="prose max-w-none">
+                    <div className="prose max-w-none" data-tour="scripture-modal-verse-body">
                       <div
                         className="text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl"
                         dangerouslySetInnerHTML={{
@@ -748,6 +795,7 @@ export default function ScriptureModal({
                       </div>
                       <div
                         id="chapter-content"
+                        data-tour="scripture-modal-chapter-body"
                         className="text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl"
                         dangerouslySetInnerHTML={{
                           __html: processChapterText(chapterText)
