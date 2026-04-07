@@ -18,7 +18,7 @@ Next.js 16 app for "The Gospel in its Context" (Dr. Stuart Scott): counselor/cou
 ## Key paths
 - `gospel-admin/src/app/` – App Router pages and API routes
 - `gospel-admin/src/components/` – React components (e.g. ScriptureModal, GospelSection, ComaModal)
-- `gospel-admin/src/lib/` – auth, Supabase, logger, data services
+- `gospel-admin/src/lib/` – auth, Supabase, logger, data services; **profile help tours**: `profileHelpTours.ts` re-exports `profileHelpTours/index.ts` (driver.js tour definitions)
 - `gospel-admin/sql/` – migrations and schema
 - `docs/` – project documentation
 

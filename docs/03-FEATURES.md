@@ -122,6 +122,8 @@ Users can:
 
 The app is wrapped for iOS and Android via Capacitor (WebView loads the deployed site).
 
+- **Tutorial navigation**: Scripture-reader tour jumps to `/default` and the full-walkthrough **thank-you** return to the stored profile slug use **`router.push`** on native (`CapacitorProfileHelpTourNavigation` in `layout.tsx` registers with `scriptureReaderTourNavigation.assign` in `profileHelpTours.ts`) so those moves stay in the WebView instead of opening the system browser.
+
 - **Splash screen (iOS)**: On launch, the iOS app shows a centered app icon on a solid background (Launch Screen) and keeps it visible until the web app has loaded. This avoids a black screen between the system launch screen and the first painted content. Implemented with `@capacitor/splash-screen` (`launchAutoHide: false`) and `SplashScreenController` calling `SplashScreen.hide()` once the app is ready; the launch screen is defined in `ios/App/App/Base.lproj/LaunchScreen.storyboard` and uses the `LaunchIcon` image set (same graphic as the app icon). Changing the launch screen or splash behavior requires a **native rebuild** (e.g. `npx cap sync` then build in Xcode).
 
 ## Related Documentation
