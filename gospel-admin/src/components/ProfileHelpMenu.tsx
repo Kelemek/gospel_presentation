@@ -12,6 +12,7 @@ import {
   runPrintFeatureTour,
   runResourcesFeatureTour,
   runScriptureModalFeatureTour,
+  runScriptureHoverPreviewFeatureTour,
   runTableOfContentsFeatureTour,
   runTextSizeFeatureTour,
   runThemeFeatureTour,
@@ -29,6 +30,7 @@ export type ProfileTutorialId =
   | 'print'
   | 'bibleTranslation'
   | 'scriptureModal'
+  | 'scriptureHoverPreview'
   | 'marriageSeminar'
   | 'theme'
 
@@ -93,6 +95,12 @@ const TUTORIALS: TutorialItem[] = [
     label: 'Scripture reader',
     description: 'Cards, compare, chapter context, pin, and Menu reset',
     run: runScriptureModalFeatureTour,
+  },
+  {
+    id: 'scriptureHoverPreview',
+    label: 'Quick verse preview',
+    description: 'Hover on desktop, press-and-hold on mobile; short demo in the popover',
+    run: runScriptureHoverPreviewFeatureTour,
   },
   {
     id: 'marriageSeminar',

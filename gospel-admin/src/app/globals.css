@@ -1091,3 +1091,202 @@ html.dark .profile-help-tour-popover .driver-popover-arrow-side-right,
 body.dark .profile-help-tour-popover .driver-popover-arrow-side-right {
   border-left-color: rgb(30 41 59);
 }
+
+/* Quick verse preview tour — step 1 demo: popup overlaps chip top (like ScriptureHoverModal); fingertip ends at chip center */
+.profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  isolation: isolate;
+  min-height: 240px;
+  /* Chip vertical center above stage bottom = pad-bottom + half min-h-[44px]; fingertip = top of 30px SVG */
+  --shvp-demo-stage-pad-bottom: 6px;
+  --shvp-demo-chip-half: 22px;
+  --shvp-demo-fingertip-from-bottom: calc(
+    var(--shvp-demo-stage-pad-bottom) + var(--shvp-demo-chip-half)
+  );
+  padding-bottom: var(--shvp-demo-stage-pad-bottom);
+}
+
+.profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-popup-wrap {
+  order: 1;
+  /* ~12px overlap with chip top — mirrors modal anchored with centerY - 10 and translate(-50%,-100%) */
+  margin-bottom: -12px;
+  width: 100%;
+  max-width: 24rem;
+  position: relative;
+  z-index: 2;
+}
+
+.profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-popup-card {
+  position: relative;
+  box-shadow:
+    0 20px 25px -5px rgb(0 0 0 / 0.12),
+    0 8px 10px -6px rgb(0 0 0 / 0.08);
+  border: 1px solid rgb(203 213 225);
+  background: rgb(255 255 255);
+  opacity: 0;
+  transform: translateY(12px);
+  /* After pointer hand reaches button center + short beat; see shvp-demo-finger-to-center-seq */
+  animation: shvp-demo-popup-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) 1.35s forwards;
+}
+
+html.dark .profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-popup-card,
+body.dark .profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-popup-card {
+  border-color: rgb(71 85 105);
+  background: rgb(30 41 59);
+}
+
+.profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-popup-text {
+  color: rgb(51 65 85);
+}
+
+html.dark .profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-popup-text,
+body.dark .profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-popup-text {
+  color: rgb(226 232 240);
+}
+
+.profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-popup-text .font-medium {
+  color: rgb(15 23 42);
+}
+
+html.dark .profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-popup-text .font-medium,
+body.dark .profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-popup-text .font-medium {
+  color: rgb(248 250 252);
+}
+
+.profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-popup-arrow {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid rgb(255 255 255);
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.12));
+}
+
+html.dark .profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-popup-arrow,
+body.dark .profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-popup-arrow {
+  border-top-color: rgb(30 41 59);
+}
+
+html.dark .profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-pointer-svg path,
+body.dark .profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-pointer-svg path {
+  stroke: rgb(226 232 240);
+}
+
+.profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-button-wrap {
+  order: 2;
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  justify-content: center;
+  margin-top: 0;
+}
+
+.profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-fake-btn {
+  transform: scale(1);
+}
+
+/* Press-and-hold: only the touch demo squishes the chip (pointer is sibling of button-wrap) */
+.profile-help-tour-popover .scripture-hover-preview-tour-demo:has(.shvp-demo-pointer--touch) .shvp-demo-fake-btn {
+  animation: shvp-demo-btn-press 2.35s ease-out 0.08s forwards;
+}
+
+.profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-pointer {
+  position: absolute;
+  left: 50%;
+  /* bottom edge of 30px-tall hand: chip center Y minus svg height (may be slightly negative = overlap stage bottom) */
+  bottom: calc(var(--shvp-demo-fingertip-from-bottom) - 30px);
+  width: 44px;
+  height: 30px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 3;
+  opacity: 0;
+  transform: translate(-50%, -56px);
+  filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.35));
+  animation: shvp-demo-finger-to-center-seq 2.35s ease-out 0.08s forwards;
+}
+
+.profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-pointer-svg {
+  display: block;
+  /* hand-index-fill: index finger points up; palm sits toward the chip via pointer translate animation */
+}
+
+/* Fingertip travels down to chip center (translateY 0); brief dip = press — preview fades in after */
+@keyframes shvp-demo-finger-to-center-seq {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -56px);
+  }
+  10% {
+    opacity: 1;
+    transform: translate(-50%, -56px);
+  }
+  38% {
+    transform: translate(-50%, -10px);
+  }
+  48% {
+    transform: translate(-50%, 0);
+  }
+  54% {
+    transform: translate(-50%, 5px) scale(0.93);
+  }
+  62% {
+    transform: translate(-50%, 0) scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes shvp-demo-btn-press {
+  0%,
+  46% {
+    transform: scale(1);
+  }
+  54% {
+    transform: scale(0.93);
+  }
+  63%,
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes shvp-demo-popup-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-popup-card,
+  .profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-pointer,
+  .profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-fake-btn {
+    animation: none !important;
+  }
+
+  .profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-popup-card {
+    opacity: 1;
+    transform: none;
+  }
+
+  .profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-demo-pointer {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}

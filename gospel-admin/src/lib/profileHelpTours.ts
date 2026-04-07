@@ -1,5 +1,6 @@
 import { driver, type Config, type DriveStep, type Driver } from 'driver.js'
 import 'driver.js/dist/driver.css'
+import { Capacitor } from '@capacitor/core'
 import type { PublicResourceItem } from '@/lib/supabase-data-service'
 import { groupPublicResourceItems } from '@/lib/groupPublicResourceItems'
 import { loadBookmarks } from '@/lib/profileBookmarksStorage'
@@ -57,10 +58,75 @@ export const MARRIAGE_SEMINAR_PROFILE_SLUG = 'marriagechapter1'
 
 const MARRIAGE_SEMINAR_TOUR_RESUME_STORAGE_KEY = 'gospel-marriage-seminar-tour-resume-v1'
 
+const MARRIAGE_SEMINAR_TOUR_RESUME_PAYLOAD_V2 = 2
+
+type MarriageSeminarTourResumePayloadV2 = {
+  v: typeof MARRIAGE_SEMINAR_TOUR_RESUME_PAYLOAD_V2
+  captive: boolean
+  /**
+   * When true, the marriage segment was started from the **full walkthrough**—after post-navigation steps finish,
+   * run thank-you and return to the stored start slug (callbacks are reattached in `tryStartMarriageSeminarTourAfterNavigation`).
+   */
+  fullWalkthroughChain: boolean
+}
+
+/** @internal Exported for unit tests (legacy string + JSON resume payloads). */
+export function parseMarriageSeminarTourResumeStorageValue(raw: string | null): MarriageSeminarTourResumePayloadV2 | null {
+  if (raw == null || raw === '') return null
+  try {
+    const j = JSON.parse(raw) as Partial<MarriageSeminarTourResumePayloadV2>
+    if (
+      j?.v === MARRIAGE_SEMINAR_TOUR_RESUME_PAYLOAD_V2 &&
+      typeof j.captive === 'boolean' &&
+      typeof j.fullWalkthroughChain === 'boolean'
+    ) {
+      return {
+        v: MARRIAGE_SEMINAR_TOUR_RESUME_PAYLOAD_V2,
+        captive: j.captive,
+        fullWalkthroughChain: j.fullWalkthroughChain,
+      }
+    }
+  } catch {
+    /* legacy plain strings */
+  }
+  if (raw === 'pending') {
+    return {
+      v: MARRIAGE_SEMINAR_TOUR_RESUME_PAYLOAD_V2,
+      captive: false,
+      fullWalkthroughChain: false,
+    }
+  }
+  if (raw === 'full-walkthrough') {
+    return {
+      v: MARRIAGE_SEMINAR_TOUR_RESUME_PAYLOAD_V2,
+      captive: true,
+      fullWalkthroughChain: true,
+    }
+  }
+  return null
+}
+
+function serializeMarriageSeminarTourResumeForNavigation(options?: ProfileFeatureTourOptions): string {
+  const captive = options?.captive === true
+  return JSON.stringify({
+    v: MARRIAGE_SEMINAR_TOUR_RESUME_PAYLOAD_V2,
+    captive,
+    fullWalkthroughChain: captive,
+  } satisfies MarriageSeminarTourResumePayloadV2)
+}
+
 /** Scripture reader tour always runs on the public default presentation (`/default`) so steps match a known outline. */
 export const SCRIPTURE_READER_TOUR_DEFAULT_SLUG = 'default'
 
 const SCRIPTURE_READER_TOUR_RESUME_STORAGE_KEY = 'gospel-scripture-reader-tour-resume-v1'
+
+/** Remember `[slug]` when a full walkthrough starts so the closing step can return there. */
+const FULL_WALKTHROUGH_START_SLUG_STORAGE_KEY = 'gospel-full-walkthrough-start-slug-v1'
+
+type FullWalkthroughStartSlugPayloadV1 = {
+  v: 1
+  slug: string
+}
 
 /** Indirection so Jest can mock navigation (`window.location.assign` is not writable in jsdom). */
 export const scriptureReaderTourNavigation = {
@@ -69,6 +135,36 @@ export const scriptureReaderTourNavigation = {
       window.location.assign(url)
     }
   },
+}
+
+/** First path segment of a presentation URL (`/[slug]`), for full-walkthrough return navigation. */
+export function getPresentationSlugFromPathname(pathname: string): string {
+  if (typeof pathname !== 'string' || pathname.length === 0) {
+    return SCRIPTURE_READER_TOUR_DEFAULT_SLUG
+  }
+  const noQueryHash = pathname.split(/[?#]/)[0] ?? pathname
+  const parts = noQueryHash.replace(/\/$/, '').split('/').filter(Boolean)
+  return parts[0] ?? SCRIPTURE_READER_TOUR_DEFAULT_SLUG
+}
+
+function clearFullWalkthroughStartSlug(): void {
+  try {
+    sessionStorage.removeItem(FULL_WALKTHROUGH_START_SLUG_STORAGE_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
+function readFullWalkthroughStartSlug(): string | null {
+  try {
+    const raw = sessionStorage.getItem(FULL_WALKTHROUGH_START_SLUG_STORAGE_KEY)
+    if (!raw) return null
+    const p = JSON.parse(raw) as FullWalkthroughStartSlugPayloadV1
+    if (p?.v !== 1 || typeof p.slug !== 'string' || p.slug.length === 0) return null
+    return p.slug
+  } catch {
+    return null
+  }
 }
 
 /** Cap consecutive top-level template blocks (each block is one tour step listing all links in that run). */
@@ -895,6 +991,92 @@ export function runTableOfContentsFeatureTour(options?: ProfileFeatureTourOption
   d.drive()
 }
 
+/** Same as `ScriptureHoverModal`: native app or primary input has no hover. */
+function isTouchOnlyScripturePreview(): boolean {
+  if (typeof window === 'undefined') return false
+  if (Capacitor.isNativePlatform()) return true
+  return typeof window.matchMedia === 'function' && window.matchMedia('(hover: none)').matches
+}
+
+/** Verse text aligned with common English Bibles (e.g. ESV) for the default profile’s first scripture card. */
+const SCRIPTURE_HOVER_PREVIEW_DEMO_REFERENCE = 'Deuteronomy 4:35'
+const SCRIPTURE_HOVER_PREVIEW_DEMO_VERSE_TEXT =
+  'To you it was shown, that you might know that the Lord is God; there is no other besides him.'
+
+function profileHelpRefreshDriverConfig(drv: Driver, patch: Partial<Config>): void {
+  drv.setConfig({ ...drv.getConfig(), ...patch })
+  window.requestAnimationFrame(() => drv.refresh())
+}
+
+/**
+ * Same silhouette browsers use for `cursor: pointer` on links (hand with index finger): Bootstrap Icons `hand-index-fill` (MIT).
+ * https://github.com/twbs/icons — finger points **up**; motion brings the hand down toward the chip (`globals.css`).
+ */
+function scriptureHoverPreviewDemoLinkPointerSvg(): string {
+  return (
+    '<svg class="shvp-demo-pointer-svg" width="30" height="30" viewBox="0 0 16 16" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">' +
+    '<path fill="#ffffff" stroke="rgb(15 23 42)" stroke-width="0.4" stroke-linejoin="round" d="M8.5 4.466V1.75a1.75 1.75 0 1 0-3.5 0v5.34l-1.2.24a1.5 1.5 0 0 0-1.196 1.636l.345 3.106a2.5 2.5 0 0 0 .405 1.11l1.433 2.15A1.5 1.5 0 0 0 6.035 16h6.385a1.5 1.5 0 0 0 1.302-.756l1.395-2.441a3.5 3.5 0 0 0 .444-1.389l.271-2.715a2 2 0 0 0-1.99-2.199h-.581a5 5 0 0 0-.195-.248c-.191-.229-.51-.568-.88-.716-.364-.146-.846-.132-1.158-.108l-.132.012a1.26 1.26 0 0 0-.56-.642 2.6 2.6 0 0 0-.738-.288c-.31-.062-.739-.058-1.05-.046z"/>' +
+    '</svg>'
+  )
+}
+
+/**
+ * Static HTML: animated demo—**fingertip** to chip **center**; preview **overlaps** chip top like `ScriptureHoverModal` (timing in CSS). No API.
+ */
+function scriptureHoverPreviewDemoVisualsHtml(useTouchPointer: boolean): string {
+  const ref = escapeForPopoverText(SCRIPTURE_HOVER_PREVIEW_DEMO_REFERENCE)
+  const verse = escapeForPopoverText(SCRIPTURE_HOVER_PREVIEW_DEMO_VERSE_TEXT)
+  const touchClass = useTouchPointer ? ' shvp-demo-pointer--touch' : ''
+  const pointerSvg = scriptureHoverPreviewDemoLinkPointerSvg()
+  return (
+    '<div class="scripture-hover-preview-tour-demo" role="presentation">' +
+    '<div class="shvp-demo-stage mt-3">' +
+    '<div class="shvp-demo-popup-wrap">' +
+    '<div class="shvp-demo-popup-card relative text-left rounded-lg p-6 min-h-[60px]">' +
+    '<div class="shvp-demo-popup-text">' +
+    `<div class="font-medium mb-2 text-base md:text-lg">${ref}</div>` +
+    `<div class="text-base md:text-lg leading-relaxed">${verse}</div>` +
+    '</div>' +
+    '<div class="shvp-demo-popup-arrow" aria-hidden="true"></div>' +
+    '</div></div>' +
+    `<div class="shvp-demo-button-wrap"><span class="shvp-demo-fake-btn inline-flex items-center justify-center gap-1.5 px-4 py-2 text-base md:text-lg rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 min-h-[44px] font-normal">${ref}</span></div>` +
+    `<div class="shvp-demo-pointer${touchClass}" aria-hidden="true">${pointerSvg}</div>` +
+    '</div></div>'
+  )
+}
+
+function scriptureHoverPreviewTourIntroDescription(): string {
+  const how =
+    '<p><strong>Desktop:</strong> with a mouse, <strong>hover</strong> over a scripture reference in the paragraph text (the pill-style link) for a couple of seconds. <strong>Phone or native app:</strong> <strong>press and hold</strong> for about half a second—touchscreens have no hover. Either way, a small card appears with verse text without opening the full reader.</p>'
+  return `${how}${scriptureHoverPreviewDemoVisualsHtml(isTouchOnlyScripturePreview())}`
+}
+
+/**
+ * Short tour: explains inline scripture **preview** (hover or long-press) and shows an **animated link-pointer-hand** demo
+ * in the popover (CSS in `globals.css`).
+ */
+export function runScriptureHoverPreviewFeatureTour(options?: ProfileFeatureTourOptions): void {
+  const d = driver({
+    ...baseProfileHelpDriverConfig(options),
+    steps: prependSegmentIntroIfAny(options, [
+      {
+        element: () => document.body,
+        onHighlightStarted: (_el, _step, { driver: drv }) => {
+          profileHelpRefreshDriverConfig(drv, { stagePadding: 10, popoverOffset: 10 })
+        },
+        popover: {
+          title: 'Quick verse preview',
+          description: scriptureHoverPreviewTourIntroDescription(),
+          side: 'over',
+          align: 'center',
+        },
+      },
+    ]),
+  })
+
+  d.drive()
+}
+
 /**
  * Scripture modal tour: opens the first scripture **card** on the page, then walks compare, chapter context,
  * Verse tab (back to single passage), next/prev arrows, close, pinned card, pin spotlight (explained only—no unpin),
@@ -1477,12 +1659,25 @@ function buildMarriageSeminarResourceLinkSelector(): string {
 export function tryStartMarriageSeminarTourAfterNavigation(currentSlug: string): void {
   if (typeof window === 'undefined') return
   if (currentSlug !== MARRIAGE_SEMINAR_PROFILE_SLUG) return
-  const mode = sessionStorage.getItem(MARRIAGE_SEMINAR_TOUR_RESUME_STORAGE_KEY)
-  if (mode !== 'pending' && mode !== 'full-walkthrough') return
+  const raw = sessionStorage.getItem(MARRIAGE_SEMINAR_TOUR_RESUME_STORAGE_KEY)
+  const payload = parseMarriageSeminarTourResumeStorageValue(raw)
+  if (!payload) return
   sessionStorage.removeItem(MARRIAGE_SEMINAR_TOUR_RESUME_STORAGE_KEY)
   window.requestAnimationFrame(() => {
+    const fullWalkthroughHooks: Pick<ProfileFeatureTourOptions, 'onComplete' | 'onAborted'> | undefined =
+      payload.fullWalkthroughChain
+        ? {
+            onComplete: () => {
+              runFullWalkthroughThankYouFinale()
+            },
+            onAborted: () => {
+              clearFullWalkthroughStartSlug()
+            },
+          }
+        : undefined
     runMarriageSeminarResourcesTourPostNavigationOnly({
-      captive: mode === 'full-walkthrough',
+      captive: payload.captive,
+      ...fullWalkthroughHooks,
     })
   })
 }
@@ -1731,7 +1926,7 @@ async function runMarriageSeminarResourcesTourAsync(options?: ProfileFeatureTour
         try {
           sessionStorage.setItem(
             MARRIAGE_SEMINAR_TOUR_RESUME_STORAGE_KEY,
-            options?.captive === true ? 'full-walkthrough' : 'pending'
+            serializeMarriageSeminarTourResumeForNavigation(options)
           )
         } catch {
           navigationScheduled = false
@@ -1766,12 +1961,51 @@ async function runMarriageSeminarResourcesTourAsync(options?: ProfileFeatureTour
           } catch {
             /* ignore */
           }
+          options?.onComplete?.()
         }
-        options?.onComplete?.()
+        /* When navigating to the marriage profile, chain `onComplete` runs after post-navigation steps
+         * (`tryStartMarriageSeminarTourAfterNavigation` reattaches it). */
       },
     }),
     showProgress: true,
     steps: prependSegmentIntroIfAny(options, steps),
+  })
+
+  d.drive()
+}
+
+/**
+ * Final full-walkthrough step: thank-you message, then browser navigation back to the profile slug stored at walkthrough start.
+ * Exported for tests (`scriptureReaderTourNavigation.assign`).
+ */
+export function runFullWalkthroughThankYouFinale(): void {
+  const slug = readFullWalkthroughStartSlug() ?? SCRIPTURE_READER_TOUR_DEFAULT_SLUG
+  clearFullWalkthroughStartSlug()
+  const targetPath = `/${slug}`
+
+  const goHome = (): void => {
+    scriptureReaderTourNavigation.assign(targetPath)
+  }
+
+  const d = driver({
+    ...baseProfileHelpDriverConfig({
+      onComplete: goHome,
+      onAborted: goHome,
+    }),
+    doneBtnText: 'Continue',
+    showProgress: false,
+    steps: [
+      {
+        element: () => document.body,
+        popover: {
+          title: 'Thank you',
+          description:
+            '<p>Thanks for watching.</p><p>May God bless your study of His Word.</p>',
+          side: 'over',
+          align: 'center',
+        },
+      },
+    ],
   })
 
   d.drive()
@@ -1842,6 +2076,14 @@ const FULL_WALKTHROUGH_SEGMENTS: Array<{
     },
   },
   {
+    run: runScriptureHoverPreviewFeatureTour,
+    intro: {
+      title: 'Quick verse preview',
+      description:
+        'Desktop: hover; phone or app: press-and-hold—popover demo of a quick verse card on paragraph links and blue section buttons.',
+    },
+  },
+  {
     run: runMarriageSeminarResourcesTour,
     intro: {
       title: 'Marriage seminar resources',
@@ -1865,8 +2107,13 @@ function runFullProfileHelpTutorialFromSegment(startIndex: number): void {
     run({
       captive: true,
       segmentIntro: intro,
+      onAborted: () => {
+        clearFullWalkthroughStartSlug()
+      },
       onComplete: isLast
-        ? undefined
+        ? () => {
+            window.requestAnimationFrame(() => runFullWalkthroughThankYouFinale())
+          }
         : () => {
             window.requestAnimationFrame(() => runAt(index + 1))
           },
@@ -1877,6 +2124,17 @@ function runFullProfileHelpTutorialFromSegment(startIndex: number): void {
 
 /** Runs every profile tutorial in the same order as the Help menu, one after another. */
 export function runFullProfileHelpTutorial(): void {
+  if (typeof window !== 'undefined') {
+    try {
+      const slug = getPresentationSlugFromPathname(window.location.pathname)
+      sessionStorage.setItem(
+        FULL_WALKTHROUGH_START_SLUG_STORAGE_KEY,
+        JSON.stringify({ v: 1, slug } satisfies FullWalkthroughStartSlugPayloadV1)
+      )
+    } catch {
+      /* quota / private mode */
+    }
+  }
   runFullProfileHelpTutorialFromSegment(0)
 }
 
