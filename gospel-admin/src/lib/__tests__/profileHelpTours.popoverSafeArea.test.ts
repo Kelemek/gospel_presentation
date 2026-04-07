@@ -1,4 +1,7 @@
-import { applyProfileHelpTourPopoverSafeAreaNudge } from '@/lib/profileHelpTours'
+import {
+  applyProfileHelpTourPopoverSafeAreaNudge,
+  getProfileHelpTourPopoverSafeInsets,
+} from '@/lib/profileHelpTours'
 import * as scrollToTocAnchor from '@/lib/scrollToTocAnchor'
 
 describe('applyProfileHelpTourPopoverSafeAreaNudge', () => {
@@ -31,6 +34,29 @@ describe('applyProfileHelpTourPopoverSafeAreaNudge', () => {
       Object.defineProperty(window, prop, { configurable: true, writable: true, value })
     }
   }
+
+  it('boosts bottom inset on Android narrow when env() reports zero (matches JS used for nudge)', () => {
+    const prevUa = navigator.userAgent
+    const prevMm = window.matchMedia
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value:
+        'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+    })
+    window.matchMedia = jest.fn().mockImplementation((query: string) => ({
+      matches: query.includes('767'),
+      media: query,
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+    })) as typeof window.matchMedia
+    getSafeSpy.mockReturnValue({ top: 0, right: 0, bottom: 0, left: 0 })
+    try {
+      expect(getProfileHelpTourPopoverSafeInsets().bottom).toBe(56)
+    } finally {
+      window.matchMedia = prevMm
+      Object.defineProperty(navigator, 'userAgent', { configurable: true, value: prevUa })
+    }
+  })
 
   it('does not change the popover when safe-area insets are all zero', () => {
     getSafeSpy.mockReturnValue({ top: 0, right: 0, bottom: 0, left: 0 })

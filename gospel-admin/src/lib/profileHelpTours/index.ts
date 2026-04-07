@@ -301,6 +301,39 @@ function clearDriverBodyClasses(): void {
  * on notched devices. After driver positions the popover, nudge with `translate` only when its border box
  * intersects the non-usable inset bands.
  */
+/**
+ * Android Chrome / Capacitor WebView often reports `env(safe-area-inset-bottom)` as 0 while the system
+ * nav bar or gesture inset still overlaps the layout viewport. Use a minimum bottom inset so nudges run
+ * and popovers stay above those controls (pairs with CSS `max()` on narrow viewports in `globals.css`).
+ */
+/** Mobile Chrome/WebView when `env(safe-area-inset-bottom)` is often 0; 3-button nav is typically ~48–56dp. */
+const PROFILE_HELP_TOUR_ANDROID_FALLBACK_BOTTOM_INSET_PX = 56
+/** Capacitor Android WebView: reserve extra space above gesture / system nav (matches heavy overlap reports). */
+const PROFILE_HELP_TOUR_CAPACITOR_ANDROID_BOTTOM_INSET_PX = 72
+
+/** @internal Exported for unit tests */
+export function getProfileHelpTourPopoverSafeInsets(): ReturnType<typeof getSafeAreaInsetsPx> {
+  const base = getSafeAreaInsetsPx()
+  if (typeof window === 'undefined') return base
+
+  const ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : ''
+  const isAndroid = /Android/i.test(ua)
+  const narrowForTour =
+    typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 767px)').matches
+  const nativeAndroid = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android'
+
+  if (isAndroid && (narrowForTour || nativeAndroid)) {
+    const floor = nativeAndroid
+      ? PROFILE_HELP_TOUR_CAPACITOR_ANDROID_BOTTOM_INSET_PX
+      : PROFILE_HELP_TOUR_ANDROID_FALLBACK_BOTTOM_INSET_PX
+    return {
+      ...base,
+      bottom: Math.max(base.bottom, floor),
+    }
+  }
+  return base
+}
+
 /** One-axis nudge: after `translate(delta)`, need rectLo+delta >= safeLo and rectHi+delta <= safeHi. */
 function popoverSafeAxisNudge(rectLo: number, rectHi: number, safeLo: number, safeHi: number): number {
   const deltaMin = safeLo - rectLo
@@ -315,8 +348,8 @@ function popoverSafeAxisNudge(rectLo: number, rectHi: number, safeLo: number, sa
 
 export function applyProfileHelpTourPopoverSafeAreaNudge(wrapper: HTMLElement): void {
   if (typeof window === 'undefined' || !wrapper.isConnected) return
-  const insets = getSafeAreaInsetsPx()
-  if (insets.top + insets.right + insets.bottom + insets.left === 0) return
+  const insets = getProfileHelpTourPopoverSafeInsets()
+  if (insets.top === 0 && insets.right === 0 && insets.bottom === 0 && insets.left === 0) return
 
   const vw = window.innerWidth
   const vh = window.innerHeight
@@ -343,11 +376,18 @@ export function applyProfileHelpTourPopoverSafeAreaNudge(wrapper: HTMLElement): 
 }
 
 function scheduleProfileHelpTourPopoverSafeAreaNudge(wrapper: HTMLElement): void {
-  queueMicrotask(() => {
+  const run = (): void => {
     if (wrapper.isConnected) {
       applyProfileHelpTourPopoverSafeAreaNudge(wrapper)
     }
-  })
+  }
+  // driver.js calls `scrollIntoView` on the popover after positioning; run after microtask + 2 rAFs so layout matches.
+  queueMicrotask(run)
+  if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(run)
+    })
+  }
 }
 
 /** Wraps driver.js so tutorial popovers get conditional safe-area correction after layout and after `refresh()`. */
@@ -364,12 +404,10 @@ function createProfileHelpDriver(config: Config): Driver {
   const innerRefresh = typeof d.refresh === 'function' ? d.refresh.bind(d) : () => {}
   d.refresh = () => {
     innerRefresh()
-    queueMicrotask(() => {
-      const el = document.getElementById('driver-popover-content')
-      if (el instanceof HTMLElement) {
-        applyProfileHelpTourPopoverSafeAreaNudge(el)
-      }
-    })
+    const el = document.getElementById('driver-popover-content')
+    if (el instanceof HTMLElement) {
+      scheduleProfileHelpTourPopoverSafeAreaNudge(el)
+    }
   }
   return d
 }

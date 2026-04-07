@@ -1024,6 +1024,13 @@ s {
 
 /* Help tour: larger tap targets on narrow viewports (driver.js defaults are ~12px text, tight padding). */
 @media (max-width: 767px) {
+  /* Android often reports safe-area-bottom as 0; floor keeps the card above system nav / 3-button bar. */
+  .profile-help-tour-popover.driver-popover {
+    max-height: calc(
+      100dvh - env(safe-area-inset-top, 0px) - max(56px, env(safe-area-inset-bottom, 0px)) - 24px
+    );
+  }
+
   .profile-help-tour-popover.driver-popover .driver-popover-footer {
     margin-top: 14px;
     gap: 10px;
