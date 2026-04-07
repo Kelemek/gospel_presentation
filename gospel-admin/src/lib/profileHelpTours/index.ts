@@ -1295,9 +1295,10 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         document.querySelector(SCRIPTURE_MODAL_VERSE_BODY) ??
         document.querySelector(SCRIPTURE_MODAL_TOOLBAR)!,
       popover: {
-        title: 'Two columns',
-        description:
-          'Each column shows the same reference in a different translation. Main translation is on the right; the compare column is on the left. Attribution still appears at the bottom when you scroll.',
+        title: narrow ? 'Top and bottom' : 'Two columns',
+        description: narrow
+          ? 'Each block shows the same reference in a different translation. On smaller screens they stack: the <strong>compare</strong> translation is on <strong>top</strong> and your <strong>main</strong> translation is below. Attribution still appears at the bottom when you scroll.'
+          : 'Each column shows the same reference in a different translation. Main translation is on the right; the compare column is on the left. Attribution still appears at the bottom when you scroll.',
         ...pop({ side: 'top', align: 'start' }),
       },
     },
