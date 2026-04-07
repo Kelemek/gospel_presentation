@@ -4,17 +4,43 @@
 
 export const FALLBACK_HEADER_OFFSET = 80
 
-export function getSafeAreaInsetTop(): number {
-  if (typeof window === 'undefined') return 0
+/** Physical notch / home-indicator insets when `viewport-fit=cover` applies (often 0 in desktop devtools). */
+export function getSafeAreaInsetsPx(): {
+  top: number
+  right: number
+  bottom: number
+  left: number
+} {
+  if (typeof window === 'undefined') {
+    return { top: 0, right: 0, bottom: 0, left: 0 }
+  }
   const div = document.createElement('div')
-  div.style.paddingTop = 'env(safe-area-inset-top)'
-  div.style.position = 'fixed'
-  div.style.visibility = 'hidden'
+  div.style.cssText = [
+    'position:fixed',
+    'left:0',
+    'top:0',
+    'width:0',
+    'height:0',
+    'visibility:hidden',
+    'pointer-events:none',
+    'padding-top:env(safe-area-inset-top,0px)',
+    'padding-right:env(safe-area-inset-right,0px)',
+    'padding-bottom:env(safe-area-inset-bottom,0px)',
+    'padding-left:env(safe-area-inset-left,0px)',
+  ].join(';')
   document.body.appendChild(div)
-  const computed = window.getComputedStyle(div)
-  const inset = parseInt(computed.paddingTop, 10) || 0
+  const s = window.getComputedStyle(div)
+  const p = (v: string) => parseFloat(v) || 0
+  const top = p(s.paddingTop)
+  const right = p(s.paddingRight)
+  const bottom = p(s.paddingBottom)
+  const left = p(s.paddingLeft)
   document.body.removeChild(div)
-  return inset
+  return { top, right, bottom, left }
+}
+
+export function getSafeAreaInsetTop(): number {
+  return getSafeAreaInsetsPx().top
 }
 
 /** Pixel offset from top of viewport for scroll targets (sticky header + safe area). */

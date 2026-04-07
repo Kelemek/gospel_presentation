@@ -1,4 +1,4 @@
-import { driver, type Config, type DriveStep, type Driver } from 'driver.js'
+import { driver, type Alignment, type Config, type DriveStep, type Driver, type Side } from 'driver.js'
 import 'driver.js/dist/driver.css'
 import { Capacitor } from '@capacitor/core'
 import type { PublicResourceItem } from '@/lib/supabase-data-service'
@@ -12,7 +12,11 @@ import {
   GOSPEL_CLOSE_BOOKMARKS_PANEL_EVENT,
   GOSPEL_CLOSE_PROFILE_SLIDEOUT_MENU_EVENT,
 } from '@/lib/bookmarksPanelCloseEvent'
-import { getProfileHeaderScrollOffset, scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
+import {
+  getProfileHeaderScrollOffset,
+  getSafeAreaInsetsPx,
+  scrollToTocAnchor,
+} from '@/lib/scrollToTocAnchor'
 
 const BOOKMARKS_TRIGGER = '[data-tour="bookmarks-trigger"]'
 const BOOKMARKS_PANEL = '[data-tour="bookmarks-panel"]'
@@ -178,6 +182,13 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
+/** Matches Tailwind `md` (~768px): use popunder + extra offsets so driver.js does not cover the spotlight on phones. */
+function isNarrowProfileHelpTourViewport(): boolean {
+  if (typeof window === 'undefined') return false
+  if (typeof window.matchMedia !== 'function') return false
+  return window.matchMedia('(max-width: 767px)').matches
+}
+
 function openBookmarksPanelIfClosed(): void {
   if (document.querySelector(BOOKMARKS_PANEL)) return
   document.querySelector<HTMLElement>(BOOKMARKS_TRIGGER)?.click()
@@ -266,6 +277,85 @@ function sleep(ms: number): Promise<void> {
 function clearDriverBodyClasses(): void {
   if (typeof document === 'undefined') return
   document.body.classList.remove('driver-active', 'driver-fade', 'driver-simple')
+}
+
+/**
+ * driver.js sets fixed `top`/`left`/`bottom`/`right` from `innerWidth`/`innerHeight`, which ignore safe areas.
+ * Unconditional `margin: env(safe-area-inset-*)` on the popover shifts that box after layout and covers spotlights
+ * on notched devices. After driver positions the popover, nudge with `translate` only when its border box
+ * intersects the non-usable inset bands.
+ */
+/** One-axis nudge: after `translate(delta)`, need rectLo+delta >= safeLo and rectHi+delta <= safeHi. */
+function popoverSafeAxisNudge(rectLo: number, rectHi: number, safeLo: number, safeHi: number): number {
+  const deltaMin = safeLo - rectLo
+  const deltaMax = safeHi - rectHi
+  if (deltaMin > deltaMax) {
+    // Wider/taller than the safe span — no delta fits both edges; center the overflow.
+    return (deltaMin + deltaMax) / 2
+  }
+  // Feasible [deltaMin, deltaMax]: pick delta closest to 0 (minimal movement).
+  return Math.max(deltaMin, Math.min(deltaMax, 0))
+}
+
+export function applyProfileHelpTourPopoverSafeAreaNudge(wrapper: HTMLElement): void {
+  if (typeof window === 'undefined' || !wrapper.isConnected) return
+  const insets = getSafeAreaInsetsPx()
+  if (insets.top + insets.right + insets.bottom + insets.left === 0) return
+
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  const safeL = insets.left
+  const safeT = insets.top
+  const safeR = vw - insets.right
+  const safeB = vh - insets.bottom
+
+  const driverTransform =
+    wrapper.style.transform && wrapper.style.transform !== 'none'
+      ? wrapper.style.transform.trim()
+      : ''
+
+  const rect = wrapper.getBoundingClientRect()
+  const dx = popoverSafeAxisNudge(rect.left, rect.right, safeL, safeR)
+  const dy = popoverSafeAxisNudge(rect.top, rect.bottom, safeT, safeB)
+
+  if (dx === 0 && dy === 0) {
+    return
+  }
+
+  const nudge = `translate(${dx}px, ${dy}px)`
+  wrapper.style.transform = driverTransform ? `${driverTransform} ${nudge}` : nudge
+}
+
+function scheduleProfileHelpTourPopoverSafeAreaNudge(wrapper: HTMLElement): void {
+  queueMicrotask(() => {
+    if (wrapper.isConnected) {
+      applyProfileHelpTourPopoverSafeAreaNudge(wrapper)
+    }
+  })
+}
+
+/** Wraps driver.js so tutorial popovers get conditional safe-area correction after layout and after `refresh()`. */
+function createProfileHelpDriver(config: Config): Driver {
+  const userOnPopoverRender = config.onPopoverRender
+  const merged: Config = {
+    ...config,
+    onPopoverRender: (popover, opts) => {
+      userOnPopoverRender?.(popover, opts)
+      scheduleProfileHelpTourPopoverSafeAreaNudge(popover.wrapper)
+    },
+  }
+  const d = driver(merged)
+  const innerRefresh = typeof d.refresh === 'function' ? d.refresh.bind(d) : () => {}
+  d.refresh = () => {
+    innerRefresh()
+    queueMicrotask(() => {
+      const el = document.getElementById('driver-popover-content')
+      if (el instanceof HTMLElement) {
+        applyProfileHelpTourPopoverSafeAreaNudge(el)
+      }
+    })
+  }
+  return d
 }
 
 async function waitUntil(
@@ -519,7 +609,7 @@ function baseProfileHelpDriverConfig(options?: ProfileFeatureTourOptions): Omit<
 export function runBookmarksFeatureTour(options?: ProfileFeatureTourOptions): void {
   let tourAddedBookmarkId: string | null = null
 
-  const d = driver({
+  const d = createProfileHelpDriver({
     ...baseProfileHelpDriverConfig({
       ...options,
       onAborted: () => {
@@ -704,7 +794,7 @@ export function runBookmarksFeatureTour(options?: ProfileFeatureTourOptions): vo
 export function runThemeFeatureTour(options?: ProfileFeatureTourOptions): void {
   const themeSnapshot = readThemePersistenceSnapshot()
 
-  const d = driver({
+  const d = createProfileHelpDriver({
     ...baseProfileHelpDriverConfig({
       ...options,
       onAborted: () => {
@@ -755,7 +845,7 @@ export function runThemeFeatureTour(options?: ProfileFeatureTourOptions): void {
  * Text size tour: Menu closed first, then opens Text size in the slide-out (same drawer pattern as Resources).
  */
 export function runTextSizeFeatureTour(options?: ProfileFeatureTourOptions): void {
-  const d = driver({
+  const d = createProfileHelpDriver({
     ...baseProfileHelpDriverConfig(options),
     steps: prependSegmentIntroIfAny(options, [
       {
@@ -822,7 +912,7 @@ export function runTextSizeFeatureTour(options?: ProfileFeatureTourOptions): voi
  * Print tour: Menu closed first, then spotlights **Print Version** in the slide-out (web: browser print / PDF; native: system print).
  */
 export function runPrintFeatureTour(options?: ProfileFeatureTourOptions): void {
-  const d = driver({
+  const d = createProfileHelpDriver({
     ...baseProfileHelpDriverConfig(options),
     steps: prependSegmentIntroIfAny(options, [
       {
@@ -913,7 +1003,7 @@ async function runBibleTranslationFeatureTourAsync(options?: ProfileFeatureTourO
   const enabled = await fetchEnabledTranslationsForBibleTour()
   const descriptionHtml = buildBibleTranslationTourPopoverDescription(enabled)
 
-  const d = driver({
+  const d = createProfileHelpDriver({
     ...baseProfileHelpDriverConfig(options),
     steps: prependSegmentIntroIfAny(options, [
       {
@@ -952,7 +1042,7 @@ async function runBibleTranslationFeatureTourAsync(options?: ProfileFeatureTourO
  * Table of contents tour: opens **Menu**, then highlights section/subsection links in the slide-out.
  */
 export function runTableOfContentsFeatureTour(options?: ProfileFeatureTourOptions): void {
-  const d = driver({
+  const d = createProfileHelpDriver({
     ...baseProfileHelpDriverConfig(options),
     steps: prependSegmentIntroIfAny(options, [
       {
@@ -1056,7 +1146,7 @@ function scriptureHoverPreviewTourIntroDescription(): string {
  * in the popover (CSS in `globals.css`).
  */
 export function runScriptureHoverPreviewFeatureTour(options?: ProfileFeatureTourOptions): void {
-  const d = driver({
+  const d = createProfileHelpDriver({
     ...baseProfileHelpDriverConfig(options),
     steps: prependSegmentIntroIfAny(options, [
       {
@@ -1108,6 +1198,13 @@ export function runScriptureModalFeatureTour(options?: ProfileFeatureTourOptions
 }
 
 function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions): void {
+  const narrow = isNarrowProfileHelpTourViewport()
+  const pop = (
+    wide: { side: Side; align: Alignment },
+    narrowOverride?: { side: Side; align: Alignment }
+  ): { side: Side; align: Alignment } =>
+    narrow ? (narrowOverride ?? { side: 'bottom', align: 'center' }) : wide
+
   const steps: DriveStep[] = [
     {
       element: SCRIPTURE_CARD,
@@ -1115,8 +1212,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         title: 'Open a scripture card',
         description:
           'Blue cards list passages for this section. Tap one to read it in full—or use <strong>Next</strong> to open the first card for this tour.',
-        side: 'top',
-        align: 'start',
+        ...pop({ side: 'top', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           document.querySelector<HTMLElement>(SCRIPTURE_CARD)?.click()
           void waitUntil(() => !!document.querySelector(SCRIPTURE_MODAL_TOOLBAR), 12000).then(() => {
@@ -1139,8 +1235,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         title: 'Presentation context',
         description:
           'When available, this area shows which <strong>section</strong> and <strong>subsection</strong> you are in, plus a short summary from the outline—so you remember how this passage fits the lesson.',
-        side: 'bottom',
-        align: 'start',
+        ...pop({ side: 'bottom', align: 'start' }),
       },
     },
     {
@@ -1150,8 +1245,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         title: 'The passage',
         description:
           'The verse or range appears here in the translation you chose in the menu (or the site default). Use the toolbar above to compare, change chapter view, or move to another passage.',
-        side: 'top',
-        align: 'start',
+        ...pop({ side: 'top', align: 'start' }),
       },
     },
     {
@@ -1160,8 +1254,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         title: 'Compare translations',
         description:
           'Open <strong>Compare</strong> and pick a second version to read the same passage side by side (when your church has more than one translation enabled). Use <strong>Next</strong> to turn it on for this tour.',
-        side: 'bottom',
-        align: 'start',
+        ...pop({ side: 'bottom', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           const applied = selectFirstCompareTranslationOption()
           if (!applied) {
@@ -1189,8 +1282,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         title: 'Two columns',
         description:
           'Each column shows the same reference in a different translation. Main translation is on the right; the compare column is on the left. Attribution still appears at the bottom when you scroll.',
-        side: 'top',
-        align: 'start',
+        ...pop({ side: 'top', align: 'start' }),
       },
     },
     {
@@ -1199,8 +1291,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         title: 'Turn off compare',
         description:
           'Choose <strong>Compare</strong> again and pick the blank first row (or use <strong>Next</strong>) to return to a single column.',
-        side: 'bottom',
-        align: 'start',
+        ...pop({ side: 'bottom', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           clearCompareTranslationSelect()
           void waitUntil(() => !compareColumnsVisible() && modalVerseBodyHasText(), 12000).then(() => {
@@ -1218,8 +1309,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         title: 'Chapter context',
         description:
           'Tap <strong>Chapter Context</strong> to load the whole chapter. Your verses stay highlighted in the longer text so you can see what comes before and after. Use <strong>Next</strong> to load it now.',
-        side: 'bottom',
-        align: 'start',
+        ...pop({ side: 'bottom', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           document.querySelector<HTMLElement>(SCRIPTURE_MODAL_CHAPTER_CONTEXT_BTN)?.click()
           void waitUntil(() => !!document.querySelector(SCRIPTURE_MODAL_CHAPTER_BODY), 15000).then(() => {
@@ -1245,8 +1335,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         title: 'Verse in context',
         description:
           'Scroll inside this area to explore the chapter. The passage you opened is marked so it is easy to spot inside the surrounding verses.',
-        side: 'top',
-        align: 'start',
+        ...pop({ side: 'top', align: 'start' }),
       },
     },
     {
@@ -1255,8 +1344,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         title: 'Back to single verse',
         description:
           'Tap <strong>Verse</strong> to leave chapter view and return to just the passage you opened—compact and easy to read. Use <strong>Next</strong> to switch back for this tour.',
-        side: 'bottom',
-        align: 'start',
+        ...pop({ side: 'bottom', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           document.querySelector<HTMLElement>(SCRIPTURE_MODAL_VERSE_TAB)?.click()
           void waitUntil(() => modalSingleVerseViewReady(), 12000).then(() => {
@@ -1274,8 +1362,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         title: 'Next passage',
         description:
           'The heading in the center shows the active reference. Tap <strong>▶</strong> (or swipe left on mobile) to jump to the <strong>next</strong> scripture card in profile order—the text updates to that passage. Use <strong>Next</strong> to try it (disabled if there is only one card).',
-        side: 'bottom',
-        align: 'start',
+        ...pop({ side: 'bottom', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           const btn = document.querySelector<HTMLButtonElement>(SCRIPTURE_MODAL_NEXT)
           if (btn && !btn.disabled) {
@@ -1301,8 +1388,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         title: 'Previous passage',
         description:
           'Tap <strong>◀</strong> (or swipe right) to go <strong>back</strong> to the prior card—the heading and passage text change again so you can step through the outline in order. Use <strong>Next</strong> to try it (disabled if you are on the first card).',
-        side: 'bottom',
-        align: 'start',
+        ...pop({ side: 'bottom', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           const btn = document.querySelector<HTMLButtonElement>(SCRIPTURE_MODAL_PREV)
           if (btn && !btn.disabled) {
@@ -1328,8 +1414,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         title: 'Close when you are done',
         description:
           'Tap <strong>×</strong> to return to the presentation. Use <strong>Next</strong> to close for this tour.',
-        side: 'left',
-        align: 'start',
+        ...pop({ side: 'left', align: 'start' }, { side: 'bottom', align: 'end' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           document.querySelector<HTMLElement>(SCRIPTURE_MODAL_CLOSE)?.click()
           void waitUntil(() => !document.querySelector(SCRIPTURE_MODAL_TOOLBAR), 5000).then(() => {
@@ -1348,8 +1433,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         title: 'Pinned passage',
         description:
           'After you close the reader, the <strong>last passage you were viewing</strong> stays marked on its blue card: yellow highlight and bold text so you can find it quickly. The next step spotlights the <strong>pin</strong> on that card (this tour will not clear progress there), then the tour shows <strong>Reset Progress</strong> in <strong>Menu</strong>.',
-        side: 'top',
-        align: 'start',
+        ...pop({ side: 'top', align: 'start' }),
       },
     },
     {
@@ -1362,8 +1446,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         title: 'Pin on the card',
         description:
           'Tap this <strong>pin</strong> anytime to clear reading progress for this presentation—the yellow highlight goes away until you open another passage. It does the same job as <strong>Reset Progress</strong> in the slide-out menu. This tour skips tapping it so your progress stays pinned while we show the menu reset next.',
-        side: 'top',
-        align: 'start',
+        ...pop({ side: 'top', align: 'start' }),
       },
     },
     {
@@ -1372,8 +1455,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         title: 'Reset from the menu',
         description:
           'The same reading progress appears at the <strong>bottom</strong> of the slide-out menu under the profile details. Use <strong>Next</strong> to open <strong>Menu</strong> and scroll there.',
-        side: 'bottom',
-        align: 'start',
+        ...pop({ side: 'bottom', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           openProfileMenuIfClosed()
           const behavior: ScrollBehavior = prefersReducedMotion() ? 'auto' : 'smooth'
@@ -1414,8 +1496,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         title: 'Reading progress',
         description:
           'This block matches the <strong>highlighted card</strong> on the page. <strong>Reset Progress</strong> clears the saved passage for this presentation (and removes the yellow styling). Use <strong>Next</strong> to spotlight the reset control.',
-        side: 'right',
-        align: 'start',
+        ...pop({ side: 'right', align: 'start' }),
       },
     },
     {
@@ -1428,8 +1509,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         title: 'Reset Progress',
         description:
           'Tap <strong>Reset Progress</strong> when you want a fresh start. Use <strong>Next</strong> (or <strong>Done</strong>) and the tour will tap it for you—then the tour ends while the page updates.',
-        side: 'right',
-        align: 'start',
+        ...pop({ side: 'right', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           const btn = document.querySelector<HTMLButtonElement>(TOC_RESET_PROGRESS)
           if (btn && !btn.disabled) {
@@ -1449,8 +1529,28 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
     },
   ]
 
-  const d = driver({
+  const d = createProfileHelpDriver({
     ...baseProfileHelpDriverConfig(options),
+    stagePadding: narrow ? 14 : 10,
+    popoverOffset: narrow ? 26 : 10,
+    ...(narrow
+      ? {
+          onHighlighted: (element, _step, { driver: drv }) => {
+            if (element instanceof HTMLElement && element !== document.body) {
+              element.scrollIntoView({
+                block: 'center',
+                inline: 'nearest',
+                behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+              })
+            }
+            window.requestAnimationFrame(() => {
+              window.requestAnimationFrame(() => {
+                window.setTimeout(() => drv.refresh(), prefersReducedMotion() ? 0 : 140)
+              })
+            })
+          },
+        }
+      : {}),
     showProgress: true,
     steps: prependSegmentIntroIfAny(options, steps),
   })
@@ -1583,7 +1683,7 @@ async function runResourcesFeatureTourAsync(options?: ProfileFeatureTourOptions)
   }
 
   const stepsWithIntro = prependSegmentIntroIfAny(options, steps)
-  const d = driver({
+  const d = createProfileHelpDriver({
     ...baseProfileHelpDriverConfig(options),
     showProgress: stepsWithIntro.length > 1,
     steps: stepsWithIntro,
@@ -1791,7 +1891,7 @@ function runMarriageSeminarResourcesTourPostNavigationOnly(options?: ProfileFeat
     },
   ]
 
-  const d = driver({
+  const d = createProfileHelpDriver({
     ...baseProfileHelpDriverConfig(options),
     showProgress: true,
     steps: prependSegmentIntroIfAny(options, steps),
@@ -1941,7 +2041,7 @@ async function runMarriageSeminarResourcesTourAsync(options?: ProfileFeatureTour
     },
   })
 
-  const d = driver({
+  const d = createProfileHelpDriver({
     ...baseProfileHelpDriverConfig({
       ...options,
       onAborted: () => {
@@ -1987,7 +2087,7 @@ export function runFullWalkthroughThankYouFinale(): void {
     scriptureReaderTourNavigation.assign(targetPath)
   }
 
-  const d = driver({
+  const d = createProfileHelpDriver({
     ...baseProfileHelpDriverConfig({
       onComplete: goHome,
       onAborted: goHome,

@@ -1,4 +1,4 @@
-import { scrollToTocAnchor } from '../scrollToTocAnchor'
+import { getSafeAreaInsetsPx, scrollToTocAnchor } from '../scrollToTocAnchor'
 
 describe('scrollToTocAnchor', () => {
   beforeEach(() => {
@@ -39,5 +39,28 @@ describe('scrollToTocAnchor', () => {
       top: 400 + 100 - 64,
       behavior: 'auto',
     })
+  })
+})
+
+describe('getSafeAreaInsetsPx', () => {
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('reads padding from computed style on a probe element', () => {
+    const original = window.getComputedStyle
+    window.getComputedStyle = jest.fn(() => ({
+      paddingTop: '47px',
+      paddingRight: '0px',
+      paddingBottom: '34px',
+      paddingLeft: '0px',
+    })) as unknown as typeof window.getComputedStyle
+    try {
+      const r = getSafeAreaInsetsPx()
+      expect(r).toEqual({ top: 47, right: 0, bottom: 34, left: 0 })
+      expect(document.body.querySelector('div')).toBeNull()
+    } finally {
+      window.getComputedStyle = original
+    }
   })
 })

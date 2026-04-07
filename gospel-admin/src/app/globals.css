@@ -1004,7 +1004,10 @@ s {
 }
 
 /* driver.js help tour popover — iOS/Android safe areas (viewport-fit=cover in layout.tsx).
-   Popovers are position:fixed on body; driver.js clamps to innerWidth/innerHeight without env(). */
+   Popovers are position:fixed; driver.js sets top/left/bottom/right. Do NOT use unconditional
+   safe-area margins here — they shift the box after driver positions it and cover spotlights on
+   real devices. Max size uses env() only; when the popover intersects a safe inset, profileHelpTours
+   applies a conditional translate after layout (see applyProfileHelpTourPopoverSafeAreaNudge). */
 .profile-help-tour-popover.driver-popover {
   box-sizing: border-box;
   max-width: min(
@@ -1017,10 +1020,51 @@ s {
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  margin-top: env(safe-area-inset-top, 0px);
-  margin-right: env(safe-area-inset-right, 0px);
-  margin-bottom: env(safe-area-inset-bottom, 0px);
-  margin-left: env(safe-area-inset-left, 0px);
+}
+
+/* Help tour: larger tap targets on narrow viewports (driver.js defaults are ~12px text, tight padding). */
+@media (max-width: 767px) {
+  .profile-help-tour-popover.driver-popover .driver-popover-footer {
+    margin-top: 14px;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .profile-help-tour-popover.driver-popover .driver-popover-footer button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 16px;
+    font-size: 15px;
+    line-height: 1.2;
+    border-radius: 8px;
+  }
+
+  .profile-help-tour-popover.driver-popover .driver-popover-navigation-btns {
+    gap: 8px;
+  }
+
+  .profile-help-tour-popover.driver-popover .driver-popover-navigation-btns button + button {
+    margin-left: 0;
+  }
+
+  .profile-help-tour-popover.driver-popover .driver-popover-close-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  .profile-help-tour-popover.driver-popover .driver-popover-progress-text {
+    font-size: 14px;
+  }
 }
 
 /* driver.js help tour popover — match site dark mode (popover is attached to body) */
