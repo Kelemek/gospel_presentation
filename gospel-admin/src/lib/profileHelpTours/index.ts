@@ -21,6 +21,8 @@ import {
 const BOOKMARKS_TRIGGER = '[data-tour="bookmarks-trigger"]'
 const BOOKMARKS_PANEL = '[data-tour="bookmarks-panel"]'
 const BOOKMARKS_ADD = '[data-tour="bookmarks-add"]'
+const BOOKMARKS_ROW = '[data-tour="bookmarks-row"]'
+const BOOKMARKS_REMOVE = '[data-tour="bookmarks-remove"]'
 const ALERT_MODAL_CONFIRM = '[data-tour="alert-modal-confirm"]'
 const THEME_TOGGLE = '[data-tour="theme-toggle"]'
 
@@ -30,7 +32,8 @@ const TOC_RESOURCES_TOGGLE = '[data-tour="toc-resources-toggle"]'
 const TOC_TEXT_SIZE_TOGGLE = '[data-tour="toc-text-size-toggle"]'
 const TEXT_SIZE_PANEL = '[data-tour="text-size-panel"]'
 const TOC_PRINT_VERSION = '[data-tour="toc-print-version"]'
-const TOC_BIBLE_TRANSLATION = '[data-tour="toc-bible-translation"]'
+const TOC_BIBLE_TRANSLATION_TOGGLE = '[data-tour="toc-bible-translation-toggle"]'
+const BIBLE_TRANSLATION_PANEL = '[data-tour="bible-translation-panel"]'
 const TOC_SECTION_LINKS = '[data-tour="toc-section-links"]'
 const TOC_READING_PROGRESS = '[data-tour="toc-reading-progress"]'
 const TOC_RESET_PROGRESS = '[data-tour="toc-reset-progress"]'
@@ -658,7 +661,7 @@ function baseProfileHelpDriverConfig(options?: ProfileFeatureTourOptions): Omit<
 }
 
 /**
- * Spotlight tour for the header bookmarks control and panel (add + remove the tour bookmark).
+ * Spotlight tour: what bookmarks are (icon) → reading position & scroll → open panel → add → show row → remove.
  */
 export function runBookmarksFeatureTour(options?: ProfileFeatureTourOptions): void {
   let tourAddedBookmarkId: string | null = null
@@ -687,34 +690,14 @@ export function runBookmarksFeatureTour(options?: ProfileFeatureTourOptions): vo
         popover: {
           title: 'Bookmarks',
           description:
-            'Use this icon to save where you are in this presentation or jump back later. Bookmarks are stored only on this device (your browser).',
+            'Use this icon to save where you are in this presentation or jump back later. Bookmarks are stored only on this device (your browser). Use <strong>Next</strong> to see how <strong>where you scroll</strong> affects what gets saved.',
           side: 'bottom',
           align: 'end',
           onNextClick: (_element, _step, { driver: drv }) => {
-            openBookmarksPanelIfClosed()
             window.setTimeout(() => {
               drv.refresh()
               drv.moveNext()
-            }, 220)
-          },
-        },
-      },
-      {
-        element: BOOKMARKS_PANEL,
-        popover: {
-          title: 'Your saved places',
-          description:
-            'Use <strong>Add bookmark</strong> to capture this profile and your current section. Open a row to jump there, or another profile. <strong>Next</strong> closes this panel and scrolls to the <strong>second subsection</strong> in the text (e.g. point B), or the second list item when there is no second subsection, then you will add a practice bookmark and remove it.',
-          side: 'left',
-          align: 'start',
-          onNextClick: (_element, _step, { driver: drv }) => {
-            closeBookmarksPanelIfOpen()
-            scrollBookmarkTourSampleIntoView()
-            const delay = prefersReducedMotion() ? 160 : 720
-            window.setTimeout(() => {
-              drv.refresh()
-              drv.moveNext()
-            }, delay)
+            }, prefersReducedMotion() ? 80 : 160)
           },
         },
       },
@@ -726,9 +709,27 @@ export function runBookmarksFeatureTour(options?: ProfileFeatureTourOptions): vo
         popover: {
           title: 'Reading position',
           description:
-            'Scroll position matters: bookmarks use your place in the presentation to pick the best <strong>section</strong> for the menu. We scrolled to the <strong>second subsection</strong> when this page has one (e.g. after point A, point B), otherwise the second list item. Use <strong>Next</strong> to open the bookmarks panel again and save.',
+            '<strong>Where you are</strong> on the page matters: bookmarks use your place in the presentation to pick the best <strong>section</strong> for the list. Use <strong>Next</strong> to continue.',
           side: 'bottom',
           align: 'start',
+          onNextClick: (_element, _step, { driver: drv }) => {
+            scrollBookmarkTourSampleIntoView()
+            const delay = prefersReducedMotion() ? 160 : 720
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, delay)
+          },
+        },
+      },
+      {
+        element: BOOKMARKS_TRIGGER,
+        popover: {
+          title: 'Open your bookmarks',
+          description:
+            'Tap the <strong>bookmark</strong> icon to open the list of saved places. Use <strong>Next</strong> to open the panel for this tour.',
+          side: 'bottom',
+          align: 'end',
           onNextClick: (_element, _step, { driver: drv }) => {
             openBookmarksPanelIfClosed()
             window.setTimeout(() => {
@@ -743,7 +744,7 @@ export function runBookmarksFeatureTour(options?: ProfileFeatureTourOptions): vo
         popover: {
           title: 'Add bookmark',
           description:
-            'Tap <strong>Add bookmark</strong> to save your place—or use <strong>Next</strong> and this tour will add one for you. If this spot was already saved, the next step explains what to do.',
+            'This panel lists your saved places. Use <strong>Add bookmark</strong> to capture this profile and your current section—or use <strong>Next</strong> and this tour will add one for you. Open a row to jump there, or another profile. The next steps show your bookmark in the list and how to remove it. If this spot was already saved, you will still see the row and removal steps.',
           side: 'left',
           align: 'start',
           onNextClick: (_element, _step, { driver: drv }) => {
@@ -767,14 +768,47 @@ export function runBookmarksFeatureTour(options?: ProfileFeatureTourOptions): vo
         },
       },
       {
-        element: () =>
-          (tourAddedBookmarkId
-            ? document.querySelector(
-                `[data-tour="bookmarks-row"][data-bookmark-id="${escapeAttrSelectorValue(tourAddedBookmarkId)}"]`
-              )
-            : null) ??
-          document.querySelector(BOOKMARKS_PANEL) ??
-          document.body,
+        element: () => {
+          if (tourAddedBookmarkId) {
+            const row = document.querySelector(
+              `${BOOKMARKS_ROW}[data-bookmark-id="${escapeAttrSelectorValue(tourAddedBookmarkId)}"]`
+            )
+            if (row) return row
+          }
+          return (
+            document.querySelector(BOOKMARKS_ROW) ??
+            document.querySelector(BOOKMARKS_PANEL) ??
+            document.body
+          )
+        },
+        popover: {
+          title: 'Your bookmark',
+          description:
+            'This row is your saved place for this profile and section—tap it to jump back here. If you already had a bookmark for this spot, it is the same row. Use <strong>Next</strong> to see how to remove it with the trash icon.',
+          side: 'left',
+          align: 'start',
+          onNextClick: (_element, _step, { driver: drv }) => {
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, prefersReducedMotion() ? 80 : 160)
+          },
+        },
+      },
+      {
+        element: () => {
+          if (tourAddedBookmarkId) {
+            const forTourBookmark = document.querySelector(
+              `${BOOKMARKS_REMOVE}[data-bookmark-id="${escapeAttrSelectorValue(tourAddedBookmarkId)}"]`
+            )
+            if (forTourBookmark) return forTourBookmark
+          }
+          return (
+            document.querySelector(BOOKMARKS_REMOVE) ??
+            document.querySelector(BOOKMARKS_PANEL) ??
+            document.body
+          )
+        },
         popover: {
           title: 'Remove a bookmark',
           description:
@@ -791,7 +825,7 @@ export function runBookmarksFeatureTour(options?: ProfileFeatureTourOptions): vo
               return
             }
             const removeBtn = document.querySelector<HTMLElement>(
-              `[data-tour="bookmarks-remove"][data-bookmark-id="${escapeAttrSelectorValue(id)}"]`
+              `${BOOKMARKS_REMOVE}[data-bookmark-id="${escapeAttrSelectorValue(id)}"]`
             )
             if (!removeBtn) {
               tourAddedBookmarkId = null
@@ -1002,7 +1036,7 @@ export function runPrintFeatureTour(options?: ProfileFeatureTourOptions): void {
   d.drive()
 }
 
-/** Builds popover HTML listing enabled translations (same source as the menu dropdown). Exported for tests. */
+/** Builds popover HTML listing enabled translations (same source as the menu list). Exported for tests. */
 export function buildBibleTranslationTourPopoverDescription(
   enabled: ReadonlyArray<{ translation_name: string }>
 ): string {
@@ -1014,7 +1048,7 @@ export function buildBibleTranslationTourPopoverDescription(
     .map((n) => `<li><strong>${escapeForPopoverText(n)}</strong></li>`)
     .join('')
   return (
-    '<p>Use this dropdown to choose which Bible version opens when you tap a reference. ' +
+    '<p>Choose which Bible version opens when you tap a reference. ' +
     '<strong>Translations available</strong> in your menu right now:</p>' +
     `<ul class="list-disc pl-5 mt-2 text-sm">${listItems}</ul>` +
     '<p class="mt-2">The setting applies to scripture modals and quoted passages on presentation pages. ' +
@@ -1046,8 +1080,8 @@ async function fetchEnabledTranslationsForBibleTour(): Promise<{ translation_nam
 }
 
 /**
- * Bible translation tour: Menu closed first, then spotlights the **Bible Translation** dropdown in the slide-out.
- * Prefetches `/api/translations/enabled` so the popover lists the same translations as the dropdown.
+ * Bible translation tour: Menu → **Bible Translation** button (step 2) → opens list on Next → panel (step 3), same pattern as Text size.
+ * Prefetches `/api/translations/enabled` so the popover lists the same translations as the menu.
  */
 export function runBibleTranslationFeatureTour(options?: ProfileFeatureTourOptions): void {
   void runBibleTranslationFeatureTourAsync(options)
@@ -1065,7 +1099,7 @@ async function runBibleTranslationFeatureTourAsync(options?: ProfileFeatureTourO
         popover: {
           title: 'Menu',
           description:
-            'Tap <strong>Menu</strong> (top-left) to open the table of contents. Under <strong>Print Version</strong> you will find the <strong>Bible Translation</strong> dropdown. Use <strong>Next</strong> to open the menu for this tour.',
+            'Tap <strong>Menu</strong> (top-left) to open the table of contents, where you will find <strong>Bible Translation</strong> (under <strong>Print Version</strong>) and other controls. Use <strong>Next</strong> to open the menu for this tour.',
           side: 'bottom',
           align: 'start',
           onNextClick: (_e, _s, { driver: drv }) => {
@@ -1078,7 +1112,34 @@ async function runBibleTranslationFeatureTourAsync(options?: ProfileFeatureTourO
         },
       },
       {
-        element: TOC_BIBLE_TRANSLATION,
+        element: TOC_BIBLE_TRANSLATION_TOGGLE,
+        popover: {
+          title: 'Bible translation',
+          description:
+            'Tap <strong>Bible Translation</strong> to show the versions available for scripture (same pattern as <strong>Text size</strong>). Use <strong>Next</strong> to open the list for this tour.',
+          side: 'right',
+          align: 'start',
+          onNextClick: (_e, _s, { driver: drv }) => {
+            const t = document.querySelector<HTMLElement>(TOC_BIBLE_TRANSLATION_TOGGLE)
+            if (!t) {
+              window.setTimeout(() => {
+                drv.refresh()
+                drv.moveNext()
+              }, 200)
+              return
+            }
+            if (!document.querySelector(BIBLE_TRANSLATION_PANEL)) {
+              t.click()
+            }
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, 220)
+          },
+        },
+      },
+      {
+        element: BIBLE_TRANSLATION_PANEL,
         popover: {
           title: 'Bible translation',
           description: descriptionHtml,
@@ -2175,7 +2236,7 @@ const FULL_WALKTHROUGH_SEGMENTS: Array<{
     intro: {
       title: 'Using bookmarks',
       description:
-        'Save your place on this device, open saved spots, and add or remove a practice bookmark in this segment.',
+        'What bookmarks are, how scroll position matters, then add a practice bookmark, see it in the list, and remove it.',
     },
   },
   {
@@ -2219,7 +2280,8 @@ const FULL_WALKTHROUGH_SEGMENTS: Array<{
     run: runBibleTranslationFeatureTour,
     intro: {
       title: 'Bible translation',
-      description: 'Choose which Bible version opens when you tap scripture on presentation pages.',
+      description:
+        'Use the Bible Translation control in the menu (under Print Version), then pick a version from the list—the same button-and-list pattern as Text size.',
     },
   },
   {

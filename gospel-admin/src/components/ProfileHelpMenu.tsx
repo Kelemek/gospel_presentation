@@ -87,7 +87,7 @@ const TUTORIALS: TutorialItem[] = [
   {
     id: 'bibleTranslation',
     label: 'Bible translation',
-    description: 'Choose which version opens for scripture',
+    description: 'Tap Bible Translation in the menu, then pick a version from the list',
     run: runBibleTranslationFeatureTour,
   },
   {

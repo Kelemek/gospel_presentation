@@ -175,4 +175,17 @@ describe('TableOfContents additional behaviors', () => {
     fireEvent.click(screen.getByRole('option', { name: /^Larger$/i }))
     expect(localStorage.getItem('gospel-profile-text-size')).toBe('larger')
   })
+
+  it('Bible translation list opens and setTranslation is called when an option is chosen', () => {
+    const TableOfContents = require('../TableOfContents').default
+    const { useTranslation } = require('@/contexts/TranslationContext')
+    const setTranslation = useTranslation().setTranslation
+    setTranslation.mockClear()
+
+    renderToc(<TableOfContents sections={[]} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /Bible Translation/i }))
+    fireEvent.click(screen.getByRole('option', { name: /KJV \(King James Version\)/i }))
+    expect(setTranslation).toHaveBeenCalledWith('kjv')
+  })
 })
