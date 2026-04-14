@@ -182,21 +182,21 @@ export default function MemorizationPracticeSession({
     [typableIndices, verse.id]
   )
 
+  /** Keep verse in view when the keyboard opens; use `auto` scroll — smooth scroll + focus fights iOS soft keyboard. */
   const scrollPracticeWordsForKeyboard = useCallback(() => {
     requestAnimationFrame(() => {
       const el = practiceWordsRef.current
       if (el && typeof el.scrollIntoView === 'function') {
-        el.scrollIntoView({ block: 'center', behavior: 'smooth', inline: 'nearest' })
+        el.scrollIntoView({ block: 'center', behavior: 'auto', inline: 'nearest' })
       }
     })
   }, [])
 
-  /** Tap verse/blanks to refocus the hidden field if the soft keyboard was dismissed (e.g. after Hint). */
+  /** Tap verse/blanks to refocus only — do not scroll here; scrollIntoView after focus dismisses the keyboard on iOS. */
   const refocusKeyboardFromVerseTap = useCallback(() => {
     if (awaitingRoundAdvance) return
     practiceInputRef.current?.focus({ preventScroll: true })
-    scrollPracticeWordsForKeyboard()
-  }, [awaitingRoundAdvance, scrollPracticeWordsForKeyboard])
+  }, [awaitingRoundAdvance])
 
   /** flushSync + immediate focus keeps iOS / Capacitor WebView keyboard in the same user gesture as the tap. */
   const startRoundAndFocusInput = useCallback(
@@ -360,9 +360,10 @@ export default function MemorizationPracticeSession({
     }
     const id = window.setTimeout(() => {
       practiceInputRef.current?.focus({ preventScroll: true })
+      scrollPracticeWordsForKeyboard()
     }, 0)
     return () => window.clearTimeout(id)
-  }, [phase, awaitingRoundAdvance, roundIndex, currentTargetIndex, hintActive])
+  }, [phase, awaitingRoundAdvance, roundIndex, currentTargetIndex, hintActive, scrollPracticeWordsForKeyboard])
 
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => {
@@ -451,7 +452,6 @@ export default function MemorizationPracticeSession({
               className="absolute left-0 top-0 z-0 h-px w-full max-w-full border-0 bg-transparent p-0 opacity-[0.02] text-transparent caret-transparent"
               onKeyDown={handlePracticeInputKeyDown}
               onInput={handlePracticeInput}
-              onFocus={scrollPracticeWordsForKeyboard}
             />
           )}
           {phase === 'intro' && (
@@ -543,7 +543,7 @@ export default function MemorizationPracticeSession({
                 onPointerDown={() => {
                   refocusKeyboardFromVerseTap()
                 }}
-                className={`cursor-text text-base leading-relaxed font-serif flex flex-wrap gap-x-1 gap-y-2 items-baseline rounded-md p-1 ring-2 ring-inset transition-shadow ${
+                className={`touch-manipulation cursor-text text-base leading-relaxed font-serif flex flex-wrap gap-x-1 gap-y-2 items-baseline rounded-md p-1 ring-2 ring-inset transition-shadow ${
                   flashError
                     ? 'ring-red-400 dark:ring-red-500'
                     : 'ring-transparent'
