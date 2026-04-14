@@ -43,7 +43,9 @@ describe('MemorizationPracticeSession', () => {
     render(
       <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
     )
-    expect(screen.getByTestId('memorize-intro-text')).toHaveTextContent('For God so loved the world')
+    expect(screen.getByTestId('memorize-intro-text')).toHaveTextContent(
+      'For God so loved the world John 3:16'
+    )
   })
 
   it('enters practice mode when Start practice is clicked', async () => {
@@ -54,6 +56,18 @@ describe('MemorizationPracticeSession', () => {
     await user.click(screen.getByRole('button', { name: /Start practice/i }))
     expect(screen.getByTestId('memorize-practice-words')).toBeInTheDocument()
     expect(screen.getByText(/Round 1 of 5/i)).toBeInTheDocument()
+  })
+
+  it('refocuses the practice input when tapping the verse area (soft keyboard recovery)', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
+    )
+    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    const input = screen.getByTestId('memorize-practice-input') as HTMLInputElement
+    const focusSpy = jest.spyOn(input, 'focus')
+    fireEvent.pointerDown(screen.getByTestId('memorize-practice-words'))
+    expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true })
   })
 
   it('shows Hint control during practice; holding peeks blanks progressively', async () => {

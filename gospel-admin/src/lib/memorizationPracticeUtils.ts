@@ -22,6 +22,75 @@ export function getWordsForMemorization(plainText: string): string[] {
   return plainText.trim().split(/\s+/).filter(Boolean)
 }
 
+/** One display/typing unit: verse words, reference words, per-digit blanks, or visible punctuation (not typed). */
+export type MemorizationToken = {
+  kind: 'word' | 'digit' | 'punct'
+  /** Word text, single digit char, or punctuation/space to show as-is */
+  text: string
+}
+
+/** Parse a reference: each digit is its own token; colons, dashes, and other non-alphanumeric chars are punct (shown, not typed). */
+export function parseReferenceMemorizationTokens(reference: string): MemorizationToken[] {
+  const ref = reference.trim()
+  if (!ref) return []
+  const tokens: MemorizationToken[] = []
+  let i = 0
+  while (i < ref.length) {
+    const c = ref[i]
+    if (/\s/.test(c)) {
+      if (tokens.length === 0 || tokens[tokens.length - 1]!.text !== ' ') {
+        tokens.push({ kind: 'punct', text: ' ' })
+      }
+      while (i < ref.length && /\s/.test(ref[i])) i++
+      continue
+    }
+    if (/[0-9]/.test(c)) {
+      tokens.push({ kind: 'digit', text: c })
+      i++
+      continue
+    }
+    if (/[A-Za-z]/.test(c)) {
+      let j = i + 1
+      while (j < ref.length && /[A-Za-z]/.test(ref[j]!)) j++
+      tokens.push({ kind: 'word', text: ref.slice(i, j) })
+      i = j
+      continue
+    }
+    tokens.push({ kind: 'punct', text: c })
+    i++
+  }
+  return tokens
+}
+
+/** Verse words (with spaces as punct tokens) + space + reference tokens appended for memorization. */
+export function buildMemorizationTokens(versePlainText: string, reference: string): MemorizationToken[] {
+  const verseWords = getWordsForMemorization(versePlainText)
+  const out: MemorizationToken[] = []
+  for (let i = 0; i < verseWords.length; i++) {
+    if (i > 0) out.push({ kind: 'punct', text: ' ' })
+    out.push({ kind: 'word', text: verseWords[i]! })
+  }
+  const refTokens = parseReferenceMemorizationTokens(reference)
+  if (refTokens.length === 0) return out
+  if (out.length > 0) out.push({ kind: 'punct', text: ' ' })
+  out.push(...refTokens)
+  return out
+}
+
+export function getTypableTokenIndices(tokens: MemorizationToken[]): number[] {
+  const idx: number[] = []
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i]!
+    if (t.kind === 'word' || t.kind === 'digit') idx.push(i)
+  }
+  return idx
+}
+
+/** Plain line for intro / display (spaces and punctuation come from token text). */
+export function formatMemorizationTokensPlain(tokens: MemorizationToken[]): string {
+  return tokens.map((t) => t.text).join('')
+}
+
 /** Round 1 = 20% hidden, … round 5 = 100%. Round 0 = 0%. */
 export function hiddenFractionForRound(roundIndex: number): number {
   if (roundIndex <= 0) return 0

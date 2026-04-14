@@ -109,6 +109,7 @@ export default function MemorizeDropdown({
                 <div className="flex flex-col gap-1 shrink-0">
                   <button
                     type="button"
+                    data-memorize-verse-practice={v.id}
                     onClick={() => {
                       if (onMemorizationPracticeStart) {
                         onMemorizationPracticeStart(v)

@@ -551,21 +551,6 @@ export default function ScriptureModal({
             <div className="flex-1 flex justify-end items-center gap-1.5">
               <button
                 type="button"
-                data-tour="scripture-modal-memorize"
-                onClick={handleMemorize}
-                disabled={loading || !!error || !(scriptureText ?? '').trim() || isMemoized}
-                title={isMemoized ? 'Already in memorization list' : 'Save this verse to memorize later'}
-                aria-label={isMemoized ? 'Verse already in memorization list' : 'Memorize this verse'}
-                className={`px-2 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors min-h-[36px] border-2 shrink-0 ${
-                  isMemoized || loading || !!error || !(scriptureText ?? '').trim()
-                    ? 'text-slate-400 dark:text-slate-500 border-slate-300 dark:border-slate-600 cursor-not-allowed bg-slate-50 dark:bg-slate-700/50'
-                    : 'text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500'
-                }`}
-              >
-                Memorize
-              </button>
-              <button
-                type="button"
                 data-tour="scripture-modal-close"
                 onClick={onClose}
                 className="text-slate-600 dark:text-slate-200 text-xl font-bold min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center bg-white dark:bg-slate-600 shadow-sm ring-1 ring-slate-300/80 dark:ring-slate-500/60 hover:bg-slate-50 dark:hover:bg-slate-500 hover:ring-slate-400 dark:hover:ring-slate-400 active:bg-slate-100 dark:active:bg-slate-400"
@@ -576,7 +561,7 @@ export default function ScriptureModal({
             </div>
           </div>
           
-          {/* Context Toggle Buttons - Always Visible. Small: row1 = selects, row2 = Verse + Chapter Context */}
+          {/* Context Toggle Buttons - Always Visible. Small: row1 = selects, row2 = Verse + Chapter Context + Memorize */}
           <div className="flex flex-wrap gap-1.5 justify-center items-center">
             <div className="w-full sm:w-auto flex flex-wrap gap-1.5 justify-center sm:justify-start items-center">
               {/* Compare dropdown - to the left of main translation */}
@@ -651,6 +636,22 @@ export default function ScriptureModal({
                 } ${contextLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {contextLoading ? 'Loading...' : 'Chapter Context'}
+              </button>
+
+              <button
+                type="button"
+                data-tour="scripture-modal-memorize"
+                onClick={handleMemorize}
+                disabled={loading || !!error || !(scriptureText ?? '').trim() || isMemoized}
+                title={isMemoized ? 'Already in memorization list' : 'Save this verse to memorize later'}
+                aria-label={isMemoized ? 'Verse already in memorization list' : 'Memorize this verse'}
+                className={`px-2 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors min-h-[36px] border-2 shrink-0 ${
+                  isMemoized || loading || !!error || !(scriptureText ?? '').trim()
+                    ? 'text-slate-400 dark:text-slate-500 border-slate-300 dark:border-slate-600 cursor-not-allowed bg-slate-50 dark:bg-slate-700/50'
+                    : 'text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500'
+                }`}
+              >
+                Memorize
               </button>
             </div>
           </div>

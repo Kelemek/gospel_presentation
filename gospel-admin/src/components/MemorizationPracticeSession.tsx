@@ -18,11 +18,14 @@ import {
 } from '@/lib/memorizationEncouragementMessages'
 import {
   MEMORIZATION_FULL_HIDE_ROUND,
+  buildMemorizationTokens,
   firstLetterOfWord,
+  formatMemorizationTokensPlain,
   generateMemorizationSessionSeed,
-  getWordsForMemorization,
+  getTypableTokenIndices,
   hiddenFractionForRound,
   pickHiddenWordIndices,
+  type MemorizationToken,
 } from '@/lib/memorizationPracticeUtils'
 
 export interface MemorizationPracticeSessionResult {
@@ -41,12 +44,22 @@ type Phase = 'intro' | 'practicing' | 'done'
 
 const MAX_WRONG_BEFORE_REVEAL = 3
 
+function expectedKeystrokeForToken(token: MemorizationToken): string {
+  if (token.kind === 'digit') return token.text
+  if (token.kind === 'word') return firstLetterOfWord(token.text)
+  return ''
+}
+
 export default function MemorizationPracticeSession({
   verse,
   onClose,
   onComplete,
 }: MemorizationPracticeSessionProps) {
-  const words = useMemo(() => getWordsForMemorization(verse.text), [verse.text])
+  const tokens = useMemo(
+    () => buildMemorizationTokens(verse.text, verse.reference),
+    [verse.text, verse.reference]
+  )
+  const typableIndices = useMemo(() => getTypableTokenIndices(tokens), [tokens])
 
   const [phase, setPhase] = useState<Phase>('intro')
   const [roundIndex, setRoundIndex] = useState(0)
@@ -149,11 +162,15 @@ export default function MemorizationPracticeSession({
     return null
   }, [hiddenSorted, revealed])
 
+  const currentTargetToken =
+    currentTargetIndex !== null ? (tokens[currentTargetIndex] ?? null) : null
+
   const startRound = useCallback(
     (r: number) => {
       roundAdvanceHandledRef.current = null
       const seed = sessionSeedRef.current || verse.id
-      const hidden = pickHiddenWordIndices(words.length, r, seed)
+      const localHidden = pickHiddenWordIndices(typableIndices.length, r, seed)
+      const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
       setRoundIndex(r)
       setHiddenIndices(hidden)
       setRevealed(new Set())
@@ -162,7 +179,7 @@ export default function MemorizationPracticeSession({
       setRoundAffirmation('')
       setPhase('practicing')
     },
-    [words.length, verse.id]
+    [typableIndices, verse.id]
   )
 
   const scrollPracticeWordsForKeyboard = useCallback(() => {
@@ -173,6 +190,13 @@ export default function MemorizationPracticeSession({
       }
     })
   }, [])
+
+  /** Tap verse/blanks to refocus the hidden field if the soft keyboard was dismissed (e.g. after Hint). */
+  const refocusKeyboardFromVerseTap = useCallback(() => {
+    if (awaitingRoundAdvance) return
+    practiceInputRef.current?.focus({ preventScroll: true })
+    scrollPracticeWordsForKeyboard()
+  }, [awaitingRoundAdvance, scrollPracticeWordsForKeyboard])
 
   /** flushSync + immediate focus keeps iOS / Capacitor WebView keyboard in the same user gesture as the tap. */
   const startRoundAndFocusInput = useCallback(
@@ -220,14 +244,26 @@ export default function MemorizationPracticeSession({
     onComplete,
   ])
 
-  const processLetter = useCallback(
+  const processKeystroke = useCallback(
     (key: string) => {
       if (hintActive) return
       if (phase !== 'practicing' || currentTargetIndex === null) return
-      if (key.length !== 1 || !/^[a-zA-Z]$/.test(key)) return
-      const expected = firstLetterOfWord(words[currentTargetIndex])
-      if (!expected) return
-      if (key.toLowerCase() === expected) {
+      if (key.length !== 1) return
+      const token = tokens[currentTargetIndex]
+      if (!token || token.kind === 'punct') return
+
+      let correct = false
+      if (token.kind === 'digit') {
+        if (!/^[0-9]$/.test(key)) return
+        correct = key === token.text
+      } else {
+        if (!/^[a-zA-Z]$/.test(key)) return
+        const expected = expectedKeystrokeForToken(token)
+        if (!expected) return
+        correct = key.toLowerCase() === expected
+      }
+
+      if (correct) {
         const idx = currentTargetIndex
         setRevealed((prev) => {
           const next = new Set(prev)
@@ -237,6 +273,10 @@ export default function MemorizationPracticeSession({
         setConsecutiveWrong(0)
         setCorrectKeystrokesTotal((c) => c + 1)
       } else {
+        const isWrongKind =
+          (token.kind === 'digit' && /^[0-9]$/.test(key)) ||
+          (token.kind === 'word' && /^[a-zA-Z]$/.test(key))
+        if (!isWrongKind) return
         setWrongAttemptsTotal((w) => w + 1)
         setConsecutiveWrong((c) => {
           const n = c + 1
@@ -256,7 +296,7 @@ export default function MemorizationPracticeSession({
         window.setTimeout(() => setFlashError(false), 120)
       }
     },
-    [phase, currentTargetIndex, words, hintActive]
+    [phase, currentTargetIndex, tokens, hintActive]
   )
 
   const handlePracticeInputKeyDown = useCallback(
@@ -266,15 +306,19 @@ export default function MemorizationPracticeSession({
       if (e.ctrlKey || e.metaKey || e.altKey) return
       const key = e.key
       if (key.length !== 1) return
-      if (!/^[a-zA-Z]$/.test(key)) return
+      const token = tokens[currentTargetIndex]
+      if (!token || token.kind === 'punct') return
+      const allow =
+        token.kind === 'digit' ? /^[0-9]$/.test(key) : /^[a-zA-Z]$/.test(key)
+      if (!allow) return
       e.preventDefault()
       suppressInputFromKeydownRef.current = true
-      processLetter(key)
+      processKeystroke(key)
       window.setTimeout(() => {
         suppressInputFromKeydownRef.current = false
       }, 0)
     },
-    [phase, currentTargetIndex, hintActive, processLetter]
+    [phase, currentTargetIndex, hintActive, processKeystroke, tokens]
   )
 
   /** Mobile keyboards often omit keydown letters; input events still receive the character. */
@@ -297,10 +341,14 @@ export default function MemorizationPracticeSession({
       if (v.length === 0) return
       const last = v.slice(-1)
       el.value = ''
-      if (!/^[a-zA-Z]$/.test(last)) return
-      processLetter(last)
+      const token = currentTargetIndex !== null ? tokens[currentTargetIndex] : null
+      if (!token || token.kind === 'punct') return
+      const ok =
+        token.kind === 'digit' ? /^[0-9]$/.test(last) : /^[a-zA-Z]$/.test(last)
+      if (!ok) return
+      processKeystroke(last)
     },
-    [phase, currentTargetIndex, hintActive, processLetter]
+    [phase, currentTargetIndex, hintActive, processKeystroke, tokens]
   )
 
   useEffect(() => {
@@ -324,16 +372,17 @@ export default function MemorizationPracticeSession({
     return () => window.removeEventListener('keydown', onEsc)
   }, [onClose])
 
-  if (words.length === 0) {
+  if (typableIndices.length === 0) {
     return (
       <div
+        data-tour="memorize-practice-dialog"
         className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4"
         role="dialog"
         aria-modal="true"
         aria-labelledby="memorize-practice-title"
       >
         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full p-6 border border-slate-200 dark:border-slate-600">
-          <p className="text-slate-700 dark:text-slate-200">No words to practice for this passage.</p>
+          <p className="text-slate-700 dark:text-slate-200">No passage text to practice for this verse.</p>
           <button
             type="button"
             onClick={onClose}
@@ -348,6 +397,7 @@ export default function MemorizationPracticeSession({
 
   return (
     <div
+      data-tour="memorize-practice-dialog"
       className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4"
       style={{
         paddingTop: 'env(safe-area-inset-top)',
@@ -363,10 +413,10 @@ export default function MemorizationPracticeSession({
             <h2 id="memorize-practice-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">
               Memorize
             </h2>
-            <p className="text-sm text-slate-600 dark:text-slate-400">{verse.reference}</p>
           </div>
           <button
             type="button"
+            data-tour="memorize-practice-close"
             onClick={onClose}
             className="text-slate-600 dark:text-slate-200 text-xl font-bold min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-600"
             aria-label="Close"
@@ -388,14 +438,14 @@ export default function MemorizationPracticeSession({
             <input
               ref={practiceInputRef}
               type="text"
-              inputMode="text"
+              inputMode={currentTargetToken?.kind === 'digit' ? 'numeric' : 'text'}
               autoComplete="off"
               autoCorrect="off"
               autoCapitalize="off"
               spellCheck={false}
               enterKeyHint="done"
               disabled={phase === 'intro' || awaitingRoundAdvance}
-              aria-label="Type the first letter of each blank word"
+              aria-label="Type the first letter of each blank word, or each digit for number blanks"
               data-testid="memorize-practice-input"
               tabIndex={phase === 'intro' || awaitingRoundAdvance ? -1 : 0}
               className="absolute left-0 top-0 z-0 h-px w-full max-w-full border-0 bg-transparent p-0 opacity-[0.02] text-transparent caret-transparent"
@@ -407,16 +457,18 @@ export default function MemorizationPracticeSession({
           {phase === 'intro' && (
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
-                Read the verse, then practice by typing the first letter of each hidden word in order.
+                Read the verse and reference, then practice: first letter of each word, each digit separately; colons
+                and dashes in the reference are shown and are not typed.
               </p>
               <p
                 className="text-base leading-relaxed text-slate-900 dark:text-slate-100 font-serif"
                 data-testid="memorize-intro-text"
               >
-                {words.join(' ')}
+                {formatMemorizationTokensPlain(tokens)}
               </p>
               <button
                 type="button"
+                data-tour="memorize-start-practice"
                 onClick={() => {
                   completedRef.current = false
                   sessionSeedRef.current = generateMemorizationSessionSeed()
@@ -474,30 +526,48 @@ export default function MemorizationPracticeSession({
                   </button>
                 )}
               </div>
-              {!awaitingRoundAdvance && currentTargetIndex !== null && (
+              {!awaitingRoundAdvance && (
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-                  Type the first letter of the next blank word (left to right). Hold Hint to peek; another blank
-                  appears every 3 seconds while you hold.
+                  {currentTargetIndex !== null &&
+                    (currentTargetToken?.kind === 'digit'
+                      ? 'Type the next digit (left to right). Colons and dashes in the reference are not typed.'
+                      : 'Type the first letter of the next blank (left to right). Hold Hint to peek; another blank appears every 3 seconds while you hold.')}
+                  {currentTargetIndex !== null && ' '}
+                  Tap the verse or blanks if the keyboard closed.
                 </p>
               )}
               <div
                 ref={practiceWordsRef}
-                className={`text-base leading-relaxed font-serif flex flex-wrap gap-x-1 gap-y-2 items-baseline rounded-md p-1 ring-2 ring-inset transition-shadow ${
+                role="group"
+                aria-label="Verse practice area; tap to show the keyboard again"
+                onPointerDown={() => {
+                  refocusKeyboardFromVerseTap()
+                }}
+                className={`cursor-text text-base leading-relaxed font-serif flex flex-wrap gap-x-1 gap-y-2 items-baseline rounded-md p-1 ring-2 ring-inset transition-shadow ${
                   flashError
                     ? 'ring-red-400 dark:ring-red-500'
                     : 'ring-transparent'
                 }`}
                 data-testid="memorize-practice-words"
               >
-                {words.map((w, i) => {
+                {tokens.map((token, i) => {
+                  if (token.kind === 'punct') {
+                    return (
+                      <span
+                        key={`tok-${i}`}
+                        className="inline text-slate-900 dark:text-slate-100 whitespace-pre"
+                      >
+                        {token.text}
+                      </span>
+                    )
+                  }
+                  const w = token.text
                   const isHidden = hiddenIndices.has(i)
                   const isRevealed = revealed.has(i)
                   const showViaHint = hintActive && isHidden && !isRevealed && hintPeekIndices.has(i)
                   const showBlankUnderline = isHidden && !isRevealed
                   const isCurrent = showBlankUnderline && i === currentTargetIndex
 
-                  // One layout for every word: same border box (visible underline only while blank),
-                  // inner always renders {w} so width never changes when a blank is filled in.
                   let innerClass = 'text-slate-900 dark:text-slate-100'
                   if (showBlankUnderline) {
                     innerClass = showViaHint
@@ -507,8 +577,8 @@ export default function MemorizationPracticeSession({
 
                   return (
                     <span
-                      key={`word-${i}`}
-                      className={`inline-flex items-baseline border-b-2 box-border px-0.5 min-h-[1.5em] ${
+                      key={`tok-${i}`}
+                      className={`inline-flex items-baseline border-b-2 box-border px-0.5 min-h-[1.5em] min-w-[0.6em] justify-center ${
                         showBlankUnderline
                           ? 'border-slate-400 dark:border-slate-500'
                           : 'border-transparent'

@@ -37,6 +37,9 @@ const TOC_BIBLE_TRANSLATION_TOGGLE = '[data-tour="toc-bible-translation-toggle"]
 const BIBLE_TRANSLATION_PANEL = '[data-tour="bible-translation-panel"]'
 const TOC_MEMORIZE_TOGGLE = '[data-tour="toc-memorize-toggle"]'
 const MEMORIZE_PANEL = '[data-tour="memorize-panel"]'
+const MEMORIZE_PRACTICE_DIALOG = '[data-tour="memorize-practice-dialog"]'
+const MEMORIZE_START_PRACTICE = '[data-tour="memorize-start-practice"]'
+const MEMORIZE_PRACTICE_CLOSE = '[data-tour="memorize-practice-close"]'
 const TOC_SECTION_LINKS = '[data-tour="toc-section-links"]'
 const TOC_READING_PROGRESS = '[data-tour="toc-reading-progress"]'
 const TOC_RESET_PROGRESS = '[data-tour="toc-reset-progress"]'
@@ -438,6 +441,21 @@ async function waitUntil(
 function openProfileMenuIfClosed(): void {
   if (document.querySelector(PROFILE_SLIDEOUT_MENU)) return
   document.querySelector<HTMLElement>(PROFILE_MENU_BUTTON)?.click()
+}
+
+function openMemorizePanelIfCollapsed(): void {
+  if (document.querySelector(MEMORIZE_PANEL)) return
+  document.querySelector<HTMLElement>(TOC_MEMORIZE_TOGGLE)?.click()
+}
+
+/** After closing the practice modal, restore Menu → Memorize for the remove step. */
+async function reopenMemorizeMenuAndPanelForTour(): Promise<void> {
+  openProfileMenuIfClosed()
+  await waitUntil(() => document.querySelector(PROFILE_SLIDEOUT_MENU) != null, 4000)
+  await sleep(200)
+  openMemorizePanelIfCollapsed()
+  await waitUntil(() => document.querySelector(MEMORIZE_PANEL) != null, 4000)
+  await sleep(120)
 }
 
 function dispatchSelectChangeNative(sel: HTMLSelectElement): void {
@@ -1180,7 +1198,7 @@ async function runBibleTranslationFeatureTourAsync(options?: ProfileFeatureTourO
 
 /**
  * Verse memorization tour: opens a scripture **card**, saves with **Memorize** in the reader, opens **Menu** → **Memorize**,
- * explains the list, then **Remove**s the verse added for this tour (with confirm).
+ * explains the list, opens **Practice** for a short preview (intro + round 1), closes it, then **Remove**s the verse added for this tour (with confirm).
  *
  * When not on `/default`, stores resume state and navigates there first (`ProfilePageClient` calls `tryStartMemorizeTourAfterNavigation`).
  */
@@ -1333,8 +1351,118 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
       popover: {
         title: 'Your memorization list',
         description:
-          'Verses are grouped by progress—<strong>Learning</strong>, <strong>Practicing</strong>, and <strong>Mastered</strong>. Tap <strong>Practice</strong> for guided rounds with words hidden. Use <strong>Next</strong> when you are ready to remove the verse we added.',
+          'Verses are grouped by progress—<strong>Learning</strong>, <strong>Practicing</strong>, and <strong>Mastered</strong>. <strong>Practice</strong> opens guided rounds with blanks for each word (and digits in the reference). Use <strong>Next</strong> to open <strong>Practice</strong> for the verse we added and preview how it works.',
         ...pop({ side: 'right', align: 'start' }),
+      },
+    },
+    {
+      element: () => {
+        const id = memorizeTourTargetVerseId
+        if (!id) return document.querySelector(MEMORIZE_PANEL) ?? document.body
+        return (
+          document.querySelector(
+            `button[data-memorize-verse-practice="${escapeAttrSelectorValue(id)}"]`
+          ) ?? document.querySelector(MEMORIZE_PANEL) ?? document.body
+        )
+      },
+      popover: {
+        title: 'Open Practice',
+        description:
+          'Use <strong>Next</strong> to open the practice session for the verse we added (same as tapping <strong>Practice</strong> on that row).',
+        ...pop({ side: 'right', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          const id = memorizeTourTargetVerseId
+          if (!id) {
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, 120)
+            return
+          }
+          const practiceBtn = document.querySelector<HTMLElement>(
+            `button[data-memorize-verse-practice="${escapeAttrSelectorValue(id)}"]`
+          )
+          if (!practiceBtn) {
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, 120)
+            return
+          }
+          practiceBtn.click()
+          void waitUntil(() => !!document.querySelector(MEMORIZE_PRACTICE_DIALOG), 8000).then((opened) => {
+            if (!opened) {
+              window.setTimeout(() => {
+                drv.refresh()
+                drv.moveNext()
+              }, 120)
+              return
+            }
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, prefersReducedMotion() ? 80 : 200)
+          })
+        },
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(MEMORIZE_PRACTICE_DIALOG) ??
+        document.querySelector(MEMORIZE_PANEL) ??
+        document.body,
+      popover: {
+        title: 'Before you practice',
+        description:
+          'You see the full verse and reference first. When you are ready, <strong>Start practice</strong> begins five rounds with more words hidden each time. Use <strong>Next</strong> to start round 1 for this tour.',
+        ...pop({ side: 'right', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          const start = document.querySelector<HTMLElement>(MEMORIZE_START_PRACTICE)
+          if (start) {
+            start.click()
+            void waitUntil(
+              () => !!document.querySelector('[data-testid="memorize-practice-words"]'),
+              6000
+            ).then(() => {
+              window.setTimeout(() => {
+                drv.refresh()
+                drv.moveNext()
+              }, prefersReducedMotion() ? 80 : 200)
+            })
+            return
+          }
+          window.setTimeout(() => {
+            drv.refresh()
+            drv.moveNext()
+          }, 120)
+        },
+      },
+    },
+    {
+      element: () =>
+        document.querySelector('[data-testid="memorize-practice-words"]') ??
+        document.querySelector(MEMORIZE_PRACTICE_DIALOG) ??
+        document.querySelector(MEMORIZE_PANEL) ??
+        document.body,
+      popover: {
+        title: 'Guided practice',
+        description:
+          'Blanks mark what to type next—<strong>first letter</strong> of each word, or each <strong>digit</strong> in the reference. <strong>Hint</strong> temporarily peeks at hidden words. Use <strong>Next</strong> to close this preview and return to the list.',
+        ...pop({ side: 'right', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          void (async () => {
+            const closeBtn = document.querySelector<HTMLElement>(MEMORIZE_PRACTICE_CLOSE)
+            if (closeBtn) {
+              closeBtn.click()
+              await waitUntil(() => !document.querySelector(MEMORIZE_PRACTICE_DIALOG), 6000)
+            }
+            await reopenMemorizeMenuAndPanelForTour()
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, prefersReducedMotion() ? 80 : 200)
+          })()
+        },
       },
     },
     {
@@ -2580,7 +2708,7 @@ const FULL_WALKTHROUGH_SEGMENTS: Array<{
     intro: {
       title: 'Verse memorization',
       description:
-        'Open a scripture card, save with Memorize in the reader, open the Memorize list in the menu, then remove the verse we add for this tour.',
+        'Open a scripture card, save with Memorize in the reader, open the Memorize list, preview Practice (intro + round 1), then remove the verse we add for this tour.',
     },
   },
   {
