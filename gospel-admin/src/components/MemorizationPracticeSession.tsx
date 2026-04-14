@@ -4,6 +4,7 @@ import {
   startTransition,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -74,6 +75,8 @@ export default function MemorizationPracticeSession({
   const [hintPeekCount, setHintPeekCount] = useState(1)
   /** Rounds 1–4: all blanks filled; show Repeat/Next in modal footer without leaving the verse view. */
   const [awaitingRoundAdvance, setAwaitingRoundAdvance] = useState(false)
+  const awaitingRoundAdvanceRef = useRef(false)
+  awaitingRoundAdvanceRef.current = awaitingRoundAdvance
   const [roundAffirmation, setRoundAffirmation] = useState('')
   const [completionMessage, setCompletionMessage] = useState('')
   const completedRef = useRef(false)
@@ -192,11 +195,32 @@ export default function MemorizationPracticeSession({
     })
   }, [])
 
-  /** Tap verse/blanks to refocus only — do not scroll here; scrollIntoView after focus dismisses the keyboard on iOS. */
-  const refocusKeyboardFromVerseTap = useCallback(() => {
-    if (awaitingRoundAdvance) return
-    practiceInputRef.current?.focus({ preventScroll: true })
-  }, [awaitingRoundAdvance])
+  /**
+   * Taps on the verse hit this div, not the hidden input — the browser blurs the input and dismisses the keyboard.
+   * Capture-phase listeners with passive:false on touchstart let us preventDefault when the input is already focused,
+   * so the keyboard stays up; otherwise we focus to bring it back (no scroll — avoids iOS fighting the keyboard).
+   */
+  useLayoutEffect(() => {
+    if (phase !== 'practicing') return
+    const el = practiceWordsRef.current
+    if (!el) return
+    const onVerseCapture = (e: PointerEvent | TouchEvent) => {
+      if (awaitingRoundAdvanceRef.current) return
+      const input = practiceInputRef.current
+      if (!input) return
+      if (document.activeElement === input) {
+        e.preventDefault()
+        return
+      }
+      input.focus({ preventScroll: true })
+    }
+    el.addEventListener('touchstart', onVerseCapture, { capture: true, passive: false })
+    el.addEventListener('pointerdown', onVerseCapture, { capture: true })
+    return () => {
+      el.removeEventListener('touchstart', onVerseCapture, { capture: true })
+      el.removeEventListener('pointerdown', onVerseCapture, { capture: true })
+    }
+  }, [phase])
 
   /** flushSync + immediate focus keeps iOS / Capacitor WebView keyboard in the same user gesture as the tap. */
   const startRoundAndFocusInput = useCallback(
@@ -540,9 +564,6 @@ export default function MemorizationPracticeSession({
                 ref={practiceWordsRef}
                 role="group"
                 aria-label="Verse practice area; tap to show the keyboard again"
-                onPointerDown={() => {
-                  refocusKeyboardFromVerseTap()
-                }}
                 className={`touch-manipulation cursor-text text-base leading-relaxed font-serif flex flex-wrap gap-x-1 gap-y-2 items-baseline rounded-md p-1 ring-2 ring-inset transition-shadow ${
                   flashError
                     ? 'ring-red-400 dark:ring-red-500'

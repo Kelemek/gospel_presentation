@@ -66,6 +66,7 @@ describe('MemorizationPracticeSession', () => {
     await user.click(screen.getByRole('button', { name: /Start practice/i }))
     const input = screen.getByTestId('memorize-practice-input') as HTMLInputElement
     const focusSpy = jest.spyOn(input, 'focus')
+    input.blur()
     fireEvent.pointerDown(screen.getByTestId('memorize-practice-words'))
     expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true })
   })
