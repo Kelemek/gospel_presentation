@@ -89,6 +89,7 @@ export default function MemorizationPracticeSession({
   /** If keydown already handled a letter, skip the matching input event (avoids double counts). */
   const suppressInputFromKeydownRef = useRef(false)
   const practiceWordsRef = useRef<HTMLDivElement>(null)
+  const hintButtonRef = useRef<HTMLButtonElement>(null)
   /** Extra bottom padding when the on-screen keyboard shrinks visualViewport (mobile / Capacitor). */
   const [keyboardInsetPx, setKeyboardInsetPx] = useState(0)
 
@@ -196,30 +197,52 @@ export default function MemorizationPracticeSession({
   }, [])
 
   /**
-   * Taps on the verse hit this div, not the hidden input — the browser blurs the input and dismisses the keyboard.
+   * Taps hit the verse / Hint control, not the hidden input — the browser blurs the input and dismisses the keyboard.
    * Capture-phase listeners with passive:false on touchstart let us preventDefault when the input is already focused,
    * so the keyboard stays up; otherwise we focus to bring it back (no scroll — avoids iOS fighting the keyboard).
    */
+  const keepPracticeInputOnPointerCapture = useCallback((e: PointerEvent | TouchEvent) => {
+    if (awaitingRoundAdvanceRef.current) return
+    const input = practiceInputRef.current
+    if (!input) return
+    if (document.activeElement === input) {
+      e.preventDefault()
+      return
+    }
+    input.focus({ preventScroll: true })
+  }, [])
+
   useLayoutEffect(() => {
     if (phase !== 'practicing') return
     const el = practiceWordsRef.current
     if (!el) return
-    const onVerseCapture = (e: PointerEvent | TouchEvent) => {
-      if (awaitingRoundAdvanceRef.current) return
-      const input = practiceInputRef.current
-      if (!input) return
-      if (document.activeElement === input) {
-        e.preventDefault()
-        return
-      }
-      input.focus({ preventScroll: true })
-    }
-    el.addEventListener('touchstart', onVerseCapture, { capture: true, passive: false })
-    el.addEventListener('pointerdown', onVerseCapture, { capture: true })
+    el.addEventListener('touchstart', keepPracticeInputOnPointerCapture, { capture: true, passive: false })
+    el.addEventListener('pointerdown', keepPracticeInputOnPointerCapture, { capture: true })
     return () => {
-      el.removeEventListener('touchstart', onVerseCapture, { capture: true })
-      el.removeEventListener('pointerdown', onVerseCapture, { capture: true })
+      el.removeEventListener('touchstart', keepPracticeInputOnPointerCapture, { capture: true })
+      el.removeEventListener('pointerdown', keepPracticeInputOnPointerCapture, { capture: true })
     }
+  }, [phase, keepPracticeInputOnPointerCapture])
+
+  useLayoutEffect(() => {
+    if (phase !== 'practicing' || awaitingRoundAdvance) return
+    const el = hintButtonRef.current
+    if (!el) return
+    el.addEventListener('touchstart', keepPracticeInputOnPointerCapture, { capture: true, passive: false })
+    el.addEventListener('pointerdown', keepPracticeInputOnPointerCapture, { capture: true })
+    return () => {
+      el.removeEventListener('touchstart', keepPracticeInputOnPointerCapture, { capture: true })
+      el.removeEventListener('pointerdown', keepPracticeInputOnPointerCapture, { capture: true })
+    }
+  }, [phase, awaitingRoundAdvance, keepPracticeInputOnPointerCapture])
+
+  /** After releasing Hint, WebKit may leave focus on the button — put it back on the hidden field. */
+  const restorePracticeInputFocusAfterHint = useCallback(() => {
+    requestAnimationFrame(() => {
+      if (awaitingRoundAdvanceRef.current) return
+      if (phase !== 'practicing') return
+      practiceInputRef.current?.focus({ preventScroll: true })
+    })
   }, [phase])
 
   /** flushSync + immediate focus keeps iOS / Capacitor WebView keyboard in the same user gesture as the tap. */
@@ -522,8 +545,10 @@ export default function MemorizationPracticeSession({
                 </p>
                 {!awaitingRoundAdvance && (
                   <button
+                    ref={hintButtonRef}
                     type="button"
                     data-testid="memorize-hint-button"
+                    tabIndex={-1}
                     className="shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors border border-blue-200 dark:border-blue-700 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900/60 hover:border-blue-300 dark:hover:border-blue-600 active:bg-blue-200 dark:active:bg-blue-900/70 select-none touch-manipulation"
                     aria-pressed={hintActive}
                     aria-label="Hold to peek at hidden words; adds the next word every 3 seconds"
@@ -536,14 +561,17 @@ export default function MemorizationPracticeSession({
                     onPointerUp={() => {
                       setHintPeekCount(1)
                       setHintHeld(false)
+                      restorePracticeInputFocusAfterHint()
                     }}
                     onPointerLeave={() => {
                       setHintPeekCount(1)
                       setHintHeld(false)
+                      restorePracticeInputFocusAfterHint()
                     }}
                     onPointerCancel={() => {
                       setHintPeekCount(1)
                       setHintHeld(false)
+                      restorePracticeInputFocusAfterHint()
                     }}
                   >
                     Hint
