@@ -127,4 +127,42 @@ describe('MemorizationPracticeSession', () => {
     expect(screen.getByRole('button', { name: /Next round/i })).toBeInTheDocument()
     expect(screen.queryByTestId('memorize-hint-button')).not.toBeInTheDocument()
   })
+
+  it('calls onPersistInProgress with betweenRounds when an intermediate round completes', async () => {
+    const user = userEvent.setup()
+    const onPersistInProgress = jest.fn()
+    render(
+      <MemorizationPracticeSession
+        verse={baseVerse}
+        onClose={jest.fn()}
+        onComplete={jest.fn()}
+        onPersistInProgress={onPersistInProgress}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    await user.keyboard('f')
+    expect(onPersistInProgress).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        phase: { kind: 'betweenRounds', completedRoundIndex: 1 },
+      })
+    )
+  })
+
+  it('resumes betweenRounds from verse.inProgressPractice without showing intro', () => {
+    const verseWithProgress: MemorizedVerse = {
+      ...baseVerse,
+      inProgressPractice: {
+        sessionSeed: 'resume-seed',
+        wrongAttempts: 0,
+        correctKeystrokes: 1,
+        updatedAt: 99,
+        phase: { kind: 'betweenRounds', completedRoundIndex: 1 },
+      },
+    }
+    render(
+      <MemorizationPracticeSession verse={verseWithProgress} onClose={jest.fn()} onComplete={jest.fn()} />
+    )
+    expect(screen.queryByTestId('memorize-intro-text')).not.toBeInTheDocument()
+    expect(screen.getByTestId('memorize-round-advance-footer')).toBeInTheDocument()
+  })
 })

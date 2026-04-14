@@ -6,9 +6,11 @@ import MemorizationPracticeSession from '@/components/MemorizationPracticeSessio
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import {
   GOSPEL_MEMORIZATION_CHANGED_EVENT,
+  clearMemorizationInProgress,
   getMasterLevel,
   loadMemorizedVerses,
   removeMemorizedVerse,
+  saveMemorizationInProgress,
   updatePracticeStats,
   type MemorizedVerse,
 } from '@/lib/verseMemorizationStorage'
@@ -200,6 +202,17 @@ export default function MemorizeDropdown({
             onClose={() => {
               setPracticeVerse(null)
               refresh()
+            }}
+            onPersistInProgress={(payload) => {
+              saveMemorizationInProgress(practiceVerse.id, payload)
+              refresh()
+            }}
+            onClearInProgress={() => {
+              clearMemorizationInProgress(practiceVerse.id)
+              refresh()
+              setPracticeVerse(
+                loadMemorizedVerses().find((v) => v.id === practiceVerse.id) ?? null
+              )
             }}
             onComplete={(result) => {
               updatePracticeStats(practiceVerse.id, {

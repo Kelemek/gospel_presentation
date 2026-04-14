@@ -16,6 +16,22 @@ export interface MemorizationPracticeSessionRecord {
   completed: boolean
 }
 
+/** Saved while a five-round run is in flight (localStorage only). */
+export type MemorizationInProgressPhase =
+  | { kind: 'betweenRounds'; completedRoundIndex: number }
+  | { kind: 'inRound'; roundIndex: number }
+
+export interface MemorizationInProgress {
+  sessionSeed: string
+  wrongAttempts: number
+  correctKeystrokes: number
+  updatedAt: number
+  phase: MemorizationInProgressPhase
+}
+
+/** Payload from the practice UI (storage sets `updatedAt`). */
+export type MemorizationInProgressSavePayload = Omit<MemorizationInProgress, 'updatedAt'>
+
 export interface MemorizedVerse {
   id: string
   reference: string
@@ -24,6 +40,8 @@ export interface MemorizedVerse {
   dateAdded: number
   lastPracticedAt: number | null
   practiceSessions: MemorizationPracticeSessionRecord[]
+  /** Resume point for the current multi-round practice session, if any. */
+  inProgressPractice?: MemorizationInProgress | null
 }
 
 interface StoredShape {
@@ -35,6 +53,62 @@ function newId(): string {
   return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`
+}
+
+function normalizeInProgress(raw: unknown): MemorizationInProgress | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const o = raw as Record<string, unknown>
+  const sessionSeed = o.sessionSeed
+  const wrongAttempts = o.wrongAttempts
+  const correctKeystrokes = o.correctKeystrokes
+  const updatedAt = o.updatedAt
+  const phase = o.phase
+  if (
+    typeof sessionSeed !== 'string' ||
+    sessionSeed.length === 0 ||
+    typeof wrongAttempts !== 'number' ||
+    wrongAttempts < 0 ||
+    typeof correctKeystrokes !== 'number' ||
+    correctKeystrokes < 0 ||
+    typeof updatedAt !== 'number' ||
+    !phase ||
+    typeof phase !== 'object'
+  ) {
+    return undefined
+  }
+  const p = phase as Record<string, unknown>
+  const kind = p.kind
+  if (kind === 'betweenRounds') {
+    const completedRoundIndex = p.completedRoundIndex
+    if (
+      typeof completedRoundIndex !== 'number' ||
+      completedRoundIndex < 1 ||
+      completedRoundIndex > 4
+    ) {
+      return undefined
+    }
+    return {
+      sessionSeed,
+      wrongAttempts,
+      correctKeystrokes,
+      updatedAt,
+      phase: { kind: 'betweenRounds', completedRoundIndex },
+    }
+  }
+  if (kind === 'inRound') {
+    const roundIndex = p.roundIndex
+    if (typeof roundIndex !== 'number' || roundIndex < 1 || roundIndex > 5) {
+      return undefined
+    }
+    return {
+      sessionSeed,
+      wrongAttempts,
+      correctKeystrokes,
+      updatedAt,
+      phase: { kind: 'inRound', roundIndex },
+    }
+  }
+  return undefined
 }
 
 function normalizeVerse(v: unknown): MemorizedVerse | null {
@@ -77,6 +151,7 @@ function normalizeVerse(v: unknown): MemorizedVerse | null {
       practiceSessions.push({ date, wrongAttempts, correctKeystrokes, completed })
     }
   }
+  const inProgressPractice = normalizeInProgress(o.inProgressPractice)
   return {
     id,
     reference,
@@ -85,6 +160,7 @@ function normalizeVerse(v: unknown): MemorizedVerse | null {
     dateAdded,
     lastPracticedAt: typeof lastPracticedAt === 'number' ? lastPracticedAt : null,
     practiceSessions,
+    ...(inProgressPractice ? { inProgressPractice } : {}),
   }
 }
 
@@ -208,9 +284,46 @@ export function updatePracticeStats(
   }
   const updated: MemorizedVerse = {
     ...verse,
+    inProgressPractice: undefined,
     lastPracticedAt: Date.now(),
     practiceSessions: [...verse.practiceSessions, session],
   }
+  const next = [...list]
+  next[idx] = updated
+  persist(next)
+  return updated
+}
+
+export function saveMemorizationInProgress(
+  id: string,
+  payload: MemorizationInProgressSavePayload
+): MemorizedVerse | null {
+  const list = loadMemorizedVerses()
+  const idx = list.findIndex((v) => v.id === id)
+  if (idx < 0) return null
+
+  const verse = list[idx]
+  const inProgressPractice: MemorizationInProgress = {
+    ...payload,
+    updatedAt: Date.now(),
+  }
+  const updated: MemorizedVerse = { ...verse, inProgressPractice }
+  const next = [...list]
+  next[idx] = updated
+  persist(next)
+  return updated
+}
+
+export function clearMemorizationInProgress(id: string): MemorizedVerse | null {
+  const list = loadMemorizedVerses()
+  const idx = list.findIndex((v) => v.id === id)
+  if (idx < 0) return null
+
+  const verse = list[idx]
+  if (!verse.inProgressPractice) return verse
+
+  const updated: MemorizedVerse = { ...verse }
+  delete updated.inProgressPractice
   const next = [...list]
   next[idx] = updated
   persist(next)

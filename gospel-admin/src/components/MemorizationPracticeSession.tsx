@@ -12,7 +12,10 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react'
 import { flushSync } from 'react-dom'
-import type { MemorizedVerse } from '@/lib/verseMemorizationStorage'
+import type {
+  MemorizationInProgressSavePayload,
+  MemorizedVerse,
+} from '@/lib/verseMemorizationStorage'
 import {
   pickRandomAllDoneMessage,
   pickRandomRoundAffirmation,
@@ -39,6 +42,10 @@ interface MemorizationPracticeSessionProps {
   verse: MemorizedVerse
   onClose: () => void
   onComplete: (result: MemorizationPracticeSessionResult) => void
+  /** Persist multi-round progress (localStorage); do not replace the open `verse` prop on each call to avoid re-hydrating mid-session. */
+  onPersistInProgress?: (payload: MemorizationInProgressSavePayload) => void
+  /** Clear saved in-progress for this verse (e.g. Start over). */
+  onClearInProgress?: () => void
 }
 
 type Phase = 'intro' | 'practicing' | 'done'
@@ -61,6 +68,8 @@ export default function MemorizationPracticeSession({
   verse,
   onClose,
   onComplete,
+  onPersistInProgress,
+  onClearInProgress,
 }: MemorizationPracticeSessionProps) {
   const tokens = useMemo(
     () => buildMemorizationTokens(verse.text, verse.reference),
@@ -103,8 +112,15 @@ export default function MemorizationPracticeSession({
   /** Extra bottom padding when the on-screen keyboard shrinks visualViewport (mobile / Capacitor). */
   const [keyboardInsetPx, setKeyboardInsetPx] = useState(0)
 
+  /** One resume hydrate per dialog open / verse id (avoid re-applying when parent refreshes list only). */
+  const openedLayoutOnceForVerseIdRef = useRef<string | null>(null)
+  const lastVerseIdForLayoutRef = useRef(verse.id)
+
   useEffect(() => {
-    sessionSeedRef.current = ''
+    if (verse.inProgressPractice) {
+      completedRef.current = false
+      return
+    }
     completedRef.current = false
     roundAdvanceHandledRef.current = null
     startTransition(() => {
@@ -112,7 +128,16 @@ export default function MemorizationPracticeSession({
       setRoundAffirmation('')
       setCompletionMessage('')
     })
-  }, [verse.id])
+    sessionSeedRef.current = ''
+    startTransition(() => {
+      setPhase('intro')
+      setRoundIndex(0)
+      setHiddenIndices(new Set())
+      setRevealed(new Set())
+      setWrongAttemptsTotal(0)
+      setCorrectKeystrokesTotal(0)
+    })
+  }, [verse.id, verse.inProgressPractice])
 
   useEffect(() => {
     document.body.style.overflow = 'hidden'
@@ -195,6 +220,55 @@ export default function MemorizationPracticeSession({
     },
     [typableIndices, verse.id]
   )
+
+  useLayoutEffect(() => {
+    if (lastVerseIdForLayoutRef.current !== verse.id) {
+      lastVerseIdForLayoutRef.current = verse.id
+      openedLayoutOnceForVerseIdRef.current = null
+    }
+    if (openedLayoutOnceForVerseIdRef.current === verse.id) return
+    openedLayoutOnceForVerseIdRef.current = verse.id
+
+    const ip = verse.inProgressPractice
+    if (!ip) return
+
+    sessionSeedRef.current = ip.sessionSeed
+    setWrongAttemptsTotal(ip.wrongAttempts)
+    setCorrectKeystrokesTotal(ip.correctKeystrokes)
+    completedRef.current = false
+
+    if (ip.phase.kind === 'betweenRounds') {
+      const r = ip.phase.completedRoundIndex
+      roundAdvanceHandledRef.current = r
+      const seed = sessionSeedRef.current
+      const localHidden = pickHiddenWordIndices(typableIndices.length, r, seed)
+      const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
+      setRoundIndex(r)
+      setHiddenIndices(hidden)
+      setRevealed(new Set(hidden))
+      setConsecutiveWrong(0)
+      setAwaitingRoundAdvance(true)
+      setRoundAffirmation(pickRandomRoundAffirmation())
+      setPhase('practicing')
+    } else {
+      roundAdvanceHandledRef.current = null
+      const r = ip.phase.roundIndex
+      const localHidden = pickHiddenWordIndices(typableIndices.length, r, sessionSeedRef.current)
+      const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
+      setRoundIndex(r)
+      setHiddenIndices(hidden)
+      setRevealed(new Set())
+      setConsecutiveWrong(0)
+      setAwaitingRoundAdvance(false)
+      setRoundAffirmation('')
+      setPhase('practicing')
+      setWrongAttemptsTotal(ip.wrongAttempts)
+      setCorrectKeystrokesTotal(ip.correctKeystrokes)
+    }
+    requestAnimationFrame(() => {
+      practiceInputRef.current?.focus({ preventScroll: true })
+    })
+  }, [verse.id, verse.inProgressPractice, typableIndices])
 
   /**
    * Scroll the active blank toward the vertical center of the practice column, then nudge using
@@ -317,6 +391,57 @@ export default function MemorizationPracticeSession({
     [startRound, scrollCurrentBlankIntoView]
   )
 
+  const persistPracticeSnapshot = useCallback(
+    (phasePayload: MemorizationInProgressSavePayload['phase']) => {
+      if (!onPersistInProgress || !sessionSeedRef.current) return
+      onPersistInProgress({
+        sessionSeed: sessionSeedRef.current,
+        wrongAttempts: wrongAttemptsTotal,
+        correctKeystrokes: correctKeystrokesTotal,
+        phase: phasePayload,
+      })
+    },
+    [onPersistInProgress, wrongAttemptsTotal, correctKeystrokesTotal]
+  )
+
+  const handleClose = useCallback(() => {
+    if (onPersistInProgress && sessionSeedRef.current && phase === 'practicing') {
+      if (awaitingRoundAdvance) {
+        persistPracticeSnapshot({ kind: 'betweenRounds', completedRoundIndex: roundIndex })
+      } else {
+        persistPracticeSnapshot({ kind: 'inRound', roundIndex })
+      }
+    }
+    onClose()
+  }, [
+    onClose,
+    onPersistInProgress,
+    phase,
+    awaitingRoundAdvance,
+    roundIndex,
+    persistPracticeSnapshot,
+  ])
+
+  const handleStartOver = useCallback(() => {
+    onClearInProgress?.()
+    sessionSeedRef.current = ''
+    completedRef.current = false
+    roundAdvanceHandledRef.current = null
+    openedLayoutOnceForVerseIdRef.current = null
+    lastVerseIdForLayoutRef.current = verse.id
+    startTransition(() => {
+      setPhase('intro')
+      setRoundIndex(0)
+      setHiddenIndices(new Set())
+      setRevealed(new Set())
+      setWrongAttemptsTotal(0)
+      setCorrectKeystrokesTotal(0)
+      setAwaitingRoundAdvance(false)
+      setRoundAffirmation('')
+      setCompletionMessage('')
+    })
+  }, [verse.id, onClearInProgress])
+
   useEffect(() => {
     if (phase !== 'practicing' || hiddenIndices.size === 0) return
     const allDone = [...hiddenIndices].every((i) => revealed.has(i))
@@ -336,6 +461,9 @@ export default function MemorizationPracticeSession({
     } else {
       if (roundAdvanceHandledRef.current === roundIndex) return
       roundAdvanceHandledRef.current = roundIndex
+      if (onPersistInProgress && sessionSeedRef.current) {
+        persistPracticeSnapshot({ kind: 'betweenRounds', completedRoundIndex: roundIndex })
+      }
       startTransition(() => {
         setRoundAffirmation(pickRandomRoundAffirmation())
         setAwaitingRoundAdvance(true)
@@ -349,6 +477,8 @@ export default function MemorizationPracticeSession({
     wrongAttemptsTotal,
     correctKeystrokesTotal,
     onComplete,
+    onPersistInProgress,
+    persistPracticeSnapshot,
   ])
 
   const processKeystroke = useCallback(
@@ -493,11 +623,15 @@ export default function MemorizationPracticeSession({
 
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') handleClose()
     }
     window.addEventListener('keydown', onEsc)
     return () => window.removeEventListener('keydown', onEsc)
-  }, [onClose])
+  }, [handleClose])
+
+  const showStartOver =
+    typeof onClearInProgress === 'function' &&
+    (phase === 'practicing' || (phase === 'intro' && !!verse.inProgressPractice))
 
   if (typableIndices.length === 0) {
     return (
@@ -540,6 +674,16 @@ export default function MemorizationPracticeSession({
             Memorize
           </h2>
           <div className="flex items-center gap-2 shrink-0">
+            {showStartOver && (
+              <button
+                type="button"
+                data-testid="memorize-start-over"
+                onClick={handleStartOver}
+                className="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600"
+              >
+                Start over
+              </button>
+            )}
             {phase === 'practicing' && !awaitingRoundAdvance && (
               <button
                 ref={hintButtonRef}
@@ -577,7 +721,7 @@ export default function MemorizationPracticeSession({
             <button
               type="button"
               data-tour="memorize-practice-close"
-              onClick={onClose}
+              onClick={handleClose}
               className="text-slate-600 dark:text-slate-200 text-xl font-bold min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-600"
               aria-label="Close"
             >
@@ -634,6 +778,12 @@ export default function MemorizationPracticeSession({
                   completedRef.current = false
                   sessionSeedRef.current = generateMemorizationSessionSeed()
                   startRoundAndFocusInput(1)
+                  onPersistInProgress?.({
+                    sessionSeed: sessionSeedRef.current,
+                    wrongAttempts: 0,
+                    correctKeystrokes: 0,
+                    phase: { kind: 'inRound', roundIndex: 1 },
+                  })
                 }}
                 className="mt-6 w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600"
               >
@@ -792,14 +942,20 @@ export default function MemorizationPracticeSession({
               <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
                 <button
                   type="button"
-                  onClick={() => startRoundAndFocusInput(roundIndex)}
+                  onClick={() => {
+                    persistPracticeSnapshot({ kind: 'inRound', roundIndex })
+                    startRoundAndFocusInput(roundIndex)
+                  }}
                   className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium border-2 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600"
                 >
                   Repeat this round
                 </button>
                 <button
                   type="button"
-                  onClick={() => startRoundAndFocusInput(roundIndex + 1)}
+                  onClick={() => {
+                    persistPracticeSnapshot({ kind: 'inRound', roundIndex: roundIndex + 1 })
+                    startRoundAndFocusInput(roundIndex + 1)
+                  }}
                   className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600"
                 >
                   Next round

@@ -23,7 +23,13 @@ import { useTranslation } from '@/contexts/TranslationContext'
 import { GOSPEL_CLOSE_PROFILE_SLIDEOUT_MENU_EVENT } from '@/lib/bookmarksPanelCloseEvent'
 import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
 import { findFirstScriptureCardAnchors } from '@/lib/findFirstScriptureCardAnchors'
-import { updatePracticeStats, type MemorizedVerse } from '@/lib/verseMemorizationStorage'
+import {
+  clearMemorizationInProgress,
+  loadMemorizedVerses,
+  saveMemorizationInProgress,
+  updatePracticeStats,
+  type MemorizedVerse,
+} from '@/lib/verseMemorizationStorage'
 
 interface ProfileInfo {
   title: string
@@ -790,6 +796,15 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
           <MemorizationPracticeSession
             verse={memorizationPracticeVerse}
             onClose={() => setMemorizationPracticeVerse(null)}
+            onPersistInProgress={(payload) => {
+              saveMemorizationInProgress(memorizationPracticeVerse.id, payload)
+            }}
+            onClearInProgress={() => {
+              clearMemorizationInProgress(memorizationPracticeVerse.id)
+              setMemorizationPracticeVerse(
+                loadMemorizedVerses().find((v) => v.id === memorizationPracticeVerse.id) ?? null
+              )
+            }}
             onComplete={(result) => {
               updatePracticeStats(memorizationPracticeVerse.id, {
                 wrongAttempts: result.wrongAttempts,

@@ -5,8 +5,10 @@
 import {
   VERSE_MEMORIZATION_STORAGE_KEY,
   addMemorizedVerse,
+  clearMemorizationInProgress,
   loadMemorizedVerses,
   removeMemorizedVerse,
+  saveMemorizationInProgress,
   stripScriptureForMemorization,
   updatePracticeStats,
   getMasterLevel,
@@ -85,5 +87,49 @@ describe('verseMemorizationStorage', () => {
   it('persists under expected storage key', () => {
     addMemorizedVerse('Gen 1:1', 'In the beginning', 'esv')
     expect(window.localStorage.getItem(VERSE_MEMORIZATION_STORAGE_KEY)).toContain('"v":1')
+  })
+
+  it('saveMemorizationInProgress stores resume payload and clearMemorizationInProgress removes it', () => {
+    addMemorizedVerse('Ps 23:1', 'The Lord is my shepherd', 'esv')
+    const id = loadMemorizedVerses()[0].id
+    saveMemorizationInProgress(id, {
+      sessionSeed: 'seed-1',
+      wrongAttempts: 1,
+      correctKeystrokes: 5,
+      phase: { kind: 'betweenRounds', completedRoundIndex: 2 },
+    })
+    const mid = loadMemorizedVerses()[0]
+    expect(mid.inProgressPractice?.phase).toEqual({ kind: 'betweenRounds', completedRoundIndex: 2 })
+    expect(mid.inProgressPractice?.sessionSeed).toBe('seed-1')
+    clearMemorizationInProgress(id)
+    expect(loadMemorizedVerses()[0].inProgressPractice).toBeUndefined()
+  })
+
+  it('updatePracticeStats clears inProgressPractice when a session completes', () => {
+    addMemorizedVerse('Ps 119:1', 'Blessed are they', 'esv')
+    const id = loadMemorizedVerses()[0].id
+    saveMemorizationInProgress(id, {
+      sessionSeed: 's',
+      wrongAttempts: 0,
+      correctKeystrokes: 1,
+      phase: { kind: 'inRound', roundIndex: 3 },
+    })
+    expect(loadMemorizedVerses()[0].inProgressPractice).toBeDefined()
+    updatePracticeStats(id, { wrongAttempts: 0, correctKeystrokes: 10, completed: true })
+    const after = loadMemorizedVerses()[0]
+    expect(after.inProgressPractice).toBeUndefined()
+    expect(after.practiceSessions).toHaveLength(1)
+  })
+
+  it('getMasterLevel ignores in-progress only (completed sessions only)', () => {
+    addMemorizedVerse('Prov 1:1', 'The proverbs', 'esv')
+    const id = loadMemorizedVerses()[0].id
+    saveMemorizationInProgress(id, {
+      sessionSeed: 's',
+      wrongAttempts: 0,
+      correctKeystrokes: 0,
+      phase: { kind: 'inRound', roundIndex: 1 },
+    })
+    expect(getMasterLevel(loadMemorizedVerses()[0])).toBe('learning')
   })
 })
