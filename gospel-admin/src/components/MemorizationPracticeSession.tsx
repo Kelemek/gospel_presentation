@@ -89,6 +89,9 @@ export default function MemorizationPracticeSession({
   /** If keydown already handled a letter, skip the matching input event (avoids double counts). */
   const suppressInputFromKeydownRef = useRef(false)
   const practiceWordsRef = useRef<HTMLDivElement>(null)
+  /** Distinguish verse tap (refocus keyboard) from vertical scroll — movement past threshold = scroll. */
+  const verseTouchMovedRef = useRef(false)
+  const verseTouchStartRef = useRef({ x: 0, y: 0 })
   const hintButtonRef = useRef<HTMLButtonElement>(null)
   /** Extra bottom padding when the on-screen keyboard shrinks visualViewport (mobile / Capacitor). */
   const [keyboardInsetPx, setKeyboardInsetPx] = useState(0)
@@ -606,13 +609,33 @@ export default function MemorizationPracticeSession({
                 ref={practiceWordsRef}
                 role="group"
                 aria-label="Verse practice area; tap to show the keyboard again"
+                onTouchStart={(e) => {
+                  verseTouchMovedRef.current = false
+                  const t = e.touches[0]
+                  if (t) verseTouchStartRef.current = { x: t.clientX, y: t.clientY }
+                }}
+                onTouchMove={(e) => {
+                  const t = e.touches[0]
+                  if (!t) return
+                  const dx = t.clientX - verseTouchStartRef.current.x
+                  const dy = t.clientY - verseTouchStartRef.current.y
+                  if (dx * dx + dy * dy > 144) verseTouchMovedRef.current = true
+                }}
+                onTouchCancel={() => {
+                  verseTouchMovedRef.current = false
+                }}
                 onTouchEnd={() => {
                   if (awaitingRoundAdvance) return
-                  requestAnimationFrame(() => {
-                    if (document.activeElement !== practiceInputRef.current) {
-                      practiceInputRef.current?.focus({ preventScroll: true })
-                    }
-                  })
+                  const wasScroll = verseTouchMovedRef.current
+                  verseTouchMovedRef.current = false
+                  if (wasScroll) return
+                  // iOS/Capacitor: focus() must run in the touch handler, not rAF, or the keyboard won't open.
+                  const input = practiceInputRef.current
+                  if (!input) return
+                  input.focus({ preventScroll: true })
+                  window.setTimeout(() => {
+                    if (document.activeElement !== input) input.focus({ preventScroll: true })
+                  }, 0)
                 }}
                 className={`touch-manipulation cursor-text text-base leading-relaxed font-serif flex flex-wrap gap-x-1 gap-y-2 items-baseline rounded-md p-1 ring-2 ring-inset transition-shadow ${
                   flashError
