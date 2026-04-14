@@ -2,8 +2,14 @@
 
 import { useState, useEffect, useRef, type TouchEvent } from 'react'
 import { useTranslation, type BibleTranslation } from '@/contexts/TranslationContext'
+import { useAlertModal } from '@/contexts/AlertModalContext'
 import { splitScriptureReferenceForHeader } from '@/lib/splitScriptureReferenceForHeader'
 import { formatScriptureApiError } from '@/lib/format-scripture-api-error'
+import {
+  addMemorizedVerse,
+  GOSPEL_MEMORIZATION_CHANGED_EVENT,
+  isMemoizedForReference,
+} from '@/lib/verseMemorizationStorage'
 
 
 
@@ -36,7 +42,9 @@ export default function ScriptureModal({
   onScriptureViewed
 }: ScriptureModalProps) {
   const { translation, setTranslation, enabledTranslations } = useTranslation()
+  const { showAlert } = useAlertModal()
   const [scriptureText, setScriptureText] = useState<string>('')
+  const [isMemoized, setIsMemoized] = useState(false)
   const [chapterText, setChapterText] = useState<string>('')
   const [showingContext, setShowingContext] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -109,6 +117,16 @@ export default function ScriptureModal({
       setContextLoading(false)
     }
   }
+
+  useEffect(() => {
+    setIsMemoized(isMemoizedForReference(reference, translation))
+  }, [reference, translation])
+
+  useEffect(() => {
+    const onChanged = () => setIsMemoized(isMemoizedForReference(reference, translation))
+    window.addEventListener(GOSPEL_MEMORIZATION_CHANGED_EVENT, onChanged)
+    return () => window.removeEventListener(GOSPEL_MEMORIZATION_CHANGED_EVENT, onChanged)
+  }, [reference, translation])
 
   // Prevent body scrolling when modal is open
   useEffect(() => {
@@ -274,7 +292,7 @@ export default function ScriptureModal({
           if (errMsg) {
             setError(errMsg)
           } else {
-            setScriptureText(data.text)
+            setScriptureText(typeof data.text === 'string' ? data.text : '')
             // Track scripture progress when successfully viewed in modal
             if (onScriptureViewed) {
               onScriptureViewed(reference)
@@ -297,6 +315,18 @@ export default function ScriptureModal({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, reference, translation])
+
+  const handleMemorize = () => {
+    const text = scriptureText ?? ''
+    if (!text.trim() || loading || error) return
+    const ok = addMemorizedVerse(reference, text, translation)
+    if (ok) {
+      setIsMemoized(true)
+      showAlert('Added to memorization list.')
+    } else {
+      showAlert('This verse is already in your memorization list.')
+    }
+  }
 
   if (!isOpen) return null
 
@@ -518,7 +548,22 @@ export default function ScriptureModal({
                 ▶
               </button>
             </div>
-            <div className="flex-1 flex justify-end items-center">
+            <div className="flex-1 flex justify-end items-center gap-1.5">
+              <button
+                type="button"
+                data-tour="scripture-modal-memorize"
+                onClick={handleMemorize}
+                disabled={loading || !!error || !(scriptureText ?? '').trim() || isMemoized}
+                title={isMemoized ? 'Already in memorization list' : 'Save this verse to memorize later'}
+                aria-label={isMemoized ? 'Verse already in memorization list' : 'Memorize this verse'}
+                className={`px-2 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors min-h-[36px] border-2 shrink-0 ${
+                  isMemoized || loading || !!error || !(scriptureText ?? '').trim()
+                    ? 'text-slate-400 dark:text-slate-500 border-slate-300 dark:border-slate-600 cursor-not-allowed bg-slate-50 dark:bg-slate-700/50'
+                    : 'text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500'
+                }`}
+              >
+                Memorize
+              </button>
               <button
                 type="button"
                 data-tour="scripture-modal-close"

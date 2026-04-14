@@ -7,6 +7,7 @@ import { useProfileWithCache } from '@/lib/useProfileWithCache'
 import { createClient } from '@/lib/supabase/client'
 import {
   tryStartMarriageSeminarTourAfterNavigation,
+  tryStartMemorizeTourAfterNavigation,
   tryStartScriptureReaderTourAfterNavigation,
 } from '@/lib/profileHelpTours'
 
@@ -53,6 +54,7 @@ export default function ProfilePageClient({ slug }: ProfilePageClientProps) {
   useEffect(() => {
     if (!profile) return
     tryStartScriptureReaderTourAfterNavigation(slug)
+    tryStartMemorizeTourAfterNavigation(slug)
     tryStartMarriageSeminarTourAfterNavigation(slug)
   }, [profile, slug])
 

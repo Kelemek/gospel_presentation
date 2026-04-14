@@ -1,10 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import GospelSection from '@/components/GospelSection'
 import ScriptureModal from '@/components/ScriptureModal'
+import MemorizationPracticeSession from '@/components/MemorizationPracticeSession'
 import TableOfContents from '@/components/TableOfContents'
 import SidebarAuthNav from '@/components/SidebarAuthNav'
 import ThemeToggle from '@/components/ThemeToggle'
@@ -21,6 +23,7 @@ import { useTranslation } from '@/contexts/TranslationContext'
 import { GOSPEL_CLOSE_PROFILE_SLIDEOUT_MENU_EVENT } from '@/lib/bookmarksPanelCloseEvent'
 import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
 import { findFirstScriptureCardAnchors } from '@/lib/findFirstScriptureCardAnchors'
+import { updatePracticeStats, type MemorizedVerse } from '@/lib/verseMemorizationStorage'
 
 interface ProfileInfo {
   title: string
@@ -63,6 +66,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
   const [favoriteReferences, setFavoriteReferences] = useState<string[]>([])
   const [currentReferenceIndex, setCurrentReferenceIndex] = useState(0)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [memorizationPracticeVerse, setMemorizationPracticeVerse] = useState<MemorizedVerse | null>(null)
   const [canEdit, setCanEdit] = useState(false)
   const [fromEditor, setFromEditor] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
@@ -500,6 +504,11 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     setIsMenuOpen(false)
   }
 
+  const handleMemorizationPracticeStart = (verse: MemorizedVerse) => {
+    setMemorizationPracticeVerse(verse)
+    closeMenu()
+  }
+
   useEffect(() => {
     const onTourCloseMenu = (): void => {
       setIsMenuOpen(false)
@@ -672,7 +681,12 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                 </button>
               </div>
               
-              <TableOfContents sections={sections} currentProfileSlug={profileInfo.slug} onNavigate={closeMenu} />
+              <TableOfContents
+                sections={sections}
+                currentProfileSlug={profileInfo.slug}
+                onNavigate={closeMenu}
+                onMemorizationPracticeStart={handleMemorizationPracticeStart}
+              />
               
               {/* Profile Info in Sidebar */}
               <div className="mt-8 pt-6 border-t border-gray-200 dark:border-slate-600">
@@ -769,6 +783,23 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
         context={selectedScripture.context}
         onScriptureViewed={handleModalScriptureViewed}
       />
+
+      {typeof document !== 'undefined' &&
+        memorizationPracticeVerse &&
+        createPortal(
+          <MemorizationPracticeSession
+            verse={memorizationPracticeVerse}
+            onClose={() => setMemorizationPracticeVerse(null)}
+            onComplete={(result) => {
+              updatePracticeStats(memorizationPracticeVerse.id, {
+                wrongAttempts: result.wrongAttempts,
+                correctKeystrokes: result.correctKeystrokes,
+                completed: result.completed,
+              })
+            }}
+          />,
+          document.body
+        )}
     </>
   )
 }

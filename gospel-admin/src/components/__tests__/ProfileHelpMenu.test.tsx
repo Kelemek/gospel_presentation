@@ -7,6 +7,7 @@ jest.mock('@/lib/profileHelpTours', () => ({
   runBookmarksFeatureTour: jest.fn(),
   runFullProfileHelpTutorial: jest.fn(),
   runMarriageSeminarResourcesTour: jest.fn(),
+  runMemorizeFeatureTour: jest.fn(),
   runPrintFeatureTour: jest.fn(),
   runResourcesFeatureTour: jest.fn(),
   runScriptureHoverPreviewFeatureTour: jest.fn(),
@@ -21,6 +22,7 @@ import {
   runBookmarksFeatureTour,
   runFullProfileHelpTutorial,
   runMarriageSeminarResourcesTour,
+  runMemorizeFeatureTour,
   runPrintFeatureTour,
   runResourcesFeatureTour,
   runScriptureHoverPreviewFeatureTour,
@@ -49,6 +51,7 @@ describe('ProfileHelpMenu', () => {
     expect(screen.getByRole('menuitem', { name: /^print version/i })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /^bible translation/i })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /^scripture reader/i })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /^verse memorization/i })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /^quick verse preview/i })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /marriage seminar resources/i })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /light and dark mode/i })).toBeInTheDocument()
@@ -162,6 +165,18 @@ describe('ProfileHelpMenu', () => {
 
     await waitFor(() => {
       expect(runScriptureModalFeatureTour).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('starts verse memorization tutorial when chosen', async () => {
+    const user = userEvent.setup()
+    render(<ProfileHelpMenu />)
+
+    await user.click(screen.getByRole('button', { name: /help and tutorials/i }))
+    await user.click(screen.getByRole('menuitem', { name: /^verse memorization/i }))
+
+    await waitFor(() => {
+      expect(runMemorizeFeatureTour).toHaveBeenCalledTimes(1)
     })
   })
 

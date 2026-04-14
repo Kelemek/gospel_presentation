@@ -9,6 +9,7 @@ import {
   runBookmarksFeatureTour,
   runFullProfileHelpTutorial,
   runMarriageSeminarResourcesTour,
+  runMemorizeFeatureTour,
   runPrintFeatureTour,
   runResourcesFeatureTour,
   runScriptureModalFeatureTour,
@@ -30,6 +31,7 @@ export type ProfileTutorialId =
   | 'print'
   | 'bibleTranslation'
   | 'scriptureModal'
+  | 'memorize'
   | 'scriptureHoverPreview'
   | 'marriageSeminar'
   | 'theme'
@@ -45,7 +47,8 @@ const TUTORIALS: TutorialItem[] = [
   {
     id: 'full',
     label: 'Full walkthrough',
-    description: 'All tutorials in order—bookmarks, theme, menu, scripture, then marriage seminar',
+    description:
+      'All tutorials in order—bookmarks, theme, menu, scripture, verse memorization, then marriage seminar',
     run: runFullProfileHelpTutorial,
   },
   {
@@ -95,6 +98,12 @@ const TUTORIALS: TutorialItem[] = [
     label: 'Scripture reader',
     description: 'Cards, compare, chapter context, pin, and Menu reset',
     run: runScriptureModalFeatureTour,
+  },
+  {
+    id: 'memorize',
+    label: 'Verse memorization',
+    description: 'Save a verse in the reader, open Memorize in the menu, then remove it',
+    run: runMemorizeFeatureTour,
   },
   {
     id: 'scriptureHoverPreview',

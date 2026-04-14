@@ -17,6 +17,7 @@ import {
   getSafeAreaInsetsPx,
   scrollToTocAnchor,
 } from '@/lib/scrollToTocAnchor'
+import { loadMemorizedVerses } from '@/lib/verseMemorizationStorage'
 
 const BOOKMARKS_TRIGGER = '[data-tour="bookmarks-trigger"]'
 const BOOKMARKS_PANEL = '[data-tour="bookmarks-panel"]'
@@ -34,6 +35,8 @@ const TEXT_SIZE_PANEL = '[data-tour="text-size-panel"]'
 const TOC_PRINT_VERSION = '[data-tour="toc-print-version"]'
 const TOC_BIBLE_TRANSLATION_TOGGLE = '[data-tour="toc-bible-translation-toggle"]'
 const BIBLE_TRANSLATION_PANEL = '[data-tour="bible-translation-panel"]'
+const TOC_MEMORIZE_TOGGLE = '[data-tour="toc-memorize-toggle"]'
+const MEMORIZE_PANEL = '[data-tour="memorize-panel"]'
 const TOC_SECTION_LINKS = '[data-tour="toc-section-links"]'
 const TOC_READING_PROGRESS = '[data-tour="toc-reading-progress"]'
 const TOC_RESET_PROGRESS = '[data-tour="toc-reset-progress"]'
@@ -51,6 +54,8 @@ const SCRIPTURE_MODAL_VERSE_TAB = '[data-tour="scripture-modal-verse-tab"]'
 const SCRIPTURE_MODAL_PREV = '[data-tour="scripture-modal-prev"]'
 const SCRIPTURE_MODAL_NEXT = '[data-tour="scripture-modal-next"]'
 const SCRIPTURE_MODAL_CLOSE = '[data-tour="scripture-modal-close"]'
+const SCRIPTURE_MODAL_MEMORIZE = '[data-tour="scripture-modal-memorize"]'
+const ALERT_MODAL_OK = '[data-tour="alert-modal-ok"]'
 const SCRIPTURE_LAST_VIEWED_CARD = '[data-scripture-last-viewed="true"]'
 const SCRIPTURE_PROGRESS_UNPIN = '[data-tour="scripture-progress-unpin"]'
 const RESOURCES_LIST_PANEL = '[data-tour="resources-list-panel"]'
@@ -126,6 +131,8 @@ function serializeMarriageSeminarTourResumeForNavigation(options?: ProfileFeatur
 export const SCRIPTURE_READER_TOUR_DEFAULT_SLUG = 'default'
 
 const SCRIPTURE_READER_TOUR_RESUME_STORAGE_KEY = 'gospel-scripture-reader-tour-resume-v1'
+/** Same payload shape as scripture reader resume; only one of these keys should be set when navigating to `/default`. */
+const MEMORIZE_TOUR_RESUME_STORAGE_KEY = 'gospel-memorize-tour-resume-v1'
 
 /** Remember `[slug]` when a full walkthrough starts so the closing step can return there. */
 const FULL_WALKTHROUGH_START_SLUG_STORAGE_KEY = 'gospel-full-walkthrough-start-slug-v1'
@@ -464,6 +471,24 @@ function modalVerseBodyHasText(): boolean {
   if (!el) return false
   const t = (el.textContent ?? '').replace(/\s/g, '')
   return t.length > 20
+}
+
+function getScriptureModalReferenceFromDom(): string | null {
+  const h3 = document.querySelector(`${SCRIPTURE_MODAL_TOOLBAR} h3`) as HTMLElement | null
+  return h3?.getAttribute('aria-label') ?? h3?.textContent?.trim() ?? null
+}
+
+/** After adding (or when the verse was already saved), pick the verse row id for the memorization tour remove step. */
+function resolveMemorizeTourTargetVerseIdAfterAdd(): string | null {
+  const verses = loadMemorizedVerses()
+  if (verses.length === 0) return null
+  const ref = getScriptureModalReferenceFromDom()
+  if (ref) {
+    const normalized = ref.trim()
+    const match = verses.find((v) => v.reference.trim() === normalized)
+    if (match) return match.id
+  }
+  return verses.reduce((a, b) => (a.dateAdded >= b.dateAdded ? a : b)).id
 }
 
 function compareColumnsVisible(): boolean {
@@ -1154,6 +1179,263 @@ async function runBibleTranslationFeatureTourAsync(options?: ProfileFeatureTourO
 }
 
 /**
+ * Verse memorization tour: opens a scripture **card**, saves with **Memorize** in the reader, opens **Menu** → **Memorize**,
+ * explains the list, then **Remove**s the verse added for this tour (with confirm).
+ *
+ * When not on `/default`, stores resume state and navigates there first (`ProfilePageClient` calls `tryStartMemorizeTourAfterNavigation`).
+ */
+export function runMemorizeFeatureTour(options?: ProfileFeatureTourOptions): void {
+  if (typeof window === 'undefined') return
+  if (!isDefaultProfilePath(window.location.pathname)) {
+    const payload: ScriptureReaderTourResumePayloadV1 = {
+      v: 1,
+      captiveForTour: options?.captive === true,
+      continueFullWalkthroughAt:
+        options?.captive === true ? getFullWalkthroughIndexAfterMemorize() : undefined,
+      segmentIntro: options?.segmentIntro,
+    }
+    try {
+      sessionStorage.removeItem(SCRIPTURE_READER_TOUR_RESUME_STORAGE_KEY)
+      sessionStorage.setItem(MEMORIZE_TOUR_RESUME_STORAGE_KEY, JSON.stringify(payload))
+    } catch {
+      runMemorizeFeatureTourOnCurrentPage(options)
+      return
+    }
+    scriptureReaderTourNavigation.assign(`/${SCRIPTURE_READER_TOUR_DEFAULT_SLUG}`)
+    return
+  }
+  runMemorizeFeatureTourOnCurrentPage(options)
+}
+
+function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions): void {
+  let memorizeTourTargetVerseId: string | null = null
+  const narrow = isNarrowProfileHelpTourViewport()
+  const pop = (
+    wide: { side: Side; align: Alignment },
+    narrowOverride?: { side: Side; align: Alignment }
+  ): { side: Side; align: Alignment } =>
+    narrow ? (narrowOverride ?? { side: 'bottom', align: 'center' }) : wide
+
+  closeProfileSlideoutMenuIfOpen()
+  closeBookmarksPanelIfOpen()
+
+  const steps: DriveStep[] = [
+    {
+      element: SCRIPTURE_CARD,
+      popover: {
+        title: 'Open a scripture card',
+        description:
+          'Blue cards list passages for this section. Tap one to read—or use <strong>Next</strong> to open the first card for this tour.',
+        ...pop({ side: 'top', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          document.querySelector<HTMLElement>(SCRIPTURE_CARD)?.click()
+          void waitUntil(() => !!document.querySelector(SCRIPTURE_MODAL_TOOLBAR), 12000).then(() => {
+            void waitUntil(() => modalVerseBodyHasText(), 15000).then(() => {
+              window.setTimeout(() => {
+                drv.refresh()
+                drv.moveNext()
+              }, 200)
+            })
+          })
+        },
+      },
+    },
+    {
+      element: SCRIPTURE_MODAL_MEMORIZE,
+      popover: {
+        title: 'Save for memorization',
+        description:
+          'Tap <strong>Memorize</strong> in the reader header to save this passage on this device (reference, text, and translation). If it is already saved, the button is disabled and we will skip ahead. Use <strong>Next</strong> to save (or continue).',
+        ...pop({ side: 'bottom', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          const tryAdvance = (): void => {
+            memorizeTourTargetVerseId = resolveMemorizeTourTargetVerseIdAfterAdd()
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, 200)
+          }
+          const btn = document.querySelector<HTMLButtonElement>(SCRIPTURE_MODAL_MEMORIZE)
+          if (btn?.disabled) {
+            tryAdvance()
+            return
+          }
+          btn?.click()
+          void waitUntil(() => !!document.querySelector(ALERT_MODAL_OK), 6000).then((hasOk) => {
+            if (hasOk) document.querySelector<HTMLElement>(ALERT_MODAL_OK)?.click()
+            tryAdvance()
+          })
+        },
+      },
+    },
+    {
+      element: SCRIPTURE_MODAL_CLOSE,
+      popover: {
+        title: 'Close the reader',
+        description: 'Use <strong>Next</strong> to close the Scripture reader and return to the page.',
+        ...pop({ side: 'bottom', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          document.querySelector<HTMLElement>(SCRIPTURE_MODAL_CLOSE)?.click()
+          void waitUntil(() => !document.querySelector(SCRIPTURE_MODAL_TOOLBAR), 5000).then(() => {
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, 200)
+          })
+        },
+      },
+    },
+    {
+      element: PROFILE_MENU_BUTTON,
+      popover: {
+        title: 'Menu',
+        description:
+          'Open the slide-out to find <strong>Memorize</strong> just below <strong>Bible Translation</strong>. Use <strong>Next</strong> to open the menu.',
+        side: 'bottom',
+        align: 'start',
+        onNextClick: (_e, _s, { driver: drv }) => {
+          openProfileMenuIfClosed()
+          window.setTimeout(() => {
+            drv.refresh()
+            drv.moveNext()
+          }, 380)
+        },
+      },
+    },
+    {
+      element: TOC_MEMORIZE_TOGGLE,
+      popover: {
+        title: 'Memorize',
+        description:
+          'Tap <strong>Memorize</strong> to show your saved verses. Use <strong>Next</strong> to expand the list for this tour.',
+        ...pop({ side: 'right', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          const t = document.querySelector<HTMLElement>(TOC_MEMORIZE_TOGGLE)
+          if (!t) {
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, 200)
+            return
+          }
+          if (!document.querySelector(MEMORIZE_PANEL)) {
+            t.click()
+          }
+          window.setTimeout(() => {
+            drv.refresh()
+            drv.moveNext()
+          }, 220)
+        },
+      },
+    },
+    {
+      element: MEMORIZE_PANEL,
+      popover: {
+        title: 'Your memorization list',
+        description:
+          'Verses are grouped by progress—<strong>Learning</strong>, <strong>Practicing</strong>, and <strong>Mastered</strong>. Tap <strong>Practice</strong> for guided rounds with words hidden. Use <strong>Next</strong> when you are ready to remove the verse we added.',
+        ...pop({ side: 'right', align: 'start' }),
+      },
+    },
+    {
+      element: () => {
+        const id = memorizeTourTargetVerseId
+        if (!id) return document.querySelector(MEMORIZE_PANEL) ?? document.body
+        return (
+          document.querySelector(
+            `button[data-memorize-verse-id="${escapeAttrSelectorValue(id)}"]`
+          ) ?? document.querySelector(MEMORIZE_PANEL) ?? document.body
+        )
+      },
+      popover: {
+        title: 'Remove this verse',
+        description:
+          'Use <strong>Next</strong> to remove the verse we added for this tour (the tour confirms the dialog for you).',
+        ...pop({ side: 'right', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          const id = memorizeTourTargetVerseId
+          if (!id) {
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, 120)
+            return
+          }
+          const removeBtn = document.querySelector<HTMLElement>(
+            `button[data-memorize-verse-id="${escapeAttrSelectorValue(id)}"]`
+          )
+          if (!removeBtn) {
+            memorizeTourTargetVerseId = null
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, 120)
+            return
+          }
+          removeBtn.click()
+          void waitUntil(() => !!document.querySelector(ALERT_MODAL_CONFIRM), 4000)
+            .then((hasModal) => {
+              if (hasModal) document.querySelector<HTMLElement>(ALERT_MODAL_CONFIRM)?.click()
+              return waitUntil(() => !loadMemorizedVerses().some((v) => v.id === id), 5000)
+            })
+            .then(() => {
+              memorizeTourTargetVerseId = null
+              window.setTimeout(() => {
+                drv.refresh()
+                drv.moveNext()
+              }, prefersReducedMotion() ? 80 : 200)
+            })
+        },
+      },
+    },
+    {
+      element: MEMORIZE_PANEL,
+      popover: {
+        title: 'All set',
+        description:
+          'You can add verses anytime from the Scripture reader and manage them here. **Done** closes the tour and the menu.',
+        ...pop({ side: 'right', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          closeProfileSlideoutMenuIfOpen()
+          window.setTimeout(() => {
+            closeProfileSlideoutMenuIfOpen()
+            drv.destroy()
+          }, 0)
+        },
+      },
+    },
+  ]
+
+  const d = createProfileHelpDriver({
+    ...baseProfileHelpDriverConfig(options),
+    stagePadding: narrow ? 14 : 10,
+    popoverOffset: narrow ? 26 : 10,
+    ...(narrow
+      ? {
+          onHighlighted: (element, _step, { driver: drv }) => {
+            if (element instanceof HTMLElement && element !== document.body) {
+              element.scrollIntoView({
+                block: 'center',
+                inline: 'nearest',
+                behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+              })
+            }
+            window.requestAnimationFrame(() => {
+              window.requestAnimationFrame(() => {
+                window.setTimeout(() => drv.refresh(), prefersReducedMotion() ? 0 : 140)
+              })
+            })
+          },
+        }
+      : {}),
+    showProgress: true,
+    steps: prependSegmentIntroIfAny(options, steps),
+  })
+
+  d.drive()
+}
+
+/**
  * Table of contents tour: opens **Menu**, then highlights section/subsection links in the slide-out.
  */
 export function runTableOfContentsFeatureTour(options?: ProfileFeatureTourOptions): void {
@@ -1165,7 +1447,7 @@ export function runTableOfContentsFeatureTour(options?: ProfileFeatureTourOption
         popover: {
           title: 'Menu',
           description:
-            'Tap <strong>Menu</strong> (top-left) to open the slide-out. At the top you will find <strong>Resources</strong>, <strong>Text size</strong>, <strong>Print</strong>, and <strong>Bible translation</strong>. Below that is the <strong>table of contents</strong>—links that match each section of this presentation. Use <strong>Next</strong> to open the menu for this tour.',
+            'Tap <strong>Menu</strong> (top-left) to open the slide-out. At the top you will find <strong>Resources</strong>, <strong>Text size</strong>, <strong>Print</strong>, and <strong>Bible translation</strong>, with <strong>Memorize</strong> just below <strong>Bible translation</strong>. Below that is the <strong>table of contents</strong>—links that match each section of this presentation. Use <strong>Next</strong> to open the menu for this tour.',
           side: 'bottom',
           align: 'start',
           onNextClick: (_e, _s, { driver: drv }) => {
@@ -1301,6 +1583,7 @@ export function runScriptureModalFeatureTour(options?: ProfileFeatureTourOptions
       segmentIntro: options?.segmentIntro,
     }
     try {
+      sessionStorage.removeItem(MEMORIZE_TOUR_RESUME_STORAGE_KEY)
       sessionStorage.setItem(SCRIPTURE_READER_TOUR_RESUME_STORAGE_KEY, JSON.stringify(payload))
     } catch {
       runScriptureModalFeatureTourOnCurrentPage(options)
@@ -2293,6 +2576,14 @@ const FULL_WALKTHROUGH_SEGMENTS: Array<{
     },
   },
   {
+    run: runMemorizeFeatureTour,
+    intro: {
+      title: 'Verse memorization',
+      description:
+        'Open a scripture card, save with Memorize in the reader, open the Memorize list in the menu, then remove the verse we add for this tour.',
+    },
+  },
+  {
     run: runScriptureHoverPreviewFeatureTour,
     intro: {
       title: 'Quick verse preview',
@@ -2312,6 +2603,11 @@ const FULL_WALKTHROUGH_SEGMENTS: Array<{
 
 function getFullWalkthroughIndexAfterScriptureReader(): number {
   const i = FULL_WALKTHROUGH_SEGMENTS.findIndex((s) => s.run === runScriptureModalFeatureTour)
+  return i >= 0 ? i + 1 : FULL_WALKTHROUGH_SEGMENTS.length
+}
+
+function getFullWalkthroughIndexAfterMemorize(): number {
+  const i = FULL_WALKTHROUGH_SEGMENTS.findIndex((s) => s.run === runMemorizeFeatureTour)
   return i >= 0 ? i + 1 : FULL_WALKTHROUGH_SEGMENTS.length
 }
 
@@ -2385,5 +2681,38 @@ export function tryStartScriptureReaderTourAfterNavigation(currentSlug: string):
   }
   window.requestAnimationFrame(() => {
     runScriptureModalFeatureTourOnCurrentPage(resumeOptions)
+  })
+}
+
+/**
+ * After navigation to `/default`, resumes the verse memorization tour if `runMemorizeFeatureTour` scheduled it.
+ * Call from `ProfilePageClient` once the profile has loaded.
+ */
+export function tryStartMemorizeTourAfterNavigation(currentSlug: string): void {
+  if (typeof window === 'undefined') return
+  if (currentSlug !== SCRIPTURE_READER_TOUR_DEFAULT_SLUG) return
+  const raw = sessionStorage.getItem(MEMORIZE_TOUR_RESUME_STORAGE_KEY)
+  if (!raw) return
+  sessionStorage.removeItem(MEMORIZE_TOUR_RESUME_STORAGE_KEY)
+  let payload: ScriptureReaderTourResumePayloadV1
+  try {
+    payload = JSON.parse(raw) as ScriptureReaderTourResumePayloadV1
+  } catch {
+    return
+  }
+  if (payload.v !== 1) return
+  const continueAt = payload.continueFullWalkthroughAt
+  const resumeOptions: ProfileFeatureTourOptions = {
+    captive: payload.captiveForTour,
+    segmentIntro: payload.segmentIntro,
+    onComplete:
+      continueAt !== undefined
+        ? () => {
+            window.requestAnimationFrame(() => runFullProfileHelpTutorialFromSegment(continueAt))
+          }
+        : undefined,
+  }
+  window.requestAnimationFrame(() => {
+    runMemorizeFeatureTourOnCurrentPage(resumeOptions)
   })
 }

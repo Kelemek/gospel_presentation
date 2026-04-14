@@ -36,8 +36,10 @@ describe('AlertModalContext', () => {
     await user.click(screen.getByRole('button', { name: /Show alert/i }))
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
     expect(screen.getByText('Hello')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'OK' })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'OK' }))
+    const okBtn = screen.getByRole('button', { name: 'OK' })
+    expect(okBtn).toBeInTheDocument()
+    expect(okBtn).toHaveAttribute('data-tour', 'alert-modal-ok')
+    await user.click(okBtn)
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 

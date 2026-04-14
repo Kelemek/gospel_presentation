@@ -12,12 +12,16 @@ import { Printer } from '@capgo/capacitor-printer'
 import { stripHtmlTags } from '@/lib/stripHtmlTags'
 import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
 import { groupPublicResourceItems } from '@/lib/groupPublicResourceItems'
+import MemorizeDropdown from '@/components/MemorizeDropdown'
+import type { MemorizedVerse } from '@/lib/verseMemorizationStorage'
 
 interface TableOfContentsProps {
   sections: GospelSection[]
   currentProfileSlug?: string
   /** Called when a TOC link is clicked (e.g. to close the side menu) */
   onNavigate?: () => void
+  /** When set, Practice opens here so the slide-out can close without unmounting the session (parent portals the modal). */
+  onMemorizationPracticeStart?: (verse: MemorizedVerse) => void
 }
 
 // Helper to check if a title is blank (used to filter out empty TOC entries)
@@ -40,7 +44,7 @@ function handleTocClick(
 
 export default function TableOfContents({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  sections, currentProfileSlug: _currentProfileSlug, onNavigate
+  sections, currentProfileSlug: _currentProfileSlug, onNavigate, onMemorizationPracticeStart
 }: TableOfContentsProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [resourceItems, setResourceItems] = useState<PublicResourceItem[]>([])
@@ -265,7 +269,7 @@ export default function TableOfContents({
         )}
       </div>
 
-      {/* Print + Bible: same vertical rhythm as Resources / Text size (space-y-4 md:space-y-3) */}
+      {/* Print + Bible + Memorize: Memorize sits below Bible Translation */}
       <div className="space-y-4 md:space-y-3 pb-4 border-b border-slate-200 dark:border-slate-600">
         <button
           type="button"
@@ -331,6 +335,11 @@ export default function TableOfContents({
             </div>
           )}
         </div>
+
+        <MemorizeDropdown
+          onNavigate={onNavigate}
+          onMemorizationPracticeStart={onMemorizationPracticeStart}
+        />
       </div>
       <div data-tour="toc-section-links">
       {sections.map((section) => (
