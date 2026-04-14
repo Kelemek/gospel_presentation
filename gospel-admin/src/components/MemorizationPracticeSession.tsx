@@ -72,6 +72,9 @@ export default function MemorizationPracticeSession({
   const practiceInputRef = useRef<HTMLInputElement>(null)
   /** If keydown already handled a letter, skip the matching input event (avoids double counts). */
   const suppressInputFromKeydownRef = useRef(false)
+  const practiceWordsRef = useRef<HTMLDivElement>(null)
+  /** Extra bottom padding when the on-screen keyboard shrinks visualViewport (mobile / Capacitor). */
+  const [keyboardInsetPx, setKeyboardInsetPx] = useState(0)
 
   useEffect(() => {
     sessionSeedRef.current = ''
@@ -90,6 +93,22 @@ export default function MemorizationPracticeSession({
     return () => {
       document.body.style.overflow = 'unset'
       document.documentElement.style.overflow = 'unset'
+    }
+  }, [])
+
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const updateInset = () => {
+      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+      setKeyboardInsetPx(inset)
+    }
+    updateInset()
+    vv.addEventListener('resize', updateInset)
+    vv.addEventListener('scroll', updateInset)
+    return () => {
+      vv.removeEventListener('resize', updateInset)
+      vv.removeEventListener('scroll', updateInset)
     }
   }, [])
 
@@ -146,6 +165,15 @@ export default function MemorizationPracticeSession({
     [words.length, verse.id]
   )
 
+  const scrollPracticeWordsForKeyboard = useCallback(() => {
+    requestAnimationFrame(() => {
+      const el = practiceWordsRef.current
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ block: 'center', behavior: 'smooth', inline: 'nearest' })
+      }
+    })
+  }, [])
+
   /** flushSync + immediate focus keeps iOS / Capacitor WebView keyboard in the same user gesture as the tap. */
   const startRoundAndFocusInput = useCallback(
     (r: number) => {
@@ -153,8 +181,9 @@ export default function MemorizationPracticeSession({
         startRound(r)
       })
       practiceInputRef.current?.focus({ preventScroll: true })
+      scrollPracticeWordsForKeyboard()
     },
-    [startRound]
+    [startRound, scrollPracticeWordsForKeyboard]
   )
 
   useEffect(() => {
@@ -347,7 +376,14 @@ export default function MemorizationPracticeSession({
         </div>
 
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <div className="relative px-4 py-4 flex-1 min-h-0 overflow-y-auto">
+          <div
+            className="relative px-4 py-4 flex-1 min-h-0 overflow-y-auto"
+            style={
+              keyboardInsetPx > 0
+                ? { paddingBottom: `calc(${keyboardInsetPx}px + 0.5rem)` }
+                : undefined
+            }
+          >
           {phase !== 'done' && (
             <input
               ref={practiceInputRef}
@@ -365,6 +401,7 @@ export default function MemorizationPracticeSession({
               className="absolute left-0 top-0 z-0 h-px w-full max-w-full border-0 bg-transparent p-0 opacity-[0.02] text-transparent caret-transparent"
               onKeyDown={handlePracticeInputKeyDown}
               onInput={handlePracticeInput}
+              onFocus={scrollPracticeWordsForKeyboard}
             />
           )}
           {phase === 'intro' && (
@@ -418,7 +455,6 @@ export default function MemorizationPracticeSession({
                     onPointerDown={(e) => {
                       e.preventDefault()
                       setHintPeekCount(1)
-                      practiceInputRef.current?.blur()
                       setHintHeld(true)
                     }}
                     onPointerUp={() => {
@@ -445,6 +481,7 @@ export default function MemorizationPracticeSession({
                 </p>
               )}
               <div
+                ref={practiceWordsRef}
                 className={`text-base leading-relaxed font-serif flex flex-wrap gap-x-1 gap-y-2 items-baseline rounded-md p-1 ring-2 ring-inset transition-shadow ${
                   flashError
                     ? 'ring-red-400 dark:ring-red-500'
