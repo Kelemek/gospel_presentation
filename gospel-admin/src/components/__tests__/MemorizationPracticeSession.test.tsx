@@ -85,7 +85,7 @@ describe('MemorizationPracticeSession', () => {
     expect(hint).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('while holding Hint, peeks one more blank every 3 seconds', () => {
+  it('while holding Hint, peeks one more blank every second', () => {
     jest.useFakeTimers()
     const actual = jest.requireActual<typeof import('@/lib/memorizationPracticeUtils')>(
       '@/lib/memorizationPracticeUtils'
@@ -106,7 +106,7 @@ describe('MemorizationPracticeSession', () => {
       screen.getByTestId('memorize-practice-words').querySelectorAll('.italic').length
     expect(countItalic()).toBe(1)
     act(() => {
-      jest.advanceTimersByTime(3000)
+      jest.advanceTimersByTime(1000)
     })
     expect(countItalic()).toBe(2)
     fireEvent.pointerUp(hint)

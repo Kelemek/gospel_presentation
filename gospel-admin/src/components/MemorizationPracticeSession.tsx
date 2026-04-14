@@ -48,6 +48,9 @@ const MAX_WRONG_BEFORE_REVEAL = 3
 /** Extra inset beyond the viewport edge so the current blank sits higher above the soft keyboard. */
 const MEMORIZE_EXTRA_GAP_ABOVE_KEYBOARD_PX = 48
 
+/** While Hint is held, each tick reveals one more unrevealed blank (left to right). */
+const MEMORIZE_HINT_EXTRA_PEEK_INTERVAL_MS = 1000
+
 function expectedKeystrokeForToken(token: MemorizationToken): string {
   if (token.kind === 'digit') return token.text
   if (token.kind === 'word') return firstLetterOfWord(token.text)
@@ -74,7 +77,7 @@ export default function MemorizationPracticeSession({
   const [correctKeystrokesTotal, setCorrectKeystrokesTotal] = useState(0)
   const [flashError, setFlashError] = useState(false)
   const [hintHeld, setHintHeld] = useState(false)
-  /** While hint is held: how many unrevealed blanks (left-to-right) to peek, starting at 1; +1 every 3s. */
+  /** While hint is held: how many unrevealed blanks (left-to-right) to peek, starting at 1; +1 each tick. */
   const [hintPeekCount, setHintPeekCount] = useState(1)
   /** Rounds 1–4: all blanks filled; show Repeat/Next in modal footer without leaving the verse view. */
   const [awaitingRoundAdvance, setAwaitingRoundAdvance] = useState(false)
@@ -160,7 +163,7 @@ export default function MemorizationPracticeSession({
     if (!hintActive) return
     const id = window.setInterval(() => {
       setHintPeekCount((c) => Math.min(c + 1, unrevealedLenRef.current))
-    }, 3000)
+    }, MEMORIZE_HINT_EXTRA_PEEK_INTERVAL_MS)
     return () => {
       window.clearInterval(id)
     }
@@ -532,21 +535,55 @@ export default function MemorizationPracticeSession({
       aria-labelledby="memorize-practice-title"
     >
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] border border-slate-200 dark:border-slate-600 flex flex-col overflow-hidden">
-        <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-2 border-b border-slate-200 dark:border-slate-600 shrink-0">
-          <div>
-            <h2 id="memorize-practice-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-              Memorize
-            </h2>
+        <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2 border-b border-slate-200 dark:border-slate-600 shrink-0">
+          <h2 id="memorize-practice-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100 min-w-0">
+            Memorize
+          </h2>
+          <div className="flex items-center gap-2 shrink-0">
+            {phase === 'practicing' && !awaitingRoundAdvance && (
+              <button
+                ref={hintButtonRef}
+                type="button"
+                data-testid="memorize-hint-button"
+                tabIndex={-1}
+                className="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors border border-blue-200 dark:border-blue-700 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900/60 hover:border-blue-300 dark:hover:border-blue-600 active:bg-blue-200 dark:active:bg-blue-900/70 select-none touch-manipulation"
+                aria-pressed={hintActive}
+                aria-label="Hold to peek at hidden words; adds the next word every second"
+                title="Hold to peek; next blank every 1s while held"
+                onPointerDown={(e) => {
+                  e.preventDefault()
+                  setHintPeekCount(1)
+                  setHintHeld(true)
+                }}
+                onPointerUp={() => {
+                  setHintPeekCount(1)
+                  setHintHeld(false)
+                  restorePracticeInputFocusAfterHint()
+                }}
+                onPointerLeave={() => {
+                  setHintPeekCount(1)
+                  setHintHeld(false)
+                  restorePracticeInputFocusAfterHint()
+                }}
+                onPointerCancel={() => {
+                  setHintPeekCount(1)
+                  setHintHeld(false)
+                  restorePracticeInputFocusAfterHint()
+                }}
+              >
+                Hint
+              </button>
+            )}
+            <button
+              type="button"
+              data-tour="memorize-practice-close"
+              onClick={onClose}
+              className="text-slate-600 dark:text-slate-200 text-xl font-bold min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-600"
+              aria-label="Close"
+            >
+              ×
+            </button>
           </div>
-          <button
-            type="button"
-            data-tour="memorize-practice-close"
-            onClick={onClose}
-            className="text-slate-600 dark:text-slate-200 text-xl font-bold min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-600"
-            aria-label="Close"
-          >
-            ×
-          </button>
         </div>
 
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -607,7 +644,7 @@ export default function MemorizationPracticeSession({
 
           {phase === 'practicing' && (
             <div>
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <div className="mb-2">
                 <p className="text-sm text-slate-600 dark:text-slate-400">
                   {awaitingRoundAdvance ? (
                     <>
@@ -620,47 +657,13 @@ export default function MemorizationPracticeSession({
                     </>
                   )}
                 </p>
-                {!awaitingRoundAdvance && (
-                  <button
-                    ref={hintButtonRef}
-                    type="button"
-                    data-testid="memorize-hint-button"
-                    tabIndex={-1}
-                    className="shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors border border-blue-200 dark:border-blue-700 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900/60 hover:border-blue-300 dark:hover:border-blue-600 active:bg-blue-200 dark:active:bg-blue-900/70 select-none touch-manipulation"
-                    aria-pressed={hintActive}
-                    aria-label="Hold to peek at hidden words; adds the next word every 3 seconds"
-                    title="Hold to peek; next blank every 3s while held"
-                    onPointerDown={(e) => {
-                      e.preventDefault()
-                      setHintPeekCount(1)
-                      setHintHeld(true)
-                    }}
-                    onPointerUp={() => {
-                      setHintPeekCount(1)
-                      setHintHeld(false)
-                      restorePracticeInputFocusAfterHint()
-                    }}
-                    onPointerLeave={() => {
-                      setHintPeekCount(1)
-                      setHintHeld(false)
-                      restorePracticeInputFocusAfterHint()
-                    }}
-                    onPointerCancel={() => {
-                      setHintPeekCount(1)
-                      setHintHeld(false)
-                      restorePracticeInputFocusAfterHint()
-                    }}
-                  >
-                    Hint
-                  </button>
-                )}
               </div>
               {!awaitingRoundAdvance && (
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
                   {currentTargetIndex !== null &&
                     (currentTargetToken?.kind === 'digit'
                       ? 'Type the next digit (left to right). Colons and dashes in the reference are not typed.'
-                      : 'Type the first letter of the next blank (left to right). Hold Hint to peek; another blank appears every 3 seconds while you hold.')}
+                      : 'Type the first letter of the next blank (left to right). Hold Hint to peek; another blank appears every second while you hold.')}
                   {currentTargetIndex !== null && ' '}
                   Tap the verse or blanks if the keyboard closed.
                 </p>
