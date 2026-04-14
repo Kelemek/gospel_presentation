@@ -88,6 +88,7 @@ export default function MemorizationPracticeSession({
   const practiceInputRef = useRef<HTMLInputElement>(null)
   /** If keydown already handled a letter, skip the matching input event (avoids double counts). */
   const suppressInputFromKeydownRef = useRef(false)
+  const practiceScrollRef = useRef<HTMLDivElement>(null)
   const practiceWordsRef = useRef<HTMLDivElement>(null)
   /** Distinguish verse tap (refocus keyboard) from vertical scroll — movement past threshold = scroll. */
   const verseTouchMovedRef = useRef(false)
@@ -189,15 +190,36 @@ export default function MemorizationPracticeSession({
     [typableIndices, verse.id]
   )
 
-  /** Scroll the active blank to the vertical center of the scrollable panel (long verses + keyboard). */
+  /**
+   * Scroll the active blank toward the vertical center of the practice column, then nudge using
+   * `visualViewport` so the blank stays above the soft keyboard (scrollIntoView alone uses the scroll
+   * container, not the visible viewport).
+   */
   const scrollCurrentBlankIntoView = useCallback(() => {
     requestAnimationFrame(() => {
       const root = practiceWordsRef.current
+      const scrollEl = practiceScrollRef.current
       if (!root) return
       const el = root.querySelector<HTMLElement>('[data-memorize-current-blank="true"]')
-      if (el && typeof el.scrollIntoView === 'function') {
-        el.scrollIntoView({ block: 'center', behavior: 'auto', inline: 'nearest' })
+      if (!el || typeof el.scrollIntoView !== 'function') return
+      el.scrollIntoView({ block: 'center', behavior: 'auto', inline: 'nearest' })
+      if (!scrollEl) return
+      const vv = window.visualViewport
+      if (!vv) return
+      const margin = 12
+      const viewTop = vv.offsetTop + margin
+      const viewBottom = vv.offsetTop + vv.height - margin
+      const nudgeIntoVisibleViewport = () => {
+        const rect = el.getBoundingClientRect()
+        if (rect.bottom > viewBottom) {
+          scrollEl.scrollTop += rect.bottom - viewBottom
+        }
+        if (rect.top < viewTop) {
+          scrollEl.scrollTop -= viewTop - rect.top
+        }
       }
+      nudgeIntoVisibleViewport()
+      requestAnimationFrame(nudgeIntoVisibleViewport)
     })
   }, [])
 
@@ -218,19 +240,33 @@ export default function MemorizationPracticeSession({
   }, [])
 
   /**
-   * Verse area: do NOT use touchstart + preventDefault — that blocks vertical scrolling on long passages.
-   * Mouse/pen: capture pointerdown to keep focus when tapping the verse. Touch uses native scroll; touchend refocuses.
+   * Verse area:
+   * - When the hidden input is focused (keyboard up), touchstart + preventDefault stops iOS from blurring it on tap.
+   *   That blocks starting a scroll gesture *on the verse* while focused; scroll from the instruction area above or
+   *   tap outside to dismiss first if needed.
+   * - When not focused, no preventDefault so the panel can scroll; touchend refocuses after a tap (see verse div).
+   * - Mouse/pen: pointerdown capture keeps focus when tapping the verse.
    */
   useLayoutEffect(() => {
     if (phase !== 'practicing') return
     const el = practiceWordsRef.current
     if (!el) return
+    const onTouchStartCaptureVerse = (e: TouchEvent) => {
+      if (awaitingRoundAdvanceRef.current) return
+      const input = practiceInputRef.current
+      if (!input) return
+      if (document.activeElement === input) {
+        e.preventDefault()
+      }
+    }
     const onPointerDownCapture = (e: PointerEvent) => {
       if (e.pointerType === 'touch') return
       keepPracticeInputOnPointerCapture(e)
     }
+    el.addEventListener('touchstart', onTouchStartCaptureVerse, { capture: true, passive: false })
     el.addEventListener('pointerdown', onPointerDownCapture, { capture: true })
     return () => {
+      el.removeEventListener('touchstart', onTouchStartCaptureVerse, { capture: true })
       el.removeEventListener('pointerdown', onPointerDownCapture, { capture: true })
     }
   }, [phase, keepPracticeInputOnPointerCapture])
@@ -429,6 +465,19 @@ export default function MemorizationPracticeSession({
     scrollCurrentBlankIntoView()
   }, [phase, awaitingRoundAdvance, currentTargetIndex, roundIndex, scrollCurrentBlankIntoView])
 
+  /** When the keyboard resizes the visual viewport, re-nudge so the current blank stays above it. */
+  useEffect(() => {
+    if (phase !== 'practicing' || awaitingRoundAdvance || currentTargetIndex === null) return
+    const id = window.setTimeout(() => scrollCurrentBlankIntoView(), 80)
+    return () => window.clearTimeout(id)
+  }, [
+    keyboardInsetPx,
+    phase,
+    awaitingRoundAdvance,
+    currentTargetIndex,
+    scrollCurrentBlankIntoView,
+  ])
+
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -492,6 +541,7 @@ export default function MemorizationPracticeSession({
 
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <div
+            ref={practiceScrollRef}
             className="relative px-4 py-4 flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y"
             style={
               keyboardInsetPx > 0
