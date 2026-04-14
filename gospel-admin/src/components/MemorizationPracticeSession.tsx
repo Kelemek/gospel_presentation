@@ -186,10 +186,12 @@ export default function MemorizationPracticeSession({
     [typableIndices, verse.id]
   )
 
-  /** Keep verse in view when the keyboard opens; use `auto` scroll — smooth scroll + focus fights iOS soft keyboard. */
-  const scrollPracticeWordsForKeyboard = useCallback(() => {
+  /** Scroll the active blank to the vertical center of the scrollable panel (long verses + keyboard). */
+  const scrollCurrentBlankIntoView = useCallback(() => {
     requestAnimationFrame(() => {
-      const el = practiceWordsRef.current
+      const root = practiceWordsRef.current
+      if (!root) return
+      const el = root.querySelector<HTMLElement>('[data-memorize-current-blank="true"]')
       if (el && typeof el.scrollIntoView === 'function') {
         el.scrollIntoView({ block: 'center', behavior: 'auto', inline: 'nearest' })
       }
@@ -212,15 +214,21 @@ export default function MemorizationPracticeSession({
     input.focus({ preventScroll: true })
   }, [])
 
+  /**
+   * Verse area: do NOT use touchstart + preventDefault — that blocks vertical scrolling on long passages.
+   * Mouse/pen: capture pointerdown to keep focus when tapping the verse. Touch uses native scroll; touchend refocuses.
+   */
   useLayoutEffect(() => {
     if (phase !== 'practicing') return
     const el = practiceWordsRef.current
     if (!el) return
-    el.addEventListener('touchstart', keepPracticeInputOnPointerCapture, { capture: true, passive: false })
-    el.addEventListener('pointerdown', keepPracticeInputOnPointerCapture, { capture: true })
+    const onPointerDownCapture = (e: PointerEvent) => {
+      if (e.pointerType === 'touch') return
+      keepPracticeInputOnPointerCapture(e)
+    }
+    el.addEventListener('pointerdown', onPointerDownCapture, { capture: true })
     return () => {
-      el.removeEventListener('touchstart', keepPracticeInputOnPointerCapture, { capture: true })
-      el.removeEventListener('pointerdown', keepPracticeInputOnPointerCapture, { capture: true })
+      el.removeEventListener('pointerdown', onPointerDownCapture, { capture: true })
     }
   }, [phase, keepPracticeInputOnPointerCapture])
 
@@ -252,9 +260,9 @@ export default function MemorizationPracticeSession({
         startRound(r)
       })
       practiceInputRef.current?.focus({ preventScroll: true })
-      scrollPracticeWordsForKeyboard()
+      scrollCurrentBlankIntoView()
     },
-    [startRound, scrollPracticeWordsForKeyboard]
+    [startRound, scrollCurrentBlankIntoView]
   )
 
   useEffect(() => {
@@ -407,10 +415,16 @@ export default function MemorizationPracticeSession({
     }
     const id = window.setTimeout(() => {
       practiceInputRef.current?.focus({ preventScroll: true })
-      scrollPracticeWordsForKeyboard()
+      scrollCurrentBlankIntoView()
     }, 0)
     return () => window.clearTimeout(id)
-  }, [phase, awaitingRoundAdvance, roundIndex, currentTargetIndex, hintActive, scrollPracticeWordsForKeyboard])
+  }, [phase, awaitingRoundAdvance, roundIndex, currentTargetIndex, hintActive, scrollCurrentBlankIntoView])
+
+  /** Keep the active blank centered as you advance (and after round changes). */
+  useEffect(() => {
+    if (phase !== 'practicing' || awaitingRoundAdvance || currentTargetIndex === null) return
+    scrollCurrentBlankIntoView()
+  }, [phase, awaitingRoundAdvance, currentTargetIndex, roundIndex, scrollCurrentBlankIntoView])
 
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => {
@@ -475,7 +489,7 @@ export default function MemorizationPracticeSession({
 
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <div
-            className="relative px-4 py-4 flex-1 min-h-0 overflow-y-auto"
+            className="relative px-4 py-4 flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y"
             style={
               keyboardInsetPx > 0
                 ? { paddingBottom: `calc(${keyboardInsetPx}px + 0.5rem)` }
@@ -592,6 +606,14 @@ export default function MemorizationPracticeSession({
                 ref={practiceWordsRef}
                 role="group"
                 aria-label="Verse practice area; tap to show the keyboard again"
+                onTouchEnd={() => {
+                  if (awaitingRoundAdvance) return
+                  requestAnimationFrame(() => {
+                    if (document.activeElement !== practiceInputRef.current) {
+                      practiceInputRef.current?.focus({ preventScroll: true })
+                    }
+                  })
+                }}
                 className={`touch-manipulation cursor-text text-base leading-relaxed font-serif flex flex-wrap gap-x-1 gap-y-2 items-baseline rounded-md p-1 ring-2 ring-inset transition-shadow ${
                   flashError
                     ? 'ring-red-400 dark:ring-red-500'
@@ -627,6 +649,7 @@ export default function MemorizationPracticeSession({
                   return (
                     <span
                       key={`tok-${i}`}
+                      data-memorize-current-blank={isCurrent ? 'true' : undefined}
                       className={`inline-flex items-baseline border-b-2 box-border px-0.5 min-h-[1.5em] min-w-[0.6em] justify-center ${
                         showBlankUnderline
                           ? 'border-slate-400 dark:border-slate-500'
