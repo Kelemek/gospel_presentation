@@ -45,6 +45,9 @@ type Phase = 'intro' | 'practicing' | 'done'
 
 const MAX_WRONG_BEFORE_REVEAL = 3
 
+/** Extra inset beyond the viewport edge so the current blank sits higher above the soft keyboard. */
+const MEMORIZE_EXTRA_GAP_ABOVE_KEYBOARD_PX = 48
+
 function expectedKeystrokeForToken(token: MemorizationToken): string {
   if (token.kind === 'digit') return token.text
   if (token.kind === 'word') return firstLetterOfWord(token.text)
@@ -206,9 +209,10 @@ export default function MemorizationPracticeSession({
       if (!scrollEl) return
       const vv = window.visualViewport
       if (!vv) return
-      const margin = 12
-      const viewTop = vv.offsetTop + margin
-      const viewBottom = vv.offsetTop + vv.height - margin
+      const edgeMargin = 12
+      const viewTop = vv.offsetTop + edgeMargin
+      const viewBottom =
+        vv.offsetTop + vv.height - edgeMargin - MEMORIZE_EXTRA_GAP_ABOVE_KEYBOARD_PX
       const reduceMotion =
         typeof window.matchMedia === 'function' &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches
