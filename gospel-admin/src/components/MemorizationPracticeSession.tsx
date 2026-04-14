@@ -193,7 +193,7 @@ export default function MemorizationPracticeSession({
   /**
    * Scroll the active blank toward the vertical center of the practice column, then nudge using
    * `visualViewport` so the blank stays above the soft keyboard (scrollIntoView alone uses the scroll
-   * container, not the visible viewport).
+   * container, not the visible viewport). The nudge uses smooth scrolling unless reduced motion is on.
    */
   const scrollCurrentBlankIntoView = useCallback(() => {
     requestAnimationFrame(() => {
@@ -209,17 +209,23 @@ export default function MemorizationPracticeSession({
       const margin = 12
       const viewTop = vv.offsetTop + margin
       const viewBottom = vv.offsetTop + vv.height - margin
+      const reduceMotion =
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      const nudgeBehavior: ScrollBehavior = reduceMotion ? 'auto' : 'smooth'
       const nudgeIntoVisibleViewport = () => {
         const rect = el.getBoundingClientRect()
-        if (rect.bottom > viewBottom) {
-          scrollEl.scrollTop += rect.bottom - viewBottom
-        }
-        if (rect.top < viewTop) {
-          scrollEl.scrollTop -= viewTop - rect.top
-        }
+        let delta = 0
+        if (rect.bottom > viewBottom) delta += rect.bottom - viewBottom
+        if (rect.top < viewTop) delta -= viewTop - rect.top
+        if (Math.abs(delta) < 0.5) return
+        const nextTop = Math.max(0, scrollEl.scrollTop + delta)
+        scrollEl.scrollTo({ top: nextTop, behavior: nudgeBehavior })
       }
       nudgeIntoVisibleViewport()
-      requestAnimationFrame(nudgeIntoVisibleViewport)
+      if (nudgeBehavior === 'auto') {
+        requestAnimationFrame(nudgeIntoVisibleViewport)
+      }
     })
   }, [])
 
