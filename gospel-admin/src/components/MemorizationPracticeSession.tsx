@@ -1,6 +1,7 @@
 'use client'
 
 import {
+  startTransition,
   useCallback,
   useEffect,
   useMemo,
@@ -9,6 +10,7 @@ import {
   type FormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react'
+import { flushSync } from 'react-dom'
 import type { MemorizedVerse } from '@/lib/verseMemorizationStorage'
 import {
   pickRandomAllDoneMessage,
@@ -50,7 +52,7 @@ export default function MemorizationPracticeSession({
   const [roundIndex, setRoundIndex] = useState(0)
   const [hiddenIndices, setHiddenIndices] = useState<Set<number>>(new Set())
   const [revealed, setRevealed] = useState<Set<number>>(new Set())
-  const [consecutiveWrong, setConsecutiveWrong] = useState(0)
+  const [, setConsecutiveWrong] = useState(0)
   const [wrongAttemptsTotal, setWrongAttemptsTotal] = useState(0)
   const [correctKeystrokesTotal, setCorrectKeystrokesTotal] = useState(0)
   const [flashError, setFlashError] = useState(false)
@@ -73,11 +75,13 @@ export default function MemorizationPracticeSession({
 
   useEffect(() => {
     sessionSeedRef.current = ''
-    setAwaitingRoundAdvance(false)
-    setRoundAffirmation('')
-    setCompletionMessage('')
     completedRef.current = false
     roundAdvanceHandledRef.current = null
+    startTransition(() => {
+      setAwaitingRoundAdvance(false)
+      setRoundAffirmation('')
+      setCompletionMessage('')
+    })
   }, [verse.id])
 
   useEffect(() => {
@@ -89,9 +93,8 @@ export default function MemorizationPracticeSession({
     }
   }, [])
 
-  useEffect(() => {
-    if (phase !== 'practicing') setHintHeld(false)
-  }, [phase])
+  /** Raw pointer state; use hintActive for gameplay so we do not sync hintHeld in an effect when phase changes. */
+  const hintActive = hintHeld && phase === 'practicing'
 
   const hiddenSorted = useMemo(() => [...hiddenIndices].sort((a, b) => a - b), [hiddenIndices])
 
@@ -106,23 +109,19 @@ export default function MemorizationPracticeSession({
   }, [unrevealedHiddenSorted])
 
   const hintPeekIndices = useMemo(() => {
-    if (!hintHeld) return new Set<number>()
+    if (!hintActive) return new Set<number>()
     return new Set(unrevealedHiddenSorted.slice(0, hintPeekCount))
-  }, [hintHeld, unrevealedHiddenSorted, hintPeekCount])
+  }, [hintActive, unrevealedHiddenSorted, hintPeekCount])
 
   useEffect(() => {
-    if (!hintHeld) {
-      setHintPeekCount(1)
-      return
-    }
-    setHintPeekCount(1)
+    if (!hintActive) return
     const id = window.setInterval(() => {
       setHintPeekCount((c) => Math.min(c + 1, unrevealedLenRef.current))
     }, 3000)
     return () => {
       window.clearInterval(id)
     }
-  }, [hintHeld])
+  }, [hintActive])
 
   const currentTargetIndex = useMemo(() => {
     for (const idx of hiddenSorted) {
@@ -147,6 +146,17 @@ export default function MemorizationPracticeSession({
     [words.length, verse.id]
   )
 
+  /** flushSync + immediate focus keeps iOS / Capacitor WebView keyboard in the same user gesture as the tap. */
+  const startRoundAndFocusInput = useCallback(
+    (r: number) => {
+      flushSync(() => {
+        startRound(r)
+      })
+      practiceInputRef.current?.focus({ preventScroll: true })
+    },
+    [startRound]
+  )
+
   useEffect(() => {
     if (phase !== 'practicing' || hiddenIndices.size === 0) return
     const allDone = [...hiddenIndices].every((i) => revealed.has(i))
@@ -159,13 +169,17 @@ export default function MemorizationPracticeSession({
         correctKeystrokes: correctKeystrokesTotal,
         completed: true,
       })
-      setCompletionMessage(pickRandomAllDoneMessage())
-      setPhase('done')
+      startTransition(() => {
+        setCompletionMessage(pickRandomAllDoneMessage())
+        setPhase('done')
+      })
     } else {
       if (roundAdvanceHandledRef.current === roundIndex) return
       roundAdvanceHandledRef.current = roundIndex
-      setRoundAffirmation(pickRandomRoundAffirmation())
-      setAwaitingRoundAdvance(true)
+      startTransition(() => {
+        setRoundAffirmation(pickRandomRoundAffirmation())
+        setAwaitingRoundAdvance(true)
+      })
     }
   }, [
     phase,
@@ -179,7 +193,7 @@ export default function MemorizationPracticeSession({
 
   const processLetter = useCallback(
     (key: string) => {
-      if (hintHeld) return
+      if (hintActive) return
       if (phase !== 'practicing' || currentTargetIndex === null) return
       if (key.length !== 1 || !/^[a-zA-Z]$/.test(key)) return
       const expected = firstLetterOfWord(words[currentTargetIndex])
@@ -213,12 +227,12 @@ export default function MemorizationPracticeSession({
         window.setTimeout(() => setFlashError(false), 120)
       }
     },
-    [phase, currentTargetIndex, words, hintHeld]
+    [phase, currentTargetIndex, words, hintActive]
   )
 
   const handlePracticeInputKeyDown = useCallback(
     (e: ReactKeyboardEvent<HTMLInputElement>) => {
-      if (hintHeld) return
+      if (hintActive) return
       if (phase !== 'practicing' || currentTargetIndex === null) return
       if (e.ctrlKey || e.metaKey || e.altKey) return
       const key = e.key
@@ -231,7 +245,7 @@ export default function MemorizationPracticeSession({
         suppressInputFromKeydownRef.current = false
       }, 0)
     },
-    [phase, currentTargetIndex, hintHeld, processLetter]
+    [phase, currentTargetIndex, hintActive, processLetter]
   )
 
   /** Mobile keyboards often omit keydown letters; input events still receive the character. */
@@ -241,7 +255,7 @@ export default function MemorizationPracticeSession({
         e.currentTarget.value = ''
         return
       }
-      if (hintHeld) {
+      if (hintActive) {
         e.currentTarget.value = ''
         return
       }
@@ -257,11 +271,11 @@ export default function MemorizationPracticeSession({
       if (!/^[a-zA-Z]$/.test(last)) return
       processLetter(last)
     },
-    [phase, currentTargetIndex, hintHeld, processLetter]
+    [phase, currentTargetIndex, hintActive, processLetter]
   )
 
   useEffect(() => {
-    if (phase !== 'practicing' || awaitingRoundAdvance || currentTargetIndex === null || hintHeld) {
+    if (phase !== 'practicing' || awaitingRoundAdvance || currentTargetIndex === null || hintActive) {
       if (phase !== 'practicing' || awaitingRoundAdvance) {
         practiceInputRef.current?.blur()
       }
@@ -271,7 +285,7 @@ export default function MemorizationPracticeSession({
       practiceInputRef.current?.focus({ preventScroll: true })
     }, 0)
     return () => window.clearTimeout(id)
-  }, [phase, awaitingRoundAdvance, roundIndex, currentTargetIndex, hintHeld])
+  }, [phase, awaitingRoundAdvance, roundIndex, currentTargetIndex, hintActive])
 
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => {
@@ -333,7 +347,26 @@ export default function MemorizationPracticeSession({
         </div>
 
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <div className="px-4 py-4 flex-1 min-h-0 overflow-y-auto">
+          <div className="relative px-4 py-4 flex-1 min-h-0 overflow-y-auto">
+          {phase !== 'done' && (
+            <input
+              ref={practiceInputRef}
+              type="text"
+              inputMode="text"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              enterKeyHint="done"
+              disabled={phase === 'intro' || awaitingRoundAdvance}
+              aria-label="Type the first letter of each blank word"
+              data-testid="memorize-practice-input"
+              tabIndex={phase === 'intro' || awaitingRoundAdvance ? -1 : 0}
+              className="absolute left-0 top-0 z-0 h-px w-full max-w-full border-0 bg-transparent p-0 opacity-[0.02] text-transparent caret-transparent"
+              onKeyDown={handlePracticeInputKeyDown}
+              onInput={handlePracticeInput}
+            />
+          )}
           {phase === 'intro' && (
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
@@ -350,7 +383,7 @@ export default function MemorizationPracticeSession({
                 onClick={() => {
                   completedRef.current = false
                   sessionSeedRef.current = generateMemorizationSessionSeed()
-                  startRound(1)
+                  startRoundAndFocusInput(1)
                 }}
                 className="mt-6 w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600"
               >
@@ -361,22 +394,6 @@ export default function MemorizationPracticeSession({
 
           {phase === 'practicing' && (
             <div>
-              <input
-                ref={practiceInputRef}
-                type="text"
-                inputMode="text"
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck={false}
-                enterKeyHint="done"
-                aria-label="Type the first letter of each blank word"
-                data-testid="memorize-practice-input"
-                className="sr-only"
-                tabIndex={0}
-                onKeyDown={handlePracticeInputKeyDown}
-                onInput={handlePracticeInput}
-              />
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <p className="text-sm text-slate-600 dark:text-slate-400">
                   {awaitingRoundAdvance ? (
@@ -395,17 +412,27 @@ export default function MemorizationPracticeSession({
                     type="button"
                     data-testid="memorize-hint-button"
                     className="shrink-0 px-3 py-1.5 text-sm font-medium rounded-lg transition-colors border border-blue-200 dark:border-blue-700 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900/60 hover:border-blue-300 dark:hover:border-blue-600 active:bg-blue-200 dark:active:bg-blue-900/70 select-none touch-manipulation"
-                    aria-pressed={hintHeld}
+                    aria-pressed={hintActive}
                     aria-label="Hold to peek at hidden words; adds the next word every 3 seconds"
                     title="Hold to peek; next blank every 3s while held"
                     onPointerDown={(e) => {
                       e.preventDefault()
+                      setHintPeekCount(1)
                       practiceInputRef.current?.blur()
                       setHintHeld(true)
                     }}
-                    onPointerUp={() => setHintHeld(false)}
-                    onPointerLeave={() => setHintHeld(false)}
-                    onPointerCancel={() => setHintHeld(false)}
+                    onPointerUp={() => {
+                      setHintPeekCount(1)
+                      setHintHeld(false)
+                    }}
+                    onPointerLeave={() => {
+                      setHintPeekCount(1)
+                      setHintHeld(false)
+                    }}
+                    onPointerCancel={() => {
+                      setHintPeekCount(1)
+                      setHintHeld(false)
+                    }}
                   >
                     Hint
                   </button>
@@ -428,7 +455,7 @@ export default function MemorizationPracticeSession({
                 {words.map((w, i) => {
                   const isHidden = hiddenIndices.has(i)
                   const isRevealed = revealed.has(i)
-                  const showViaHint = hintHeld && isHidden && !isRevealed && hintPeekIndices.has(i)
+                  const showViaHint = hintActive && isHidden && !isRevealed && hintPeekIndices.has(i)
                   const showBlankUnderline = isHidden && !isRevealed
                   const isCurrent = showBlankUnderline && i === currentTargetIndex
 
@@ -500,14 +527,14 @@ export default function MemorizationPracticeSession({
               <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
                 <button
                   type="button"
-                  onClick={() => startRound(roundIndex)}
+                  onClick={() => startRoundAndFocusInput(roundIndex)}
                   className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium border-2 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600"
                 >
                   Repeat this round
                 </button>
                 <button
                   type="button"
-                  onClick={() => startRound(roundIndex + 1)}
+                  onClick={() => startRoundAndFocusInput(roundIndex + 1)}
                   className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600"
                 >
                   Next round
