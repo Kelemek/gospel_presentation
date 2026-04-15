@@ -20,7 +20,7 @@ import {
   pickRandomAllDoneMessage,
   pickRandomRoundAffirmation,
 } from '@/lib/memorizationEncouragementMessages'
-import { scrollMemorizeBlankIntoPracticeColumn } from '@/lib/memorizationScrollIntoPractice'
+import { scrollMemorizeBlankNearestInPracticeColumn } from '@/lib/memorizationScrollIntoPractice'
 import { isMemorizeAndroidWebHost } from '@/lib/memorizationViewportPlatform'
 import {
   MEMORIZATION_FULL_HIDE_ROUND,
@@ -292,6 +292,9 @@ export default function MemorizationPracticeSession({
       setCorrectKeystrokesTotal(ip.correctKeystrokes)
     }
     requestAnimationFrame(() => {
+      if (isMemorizeAndroidWebHost() && practiceScrollRef.current) {
+        practiceScrollRef.current.scrollTop = 0
+      }
       practiceInputRef.current?.focus({ preventScroll: true })
     })
   }, [verse.id, verse.inProgressPractice, typableIndices])
@@ -311,7 +314,7 @@ export default function MemorizationPracticeSession({
       if (!el) return
       const androidHost = isMemorizeAndroidWebHost()
       if (androidHost) {
-        scrollMemorizeBlankIntoPracticeColumn(scrollEl, el)
+        scrollMemorizeBlankNearestInPracticeColumn(scrollEl, el)
       } else if (typeof el.scrollIntoView === 'function') {
         el.scrollIntoView({ block: 'center', behavior: 'auto', inline: 'nearest' })
       }
@@ -417,6 +420,9 @@ export default function MemorizationPracticeSession({
       flushSync(() => {
         startRound(r)
       })
+      if (isMemorizeAndroidWebHost() && practiceScrollRef.current) {
+        practiceScrollRef.current.scrollTop = 0
+      }
       practiceInputRef.current?.focus({ preventScroll: true })
       scrollCurrentBlankIntoView()
     },
