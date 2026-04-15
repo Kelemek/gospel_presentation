@@ -322,7 +322,9 @@ export default function ScriptureModal({
     const ok = addMemorizedVerse(reference, text, translation)
     if (ok) {
       setIsMemoized(true)
-      showAlert('Added to memorization list.')
+      showAlert(
+        'Added to memorization list.\n\nYou can find this verse under Memorize in the menu.'
+      )
     } else {
       showAlert('This verse is already in your memorization list.')
     }

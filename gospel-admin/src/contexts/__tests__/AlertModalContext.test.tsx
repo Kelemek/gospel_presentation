@@ -13,6 +13,9 @@ function TestConsumer() {
   return (
     <div>
       <button type="button" onClick={() => showAlert('Hello')}>Show alert</button>
+      <button type="button" onClick={() => showAlert('First line.\n\nSecond paragraph.')}>
+        Show alert two-part
+      </button>
       <button type="button" onClick={() => showConfirm('Confirm?')}>Show confirm</button>
     </div>
   )
@@ -33,7 +36,7 @@ describe('AlertModalContext', () => {
       </AlertModalProvider>
     )
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /Show alert/i }))
+    await user.click(screen.getByRole('button', { name: 'Show alert' }))
     await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
     expect(screen.getByText('Hello')).toBeInTheDocument()
     const okBtn = screen.getByRole('button', { name: 'OK' })
@@ -41,6 +44,23 @@ describe('AlertModalContext', () => {
     expect(okBtn).toHaveAttribute('data-tour', 'alert-modal-ok')
     await user.click(okBtn)
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  it('showAlert bolds the first paragraph when message contains a blank line', async () => {
+    const user = userEvent.setup({ delay: null })
+    render(
+      <AlertModalProvider>
+        <TestConsumer />
+      </AlertModalProvider>
+    )
+    await user.click(screen.getByRole('button', { name: /Show alert two-part/i }))
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
+    const p = document.getElementById('alert-modal-title')
+    expect(p).not.toBeNull()
+    const strong = p!.querySelector('strong')
+    expect(strong).not.toBeNull()
+    expect(strong).toHaveTextContent('First line.')
+    expect(screen.getByText('Second paragraph.')).toBeInTheDocument()
   })
 
   it('showConfirm opens modal with Cancel and Confirm', async () => {

@@ -27,6 +27,23 @@ interface AlertModalContextType {
 
 const AlertModalContext = createContext<AlertModalContextType | null>(null)
 
+/** Renders message; if it contains a blank line (\n\n), the first paragraph is emphasized. */
+function AlertModalMessage({ message }: { message: string }) {
+  const parts = message.split(/\n\n/)
+  if (parts.length === 1) {
+    return <span className="whitespace-pre-wrap">{message}</span>
+  }
+  const head = parts[0]
+  const rest = parts.slice(1).join('\n\n')
+  return (
+    <>
+      <strong className="font-semibold">{head}</strong>
+      {'\n\n'}
+      <span className="whitespace-pre-wrap">{rest}</span>
+    </>
+  )
+}
+
 export function AlertModalProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AlertModalState>({
     isOpen: false,
@@ -96,7 +113,7 @@ export function AlertModalProvider({ children }: { children: React.ReactNode }) 
           >
             <div className="px-6 py-5 border-b border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50">
               <p id="alert-modal-title" className="text-slate-800 dark:text-slate-100 text-base leading-relaxed whitespace-pre-wrap">
-                {state.message}
+                <AlertModalMessage message={state.message} />
               </p>
             </div>
             <div className="px-6 py-4 bg-white dark:bg-slate-800 flex justify-end gap-3">
