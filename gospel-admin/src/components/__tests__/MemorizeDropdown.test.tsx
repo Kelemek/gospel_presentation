@@ -61,4 +61,35 @@ describe('MemorizeDropdown', () => {
     expect(mockShowConfirm).toHaveBeenCalled()
     await waitFor(() => expect(loadMemorizedVerses()).toHaveLength(0))
   })
+
+  it('does not call onNavigate when parent handles practice (avoids double closeMenu)', async () => {
+    addMemorizedVerse('John 3:16', 'For God so loved the world.', 'esv')
+    const user = userEvent.setup()
+    const onNavigate = jest.fn()
+    const onMemorizationPracticeStart = jest.fn()
+    render(
+      <MemorizeDropdown onNavigate={onNavigate} onMemorizationPracticeStart={onMemorizationPracticeStart} />
+    )
+    await user.click(screen.getByRole('button', { name: /memorize/i }))
+    const practiceBtn = document.querySelector('[data-memorize-verse-practice]')
+    expect(practiceBtn).toBeTruthy()
+    await user.click(practiceBtn as HTMLElement)
+
+    expect(onMemorizationPracticeStart).toHaveBeenCalledTimes(1)
+    expect(onNavigate).not.toHaveBeenCalled()
+  })
+
+  it('calls onNavigate when opening the portaled practice session locally', async () => {
+    addMemorizedVerse('John 3:16', 'For God so loved the world.', 'esv')
+    const user = userEvent.setup()
+    const onNavigate = jest.fn()
+    render(<MemorizeDropdown onNavigate={onNavigate} />)
+    await user.click(screen.getByRole('button', { name: /memorize/i }))
+    const practiceBtn = document.querySelector('[data-memorize-verse-practice]')
+    expect(practiceBtn).toBeTruthy()
+    await user.click(practiceBtn as HTMLElement)
+
+    expect(onNavigate).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId('mock-practice-session')).toBeInTheDocument()
+  })
 })

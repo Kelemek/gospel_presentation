@@ -1198,7 +1198,7 @@ async function runBibleTranslationFeatureTourAsync(options?: ProfileFeatureTourO
 
 /**
  * Verse memorization tour: opens a scripture **card**, saves with **Memorize** in the reader, opens **Menu** → **Memorize**,
- * explains the list, opens **Practice** for a short preview (intro + round 1), closes it, then **Remove**s the verse added for this tour (with confirm).
+ * explains the list, opens practice from the **verse row** for a short preview (intro + round 1), closes it, then removes the tour verse with the **trash** control (with confirm).
  *
  * When not on `/default`, stores resume state and navigates there first (`ProfilePageClient` calls `tryStartMemorizeTourAfterNavigation`).
  */
@@ -1351,7 +1351,7 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
       popover: {
         title: 'Your memorization list',
         description:
-          'Verses are grouped by progress—<strong>Learning</strong>, <strong>Practicing</strong>, and <strong>Mastered</strong>. <strong>Practice</strong> opens guided rounds with blanks for each word (and digits in the reference). Use <strong>Next</strong> to open <strong>Practice</strong> for the verse we added and preview how it works.',
+          'Verses are grouped by progress—<strong>Learning</strong>, <strong>Practicing</strong>, and <strong>Mastered</strong>. Tap the <strong>left side of a row</strong> (reference and details) to open guided practice—five rounds with blanks for each word (and digits in the reference). The <strong>trash</strong> icon on the right removes a verse after you confirm. Use <strong>Next</strong> to open practice for the verse we added and preview how it works.',
         ...pop({ side: 'right', align: 'start' }),
       },
     },
@@ -1366,9 +1366,9 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
         )
       },
       popover: {
-        title: 'Open Practice',
+        title: 'Open practice from the list',
         description:
-          'Use <strong>Next</strong> to open the practice session for the verse we added (same as tapping <strong>Practice</strong> on that row).',
+          'Use <strong>Next</strong> to open the practice session for the verse we added (same as tapping that verse’s <strong>row on the left</strong>).',
         ...pop({ side: 'right', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           const id = memorizeTourTargetVerseId
@@ -1478,7 +1478,7 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
       popover: {
         title: 'Remove this verse',
         description:
-          'Use <strong>Next</strong> to remove the verse we added for this tour (the tour confirms the dialog for you).',
+          'Use <strong>Next</strong> to remove the verse we added for this tour via the <strong>trash</strong> icon (the tour confirms the dialog for you).',
         ...pop({ side: 'right', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           const id = memorizeTourTargetVerseId
@@ -2708,7 +2708,7 @@ const FULL_WALKTHROUGH_SEGMENTS: Array<{
     intro: {
       title: 'Verse memorization',
       description:
-        'Open a scripture card, save with Memorize in the reader, open the Memorize list, preview Practice (intro + round 1), then remove the verse we add for this tour.',
+        'Open a scripture card, save with Memorize in the reader, open the Memorize list, start practice from the verse row (intro + round 1), then remove the verse we add for this tour.',
     },
   },
   {

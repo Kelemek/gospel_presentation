@@ -52,16 +52,12 @@ export default function MemorizeDropdown({
 }: MemorizeDropdownProps) {
   const { showConfirm } = useAlertModal()
   const [isOpen, setIsOpen] = useState(false)
-  const [verses, setVerses] = useState<MemorizedVerse[]>([])
+  const [verses, setVerses] = useState<MemorizedVerse[]>(() => loadMemorizedVerses())
   const [practiceVerse, setPracticeVerse] = useState<MemorizedVerse | null>(null)
 
   const refresh = useCallback(() => {
     setVerses(loadMemorizedVerses())
   }, [])
-
-  useEffect(() => {
-    refresh()
-  }, [refresh])
 
   useEffect(() => {
     const onChanged = () => refresh()
@@ -91,52 +87,67 @@ export default function MemorizeDropdown({
         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 px-1 mb-1">
           {label}
         </p>
-        <ul className="space-y-2">
+        <div
+          className="mt-1 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-sm overflow-hidden"
+          role="list"
+        >
           {list.map((v) => (
-            <li
+            <div
               key={v.id}
-              className="rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 p-2"
+              role="listitem"
+              className="flex border-b border-slate-100 dark:border-slate-600 last:border-b-0"
             >
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{v.reference}</p>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">
-                    {v.translation.toUpperCase()}
-                    {v.lastPracticedAt != null ? ` · Last: ${formatDate(v.lastPracticedAt)}` : ''}
-                  </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-500 mt-0.5">
-                    Sessions: {v.practiceSessions.filter((s) => s.completed).length} completed
-                  </p>
-                </div>
-                <div className="flex flex-col gap-1 shrink-0">
-                  <button
-                    type="button"
-                    data-memorize-verse-practice={v.id}
-                    onClick={() => {
-                      if (onMemorizationPracticeStart) {
-                        onMemorizationPracticeStart(v)
-                      } else {
-                        setPracticeVerse(v)
-                      }
-                    }}
-                    className="w-full px-3 py-1 text-sm rounded-md transition-colors cursor-pointer flex items-center justify-center font-medium bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600"
-                  >
-                    Practice
-                  </button>
-                  <button
-                    type="button"
-                    data-memorize-verse-id={v.id}
-                    onClick={(e) => void handleRemove(e, v.id)}
-                    className="px-2 py-1 text-xs text-red-700 dark:text-red-300 hover:underline"
-                    aria-label={`Remove ${v.reference}`}
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-            </li>
+              <button
+                type="button"
+                data-memorize-verse-practice={v.id}
+                onClick={() => {
+                  if (onMemorizationPracticeStart) {
+                    onMemorizationPracticeStart(v)
+                  } else {
+                    onNavigate?.()
+                    setPracticeVerse(v)
+                  }
+                }}
+                className="min-w-0 flex-1 cursor-pointer text-left px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors"
+              >
+                <span className="font-medium text-slate-900 dark:text-slate-100 truncate block">
+                  {v.reference}
+                </span>
+                <span className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 block">
+                  {v.translation.toUpperCase()}
+                  {v.lastPracticedAt != null ? ` · Last: ${formatDate(v.lastPracticedAt)}` : ''}
+                </span>
+                <span className="text-xs text-slate-500 dark:text-slate-500 mt-0.5 block">
+                  Sessions: {v.practiceSessions.filter((s) => s.completed).length} completed
+                </span>
+              </button>
+              <button
+                type="button"
+                data-memorize-verse-id={v.id}
+                onClick={(e) => void handleRemove(e, v.id)}
+                className="shrink-0 flex cursor-pointer items-center justify-center px-3 min-h-[48px] text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 hover:bg-slate-50 dark:hover:bg-slate-700/80"
+                aria-label={`Remove ${v.reference}`}
+                title="Remove"
+              >
+                <svg
+                  className="w-5 h-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  aria-hidden
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                  />
+                </svg>
+              </button>
+            </div>
           ))}
-        </ul>
+        </div>
       </div>
     )
   }
