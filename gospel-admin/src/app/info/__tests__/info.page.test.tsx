@@ -31,6 +31,9 @@ describe('Info page', () => {
       screen.getByText(/Read scriptures in their full biblical context/i)
     ).toBeInTheDocument()
     expect(
+      screen.getByText(/Guided verse memorization with practice rounds/i)
+    ).toBeInTheDocument()
+    expect(
       screen.getByText(/Marriage seminar content by Dr\. Randy Westerberg/i)
     ).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: /Marriage/i })).toBeInTheDocument()
@@ -38,18 +41,16 @@ describe('Info page', () => {
     expect(screen.getByRole('heading', { name: /Biblical Counseling/i })).toBeInTheDocument()
     expect(screen.getByText(/The Nature Of True Repentance/i)).toBeInTheDocument()
 
-    expect(screen.getByRole('link', { name: /Website: open link/i })).toHaveAttribute(
-      'href',
-      INFO_PAGE_WEB_URL
-    )
-    expect(screen.getByRole('link', { name: /App Store: open link/i })).toHaveAttribute(
-      'href',
-      INFO_PAGE_APP_STORE_URL
-    )
-    expect(screen.getByRole('link', { name: /Google Play: open link/i })).toHaveAttribute(
-      'href',
-      INFO_PAGE_PLAY_STORE_URL
-    )
+    const expectAllLinksHref = (name: RegExp, href: string) => {
+      const links = screen.getAllByRole('link', { name })
+      expect(links.length).toBeGreaterThanOrEqual(1)
+      for (const link of links) {
+        expect(link).toHaveAttribute('href', href)
+      }
+    }
+    expectAllLinksHref(/Website: open link/i, INFO_PAGE_WEB_URL)
+    expectAllLinksHref(/App Store: open link/i, INFO_PAGE_APP_STORE_URL)
+    expectAllLinksHref(/Google Play: open link/i, INFO_PAGE_PLAY_STORE_URL)
 
     const svgs = container.querySelectorAll('svg')
     expect(svgs.length).toBeGreaterThanOrEqual(3)
