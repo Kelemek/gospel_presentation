@@ -60,6 +60,9 @@ const MEMORIZE_EXTRA_GAP_ABOVE_KEYBOARD_PX = 48
 /** While Hint is held, each tick reveals one more unrevealed blank (left to right). */
 const MEMORIZE_HINT_EXTRA_PEEK_INTERVAL_MS = 1000
 
+/** On Android, clamp the practice column scrollTop to 0 for this many ms after a round starts. */
+const ANDROID_SCROLL_CLAMP_MS = 600
+
 function expectedKeystrokeForToken(token: MemorizationToken): string {
   if (token.kind === 'digit') return token.text
   if (token.kind === 'word') return firstLetterOfWord(token.text)
@@ -113,8 +116,12 @@ export default function MemorizationPracticeSession({
   const assignPracticeInputRef = useCallback((node: HTMLInputElement | null) => {
     practiceInputRef.current = node
   }, [])
-  /** Keep Android at the top when a round first opens; begin auto-scroll after the first blank advances. */
-  const androidInitialTargetLockRef = useRef<number | null>(null)
+  /**
+   * On Android, Chrome scrolls the overflow column during the keyboard-open animation,
+   * overriding our scrollTop=0. This timestamp lets a scroll-event listener clamp the
+   * column to 0 for ANDROID_SCROLL_CLAMP_MS after a round starts or resumes.
+   */
+  const androidScrollClampUntilRef = useRef(0)
   /** If keydown already handled a letter, skip the matching input event (avoids double counts). */
   const suppressInputFromKeydownRef = useRef(false)
   const practiceScrollRef = useRef<HTMLDivElement>(null)
@@ -233,10 +240,17 @@ export default function MemorizationPracticeSession({
     currentTargetIndex !== null ? (tokens[currentTargetIndex] ?? null) : null
 
   useEffect(() => {
-    if (androidInitialTargetLockRef.current === null) return
-    if (currentTargetIndex === androidInitialTargetLockRef.current) return
-    androidInitialTargetLockRef.current = null
-  }, [currentTargetIndex])
+    if (!memorizeAndroidHost || phase !== 'practicing') return
+    const scrollEl = practiceScrollRef.current
+    if (!scrollEl) return
+    const onScroll = () => {
+      if (Date.now() < androidScrollClampUntilRef.current) {
+        scrollEl.scrollTop = 0
+      }
+    }
+    scrollEl.addEventListener('scroll', onScroll, { passive: false })
+    return () => scrollEl.removeEventListener('scroll', onScroll)
+  }, [memorizeAndroidHost, phase])
 
   const startRound = useCallback(
     (r: number) => {
@@ -244,7 +258,7 @@ export default function MemorizationPracticeSession({
       const seed = sessionSeedRef.current || verse.id
       const localHidden = pickHiddenWordIndices(typableIndices.length, r, seed)
       const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
-      androidInitialTargetLockRef.current = memorizeAndroidHost ? Math.min(...hidden) : null
+      if (memorizeAndroidHost) androidScrollClampUntilRef.current = Date.now() + ANDROID_SCROLL_CLAMP_MS
       setRoundIndex(r)
       setHiddenIndices(hidden)
       setRevealed(new Set())
@@ -278,7 +292,6 @@ export default function MemorizationPracticeSession({
       const seed = sessionSeedRef.current
       const localHidden = pickHiddenWordIndices(typableIndices.length, r, seed)
       const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
-      androidInitialTargetLockRef.current = null
       setRoundIndex(r)
       setHiddenIndices(hidden)
       setRevealed(new Set(hidden))
@@ -291,7 +304,7 @@ export default function MemorizationPracticeSession({
       const r = ip.phase.roundIndex
       const localHidden = pickHiddenWordIndices(typableIndices.length, r, sessionSeedRef.current)
       const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
-      androidInitialTargetLockRef.current = memorizeAndroidHost ? Math.min(...hidden) : null
+      if (memorizeAndroidHost) androidScrollClampUntilRef.current = Date.now() + ANDROID_SCROLL_CLAMP_MS
       setRoundIndex(r)
       setHiddenIndices(hidden)
       setRevealed(new Set())
@@ -325,7 +338,7 @@ export default function MemorizationPracticeSession({
       if (!el) return
       const androidHost = isMemorizeAndroidWebHost()
       if (androidHost) {
-        if (androidInitialTargetLockRef.current === currentTargetIndex) {
+        if (Date.now() < androidScrollClampUntilRef.current) {
           scrollEl.scrollTop = 0
           return
         }
@@ -358,7 +371,7 @@ export default function MemorizationPracticeSession({
         requestAnimationFrame(nudgeIntoVisibleViewport)
       }
     })
-  }, [currentTargetIndex])
+  }, [])
 
   /**
    * Taps hit the verse / Hint control, not the hidden input — the browser blurs the input and dismisses the keyboard.

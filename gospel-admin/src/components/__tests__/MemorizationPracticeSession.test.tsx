@@ -175,25 +175,10 @@ describe('MemorizationPracticeSession', () => {
     expect(screen.getByTestId('memorize-round-advance-footer')).toBeInTheDocument()
   })
 
-  it('keeps Android at the top when practice first opens, then scrolls after progress advances', async () => {
+  it('clamps Android scroll to 0 for the first 600ms after practice starts', async () => {
     ;(isMemorizeAndroidWebHost as jest.Mock).mockReturnValue(true)
-    const actual = jest.requireActual<typeof import('@/lib/memorizationPracticeUtils')>(
-      '@/lib/memorizationPracticeUtils'
-    )
-    ;(pickHiddenWordIndices as jest.Mock).mockImplementationOnce(
-      (wordCount: number, roundIndex: number, seedStr: string) => {
-        if (roundIndex === 1) return new Set([0, 1])
-        return actual.pickHiddenWordIndices(wordCount, roundIndex, seedStr)
-      }
-    )
-    const user = userEvent.setup()
-    const rafCallbacks: FrameRequestCallback[] = []
-    const originalRaf = window.requestAnimationFrame
-    window.requestAnimationFrame = ((cb: FrameRequestCallback) => {
-      rafCallbacks.push(cb)
-      return rafCallbacks.length
-    }) as typeof window.requestAnimationFrame
-
+    jest.useFakeTimers()
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
     render(
       <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
     )
@@ -204,68 +189,16 @@ describe('MemorizationPracticeSession', () => {
       .closest('.overflow-y-auto') as HTMLDivElement
     expect(scrollEl).toBeTruthy()
 
-    Object.defineProperty(scrollEl, 'clientHeight', { value: 200, configurable: true })
-    Object.defineProperty(scrollEl, 'scrollHeight', { value: 1200, configurable: true })
-    scrollEl.getBoundingClientRect = jest.fn(() => ({
-      top: 0,
-      left: 0,
-      bottom: 200,
-      right: 300,
-      width: 300,
-      height: 200,
-      x: 0,
-      y: 0,
-      toJSON: () => ({}),
-    }))
-
-    const currentBlank = document.querySelector('[data-memorize-current-blank="true"]') as HTMLElement
-    expect(currentBlank).toBeTruthy()
-    currentBlank.getBoundingClientRect = jest.fn(() => ({
-      top: 350,
-      left: 0,
-      bottom: 380,
-      right: 100,
-      width: 100,
-      height: 30,
-      x: 0,
-      y: 350,
-      toJSON: () => ({}),
-    }))
-
-    act(() => {
-      while (rafCallbacks.length > 0) {
-        const cb = rafCallbacks.shift()
-        cb?.(performance.now())
-      }
-    })
-
+    scrollEl.scrollTop = 500
+    fireEvent.scroll(scrollEl)
     expect(scrollEl.scrollTop).toBe(0)
 
-    await user.keyboard('f')
+    act(() => { jest.advanceTimersByTime(700) })
 
-    const nextBlank = document.querySelector('[data-memorize-current-blank="true"]') as HTMLElement
-    expect(nextBlank).toBeTruthy()
-    nextBlank.getBoundingClientRect = jest.fn(() => ({
-      top: 350,
-      left: 0,
-      bottom: 380,
-      right: 100,
-      width: 100,
-      height: 30,
-      x: 0,
-      y: 350,
-      toJSON: () => ({}),
-    }))
+    scrollEl.scrollTop = 500
+    fireEvent.scroll(scrollEl)
+    expect(scrollEl.scrollTop).toBe(500)
 
-    act(() => {
-      while (rafCallbacks.length > 0) {
-        const cb = rafCallbacks.shift()
-        cb?.(performance.now())
-      }
-    })
-
-    expect(scrollEl.scrollTop).toBeGreaterThan(0)
-
-    window.requestAnimationFrame = originalRaf
+    jest.useRealTimers()
   })
 })
