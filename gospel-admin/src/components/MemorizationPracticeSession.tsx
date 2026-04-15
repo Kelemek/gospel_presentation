@@ -78,6 +78,8 @@ export default function MemorizationPracticeSession({
     [verse.text, verse.reference]
   )
   const typableIndices = useMemo(() => getTypableTokenIndices(tokens), [tokens])
+  /** Hide IME field outside the verse scroller so Android does not scrollTo focused input (top of column). */
+  const memorizeAndroidHost = useMemo(() => isMemorizeAndroidWebHost(), [])
 
   const [phase, setPhase] = useState<Phase>('intro')
   const [roundIndex, setRoundIndex] = useState(0)
@@ -108,6 +110,9 @@ export default function MemorizationPracticeSession({
   const sessionSeedRef = useRef<string>('')
   /** Focused during practice so mobile/Capacitor WebView can show the soft keyboard. */
   const practiceInputRef = useRef<HTMLInputElement>(null)
+  const assignPracticeInputRef = useCallback((node: HTMLInputElement | null) => {
+    practiceInputRef.current = node
+  }, [])
   /** If keydown already handled a letter, skip the matching input event (avoids double counts). */
   const suppressInputFromKeydownRef = useRef(false)
   const practiceScrollRef = useRef<HTMLDivElement>(null)
@@ -749,6 +754,25 @@ export default function MemorizationPracticeSession({
         </div>
 
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {phase !== 'done' && memorizeAndroidHost && (
+            <input
+              ref={assignPracticeInputRef}
+              type="text"
+              inputMode={currentTargetToken?.kind === 'digit' ? 'numeric' : 'text'}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              enterKeyHint="done"
+              disabled={phase === 'intro' || awaitingRoundAdvance}
+              aria-label="Type the first letter of each blank word, or each digit for number blanks"
+              data-testid="memorize-practice-input"
+              tabIndex={phase === 'intro' || awaitingRoundAdvance ? -1 : 0}
+              className="pointer-events-none fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-110 h-10 w-32 max-w-[min(12rem,45vw)] -translate-x-1/2 border-0 bg-transparent p-0 opacity-[0.02] text-transparent caret-transparent"
+              onKeyDown={handlePracticeInputKeyDown}
+              onInput={handlePracticeInput}
+            />
+          )}
           <div
             ref={practiceScrollRef}
             className="relative px-4 py-4 flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y"
@@ -758,9 +782,9 @@ export default function MemorizationPracticeSession({
                 : undefined
             }
           >
-          {phase !== 'done' && (
+          {phase !== 'done' && !memorizeAndroidHost && (
             <input
-              ref={practiceInputRef}
+              ref={assignPracticeInputRef}
               type="text"
               inputMode={currentTargetToken?.kind === 'digit' ? 'numeric' : 'text'}
               autoComplete="off"
