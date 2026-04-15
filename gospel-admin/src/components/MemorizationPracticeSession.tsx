@@ -113,6 +113,8 @@ export default function MemorizationPracticeSession({
   const assignPracticeInputRef = useCallback((node: HTMLInputElement | null) => {
     practiceInputRef.current = node
   }, [])
+  /** Keep Android at the top when a round first opens; begin auto-scroll after the first blank advances. */
+  const androidInitialTargetLockRef = useRef<number | null>(null)
   /** If keydown already handled a letter, skip the matching input event (avoids double counts). */
   const suppressInputFromKeydownRef = useRef(false)
   const practiceScrollRef = useRef<HTMLDivElement>(null)
@@ -230,12 +232,19 @@ export default function MemorizationPracticeSession({
   const currentTargetToken =
     currentTargetIndex !== null ? (tokens[currentTargetIndex] ?? null) : null
 
+  useEffect(() => {
+    if (androidInitialTargetLockRef.current === null) return
+    if (currentTargetIndex === androidInitialTargetLockRef.current) return
+    androidInitialTargetLockRef.current = null
+  }, [currentTargetIndex])
+
   const startRound = useCallback(
     (r: number) => {
       roundAdvanceHandledRef.current = null
       const seed = sessionSeedRef.current || verse.id
       const localHidden = pickHiddenWordIndices(typableIndices.length, r, seed)
       const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
+      androidInitialTargetLockRef.current = memorizeAndroidHost ? Math.min(...hidden) : null
       setRoundIndex(r)
       setHiddenIndices(hidden)
       setRevealed(new Set())
@@ -244,7 +253,7 @@ export default function MemorizationPracticeSession({
       setRoundAffirmation('')
       setPhase('practicing')
     },
-    [typableIndices, verse.id]
+    [memorizeAndroidHost, typableIndices, verse.id]
   )
 
   useLayoutEffect(() => {
@@ -269,6 +278,7 @@ export default function MemorizationPracticeSession({
       const seed = sessionSeedRef.current
       const localHidden = pickHiddenWordIndices(typableIndices.length, r, seed)
       const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
+      androidInitialTargetLockRef.current = null
       setRoundIndex(r)
       setHiddenIndices(hidden)
       setRevealed(new Set(hidden))
@@ -281,6 +291,7 @@ export default function MemorizationPracticeSession({
       const r = ip.phase.roundIndex
       const localHidden = pickHiddenWordIndices(typableIndices.length, r, sessionSeedRef.current)
       const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
+      androidInitialTargetLockRef.current = memorizeAndroidHost ? Math.min(...hidden) : null
       setRoundIndex(r)
       setHiddenIndices(hidden)
       setRevealed(new Set())
@@ -297,7 +308,7 @@ export default function MemorizationPracticeSession({
       }
       practiceInputRef.current?.focus({ preventScroll: true })
     })
-  }, [verse.id, verse.inProgressPractice, typableIndices])
+  }, [memorizeAndroidHost, verse.id, verse.inProgressPractice, typableIndices])
 
   /**
    * Scroll the active blank toward the vertical center of the practice column, then nudge using
@@ -314,6 +325,10 @@ export default function MemorizationPracticeSession({
       if (!el) return
       const androidHost = isMemorizeAndroidWebHost()
       if (androidHost) {
+        if (androidInitialTargetLockRef.current === currentTargetIndex) {
+          scrollEl.scrollTop = 0
+          return
+        }
         scrollMemorizeBlankNearestInPracticeColumn(scrollEl, el)
       } else if (typeof el.scrollIntoView === 'function') {
         el.scrollIntoView({ block: 'center', behavior: 'auto', inline: 'nearest' })
@@ -343,7 +358,7 @@ export default function MemorizationPracticeSession({
         requestAnimationFrame(nudgeIntoVisibleViewport)
       }
     })
-  }, [])
+  }, [currentTargetIndex])
 
   /**
    * Taps hit the verse / Hint control, not the hidden input — the browser blurs the input and dismisses the keyboard.

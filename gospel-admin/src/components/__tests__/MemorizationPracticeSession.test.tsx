@@ -22,7 +22,12 @@ jest.mock('@/lib/memorizationEncouragementMessages', () => ({
   pickRandomAllDoneMessage: () => 'Test all done.',
 }))
 
+jest.mock('@/lib/memorizationViewportPlatform', () => ({
+  isMemorizeAndroidWebHost: jest.fn(() => false),
+}))
+
 import { pickHiddenWordIndices } from '@/lib/memorizationPracticeUtils'
+import { isMemorizeAndroidWebHost } from '@/lib/memorizationViewportPlatform'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import MemorizationPracticeSession from '@/components/MemorizationPracticeSession'
@@ -39,6 +44,10 @@ const baseVerse: MemorizedVerse = {
 }
 
 describe('MemorizationPracticeSession', () => {
+  beforeEach(() => {
+    ;(isMemorizeAndroidWebHost as jest.Mock).mockReturnValue(false)
+  })
+
   it('shows intro with full verse text', () => {
     render(
       <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
@@ -164,5 +173,99 @@ describe('MemorizationPracticeSession', () => {
     )
     expect(screen.queryByTestId('memorize-intro-text')).not.toBeInTheDocument()
     expect(screen.getByTestId('memorize-round-advance-footer')).toBeInTheDocument()
+  })
+
+  it('keeps Android at the top when practice first opens, then scrolls after progress advances', async () => {
+    ;(isMemorizeAndroidWebHost as jest.Mock).mockReturnValue(true)
+    const actual = jest.requireActual<typeof import('@/lib/memorizationPracticeUtils')>(
+      '@/lib/memorizationPracticeUtils'
+    )
+    ;(pickHiddenWordIndices as jest.Mock).mockImplementationOnce(
+      (wordCount: number, roundIndex: number, seedStr: string) => {
+        if (roundIndex === 1) return new Set([0, 1])
+        return actual.pickHiddenWordIndices(wordCount, roundIndex, seedStr)
+      }
+    )
+    const user = userEvent.setup()
+    const rafCallbacks: FrameRequestCallback[] = []
+    const originalRaf = window.requestAnimationFrame
+    window.requestAnimationFrame = ((cb: FrameRequestCallback) => {
+      rafCallbacks.push(cb)
+      return rafCallbacks.length
+    }) as typeof window.requestAnimationFrame
+
+    render(
+      <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
+    )
+    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+
+    const scrollEl = screen
+      .getByTestId('memorize-practice-words')
+      .closest('.overflow-y-auto') as HTMLDivElement
+    expect(scrollEl).toBeTruthy()
+
+    Object.defineProperty(scrollEl, 'clientHeight', { value: 200, configurable: true })
+    Object.defineProperty(scrollEl, 'scrollHeight', { value: 1200, configurable: true })
+    scrollEl.getBoundingClientRect = jest.fn(() => ({
+      top: 0,
+      left: 0,
+      bottom: 200,
+      right: 300,
+      width: 300,
+      height: 200,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    }))
+
+    const currentBlank = document.querySelector('[data-memorize-current-blank="true"]') as HTMLElement
+    expect(currentBlank).toBeTruthy()
+    currentBlank.getBoundingClientRect = jest.fn(() => ({
+      top: 350,
+      left: 0,
+      bottom: 380,
+      right: 100,
+      width: 100,
+      height: 30,
+      x: 0,
+      y: 350,
+      toJSON: () => ({}),
+    }))
+
+    act(() => {
+      while (rafCallbacks.length > 0) {
+        const cb = rafCallbacks.shift()
+        cb?.(performance.now())
+      }
+    })
+
+    expect(scrollEl.scrollTop).toBe(0)
+
+    await user.keyboard('f')
+
+    const nextBlank = document.querySelector('[data-memorize-current-blank="true"]') as HTMLElement
+    expect(nextBlank).toBeTruthy()
+    nextBlank.getBoundingClientRect = jest.fn(() => ({
+      top: 350,
+      left: 0,
+      bottom: 380,
+      right: 100,
+      width: 100,
+      height: 30,
+      x: 0,
+      y: 350,
+      toJSON: () => ({}),
+    }))
+
+    act(() => {
+      while (rafCallbacks.length > 0) {
+        const cb = rafCallbacks.shift()
+        cb?.(performance.now())
+      }
+    })
+
+    expect(scrollEl.scrollTop).toBeGreaterThan(0)
+
+    window.requestAnimationFrame = originalRaf
   })
 })
