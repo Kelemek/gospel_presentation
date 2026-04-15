@@ -20,6 +20,7 @@ import {
   pickRandomAllDoneMessage,
   pickRandomRoundAffirmation,
 } from '@/lib/memorizationEncouragementMessages'
+import { isMemorizeAndroidWebHost } from '@/lib/memorizationViewportPlatform'
 import {
   MEMORIZATION_FULL_HIDE_ROUND,
   buildMemorizationTokens,
@@ -151,14 +152,28 @@ export default function MemorizationPracticeSession({
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
-    const updateInset = () => {
+    const coalesceAndroid = isMemorizeAndroidWebHost()
+    let insetRaf = 0
+    const applyInset = () => {
       const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
       setKeyboardInsetPx(inset)
     }
-    updateInset()
+    const updateInset = () => {
+      if (!coalesceAndroid) {
+        applyInset()
+        return
+      }
+      if (insetRaf) return
+      insetRaf = window.requestAnimationFrame(() => {
+        insetRaf = 0
+        applyInset()
+      })
+    }
+    applyInset()
     vv.addEventListener('resize', updateInset)
     vv.addEventListener('scroll', updateInset)
     return () => {
+      if (insetRaf) window.cancelAnimationFrame(insetRaf)
       vv.removeEventListener('resize', updateInset)
       vv.removeEventListener('scroll', updateInset)
     }
@@ -273,7 +288,8 @@ export default function MemorizationPracticeSession({
   /**
    * Scroll the active blank toward the vertical center of the practice column, then nudge using
    * `visualViewport` so the blank stays above the soft keyboard (scrollIntoView alone uses the scroll
-   * container, not the visible viewport). The nudge uses smooth scrolling unless reduced motion is on.
+   * container, not the visible viewport). The nudge uses smooth scrolling on iOS/desktop unless reduced
+   * motion is on; Android uses instant nudge + double measure to avoid IME-driven jitter.
    */
   const scrollCurrentBlankIntoView = useCallback(() => {
     requestAnimationFrame(() => {
@@ -293,7 +309,9 @@ export default function MemorizationPracticeSession({
       const reduceMotion =
         typeof window.matchMedia === 'function' &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      const nudgeBehavior: ScrollBehavior = reduceMotion ? 'auto' : 'smooth'
+      const androidHost = isMemorizeAndroidWebHost()
+      const nudgeBehavior: ScrollBehavior =
+        reduceMotion || androidHost ? 'auto' : 'smooth'
       const nudgeIntoVisibleViewport = () => {
         const rect = el.getBoundingClientRect()
         let delta = 0
@@ -611,7 +629,8 @@ export default function MemorizationPracticeSession({
   /** When the keyboard resizes the visual viewport, re-nudge so the current blank stays above it. */
   useEffect(() => {
     if (phase !== 'practicing' || awaitingRoundAdvance || currentTargetIndex === null) return
-    const id = window.setTimeout(() => scrollCurrentBlankIntoView(), 80)
+    const delayMs = isMemorizeAndroidWebHost() ? 120 : 80
+    const id = window.setTimeout(() => scrollCurrentBlankIntoView(), delayMs)
     return () => window.clearTimeout(id)
   }, [
     keyboardInsetPx,
