@@ -20,6 +20,7 @@ import {
   pickRandomAllDoneMessage,
   pickRandomRoundAffirmation,
 } from '@/lib/memorizationEncouragementMessages'
+import { scrollMemorizeBlankIntoPracticeColumn } from '@/lib/memorizationScrollIntoPractice'
 import { isMemorizeAndroidWebHost } from '@/lib/memorizationViewportPlatform'
 import {
   MEMORIZATION_FULL_HIDE_ROUND,
@@ -85,6 +86,11 @@ export default function MemorizationPracticeSession({
   const [, setConsecutiveWrong] = useState(0)
   const [wrongAttemptsTotal, setWrongAttemptsTotal] = useState(0)
   const [correctKeystrokesTotal, setCorrectKeystrokesTotal] = useState(0)
+  /** Latest totals for persist / onComplete without churning callbacks on every wrong key. */
+  const wrongAttemptsRef = useRef(0)
+  const correctKeystrokesRef = useRef(0)
+  wrongAttemptsRef.current = wrongAttemptsTotal
+  correctKeystrokesRef.current = correctKeystrokesTotal
   const [flashError, setFlashError] = useState(false)
   const [hintHeld, setHintHeld] = useState(false)
   /** While hint is held: how many unrevealed blanks (left-to-right) to peek, starting at 1; +1 each tick. */
@@ -295,11 +301,15 @@ export default function MemorizationPracticeSession({
     requestAnimationFrame(() => {
       const root = practiceWordsRef.current
       const scrollEl = practiceScrollRef.current
-      if (!root) return
+      if (!root || !scrollEl) return
       const el = root.querySelector<HTMLElement>('[data-memorize-current-blank="true"]')
-      if (!el || typeof el.scrollIntoView !== 'function') return
-      el.scrollIntoView({ block: 'center', behavior: 'auto', inline: 'nearest' })
-      if (!scrollEl) return
+      if (!el) return
+      const androidHost = isMemorizeAndroidWebHost()
+      if (androidHost) {
+        scrollMemorizeBlankIntoPracticeColumn(scrollEl, el)
+      } else if (typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ block: 'center', behavior: 'auto', inline: 'nearest' })
+      }
       const vv = window.visualViewport
       if (!vv) return
       const edgeMargin = 12
@@ -309,7 +319,6 @@ export default function MemorizationPracticeSession({
       const reduceMotion =
         typeof window.matchMedia === 'function' &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      const androidHost = isMemorizeAndroidWebHost()
       const nudgeBehavior: ScrollBehavior =
         reduceMotion || androidHost ? 'auto' : 'smooth'
       const nudgeIntoVisibleViewport = () => {
@@ -414,12 +423,12 @@ export default function MemorizationPracticeSession({
       if (!onPersistInProgress || !sessionSeedRef.current) return
       onPersistInProgress({
         sessionSeed: sessionSeedRef.current,
-        wrongAttempts: wrongAttemptsTotal,
-        correctKeystrokes: correctKeystrokesTotal,
+        wrongAttempts: wrongAttemptsRef.current,
+        correctKeystrokes: correctKeystrokesRef.current,
         phase: phasePayload,
       })
     },
-    [onPersistInProgress, wrongAttemptsTotal, correctKeystrokesTotal]
+    [onPersistInProgress]
   )
 
   const handleClose = useCallback(() => {
@@ -468,8 +477,8 @@ export default function MemorizationPracticeSession({
       if (completedRef.current) return
       completedRef.current = true
       onComplete({
-        wrongAttempts: wrongAttemptsTotal,
-        correctKeystrokes: correctKeystrokesTotal,
+        wrongAttempts: wrongAttemptsRef.current,
+        correctKeystrokes: correctKeystrokesRef.current,
         completed: true,
       })
       startTransition(() => {
@@ -487,17 +496,7 @@ export default function MemorizationPracticeSession({
         setAwaitingRoundAdvance(true)
       })
     }
-  }, [
-    phase,
-    hiddenIndices,
-    revealed,
-    roundIndex,
-    wrongAttemptsTotal,
-    correctKeystrokesTotal,
-    onComplete,
-    onPersistInProgress,
-    persistPracticeSnapshot,
-  ])
+  }, [phase, hiddenIndices, revealed, roundIndex, onComplete, onPersistInProgress, persistPracticeSnapshot])
 
   const processKeystroke = useCallback(
     (key: string) => {
