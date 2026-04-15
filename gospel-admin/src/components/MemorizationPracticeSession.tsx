@@ -86,6 +86,7 @@ export default function MemorizationPracticeSession({
 
   const [phase, setPhase] = useState<Phase>('intro')
   const [roundIndex, setRoundIndex] = useState(0)
+  const [hasTypedInRound, setHasTypedInRound] = useState(false)
   const [hiddenIndices, setHiddenIndices] = useState<Set<number>>(new Set())
   const [revealed, setRevealed] = useState<Set<number>>(new Set())
   const [, setConsecutiveWrong] = useState(0)
@@ -153,6 +154,7 @@ export default function MemorizationPracticeSession({
     startTransition(() => {
       setPhase('intro')
       setRoundIndex(0)
+      setHasTypedInRound(false)
       setHiddenIndices(new Set())
       setRevealed(new Set())
       setWrongAttemptsTotal(0)
@@ -260,6 +262,7 @@ export default function MemorizationPracticeSession({
       const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
       if (memorizeAndroidHost) androidScrollClampUntilRef.current = Date.now() + ANDROID_SCROLL_CLAMP_MS
       setRoundIndex(r)
+      setHasTypedInRound(false)
       setHiddenIndices(hidden)
       setRevealed(new Set())
       setConsecutiveWrong(0)
@@ -293,6 +296,7 @@ export default function MemorizationPracticeSession({
       const localHidden = pickHiddenWordIndices(typableIndices.length, r, seed)
       const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
       setRoundIndex(r)
+      setHasTypedInRound(false)
       setHiddenIndices(hidden)
       setRevealed(new Set(hidden))
       setConsecutiveWrong(0)
@@ -306,6 +310,7 @@ export default function MemorizationPracticeSession({
       const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
       if (memorizeAndroidHost) androidScrollClampUntilRef.current = Date.now() + ANDROID_SCROLL_CLAMP_MS
       setRoundIndex(r)
+      setHasTypedInRound(false)
       setHiddenIndices(hidden)
       setRevealed(new Set())
       setConsecutiveWrong(0)
@@ -452,9 +457,8 @@ export default function MemorizationPracticeSession({
         practiceScrollRef.current.scrollTop = 0
       }
       practiceInputRef.current?.focus({ preventScroll: true })
-      scrollCurrentBlankIntoView()
     },
-    [startRound, scrollCurrentBlankIntoView]
+    [startRound]
   )
 
   const persistPracticeSnapshot = useCallback(
@@ -498,6 +502,7 @@ export default function MemorizationPracticeSession({
     startTransition(() => {
       setPhase('intro')
       setRoundIndex(0)
+      setHasTypedInRound(false)
       setHiddenIndices(new Set())
       setRevealed(new Set())
       setWrongAttemptsTotal(0)
@@ -544,6 +549,8 @@ export default function MemorizationPracticeSession({
       if (key.length !== 1) return
       const token = tokens[currentTargetIndex]
       if (!token || token.kind === 'punct') return
+
+      setHasTypedInRound(true)
 
       let correct = false
       if (token.kind === 'digit') {
@@ -653,20 +660,22 @@ export default function MemorizationPracticeSession({
     }
     const id = window.setTimeout(() => {
       practiceInputRef.current?.focus({ preventScroll: true })
-      scrollCurrentBlankIntoView()
+      if (hasTypedInRound) scrollCurrentBlankIntoView()
     }, 0)
     return () => window.clearTimeout(id)
-  }, [phase, awaitingRoundAdvance, roundIndex, currentTargetIndex, hintActive, scrollCurrentBlankIntoView])
+  }, [phase, awaitingRoundAdvance, roundIndex, currentTargetIndex, hintActive, hasTypedInRound, scrollCurrentBlankIntoView])
 
   /** Keep the active blank centered as you advance (and after round changes). */
   useEffect(() => {
     if (phase !== 'practicing' || awaitingRoundAdvance || currentTargetIndex === null) return
+    if (!hasTypedInRound) return
     scrollCurrentBlankIntoView()
-  }, [phase, awaitingRoundAdvance, currentTargetIndex, roundIndex, scrollCurrentBlankIntoView])
+  }, [phase, awaitingRoundAdvance, currentTargetIndex, roundIndex, hasTypedInRound, scrollCurrentBlankIntoView])
 
   /** When the keyboard resizes the visual viewport, re-nudge so the current blank stays above it. */
   useEffect(() => {
     if (phase !== 'practicing' || awaitingRoundAdvance || currentTargetIndex === null) return
+    if (!hasTypedInRound) return
     const delayMs = isMemorizeAndroidWebHost() ? 120 : 80
     const id = window.setTimeout(() => scrollCurrentBlankIntoView(), delayMs)
     return () => window.clearTimeout(id)
@@ -675,6 +684,7 @@ export default function MemorizationPracticeSession({
     phase,
     awaitingRoundAdvance,
     currentTargetIndex,
+    hasTypedInRound,
     scrollCurrentBlankIntoView,
   ])
 
@@ -802,7 +812,7 @@ export default function MemorizationPracticeSession({
               aria-label="Type the first letter of each blank word, or each digit for number blanks"
               data-testid="memorize-practice-input"
               tabIndex={phase === 'intro' || awaitingRoundAdvance ? -1 : 0}
-              className="pointer-events-none fixed bottom-[max(0.5rem,env(safe-area-inset-bottom))] left-1/2 z-110 h-10 w-32 max-w-[min(12rem,45vw)] -translate-x-1/2 border-0 bg-transparent p-0 opacity-[0.02] text-transparent caret-transparent"
+              className="pointer-events-none fixed top-[25vh] left-1/2 z-110 h-10 w-32 max-w-[min(12rem,45vw)] -translate-x-1/2 border-0 bg-transparent p-0 opacity-[0.02] text-transparent caret-transparent"
               onKeyDown={handlePracticeInputKeyDown}
               onInput={handlePracticeInput}
             />
