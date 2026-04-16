@@ -80,8 +80,23 @@ export default function ComaModal({ isOpen, onClose }: ComaModalProps) {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
             </div>
           ) : (
-            <div 
-              className="prose prose-slate dark:prose-invert max-w-none prose-p:text-slate-700 dark:prose-p:text-slate-200 prose-headings:text-slate-900 dark:prose-headings:text-slate-100 prose-li:text-slate-700 dark:prose-li:text-slate-200 prose-ol:text-slate-700 dark:prose-ol:text-slate-200 prose-ul:text-slate-700 dark:prose-ul:text-slate-200 dark:[&_.text-gray-700]:text-slate-200 dark:[&_.text-gray-600]:text-slate-200 dark:[&_.text-gray-800]:text-slate-100 dark:[&_.text-gray-900]:text-slate-100"
+            <div
+              className={
+                'prose prose-sm prose-slate max-w-none dark:prose-invert leading-snug ' +
+                'prose-headings:text-slate-900 dark:prose-headings:text-slate-100 ' +
+                'prose-headings:mb-2 prose-headings:mt-4 first:prose-headings:mt-0 ' +
+                'prose-p:my-2 prose-p:text-slate-700 dark:prose-p:text-slate-200 ' +
+                'prose-li:my-0.5 prose-li:text-slate-700 dark:prose-li:text-slate-200 ' +
+                'prose-ol:my-2 prose-ol:text-slate-700 dark:prose-ol:text-slate-200 ' +
+                'prose-ul:my-2 prose-ul:text-slate-700 dark:prose-ul:text-slate-200 ' +
+                '[&_.space-y-6>*+*]:mt-4! [&_.space-y-4>*+*]:mt-2! [&_.space-y-2>*+*]:mt-1! ' +
+                '[&_h1]:mb-2! [&_h2]:mt-3! [&_h2]:mb-2! ' +
+                'print-content print:[&_p]:mb-3 print:[&_p:last-child]:mb-0 ' +
+                'dark:[&_.text-gray-700]:text-slate-200! dark:[&_.text-gray-600]:text-slate-200! ' +
+                'dark:[&_.text-gray-800]:text-slate-100! dark:[&_.text-gray-900]:text-slate-50! ' +
+                'dark:[&_.text-blue-700]:text-blue-300! dark:[&_.text-blue-800]:text-blue-200! ' +
+                'dark:[&_.bg-blue-50]:bg-slate-700/70! dark:[&_.border-blue-500]:border-blue-400!'
+              }
               dangerouslySetInnerHTML={{ __html: instructions }}
             />
           )}
