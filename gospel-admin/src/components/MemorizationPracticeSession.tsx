@@ -21,7 +21,10 @@ import {
   pickRandomRoundAffirmation,
 } from '@/lib/memorizationEncouragementMessages'
 import { scrollMemorizeBlankNearestInPracticeColumn } from '@/lib/memorizationScrollIntoPractice'
-import { isMemorizeAndroidWebHost } from '@/lib/memorizationViewportPlatform'
+import {
+  isMemorizeAndroidWebHost,
+  isMemorizeIosWebHost,
+} from '@/lib/memorizationViewportPlatform'
 import {
   MEMORIZATION_FULL_HIDE_ROUND,
   buildMemorizationTokens,
@@ -329,10 +332,11 @@ export default function MemorizationPracticeSession({
   }, [memorizeAndroidHost, verse.id, verse.inProgressPractice, typableIndices])
 
   /**
-   * Scroll the active blank toward the vertical center of the practice column, then nudge using
-   * `visualViewport` so the blank stays above the soft keyboard (scrollIntoView alone uses the scroll
-   * container, not the visible viewport). The nudge uses smooth scrolling on iOS/desktop unless reduced
-   * motion is on; Android uses instant nudge + double measure to avoid IME-driven jitter.
+   * Scroll the active blank only as needed in the practice column (same min-scroll path as Android),
+   * then nudge using `visualViewport` so the blank stays above the soft keyboard. We avoid
+   * `scrollIntoView({ block: 'center' })` on iOS: it centers in the scroll box and ignores the keyboard,
+   * so the viewport nudge then scrolls the other way — a visible down-then-up. Android already used
+   * min-scroll + instant nudge + double measure to avoid IME jitter; iOS now matches the instant nudge.
    */
   const scrollCurrentBlankIntoView = useCallback(() => {
     requestAnimationFrame(() => {
@@ -347,10 +351,8 @@ export default function MemorizationPracticeSession({
           scrollEl.scrollTop = 0
           return
         }
-        scrollMemorizeBlankNearestInPracticeColumn(scrollEl, el)
-      } else if (typeof el.scrollIntoView === 'function') {
-        el.scrollIntoView({ block: 'center', behavior: 'auto', inline: 'nearest' })
       }
+      scrollMemorizeBlankNearestInPracticeColumn(scrollEl, el)
       const vv = window.visualViewport
       if (!vv) return
       const edgeMargin = 12
@@ -361,7 +363,7 @@ export default function MemorizationPracticeSession({
         typeof window.matchMedia === 'function' &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches
       const nudgeBehavior: ScrollBehavior =
-        reduceMotion || androidHost ? 'auto' : 'smooth'
+        reduceMotion || androidHost || isMemorizeIosWebHost() ? 'auto' : 'smooth'
       const nudgeIntoVisibleViewport = () => {
         const rect = el.getBoundingClientRect()
         let delta = 0
