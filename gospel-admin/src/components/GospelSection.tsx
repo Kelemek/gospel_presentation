@@ -183,7 +183,7 @@ function TextWithComaButtons({
 
       if (onScriptureClick) {
         return (
-          <ScriptureHoverModal key={i} reference={reference} hoverDelayMs={2000} inline>
+          <ScriptureHoverModal key={i} reference={reference} hoverDelayMs={500} inline>
             <span
               className="relative inline-flex items-center"
               style={{ margin: '0 2px', verticalAlign: 'baseline' }}
@@ -305,7 +305,7 @@ function ScriptureReferences({ references, onScriptureClick, anchorSectionId, an
             <div key={index} className="relative inline-block">
               <ScriptureHoverModal
                 reference={ref.reference}
-                hoverDelayMs={2000} // 2 seconds
+                hoverDelayMs={500} // 0.5 seconds
               >
                 <button
                   type="button"
