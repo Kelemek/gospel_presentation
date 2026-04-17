@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { BIBLE_TRANSLATION_CODES } from '@/lib/bible-translations'
+import { mergeTranslationReportCodes } from '@/lib/bible-translations'
 import { createAdminClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
@@ -94,22 +94,20 @@ export async function POST(request: NextRequest) {
       
       if (fetchError) {
         return NextResponse.json({
-          translations: [...BIBLE_TRANSLATION_CODES],
+          translations: mergeTranslationReportCodes([]),
         })
       }
-      
-      // Get unique translations, sorted
-      const uniqueTranslations = Array.from(
+
+      const uniqueFromDb = Array.from(
         new Set(
           (logs as any[])
             .map((log: any) => log.translation)
             .filter((trans: string) => trans && trans.length > 0)
         )
-      ).sort()
-      
+      )
+
       return NextResponse.json({
-        translations:
-          uniqueTranslations.length > 0 ? uniqueTranslations : [...BIBLE_TRANSLATION_CODES],
+        translations: mergeTranslationReportCodes(uniqueFromDb),
       })
     }
 

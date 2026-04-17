@@ -52,7 +52,10 @@ describe('ScriptureHoverModal', () => {
     expect(screen.queryByText(/Loading verse/)).not.toBeInTheDocument()
     act(() => { jest.advanceTimersByTime(150) })
     await waitFor(() => expect(screen.getByText(/Loading verse/)).toBeInTheDocument())
-    expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining('/api/scripture?reference=John%203%3A16'))
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/scripture?reference=John%203%3A16'),
+      expect.objectContaining({ cache: 'no-store' })
+    )
     jest.useRealTimers()
   })
 

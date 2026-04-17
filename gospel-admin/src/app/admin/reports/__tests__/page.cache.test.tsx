@@ -59,6 +59,13 @@ describe('ReportsPage scripture cache section', () => {
     expect(screen.getByText(/Verses cached: 5\/500/)).toBeInTheDocument()
   })
 
+  it('lists NASB, NIV, and NLT usage summaries (not only translations seen in logs)', () => {
+    render(<ReportsPage />)
+    expect(screen.getByRole('button', { name: /NASB Usage Summary/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /NIV Usage Summary/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /NLT Usage Summary/i })).toBeInTheDocument()
+  })
+
   it('refreshes cache stats when Refresh is clicked', async () => {
     render(<ReportsPage />)
     await waitFor(() => expect(screen.getByText('ESV')).toBeInTheDocument())

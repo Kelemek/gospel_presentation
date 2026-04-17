@@ -2,7 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { BIBLE_TRANSLATION_CODES, REMOTE_SCRIPTURE_CACHE_CODES } from '@/lib/bible-translations'
+import {
+  BIBLE_TRANSLATION_CODES,
+  mergeTranslationReportCodes,
+  REMOTE_SCRIPTURE_CACHE_CODES,
+} from '@/lib/bible-translations'
 import { logger } from '@/lib/logger'
 
 interface ReportResult {
@@ -26,8 +30,9 @@ type CacheStatRow = {
 }
 
 export default function ReportsPage() {
-  const [translations, setTranslations] = useState<string[]>([])
-  const [selectedReport, setSelectedReport] = useState<string>('')
+  // Full list on first paint so per-translation summaries (incl. NASB, NIV, NLT) are never omitted while fetch runs.
+  const [translations, setTranslations] = useState<string[]>(() => mergeTranslationReportCodes([]))
+  const [selectedReport, setSelectedReport] = useState<string>('esv_summary')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [results, setResults] = useState<ReportResult | null>(null)
@@ -72,14 +77,10 @@ export default function ReportsPage() {
         
         if (response.ok) {
           const data = await response.json()
-          if (data.translations && data.translations.length > 0) {
-            setTranslations(data.translations)
-            setSelectedReport(`${data.translations[0]}_summary`)
-          } else {
-            // Fallback to defaults if no translations found
-            setTranslations([...BIBLE_TRANSLATION_CODES])
-            setSelectedReport('esv_summary')
-          }
+          const raw = Array.isArray(data.translations) ? data.translations : []
+          const merged = mergeTranslationReportCodes(raw)
+          setTranslations(merged)
+          setSelectedReport(`${merged[0]}_summary`)
         } else {
           setTranslations([...BIBLE_TRANSLATION_CODES])
           setSelectedReport('esv_summary')

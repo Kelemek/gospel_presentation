@@ -11,6 +11,19 @@ export const BIBLE_TRANSLATION_CODES = [
 
 export type BibleTranslation = (typeof BIBLE_TRANSLATION_CODES)[number]
 
+/**
+ * Codes seen in access logs (or from API) merged with every app-supported translation
+ * so admin usage reports always list a summary per version, including zero-usage translations.
+ */
+export function mergeTranslationReportCodes(fromDbOrApi: string[]): string[] {
+  const unique = Array.from(
+    new Set(fromDbOrApi.map((t) => String(t).trim()).filter((t) => t.length > 0))
+  )
+  const known = new Set(BIBLE_TRANSLATION_CODES as readonly string[])
+  const extras = unique.filter((t) => !known.has(t)).sort()
+  return [...BIBLE_TRANSLATION_CODES, ...extras]
+}
+
 /** Translations fetched from API.Bible (server cache + verse limit, like ESV). */
 export const API_BIBLE_TRANSLATION_CODES = ['kjv', 'nasb', 'lsb', 'niv', 'nlt', 'csb'] as const
 
