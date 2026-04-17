@@ -52,6 +52,8 @@ export default function AddMemorizedVerseModal({
 
   const [submitting, setSubmitting] = useState(false)
   const verseSectionRef = useRef<HTMLDivElement>(null)
+  const bookListScrollRef = useRef<HTMLDivElement>(null)
+  const bookRowRefs = useRef<Map<string, HTMLDivElement | null>>(new Map())
 
   const filteredBooks = useMemo(
     () => BIBLE_BOOKS_PUBLIC.filter((b) => b.testament === testament),
@@ -61,6 +63,12 @@ export default function AddMemorizedVerseModal({
   useEffect(() => {
     setExpandedBookId(null)
   }, [testament])
+
+  useLayoutEffect(() => {
+    if (!isOpen) return
+    const el = bookListScrollRef.current
+    if (el) el.scrollTop = 0
+  }, [testament, isOpen])
 
   const resetSelection = useCallback(() => {
     setSelectedChapterId(null)
@@ -160,6 +168,24 @@ export default function AddMemorizedVerseModal({
     return () => window.removeEventListener('keydown', onKey)
   }, [isOpen, onClose])
 
+  useLayoutEffect(() => {
+    if (!isOpen || !expandedBookId) return
+    const id = requestAnimationFrame(() => {
+      const el = bookRowRefs.current.get(expandedBookId)
+      if (!el) return
+      const reducedMotion =
+        typeof window.matchMedia === 'function' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      if (typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({
+          block: 'start',
+          behavior: reducedMotion ? 'instant' : 'smooth',
+        })
+      }
+    })
+    return () => cancelAnimationFrame(id)
+  }, [expandedBookId, isOpen])
+
   useEffect(() => {
     if (!selectedChapterId) return
     const id = requestAnimationFrame(() => {
@@ -230,37 +256,47 @@ export default function AddMemorizedVerseModal({
           </button>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3">
-          <div className="flex rounded-lg border border-slate-200 dark:border-slate-600 p-0.5 bg-slate-100 dark:bg-slate-900/50 mb-3">
-            <button
-              type="button"
-              onClick={() => setTestament('ot')}
-              className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${
-                testament === 'ot'
-                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400'
-              }`}
-            >
-              Old Testament
-            </button>
-            <button
-              type="button"
-              onClick={() => setTestament('nt')}
-              className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${
-                testament === 'nt'
-                  ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
-                  : 'text-slate-600 dark:text-slate-400'
-              }`}
-            >
-              New Testament
-            </button>
+        <div className="flex-1 min-h-0 flex flex-col">
+          <div className="shrink-0 px-3 pt-3">
+            <div className="flex rounded-lg border border-slate-200 dark:border-slate-600 p-0.5 bg-slate-100 dark:bg-slate-900/50 mb-3">
+              <button
+                type="button"
+                onClick={() => setTestament('ot')}
+                className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${
+                  testament === 'ot'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                Old Testament
+              </button>
+              <button
+                type="button"
+                onClick={() => setTestament('nt')}
+                className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${
+                  testament === 'nt'
+                    ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400'
+                }`}
+              >
+                New Testament
+              </button>
+            </div>
           </div>
 
+          <div ref={bookListScrollRef} className="flex-1 min-h-0 overflow-y-auto px-3 pb-3">
           <div className="space-y-0 border border-slate-200 dark:border-slate-600 rounded-lg overflow-hidden">
               {filteredBooks.map((book) => {
                 const open = expandedBookId === book.id
                 return (
-                  <div key={book.id} className="border-b border-slate-200 dark:border-slate-600 last:border-b-0">
+                  <div
+                    key={book.id}
+                    ref={(node) => {
+                      if (node) bookRowRefs.current.set(book.id, node)
+                      else bookRowRefs.current.delete(book.id)
+                    }}
+                    className="border-b border-slate-200 dark:border-slate-600 last:border-b-0 scroll-mt-3"
+                  >
                     <button
                       type="button"
                       onClick={() => {
@@ -346,6 +382,7 @@ export default function AddMemorizedVerseModal({
                 )
               })}
             </div>
+          </div>
         </div>
 
         <div className="shrink-0 border-t border-slate-200 dark:border-slate-600 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-slate-50 dark:bg-slate-900/40">

@@ -118,6 +118,8 @@ GET /api/scripture?reference=John%203:16&translation=esv
 2. **ESV / NIV / NLT / CSB** — If cache row exists and is newer than the TTL for that provider → return cached text.
 3. On cache miss → call ESV API or API.Bible → upsert `scripture_cache` → run the matching LRU RPC (`enforce_esv_cache_limit` or `enforce_translation_cache_limit`).
 
+**Headings vs. verse text**: ESV requests use `include-headings=false`. API.Bible passage requests use **`include-titles=false`** so section titles are not requested in the response (see API reference: `include-titles` controls “Include section titles in content”). Some editions still embed a short title in the verse line; `formatApiBiblePassageText` (`gospel-admin/src/lib/api-bible-format.ts`) then strips standalone heading lines and, when needed, a leading title-like sentence before the verse body.
+
 ### Verse Range Handling
 Scripture references can include verse ranges using hyphens or en-dashes:
 - `John 3:16-18` → Returns verses 16, 17, 18

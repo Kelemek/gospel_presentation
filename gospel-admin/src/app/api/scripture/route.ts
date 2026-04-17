@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchScripture } from '@/lib/bible-api'
+import { normalizeApiBibleStoredText } from '@/lib/api-bible-format'
 import type { BibleTranslation } from '@/lib/bible-translations'
 import { isBibleTranslation } from '@/lib/bible-translations'
 import { logger } from '@/lib/logger'
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           reference,
-          text: (cachedData as { text: string }).text,
+          text: normalizeApiBibleStoredText(translation, (cachedData as { text: string }).text),
           translation,
           cached: true,
         },

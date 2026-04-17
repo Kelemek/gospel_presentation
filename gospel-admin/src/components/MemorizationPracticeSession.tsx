@@ -25,6 +25,7 @@ import {
   isMemorizeAndroidWebHost,
   isMemorizeIosWebHost,
 } from '@/lib/memorizationViewportPlatform'
+import { normalizeApiBibleStoredText } from '@/lib/api-bible-format'
 import {
   MEMORIZATION_FULL_HIDE_ROUND,
   buildMemorizationTokens,
@@ -79,9 +80,13 @@ export default function MemorizationPracticeSession({
   onPersistInProgress,
   onClearInProgress,
 }: MemorizationPracticeSessionProps) {
+  const practiceVerseText = useMemo(
+    () => normalizeApiBibleStoredText(verse.translation, verse.text),
+    [verse.translation, verse.text]
+  )
   const tokens = useMemo(
-    () => buildMemorizationTokens(verse.text, verse.reference),
-    [verse.text, verse.reference]
+    () => buildMemorizationTokens(practiceVerseText, verse.reference),
+    [practiceVerseText, verse.reference]
   )
   const typableIndices = useMemo(() => getTypableTokenIndices(tokens), [tokens])
   /** Hide IME field outside the verse scroller so Android does not scrollTo focused input (top of column). */

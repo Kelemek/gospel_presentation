@@ -86,7 +86,8 @@ async function fetchFromApiBible(
   }
 
   const base = (process.env.API_BIBLE_BASE_URL || 'https://rest.api.bible').replace(/\/$/, '')
-  const url = `${base}/v1/bibles/${encodeURIComponent(bibleId)}/passages/${encodeURIComponent(passageId)}?content-type=text&include-verse-numbers=true`
+  /** `include-titles=false` omits publisher section titles (API.Bible still may mix markup; `formatApiBiblePassageText` normalizes). */
+  const url = `${base}/v1/bibles/${encodeURIComponent(bibleId)}/passages/${encodeURIComponent(passageId)}?content-type=text&include-verse-numbers=true&include-titles=false`
 
   const response = await fetch(url, {
     headers: {
@@ -107,9 +108,14 @@ async function fetchFromApiBible(
     throw new Error('Scripture text not found')
   }
 
+  const text = formatApiBiblePassageText(content)
+  if (!text.trim()) {
+    throw new Error('Scripture text not found')
+  }
+
   return {
     reference: reference.trim(),
-    text: formatApiBiblePassageText(content),
+    text,
     translation,
   }
 }
