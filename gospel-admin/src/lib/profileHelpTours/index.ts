@@ -38,6 +38,12 @@ const BIBLE_TRANSLATION_PANEL = '[data-tour="bible-translation-panel"]'
 const TOC_MEMORIZE_TOGGLE = '[data-tour="toc-memorize-toggle"]'
 const MEMORIZE_ADD_VERSE = '[data-tour="memorize-add-verse"]'
 const MEMORIZE_PANEL = '[data-tour="memorize-panel"]'
+const ADD_MEMORIZE_MODAL = '[data-tour="add-memorize-modal"]'
+const ADD_MEMORIZE_TESTAMENTS = '[data-tour="add-memorize-testaments"]'
+const ADD_MEMORIZE_BOOK = '[data-tour="add-memorize-book"]'
+const ADD_MEMORIZE_CHAPTER = '[data-tour="add-memorize-chapter"]'
+const ADD_MEMORIZE_VERSE = '[data-tour="add-memorize-verse"]'
+const ADD_MEMORIZE_ADD = '[data-tour="add-memorize-add"]'
 const MEMORIZE_PRACTICE_DIALOG = '[data-tour="memorize-practice-dialog"]'
 const MEMORIZE_START_PRACTICE = '[data-tour="memorize-start-practice"]'
 const MEMORIZE_PRACTICE_CLOSE = '[data-tour="memorize-practice-close"]'
@@ -1348,21 +1354,6 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
       },
     },
     {
-      element: MEMORIZE_ADD_VERSE,
-      popover: {
-        title: 'Add a verse from the menu',
-        description:
-          'Tap <strong>+ Add</strong> to pick a book, chapter, and verse range in your current Bible translation—without opening the Scripture reader. Use <strong>Next</strong> to continue and see your memorization list.',
-        ...pop({ side: 'right', align: 'start' }),
-        onNextClick: (_e, _s, { driver: drv }) => {
-          window.setTimeout(() => {
-            drv.refresh()
-            drv.moveNext()
-          }, 120)
-        },
-      },
-    },
-    {
       element: MEMORIZE_PANEL,
       popover: {
         title: 'Your memorization list',
@@ -1543,6 +1534,245 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
           closeProfileSlideoutMenuIfOpen()
           window.setTimeout(() => {
             closeProfileSlideoutMenuIfOpen()
+            drv.destroy()
+          }, 0)
+        },
+      },
+    },
+  ]
+
+  const d = createProfileHelpDriver({
+    ...baseProfileHelpDriverConfig(options),
+    stagePadding: narrow ? 14 : 10,
+    popoverOffset: narrow ? 26 : 10,
+    ...(narrow
+      ? {
+          onHighlighted: (element, _step, { driver: drv }) => {
+            if (element instanceof HTMLElement && element !== document.body) {
+              element.scrollIntoView({
+                block: 'center',
+                inline: 'nearest',
+                behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+              })
+            }
+            window.requestAnimationFrame(() => {
+              window.requestAnimationFrame(() => {
+                window.setTimeout(() => drv.refresh(), prefersReducedMotion() ? 0 : 140)
+              })
+            })
+          },
+        }
+      : {}),
+    showProgress: true,
+    steps: prependSegmentIntroIfAny(options, steps),
+  })
+
+  d.drive()
+}
+
+/** Dismiss the Add Memorized Verse picker by sending Escape (its window keydown listener closes on Escape). */
+function closeAddMemorizeModalIfOpen(): void {
+  if (typeof document === 'undefined') return
+  if (!document.querySelector(ADD_MEMORIZE_MODAL)) return
+  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+}
+
+/**
+ * Add Custom Memorization tour: walks through **Menu** → **Memorize** → **+ Add**, explains the picker’s
+ * testaments, auto-picks a book, chapter, and verse, then highlights **Add**. The tour does not submit;
+ * closing the modal cleans up without persisting a new memorized verse.
+ */
+export function runAddCustomMemorizationFeatureTour(options?: ProfileFeatureTourOptions): void {
+  const narrow = isNarrowProfileHelpTourViewport()
+  const pop = (
+    wide: { side: Side; align: Alignment },
+    narrowOverride?: { side: Side; align: Alignment }
+  ): { side: Side; align: Alignment } =>
+    narrow ? (narrowOverride ?? { side: 'bottom', align: 'center' }) : wide
+
+  closeProfileSlideoutMenuIfOpen()
+  closeBookmarksPanelIfOpen()
+  closeAddMemorizeModalIfOpen()
+
+  const steps: DriveStep[] = [
+    {
+      element: PROFILE_MENU_BUTTON,
+      popover: {
+        title: 'Menu',
+        description:
+          'Tap <strong>Menu</strong> (top-left) to open the slide-out. <strong>Memorize</strong> sits just below <strong>Bible Translation</strong>. Use <strong>Next</strong> to open the menu for this tour.',
+        side: 'bottom',
+        align: 'start',
+        onNextClick: (_e, _s, { driver: drv }) => {
+          openProfileMenuIfClosed()
+          window.setTimeout(() => {
+            drv.refresh()
+            drv.moveNext()
+          }, 380)
+        },
+      },
+    },
+    {
+      element: TOC_MEMORIZE_TOGGLE,
+      popover: {
+        title: 'Memorize',
+        description:
+          'Tap <strong>Memorize</strong> to show your saved verses and reveal the <strong>+ Add</strong> button for adding new passages. Use <strong>Next</strong> to expand it for this tour.',
+        ...pop({ side: 'right', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          openMemorizePanelIfCollapsed()
+          window.setTimeout(() => {
+            drv.refresh()
+            drv.moveNext()
+          }, 220)
+        },
+      },
+    },
+    {
+      element: MEMORIZE_ADD_VERSE,
+      popover: {
+        title: '+ Add',
+        description:
+          'Tap <strong>+ Add</strong> to open a picker for <strong>any</strong> book, chapter, and verse range—without opening the Scripture reader. Text is loaded in your <strong>current Bible translation</strong>. Use <strong>Next</strong> to open the picker for this tour.',
+        ...pop({ side: 'right', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          const btn = document.querySelector<HTMLElement>(MEMORIZE_ADD_VERSE)
+          if (!btn) {
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, 120)
+            return
+          }
+          btn.click()
+          void waitUntil(() => !!document.querySelector(ADD_MEMORIZE_MODAL), 6000).then(() => {
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, prefersReducedMotion() ? 80 : 200)
+          })
+        },
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(ADD_MEMORIZE_TESTAMENTS) ??
+        document.querySelector(ADD_MEMORIZE_MODAL) ??
+        document.body,
+      popover: {
+        title: 'Old or New Testament',
+        description:
+          'Start by choosing a <strong>testament</strong>. <strong>Old Testament</strong> lists <strong>Genesis → Malachi</strong>; <strong>New Testament</strong> lists <strong>Matthew → Revelation</strong>. The book list below updates to match. Use <strong>Next</strong> to continue with the <strong>Old Testament</strong> for this tour.',
+        ...pop({ side: 'bottom', align: 'center' }),
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(ADD_MEMORIZE_BOOK) ??
+        document.querySelector(ADD_MEMORIZE_MODAL) ??
+        document.body,
+      popover: {
+        title: 'Choose a book',
+        description:
+          'Each row is a <strong>book</strong> of the Bible. Tap one to reveal its <strong>chapters</strong> (long books scroll inside the list). Use <strong>Next</strong> to open <strong>Genesis</strong> for this tour.',
+        ...pop({ side: 'right', align: 'start' }, { side: 'bottom', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          const bookBtn = document.querySelector<HTMLElement>(ADD_MEMORIZE_BOOK)
+          if (!bookBtn) {
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, 120)
+            return
+          }
+          bookBtn.click()
+          void waitUntil(() => !!document.querySelector(ADD_MEMORIZE_CHAPTER), 4000).then(() => {
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, prefersReducedMotion() ? 80 : 200)
+          })
+        },
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(ADD_MEMORIZE_CHAPTER) ??
+        document.querySelector(ADD_MEMORIZE_MODAL) ??
+        document.body,
+      popover: {
+        title: 'Choose a chapter',
+        description:
+          'Each number is a <strong>chapter</strong>. Tap one and the <strong>verses</strong> for that chapter appear below. Use <strong>Next</strong> to pick <strong>chapter 1</strong> for this tour.',
+        ...pop({ side: 'right', align: 'start' }, { side: 'bottom', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          const chapterBtn = document.querySelector<HTMLElement>(ADD_MEMORIZE_CHAPTER)
+          if (!chapterBtn) {
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, 120)
+            return
+          }
+          chapterBtn.click()
+          void waitUntil(() => !!document.querySelector(ADD_MEMORIZE_VERSE), 4000).then(() => {
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, prefersReducedMotion() ? 80 : 200)
+          })
+        },
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(ADD_MEMORIZE_VERSE) ??
+        document.querySelector(ADD_MEMORIZE_MODAL) ??
+        document.body,
+      popover: {
+        title: 'Choose a verse',
+        description:
+          'Tap one verse to pick a <strong>single verse</strong>; tap a <strong>second</strong> verse to set a <strong>range</strong>. Tapping outside the range starts a new selection. Use <strong>Next</strong> to pick <strong>verse 1</strong> for this tour.',
+        ...pop({ side: 'right', align: 'start' }, { side: 'bottom', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          const verseBtn = document.querySelector<HTMLElement>(ADD_MEMORIZE_VERSE)
+          if (!verseBtn) {
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, 120)
+            return
+          }
+          verseBtn.click()
+          void waitUntil(
+            () => {
+              const addBtn = document.querySelector<HTMLButtonElement>(ADD_MEMORIZE_ADD)
+              return !!addBtn && !addBtn.disabled
+            },
+            2000
+          ).then(() => {
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, prefersReducedMotion() ? 80 : 200)
+          })
+        },
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(ADD_MEMORIZE_ADD) ??
+        document.querySelector(ADD_MEMORIZE_MODAL) ??
+        document.body,
+      popover: {
+        title: 'Add',
+        description:
+          'Tap <strong>Add</strong> to save the passage. The app loads the text from your current translation and stores <strong>reference</strong>, <strong>text</strong>, and <strong>translation</strong> on this device. Duplicates (same reference and translation) are rejected. <strong>Done</strong> closes this tour without adding the verse.',
+        ...pop({ side: 'top', align: 'center' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          closeAddMemorizeModalIfOpen()
+          closeProfileSlideoutMenuIfOpen()
+          window.setTimeout(() => {
             drv.destroy()
           }, 0)
         },
@@ -2725,6 +2955,14 @@ const FULL_WALKTHROUGH_SEGMENTS: Array<{
       title: 'Verse memorization',
       description:
         'Open a scripture card, save with Memorize in the reader, open the Memorize list, start practice from the verse row (intro + round 1), then remove the verse we add for this tour.',
+    },
+  },
+  {
+    run: runAddCustomMemorizationFeatureTour,
+    intro: {
+      title: 'Add custom memorization',
+      description:
+        'Open Menu → Memorize → + Add to pick any book, chapter, and verse (Genesis 1:1 for this tour), then the Add button—no verse is actually saved.',
     },
   },
   {

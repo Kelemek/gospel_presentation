@@ -5,6 +5,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { createPortal } from 'react-dom'
 import { bookmarksPanelStyleFromTrigger } from '@/components/BookmarksDropdown'
 import {
+  runAddCustomMemorizationFeatureTour,
   runBibleTranslationFeatureTour,
   runBookmarksFeatureTour,
   runFullProfileHelpTutorial,
@@ -32,6 +33,7 @@ export type ProfileTutorialId =
   | 'bibleTranslation'
   | 'scriptureModal'
   | 'memorize'
+  | 'addCustomMemorization'
   | 'scriptureHoverPreview'
   | 'marriageSeminar'
   | 'theme'
@@ -48,7 +50,7 @@ const TUTORIALS: TutorialItem[] = [
     id: 'full',
     label: 'Full walkthrough',
     description:
-      'All tutorials in order—bookmarks, theme, menu, scripture, verse memorization, then marriage seminar',
+      'All tutorials in order—bookmarks, theme, menu, scripture, verse memorization, add custom memorization, then marriage seminar',
     run: runFullProfileHelpTutorial,
   },
   {
@@ -104,6 +106,12 @@ const TUTORIALS: TutorialItem[] = [
     label: 'Verse memorization',
     description: 'Save a verse in the reader, open Memorize in the menu, then remove it',
     run: runMemorizeFeatureTour,
+  },
+  {
+    id: 'addCustomMemorization',
+    label: 'Add custom memorization',
+    description: 'Pick any book, chapter, and verse from the menu to add to your memorization list',
+    run: runAddCustomMemorizationFeatureTour,
   },
   {
     id: 'scriptureHoverPreview',

@@ -234,6 +234,7 @@ export default function AddMemorizedVerseModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="add-memorized-verse-title"
+      data-tour="add-memorize-modal"
       onClick={onClose}
     >
       <div
@@ -258,7 +259,10 @@ export default function AddMemorizedVerseModal({
 
         <div className="flex-1 min-h-0 flex flex-col">
           <div className="shrink-0 px-3 pt-3">
-            <div className="flex rounded-lg border border-slate-200 dark:border-slate-600 p-0.5 bg-slate-100 dark:bg-slate-900/50 mb-3">
+            <div
+              data-tour="add-memorize-testaments"
+              className="flex rounded-lg border border-slate-200 dark:border-slate-600 p-0.5 bg-slate-100 dark:bg-slate-900/50 mb-3"
+            >
               <button
                 type="button"
                 onClick={() => setTestament('ot')}
@@ -299,6 +303,8 @@ export default function AddMemorizedVerseModal({
                   >
                     <button
                       type="button"
+                      data-tour="add-memorize-book"
+                      data-add-memorize-book-id={book.id}
                       onClick={() => {
                         if (open) {
                           setExpandedBookId(null)
@@ -337,6 +343,8 @@ export default function AddMemorizedVerseModal({
                                 <button
                                   key={ch.id}
                                   type="button"
+                                  data-tour="add-memorize-chapter"
+                                  data-add-memorize-chapter-number={num}
                                   onClick={() => onChapterClick(book, ch.id, num)}
                                   className={`min-h-[48px] w-full min-w-0 rounded-lg text-sm font-medium border transition-colors touch-manipulation ${
                                     selected
@@ -361,6 +369,8 @@ export default function AddMemorizedVerseModal({
                                     <button
                                       key={n}
                                       type="button"
+                                      data-tour="add-memorize-verse"
+                                      data-add-memorize-verse-number={n}
                                       onClick={() => onVerseClick(n)}
                                       className={`min-h-[48px] w-full min-w-0 rounded-lg text-sm font-medium border transition-colors touch-manipulation ${
                                         on
@@ -388,6 +398,7 @@ export default function AddMemorizedVerseModal({
         <div className="shrink-0 border-t border-slate-200 dark:border-slate-600 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] bg-slate-50 dark:bg-slate-900/40">
           <button
             type="button"
+            data-tour="add-memorize-add"
             disabled={!canAdd}
             onClick={() => void onAdd()}
             className="w-full min-h-[48px] rounded-lg font-medium border border-blue-300 dark:border-blue-600 bg-blue-100 text-blue-900 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-100 dark:hover:bg-blue-900/65 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
