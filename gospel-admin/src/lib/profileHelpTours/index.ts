@@ -36,6 +36,7 @@ const TOC_PRINT_VERSION = '[data-tour="toc-print-version"]'
 const TOC_BIBLE_TRANSLATION_TOGGLE = '[data-tour="toc-bible-translation-toggle"]'
 const BIBLE_TRANSLATION_PANEL = '[data-tour="bible-translation-panel"]'
 const TOC_MEMORIZE_TOGGLE = '[data-tour="toc-memorize-toggle"]'
+const MEMORIZE_ADD_VERSE = '[data-tour="memorize-add-verse"]'
 const MEMORIZE_PANEL = '[data-tour="memorize-panel"]'
 const MEMORIZE_PRACTICE_DIALOG = '[data-tour="memorize-practice-dialog"]'
 const MEMORIZE_START_PRACTICE = '[data-tour="memorize-start-practice"]'
@@ -1198,7 +1199,7 @@ async function runBibleTranslationFeatureTourAsync(options?: ProfileFeatureTourO
 
 /**
  * Verse memorization tour: opens a scripture **card**, saves with **Memorize** in the reader, opens **Menu** → **Memorize**,
- * explains the list, opens practice from the **verse row** for a short preview (intro + round 1), closes it, then removes the tour verse with the **trash** control (with confirm).
+ * highlights **+ Add** (picker without the reader), explains the list, opens practice from the **verse row** for a short preview (intro + round 1), closes it, then removes the tour verse with the **trash** control (with confirm).
  *
  * When not on `/default`, stores resume state and navigates there first (`ProfilePageClient` calls `tryStartMemorizeTourAfterNavigation`).
  */
@@ -1343,6 +1344,21 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
             drv.refresh()
             drv.moveNext()
           }, 220)
+        },
+      },
+    },
+    {
+      element: MEMORIZE_ADD_VERSE,
+      popover: {
+        title: 'Add a verse from the menu',
+        description:
+          'Tap <strong>+ Add</strong> to pick a book, chapter, and verse range in your current Bible translation—without opening the Scripture reader. Use <strong>Next</strong> to continue and see your memorization list.',
+        ...pop({ side: 'right', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          window.setTimeout(() => {
+            drv.refresh()
+            drv.moveNext()
+          }, 120)
         },
       },
     },

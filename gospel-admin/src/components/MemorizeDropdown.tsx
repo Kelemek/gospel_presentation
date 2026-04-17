@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import AddMemorizedVerseModal from '@/components/AddMemorizedVerseModal'
 import MemorizationPracticeSession from '@/components/MemorizationPracticeSession'
 import { useAlertModal } from '@/contexts/AlertModalContext'
+import { useTranslation } from '@/contexts/TranslationContext'
 import {
   GOSPEL_MEMORIZATION_CHANGED_EVENT,
   clearMemorizationInProgress,
@@ -51,7 +53,9 @@ export default function MemorizeDropdown({
   onMemorizationPracticeStart,
 }: MemorizeDropdownProps) {
   const { showConfirm } = useAlertModal()
+  const { translation } = useTranslation()
   const [isOpen, setIsOpen] = useState(false)
+  const [addVerseOpen, setAddVerseOpen] = useState(false)
   const [verses, setVerses] = useState<MemorizedVerse[]>(() => loadMemorizedVerses())
   const [practiceVerse, setPracticeVerse] = useState<MemorizedVerse | null>(null)
 
@@ -154,7 +158,7 @@ export default function MemorizeDropdown({
 
   return (
     <>
-      <div data-tour="toc-memorize-section">
+      <div data-tour="toc-memorize-section" className="flex flex-col gap-3">
         <button
           type="button"
           data-tour="toc-memorize-toggle"
@@ -183,15 +187,25 @@ export default function MemorizeDropdown({
           </span>
         </button>
         {isOpen && (
+          <button
+            type="button"
+            data-tour="memorize-add-verse"
+            onClick={() => setAddVerseOpen(true)}
+            className="w-full min-h-[44px] rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/40 px-4 py-2.5 text-sm font-medium text-blue-800 dark:text-blue-100 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+          >
+            + Add
+          </button>
+        )}
+        {isOpen && (
           <div
             data-tour="memorize-panel"
-            className="mt-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-sm overflow-hidden p-3 max-h-[min(70vh,480px)] overflow-y-auto"
+            className="border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-sm overflow-hidden p-3 max-h-[min(70vh,480px)] overflow-y-auto"
             role="region"
             aria-label="Memorization list"
           >
             {verses.length === 0 ? (
               <p className="text-sm text-slate-500 dark:text-slate-400 px-1 py-2">
-                No verses saved yet. Open a scripture and choose &quot;Memorize this verse&quot; to add one.
+                No verses saved yet. Use <strong className="font-medium text-slate-600 dark:text-slate-300">+ Add</strong> above, or open a scripture and choose &quot;Memorize this verse&quot;.
               </p>
             ) : (
               <>
@@ -203,6 +217,20 @@ export default function MemorizeDropdown({
           </div>
         )}
       </div>
+
+      {addVerseOpen &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <AddMemorizedVerseModal
+            isOpen={addVerseOpen}
+            onClose={() => {
+              setAddVerseOpen(false)
+              refresh()
+            }}
+            translation={translation}
+          />,
+          document.body
+        )}
 
       {!onMemorizationPracticeStart &&
         practiceVerse &&

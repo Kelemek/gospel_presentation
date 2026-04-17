@@ -13,6 +13,17 @@ import {
 
 const mockShowConfirm = jest.fn()
 
+jest.mock('@/contexts/TranslationContext', () => ({
+  useTranslation: () => ({ translation: 'esv' }),
+}))
+
+jest.mock('@/components/AddMemorizedVerseModal', () => ({
+  __esModule: true,
+  default: function MockAddVerseModal({ isOpen }: { isOpen: boolean }) {
+    return isOpen ? <div data-testid="add-memorized-verse-modal" /> : null
+  },
+}))
+
 jest.mock('@/contexts/AlertModalContext', () => ({
   useAlertModal: () => ({
     showConfirm: mockShowConfirm,
@@ -37,6 +48,21 @@ describe('MemorizeDropdown', () => {
     render(<MemorizeDropdown />)
     await user.click(screen.getByRole('button', { name: /memorize/i }))
     expect(screen.getByText(/No verses saved yet/i)).toBeInTheDocument()
+  })
+
+  it('shows + Add when Memorize panel is expanded', async () => {
+    const user = userEvent.setup()
+    render(<MemorizeDropdown />)
+    await user.click(screen.getByRole('button', { name: /memorize/i }))
+    expect(screen.getByRole('button', { name: /^\+ Add$/i })).toBeInTheDocument()
+  })
+
+  it('opens add-verse modal when + Add is clicked', async () => {
+    const user = userEvent.setup()
+    render(<MemorizeDropdown />)
+    await user.click(screen.getByRole('button', { name: /memorize/i }))
+    await user.click(screen.getByRole('button', { name: /^\+ Add$/i }))
+    expect(screen.getByTestId('add-memorized-verse-modal')).toBeInTheDocument()
   })
 
   it('lists verses grouped by mastery', async () => {
