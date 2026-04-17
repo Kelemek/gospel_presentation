@@ -11,23 +11,39 @@ describe('ScriptureModal additional behaviors', () => {
     onClose: jest.fn(),
   }
 
+  const defaultFetchSuccess = {
+    ok: true,
+    json: () => Promise.resolve({ text: 'Initial scripture text' }),
+  } as unknown as Response
+
   beforeEach(() => {
-    mockFetch.mockClear()
+    mockFetch.mockReset()
     jest.clearAllMocks()
-    // default initial scripture fetch
-    mockFetch.mockResolvedValue({ ok: true, json: () => Promise.resolve({ text: 'Initial scripture text' }) } as unknown as Response)
+    mockFetch.mockResolvedValue(defaultFetchSuccess)
   })
 
   it('fetches chapter context and highlights verses with ids', async () => {
     const user = userEvent.setup()
 
-  // Explicitly provide the two fetch responses in order:
-  // 1) initial scripture fetch
-  mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ text: 'Initial scripture text' }) } as unknown as Response)
-  // 2) chapter context response - include verse markers [1] and [2]
-  mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ text: '[1] In the beginning\n\n[2] And then' }) } as unknown as Response)
+    /** Verse fetch uses reference like Genesis%201%3A1-2; chapter context uses Genesis 1 only (no %3A). Strict Mode runs effects twice, so queue-based mocks are wrong. */
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (url.includes('Genesis%201%3A')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ text: 'Initial scripture text' }),
+        } as unknown as Response)
+      }
+      if (url.includes('reference=Genesis%201&')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ text: '[1] In the beginning\n\n[2] And then' }),
+        } as unknown as Response)
+      }
+      return Promise.resolve(defaultFetchSuccess)
+    })
 
-  const { container } = render(<ScriptureModal {...defaultProps} />)
+    const { container } = render(<ScriptureModal {...defaultProps} />)
 
     // Wait for component to mount and show controls
     await waitFor(() =>
@@ -40,14 +56,12 @@ describe('ScriptureModal additional behaviors', () => {
     // Wait for chapter-content to render
     await waitFor(() => expect(container.querySelector('#chapter-content')).toBeInTheDocument())
 
-  // The processed HTML should include the chapter content and highlighted verse markers
-  const chapterContent = container.querySelector('#chapter-content')
-  expect(chapterContent).toBeTruthy()
-  const inner = chapterContent?.innerHTML || ''
+    const chapterContent = container.querySelector('#chapter-content')
+    expect(chapterContent).toBeTruthy()
+    const inner = chapterContent?.innerHTML || ''
 
-  // Should include the original verse text and the sup/verse markers after processing
-  expect(inner).toMatch(/In the beginning/)
-  expect(inner).toMatch(/And then/)
+    expect(inner).toMatch(/In the beginning/)
+    expect(inner).toMatch(/And then/)
   })
 
   it('calls onScriptureViewed after successful scripture fetch', async () => {
@@ -94,5 +108,52 @@ describe('ScriptureModal additional behaviors', () => {
     fireEvent.touchEnd(scrollArea, { changedTouches: [{ clientX: 200 }] })
 
     expect(onPrevious).toHaveBeenCalled()
+  })
+
+  it('chapter context highlight includes verse after publisher footnote markers like [1] (NLT)', async () => {
+    const user = userEvent.setup()
+
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (url.includes('Psalm%2023%3A')) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              text: '[4] Even when I walk [1] through the darkest valley, I will not be afraid. Your rod and your staff protect and comfort me.',
+            }),
+        } as unknown as Response)
+      }
+      if (url.includes('reference=Psalm%2023&')) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              text:
+                '[4] Even when I walk [1] through the darkest valley, I will not be afraid. Your rod and your staff protect and comfort me.\n\n[5] You prepare a table before me in the presence of my enemies.',
+            }),
+        } as unknown as Response)
+      }
+      return Promise.resolve(defaultFetchSuccess)
+    })
+
+    const { container } = render(
+      <ScriptureModal reference="Psalm 23:4" isOpen={true} onClose={jest.fn()} />
+    )
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /Psalm 23:4/ })).toBeInTheDocument()
+    )
+
+    await user.click(screen.getByText(/Chapter Context/))
+
+    await waitFor(() => expect(container.querySelector('#chapter-content')).toBeInTheDocument())
+
+    const chapterContent = container.querySelector('#chapter-content')
+    const inner = chapterContent?.innerHTML ?? ''
+    expect(inner).toMatch(/through the darkest valley/)
+    expect(inner).toMatch(/Your rod and your staff/)
+    const verseBlock = container.querySelector('#verse-4')
+    expect(verseBlock?.textContent).toMatch(/through the darkest valley/)
   })
 })

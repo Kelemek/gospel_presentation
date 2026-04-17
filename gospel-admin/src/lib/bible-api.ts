@@ -86,7 +86,7 @@ async function fetchFromApiBible(
   }
 
   const base = (process.env.API_BIBLE_BASE_URL || 'https://rest.api.bible').replace(/\/$/, '')
-  /** `include-titles=false` omits publisher section titles (API.Bible still may mix markup; `formatApiBiblePassageText` normalizes). */
+  /** `include-titles=false` asks API.Bible not to add section titles in passage content (see API reference). */
   const url = `${base}/v1/bibles/${encodeURIComponent(bibleId)}/passages/${encodeURIComponent(passageId)}?content-type=text&include-verse-numbers=true&include-titles=false`
 
   const response = await fetch(url, {

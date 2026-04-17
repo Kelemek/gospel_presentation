@@ -25,7 +25,6 @@ import {
   isMemorizeAndroidWebHost,
   isMemorizeIosWebHost,
 } from '@/lib/memorizationViewportPlatform'
-import { normalizeApiBibleStoredText } from '@/lib/api-bible-format'
 import {
   MEMORIZATION_FULL_HIDE_ROUND,
   buildMemorizationTokens,
@@ -80,13 +79,14 @@ export default function MemorizationPracticeSession({
   onPersistInProgress,
   onClearInProgress,
 }: MemorizationPracticeSessionProps) {
-  const practiceVerseText = useMemo(
-    () => normalizeApiBibleStoredText(verse.translation, verse.text),
-    [verse.translation, verse.text]
-  )
+  /**
+   * `verse.text` is whatever was saved when the verse was added (from `/api/scripture`).
+   * API.Bible-backed fetches use `include-titles=false` and a verse-scoped passage id, so
+   * section headings are not part of the payload; practice does not need a second pass to strip titles.
+   */
   const tokens = useMemo(
-    () => buildMemorizationTokens(practiceVerseText, verse.reference),
-    [practiceVerseText, verse.reference]
+    () => buildMemorizationTokens(verse.text, verse.reference),
+    [verse.text, verse.reference]
   )
   const typableIndices = useMemo(() => getTypableTokenIndices(tokens), [tokens])
   /** Hide IME field outside the verse scroller so Android does not scrollTo focused input (top of column). */
@@ -103,8 +103,6 @@ export default function MemorizationPracticeSession({
   /** Latest totals for persist / onComplete without churning callbacks on every wrong key. */
   const wrongAttemptsRef = useRef(0)
   const correctKeystrokesRef = useRef(0)
-  wrongAttemptsRef.current = wrongAttemptsTotal
-  correctKeystrokesRef.current = correctKeystrokesTotal
   const [flashError, setFlashError] = useState(false)
   const [hintHeld, setHintHeld] = useState(false)
   /** While hint is held: how many unrevealed blanks (left-to-right) to peek, starting at 1; +1 each tick. */
@@ -112,7 +110,6 @@ export default function MemorizationPracticeSession({
   /** Rounds 1–4: all blanks filled; show Repeat/Next in modal footer without leaving the verse view. */
   const [awaitingRoundAdvance, setAwaitingRoundAdvance] = useState(false)
   const awaitingRoundAdvanceRef = useRef(false)
-  awaitingRoundAdvanceRef.current = awaitingRoundAdvance
   const [roundAffirmation, setRoundAffirmation] = useState('')
   const [completionMessage, setCompletionMessage] = useState('')
   const completedRef = useRef(false)
@@ -125,6 +122,12 @@ export default function MemorizationPracticeSession({
   const assignPracticeInputRef = useCallback((node: HTMLInputElement | null) => {
     practiceInputRef.current = node
   }, [])
+
+  useLayoutEffect(() => {
+    wrongAttemptsRef.current = wrongAttemptsTotal
+    correctKeystrokesRef.current = correctKeystrokesTotal
+    awaitingRoundAdvanceRef.current = awaitingRoundAdvance
+  }, [wrongAttemptsTotal, correctKeystrokesTotal, awaitingRoundAdvance])
   /**
    * On Android, Chrome scrolls the overflow column during the keyboard-open animation,
    * overriding our scrollTop=0. This timestamp lets a scroll-event listener clamp the
@@ -293,8 +296,6 @@ export default function MemorizationPracticeSession({
     if (!ip) return
 
     sessionSeedRef.current = ip.sessionSeed
-    setWrongAttemptsTotal(ip.wrongAttempts)
-    setCorrectKeystrokesTotal(ip.correctKeystrokes)
     completedRef.current = false
 
     if (ip.phase.kind === 'betweenRounds') {
@@ -303,30 +304,36 @@ export default function MemorizationPracticeSession({
       const seed = sessionSeedRef.current
       const localHidden = pickHiddenWordIndices(typableIndices.length, r, seed)
       const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
-      setRoundIndex(r)
-      setHasTypedInRound(false)
-      setHiddenIndices(hidden)
-      setRevealed(new Set(hidden))
-      setConsecutiveWrong(0)
-      setAwaitingRoundAdvance(true)
-      setRoundAffirmation(pickRandomRoundAffirmation())
-      setPhase('practicing')
+      startTransition(() => {
+        setWrongAttemptsTotal(ip.wrongAttempts)
+        setCorrectKeystrokesTotal(ip.correctKeystrokes)
+        setRoundIndex(r)
+        setHasTypedInRound(false)
+        setHiddenIndices(hidden)
+        setRevealed(new Set(hidden))
+        setConsecutiveWrong(0)
+        setAwaitingRoundAdvance(true)
+        setRoundAffirmation(pickRandomRoundAffirmation())
+        setPhase('practicing')
+      })
     } else {
       roundAdvanceHandledRef.current = null
       const r = ip.phase.roundIndex
       const localHidden = pickHiddenWordIndices(typableIndices.length, r, sessionSeedRef.current)
       const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
       if (memorizeAndroidHost) androidScrollClampUntilRef.current = Date.now() + ANDROID_SCROLL_CLAMP_MS
-      setRoundIndex(r)
-      setHasTypedInRound(false)
-      setHiddenIndices(hidden)
-      setRevealed(new Set())
-      setConsecutiveWrong(0)
-      setAwaitingRoundAdvance(false)
-      setRoundAffirmation('')
-      setPhase('practicing')
-      setWrongAttemptsTotal(ip.wrongAttempts)
-      setCorrectKeystrokesTotal(ip.correctKeystrokes)
+      startTransition(() => {
+        setWrongAttemptsTotal(ip.wrongAttempts)
+        setCorrectKeystrokesTotal(ip.correctKeystrokes)
+        setRoundIndex(r)
+        setHasTypedInRound(false)
+        setHiddenIndices(hidden)
+        setRevealed(new Set())
+        setConsecutiveWrong(0)
+        setAwaitingRoundAdvance(false)
+        setRoundAffirmation('')
+        setPhase('practicing')
+      })
     }
     requestAnimationFrame(() => {
       if (isMemorizeAndroidWebHost() && practiceScrollRef.current) {

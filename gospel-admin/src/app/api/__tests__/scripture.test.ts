@@ -124,6 +124,16 @@ describe('/api/scripture', () => {
     expect(data.error).toMatch(/Scripture reference is required/i)
   })
 
+  it('returns 400 when reference is only whitespace', async () => {
+    const req = new NextRequest(
+      `http://localhost:3000/api/scripture?reference=${encodeURIComponent('   ')}`
+    )
+    const res = await GET(req as any)
+    const data = await res.json()
+    expect(res.status).toBe(400)
+    expect(data.error).toMatch(/Scripture reference is required/i)
+  })
+
   it('returns 400 for invalid translation', async () => {
     const req = new NextRequest('http://localhost:3000/api/scripture?reference=John+3:16&translation=invalid')
     const res = await GET(req as any)
@@ -223,6 +233,59 @@ describe('/api/scripture', () => {
     expect(data.reference).toBe('John 3:16')
     expect(data.cached).toBe(true)
     expect(data.text).toBe('For God so loved the world...')
+  })
+
+  it('returns trimmed reference on cache hit (same shape as cache miss)', async () => {
+    process.env.ESV_API_TOKEN = 'test-token'
+
+    mockSupabaseClient.from = jest.fn((table: string) => {
+      if (table === 'scripture_cache') {
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                gte: jest.fn().mockReturnValue({
+                  maybeSingle: jest.fn().mockResolvedValue({
+                    data: { text: 'cached' },
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          }),
+          upsert: jest.fn().mockResolvedValue({
+            data: null,
+            error: null,
+          }),
+        }
+      }
+      return {}
+    })
+
+    const padded = '  John 3:16  '
+    const req = new NextRequest(
+      `http://localhost:3000/api/scripture?reference=${encodeURIComponent(padded)}`
+    )
+    const res = await GET(req as any)
+    const data = await res.json()
+    expect(res.status).toBe(200)
+    expect(data.reference).toBe('John 3:16')
+    expect(data.cached).toBe(true)
+  })
+
+  it('calls fetchScripture with trimmed reference on cache miss', async () => {
+    process.env.ESV_API_TOKEN = 'test-token'
+    const { fetchScripture } = require('@/lib/bible-api')
+
+    const padded = '  John 3:16  '
+    const req = new NextRequest(
+      `http://localhost:3000/api/scripture?reference=${encodeURIComponent(padded)}`
+    )
+    const res = await GET(req as any)
+    const data = await res.json()
+    expect(res.status).toBe(200)
+    expect(data.reference).toBe('John 3:16')
+    expect(fetchScripture).toHaveBeenCalledWith('John 3:16', 'esv')
   })
 
   it('caches KJV response and enforces translation cache limit', async () => {

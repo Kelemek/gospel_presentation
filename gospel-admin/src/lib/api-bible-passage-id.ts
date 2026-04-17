@@ -126,3 +126,14 @@ export function referenceToApiBiblePassageId(reference: string): string | null {
   }
   return startId
 }
+
+/**
+ * Stable key for `scripture_cache.reference`: same USFM passage id as API.Bible / {@link referenceToApiBiblePassageId}
+ * when the reference parses (unifies Psalm/Psalms, `:4a` → `:4`, en-dash ranges). Falls back to trimmed/suffix-stripped
+ * text if parsing fails.
+ */
+export function canonicalScriptureCacheReference(reference: string): string {
+  const passageId = referenceToApiBiblePassageId(reference)
+  if (passageId) return passageId
+  return reference.replace(/–/g, '-').replace(/(\d+)[a-z]+/g, '$1').trim()
+}

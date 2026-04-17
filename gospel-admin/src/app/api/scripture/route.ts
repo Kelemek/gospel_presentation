@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchScripture } from '@/lib/bible-api'
-import { normalizeApiBibleStoredText } from '@/lib/api-bible-format'
 import type { BibleTranslation } from '@/lib/bible-translations'
 import { isBibleTranslation } from '@/lib/bible-translations'
+import { normalizeScriptureCachedText } from '@/lib/api-bible-format'
+import { canonicalScriptureCacheReference } from '@/lib/api-bible-passage-id'
 import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getTotalCacheVerseCountForTranslation, getTotalEsvCacheVerseCount } from '@/lib/verse-counter'
@@ -10,6 +11,9 @@ import { logScriptureAccess, getSessionId } from '@/lib/scripture-logging'
 
 const ESV_CACHE_TTL_DAYS = parseInt(process.env.ESV_CACHE_TTL_DAYS || '30', 10)
 const API_BIBLE_CACHE_TTL_DAYS = parseInt(process.env.API_BIBLE_CACHE_TTL_DAYS || '14', 10)
+
+/** Do not HTTP-cache JSON; `scripture_cache` already dedupes. Public max-age was serving stale bodies after fixes. */
+const SCRIPTURE_HTTP_HEADERS = { 'Cache-Control': 'private, no-store, must-revalidate' } as const
 
 /** ESV uses its own TTL; every other supported translation is API.Bible-backed and uses the shared cache TTL. */
 function cacheTtlDaysForTranslation(translation: BibleTranslation): number {
@@ -26,6 +30,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Scripture reference is required' }, { status: 400 })
   }
 
+  /** Align with `fetchScripture` / `ScriptureResult.reference` (always trimmed) so JSON matches on cache hit vs miss. */
+  const normalizedReference = reference.trim()
+  if (!normalizedReference) {
+    return NextResponse.json({ error: 'Scripture reference is required' }, { status: 400 })
+  }
+
   if (!isBibleTranslation(translation)) {
     return NextResponse.json(
       {
@@ -37,6 +47,8 @@ export async function GET(request: NextRequest) {
   }
 
   const sessionId = getSessionId(request)
+  /** One cache row per passage: USFM id when parseable (e.g. PSA.23.4), else normalized string. */
+  const cacheReference = canonicalScriptureCacheReference(normalizedReference)
 
   try {
     // Every valid translation uses scripture_cache + remote fetch (ESV API or API.Bible; KJV/NASB/LSB may DB-fallback inside fetchScripture).
@@ -48,42 +60,40 @@ export async function GET(request: NextRequest) {
     const { data: cachedData, error: cacheError } = await supabase
       .from('scripture_cache' as any)
       .select('text')
-      .eq('reference', reference)
+      .eq('reference', cacheReference)
       .eq('translation', translation)
       .gte('cached_at', cutoffDate.toISOString())
       .maybeSingle()
 
     if (cachedData && !cacheError) {
-      logger.debug(`✅ Cache hit: ${reference} (${translation})`)
+      logger.debug(`✅ Cache hit: ${cacheReference} (${translation}) for request ${normalizedReference}`)
 
       logScriptureAccess({
-        reference,
+        reference: normalizedReference,
         translation,
         sessionId,
         request,
       }).catch((err) => logger.warn('Failed to log scripture access:', err))
 
+      const cachedText = normalizeScriptureCachedText((cachedData as { text: string }).text)
+
       return NextResponse.json(
         {
-          reference,
-          text: normalizeApiBibleStoredText(translation, (cachedData as { text: string }).text),
+          reference: normalizedReference,
+          text: cachedText,
           translation,
           cached: true,
         },
-        {
-          headers: {
-            'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
-          },
-        }
+        { headers: SCRIPTURE_HTTP_HEADERS }
       )
     }
 
-    logger.debug(`❌ Cache miss: ${reference} (${translation}) - fetching from remote API`)
-    const result = await fetchScripture(reference, translation)
+    logger.debug(`❌ Cache miss: ${normalizedReference} (${translation}) - fetching from remote API`)
+    const result = await fetchScripture(normalizedReference, translation)
 
     const { error: insertError } = await (supabase.from('scripture_cache' as any).upsert as any)(
       {
-        reference,
+        reference: cacheReference,
         translation,
         text: result.text,
         cached_at: new Date().toISOString(),
@@ -96,7 +106,7 @@ export async function GET(request: NextRequest) {
     if (insertError) {
       logger.error('Failed to cache scripture:', insertError)
     } else {
-      logger.info(`💾 Cached: ${reference} (${translation})`)
+      logger.info(`💾 Cached: ${cacheReference} (${translation}) for request ${normalizedReference}`)
 
       if (translation === 'esv') {
         const totalVerses = await getTotalEsvCacheVerseCount(supabase)
@@ -135,7 +145,7 @@ export async function GET(request: NextRequest) {
     }
 
     logScriptureAccess({
-      reference,
+      reference: normalizedReference,
       translation,
       sessionId,
       request,
@@ -143,16 +153,12 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       {
-        reference: result.reference,
+        reference: normalizedReference,
         text: result.text,
         translation: result.translation,
         cached: false,
       },
-      {
-        headers: {
-          'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
-        },
-      }
+      { headers: SCRIPTURE_HTTP_HEADERS }
     )
   } catch (error) {
     logger.error('Scripture API error:', error)

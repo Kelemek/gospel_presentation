@@ -126,7 +126,7 @@ export default function AddMemorizedVerseModal({
     setSubmitting(true)
     try {
       const params = new URLSearchParams({ reference: ref, translation })
-      const res = await fetch(`/api/scripture?${params.toString()}`)
+      const res = await fetch(`/api/scripture?${params.toString()}`, { cache: 'no-store' })
       const data = (await res.json()) as { text?: string; error?: string }
       if (!res.ok) {
         throw new Error(data.error || 'Could not load scripture text')

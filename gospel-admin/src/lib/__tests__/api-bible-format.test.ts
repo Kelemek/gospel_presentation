@@ -1,4 +1,4 @@
-import { formatApiBiblePassageText, normalizeApiBibleStoredText } from '@/lib/api-bible-format'
+import { formatApiBiblePassageText, normalizeScriptureCachedText } from '@/lib/api-bible-format'
 
 describe('formatApiBiblePassageText', () => {
   it('preserves bracket verse markers', () => {
@@ -20,53 +20,37 @@ describe('formatApiBiblePassageText', () => {
     expect(formatApiBiblePassageText(raw)).toBe('[16] For God so loved [17] For God did not send')
   })
 
-  it('drops section heading lines between verse-numbered lines', () => {
+  it('keeps non-numbered lines (e.g. section headings) when normalizing line-based text', () => {
     const raw =
       '16 For God so loved the world\nThe Son of Man\n17 For God did not send the Son into the world'
     expect(formatApiBiblePassageText(raw)).toBe(
-      '[16] For God so loved the world [17] For God did not send the Son into the world'
+      '[16] For God so loved the world The Son of Man [17] For God did not send the Son into the world'
     )
   })
 
-  it('drops bracket-format section title lines between verses', () => {
+  it('preserves bracket-format lines and heading lines mixed in one passage', () => {
     const raw =
       '[1] In the beginning God created.\nThe Creation of Heaven and Earth\n[2] And the earth was'
     expect(formatApiBiblePassageText(raw)).toBe(
-      '[1] In the beginning God created. [2] And the earth was'
+      '[1] In the beginning God created. The Creation of Heaven and Earth [2] And the earth was'
     )
   })
 
-  it('drops inline CSB-style section title before verse (e.g. Deuteronomy 23:17)', () => {
+  it('does not strip publisher or verse content from bracket lines', () => {
     const raw =
       '[17] Cult Prostitution Forbidden. No Israelite woman is to be a cult prostitute, and no Israelite man is to be a cult prostitute.'
-    expect(formatApiBiblePassageText(raw)).toBe(
-      '[17] No Israelite woman is to be a cult prostitute, and no Israelite man is to be a cult prostitute.'
+    expect(formatApiBiblePassageText(raw)).toBe(raw.replace(/\s+/g, ' ').trim())
+  })
+
+  it('strips hash characters leaked around em/en dashes (API.Bible plain text)', () => {
+    const withHashes = '[4] your rod and your staff #\u2014 #they comfort me.'
+    expect(formatApiBiblePassageText(withHashes)).toBe(
+      '[4] your rod and your staff \u2014they comfort me.'
     )
   })
 
-  it('drops CSB inline title + typographic quote + trailing passage ref (API.Bible text shape)', () => {
-    const raw =
-      '[17] Cult Prostitution Forbidden \u201cNo Israelite woman is to be a cult prostitute, and no Israelite man is to be a cult prostitute. Deuteronomy 23:17'
-    expect(formatApiBiblePassageText(raw)).toBe(
-      '[17] No Israelite woman is to be a cult prostitute, and no Israelite man is to be a cult prostitute.'
-    )
-  })
-
-  it('normalizeApiBibleStoredText runs formatter for csb only', () => {
-    const raw =
-      '[17] Cult Prostitution Forbidden \u201cNo Israelite woman is to be a cult prostitute, and no Israelite man is to be a cult prostitute.'
-    expect(normalizeApiBibleStoredText('csb', raw)).toBe(
-      '[17] No Israelite woman is to be a cult prostitute, and no Israelite man is to be a cult prostitute.'
-    )
-    expect(normalizeApiBibleStoredText('esv', raw)).toBe(raw)
-  })
-
-  it('recovers verse when multi-line passage has no `[n]` lines (heading + quote + citation)', () => {
-    const raw = `Cult Prostitution Forbidden
-"No Israelite woman is to be a cult prostitute, and no Israelite man is to be a cult prostitute.
-Deuteronomy 23:17`
-    expect(formatApiBiblePassageText(raw)).toBe(
-      'No Israelite woman is to be a cult prostitute, and no Israelite man is to be a cult prostitute.'
-    )
+  it('normalizeScriptureCachedText matches formatter output for bracket passages', () => {
+    const withHashes = '[4] your rod and your staff #\u2014 #they comfort me.'
+    expect(normalizeScriptureCachedText(withHashes)).toBe(formatApiBiblePassageText(withHashes))
   })
 })

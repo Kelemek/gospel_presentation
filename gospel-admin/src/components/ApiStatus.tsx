@@ -8,7 +8,7 @@ export default function ApiStatus() {
   useEffect(() => {
     const checkApiStatus = async () => {
       try {
-        const response = await fetch('/api/scripture?reference=John+3:16')
+        const response = await fetch('/api/scripture?reference=John+3:16', { cache: 'no-store' })
         if (response.ok) {
           setApiStatus('online')
         } else {

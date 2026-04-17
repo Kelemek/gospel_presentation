@@ -101,7 +101,10 @@ export default function ScriptureModal({
     setError('')
 
     try {
-      const response = await fetch(`/api/scripture?reference=${encodeURIComponent(chapterRef)}&translation=${translation}`)
+      const response = await fetch(
+        `/api/scripture?reference=${encodeURIComponent(chapterRef)}&translation=${translation}`,
+        { cache: 'no-store' }
+      )
       const data = await response.json()
 
       const errMsg = formatScriptureApiError(data)
@@ -229,7 +232,8 @@ export default function ScriptureModal({
     setCompareLoading(true)
     setCompareError('')
     fetch(`/api/scripture?reference=${encodeURIComponent(reference)}&translation=${compareTranslation}`, {
-      signal: abortController.signal
+      signal: abortController.signal,
+      cache: 'no-store',
     })
       .then(response => response.json())
       .then(data => {
@@ -261,7 +265,8 @@ export default function ScriptureModal({
     const chapterRef = getChapterReference(reference)
 
     fetch(`/api/scripture?reference=${encodeURIComponent(chapterRef)}&translation=${compareTranslation}`, {
-      signal: abortController.signal
+      signal: abortController.signal,
+      cache: 'no-store',
     })
       .then(response => response.json())
       .then(data => {
@@ -284,7 +289,8 @@ export default function ScriptureModal({
       setShowingContext(false)
 
       fetch(`/api/scripture?reference=${encodeURIComponent(reference)}&translation=${translation}`, {
-        signal: abortController.signal
+        signal: abortController.signal,
+        cache: 'no-store',
       })
         .then(response => response.json())
         .then(data => {
@@ -421,7 +427,9 @@ export default function ScriptureModal({
     const firstVerse = verseNumbers[0]
     const lastVerse = verseNumbers[verseNumbers.length - 1]
     const isRange = verseNumbers.length > 1
-    
+    /** Next verse after the selection; footnotes use `[1]` etc. and must not end the highlight early. */
+    const nextVerseAfterSelection = lastVerse + 1
+
     let processedText = text
       .replace(/\[(\d+)\]/g, '<sup class="text-blue-600 font-medium">$1</sup>')
       .replace(/\n\n/g, '</p><p class="mt-4">')
@@ -429,7 +437,7 @@ export default function ScriptureModal({
     if (isRange) {
       // For a range: Find and wrap everything from first verse to end of last verse
       const rangePattern = new RegExp(
-        `(<sup[^>]*>${firstVerse}</sup>[\\s\\S]*?<sup[^>]*>${lastVerse}</sup>[^<]*?)(?=<sup[^>]*>\\d+</sup>|$)`,
+        `(<sup[^>]*>${firstVerse}</sup>[\\s\\S]*?<sup[^>]*>${lastVerse}</sup>[^<]*?)(?=<sup[^>]*>${nextVerseAfterSelection}</sup>|$)`,
         'g'
       )
       
@@ -441,7 +449,10 @@ export default function ScriptureModal({
       // Single verse - wrap it with Tailwind classes
       const verseNum = firstVerse
       processedText = processedText.replace(
-        new RegExp(`(<sup[^>]*>${verseNum}</sup>[\\s\\S]*?)(?=<sup[^>]*>\\d+</sup>|$)`, 'g'),
+        new RegExp(
+          `(<sup[^>]*>${verseNum}</sup>[\\s\\S]*?)(?=<sup[^>]*>${nextVerseAfterSelection}</sup>|$)`,
+          'g'
+        ),
         `<div id="verse-${verseNum}" class="bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-800 border-l-4 border-blue-500 dark:border-blue-400 px-4 py-3 my-4 rounded-r-md shadow-sm"><div class="font-semibold text-slate-900 dark:text-slate-100 text-base leading-relaxed">$1</div></div>`
       )
     }

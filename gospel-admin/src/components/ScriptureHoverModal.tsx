@@ -45,7 +45,10 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
     setError(null)
 
     try {
-      const response = await fetch(`/api/scripture?reference=${encodeURIComponent(reference)}&translation=${translation}`)
+      const response = await fetch(
+        `/api/scripture?reference=${encodeURIComponent(reference)}&translation=${translation}`,
+        { cache: 'no-store' }
+      )
       const data = await response.json()
 
       if (response.ok) {

@@ -115,10 +115,10 @@ GET /api/scripture?reference=John%203:16&translation=esv
 
 ### How It Works
 1. **KJV / NASB / LSB** — Load from `bible_verses` (no `scripture_cache`).
-2. **ESV / NIV / NLT / CSB** — If cache row exists and is newer than the TTL for that provider → return cached text.
+2. **ESV / NIV / NLT / CSB** — If cache row exists and is newer than the TTL for that provider → return cached text. Cache lookups and upserts use a **canonical key**: the USFM passage id from `referenceToApiBiblePassageId` when the reference parses (e.g. `Psalms 23:4a` and `Psalm 23:4` → `PSA.23.4`); otherwise a normalized string fallback. **HTTP responses are not browser-cached** (`Cache-Control: no-store`); only `scripture_cache` dedupes.
 3. On cache miss → call ESV API or API.Bible → upsert `scripture_cache` → run the matching LRU RPC (`enforce_esv_cache_limit` or `enforce_translation_cache_limit`).
 
-**Headings vs. verse text**: ESV requests use `include-headings=false`. API.Bible passage requests use **`include-titles=false`** so section titles are not requested in the response (see API reference: `include-titles` controls “Include section titles in content”). Some editions still embed a short title in the verse line; `formatApiBiblePassageText` (`gospel-admin/src/lib/api-bible-format.ts`) then strips standalone heading lines and, when needed, a leading title-like sentence before the verse body.
+**Headings vs. verse text**: ESV requests use `include-headings=false`. API.Bible passage requests use **`include-titles=false`** so section titles are not requested in the response (see API reference: `include-titles` controls “Include section titles in content”). `formatApiBiblePassageText` only normalizes whitespace and verse-number shapes for display; it does not remove scripture.
 
 ### Verse Range Handling
 Scripture references can include verse ranges using hyphens or en-dashes:
