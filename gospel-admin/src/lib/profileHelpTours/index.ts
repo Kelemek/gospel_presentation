@@ -328,8 +328,13 @@ function clearDriverBodyClasses(): void {
  */
 /** Mobile Chrome/WebView when `env(safe-area-inset-bottom)` is often 0; 3-button nav is typically ~48–56dp. */
 const PROFILE_HELP_TOUR_ANDROID_FALLBACK_BOTTOM_INSET_PX = 72
-/** Capacitor Android WebView: 3-button nav + OEM padding often exceeds 96px in CSS px; keep tour footer tappable. */
-const PROFILE_HELP_TOUR_CAPACITOR_ANDROID_BOTTOM_INSET_PX = 132
+/**
+ * Capacitor Android reserves bottom space via CSS `margin-bottom` on the popover
+ * (see `body.capacitor-android .profile-help-tour-popover.driver-popover` in globals.css).
+ * JS keeps a matching bottom inset so the translate backstop catches any popover that still
+ * overflows the reserved zone (e.g. unusually tall steps or late-paint OEMs).
+ */
+const PROFILE_HELP_TOUR_CAPACITOR_ANDROID_BOTTOM_INSET_PX = 96
 
 /** @internal Exported for unit tests */
 export function getProfileHelpTourPopoverSafeInsets(): ReturnType<typeof getSafeAreaInsetsPx> {
