@@ -51,7 +51,7 @@ describe('applyProfileHelpTourPopoverSafeAreaNudge', () => {
     })) as typeof window.matchMedia
     getSafeSpy.mockReturnValue({ top: 0, right: 0, bottom: 0, left: 0 })
     try {
-      expect(getProfileHelpTourPopoverSafeInsets().bottom).toBe(56)
+      expect(getProfileHelpTourPopoverSafeInsets().bottom).toBe(64)
     } finally {
       window.matchMedia = prevMm
       Object.defineProperty(navigator, 'userAgent', { configurable: true, value: prevUa })

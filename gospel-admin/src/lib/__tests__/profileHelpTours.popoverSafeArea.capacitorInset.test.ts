@@ -32,7 +32,7 @@ describe('getProfileHelpTourPopoverSafeInsets (Capacitor Android)', () => {
         'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
     })
     try {
-      expect(getProfileHelpTourPopoverSafeInsets().bottom).toBe(72)
+      expect(getProfileHelpTourPopoverSafeInsets().bottom).toBe(96)
     } finally {
       Object.defineProperty(navigator, 'userAgent', { configurable: true, value: prevUa })
     }
