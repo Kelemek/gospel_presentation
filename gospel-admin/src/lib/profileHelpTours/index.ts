@@ -336,6 +336,109 @@ const PROFILE_HELP_TOUR_ANDROID_FALLBACK_BOTTOM_INSET_PX = 72
  */
 const PROFILE_HELP_TOUR_CAPACITOR_ANDROID_BOTTOM_INSET_PX = 96
 
+/**
+ * driver.js calls `scrollIntoView` on the popover after `ae()`; smooth scrolling can take hundreds of ms.
+ * Nudging before scroll settles fights layout — wait for scroll end / idle / stable frames first.
+ */
+const PROFILE_HELP_TOUR_SCROLL_SETTLE_IDLE_MS = 120
+const PROFILE_HELP_TOUR_SCROLL_SETTLE_MAX_MS = 1200
+const PROFILE_HELP_TOUR_SCROLL_STABLE_FRAMES = 3
+
+function scrollMotionSignature(win: Window): string {
+  const vv = win.visualViewport
+  return [
+    win.scrollX,
+    win.scrollY,
+    vv?.offsetTop ?? 0,
+    vv?.offsetLeft ?? 0,
+    vv?.scale ?? 1,
+  ].join(',')
+}
+
+/**
+ * Invokes `onSettled` after root / visual viewport scrolling has stopped (`scrollend`, idle debounce,
+ * or same motion signature for several rAFs). Always resolves within `PROFILE_HELP_TOUR_SCROLL_SETTLE_MAX_MS`.
+ * Returns a cancel function (tour step change / destroy) that does not call `onSettled`.
+ */
+function waitForScrollSettle(win: Window, onSettled: () => void): () => void {
+  let finished = false
+  let rafId = 0
+  let idleTimer: ReturnType<typeof win.setTimeout> | null = null
+  let maxTimer: ReturnType<typeof win.setTimeout> | null = null
+
+  const doc = win.document
+  const vv = win.visualViewport
+
+  const cleanup = (): void => {
+    if (rafId) {
+      win.cancelAnimationFrame(rafId)
+      rafId = 0
+    }
+    if (idleTimer != null) {
+      win.clearTimeout(idleTimer)
+      idleTimer = null
+    }
+    if (maxTimer != null) {
+      win.clearTimeout(maxTimer)
+      maxTimer = null
+    }
+    win.removeEventListener('scroll', onScrollActivity, true)
+    doc.removeEventListener('scrollend', settle)
+    win.removeEventListener('scrollend', settle)
+    vv?.removeEventListener('scroll', onScrollActivity, true)
+    try {
+      vv?.removeEventListener('scrollend' as never, settle as EventListener)
+    } catch {
+      /* VisualViewport scrollend not supported */
+    }
+  }
+
+  const settle = (): void => {
+    if (finished) return
+    finished = true
+    cleanup()
+    onSettled()
+  }
+
+  const onScrollActivity = (): void => {
+    if (idleTimer != null) win.clearTimeout(idleTimer)
+    idleTimer = win.setTimeout(settle, PROFILE_HELP_TOUR_SCROLL_SETTLE_IDLE_MS)
+  }
+
+  win.addEventListener('scroll', onScrollActivity, { capture: true, passive: true })
+  vv?.addEventListener('scroll', onScrollActivity, { capture: true, passive: true })
+  doc.addEventListener('scrollend', settle, { passive: true })
+  win.addEventListener('scrollend', settle, { passive: true })
+  vv?.addEventListener('scrollend' as never, settle as EventListener, { passive: true })
+
+  let lastSig = scrollMotionSignature(win)
+  let stableFrames = 0
+  const rafLoop = (): void => {
+    if (finished) return
+    const sig = scrollMotionSignature(win)
+    if (sig === lastSig) {
+      stableFrames++
+      if (stableFrames >= PROFILE_HELP_TOUR_SCROLL_STABLE_FRAMES) {
+        settle()
+        return
+      }
+    } else {
+      lastSig = sig
+      stableFrames = 0
+    }
+    rafId = win.requestAnimationFrame(rafLoop)
+  }
+  rafId = win.requestAnimationFrame(rafLoop)
+
+  maxTimer = win.setTimeout(settle, PROFILE_HELP_TOUR_SCROLL_SETTLE_MAX_MS)
+
+  return () => {
+    if (finished) return
+    finished = true
+    cleanup()
+  }
+}
+
 /** @internal Exported for unit tests */
 export function getProfileHelpTourPopoverSafeInsets(): ReturnType<typeof getSafeAreaInsetsPx> {
   const base = getSafeAreaInsetsPx()
@@ -427,26 +530,86 @@ export function applyProfileHelpTourPopoverSafeAreaNudge(wrapper: HTMLElement): 
   wrapper.style.transform = driverTransform ? `${driverTransform} ${nudge}` : nudge
 }
 
-/**
- * Run the nudge after driver.js finishes positioning (onPopoverRender fires *before* ae()), plus a
- * second rAF to catch any late-paint layout on native WebViews. No MutationObserver — earlier
- * attempts to re-run on every `style` mutation interfered with driver.js's pointer/click delegation
- * timing, so the schedule is minimal and runs only at known safe points.
- */
+/** driver.js calls `onPopoverRender` *before* `ae()` (positioning); then `scrollIntoView` can fire `scroll`,
+ * and driver re-runs `ae()` from its resize/scroll handler — overwriting our correction. Do not use a
+ * MutationObserver on `style` (it races pointer/click delegation). Wait for scroll to settle, then
+ * microtask + rAF passes, delayed timers on Capacitor Android, and throttled scroll/resize relayout hooks. */
+let profileHelpTourScrollSettleCancel: (() => void) | null = null
+let profileHelpTourSafeAreaRelayoutDetach: (() => void) | null = null
+
+function detachProfileHelpTourPopoverSafeAreaRelayoutListeners(): void {
+  profileHelpTourScrollSettleCancel?.()
+  profileHelpTourScrollSettleCancel = null
+  profileHelpTourSafeAreaRelayoutDetach?.()
+  profileHelpTourSafeAreaRelayoutDetach = null
+}
+
+function isCapacitorAndroidTourHost(): boolean {
+  return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android'
+}
+
 function scheduleProfileHelpTourPopoverSafeAreaNudge(wrapper: HTMLElement): void {
+  detachProfileHelpTourPopoverSafeAreaRelayoutListeners()
+
   const run = (): void => {
     if (wrapper.isConnected) {
       applyProfileHelpTourPopoverSafeAreaNudge(wrapper)
     }
   }
-  if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
-    window.requestAnimationFrame(() => {
-      run()
-      window.requestAnimationFrame(run)
-    })
-  } else {
+
+  const afterScrollSettled = (): void => {
     queueMicrotask(run)
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(() => {
+        run()
+        window.requestAnimationFrame(() => {
+          run()
+          if (isCapacitorAndroidTourHost()) {
+            window.requestAnimationFrame(run)
+          }
+        })
+      })
+    }
+
+    if (typeof window !== 'undefined' && isCapacitorAndroidTourHost()) {
+      window.setTimeout(run, 0)
+      window.setTimeout(run, 50)
+      window.setTimeout(run, 150)
+      window.setTimeout(run, 300)
+
+      let relayoutRaf: number | null = null
+      const scheduleRunAfterDriverLayout = (): void => {
+        if (relayoutRaf != null) return
+        relayoutRaf = window.requestAnimationFrame(() => {
+          relayoutRaf = null
+          window.requestAnimationFrame(run)
+        })
+      }
+
+      const vv = window.visualViewport
+      vv?.addEventListener('resize', scheduleRunAfterDriverLayout)
+      vv?.addEventListener('scroll', scheduleRunAfterDriverLayout)
+      window.addEventListener('resize', scheduleRunAfterDriverLayout)
+      window.addEventListener('scroll', scheduleRunAfterDriverLayout, true)
+
+      profileHelpTourSafeAreaRelayoutDetach = () => {
+        if (relayoutRaf != null) {
+          window.cancelAnimationFrame(relayoutRaf)
+          relayoutRaf = null
+        }
+        vv?.removeEventListener('resize', scheduleRunAfterDriverLayout)
+        vv?.removeEventListener('scroll', scheduleRunAfterDriverLayout)
+        window.removeEventListener('resize', scheduleRunAfterDriverLayout)
+        window.removeEventListener('scroll', scheduleRunAfterDriverLayout, true)
+      }
+    }
   }
+
+  if (typeof window === 'undefined') {
+    afterScrollSettled()
+    return
+  }
+  profileHelpTourScrollSettleCancel = waitForScrollSettle(window, afterScrollSettled)
 }
 
 /** Wraps driver.js so tutorial popovers get conditional safe-area correction after layout and after `refresh()`. */
@@ -467,6 +630,11 @@ function createProfileHelpDriver(config: Config): Driver {
     if (el instanceof HTMLElement) {
       scheduleProfileHelpTourPopoverSafeAreaNudge(el)
     }
+  }
+  const innerDestroy = typeof d.destroy === 'function' ? d.destroy.bind(d) : () => {}
+  d.destroy = () => {
+    detachProfileHelpTourPopoverSafeAreaRelayoutListeners()
+    innerDestroy()
   }
   return d
 }
