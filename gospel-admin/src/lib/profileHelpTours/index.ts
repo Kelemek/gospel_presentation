@@ -372,11 +372,11 @@ function popoverSafeAxisNudge(rectLo: number, rectHi: number, safeLo: number, sa
 }
 
 /**
- * Preferred: adjust driver.js's inline `style.bottom` directly when the popover is bottom-anchored
- * and lands within the reserved safe zone. This only affects popovers whose *viewport-bottom gap*
- * is smaller than the inset (e.g. popovers near the actual bottom of the screen, or driver.js's
- * `C` overflow fallback with `bottom: 10px`). Popovers placed *below a mid-screen target* keep a
- * large `style.bottom` (e.g. 400px) and are left untouched.
+ * Adjust driver.js's inline `style.bottom` directly when the popover is bottom-anchored and lands
+ * inside the reserved safe zone. Only affects popovers whose *viewport-bottom gap* is smaller than
+ * the inset (e.g. popovers near the actual bottom of the screen, or driver.js's `C` overflow
+ * fallback with `bottom: 10px`). Popovers placed *below a mid-screen target* keep a large
+ * `style.bottom` (e.g. 400px) and are left untouched.
  *
  * Returns true if a bottom-anchor correction was applied (caller skips translate fallback).
  */
@@ -386,7 +386,6 @@ function applyBottomAnchorSafeInset(wrapper: HTMLElement, requiredBottomPx: numb
   const current = parseFloat(bottomStyle)
   if (!Number.isFinite(current)) return false
   if (current >= requiredBottomPx) return false
-  // Guard against infinite-loop style churn under our MutationObserver: only write when it changes.
   wrapper.style.bottom = `${requiredBottomPx}px`
   return true
 }
@@ -429,67 +428,34 @@ export function applyProfileHelpTourPopoverSafeAreaNudge(wrapper: HTMLElement): 
 }
 
 /**
- * Observes the popover wrapper for `style` attribute changes so our bottom-anchor correction
- * reapplies after driver.js re-runs its `ae()` positioning on scroll/resize (driver exposes no
- * hook for that). MutationObserver is cheap when nothing changes, and `applyBottomAnchorSafeInset`
- * is idempotent (no write when already satisfied) so the observer cannot loop on itself.
+ * Run the nudge after driver.js finishes positioning (onPopoverRender fires *before* ae()), plus a
+ * second rAF to catch any late-paint layout on native WebViews. No MutationObserver — earlier
+ * attempts to re-run on every `style` mutation interfered with driver.js's pointer/click delegation
+ * timing, so the schedule is minimal and runs only at known safe points.
  */
-const popoverSafeAreaObservers = new WeakMap<HTMLElement, MutationObserver>()
-
-function observeProfileHelpTourPopoverForSafeArea(wrapper: HTMLElement): void {
-  if (typeof MutationObserver === 'undefined' || popoverSafeAreaObservers.has(wrapper)) return
-  const observer = new MutationObserver(() => {
-    applyProfileHelpTourPopoverSafeAreaNudge(wrapper)
-  })
-  observer.observe(wrapper, { attributes: true, attributeFilter: ['style'] })
-  popoverSafeAreaObservers.set(wrapper, observer)
-}
-
-function disconnectProfileHelpTourPopoverSafeAreaObserver(wrapper: HTMLElement | null | undefined): void {
-  if (!wrapper) return
-  const observer = popoverSafeAreaObservers.get(wrapper)
-  if (observer) {
-    observer.disconnect()
-    popoverSafeAreaObservers.delete(wrapper)
-  }
-}
-
 function scheduleProfileHelpTourPopoverSafeAreaNudge(wrapper: HTMLElement): void {
   const run = (): void => {
     if (wrapper.isConnected) {
       applyProfileHelpTourPopoverSafeAreaNudge(wrapper)
     }
   }
-  // driver.js calls `scrollIntoView` on the popover after positioning; run after microtask + 2 rAFs so layout matches.
-  // Capacitor Android often applies another layout tick after that; extra rAFs + delayed timers catch late WebView paints.
-  queueMicrotask(run)
   if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
     window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        run()
-        if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
-          window.requestAnimationFrame(run)
-        }
-      })
+      run()
+      window.requestAnimationFrame(run)
     })
+  } else {
+    queueMicrotask(run)
   }
-  if (typeof window !== 'undefined' && Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
-    window.setTimeout(run, 0)
-    window.setTimeout(run, 50)
-    window.setTimeout(run, 150)
-  }
-  observeProfileHelpTourPopoverForSafeArea(wrapper)
 }
 
 /** Wraps driver.js so tutorial popovers get conditional safe-area correction after layout and after `refresh()`. */
 function createProfileHelpDriver(config: Config): Driver {
   const userOnPopoverRender = config.onPopoverRender
-  let observedWrapper: HTMLElement | null = null
   const merged: Config = {
     ...config,
     onPopoverRender: (popover, opts) => {
       userOnPopoverRender?.(popover, opts)
-      observedWrapper = popover.wrapper
       scheduleProfileHelpTourPopoverSafeAreaNudge(popover.wrapper)
     },
   }
@@ -501,12 +467,6 @@ function createProfileHelpDriver(config: Config): Driver {
     if (el instanceof HTMLElement) {
       scheduleProfileHelpTourPopoverSafeAreaNudge(el)
     }
-  }
-  const innerDestroy = typeof d.destroy === 'function' ? d.destroy.bind(d) : () => {}
-  d.destroy = () => {
-    disconnectProfileHelpTourPopoverSafeAreaObserver(observedWrapper)
-    observedWrapper = null
-    innerDestroy()
   }
   return d
 }
