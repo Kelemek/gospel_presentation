@@ -371,18 +371,41 @@ function popoverSafeAxisNudge(rectLo: number, rectHi: number, safeLo: number, sa
   return Math.max(deltaMin, Math.min(deltaMax, 0))
 }
 
+/**
+ * Preferred: adjust driver.js's inline `style.bottom` directly when the popover is bottom-anchored
+ * and lands within the reserved safe zone. This only affects popovers whose *viewport-bottom gap*
+ * is smaller than the inset (e.g. popovers near the actual bottom of the screen, or driver.js's
+ * `C` overflow fallback with `bottom: 10px`). Popovers placed *below a mid-screen target* keep a
+ * large `style.bottom` (e.g. 400px) and are left untouched.
+ *
+ * Returns true if a bottom-anchor correction was applied (caller skips translate fallback).
+ */
+function applyBottomAnchorSafeInset(wrapper: HTMLElement, requiredBottomPx: number): boolean {
+  const bottomStyle = wrapper.style.bottom
+  if (!bottomStyle || bottomStyle === 'auto') return false
+  const current = parseFloat(bottomStyle)
+  if (!Number.isFinite(current)) return false
+  if (current >= requiredBottomPx) return false
+  // Guard against infinite-loop style churn under our MutationObserver: only write when it changes.
+  wrapper.style.bottom = `${requiredBottomPx}px`
+  return true
+}
+
 export function applyProfileHelpTourPopoverSafeAreaNudge(wrapper: HTMLElement): void {
   if (typeof window === 'undefined' || !wrapper.isConnected) return
   const insets = getProfileHelpTourPopoverSafeInsets()
   if (insets.top === 0 && insets.right === 0 && insets.bottom === 0 && insets.left === 0) return
+
+  // Targeted bottom correction: only moves popovers that are actually near the viewport bottom.
+  if (insets.bottom > 0 && applyBottomAnchorSafeInset(wrapper, insets.bottom)) {
+    return
+  }
 
   const vw = window.innerWidth
   const vh = window.innerHeight
   const safeL = insets.left
   const safeT = insets.top
   const safeR = vw - insets.right
-  // Prefer the visual viewport bottom when it sits above the layout edge (keyboard, some insets). On
-  // Android overlay nav, visualViewport often still matches innerHeight; floored bottom insets handle that.
   const vv = window.visualViewport
   const visualBottom =
     vv != null && Number.isFinite(vv.offsetTop) && Number.isFinite(vv.height) ? vv.offsetTop + vv.height : vh
@@ -403,6 +426,32 @@ export function applyProfileHelpTourPopoverSafeAreaNudge(wrapper: HTMLElement): 
 
   const nudge = `translate(${dx}px, ${dy}px)`
   wrapper.style.transform = driverTransform ? `${driverTransform} ${nudge}` : nudge
+}
+
+/**
+ * Observes the popover wrapper for `style` attribute changes so our bottom-anchor correction
+ * reapplies after driver.js re-runs its `ae()` positioning on scroll/resize (driver exposes no
+ * hook for that). MutationObserver is cheap when nothing changes, and `applyBottomAnchorSafeInset`
+ * is idempotent (no write when already satisfied) so the observer cannot loop on itself.
+ */
+const popoverSafeAreaObservers = new WeakMap<HTMLElement, MutationObserver>()
+
+function observeProfileHelpTourPopoverForSafeArea(wrapper: HTMLElement): void {
+  if (typeof MutationObserver === 'undefined' || popoverSafeAreaObservers.has(wrapper)) return
+  const observer = new MutationObserver(() => {
+    applyProfileHelpTourPopoverSafeAreaNudge(wrapper)
+  })
+  observer.observe(wrapper, { attributes: true, attributeFilter: ['style'] })
+  popoverSafeAreaObservers.set(wrapper, observer)
+}
+
+function disconnectProfileHelpTourPopoverSafeAreaObserver(wrapper: HTMLElement | null | undefined): void {
+  if (!wrapper) return
+  const observer = popoverSafeAreaObservers.get(wrapper)
+  if (observer) {
+    observer.disconnect()
+    popoverSafeAreaObservers.delete(wrapper)
+  }
 }
 
 function scheduleProfileHelpTourPopoverSafeAreaNudge(wrapper: HTMLElement): void {
@@ -429,15 +478,18 @@ function scheduleProfileHelpTourPopoverSafeAreaNudge(wrapper: HTMLElement): void
     window.setTimeout(run, 50)
     window.setTimeout(run, 150)
   }
+  observeProfileHelpTourPopoverForSafeArea(wrapper)
 }
 
 /** Wraps driver.js so tutorial popovers get conditional safe-area correction after layout and after `refresh()`. */
 function createProfileHelpDriver(config: Config): Driver {
   const userOnPopoverRender = config.onPopoverRender
+  let observedWrapper: HTMLElement | null = null
   const merged: Config = {
     ...config,
     onPopoverRender: (popover, opts) => {
       userOnPopoverRender?.(popover, opts)
+      observedWrapper = popover.wrapper
       scheduleProfileHelpTourPopoverSafeAreaNudge(popover.wrapper)
     },
   }
@@ -449,6 +501,12 @@ function createProfileHelpDriver(config: Config): Driver {
     if (el instanceof HTMLElement) {
       scheduleProfileHelpTourPopoverSafeAreaNudge(el)
     }
+  }
+  const innerDestroy = typeof d.destroy === 'function' ? d.destroy.bind(d) : () => {}
+  d.destroy = () => {
+    disconnectProfileHelpTourPopoverSafeAreaObserver(observedWrapper)
+    observedWrapper = null
+    innerDestroy()
   }
   return d
 }

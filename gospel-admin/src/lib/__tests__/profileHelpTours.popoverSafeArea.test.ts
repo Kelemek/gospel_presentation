@@ -149,4 +149,73 @@ describe('applyProfileHelpTourPopoverSafeAreaNudge', () => {
     applyProfileHelpTourPopoverSafeAreaNudge(el)
     expect(el.style.transform).toBe('translateY(-3px)')
   })
+
+  it('bumps style.bottom up to the safe inset when popover is anchored near viewport bottom', () => {
+    getSafeSpy.mockReturnValue({ top: 0, right: 0, bottom: 96, left: 0 })
+    const el = document.createElement('div')
+    document.body.appendChild(el)
+    el.style.bottom = '10px'
+    jest.spyOn(el, 'getBoundingClientRect').mockReturnValue({
+      top: 500,
+      left: 50,
+      right: 350,
+      bottom: 790,
+      width: 300,
+      height: 290,
+      x: 50,
+      y: 500,
+      toJSON: () => ({}),
+    })
+    mockViewport(400, 800)
+
+    applyProfileHelpTourPopoverSafeAreaNudge(el)
+    expect(el.style.bottom).toBe('96px')
+  })
+
+  it('leaves style.bottom alone when popover is anchored below a mid-screen target (bottom >= inset)', () => {
+    getSafeSpy.mockReturnValue({ top: 0, right: 0, bottom: 96, left: 0 })
+    const el = document.createElement('div')
+    document.body.appendChild(el)
+    el.style.bottom = '400px'
+    jest.spyOn(el, 'getBoundingClientRect').mockReturnValue({
+      top: 100,
+      left: 50,
+      right: 350,
+      bottom: 400,
+      width: 300,
+      height: 300,
+      x: 50,
+      y: 100,
+      toJSON: () => ({}),
+    })
+    mockViewport(400, 800)
+
+    applyProfileHelpTourPopoverSafeAreaNudge(el)
+    expect(el.style.bottom).toBe('400px')
+  })
+
+  it('falls through to translate fallback when popover is anchored via style.top (not bottom)', () => {
+    getSafeSpy.mockReturnValue({ top: 0, right: 0, bottom: 96, left: 0 })
+    const el = document.createElement('div')
+    document.body.appendChild(el)
+    el.style.top = '680px'
+    jest.spyOn(el, 'getBoundingClientRect').mockReturnValue({
+      top: 680,
+      left: 50,
+      right: 350,
+      bottom: 780,
+      width: 300,
+      height: 100,
+      x: 50,
+      y: 680,
+      toJSON: () => ({}),
+    })
+    mockViewport(400, 800)
+
+    applyProfileHelpTourPopoverSafeAreaNudge(el)
+    // No style.bottom anchor, so bottom correction skipped and translate fallback runs:
+    // safe bottom = 800 - 96 = 704; rect.bottom 780 -> dy = -76
+    expect(el.style.transform).toContain('translate(0px, -76px)')
+    expect(el.style.bottom).toBe('')
+  })
 })

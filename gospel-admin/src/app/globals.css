@@ -1024,12 +1024,12 @@ s {
 }
 
 /* Capacitor Android reliably under-reports `env(safe-area-inset-bottom)` (often 0) even when the
-   system 3-button / gesture nav overlaps the WebView. `position:fixed` popovers anchored with
-   `bottom: Xpx` are pushed up by their own `margin-bottom` (margin-box bottom sits at X), so this
-   forces visible spacing above the nav bar regardless of driver.js timing. Also shrinks max-height
-   so tall popovers scroll internally instead of extending into the reserved zone. */
+   system 3-button / gesture nav overlaps the WebView. The JS bottom-anchor correction in
+   `applyBottomAnchorSafeInset` (see profileHelpTours/index.ts) only bumps popovers whose `style.bottom`
+   is inside the reserved zone — so popovers placed *below* a mid-screen target are left untouched.
+   This CSS only shrinks `max-height` so tall popovers scroll internally instead of extending into
+   the reserved zone. */
 body.capacitor-android .profile-help-tour-popover.driver-popover {
-  margin-bottom: 96px;
   max-height: calc(
     100dvh - env(safe-area-inset-top, 0px) - 96px - 24px
   );
