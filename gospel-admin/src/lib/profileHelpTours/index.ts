@@ -327,9 +327,9 @@ function clearDriverBodyClasses(): void {
  * and popovers stay above those controls (pairs with CSS `max()` on narrow viewports in `globals.css`).
  */
 /** Mobile Chrome/WebView when `env(safe-area-inset-bottom)` is often 0; 3-button nav is typically ~48–56dp. */
-const PROFILE_HELP_TOUR_ANDROID_FALLBACK_BOTTOM_INSET_PX = 64
-/** Capacitor Android WebView: reserve extra space above gesture / system nav (varies by density & OEM bar height). */
-const PROFILE_HELP_TOUR_CAPACITOR_ANDROID_BOTTOM_INSET_PX = 96
+const PROFILE_HELP_TOUR_ANDROID_FALLBACK_BOTTOM_INSET_PX = 72
+/** Capacitor Android WebView: 3-button nav + OEM padding often exceeds 96px in CSS px; keep tour footer tappable. */
+const PROFILE_HELP_TOUR_CAPACITOR_ANDROID_BOTTOM_INSET_PX = 132
 
 /** @internal Exported for unit tests */
 export function getProfileHelpTourPopoverSafeInsets(): ReturnType<typeof getSafeAreaInsetsPx> {
@@ -407,7 +407,7 @@ function scheduleProfileHelpTourPopoverSafeAreaNudge(wrapper: HTMLElement): void
     }
   }
   // driver.js calls `scrollIntoView` on the popover after positioning; run after microtask + 2 rAFs so layout matches.
-  // Capacitor Android often applies another layout tick after that; a third rAF keeps the nudge from losing to late paints.
+  // Capacitor Android often applies another layout tick after that; extra rAFs + delayed timers catch late WebView paints.
   queueMicrotask(run)
   if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
     window.requestAnimationFrame(() => {
@@ -418,6 +418,11 @@ function scheduleProfileHelpTourPopoverSafeAreaNudge(wrapper: HTMLElement): void
         }
       })
     })
+  }
+  if (typeof window !== 'undefined' && Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+    window.setTimeout(run, 0)
+    window.setTimeout(run, 50)
+    window.setTimeout(run, 150)
   }
 }
 
