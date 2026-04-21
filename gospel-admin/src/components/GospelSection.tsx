@@ -211,7 +211,7 @@ function TextWithComaButtons({
                     e.stopPropagation()
                     onClearProgress()
                   }}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 text-yellow-700 dark:text-yellow-300 hover:text-yellow-800 dark:hover:text-yellow-200 transition-colors p-0.5"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 text-yellow-700 dark:text-yellow-300 hover:text-yellow-800 dark:hover:text-yellow-200 transition-colors cursor-pointer p-0.5"
                   title="Click to clear progress"
                 >
                   📍
@@ -485,13 +485,16 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
       return
     }
 
-    // Always write to localStorage immediately
+    const trimmed = answer.trim()
+
+    // Always write to localStorage immediately (omit empty answers so merge/load matches server clear)
     try {
       const stored = localStorage.getItem(storageKey)
       const fromStorage: SavedAnswer[] = stored ? JSON.parse(stored) : []
-      const entry: SavedAnswer = { questionId, answer, answeredAt: new Date() }
       const updated = fromStorage.filter(sa => sa.questionId !== questionId)
-      updated.push(entry)
+      if (trimmed !== '') {
+        updated.push({ questionId, answer: trimmed, answeredAt: new Date() })
+      }
       localStorage.setItem(storageKey, JSON.stringify(updated))
     } catch (e) {
       console.error('Error saving to localStorage:', e)
@@ -507,7 +510,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
       const response = await fetch(`/api/profiles/${profileSlug}/save-answer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionId, answer })
+        body: JSON.stringify({ questionId, answer: trimmed })
       })
 
       if (!response.ok) {
@@ -551,8 +554,9 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
                 {detail ? (
                   <div>
                     <button
+                      type="button"
                       onClick={() => toggleQuestion(question.id)}
-                      className="inline-flex items-center gap-1 px-2 py-1 text-sm font-medium text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-700 rounded transition-colors"
+                      className="inline-flex cursor-pointer items-center gap-1 px-2 py-1 text-sm font-medium text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/40 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-700 rounded transition-colors"
                     >
                       {hasHtmlTags ? (
                         <span dangerouslySetInnerHTML={{ __html: prefix }} />
@@ -572,7 +576,13 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
                       <div className="mt-2 text-sm text-slate-700 dark:text-slate-300 pl-4 border-l-2 border-blue-200 dark:border-blue-700">
                         {hasHtmlTags ? (
                           <div 
-                            className="prose prose-slate max-w-none"
+                            className={
+                              'prose prose-sm prose-slate max-w-none ' +
+                              'text-slate-700 dark:text-slate-200 ' +
+                              'prose-p:my-2 prose-p:text-slate-700 dark:prose-p:text-slate-200 ' +
+                              'prose-li:text-slate-700 dark:prose-li:text-slate-200 ' +
+                              'prose-strong:text-slate-800 dark:prose-strong:text-slate-100'
+                            }
                             dangerouslySetInnerHTML={{ __html: detail }}
                           />
                         ) : (
@@ -616,7 +626,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
                   type="button"
                   data-tour="profile-save-answer"
                   onClick={() => handleSaveAnswer(question.id, question.maxLength)}
-                  className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-all ${
+                  className={`cursor-pointer px-3 py-1.5 text-sm rounded-lg font-medium transition-all ${
                     isSaved
                       ? 'bg-green-600 text-white'
                       : 'bg-slate-500 hover:bg-slate-600 text-white'

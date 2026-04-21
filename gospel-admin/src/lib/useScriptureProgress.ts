@@ -19,6 +19,18 @@ interface UseScriptureProgressReturn {
   error: string | null
 }
 
+function profileLastViewedMatchesLocal(
+  profilePin: GospelProfile['lastViewedScripture'] | undefined,
+  local: ScriptureProgress | null
+): boolean {
+  if (!profilePin || !local) return false
+  return (
+    profilePin.reference === local.reference &&
+    (profilePin.sectionId || '') === (local.sectionId || '') &&
+    (profilePin.subsectionId || '') === (local.subsectionId || '')
+  )
+}
+
 function parseStoredProgress(value: string | null): ScriptureProgress | null {
   if (!value) return null
   try {
@@ -48,6 +60,8 @@ export function useScriptureProgress(
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [localProgress, setLocalProgress] = useState<ScriptureProgress | null>(null)
+  /** After reset, RSC `profile.lastViewedScripture` can stay stale until `router.refresh()`; do not merge it back in. */
+  const [suppressProfileLastViewed, setSuppressProfileLastViewed] = useState(false)
   const localProgressRef = useRef<ScriptureProgress | null>(null)
   useEffect(() => {
     localProgressRef.current = localProgress
@@ -56,13 +70,31 @@ export function useScriptureProgress(
   const shouldTrack = profile && !profile.isDefault
   const storageKey = profile?.slug ? `${SCRIPTURE_PROGRESS_KEY_PREFIX}${profile.slug}` : null
 
+  useEffect(() => {
+    if (!profile?.lastViewedScripture) {
+      setSuppressProfileLastViewed(false)
+    }
+  }, [profile?.lastViewedScripture])
+
+  useEffect(() => {
+    setSuppressProfileLastViewed(false)
+  }, [profile?.slug])
+
+  /** Clear suppression once RSC `profile.lastViewedScripture` matches what we already have locally (server caught up). */
+  useEffect(() => {
+    if (!suppressProfileLastViewed || !localProgress || !profile?.lastViewedScripture) return
+    if (profileLastViewedMatchesLocal(profile.lastViewedScripture, localProgress)) {
+      setSuppressProfileLastViewed(false)
+    }
+  }, [suppressProfileLastViewed, localProgress, profile?.lastViewedScripture])
+
   // Load: localStorage first; if logged in and profile.lastViewedScripture exists, prefer DB and update localStorage
   useEffect(() => {
     if (!storageKey) return
 
     const fromStorage = parseStoredProgress(typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null)
 
-    if (isLoggedIn && profile?.lastViewedScripture) {
+    if (isLoggedIn && profile?.lastViewedScripture && !suppressProfileLastViewed) {
       const fromDb: ScriptureProgress = {
         reference: profile.lastViewedScripture.reference,
         sectionId: profile.lastViewedScripture.sectionId || '',
@@ -85,7 +117,7 @@ export function useScriptureProgress(
     } else {
       setLocalProgress(fromStorage)
     }
-  }, [storageKey, isLoggedIn, profile?.lastViewedScripture, profile?.slug])
+  }, [storageKey, isLoggedIn, profile?.lastViewedScripture, profile?.slug, suppressProfileLastViewed])
 
   const trackScriptureView = useCallback(async (
     reference: string,
@@ -118,6 +150,9 @@ export function useScriptureProgress(
     if (storageKey) {
       try {
         localStorage.setItem(storageKey, JSON.stringify(progressData))
+        // Do not call setSuppressProfileLastViewed(false) here: the load effect would run while
+        // `profile.lastViewedScripture` can still be stale and overwrite this row. Suppression clears
+        // when the profile field is empty, the slug changes, or it matches `localProgress` (see effect above).
         setLocalProgress(progressData)
         localProgressRef.current = progressData
       } catch {
@@ -153,6 +188,7 @@ export function useScriptureProgress(
   }, [profile, shouldTrack, isLoggedIn, storageKey])
 
   const resetProgress = useCallback(async () => {
+    setSuppressProfileLastViewed(true)
     // Always clear localStorage
     if (storageKey) {
       try {
@@ -189,8 +225,13 @@ export function useScriptureProgress(
     }
   }, [profile, shouldTrack, isLoggedIn, storageKey])
 
-  // Merged lastViewedScripture: localProgress (from localStorage) || profile?.lastViewedScripture
-  const lastViewedScripture = localProgress || profile?.lastViewedScripture || null
+  // Merged: prefer local row; when cleared (null), ignore stale RSC profile while suppressProfileLastViewed is true.
+  const lastViewedScripture: ScriptureProgress | null =
+    localProgress != null
+      ? localProgress
+      : suppressProfileLastViewed
+        ? null
+        : profile?.lastViewedScripture ?? null
 
   return {
     trackScriptureView,

@@ -120,6 +120,57 @@ describe('POST /api/profiles/[slug]/save-answer', () => {
     })
   })
 
+  it('accepts empty string and removes saved answer for that question', async () => {
+    const existingAnswer = { questionId: 'q1', answer: 'Old', answeredAt: new Date() }
+    const mockProfile = { slug: 'test-profile', savedAnswers: [existingAnswer] } as any
+    mockDataService.getProfileBySlug.mockResolvedValue(mockProfile)
+    mockDataService.updateProfile.mockResolvedValue({} as any)
+
+    const body = { questionId: 'q1', answer: '' }
+    const request = new NextRequest('http://localhost:3000', { method: 'POST', body: JSON.stringify(body) })
+
+    const res = await POST(request, { params: Promise.resolve({ slug: 'test-profile' }) })
+    const data = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(data.success).toBe(true)
+    expect(data.cleared).toBe(true)
+    expect(mockDataService.updateProfile).toHaveBeenCalledWith('test-profile', {
+      savedAnswers: [],
+    })
+  })
+
+  it('accepts whitespace-only answer as clear', async () => {
+    const existingAnswer = { questionId: 'q1', answer: 'Old', answeredAt: new Date() }
+    const mockProfile = { slug: 'test-profile', savedAnswers: [existingAnswer] } as any
+    mockDataService.getProfileBySlug.mockResolvedValue(mockProfile)
+    mockDataService.updateProfile.mockResolvedValue({} as any)
+
+    const body = { questionId: 'q1', answer: '  \n  ' }
+    const request = new NextRequest('http://localhost:3000', { method: 'POST', body: JSON.stringify(body) })
+
+    const res = await POST(request, { params: Promise.resolve({ slug: 'test-profile' }) })
+    expect(res.status).toBe(200)
+    expect(mockDataService.updateProfile).toHaveBeenCalledWith('test-profile', {
+      savedAnswers: [],
+    })
+  })
+
+  it('accepts empty string when no prior answer (no-op clear)', async () => {
+    const mockProfile = { slug: 'test-profile', savedAnswers: [] } as any
+    mockDataService.getProfileBySlug.mockResolvedValue(mockProfile)
+    mockDataService.updateProfile.mockResolvedValue({} as any)
+
+    const body = { questionId: 'q1', answer: '' }
+    const request = new NextRequest('http://localhost:3000', { method: 'POST', body: JSON.stringify(body) })
+
+    const res = await POST(request, { params: Promise.resolve({ slug: 'test-profile' }) })
+    expect(res.status).toBe(200)
+    expect(mockDataService.updateProfile).toHaveBeenCalledWith('test-profile', {
+      savedAnswers: [],
+    })
+  })
+
   it('uses empty savedAnswers when profile has none', async () => {
     const mockProfile = { slug: 'test-profile' } as any
     mockDataService.getProfileBySlug.mockResolvedValue(mockProfile)

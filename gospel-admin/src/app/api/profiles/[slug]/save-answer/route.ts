@@ -26,14 +26,14 @@ export async function POST(
       )
     }
 
-    if (!answer || typeof answer !== 'string') {
+    if (answer == null || typeof answer !== 'string') {
       return NextResponse.json(
         { error: 'Answer is required' },
         { status: 400 }
       )
     }
 
-    // Validate answer length
+    // Validate answer length (raw input; clearing the field is allowed)
     if (answer.length > PROFILE_VALIDATION.ANSWER_MAX_LENGTH) {
       return NextResponse.json(
         { 
@@ -54,24 +54,35 @@ export async function POST(
       )
     }
 
-    // Get existing saved answers or initialize empty array
-    const savedAnswers = profile.savedAnswers || []
+    const savedAnswers = [...(profile.savedAnswers || [])]
+    const trimmed = answer.trim()
 
-    // Find and update existing answer or add new one
-    const existingIndex = savedAnswers.findIndex((a: SavedAnswer) => a.questionId === questionId)
+    // Empty / whitespace-only: remove saved answer for this question (same as "clear and save")
+    if (trimmed === '') {
+      const filtered = savedAnswers.filter((a: SavedAnswer) => a.questionId !== questionId)
+      await dataService.updateProfile(slug, {
+        savedAnswers: filtered
+      })
+      return NextResponse.json({
+        success: true,
+        questionId,
+        cleared: true
+      })
+    }
+
     const newAnswer: SavedAnswer = {
       questionId,
-      answer,
+      answer: trimmed,
       answeredAt: new Date()
     }
 
+    const existingIndex = savedAnswers.findIndex((a: SavedAnswer) => a.questionId === questionId)
     if (existingIndex >= 0) {
       savedAnswers[existingIndex] = newAnswer
     } else {
       savedAnswers.push(newAnswer)
     }
 
-    // Update the profile with new saved answers
     await dataService.updateProfile(slug, {
       savedAnswers
     })

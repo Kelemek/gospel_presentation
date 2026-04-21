@@ -519,7 +519,7 @@ export default function ScriptureModal({
                 disabled={!hasPrevious}
                 className={`min-h-[36px] min-w-[36px] p-1.5 rounded-md transition-colors flex items-center justify-center text-lg font-bold ${
                   hasPrevious 
-                    ? 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500' 
+                    ? 'cursor-pointer text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500' 
                     : 'text-slate-300 dark:text-slate-500 cursor-not-allowed'
                 }`}
                 title="Previous Scripture"
@@ -552,7 +552,7 @@ export default function ScriptureModal({
                 disabled={!hasNext}
                 className={`min-h-[36px] min-w-[36px] p-1.5 rounded-md transition-colors flex items-center justify-center text-lg font-bold ${
                   hasNext 
-                    ? 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500' 
+                    ? 'cursor-pointer text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500' 
                     : 'text-slate-300 dark:text-slate-500 cursor-not-allowed'
                 }`}
                 title="Next Scripture"
@@ -566,7 +566,7 @@ export default function ScriptureModal({
                 type="button"
                 data-tour="scripture-modal-close"
                 onClick={onClose}
-                className="text-slate-600 dark:text-slate-200 text-xl font-bold min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center bg-white dark:bg-slate-600 shadow-sm ring-1 ring-slate-300/80 dark:ring-slate-500/60 hover:bg-slate-50 dark:hover:bg-slate-500 hover:ring-slate-400 dark:hover:ring-slate-400 active:bg-slate-100 dark:active:bg-slate-400"
+                className="cursor-pointer text-slate-600 dark:text-slate-200 text-xl font-bold min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center bg-white dark:bg-slate-600 shadow-sm ring-1 ring-slate-300/80 dark:ring-slate-500/60 hover:bg-slate-50 dark:hover:bg-slate-500 hover:ring-slate-400 dark:hover:ring-slate-400 active:bg-slate-100 dark:active:bg-slate-400"
                 aria-label="Close modal"
               >
                 ×
@@ -628,7 +628,7 @@ export default function ScriptureModal({
                 type="button"
                 data-tour="scripture-modal-verse-tab"
                 onClick={() => setShowingContext(false)}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors min-h-[36px] border-2 ${
+                className={`cursor-pointer px-3 py-1.5 text-sm font-medium rounded-md transition-colors min-h-[36px] border-2 ${
                   !showingContext 
                     ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border-blue-400 dark:border-blue-600' 
                     : 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 border-slate-400 dark:border-slate-500'
@@ -646,7 +646,7 @@ export default function ScriptureModal({
                   showingContext 
                     ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border-blue-400 dark:border-blue-600' 
                     : 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 border-slate-400 dark:border-slate-500'
-                } ${contextLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                } ${contextLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
               >
                 {contextLoading ? 'Loading...' : 'Chapter Context'}
               </button>
@@ -661,7 +661,7 @@ export default function ScriptureModal({
                 className={`px-2 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors min-h-[36px] border-2 shrink-0 ${
                   isMemoized || loading || !!error || !(scriptureText ?? '').trim()
                     ? 'text-slate-400 dark:text-slate-500 border-slate-300 dark:border-slate-600 cursor-not-allowed bg-slate-50 dark:bg-slate-700/50'
-                    : 'text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500'
+                    : 'cursor-pointer text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500'
                 }`}
               >
                 Memorize

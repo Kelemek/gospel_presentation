@@ -121,7 +121,7 @@ export function AlertModalProvider({ children }: { children: React.ReactNode }) 
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 font-medium transition-colors"
+                  className="cursor-pointer px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 font-medium transition-colors"
                 >
                   Cancel
                 </button>
@@ -136,7 +136,7 @@ export function AlertModalProvider({ children }: { children: React.ReactNode }) 
                       : undefined
                 }
                 onClick={state.variant === 'alert' ? handleClose : handleConfirm}
-                className="px-4 py-2 rounded-lg bg-slate-500 hover:bg-slate-600 active:bg-slate-700 text-white dark:bg-slate-600 dark:hover:bg-slate-500 dark:active:bg-slate-400 font-medium transition-colors"
+                className="cursor-pointer px-4 py-2 rounded-lg bg-slate-500 hover:bg-slate-600 active:bg-slate-700 text-white dark:bg-slate-600 dark:hover:bg-slate-500 dark:active:bg-slate-400 font-medium transition-colors"
               >
                 {state.variant === 'alert' ? 'OK' : 'Confirm'}
               </button>

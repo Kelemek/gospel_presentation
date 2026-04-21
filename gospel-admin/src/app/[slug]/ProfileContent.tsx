@@ -677,8 +677,9 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                   Table of Contents
                 </h3>
                 <button
+                  type="button"
                   onClick={closeMenu}
-                  className="lg:hidden p-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors"
+                  className="lg:hidden cursor-pointer p-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors"
                   aria-label="Close menu"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -727,7 +728,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                           router.refresh()
                         }}
                         disabled={progressLoading}
-                        className="text-xs px-3 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded transition-colors disabled:opacity-50 w-full"
+                        className="w-full cursor-pointer rounded px-3 py-1 text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-200 dark:hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
                         aria-label="Reset scripture reading progress for this presentation"
                       >
                         {progressLoading ? 'Resetting...' : 'Reset Progress'}

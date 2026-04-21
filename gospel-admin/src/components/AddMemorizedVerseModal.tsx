@@ -248,7 +248,7 @@ export default function AddMemorizedVerseModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors"
+            className="cursor-pointer p-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors"
             aria-label="Close"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -266,7 +266,7 @@ export default function AddMemorizedVerseModal({
               <button
                 type="button"
                 onClick={() => setTestament('ot')}
-                className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${
+                className={`flex-1 cursor-pointer py-2.5 text-sm font-medium rounded-md transition-colors ${
                   testament === 'ot'
                     ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
                     : 'text-slate-600 dark:text-slate-400'
@@ -277,7 +277,7 @@ export default function AddMemorizedVerseModal({
               <button
                 type="button"
                 onClick={() => setTestament('nt')}
-                className={`flex-1 py-2.5 text-sm font-medium rounded-md transition-colors ${
+                className={`flex-1 cursor-pointer py-2.5 text-sm font-medium rounded-md transition-colors ${
                   testament === 'nt'
                     ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
                     : 'text-slate-600 dark:text-slate-400'
@@ -317,7 +317,7 @@ export default function AddMemorizedVerseModal({
                           setSelectedBookName('')
                         }
                       }}
-                      className="flex w-full items-start justify-between gap-2 px-3 py-3 text-left text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700/80 min-h-[48px]"
+                      className="flex w-full cursor-pointer items-start justify-between gap-2 px-3 py-3 text-left text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700/80 min-h-[48px]"
                     >
                       <span className="font-medium min-w-0 flex-1 leading-snug">{book.name}</span>
                       <svg
@@ -346,7 +346,7 @@ export default function AddMemorizedVerseModal({
                                   data-tour="add-memorize-chapter"
                                   data-add-memorize-chapter-number={num}
                                   onClick={() => onChapterClick(book, ch.id, num)}
-                                  className={`min-h-[48px] w-full min-w-0 rounded-lg text-sm font-medium border transition-colors touch-manipulation ${
+                                  className={`min-h-[48px] w-full min-w-0 cursor-pointer rounded-lg text-sm font-medium border transition-colors touch-manipulation ${
                                     selected
                                       ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100 border-blue-300 dark:border-blue-600'
                                       : 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600'
@@ -372,7 +372,7 @@ export default function AddMemorizedVerseModal({
                                       data-tour="add-memorize-verse"
                                       data-add-memorize-verse-number={n}
                                       onClick={() => onVerseClick(n)}
-                                      className={`min-h-[48px] w-full min-w-0 rounded-lg text-sm font-medium border transition-colors touch-manipulation ${
+                                      className={`min-h-[48px] w-full min-w-0 cursor-pointer rounded-lg text-sm font-medium border transition-colors touch-manipulation ${
                                         on
                                           ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100 border-blue-300 dark:border-blue-600'
                                           : 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600'
@@ -401,7 +401,7 @@ export default function AddMemorizedVerseModal({
             data-tour="add-memorize-add"
             disabled={!canAdd}
             onClick={() => void onAdd()}
-            className="w-full min-h-[48px] rounded-lg font-medium border border-blue-300 dark:border-blue-600 bg-blue-100 text-blue-900 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-100 dark:hover:bg-blue-900/65 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full min-h-[48px] cursor-pointer rounded-lg font-medium border border-blue-300 dark:border-blue-600 bg-blue-100 text-blue-900 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-100 dark:hover:bg-blue-900/65 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {submitting ? 'Adding…' : 'Add'}
           </button>

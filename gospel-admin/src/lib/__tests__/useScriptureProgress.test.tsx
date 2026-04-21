@@ -135,6 +135,101 @@ describe('useScriptureProgress', () => {
     )
   })
 
+  test('after reset, lastViewedScripture is none even if profile prop still has stale lastViewedScripture (no rerender)', async () => {
+    const profile = {
+      slug: 'p-stale-rsc',
+      isDefault: false,
+      lastViewedScripture: {
+        reference: 'Ephesians 4:25-32',
+        sectionId: 'section-1',
+        subsectionId: 'section-1-0',
+        viewedAt: new Date('2024-01-01'),
+      },
+    }
+    const fetchMock = jest.fn((url: string, opts?: any) => {
+      if (opts?.method === 'DELETE') return Promise.resolve({ ok: true })
+      return Promise.resolve({ ok: true })
+    })
+    // @ts-expect-error mocking incompatible types
+    global.fetch = fetchMock
+    Object.defineProperty(global, 'localStorage', {
+      value: { getItem: jest.fn(() => null), setItem: jest.fn(), removeItem: jest.fn(), clear: jest.fn() },
+      writable: true,
+    })
+
+    render(<TestHarness profile={profile} isLoggedIn />)
+    expect(screen.getByTestId('last')).toHaveTextContent('Ephesians 4:25-32')
+
+    const user = userEvent.setup()
+    await user.click(screen.getByText('reset'))
+    await waitFor(() => {
+      expect(screen.getByTestId('last')).toHaveTextContent('none')
+    })
+  })
+
+  test('tracking after reset does not revert to stale profile.lastViewedScripture before RSC refresh', async () => {
+    const staleProfile = {
+      slug: 'p-stale-after-reset',
+      isDefault: false,
+      lastViewedScripture: {
+        reference: 'Genesis 1:1',
+        sectionId: 'section-1',
+        subsectionId: 'section-1-0',
+        viewedAt: new Date('2020-01-01'),
+      },
+    }
+    const fetchMock = jest.fn((url: string, opts?: any) => {
+      if (opts?.method === 'DELETE') return Promise.resolve({ ok: true })
+      return Promise.resolve({ ok: true })
+    })
+    // @ts-expect-error mocking incompatible types
+    global.fetch = fetchMock
+    const store: Record<string, string> = {}
+    Object.defineProperty(global, 'localStorage', {
+      value: {
+        getItem: jest.fn((k: string) => store[k] ?? null),
+        setItem: jest.fn((k: string, v: string) => {
+          store[k] = v
+        }),
+        removeItem: jest.fn((k: string) => {
+          delete store[k]
+        }),
+        clear: jest.fn(() => {
+          for (const k of Object.keys(store)) delete store[k]
+        }),
+      },
+      writable: true,
+    })
+
+    function Harness({ profile }: { profile: typeof staleProfile }) {
+      const { trackScriptureView, resetProgress, lastViewedScripture } = useScriptureProgress(profile, true)
+      return (
+        <div>
+          <button type="button" onClick={() => resetProgress()}>
+            reset
+          </button>
+          <button type="button" onClick={() => trackScriptureView('John 3:16', 'section-2', 'section-2-0')}>
+            track
+          </button>
+          <div data-testid="last">{lastViewedScripture?.reference ?? 'none'}</div>
+        </div>
+      )
+    }
+
+    const { rerender } = render(<Harness profile={staleProfile} />)
+    await waitFor(() => expect(screen.getByTestId('last')).toHaveTextContent('Genesis 1:1'))
+
+    const user = userEvent.setup()
+    await user.click(screen.getByText('reset'))
+    await waitFor(() => expect(screen.getByTestId('last')).toHaveTextContent('none'))
+
+    await user.click(screen.getByText('track'))
+    await waitFor(() => expect(screen.getByTestId('last')).toHaveTextContent('John 3:16'))
+
+    rerender(<Harness profile={staleProfile} />)
+    expect(screen.getByTestId('last')).toHaveTextContent('John 3:16')
+  })
+
   test('lastViewedScripture comes from localStorage when no profile lastViewedScripture', async () => {
     const stored = { reference: 'Rom 8:28', sectionId: 's1', subsectionId: 'ss1', viewedAt: new Date().toISOString() }
     Object.defineProperty(global, 'localStorage', {
