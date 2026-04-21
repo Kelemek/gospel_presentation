@@ -191,7 +191,7 @@ export default function MemorizeDropdown({
             type="button"
             data-tour="memorize-add-verse"
             onClick={() => setAddVerseOpen(true)}
-            className="w-full min-h-[44px] rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/40 px-4 py-2.5 text-sm font-medium text-blue-800 dark:text-blue-100 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+            className="w-full min-h-[44px] cursor-pointer rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/40 px-4 py-2.5 text-sm font-medium text-blue-800 dark:text-blue-100 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
           >
             + Add
           </button>

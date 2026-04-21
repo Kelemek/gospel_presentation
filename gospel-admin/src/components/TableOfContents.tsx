@@ -175,7 +175,7 @@ export default function TableOfContents({
                         data-tour="resource-category"
                         data-resource-category-label={group.item.name}
                         onClick={() => toggleCategory(group.item.id)}
-                        className="flex w-full items-center gap-2 px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-left"
+                        className="flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-left"
                         aria-expanded={expandedCategoryIds.has(group.item.id)}
                       >
                         <span className="font-medium">{group.item.name}</span>
@@ -251,7 +251,7 @@ export default function TableOfContents({
                   setTextSize(opt.value)
                   setIsTextSizeOpen(false)
                 }}
-                className={`flex w-full items-center gap-2 px-4 py-3 text-sm text-left transition-colors border-b border-slate-100 dark:border-slate-600 last:border-b-0 ${
+                className={`flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-sm text-left transition-colors border-b border-slate-100 dark:border-slate-600 last:border-b-0 ${
                   textSize === opt.value
                     ? 'bg-slate-100 dark:bg-slate-700 font-semibold text-slate-900 dark:text-slate-50'
                     : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
@@ -318,7 +318,7 @@ export default function TableOfContents({
                   role="option"
                   aria-selected={translation === translation_code}
                   onClick={() => void handlePickTranslation(translation_code as BibleTranslation)}
-                  className={`flex w-full items-center gap-2 px-4 py-3 text-sm text-left transition-colors border-b border-slate-100 dark:border-slate-600 last:border-b-0 ${
+                  className={`flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-sm text-left transition-colors border-b border-slate-100 dark:border-slate-600 last:border-b-0 ${
                     translation === translation_code
                       ? 'bg-slate-100 dark:bg-slate-700 font-semibold text-slate-900 dark:text-slate-50'
                       : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
