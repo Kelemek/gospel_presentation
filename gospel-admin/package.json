@@ -28,6 +28,7 @@
     "@capacitor/ios": "^8.1.0",
     "@capacitor/splash-screen": "^8.0.1",
     "@capgo/capacitor-printer": "^8.0.10",
+    "@capgo/capacitor-speech-recognition": "^8.1.0",
     "@sentry/nextjs": "^10.27.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.86.0",

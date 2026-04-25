@@ -11,7 +11,8 @@ const config: CapacitorConfig = {
   webDir: 'public',
   plugins: {
     SplashScreen: {
-      launchAutoHide: true,
+      /** Kept until JS calls `SplashScreen.hide()` — see `SplashScreenController.tsx` (avoids native auto-timeout when dev server is slow). */
+      launchAutoHide: false,
       launchShowDuration: 2500,
     },
   },

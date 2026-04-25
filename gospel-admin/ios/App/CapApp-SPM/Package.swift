@@ -13,7 +13,8 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/ionic-team/capacitor-swift-pm.git", exact: "8.1.0"),
         .package(name: "CapacitorSplashScreen", path: "../../../node_modules/@capacitor/splash-screen"),
-        .package(name: "CapgoCapacitorPrinter", path: "../../../node_modules/@capgo/capacitor-printer")
+        .package(name: "CapgoCapacitorPrinter", path: "../../../node_modules/@capgo/capacitor-printer"),
+        .package(name: "CapgoCapacitorSpeechRecognition", path: "../../../node_modules/@capgo/capacitor-speech-recognition")
     ],
     targets: [
         .target(
@@ -22,7 +23,8 @@ let package = Package(
                 .product(name: "Capacitor", package: "capacitor-swift-pm"),
                 .product(name: "Cordova", package: "capacitor-swift-pm"),
                 .product(name: "CapacitorSplashScreen", package: "CapacitorSplashScreen"),
-                .product(name: "CapgoCapacitorPrinter", package: "CapgoCapacitorPrinter")
+                .product(name: "CapgoCapacitorPrinter", package: "CapgoCapacitorPrinter"),
+                .product(name: "CapgoCapacitorSpeechRecognition", package: "CapgoCapacitorSpeechRecognition")
             ]
         )
     ]

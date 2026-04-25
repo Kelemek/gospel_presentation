@@ -53,15 +53,13 @@ describe('memorizationPracticeUtils', () => {
     expect(firstLetterOfWord('(Son)')).toBe('s')
   })
 
-  it('parseReferenceMemorizationTokens splits digits and keeps colon/dash as punct', () => {
+  it('parseReferenceMemorizationTokens groups digit runs and keeps colon/dash as punct', () => {
     expect(parseReferenceMemorizationTokens('Isaiah 40:18')).toEqual([
       { kind: 'word', text: 'Isaiah' },
       { kind: 'punct', text: ' ' },
-      { kind: 'digit', text: '4' },
-      { kind: 'digit', text: '0' },
+      { kind: 'digit', text: '40' },
       { kind: 'punct', text: ':' },
-      { kind: 'digit', text: '1' },
-      { kind: 'digit', text: '8' },
+      { kind: 'digit', text: '18' },
     ])
     expect(parseReferenceMemorizationTokens('1-2')).toEqual([
       { kind: 'digit', text: '1' },
@@ -73,6 +71,7 @@ describe('memorizationPracticeUtils', () => {
   it('buildMemorizationTokens appends reference after verse with spaces', () => {
     const t = buildMemorizationTokens('For God', 'John 3:16')
     expect(formatMemorizationTokensPlain(t)).toBe('For God John 3:16')
-    expect(getTypableTokenIndices(t)).toEqual([0, 2, 4, 6, 8, 9])
+    expect(getTypableTokenIndices(t)).toEqual([0, 2, 4, 6, 8])
   })
+
 })

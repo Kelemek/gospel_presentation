@@ -21,12 +21,21 @@ export type MemorizationInProgressPhase =
   | { kind: 'betweenRounds'; completedRoundIndex: number }
   | { kind: 'inRound'; roundIndex: number }
 
+export type MemorizationPracticeKind = 'typing' | 'voice'
+
 export interface MemorizationInProgress {
   sessionSeed: string
   wrongAttempts: number
   correctKeystrokes: number
   updatedAt: number
   phase: MemorizationInProgressPhase
+  /** Omitted or `typing` = first-letter mode; `voice` = native recitation mode. */
+  practiceKind?: MemorizationPracticeKind
+  /**
+   * Next typable index (0 = first word) within the current round for voice mode.
+   * Omitted in typing mode; default 0 when resuming old saves.
+   */
+  voiceTypableOffset?: number
 }
 
 /** Payload from the practice UI (storage sets `updatedAt`). */
@@ -78,6 +87,12 @@ function normalizeInProgress(raw: unknown): MemorizationInProgress | undefined {
   }
   const p = phase as Record<string, unknown>
   const kind = p.kind
+  const practiceKindRaw = o.practiceKind
+  const practiceKind: MemorizationPracticeKind | undefined =
+    practiceKindRaw === 'typing' || practiceKindRaw === 'voice' ? practiceKindRaw : undefined
+  const voiceOff = o.voiceTypableOffset
+  const voiceTypableOffset =
+    typeof voiceOff === 'number' && voiceOff >= 0 && Number.isInteger(voiceOff) ? voiceOff : undefined
   if (kind === 'betweenRounds') {
     const completedRoundIndex = p.completedRoundIndex
     if (
@@ -92,6 +107,8 @@ function normalizeInProgress(raw: unknown): MemorizationInProgress | undefined {
       wrongAttempts,
       correctKeystrokes,
       updatedAt,
+      practiceKind,
+      ...(typeof voiceTypableOffset === 'number' ? { voiceTypableOffset } : {}),
       phase: { kind: 'betweenRounds', completedRoundIndex },
     }
   }
@@ -105,6 +122,8 @@ function normalizeInProgress(raw: unknown): MemorizationInProgress | undefined {
       wrongAttempts,
       correctKeystrokes,
       updatedAt,
+      practiceKind,
+      ...(typeof voiceTypableOffset === 'number' ? { voiceTypableOffset } : {}),
       phase: { kind: 'inRound', roundIndex },
     }
   }

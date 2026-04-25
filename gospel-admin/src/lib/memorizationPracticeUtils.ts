@@ -22,14 +22,17 @@ export function getWordsForMemorization(plainText: string): string[] {
   return plainText.trim().split(/\s+/).filter(Boolean)
 }
 
-/** One display/typing unit: verse words, reference words, per-digit blanks, or visible punctuation (not typed). */
+/** One display/typing unit: verse words, reference words, number runs (e.g. "23" as one token for voice), or visible punctuation (not typed). */
 export type MemorizationToken = {
   kind: 'word' | 'digit' | 'punct'
-  /** Word text, single digit char, or punctuation/space to show as-is */
+  /** Word text, digit string (may be multiple chars for 3:23-style references), or punctuation/space to show as-is */
   text: string
 }
 
-/** Parse a reference: each digit is its own token; colons, dashes, and other non-alphanumeric chars are punct (shown, not typed). */
+/**
+ * Parse a reference: consecutive digits form one number token; colons, dashes, and other
+ * non-alphanumeric chars are punct (shown, not typed in typing mode; spoken as one value in voice).
+ */
 export function parseReferenceMemorizationTokens(reference: string): MemorizationToken[] {
   const ref = reference.trim()
   if (!ref) return []
@@ -45,8 +48,10 @@ export function parseReferenceMemorizationTokens(reference: string): Memorizatio
       continue
     }
     if (/[0-9]/.test(c)) {
-      tokens.push({ kind: 'digit', text: c })
-      i++
+      let j = i + 1
+      while (j < ref.length && /[0-9]/.test(ref[j]!)) j++
+      tokens.push({ kind: 'digit', text: ref.slice(i, j) })
+      i = j
       continue
     }
     if (/[A-Za-z]/.test(c)) {

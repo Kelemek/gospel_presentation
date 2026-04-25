@@ -798,7 +798,8 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
             verse={memorizationPracticeVerse}
             onClose={() => setMemorizationPracticeVerse(null)}
             onPersistInProgress={(payload) => {
-              saveMemorizationInProgress(memorizationPracticeVerse.id, payload)
+              const u = saveMemorizationInProgress(memorizationPracticeVerse.id, payload)
+              if (u) setMemorizationPracticeVerse(u)
             }}
             onClearInProgress={() => {
               clearMemorizationInProgress(memorizationPracticeVerse.id)

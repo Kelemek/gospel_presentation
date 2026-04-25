@@ -243,7 +243,8 @@ export default function MemorizeDropdown({
               refresh()
             }}
             onPersistInProgress={(payload) => {
-              saveMemorizationInProgress(practiceVerse.id, payload)
+              const u = saveMemorizationInProgress(practiceVerse.id, payload)
+              if (u) setPracticeVerse(u)
               refresh()
             }}
             onClearInProgress={() => {
