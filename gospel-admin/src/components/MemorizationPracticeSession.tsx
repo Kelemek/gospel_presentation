@@ -140,6 +140,11 @@ export default function MemorizationPracticeSession({
       }).toString()}`,
     [verse.reference, verse.translation]
   )
+  /** ESV uses passage audio on all platforms. Non-ESV Listen is Web TTS — hidden on Android until native TTS is reliable. */
+  const introListenControlsVisible = useMemo(
+    () => listenViaEsvPassageUrl || !memorizeAndroidHost,
+    [listenViaEsvPassageUrl, memorizeAndroidHost]
+  )
   const passageAudioRef = useRef<HTMLAudioElement | null>(null)
   const [passageAudioPlaying, setPassageAudioPlaying] = useState(false)
   /** Bumps on speechSynthesis start/end/pause so Listen / Pause / Resume labels re-render. */
@@ -682,6 +687,9 @@ export default function MemorizationPracticeSession({
   }, [bumpListen, clearListenRepeatGapTimer])
 
   const beginTtsUtterance = useCallback(function speakTtsLine() {
+    if (memorizeAndroidHost) {
+      return
+    }
     if (typeof window === 'undefined' || !window.speechSynthesis) {
       return
     }
@@ -716,9 +724,12 @@ export default function MemorizationPracticeSession({
     }
     syn.speak(u)
     bumpListen()
-  }, [bumpListen, clearListenRepeatGapTimer, verse])
+  }, [bumpListen, clearListenRepeatGapTimer, memorizeAndroidHost, verse])
 
   const handleListenPassageClick = useCallback(() => {
+    if (!introListenControlsVisible) {
+      return
+    }
     setShowRepeatListenButton(true)
     if (listenViaEsvPassageUrl) {
       const el = passageAudioRef.current
@@ -751,9 +762,18 @@ export default function MemorizationPracticeSession({
       return
     }
     beginTtsUtterance()
-  }, [beginTtsUtterance, bumpListen, listenViaEsvPassageUrl, memorizePassageAudioUrl])
+  }, [
+    beginTtsUtterance,
+    bumpListen,
+    introListenControlsVisible,
+    listenViaEsvPassageUrl,
+    memorizePassageAudioUrl,
+  ])
 
   const handleRepeatListenToggle = useCallback(() => {
+    if (!introListenControlsVisible) {
+      return
+    }
     if (!showRepeatListenButton) {
       return
     }
@@ -790,6 +810,7 @@ export default function MemorizationPracticeSession({
     beginTtsUtterance,
     bumpListen,
     clearListenRepeatGapTimer,
+    introListenControlsVisible,
     listenViaEsvPassageUrl,
     memorizePassageAudioUrl,
     showRepeatListenButton,
@@ -1172,34 +1193,38 @@ export default function MemorizationPracticeSession({
                 >
                   Start practice
                 </button>
-                <button
-                  type="button"
-                  data-testid="memorize-listen-passage"
-                  onClick={() => {
-                    handleListenPassageClick()
-                  }}
-                  className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
-                  aria-pressed={listenAriaPressed}
-                  aria-label={listenAriaLabel}
-                >
-                  {listenButtonLabel}
-                </button>
-                {showRepeatListenButton && (
-                  <button
-                    type="button"
-                    data-testid="memorize-listen-repeat"
-                    onClick={handleRepeatListenToggle}
-                    className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 data-[on=true]:bg-amber-50 data-[on=true]:dark:bg-amber-900/20 data-[on=true]:border-amber-300 data-[on=true]:dark:border-amber-800 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
-                    data-on={repeatListenOn ? 'true' : 'false'}
-                    aria-pressed={repeatListenOn}
-                    aria-label={
-                      repeatListenOn
-                        ? 'Stop repeating the read-aloud after this play ends'
-                        : 'Repeat the read-aloud with a short pause between each play'
-                    }
-                  >
-                    {repeatListenOn ? 'Repeat on' : 'Repeat'}
-                  </button>
+                {introListenControlsVisible && (
+                  <>
+                    <button
+                      type="button"
+                      data-testid="memorize-listen-passage"
+                      onClick={() => {
+                        handleListenPassageClick()
+                      }}
+                      className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
+                      aria-pressed={listenAriaPressed}
+                      aria-label={listenAriaLabel}
+                    >
+                      {listenButtonLabel}
+                    </button>
+                    {showRepeatListenButton && (
+                      <button
+                        type="button"
+                        data-testid="memorize-listen-repeat"
+                        onClick={handleRepeatListenToggle}
+                        className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 data-[on=true]:bg-amber-50 data-[on=true]:dark:bg-amber-900/20 data-[on=true]:border-amber-300 data-[on=true]:dark:border-amber-800 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
+                        data-on={repeatListenOn ? 'true' : 'false'}
+                        aria-pressed={repeatListenOn}
+                        aria-label={
+                          repeatListenOn
+                            ? 'Stop repeating the read-aloud after this play ends'
+                            : 'Repeat the read-aloud with a short pause between each play'
+                        }
+                      >
+                        {repeatListenOn ? 'Repeat on' : 'Repeat'}
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </div>

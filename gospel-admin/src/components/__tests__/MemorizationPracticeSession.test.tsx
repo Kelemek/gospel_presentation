@@ -122,6 +122,19 @@ describe('MemorizationPracticeSession', () => {
     }
   })
 
+  it('hides Listen for non-ESV on Android', () => {
+    ;(isMemorizeAndroidWebHost as jest.Mock).mockReturnValue(true)
+    const niv: MemorizedVerse = { ...baseVerse, translation: 'niv' }
+    render(<MemorizationPracticeSession verse={niv} onClose={jest.fn()} onComplete={jest.fn()} />)
+    expect(screen.queryByTestId('memorize-listen-passage')).not.toBeInTheDocument()
+  })
+
+  it('still shows Listen for ESV on Android', () => {
+    ;(isMemorizeAndroidWebHost as jest.Mock).mockReturnValue(true)
+    render(<MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />)
+    expect(screen.getByTestId('memorize-listen-passage')).toBeInTheDocument()
+  })
+
   it('shows intro with full verse text', () => {
     render(
       <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
