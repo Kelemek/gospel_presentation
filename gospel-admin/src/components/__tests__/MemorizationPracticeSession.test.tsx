@@ -112,7 +112,7 @@ describe('MemorizationPracticeSession', () => {
       expect(utt).toBeDefined()
       const speech = utt as SpeechSynthesisUtterance
       expect(speech.text).toContain('For God so loved the world')
-      expect(speech.text).toMatch(/John 3:16/i)
+      expect(speech.text).toMatch(/John chapter 3, verse 16/i)
     } finally {
       if (speechSynthesisDesc) {
         Object.defineProperty(window, 'speechSynthesis', speechSynthesisDesc)
