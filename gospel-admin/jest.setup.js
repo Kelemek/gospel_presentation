@@ -135,6 +135,7 @@ if (typeof global.SpeechSynthesisUtterance === 'undefined') {
     constructor(text) {
       this.text = typeof text === 'string' ? text : ''
       this.lang = 'en-US'
+      this.rate = 1
     }
   }
 }

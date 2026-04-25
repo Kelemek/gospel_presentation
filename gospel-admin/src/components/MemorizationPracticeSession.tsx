@@ -26,6 +26,13 @@ import {
   isMemorizeIosWebHost,
 } from '@/lib/memorizationViewportPlatform'
 import { getMemorizationListenUtteranceText } from '@/lib/memorizationListenUtteranceText'
+import { MemorizeListenSpeedButton } from '@/components/MemorizeListenSpeedButton'
+import {
+  applyMemorizeListenPlaybackRateToMediaElement,
+  readMemorizeListenSpeedFromStorage,
+  writeMemorizeListenSpeedToStorage,
+  type MemorizeListenSpeed,
+} from '@/lib/memorizeListenSpeedStorage'
 import {
   MEMORIZATION_FULL_HIDE_ROUND,
   buildMemorizationTokens,
@@ -140,12 +147,21 @@ export default function MemorizationPracticeSession({
       }).toString()}`,
     [verse.reference, verse.translation]
   )
-  /** ESV uses passage audio on all platforms. Non-ESV Listen is Web TTS — hidden on Android until native TTS is reliable. */
-  const introListenControlsVisible = useMemo(
+  /** ESV: passage stream. Non-ESV: Web TTS — hidden on Android until native TTS is reliable. */
+  const translationListenEnabled = useMemo(
     () => listenViaEsvPassageUrl || !memorizeAndroidHost,
     [listenViaEsvPassageUrl, memorizeAndroidHost]
   )
+  /** Intro or an active (typing) round — not the between-rounds affirmation / footer step. */
+  const listenInteractionAllowed = useMemo(
+    () =>
+      translationListenEnabled &&
+      (phase === 'intro' || (phase === 'practicing' && !awaitingRoundAdvance)),
+    [translationListenEnabled, phase, awaitingRoundAdvance]
+  )
   const passageAudioRef = useRef<HTMLAudioElement | null>(null)
+  /** Rate the current Web Speech utterance was started with (resume cannot change rate; restart if it differs). */
+  const memorizeListenTtsRateAtStartRef = useRef<MemorizeListenSpeed | null>(null)
   const [passageAudioPlaying, setPassageAudioPlaying] = useState(false)
   /** Bumps on speechSynthesis start/end/pause so Listen / Pause / Resume labels re-render. */
   const [listenUiTick, setListenUiTick] = useState(0)
@@ -153,6 +169,7 @@ export default function MemorizationPracticeSession({
 
   /** Shown to the right of Listen after the user uses Listen at least once. */
   const [showRepeatListenButton, setShowRepeatListenButton] = useState(false)
+  const [listenPlaybackRate, setListenPlaybackRate] = useState<MemorizeListenSpeed>(1)
   /** When on, the passage restarts after each play with `MEMORIZE_LISTEN_REPEAT_GAP_MS`. */
   const [repeatListenOn, setRepeatListenOn] = useState(false)
   const repeatListenOnRef = useRef(false)
@@ -169,6 +186,16 @@ export default function MemorizationPracticeSession({
     repeatListenOnRef.current = repeatListenOn
   }, [repeatListenOn])
 
+  useEffect(() => {
+    setListenPlaybackRate(readMemorizeListenSpeedFromStorage())
+  }, [])
+
+  useEffect(() => {
+    const el = passageAudioRef.current
+    if (!el) return
+    applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRate)
+  }, [listenPlaybackRate])
+
   const stopPassageAudio = useCallback(() => {
     clearListenRepeatGapTimer()
     repeatListenOnRef.current = false
@@ -177,6 +204,7 @@ export default function MemorizationPracticeSession({
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel()
     }
+    memorizeListenTtsRateAtStartRef.current = null
     const el = passageAudioRef.current
     if (el) {
       el.pause()
@@ -647,16 +675,21 @@ export default function MemorizationPracticeSession({
     })
   }, [verse.id, onClearInProgress, stopPassageAudio])
 
+  /** Stops ESV + TTS listen when leaving intro, between rounds, or when complete — not only on manual buttons. */
   useEffect(() => {
-    if (phase !== 'intro') {
+    if (awaitingRoundAdvance || phase !== 'intro') {
       stopPassageAudio()
     }
-  }, [phase, stopPassageAudio])
+  }, [awaitingRoundAdvance, phase, stopPassageAudio])
 
   const handlePassageAudioPlay = useCallback(() => {
+    const el = passageAudioRef.current
+    if (el) {
+      applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRate)
+    }
     setShowRepeatListenButton(true)
     setPassageAudioPlaying(true)
-  }, [])
+  }, [listenPlaybackRate])
 
   const handlePassageAudioPause = useCallback(() => {
     setPassageAudioPlaying(false)
@@ -679,12 +712,13 @@ export default function MemorizationPracticeSession({
         return
       }
       el.currentTime = 0
+      applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRate)
       void el.play().catch(() => {
         setPassageAudioPlaying(false)
         bumpListen()
       })
     }, MEMORIZE_LISTEN_REPEAT_GAP_MS)
-  }, [bumpListen, clearListenRepeatGapTimer])
+  }, [bumpListen, clearListenRepeatGapTimer, listenPlaybackRate])
 
   const beginTtsUtterance = useCallback(function speakTtsLine() {
     if (memorizeAndroidHost) {
@@ -701,11 +735,14 @@ export default function MemorizationPracticeSession({
     syn.cancel()
     const u = new SpeechSynthesisUtterance(text)
     u.lang = 'en-US'
+    u.rate = listenPlaybackRate
+    memorizeListenTtsRateAtStartRef.current = listenPlaybackRate
     u.onstart = () => {
       setShowRepeatListenButton(true)
       bumpListen()
     }
     u.onend = () => {
+      memorizeListenTtsRateAtStartRef.current = null
       bumpListen()
       if (!repeatListenOnRef.current) {
         return
@@ -720,14 +757,15 @@ export default function MemorizationPracticeSession({
       }, MEMORIZE_LISTEN_REPEAT_GAP_MS)
     }
     u.onerror = () => {
+      memorizeListenTtsRateAtStartRef.current = null
       bumpListen()
     }
     syn.speak(u)
     bumpListen()
-  }, [bumpListen, clearListenRepeatGapTimer, memorizeAndroidHost, verse])
+  }, [bumpListen, clearListenRepeatGapTimer, listenPlaybackRate, memorizeAndroidHost, verse])
 
   const handleListenPassageClick = useCallback(() => {
-    if (!introListenControlsVisible) {
+    if (!listenInteractionAllowed) {
       return
     }
     setShowRepeatListenButton(true)
@@ -741,6 +779,7 @@ export default function MemorizationPracticeSession({
       void (async () => {
         try {
           el.src = memorizePassageAudioUrl
+          applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRate)
           await el.play()
         } catch {
           setPassageAudioPlaying(false)
@@ -754,7 +793,14 @@ export default function MemorizationPracticeSession({
     const syn = window.speechSynthesis
     if (syn.speaking) {
       if (syn.paused) {
-        syn.resume()
+        const atStart = memorizeListenTtsRateAtStartRef.current
+        if (atStart != null && listenPlaybackRate !== atStart) {
+          syn.cancel()
+          memorizeListenTtsRateAtStartRef.current = null
+          beginTtsUtterance()
+        } else {
+          syn.resume()
+        }
       } else {
         syn.pause()
       }
@@ -765,13 +811,14 @@ export default function MemorizationPracticeSession({
   }, [
     beginTtsUtterance,
     bumpListen,
-    introListenControlsVisible,
+    listenInteractionAllowed,
+    listenPlaybackRate,
     listenViaEsvPassageUrl,
     memorizePassageAudioUrl,
   ])
 
   const handleRepeatListenToggle = useCallback(() => {
-    if (!introListenControlsVisible) {
+    if (!listenInteractionAllowed) {
       return
     }
     if (!showRepeatListenButton) {
@@ -788,6 +835,7 @@ export default function MemorizationPracticeSession({
             try {
               el.src = memorizePassageAudioUrl
               el.currentTime = 0
+              applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRate)
               await el.play()
             } catch {
               setPassageAudioPlaying(false)
@@ -810,7 +858,8 @@ export default function MemorizationPracticeSession({
     beginTtsUtterance,
     bumpListen,
     clearListenRepeatGapTimer,
-    introListenControlsVisible,
+    listenInteractionAllowed,
+    listenPlaybackRate,
     listenViaEsvPassageUrl,
     memorizePassageAudioUrl,
     showRepeatListenButton,
@@ -1129,6 +1178,20 @@ export default function MemorizationPracticeSession({
                 : undefined
             }
           >
+          {phase !== 'done' && listenViaEsvPassageUrl && (
+            <audio
+              ref={passageAudioRef}
+              preload="none"
+              className="hidden"
+              aria-hidden
+              onPlay={handlePassageAudioPlay}
+              onPause={handlePassageAudioPause}
+              onEnded={handlePassageAudioEnded}
+              onError={() => {
+                setPassageAudioPlaying(false)
+              }}
+            />
+          )}
           {phase !== 'done' && !memorizeAndroidHost && (
             <input
               ref={assignPracticeInputRef}
@@ -1160,25 +1223,12 @@ export default function MemorizationPracticeSession({
               >
                 {formatMemorizationTokensPlain(tokens)}
               </p>
-              {listenViaEsvPassageUrl && (
-                <audio
-                  ref={passageAudioRef}
-                  preload="none"
-                  className="hidden"
-                  aria-hidden
-                  onPlay={handlePassageAudioPlay}
-                  onPause={handlePassageAudioPause}
-                  onEnded={handlePassageAudioEnded}
-                  onError={() => {
-                    setPassageAudioPlaying(false)
-                  }}
-                />
-              )}
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <button
                   type="button"
                   data-tour="memorize-start-practice"
                   onClick={() => {
+                    stopPassageAudio()
                     completedRef.current = false
                     sessionSeedRef.current = generateMemorizationSessionSeed()
                     startRoundAndFocusInput(1)
@@ -1193,7 +1243,7 @@ export default function MemorizationPracticeSession({
                 >
                   Start practice
                 </button>
-                {introListenControlsVisible && (
+                {translationListenEnabled && (
                   <>
                     <button
                       type="button"
@@ -1208,21 +1258,30 @@ export default function MemorizationPracticeSession({
                       {listenButtonLabel}
                     </button>
                     {showRepeatListenButton && (
-                      <button
-                        type="button"
-                        data-testid="memorize-listen-repeat"
-                        onClick={handleRepeatListenToggle}
-                        className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 data-[on=true]:bg-amber-50 data-[on=true]:dark:bg-amber-900/20 data-[on=true]:border-amber-300 data-[on=true]:dark:border-amber-800 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
-                        data-on={repeatListenOn ? 'true' : 'false'}
-                        aria-pressed={repeatListenOn}
-                        aria-label={
-                          repeatListenOn
-                            ? 'Stop repeating the read-aloud after this play ends'
-                            : 'Repeat the read-aloud with a short pause between each play'
-                        }
-                      >
-                        {repeatListenOn ? 'Repeat on' : 'Repeat'}
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          data-testid="memorize-listen-repeat"
+                          onClick={handleRepeatListenToggle}
+                          className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 data-[on=true]:bg-amber-50 data-[on=true]:dark:bg-amber-900/20 data-[on=true]:border-amber-300 data-[on=true]:dark:border-amber-800 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
+                          data-on={repeatListenOn ? 'true' : 'false'}
+                          aria-pressed={repeatListenOn}
+                          aria-label={
+                            repeatListenOn
+                              ? 'Stop repeating the read-aloud after this play ends'
+                              : 'Repeat the read-aloud with a short pause between each play'
+                          }
+                        >
+                          {repeatListenOn ? 'Repeat on' : 'Repeat'}
+                        </button>
+                        <MemorizeListenSpeedButton
+                          value={listenPlaybackRate}
+                          onSelect={(r) => {
+                            setListenPlaybackRate(r)
+                            writeMemorizeListenSpeedToStorage(r)
+                          }}
+                        />
+                      </>
                     )}
                   </>
                 )}
@@ -1341,6 +1400,51 @@ export default function MemorizationPracticeSession({
                   )
                 })}
               </div>
+              {!awaitingRoundAdvance && translationListenEnabled && (
+                <div
+                  className="mt-4 flex flex-wrap items-center justify-start gap-3"
+                  data-testid="memorize-round-listen-row"
+                >
+                  <button
+                    type="button"
+                    data-testid="memorize-listen-passage"
+                    onClick={() => {
+                      handleListenPassageClick()
+                    }}
+                    className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
+                    aria-pressed={listenAriaPressed}
+                    aria-label={listenAriaLabel}
+                  >
+                    {listenButtonLabel}
+                  </button>
+                  {showRepeatListenButton && (
+                    <>
+                      <button
+                        type="button"
+                        data-testid="memorize-listen-repeat"
+                        onClick={handleRepeatListenToggle}
+                        className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 data-[on=true]:bg-amber-50 data-[on=true]:dark:bg-amber-900/20 data-[on=true]:border-amber-300 data-[on=true]:dark:border-amber-800 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
+                        data-on={repeatListenOn ? 'true' : 'false'}
+                        aria-pressed={repeatListenOn}
+                        aria-label={
+                          repeatListenOn
+                            ? 'Stop repeating the read-aloud after this play ends'
+                            : 'Repeat the read-aloud with a short pause between each play'
+                        }
+                      >
+                        {repeatListenOn ? 'Repeat on' : 'Repeat'}
+                      </button>
+                      <MemorizeListenSpeedButton
+                        value={listenPlaybackRate}
+                        onSelect={(r) => {
+                          setListenPlaybackRate(r)
+                          writeMemorizeListenSpeedToStorage(r)
+                        }}
+                      />
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
