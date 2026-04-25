@@ -64,3 +64,20 @@ export function applyMemorizeListenPlaybackRateToMediaElement(
     // ignore
   }
 }
+
+/**
+ * iOS WebKit’s `SpeechSynthesisUtterance.rate` is faster than the same value on
+ * `HTMLMediaElement.playbackRate` (ESV audio). Map UI presets so non-ESV TTS is closer
+ * to ESV at the same speed setting.
+ */
+export const MEMORIZE_IOS_WEB_SPEECH_RATE_SCALE = 0.82
+
+export function toMemorizeWebSpeechUtteranceRate(
+  preset: MemorizeListenSpeed,
+  isIosWeb: boolean
+): number {
+  const raw = isIosWeb ? preset * MEMORIZE_IOS_WEB_SPEECH_RATE_SCALE : preset
+  // Web Speech: typical engine clamp; keep within a safe band after scaling
+  if (!Number.isFinite(raw)) return 1
+  return Math.min(2, Math.max(0.4, raw))
+}

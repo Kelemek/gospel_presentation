@@ -12,6 +12,8 @@ export interface MemorizeListenSpeedButtonProps {
   onSelect: (rate: MemorizeListenSpeed) => void
   /** @deprecated All options are shown in the select; kept for API compatibility. */
   showCurrentOnTrigger?: boolean
+  /** When true, root and select size to content (e.g. beside Repeat on one row). */
+  inline?: boolean
 }
 
 /**
@@ -23,18 +25,29 @@ export interface MemorizeListenSpeedButtonProps {
 export function MemorizeListenSpeedButton({
   value,
   onSelect,
+  inline = false,
 }: MemorizeListenSpeedButtonProps) {
   const fieldId = useId()
   const v = String(value)
+  const selectClassName = [
+    'memorize-listen-speed-select box-border min-w-0 h-12.5 cursor-pointer appearance-none rounded-lg border border-slate-300 bg-white pl-4 pr-14 text-left text-base font-medium text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100',
+    inline ? 'w-auto max-w-full' : 'w-full sm:w-auto sm:max-w-fit',
+  ].join(' ')
   return (
-    <div className="w-full min-w-0 sm:w-auto">
+    <div
+      className={
+        inline
+          ? 'w-auto min-w-0 max-w-full shrink-0'
+          : 'w-full min-w-0 sm:w-auto'
+      }
+    >
       <label className="sr-only" htmlFor={fieldId}>
         Read-aloud speed
       </label>
       <select
         id={fieldId}
         data-testid="memorize-listen-speed"
-        className="memorize-listen-speed-select box-border w-full min-w-0 sm:w-auto sm:max-w-fit h-12.5 cursor-pointer appearance-none rounded-lg border border-slate-300 bg-white pl-4 pr-14 text-left text-base font-medium text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+        className={selectClassName}
         value={v}
         onChange={(e) => {
           const n = Number.parseFloat(e.currentTarget.value) as MemorizeListenSpeed

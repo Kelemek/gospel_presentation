@@ -24,6 +24,7 @@ jest.mock('@/lib/memorizationEncouragementMessages', () => ({
 
 jest.mock('@/lib/memorizationViewportPlatform', () => ({
   isMemorizeAndroidWebHost: jest.fn(() => false),
+  isMemorizeIosWebHost: jest.fn(() => false),
 }))
 
 import { MEMORIZE_LISTEN_SPEED_STORAGE_KEY } from '@/lib/memorizeListenSpeedStorage'
@@ -58,15 +59,17 @@ describe('MemorizationPracticeSession', () => {
     playSpy.mockRestore()
   })
 
-  it('shows Listen to the right of Start practice on intro', () => {
+  it('shows Listen in the header and Start practice on intro', () => {
     render(
       <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
     )
-    expect(screen.getByTestId('memorize-listen-passage')).toHaveTextContent('Listen')
+    expect(screen.getByTestId('memorize-listen-open')).toHaveTextContent('Listen')
+    const startRow = screen.getByRole('button', { name: /Start practice/i }).closest('div.mt-6')
+    expect(startRow?.querySelector('[data-tour="memorize-start-practice"]')).toBeTruthy()
     expect(screen.getByRole('button', { name: /Start practice/i })).toBeInTheDocument()
   })
 
-  it('does not show Repeat or Speed before first Listen on intro', () => {
+  it('does not show repeat or speed until the read-aloud dialog is open', () => {
     render(
       <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
     )
@@ -74,13 +77,13 @@ describe('MemorizationPracticeSession', () => {
     expect(screen.queryByTestId('memorize-listen-speed')).not.toBeInTheDocument()
   })
 
-  it('shows Repeat and Speed after Listen; toggles repeat mode', async () => {
+  it('shows Repeat and Speed in the read-aloud dialog; toggles repeat mode', async () => {
     const user = userEvent.setup()
     render(
       <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
     )
     expect(screen.queryByTestId('memorize-listen-repeat')).not.toBeInTheDocument()
-    await user.click(screen.getByTestId('memorize-listen-passage'))
+    await user.click(screen.getByTestId('memorize-listen-open'))
     expect(screen.getByTestId('memorize-listen-speed')).toBeInTheDocument()
     const repeat = screen.getByTestId('memorize-listen-repeat')
     expect(repeat).toHaveTextContent('Repeat')
@@ -116,6 +119,7 @@ describe('MemorizationPracticeSession', () => {
         <MemorizationPracticeSession verse={niv} onClose={jest.fn()} onComplete={jest.fn()} />
       )
       expect(container.querySelector('audio')).toBeNull()
+      await user.click(screen.getByTestId('memorize-listen-open'))
       await user.click(screen.getByTestId('memorize-listen-passage'))
       expect(speak).toHaveBeenCalledTimes(1)
       const [utt] = speak.mock.calls[0] ?? []
@@ -143,13 +147,13 @@ describe('MemorizationPracticeSession', () => {
     ;(isMemorizeAndroidWebHost as jest.Mock).mockReturnValue(true)
     const niv: MemorizedVerse = { ...baseVerse, translation: 'niv' }
     render(<MemorizationPracticeSession verse={niv} onClose={jest.fn()} onComplete={jest.fn()} />)
-    expect(screen.queryByTestId('memorize-listen-passage')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('memorize-listen-open')).not.toBeInTheDocument()
   })
 
   it('still shows Listen for ESV on Android', () => {
     ;(isMemorizeAndroidWebHost as jest.Mock).mockReturnValue(true)
     render(<MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />)
-    expect(screen.getByTestId('memorize-listen-passage')).toBeInTheDocument()
+    expect(screen.getByTestId('memorize-listen-open')).toBeInTheDocument()
   })
 
   it('persists selected listen speed to localStorage', async () => {
@@ -158,7 +162,7 @@ describe('MemorizationPracticeSession', () => {
     render(
       <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
     )
-    await user.click(screen.getByTestId('memorize-listen-passage'))
+    await user.click(screen.getByTestId('memorize-listen-open'))
     await user.selectOptions(screen.getByTestId('memorize-listen-speed'), '1.5')
     expect(setItemSpy).toHaveBeenCalledWith(MEMORIZE_LISTEN_SPEED_STORAGE_KEY, '1.5')
     setItemSpy.mockRestore()
@@ -181,7 +185,7 @@ describe('MemorizationPracticeSession', () => {
     await user.click(screen.getByRole('button', { name: /Start practice/i }))
     expect(screen.getByTestId('memorize-practice-words')).toBeInTheDocument()
     expect(screen.getByText(/Round 1 of 5/i)).toBeInTheDocument()
-    expect(screen.getByTestId('memorize-round-listen-row')).toBeInTheDocument()
+    expect(screen.getByTestId('memorize-listen-open')).toBeInTheDocument()
   })
 
   it('refocuses the practice input when tapping the verse area (soft keyboard recovery)', async () => {

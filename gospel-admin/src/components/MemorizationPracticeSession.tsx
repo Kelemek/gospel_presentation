@@ -26,10 +26,11 @@ import {
   isMemorizeIosWebHost,
 } from '@/lib/memorizationViewportPlatform'
 import { getMemorizationListenUtteranceText } from '@/lib/memorizationListenUtteranceText'
-import { MemorizeListenSpeedButton } from '@/components/MemorizeListenSpeedButton'
+import { MemorizeListenControlsDialog } from '@/components/MemorizeListenControlsDialog'
 import {
   applyMemorizeListenPlaybackRateToMediaElement,
   readMemorizeListenSpeedFromStorage,
+  toMemorizeWebSpeechUtteranceRate,
   writeMemorizeListenSpeedToStorage,
   type MemorizeListenSpeed,
 } from '@/lib/memorizeListenSpeedStorage'
@@ -76,6 +77,9 @@ const ANDROID_SCROLL_CLAMP_MS = 600
 
 /** Gap between end of one read-aloud and the next when "Repeat" is on (ESV and TTS). */
 const MEMORIZE_LISTEN_REPEAT_GAP_MS = 650
+
+const MEMORIZE_LISTEN_CONTROLS_DIALOG_ID = 'memorize-listen-controls-dialog'
+const MEMORIZE_LISTEN_CONTROLS_TITLE_ID = 'memorize-listen-controls-title'
 
 function expectedKeystrokeForToken(token: MemorizationToken): string {
   if (token.kind === 'digit') return token.text
@@ -162,14 +166,20 @@ export default function MemorizationPracticeSession({
   const passageAudioRef = useRef<HTMLAudioElement | null>(null)
   /** Rate the current Web Speech utterance was started with (resume cannot change rate; restart if it differs). */
   const memorizeListenTtsRateAtStartRef = useRef<MemorizeListenSpeed | null>(null)
+  /** Set when the user pauses TTS; some WebKit versions keep `!speechSynthesis.paused` briefly after `pause()`. */
+  const memorizeListenTtsUserPausedRef = useRef(false)
+  /** Set after `speechSynthesis.resume()` until `!paused` is observed (pause flag can lag; `onstart` may not re-fire on resume). */
+  const memorizeListenTtsPostResumeRef = useRef(false)
   const [passageAudioPlaying, setPassageAudioPlaying] = useState(false)
-  /** Bumps on speechSynthesis start/end/pause so Listen / Pause / Resume labels re-render. */
+  /** Bumps on speechSynthesis start/end/pause so Play / Pause labels re-render. */
   const [listenUiTick, setListenUiTick] = useState(0)
   const bumpListen = useCallback(() => setListenUiTick((n) => n + 1), [])
 
-  /** Shown to the right of Listen after the user uses Listen at least once. */
-  const [showRepeatListenButton, setShowRepeatListenButton] = useState(false)
+  const [listenPanelOpen, setListenPanelOpen] = useState(false)
   const [listenPlaybackRate, setListenPlaybackRate] = useState<MemorizeListenSpeed>(1)
+  /** Latest rate for timeouts / stale `beginTtsUtterance` closures (e.g. repeat gap after speed change in-dialog). */
+  const listenPlaybackRateRef = useRef<MemorizeListenSpeed>(listenPlaybackRate)
+  listenPlaybackRateRef.current = listenPlaybackRate
   /** When on, the passage restarts after each play with `MEMORIZE_LISTEN_REPEAT_GAP_MS`. */
   const [repeatListenOn, setRepeatListenOn] = useState(false)
   const repeatListenOnRef = useRef(false)
@@ -194,17 +204,20 @@ export default function MemorizationPracticeSession({
     const el = passageAudioRef.current
     if (!el) return
     applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRate)
-  }, [listenPlaybackRate])
+    // Rate changes and apply() can get React play state and the <audio> element out of sync; resync the Listen label.
+    bumpListen()
+  }, [bumpListen, listenPlaybackRate])
 
   const stopPassageAudio = useCallback(() => {
     clearListenRepeatGapTimer()
     repeatListenOnRef.current = false
     setRepeatListenOn(false)
-    setShowRepeatListenButton(false)
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel()
     }
     memorizeListenTtsRateAtStartRef.current = null
+    memorizeListenTtsUserPausedRef.current = false
+    memorizeListenTtsPostResumeRef.current = false
     const el = passageAudioRef.current
     if (el) {
       el.pause()
@@ -216,43 +229,87 @@ export default function MemorizationPracticeSession({
   }, [bumpListen, clearListenRepeatGapTimer])
 
   const listenButtonLabel = useMemo(() => {
-    // Subscribes TTS readout to bumpListen() — speechSynthesis is not a React value.
+    // `listenUiTick` bumps on speech / audio events; `listenPlaybackRate` / `listenPanelOpen` force re-read when the read-aloud UI changes.
     void listenUiTick
     if (listenViaEsvPassageUrl) {
+      const el = passageAudioRef.current
+      if (el?.getAttribute('src')) {
+        return !el.paused && !el.ended ? 'Pause' : 'Listen'
+      }
       return passageAudioPlaying ? 'Pause' : 'Listen'
     }
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       return 'Listen'
     }
     const syn = window.speechSynthesis
-    if (syn.speaking && syn.paused) return 'Resume'
-    if (syn.speaking) return 'Pause'
+    if (memorizeListenTtsUserPausedRef.current) {
+      return 'Listen'
+    }
+    if (memorizeListenTtsPostResumeRef.current && syn.speaking) {
+      return 'Pause'
+    }
+    // Paused mid-utterance uses the same "Play" label as idle; click still resumes via `handleListenPassageClick`.
+    if (syn.speaking && !syn.paused) return 'Pause'
     return 'Listen'
-  }, [listenUiTick, listenViaEsvPassageUrl, passageAudioPlaying])
+  }, [
+    listenUiTick,
+    listenViaEsvPassageUrl,
+    passageAudioPlaying,
+    listenPlaybackRate,
+    listenPanelOpen,
+  ])
 
   const listenAriaPressed = useMemo(() => {
     void listenUiTick
     if (listenViaEsvPassageUrl) {
+      const el = passageAudioRef.current
+      if (el?.getAttribute('src')) {
+        return !el.paused && !el.ended
+      }
       return passageAudioPlaying
     }
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       return false
     }
     const syn = window.speechSynthesis
+    if (memorizeListenTtsUserPausedRef.current) {
+      return false
+    }
+    if (memorizeListenTtsPostResumeRef.current && syn.speaking) {
+      return true
+    }
     return syn.speaking && !syn.paused
-  }, [listenUiTick, listenViaEsvPassageUrl, passageAudioPlaying])
+  }, [
+    listenUiTick,
+    listenViaEsvPassageUrl,
+    passageAudioPlaying,
+    listenPlaybackRate,
+    listenPanelOpen,
+  ])
 
   const listenAriaLabel = useMemo(() => {
     if (listenButtonLabel === 'Pause') {
       return 'Pause read-aloud of the passage'
     }
-    if (listenButtonLabel === 'Resume') {
-      return 'Resume read-aloud of the passage'
-    }
     if (listenViaEsvPassageUrl) {
       return 'Listen to the passage read aloud (ESV audio)'
     }
     return 'Listen: read the memorized text aloud using the device (same translation is not available as streaming audio)'
+  }, [listenButtonLabel, listenViaEsvPassageUrl])
+
+  /** Sub-dialog uses "Play" instead of "Listen"; only "Pause" is distinct (no separate Resume label for TTS). */
+  const readAloudDialogPrimaryLabel = useMemo(
+    () => (listenButtonLabel === 'Listen' ? 'Play' : listenButtonLabel),
+    [listenButtonLabel]
+  )
+  const readAloudDialogPrimaryAriaLabel = useMemo(() => {
+    if (listenButtonLabel === 'Pause') {
+      return 'Pause read-aloud of the passage'
+    }
+    if (listenViaEsvPassageUrl) {
+      return 'Play the passage read aloud (ESV audio)'
+    }
+    return 'Play: read the memorized text aloud using the device (same translation is not available as streaming audio)'
   }, [listenButtonLabel, listenViaEsvPassageUrl])
 
   useLayoutEffect(() => {
@@ -634,6 +691,7 @@ export default function MemorizationPracticeSession({
   )
 
   const handleClose = useCallback(() => {
+    setListenPanelOpen(false)
     stopPassageAudio()
     if (onPersistInProgress && sessionSeedRef.current && phase === 'practicing') {
       if (awaitingRoundAdvance) {
@@ -654,6 +712,7 @@ export default function MemorizationPracticeSession({
   ])
 
   const handleStartOver = useCallback(() => {
+    setListenPanelOpen(false)
     stopPassageAudio()
     onClearInProgress?.()
     sessionSeedRef.current = ''
@@ -685,11 +744,10 @@ export default function MemorizationPracticeSession({
   const handlePassageAudioPlay = useCallback(() => {
     const el = passageAudioRef.current
     if (el) {
-      applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRate)
+      applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRateRef.current)
     }
-    setShowRepeatListenButton(true)
     setPassageAudioPlaying(true)
-  }, [listenPlaybackRate])
+  }, [])
 
   const handlePassageAudioPause = useCallback(() => {
     setPassageAudioPlaying(false)
@@ -712,13 +770,13 @@ export default function MemorizationPracticeSession({
         return
       }
       el.currentTime = 0
-      applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRate)
+      applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRateRef.current)
       void el.play().catch(() => {
         setPassageAudioPlaying(false)
         bumpListen()
       })
     }, MEMORIZE_LISTEN_REPEAT_GAP_MS)
-  }, [bumpListen, clearListenRepeatGapTimer, listenPlaybackRate])
+  }, [bumpListen, clearListenRepeatGapTimer])
 
   const beginTtsUtterance = useCallback(function speakTtsLine() {
     if (memorizeAndroidHost) {
@@ -731,17 +789,22 @@ export default function MemorizationPracticeSession({
     if (!text.trim()) {
       return
     }
+    memorizeListenTtsUserPausedRef.current = false
+    memorizeListenTtsPostResumeRef.current = false
     const syn = window.speechSynthesis
     syn.cancel()
     const u = new SpeechSynthesisUtterance(text)
     u.lang = 'en-US'
-    u.rate = listenPlaybackRate
-    memorizeListenTtsRateAtStartRef.current = listenPlaybackRate
+    const rate = listenPlaybackRateRef.current
+    u.rate = toMemorizeWebSpeechUtteranceRate(rate, isMemorizeIosWebHost())
+    memorizeListenTtsRateAtStartRef.current = rate
     u.onstart = () => {
-      setShowRepeatListenButton(true)
+      memorizeListenTtsPostResumeRef.current = false
       bumpListen()
     }
     u.onend = () => {
+      memorizeListenTtsUserPausedRef.current = false
+      memorizeListenTtsPostResumeRef.current = false
       memorizeListenTtsRateAtStartRef.current = null
       bumpListen()
       if (!repeatListenOnRef.current) {
@@ -757,32 +820,41 @@ export default function MemorizationPracticeSession({
       }, MEMORIZE_LISTEN_REPEAT_GAP_MS)
     }
     u.onerror = () => {
+      memorizeListenTtsUserPausedRef.current = false
+      memorizeListenTtsPostResumeRef.current = false
       memorizeListenTtsRateAtStartRef.current = null
       bumpListen()
     }
     syn.speak(u)
     bumpListen()
-  }, [bumpListen, clearListenRepeatGapTimer, listenPlaybackRate, memorizeAndroidHost, verse])
+  }, [bumpListen, clearListenRepeatGapTimer, memorizeAndroidHost, verse])
 
   const handleListenPassageClick = useCallback(() => {
     if (!listenInteractionAllowed) {
       return
     }
-    setShowRepeatListenButton(true)
     if (listenViaEsvPassageUrl) {
       const el = passageAudioRef.current
       if (!el) return
       if (!el.paused) {
+        clearListenRepeatGapTimer()
         el.pause()
+        setPassageAudioPlaying(false)
+        bumpListen()
+        queueMicrotask(bumpListen)
         return
       }
       void (async () => {
         try {
           el.src = memorizePassageAudioUrl
-          applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRate)
+          applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRateRef.current)
           await el.play()
+          setPassageAudioPlaying(true)
+          bumpListen()
+          requestAnimationFrame(bumpListen)
         } catch {
           setPassageAudioPlaying(false)
+          bumpListen()
         }
       })()
       return
@@ -793,35 +865,40 @@ export default function MemorizationPracticeSession({
     const syn = window.speechSynthesis
     if (syn.speaking) {
       if (syn.paused) {
+        memorizeListenTtsUserPausedRef.current = false
         const atStart = memorizeListenTtsRateAtStartRef.current
-        if (atStart != null && listenPlaybackRate !== atStart) {
+        if (atStart != null && listenPlaybackRateRef.current !== atStart) {
           syn.cancel()
           memorizeListenTtsRateAtStartRef.current = null
+          memorizeListenTtsPostResumeRef.current = false
           beginTtsUtterance()
         } else {
+          memorizeListenTtsPostResumeRef.current = true
           syn.resume()
+          window.setTimeout(bumpListen, 24)
+          window.setTimeout(bumpListen, 72)
         }
       } else {
+        memorizeListenTtsUserPausedRef.current = true
+        memorizeListenTtsPostResumeRef.current = false
         syn.pause()
       }
       bumpListen()
+      queueMicrotask(bumpListen)
       return
     }
     beginTtsUtterance()
   }, [
     beginTtsUtterance,
     bumpListen,
+    clearListenRepeatGapTimer,
     listenInteractionAllowed,
-    listenPlaybackRate,
     listenViaEsvPassageUrl,
     memorizePassageAudioUrl,
   ])
 
   const handleRepeatListenToggle = useCallback(() => {
     if (!listenInteractionAllowed) {
-      return
-    }
-    if (!showRepeatListenButton) {
       return
     }
     const next = !repeatListenOnRef.current
@@ -835,7 +912,7 @@ export default function MemorizationPracticeSession({
             try {
               el.src = memorizePassageAudioUrl
               el.currentTime = 0
-              applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRate)
+              applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRateRef.current)
               await el.play()
             } catch {
               setPassageAudioPlaying(false)
@@ -854,15 +931,14 @@ export default function MemorizationPracticeSession({
     } else {
       clearListenRepeatGapTimer()
     }
+    bumpListen()
   }, [
     beginTtsUtterance,
     bumpListen,
     clearListenRepeatGapTimer,
     listenInteractionAllowed,
-    listenPlaybackRate,
     listenViaEsvPassageUrl,
     memorizePassageAudioUrl,
-    showRepeatListenButton,
   ])
 
   useEffect(() => {
@@ -1041,12 +1117,41 @@ export default function MemorizationPracticeSession({
   ])
 
   useEffect(() => {
+    if (!listenInteractionAllowed) {
+      setListenPanelOpen(false)
+    }
+  }, [listenInteractionAllowed])
+
+  useEffect(() => {
+    if (listenPanelOpen) {
+      bumpListen()
+    }
+  }, [bumpListen, listenPanelOpen])
+
+  /** Clear post-resume hint once `speechSynthesis` reports unpaused (or flush stuck state). */
+  useEffect(() => {
+    void listenUiTick
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
+    if (!memorizeListenTtsPostResumeRef.current) return
+    const syn = window.speechSynthesis
+    if (syn.speaking && !syn.paused) {
+      memorizeListenTtsPostResumeRef.current = false
+      bumpListen()
+    }
+  }, [bumpListen, listenUiTick])
+
+  useEffect(() => {
     const onEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleClose()
+      if (e.key !== 'Escape') return
+      if (listenPanelOpen) {
+        setListenPanelOpen(false)
+        return
+      }
+      handleClose()
     }
     window.addEventListener('keydown', onEsc)
     return () => window.removeEventListener('keydown', onEsc)
-  }, [handleClose])
+  }, [handleClose, listenPanelOpen])
 
   const showStartOver =
     typeof onClearInProgress === 'function' &&
@@ -1059,7 +1164,7 @@ export default function MemorizationPracticeSession({
         className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="memorize-practice-title"
+        aria-label="Memorize practice"
       >
         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full p-6 border border-slate-200 dark:border-slate-600">
           <p className="text-slate-700 dark:text-slate-200">No passage text to practice for this verse.</p>
@@ -1075,7 +1180,10 @@ export default function MemorizationPracticeSession({
     )
   }
 
+  const showListenOpeners = listenInteractionAllowed
+
   return (
+    <>
     <div
       data-tour="memorize-practice-dialog"
       className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4"
@@ -1085,13 +1193,27 @@ export default function MemorizationPracticeSession({
       }}
       role="dialog"
       aria-modal="true"
-      aria-labelledby="memorize-practice-title"
+      aria-label="Memorize practice"
     >
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] border border-slate-200 dark:border-slate-600 flex flex-col overflow-hidden">
         <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2 border-b border-slate-200 dark:border-slate-600 shrink-0">
-          <h2 id="memorize-practice-title" className="text-lg font-semibold text-slate-900 dark:text-slate-100 min-w-0">
-            Memorize
-          </h2>
+          <div className="flex min-w-0 shrink items-center gap-2">
+            {showListenOpeners && (
+              <button
+                type="button"
+                data-testid="memorize-listen-open"
+                onClick={() => {
+                  setListenPanelOpen(true)
+                }}
+                aria-expanded={listenPanelOpen}
+                aria-controls={MEMORIZE_LISTEN_CONTROLS_DIALOG_ID}
+                aria-label="Open read-aloud controls"
+                className="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700"
+              >
+                Listen
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-2 shrink-0">
             {showStartOver && (
               <button
@@ -1243,48 +1365,6 @@ export default function MemorizationPracticeSession({
                 >
                   Start practice
                 </button>
-                {translationListenEnabled && (
-                  <>
-                    <button
-                      type="button"
-                      data-testid="memorize-listen-passage"
-                      onClick={() => {
-                        handleListenPassageClick()
-                      }}
-                      className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
-                      aria-pressed={listenAriaPressed}
-                      aria-label={listenAriaLabel}
-                    >
-                      {listenButtonLabel}
-                    </button>
-                    {showRepeatListenButton && (
-                      <>
-                        <button
-                          type="button"
-                          data-testid="memorize-listen-repeat"
-                          onClick={handleRepeatListenToggle}
-                          className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 data-[on=true]:bg-amber-50 data-[on=true]:dark:bg-amber-900/20 data-[on=true]:border-amber-300 data-[on=true]:dark:border-amber-800 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
-                          data-on={repeatListenOn ? 'true' : 'false'}
-                          aria-pressed={repeatListenOn}
-                          aria-label={
-                            repeatListenOn
-                              ? 'Stop repeating the read-aloud after this play ends'
-                              : 'Repeat the read-aloud with a short pause between each play'
-                          }
-                        >
-                          {repeatListenOn ? 'Repeat on' : 'Repeat'}
-                        </button>
-                        <MemorizeListenSpeedButton
-                          value={listenPlaybackRate}
-                          onSelect={(r) => {
-                            setListenPlaybackRate(r)
-                            writeMemorizeListenSpeedToStorage(r)
-                          }}
-                        />
-                      </>
-                    )}
-                  </>
-                )}
               </div>
             </div>
           )}
@@ -1400,51 +1480,6 @@ export default function MemorizationPracticeSession({
                   )
                 })}
               </div>
-              {!awaitingRoundAdvance && translationListenEnabled && (
-                <div
-                  className="mt-4 flex flex-wrap items-center justify-start gap-3"
-                  data-testid="memorize-round-listen-row"
-                >
-                  <button
-                    type="button"
-                    data-testid="memorize-listen-passage"
-                    onClick={() => {
-                      handleListenPassageClick()
-                    }}
-                    className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
-                    aria-pressed={listenAriaPressed}
-                    aria-label={listenAriaLabel}
-                  >
-                    {listenButtonLabel}
-                  </button>
-                  {showRepeatListenButton && (
-                    <>
-                      <button
-                        type="button"
-                        data-testid="memorize-listen-repeat"
-                        onClick={handleRepeatListenToggle}
-                        className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 data-[on=true]:bg-amber-50 data-[on=true]:dark:bg-amber-900/20 data-[on=true]:border-amber-300 data-[on=true]:dark:border-amber-800 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
-                        data-on={repeatListenOn ? 'true' : 'false'}
-                        aria-pressed={repeatListenOn}
-                        aria-label={
-                          repeatListenOn
-                            ? 'Stop repeating the read-aloud after this play ends'
-                            : 'Repeat the read-aloud with a short pause between each play'
-                        }
-                      >
-                        {repeatListenOn ? 'Repeat on' : 'Repeat'}
-                      </button>
-                      <MemorizeListenSpeedButton
-                        value={listenPlaybackRate}
-                        onSelect={(r) => {
-                          setListenPlaybackRate(r)
-                          writeMemorizeListenSpeedToStorage(r)
-                        }}
-                      />
-                    </>
-                  )}
-                </div>
-              )}
             </div>
           )}
 
@@ -1508,5 +1543,29 @@ export default function MemorizationPracticeSession({
         </div>
       </div>
     </div>
+
+    {listenPanelOpen && showListenOpeners && (
+      <MemorizeListenControlsDialog
+        open
+        onClose={() => {
+          setListenPanelOpen(false)
+        }}
+        dialogId={MEMORIZE_LISTEN_CONTROLS_DIALOG_ID}
+        titleId={MEMORIZE_LISTEN_CONTROLS_TITLE_ID}
+        onPrimaryClick={handleListenPassageClick}
+        primaryLabel={readAloudDialogPrimaryLabel}
+        primaryAriaLabel={readAloudDialogPrimaryAriaLabel}
+        primaryAriaPressed={listenAriaPressed}
+        repeatListenOn={repeatListenOn}
+        onRepeatToggle={handleRepeatListenToggle}
+        listenPlaybackRate={listenPlaybackRate}
+        onSelectSpeed={(r) => {
+          setListenPlaybackRate(r)
+          writeMemorizeListenSpeedToStorage(r)
+          bumpListen()
+        }}
+      />
+    )}
+    </>
   )
 }

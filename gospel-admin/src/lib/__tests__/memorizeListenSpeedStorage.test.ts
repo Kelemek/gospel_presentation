@@ -1,7 +1,9 @@
 import {
+  MEMORIZE_IOS_WEB_SPEECH_RATE_SCALE,
   MEMORIZE_LISTEN_SPEED_STORAGE_KEY,
   normalizeMemorizeListenSpeed,
   readMemorizeListenSpeedFromStorage,
+  toMemorizeWebSpeechUtteranceRate,
 } from '@/lib/memorizeListenSpeedStorage'
 
 describe('memorizeListenSpeedStorage', () => {
@@ -21,5 +23,16 @@ describe('memorizeListenSpeedStorage', () => {
     expect(readMemorizeListenSpeedFromStorage()).toBe(1.5)
     expect(getItemSpy).toHaveBeenCalledWith(MEMORIZE_LISTEN_SPEED_STORAGE_KEY)
     getItemSpy.mockRestore()
+  })
+
+  it('Web Speech rate matches preset on non-iOS', () => {
+    expect(toMemorizeWebSpeechUtteranceRate(1, false)).toBe(1)
+    expect(toMemorizeWebSpeechUtteranceRate(1.25, false)).toBe(1.25)
+  })
+
+  it('Web Speech rate is scaled on iOS to align with ESV audio', () => {
+    expect(MEMORIZE_IOS_WEB_SPEECH_RATE_SCALE).toBeLessThan(1)
+    expect(toMemorizeWebSpeechUtteranceRate(1, true)).toBeCloseTo(0.82, 5)
+    expect(toMemorizeWebSpeechUtteranceRate(1.25, true)).toBeCloseTo(1.25 * 0.82, 5)
   })
 })
