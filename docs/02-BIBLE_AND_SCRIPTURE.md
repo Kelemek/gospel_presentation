@@ -101,6 +101,8 @@ Passage requests use USFM-style IDs (e.g. `JHN.3.16`); mapping lives in `gospel-
 ### Endpoint
 ```
 GET /api/scripture?reference=John%203:16&translation=esv
+
+**Spoken audio (not cached):** `GET /api/scripture/audio?reference=…&translation=…` returns **302** to a provider audio URL. **ESV** uses Crossway’s passage-audio API (MP3 for the requested passage). **KJV, NASB, LSB, NIV, NLT, CSB** use API.Bible: `GET /v1/audio-bibles/.../chapters/...` (see [API.Bible — Audio Bibles](https://api.bible/api-reference)) — the **audio Bible** `bibleId` in that path can differ from the text `bibleId` in `API_BIBLE_BIBLE_ID_*`; the server resolves a linked id, then the **full chapter** `resourceUrl` for the passage’s chapter. Requires the same env as text (`ESV_API_TOKEN`, `API_BIBLE_KEY`, per-translation `API_BIBLE_BIBLE_ID_*`). If no audio is linked or the reference does not parse, the route may return 404/502.
 ```
 
 ### Response

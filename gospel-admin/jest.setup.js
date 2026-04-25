@@ -1,5 +1,4 @@
 // jest.setup.js
-/* eslint-disable @typescript-eslint/no-require-imports */
 require('@testing-library/jest-dom')
 
 // Mock Vercel analytics and speed-insights to avoid .mjs ESM parse issues
@@ -94,7 +93,7 @@ if (typeof global.Response === 'undefined') {
     }
   }
 
-  // @ts-ignore - test-time polyfill
+  // @ts-expect-error test-time polyfill replaces global Response in Jest
   global.Response = _MockResponse
 }
 
@@ -129,6 +128,16 @@ global.fetch = jest.fn((url, opts) => {
   // Fallback: empty successful response
   return Promise.resolve({ ok: true, json: async () => ({}) })
 })
+
+// JSDOM does not define `SpeechSynthesisUtterance`; memorization "Listen" uses TTS in tests.
+if (typeof global.SpeechSynthesisUtterance === 'undefined') {
+  global.SpeechSynthesisUtterance = class SpeechSynthesisUtterancePolyfill {
+    constructor(text) {
+      this.text = typeof text === 'string' ? text : ''
+      this.lang = 'en-US'
+    }
+  }
+}
 
 // Mock localStorage
 const localStorageMock = {
@@ -187,7 +196,6 @@ jest.mock('@/lib/supabase/client', () => ({
         // Prefer the test-level auth mock (if tests mock '@/lib/auth') so
         // test files that call jest.mock('@/lib/auth', ...) control auth state.
         try {
-          // eslint-disable-next-line global-require
           const authMock = require('@/lib/auth')
           if (authMock && typeof authMock.isAuthenticated === 'function') {
             // If the test-level mock indicates authenticated, return a user

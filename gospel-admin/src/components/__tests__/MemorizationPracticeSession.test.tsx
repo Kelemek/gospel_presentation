@@ -44,8 +44,82 @@ const baseVerse: MemorizedVerse = {
 }
 
 describe('MemorizationPracticeSession', () => {
+  let playSpy: jest.SpiedFunction<() => Promise<void>>
+
   beforeEach(() => {
     ;(isMemorizeAndroidWebHost as jest.Mock).mockReturnValue(false)
+    playSpy = jest
+      .spyOn(HTMLMediaElement.prototype, 'play')
+      .mockImplementation(() => Promise.resolve())
+  })
+
+  afterEach(() => {
+    playSpy.mockRestore()
+  })
+
+  it('shows Listen to the right of Start practice on intro', () => {
+    render(
+      <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
+    )
+    expect(screen.getByTestId('memorize-listen-passage')).toHaveTextContent('Listen')
+    expect(screen.getByRole('button', { name: /Start practice/i })).toBeInTheDocument()
+  })
+
+  it('shows Repeat after Listen; toggles repeat mode', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
+    )
+    expect(screen.queryByTestId('memorize-listen-repeat')).not.toBeInTheDocument()
+    await user.click(screen.getByTestId('memorize-listen-passage'))
+    const repeat = screen.getByTestId('memorize-listen-repeat')
+    expect(repeat).toHaveTextContent('Repeat')
+    await user.click(repeat)
+    expect(repeat).toHaveTextContent('Repeat on')
+    expect(repeat).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('uses device speech for non-ESV (saved verse only), not the audio element', async () => {
+    const user = userEvent.setup()
+    const speak = jest.fn()
+    const tts = {
+      speak,
+      cancel: jest.fn(),
+      pause: jest.fn(),
+      resume: jest.fn(),
+      get speaking() {
+        return false
+      },
+      get paused() {
+        return false
+      },
+    }
+    const speechSynthesisDesc = Object.getOwnPropertyDescriptor(window, 'speechSynthesis')
+    try {
+      Object.defineProperty(window, 'speechSynthesis', {
+        value: tts as unknown as SpeechSynthesis,
+        configurable: true,
+        writable: true,
+      })
+      const niv: MemorizedVerse = { ...baseVerse, translation: 'niv' }
+      const { container } = render(
+        <MemorizationPracticeSession verse={niv} onClose={jest.fn()} onComplete={jest.fn()} />
+      )
+      expect(container.querySelector('audio')).toBeNull()
+      await user.click(screen.getByTestId('memorize-listen-passage'))
+      expect(speak).toHaveBeenCalledTimes(1)
+      const [utt] = speak.mock.calls[0] ?? []
+      expect(utt).toBeDefined()
+      const speech = utt as SpeechSynthesisUtterance
+      expect(speech.text).toContain('For God so loved the world')
+      expect(speech.text).toMatch(/John 3:16/i)
+    } finally {
+      if (speechSynthesisDesc) {
+        Object.defineProperty(window, 'speechSynthesis', speechSynthesisDesc)
+      } else {
+        Reflect.deleteProperty(window, 'speechSynthesis')
+      }
+    }
   })
 
   it('shows intro with full verse text', () => {

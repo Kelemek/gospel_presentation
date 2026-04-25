@@ -25,6 +25,7 @@ import {
   isMemorizeAndroidWebHost,
   isMemorizeIosWebHost,
 } from '@/lib/memorizationViewportPlatform'
+import { getMemorizationListenUtteranceText } from '@/lib/memorizationListenUtteranceText'
 import {
   MEMORIZATION_FULL_HIDE_ROUND,
   buildMemorizationTokens,
@@ -65,6 +66,9 @@ const MEMORIZE_HINT_EXTRA_PEEK_INTERVAL_MS = 1000
 
 /** On Android, clamp the practice column scrollTop to 0 for this many ms after a round starts. */
 const ANDROID_SCROLL_CLAMP_MS = 600
+
+/** Gap between end of one read-aloud and the next when "Repeat" is on (ESV and TTS). */
+const MEMORIZE_LISTEN_REPEAT_GAP_MS = 650
 
 function expectedKeystrokeForToken(token: MemorizationToken): string {
   if (token.kind === 'digit') return token.text
@@ -123,6 +127,101 @@ export default function MemorizationPracticeSession({
     practiceInputRef.current = node
   }, [])
 
+  /**
+   * ESV: passage-scoped stream via `GET /api/scripture/audio` (Crossway). Other translations:
+   * API.Bible only exposes **chapter** MP3s, so we use device TTS to read the saved verse line only.
+   */
+  const listenViaEsvPassageUrl = verse.translation === 'esv'
+  const memorizePassageAudioUrl = useMemo(
+    () =>
+      `/api/scripture/audio?${new URLSearchParams({
+        reference: verse.reference,
+        translation: verse.translation,
+      }).toString()}`,
+    [verse.reference, verse.translation]
+  )
+  const passageAudioRef = useRef<HTMLAudioElement | null>(null)
+  const [passageAudioPlaying, setPassageAudioPlaying] = useState(false)
+  /** Bumps on speechSynthesis start/end/pause so Listen / Pause / Resume labels re-render. */
+  const [listenUiTick, setListenUiTick] = useState(0)
+  const bumpListen = useCallback(() => setListenUiTick((n) => n + 1), [])
+
+  /** Shown to the right of Listen after the user uses Listen at least once. */
+  const [showRepeatListenButton, setShowRepeatListenButton] = useState(false)
+  /** When on, the passage restarts after each play with `MEMORIZE_LISTEN_REPEAT_GAP_MS`. */
+  const [repeatListenOn, setRepeatListenOn] = useState(false)
+  const repeatListenOnRef = useRef(false)
+  const listenRepeatGapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const clearListenRepeatGapTimer = useCallback(() => {
+    if (listenRepeatGapTimerRef.current != null) {
+      clearTimeout(listenRepeatGapTimerRef.current)
+      listenRepeatGapTimerRef.current = null
+    }
+  }, [])
+
+  useLayoutEffect(() => {
+    repeatListenOnRef.current = repeatListenOn
+  }, [repeatListenOn])
+
+  const stopPassageAudio = useCallback(() => {
+    clearListenRepeatGapTimer()
+    repeatListenOnRef.current = false
+    setRepeatListenOn(false)
+    setShowRepeatListenButton(false)
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel()
+    }
+    const el = passageAudioRef.current
+    if (el) {
+      el.pause()
+      el.removeAttribute('src')
+      el.load()
+    }
+    setPassageAudioPlaying(false)
+    bumpListen()
+  }, [bumpListen, clearListenRepeatGapTimer])
+
+  const listenButtonLabel = useMemo(() => {
+    // Subscribes TTS readout to bumpListen() — speechSynthesis is not a React value.
+    void listenUiTick
+    if (listenViaEsvPassageUrl) {
+      return passageAudioPlaying ? 'Pause' : 'Listen'
+    }
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      return 'Listen'
+    }
+    const syn = window.speechSynthesis
+    if (syn.speaking && syn.paused) return 'Resume'
+    if (syn.speaking) return 'Pause'
+    return 'Listen'
+  }, [listenUiTick, listenViaEsvPassageUrl, passageAudioPlaying])
+
+  const listenAriaPressed = useMemo(() => {
+    void listenUiTick
+    if (listenViaEsvPassageUrl) {
+      return passageAudioPlaying
+    }
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      return false
+    }
+    const syn = window.speechSynthesis
+    return syn.speaking && !syn.paused
+  }, [listenUiTick, listenViaEsvPassageUrl, passageAudioPlaying])
+
+  const listenAriaLabel = useMemo(() => {
+    if (listenButtonLabel === 'Pause') {
+      return 'Pause read-aloud of the passage'
+    }
+    if (listenButtonLabel === 'Resume') {
+      return 'Resume read-aloud of the passage'
+    }
+    if (listenViaEsvPassageUrl) {
+      return 'Listen to the passage read aloud (ESV audio)'
+    }
+    return 'Listen: read the memorized text aloud using the device (same translation is not available as streaming audio)'
+  }, [listenButtonLabel, listenViaEsvPassageUrl])
+
   useLayoutEffect(() => {
     wrongAttemptsRef.current = wrongAttemptsTotal
     correctKeystrokesRef.current = correctKeystrokesTotal
@@ -172,6 +271,19 @@ export default function MemorizationPracticeSession({
       setCorrectKeystrokesTotal(0)
     })
   }, [verse.id, verse.inProgressPractice])
+
+  const lastAudioResetVerseIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (lastAudioResetVerseIdRef.current === null) {
+      lastAudioResetVerseIdRef.current = verse.id
+      return
+    }
+    if (lastAudioResetVerseIdRef.current === verse.id) {
+      return
+    }
+    lastAudioResetVerseIdRef.current = verse.id
+    stopPassageAudio()
+  }, [verse.id, stopPassageAudio])
 
   useEffect(() => {
     document.body.style.overflow = 'hidden'
@@ -489,6 +601,7 @@ export default function MemorizationPracticeSession({
   )
 
   const handleClose = useCallback(() => {
+    stopPassageAudio()
     if (onPersistInProgress && sessionSeedRef.current && phase === 'practicing') {
       if (awaitingRoundAdvance) {
         persistPracticeSnapshot({ kind: 'betweenRounds', completedRoundIndex: roundIndex })
@@ -504,9 +617,11 @@ export default function MemorizationPracticeSession({
     awaitingRoundAdvance,
     roundIndex,
     persistPracticeSnapshot,
+    stopPassageAudio,
   ])
 
   const handleStartOver = useCallback(() => {
+    stopPassageAudio()
     onClearInProgress?.()
     sessionSeedRef.current = ''
     completedRef.current = false
@@ -525,7 +640,160 @@ export default function MemorizationPracticeSession({
       setRoundAffirmation('')
       setCompletionMessage('')
     })
-  }, [verse.id, onClearInProgress])
+  }, [verse.id, onClearInProgress, stopPassageAudio])
+
+  useEffect(() => {
+    if (phase !== 'intro') {
+      stopPassageAudio()
+    }
+  }, [phase, stopPassageAudio])
+
+  const handlePassageAudioPlay = useCallback(() => {
+    setShowRepeatListenButton(true)
+    setPassageAudioPlaying(true)
+  }, [])
+
+  const handlePassageAudioPause = useCallback(() => {
+    setPassageAudioPlaying(false)
+  }, [])
+
+  const handlePassageAudioEnded = useCallback(() => {
+    setPassageAudioPlaying(false)
+    bumpListen()
+    if (!repeatListenOnRef.current) {
+      return
+    }
+    clearListenRepeatGapTimer()
+    listenRepeatGapTimerRef.current = setTimeout(() => {
+      listenRepeatGapTimerRef.current = null
+      if (!repeatListenOnRef.current) {
+        return
+      }
+      const el = passageAudioRef.current
+      if (!el) {
+        return
+      }
+      el.currentTime = 0
+      void el.play().catch(() => {
+        setPassageAudioPlaying(false)
+        bumpListen()
+      })
+    }, MEMORIZE_LISTEN_REPEAT_GAP_MS)
+  }, [bumpListen, clearListenRepeatGapTimer])
+
+  const beginTtsUtterance = useCallback(function speakTtsLine() {
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      return
+    }
+    const text = getMemorizationListenUtteranceText(verse)
+    if (!text.trim()) {
+      return
+    }
+    const syn = window.speechSynthesis
+    syn.cancel()
+    const u = new SpeechSynthesisUtterance(text)
+    u.lang = 'en-US'
+    u.onstart = () => {
+      setShowRepeatListenButton(true)
+      bumpListen()
+    }
+    u.onend = () => {
+      bumpListen()
+      if (!repeatListenOnRef.current) {
+        return
+      }
+      clearListenRepeatGapTimer()
+      listenRepeatGapTimerRef.current = setTimeout(() => {
+        listenRepeatGapTimerRef.current = null
+        if (!repeatListenOnRef.current) {
+          return
+        }
+        speakTtsLine()
+      }, MEMORIZE_LISTEN_REPEAT_GAP_MS)
+    }
+    u.onerror = () => {
+      bumpListen()
+    }
+    syn.speak(u)
+    bumpListen()
+  }, [bumpListen, clearListenRepeatGapTimer, verse])
+
+  const handleListenPassageClick = useCallback(() => {
+    setShowRepeatListenButton(true)
+    if (listenViaEsvPassageUrl) {
+      const el = passageAudioRef.current
+      if (!el) return
+      if (!el.paused) {
+        el.pause()
+        return
+      }
+      void (async () => {
+        try {
+          el.src = memorizePassageAudioUrl
+          await el.play()
+        } catch {
+          setPassageAudioPlaying(false)
+        }
+      })()
+      return
+    }
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      return
+    }
+    const syn = window.speechSynthesis
+    if (syn.speaking) {
+      if (syn.paused) {
+        syn.resume()
+      } else {
+        syn.pause()
+      }
+      bumpListen()
+      return
+    }
+    beginTtsUtterance()
+  }, [beginTtsUtterance, bumpListen, listenViaEsvPassageUrl, memorizePassageAudioUrl])
+
+  const handleRepeatListenToggle = useCallback(() => {
+    if (!showRepeatListenButton) {
+      return
+    }
+    const next = !repeatListenOnRef.current
+    repeatListenOnRef.current = next
+    setRepeatListenOn(next)
+    if (next) {
+      if (listenViaEsvPassageUrl) {
+        const el = passageAudioRef.current
+        if (el?.paused) {
+          void (async () => {
+            try {
+              el.src = memorizePassageAudioUrl
+              el.currentTime = 0
+              await el.play()
+            } catch {
+              setPassageAudioPlaying(false)
+              bumpListen()
+            }
+          })()
+        }
+        return
+      }
+      if (typeof window === 'undefined' || !window.speechSynthesis) {
+        return
+      }
+      if (!window.speechSynthesis.speaking) {
+        beginTtsUtterance()
+      }
+    } else {
+      clearListenRepeatGapTimer()
+    }
+  }, [
+    beginTtsUtterance,
+    bumpListen,
+    clearListenRepeatGapTimer,
+    listenViaEsvPassageUrl,
+    memorizePassageAudioUrl,
+    showRepeatListenButton,
+  ])
 
   useEffect(() => {
     if (phase !== 'practicing' || hiddenIndices.size === 0) return
@@ -871,24 +1139,69 @@ export default function MemorizationPracticeSession({
               >
                 {formatMemorizationTokensPlain(tokens)}
               </p>
-              <button
-                type="button"
-                data-tour="memorize-start-practice"
-                onClick={() => {
-                  completedRef.current = false
-                  sessionSeedRef.current = generateMemorizationSessionSeed()
-                  startRoundAndFocusInput(1)
-                  onPersistInProgress?.({
-                    sessionSeed: sessionSeedRef.current,
-                    wrongAttempts: 0,
-                    correctKeystrokes: 0,
-                    phase: { kind: 'inRound', roundIndex: 1 },
-                  })
-                }}
-                className="mt-6 w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600"
-              >
-                Start practice
-              </button>
+              {listenViaEsvPassageUrl && (
+                <audio
+                  ref={passageAudioRef}
+                  preload="none"
+                  className="hidden"
+                  aria-hidden
+                  onPlay={handlePassageAudioPlay}
+                  onPause={handlePassageAudioPause}
+                  onEnded={handlePassageAudioEnded}
+                  onError={() => {
+                    setPassageAudioPlaying(false)
+                  }}
+                />
+              )}
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  data-tour="memorize-start-practice"
+                  onClick={() => {
+                    completedRef.current = false
+                    sessionSeedRef.current = generateMemorizationSessionSeed()
+                    startRoundAndFocusInput(1)
+                    onPersistInProgress?.({
+                      sessionSeed: sessionSeedRef.current,
+                      wrongAttempts: 0,
+                      correctKeystrokes: 0,
+                      phase: { kind: 'inRound', roundIndex: 1 },
+                    })
+                  }}
+                  className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600"
+                >
+                  Start practice
+                </button>
+                <button
+                  type="button"
+                  data-testid="memorize-listen-passage"
+                  onClick={() => {
+                    handleListenPassageClick()
+                  }}
+                  className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
+                  aria-pressed={listenAriaPressed}
+                  aria-label={listenAriaLabel}
+                >
+                  {listenButtonLabel}
+                </button>
+                {showRepeatListenButton && (
+                  <button
+                    type="button"
+                    data-testid="memorize-listen-repeat"
+                    onClick={handleRepeatListenToggle}
+                    className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 data-[on=true]:bg-amber-50 data-[on=true]:dark:bg-amber-900/20 data-[on=true]:border-amber-300 data-[on=true]:dark:border-amber-800 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
+                    data-on={repeatListenOn ? 'true' : 'false'}
+                    aria-pressed={repeatListenOn}
+                    aria-label={
+                      repeatListenOn
+                        ? 'Stop repeating the read-aloud after this play ends'
+                        : 'Repeat the read-aloud with a short pause between each play'
+                    }
+                  >
+                    {repeatListenOn ? 'Repeat on' : 'Repeat'}
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
