@@ -1142,13 +1142,15 @@ export default function MemorizationPracticeSession({
   if (typableIndices.length === 0) {
     return (
       <div
-        data-tour="memorize-practice-dialog"
         className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4"
         role="dialog"
         aria-modal="true"
         aria-label="Memorize practice"
       >
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full p-6 border border-slate-200 dark:border-slate-600">
+        <div
+          data-tour="memorize-practice-dialog"
+          className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full p-6 border border-slate-200 dark:border-slate-600"
+        >
           <p className="text-slate-700 dark:text-slate-200">No passage text to practice for this verse.</p>
           <button
             type="button"
@@ -1167,7 +1169,6 @@ export default function MemorizationPracticeSession({
   return (
     <>
     <div
-      data-tour="memorize-practice-dialog"
       className="fixed inset-0 z-100 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4"
       style={{
         paddingTop: 'env(safe-area-inset-top)',
@@ -1177,7 +1178,10 @@ export default function MemorizationPracticeSession({
       aria-modal="true"
       aria-label="Memorize practice"
     >
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] border border-slate-200 dark:border-slate-600 flex flex-col overflow-hidden">
+      <div
+        data-tour="memorize-practice-dialog"
+        className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] border border-slate-200 dark:border-slate-600 flex flex-col overflow-hidden"
+      >
         <div className="flex items-center justify-between gap-3 px-4 pt-4 pb-2 border-b border-slate-200 dark:border-slate-600 shrink-0">
           <div className="flex min-w-0 shrink items-center gap-2">
             {showListenOpeners && (

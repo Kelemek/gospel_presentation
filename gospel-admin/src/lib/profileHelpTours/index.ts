@@ -1593,11 +1593,14 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
       element: () => {
         const id = memorizeTourTargetVerseId
         if (!id) return document.querySelector(MEMORIZE_PANEL) ?? document.body
-        return (
-          document.querySelector(
-            `button[data-memorize-verse-practice="${escapeAttrSelectorValue(id)}"]`
-          ) ?? document.querySelector(MEMORIZE_PANEL) ?? document.body
+        const practiceBtn = document.querySelector<HTMLElement>(
+          `button[data-memorize-verse-practice="${escapeAttrSelectorValue(id)}"]`
         )
+        if (practiceBtn) {
+          // Spotlight the full row (left tap target + remove control), not just the text button; matches the “row” copy.
+          return practiceBtn.closest<HTMLElement>('[role="listitem"]') ?? practiceBtn
+        }
+        return document.querySelector(MEMORIZE_PANEL) ?? document.body
       },
       popover: {
         title: 'Open practice from the list',
@@ -1807,11 +1810,14 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
       element: () => {
         const id = memorizeTourTargetVerseId
         if (!id) return document.querySelector(MEMORIZE_PANEL) ?? document.body
-        return (
-          document.querySelector(
-            `button[data-memorize-verse-id="${escapeAttrSelectorValue(id)}"]`
-          ) ?? document.querySelector(MEMORIZE_PANEL) ?? document.body
+        const removeBtn = document.querySelector<HTMLElement>(
+          `button[data-memorize-verse-id="${escapeAttrSelectorValue(id)}"]`
         )
+        if (removeBtn) {
+          // The button cell is a tall strip; the trash glyph is a small icon—spotlight the SVG so the ring matches the delete control.
+          return removeBtn.querySelector('svg') ?? removeBtn
+        }
+        return document.querySelector(MEMORIZE_PANEL) ?? document.body
       },
       popover: {
         title: 'Remove this verse',
