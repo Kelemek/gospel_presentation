@@ -669,7 +669,9 @@ export default function MemorizationPracticeSession({
       flushSync(() => {
         startRound(r)
       })
-      if (isMemorizeAndroidWebHost() && practiceScrollRef.current) {
+      // Intro and practice share this column; scrolling the long intro to reach "Start practice"
+      // must not leave a non-zero scrollTop when the inner content swaps to the round UI.
+      if (practiceScrollRef.current) {
         practiceScrollRef.current.scrollTop = 0
       }
       practiceInputRef.current?.focus({ preventScroll: true })
