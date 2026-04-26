@@ -47,6 +47,14 @@ const ADD_MEMORIZE_ADD = '[data-tour="add-memorize-add"]'
 const MEMORIZE_PRACTICE_DIALOG = '[data-tour="memorize-practice-dialog"]'
 const MEMORIZE_START_PRACTICE = '[data-tour="memorize-start-practice"]'
 const MEMORIZE_PRACTICE_CLOSE = '[data-tour="memorize-practice-close"]'
+/** Open **Listen** in the practice session header; tour uses this so read-aloud steps can be skipped (e.g. non-ESV on Android) via `moveTo`. */
+const MEMORIZE_LISTEN_OPEN = '[data-tour="memorize-listen-open"]'
+const MEMORIZE_LISTEN_PASSAGE = '[data-testid="memorize-listen-passage"]'
+const MEMORIZE_LISTEN_REPEAT = '[data-testid="memorize-listen-repeat"]'
+const MEMORIZE_LISTEN_SPEED = '[data-testid="memorize-listen-speed"]'
+const MEMORIZE_LISTEN_CLOSE = '[data-tour="memorize-listen-close"]'
+/** Number of driver.js steps for Listen → read-aloud panel walkthrough; must match the block in `runMemorizeFeatureTourOnCurrentPage`. */
+const MEMORIZE_READ_ALOUD_TOUR_STEPS = 5
 const TOC_SECTION_LINKS = '[data-tour="toc-section-links"]'
 const TOC_READING_PROGRESS = '[data-tour="toc-reading-progress"]'
 const TOC_RESET_PROGRESS = '[data-tour="toc-reset-progress"]'
@@ -1412,7 +1420,8 @@ async function runBibleTranslationFeatureTourAsync(options?: ProfileFeatureTourO
 
 /**
  * Verse memorization tour: opens a scripture **card**, saves with **Memorize** in the reader, opens **Menu** → **Memorize**,
- * highlights **+ Add** (picker without the reader), explains the list, opens practice from the **verse row** for a short preview (intro + round 1), closes it, then removes the tour verse with the **trash** control (with confirm).
+ * highlights **+ Add** (picker without the reader), explains the list, opens practice from the **verse row** for a short preview (intro + round 1),
+ * walks **Listen** and the read-aloud modal (play/pause, repeat, speed, close) when the control is shown, then continues with guided typing and closes, then removes the tour verse with the **trash** control (with confirm).
  *
  * When not on `/default`, stores resume state and navigates there first (`ProfilePageClient` calls `tryStartMemorizeTourAfterNavigation`).
  */
@@ -1437,6 +1446,17 @@ export function runMemorizeFeatureTour(options?: ProfileFeatureTourOptions): voi
     return
   }
   runMemorizeFeatureTourOnCurrentPage(options)
+}
+
+/**
+ * When **Listen** is not in the DOM (e.g. some Android + non-ESV), skip the read-aloud substeps in one jump.
+ */
+function skipReadAloudTourIfListenButtonMissing(drv: Driver): boolean {
+  if (document.querySelector(MEMORIZE_LISTEN_OPEN) != null) return false
+  const i = drv.getActiveIndex()
+  if (i === undefined) return true
+  drv.moveTo(i + MEMORIZE_READ_ALOUD_TOUR_STEPS)
+  return true
 }
 
 function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions): void {
@@ -1649,6 +1669,110 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
             drv.refresh()
             drv.moveNext()
           }, 120)
+        },
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(MEMORIZE_LISTEN_OPEN) ??
+        document.querySelector(MEMORIZE_PRACTICE_DIALOG) ??
+        document.body,
+      popover: {
+        title: 'Read aloud: Listen',
+        description:
+          '**Listen** in the session header opens the <strong>Read aloud</strong> panel. Use it during intro and typing rounds. Use <strong>Next</strong> to open the panel for a quick look (or skip ahead if you do not see **Listen** on this device).',
+        ...pop({ side: 'right', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          if (skipReadAloudTourIfListenButtonMissing(drv)) return
+          document.querySelector<HTMLElement>(MEMORIZE_LISTEN_OPEN)?.click()
+          void waitUntil(() => !!document.querySelector(MEMORIZE_LISTEN_PASSAGE), 5000).then((opened) => {
+            window.setTimeout(() => {
+              drv.refresh()
+              if (opened) {
+                drv.moveNext()
+              } else {
+                const i = drv.getActiveIndex() ?? 0
+                drv.moveTo(i + MEMORIZE_READ_ALOUD_TOUR_STEPS)
+              }
+            }, prefersReducedMotion() ? 80 : 200)
+          })
+        },
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(MEMORIZE_LISTEN_PASSAGE) ??
+        document.querySelector(MEMORIZE_PRACTICE_DIALOG) ??
+        document.body,
+      popover: {
+        title: 'Read aloud: Play or Pause',
+        description:
+          '**Play** (or <strong>Pause</strong> while it is running) the passage. ESV uses streamed audio; other translations use the device reader for your saved line. Use <strong>Next</strong> to continue.',
+        ...pop({ side: 'over', align: 'center' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          window.setTimeout(() => {
+            drv.refresh()
+            drv.moveNext()
+          }, prefersReducedMotion() ? 60 : 120)
+        },
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(MEMORIZE_LISTEN_REPEAT) ??
+        document.querySelector(MEMORIZE_PRACTICE_DIALOG) ??
+        document.body,
+      popover: {
+        title: 'Read aloud: Repeat',
+        description:
+          'Turn <strong>Repeat</strong> on to loop the read-aloud with a short pause between plays; turn it off to stop after the current one. Use <strong>Next</strong> to continue.',
+        ...pop({ side: 'over', align: 'center' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          window.setTimeout(() => {
+            drv.refresh()
+            drv.moveNext()
+          }, prefersReducedMotion() ? 60 : 120)
+        },
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(MEMORIZE_LISTEN_SPEED) ??
+        document.querySelector(MEMORIZE_PRACTICE_DIALOG) ??
+        document.body,
+      popover: {
+        title: 'Read aloud: Speed',
+        description:
+          'Choose <strong>read-aloud speed</strong>; your last choice is remembered. Use <strong>Next</strong> to continue.',
+        ...pop({ side: 'over', align: 'center' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          window.setTimeout(() => {
+            drv.refresh()
+            drv.moveNext()
+          }, prefersReducedMotion() ? 60 : 120)
+        },
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(MEMORIZE_LISTEN_CLOSE) ??
+        document.querySelector(MEMORIZE_PRACTICE_DIALOG) ??
+        document.body,
+      popover: {
+        title: 'Close read aloud',
+        description:
+          'When you are done, close this panel to return to practice. Use <strong>Next</strong> to close it for the tour and continue.',
+        ...pop({ side: 'over', align: 'center' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          void (async () => {
+            const close = document.querySelector<HTMLElement>(MEMORIZE_LISTEN_CLOSE)
+            close?.click()
+            await waitUntil(() => !document.querySelector(MEMORIZE_LISTEN_PASSAGE), 5000)
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, prefersReducedMotion() ? 80 : 200)
+          })()
         },
       },
     },

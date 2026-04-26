@@ -98,6 +98,7 @@ export function MemorizeListenControlsDialog({
           </h2>
           <button
             type="button"
+            data-tour="memorize-listen-close"
             onClick={onClose}
             className="shrink-0 text-slate-600 dark:text-slate-200 text-xl font-bold min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-600"
             aria-label="Close"

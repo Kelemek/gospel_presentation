@@ -1183,6 +1183,7 @@ export default function MemorizationPracticeSession({
             {showListenOpeners && (
               <button
                 type="button"
+                data-tour="memorize-listen-open"
                 data-testid="memorize-listen-open"
                 onClick={() => {
                   setListenPanelOpen(true)
