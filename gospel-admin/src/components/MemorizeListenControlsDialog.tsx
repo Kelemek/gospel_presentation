@@ -1,5 +1,6 @@
 'use client'
 
+import { useLayoutEffect, useRef, type MouseEvent } from 'react'
 import { MemorizeListenSpeedButton } from '@/components/MemorizeListenSpeedButton'
 import type { MemorizeListenSpeed } from '@/lib/memorizeListenSpeedStorage'
 
@@ -38,19 +39,47 @@ export function MemorizeListenControlsDialog({
   listenPlaybackRate,
   onSelectSpeed,
 }: MemorizeListenControlsDialogProps) {
+  const backdropRef = useRef<HTMLDivElement | null>(null)
+
+  useLayoutEffect(() => {
+    if (!open) return
+    const el = backdropRef.current
+    if (!el) return
+    /**
+     * iOS / WebKit: dismissing a full-screen overlay with `onClick` alone can send a
+     * retargeted `click` to the layer below, stealing focus and making the practice
+     * field’s keyboard appear then vanish. Use a non-passive `touchstart` listener so
+     * `preventDefault` suppresses that synthetic click; keep `onClick` for pointer/mouse.
+     * (React’s delegated `touchstart` is passive in some cases, so we attach natively.)
+     */
+    const onTouchStart = (e: globalThis.TouchEvent) => {
+      if (e.target !== el) return
+      e.preventDefault()
+      onClose()
+    }
+    el.addEventListener('touchstart', onTouchStart, { passive: false })
+    return () => el.removeEventListener('touchstart', onTouchStart)
+  }, [open, onClose])
+
   if (!open) {
     return null
   }
 
+  const handleBackdropPointerClose = (e: MouseEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget) return
+    onClose()
+  }
+
   return (
     <div
+      ref={backdropRef}
       className="fixed inset-0 z-120 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4"
       style={{
         paddingTop: 'env(safe-area-inset-top)',
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}
       role="presentation"
-      onClick={onClose}
+      onClick={handleBackdropPointerClose}
     >
       <div
         id={dialogId}

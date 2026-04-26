@@ -4,6 +4,7 @@ import {
   startTransition,
   useCallback,
   useEffect,
+  useId,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -229,7 +230,7 @@ export default function MemorizationPracticeSession({
   }, [bumpListen, clearListenRepeatGapTimer])
 
   const listenButtonLabel = useMemo(() => {
-    // `listenUiTick` bumps on speech / audio events; `listenPlaybackRate` / `listenPanelOpen` force re-read when the read-aloud UI changes.
+    // `listenUiTick` bumps on speech / audio, panel open, and rate changes (see effects that call `bumpListen`).
     void listenUiTick
     if (listenViaEsvPassageUrl) {
       const el = passageAudioRef.current
@@ -251,13 +252,7 @@ export default function MemorizationPracticeSession({
     // Paused mid-utterance uses the same "Play" label as idle; click still resumes via `handleListenPassageClick`.
     if (syn.speaking && !syn.paused) return 'Pause'
     return 'Listen'
-  }, [
-    listenUiTick,
-    listenViaEsvPassageUrl,
-    passageAudioPlaying,
-    listenPlaybackRate,
-    listenPanelOpen,
-  ])
+  }, [listenUiTick, listenViaEsvPassageUrl, passageAudioPlaying])
 
   const listenAriaPressed = useMemo(() => {
     void listenUiTick
@@ -279,23 +274,7 @@ export default function MemorizationPracticeSession({
       return true
     }
     return syn.speaking && !syn.paused
-  }, [
-    listenUiTick,
-    listenViaEsvPassageUrl,
-    passageAudioPlaying,
-    listenPlaybackRate,
-    listenPanelOpen,
-  ])
-
-  const listenAriaLabel = useMemo(() => {
-    if (listenButtonLabel === 'Pause') {
-      return 'Pause read-aloud of the passage'
-    }
-    if (listenViaEsvPassageUrl) {
-      return 'Listen to the passage read aloud (ESV audio)'
-    }
-    return 'Listen: read the memorized text aloud using the device (same translation is not available as streaming audio)'
-  }, [listenButtonLabel, listenViaEsvPassageUrl])
+  }, [listenUiTick, listenViaEsvPassageUrl, passageAudioPlaying])
 
   /** Sub-dialog uses "Play" instead of "Listen"; only "Pause" is distinct (no separate Resume label for TTS). */
   const readAloudDialogPrimaryLabel = useMemo(
@@ -326,7 +305,8 @@ export default function MemorizationPracticeSession({
   /** If keydown already handled a letter, skip the matching input event (avoids double counts). */
   const suppressInputFromKeydownRef = useRef(false)
   const practiceScrollRef = useRef<HTMLDivElement>(null)
-  const practiceWordsRef = useRef<HTMLDivElement>(null)
+  const practiceInputDomId = useId()
+  const practiceWordsRef = useRef<HTMLLabelElement | null>(null)
   /** Distinguish verse tap (refocus keyboard) from vertical scroll — movement past threshold = scroll. */
   const verseTouchMovedRef = useRef(false)
   const verseTouchStartRef = useRef({ x: 0, y: 0 })
@@ -1276,6 +1256,7 @@ export default function MemorizationPracticeSession({
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           {phase !== 'done' && memorizeAndroidHost && (
             <input
+              id={practiceInputDomId}
               ref={assignPracticeInputRef}
               type="text"
               inputMode={currentTargetToken?.kind === 'digit' ? 'numeric' : 'text'}
@@ -1318,6 +1299,7 @@ export default function MemorizationPracticeSession({
           )}
           {phase !== 'done' && !memorizeAndroidHost && (
             <input
+              id={practiceInputDomId}
               ref={assignPracticeInputRef}
               type="text"
               inputMode={currentTargetToken?.kind === 'digit' ? 'numeric' : 'text'}
@@ -1397,9 +1379,9 @@ export default function MemorizationPracticeSession({
                   Tap the verse or blanks if the keyboard closed.
                 </p>
               )}
-              <div
+              <label
                 ref={practiceWordsRef}
-                role="group"
+                htmlFor={practiceInputDomId}
                 aria-label="Verse practice area; tap to show the keyboard again"
                 onTouchStart={(e) => {
                   verseTouchMovedRef.current = false
@@ -1421,7 +1403,7 @@ export default function MemorizationPracticeSession({
                   const wasScroll = verseTouchMovedRef.current
                   verseTouchMovedRef.current = false
                   if (wasScroll) return
-                  // iOS/Capacitor: focus() must run in the touch handler, not rAF, or the keyboard won't open.
+                  // iOS/Capacitor: same-gesture focus; `htmlFor` + native label tap also focus the field.
                   const input = practiceInputRef.current
                   if (!input) return
                   input.focus({ preventScroll: true })
@@ -1481,7 +1463,7 @@ export default function MemorizationPracticeSession({
                     </span>
                   )
                 })}
-              </div>
+              </label>
             </div>
           )}
 
