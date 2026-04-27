@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useId, useState, useEffect } from 'react'
 
 interface ComaModalProps {
   isOpen: boolean
@@ -8,6 +8,7 @@ interface ComaModalProps {
 }
 
 export default function ComaModal({ isOpen, onClose }: ComaModalProps) {
+  const comaModalTitleId = useId()
   const [instructions, setInstructions] = useState<string>('')
   const [loading, setLoading] = useState(true)
 
@@ -57,12 +58,17 @@ export default function ComaModal({ isOpen, onClose }: ComaModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/70" onClick={onClose}>
-      <div 
+      <div
         className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={comaModalTitleId}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="sticky top-0 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-600 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">C.O.M.A. Method</h2>
+          <h2 id={comaModalTitleId} className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+            C.O.M.A. Method
+          </h2>
           <button
             type="button"
             onClick={onClose}

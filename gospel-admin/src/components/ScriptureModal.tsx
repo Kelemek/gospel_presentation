@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, type TouchEvent } from 'react'
+import { useId, useState, useEffect, useRef, type TouchEvent } from 'react'
 import { useTranslation, type BibleTranslation } from '@/contexts/TranslationContext'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import { splitScriptureReferenceForHeader } from '@/lib/splitScriptureReferenceForHeader'
@@ -51,6 +51,7 @@ export default function ScriptureModal({
   const [contextLoading, setContextLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const scriptureModalTitleId = useId()
 
   // Compare translation (second column)
   const [compareTranslation, setCompareTranslation] = useState<string | null>(null)
@@ -496,7 +497,12 @@ export default function ScriptureModal({
         paddingLeft: 'env(safe-area-inset-left)',
       }}
     >
-      <div className="bg-white dark:bg-slate-800 w-full lg:max-w-2xl xl:max-w-4xl 2xl:max-w-5xl shadow-xl flex flex-col h-full lg:h-[80vh] lg:rounded-lg min-h-0">
+      <div
+        className="bg-white dark:bg-slate-800 w-full lg:max-w-2xl xl:max-w-4xl 2xl:max-w-5xl shadow-xl flex flex-col h-full lg:h-[80vh] lg:rounded-lg min-h-0"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={scriptureModalTitleId}
+      >
         
         {/* Fixed Header with Controls - Always Visible */}
         {/* Top safe area is on the full-screen overlay only; do not repeat here (doubles inset in Capacitor/iOS). */}
@@ -528,6 +534,7 @@ export default function ScriptureModal({
                 ◀
               </button>
               <h3
+                id={scriptureModalTitleId}
                 className="text-base md:text-lg font-semibold text-slate-800 dark:text-slate-100 leading-tight px-1 min-w-0 max-w-[50vw] flex items-baseline gap-1 min-h-0"
                 title={reference}
                 aria-label={reference}
