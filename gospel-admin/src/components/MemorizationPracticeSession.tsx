@@ -109,6 +109,8 @@ export default function MemorizationPracticeSession({
   const memorizeAndroidHost = useMemo(() => isMemorizeAndroidWebHost(), [])
 
   const [phase, setPhase] = useState<Phase>('intro')
+  /** Intro-only: which round to begin at (1…MEMORIZATION_FULL_HIDE_ROUND); chains forward to round 5. */
+  const [startRoundChoice, setStartRoundChoice] = useState(1)
   const [roundIndex, setRoundIndex] = useState(0)
   const [hasTypedInRound, setHasTypedInRound] = useState(false)
   const [hiddenIndices, setHiddenIndices] = useState<Set<number>>(new Set())
@@ -333,6 +335,7 @@ export default function MemorizationPracticeSession({
     sessionSeedRef.current = ''
     startTransition(() => {
       setPhase('intro')
+      setStartRoundChoice(1)
       setRoundIndex(0)
       setHasTypedInRound(false)
       setHiddenIndices(new Set())
@@ -704,6 +707,7 @@ export default function MemorizationPracticeSession({
     lastVerseIdForLayoutRef.current = verse.id
     startTransition(() => {
       setPhase('intro')
+      setStartRoundChoice(1)
       setRoundIndex(0)
       setHasTypedInRound(false)
       setHiddenIndices(new Set())
@@ -1334,7 +1338,7 @@ export default function MemorizationPracticeSession({
               >
                 {formatMemorizationTokensPlain(tokens)}
               </p>
-              <div className="mt-6 flex flex-wrap items-center gap-3">
+              <div className="mt-6 flex min-w-0 flex-nowrap items-stretch gap-3">
                 <button
                   type="button"
                   data-tour="memorize-start-practice"
@@ -1342,18 +1346,39 @@ export default function MemorizationPracticeSession({
                     stopPassageAudio()
                     completedRef.current = false
                     sessionSeedRef.current = generateMemorizationSessionSeed()
-                    startRoundAndFocusInput(1)
+                    const r = Math.min(
+                      MEMORIZATION_FULL_HIDE_ROUND,
+                      Math.max(1, Math.floor(startRoundChoice))
+                    )
+                    startRoundAndFocusInput(r)
                     onPersistInProgress?.({
                       sessionSeed: sessionSeedRef.current,
                       wrongAttempts: 0,
                       correctKeystrokes: 0,
-                      phase: { kind: 'inRound', roundIndex: 1 },
+                      phase: { kind: 'inRound', roundIndex: r },
                     })
                   }}
-                  className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600"
+                  className="min-w-0 flex-1 px-4 py-3 text-center sm:flex-none sm:w-auto sm:shrink-0 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600"
                 >
                   Start practice
                 </button>
+                <div className="w-38 shrink-0 min-w-0 sm:w-auto sm:max-w-48 sm:shrink-0">
+                  <select
+                    data-testid="memorize-intro-start-round"
+                    aria-label="Starting round (1 to 5)"
+                    value={startRoundChoice}
+                    onChange={(e) => setStartRoundChoice(Number(e.target.value))}
+                    className="memorize-intro-start-round-select box-border h-12.5 w-full min-w-0 rounded-lg border border-slate-300 bg-white pl-4 pr-10 text-sm font-medium text-slate-800 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 appearance-none"
+                  >
+                    {Array.from({ length: MEMORIZATION_FULL_HIDE_ROUND }, (_, i) => i + 1).map(
+                      (n) => (
+                        <option key={n} value={n}>
+                          Round {n}
+                        </option>
+                      )
+                    )}
+                  </select>
+                </div>
               </div>
             </div>
           )}

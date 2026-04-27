@@ -188,6 +188,27 @@ describe('MemorizationPracticeSession', () => {
     expect(screen.getByTestId('memorize-listen-open')).toBeInTheDocument()
   })
 
+  it('starts at the selected intro round and persists inRound with that round', async () => {
+    const user = userEvent.setup()
+    const onPersistInProgress = jest.fn()
+    render(
+      <MemorizationPracticeSession
+        verse={baseVerse}
+        onClose={jest.fn()}
+        onComplete={jest.fn()}
+        onPersistInProgress={onPersistInProgress}
+      />
+    )
+    await user.selectOptions(screen.getByTestId('memorize-intro-start-round'), '2')
+    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    expect(screen.getByText(/Round 2 of 5/i)).toBeInTheDocument()
+    expect(onPersistInProgress).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        phase: { kind: 'inRound', roundIndex: 2 },
+      })
+    )
+  })
+
   it('refocuses the practice input when tapping the verse area (soft keyboard recovery)', async () => {
     const user = userEvent.setup()
     render(
