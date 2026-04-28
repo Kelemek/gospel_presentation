@@ -287,8 +287,11 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
           }}
         >
           {loading ? (
-            <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-              <div className="w-5 h-5 border-2 border-slate-400 dark:border-slate-500 border-t-transparent rounded-full animate-spin" />
+            <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
+              <div
+                className="h-6 w-6 shrink-0 animate-spin rounded-full border-b-2 border-blue-600 dark:border-blue-400"
+                aria-hidden
+              />
               <span className="text-base md:text-lg">Loading verse...</span>
             </div>
           ) : error ? (
