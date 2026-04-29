@@ -498,8 +498,9 @@ export function MemorizationReorderPanel({
           const spacingAfter = needsAttention
             ? 'mr-2 last:mr-0 sm:mr-1'
             : 'mr-1.5 last:mr-0 sm:mr-0.5'
+          /** Padding changes during drag-over caused heavy reflow; use ring-only for drop target. */
           const pad =
-            needsAttention || isDragOver
+            needsAttention
               ? 'px-2.5 py-1 sm:px-2 sm:py-0.5'
               : 'px-0 py-0'
 
@@ -515,7 +516,7 @@ export function MemorizationReorderPanel({
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, slotIndex)}
               onDragEnd={handleDragEnd}
-              className={`min-w-0 max-w-full rounded-md text-slate-900 dark:text-slate-100 transition-shadow wrap-anywhere hyphens-auto select-none [-webkit-touch-callout:none] ${spacingAfter} ${pad} ${rowRing} ${
+              className={`min-w-0 max-w-full rounded-md text-slate-900 dark:text-slate-100 wrap-anywhere hyphens-auto select-none [-webkit-touch-callout:none] ${draggedSlot === null ? 'transition-shadow' : ''} ${spacingAfter} ${pad} ${rowRing} ${
                 isDragging
                   ? usePointerPath
                     ? 'opacity-35'
