@@ -104,7 +104,8 @@ export function MemorizationReorderPanel({
     startX: number
     startY: number
     touchLike: boolean
-    timer: ReturnType<typeof setTimeout> | null
+    /** `window.setTimeout` id in the browser (differs from Node `Timeout` typing). */
+    timer: number | null
   }
   const pendingRef = useRef<PendingSession | null>(null)
   const activeDragPointerIdRef = useRef<number | null>(null)
