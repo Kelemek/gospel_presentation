@@ -28,6 +28,7 @@ import {
   isMemorizeIosWebHost,
 } from '@/lib/memorizationViewportPlatform'
 import { getMemorizationListenUtteranceText } from '@/lib/memorizationListenUtteranceText'
+import { MemorizationReorderPanel } from '@/components/MemorizationReorderPanel'
 import { MemorizeListenControlsDialog } from '@/components/MemorizeListenControlsDialog'
 import {
   applyMemorizeListenPlaybackRateToMediaElement,
@@ -38,7 +39,9 @@ import {
 } from '@/lib/memorizeListenSpeedStorage'
 import {
   MEMORIZATION_FULL_HIDE_ROUND,
+  buildInitialReorderSlotAssignment,
   buildMemorizationChoiceLabels,
+  buildMemorizationReorderChunks,
   buildMemorizationTokens,
   firstLetterOfWord,
   formatMemorizationTokensPlain,
@@ -46,6 +49,8 @@ import {
   getTypableTokenIndices,
   hiddenFractionForRound,
   pickHiddenWordIndices,
+  pickReorderMovableIndices,
+  reorderMovableCountForRound,
   seedRandom,
   stringToSeed,
   type MemorizationToken,
@@ -111,6 +116,10 @@ export default function MemorizationPracticeSession({
     () => buildMemorizationTokens(verse.text, verse.reference),
     [verse.text, verse.reference]
   )
+  const reorderChunks = useMemo(
+    () => buildMemorizationReorderChunks(verse.text, verse.reference),
+    [verse.text, verse.reference]
+  )
   const typableIndices = useMemo(() => getTypableTokenIndices(tokens), [tokens])
   /** Hide IME field outside the verse scroller so Android does not scrollTo focused input (top of column). */
   const memorizeAndroidHost = useMemo(() => isMemorizeAndroidWebHost(), [])
@@ -125,6 +134,11 @@ export default function MemorizationPracticeSession({
   const [hasTypedInRound, setHasTypedInRound] = useState(false)
   const [hiddenIndices, setHiddenIndices] = useState<Set<number>>(new Set())
   const [revealed, setRevealed] = useState<Set<number>>(new Set())
+  /** Reorder mode: `slotChunkIds[slot]` = chunk id shown at that slot (parallel to `reorderChunks`). */
+  const [reorderSlotChunkIds, setReorderSlotChunkIds] = useState<number[]>([])
+  const [reorderRoundMovableIndices, setReorderRoundMovableIndices] = useState<Set<number>>(
+    () => new Set()
+  )
   const [, setConsecutiveWrong] = useState(0)
   const [wrongAttemptsTotal, setWrongAttemptsTotal] = useState(0)
   const [correctKeystrokesTotal, setCorrectKeystrokesTotal] = useState(0)
@@ -436,13 +450,14 @@ export default function MemorizationPracticeSession({
 
   useEffect(() => {
     if (!hintActive) return
+    if (practiceMode === 'reorder') return
     const id = window.setInterval(() => {
       setHintPeekCount((c) => Math.min(c + 1, unrevealedLenRef.current))
     }, MEMORIZE_HINT_EXTRA_PEEK_INTERVAL_MS)
     return () => {
       window.clearInterval(id)
     }
-  }, [hintActive])
+  }, [hintActive, practiceMode])
 
   const currentTargetIndex = useMemo(() => {
     for (const idx of hiddenSorted) {
@@ -471,6 +486,27 @@ export default function MemorizationPracticeSession({
     (r: number) => {
       roundAdvanceHandledRef.current = null
       const seed = sessionSeedRef.current || verse.id
+      if (practiceModeRef.current === 'reorder') {
+        const chunkList = buildMemorizationReorderChunks(verse.text, verse.reference)
+        const n = chunkList.length
+        const movableArr = pickReorderMovableIndices(n, r, seed)
+        const rng = seedRandom(stringToSeed(`${seed}-mem-reorder-assign-r${r}`))
+        const assignment = buildInitialReorderSlotAssignment(n, movableArr, rng)
+        if (memorizeAndroidHost) {
+          androidScrollClampUntilRef.current = Date.now() + ANDROID_SCROLL_CLAMP_MS
+        }
+        setRoundIndex(r)
+        setHasTypedInRound(false)
+        setReorderSlotChunkIds(assignment)
+        setReorderRoundMovableIndices(new Set(movableArr))
+        setHiddenIndices(new Set())
+        setRevealed(new Set())
+        setConsecutiveWrong(0)
+        setAwaitingRoundAdvance(false)
+        setRoundAffirmation('')
+        setPhase('practicing')
+        return
+      }
       const localHidden = pickHiddenWordIndices(typableIndices.length, r, seed)
       const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
       if (memorizeAndroidHost) androidScrollClampUntilRef.current = Date.now() + ANDROID_SCROLL_CLAMP_MS
@@ -483,7 +519,7 @@ export default function MemorizationPracticeSession({
       setRoundAffirmation('')
       setPhase('practicing')
     },
-    [memorizeAndroidHost, typableIndices, verse.id]
+    [memorizeAndroidHost, typableIndices, verse.id, verse.text, verse.reference]
   )
 
   useLayoutEffect(() => {
@@ -504,40 +540,88 @@ export default function MemorizationPracticeSession({
       const r = ip.phase.completedRoundIndex
       roundAdvanceHandledRef.current = r
       const seed = sessionSeedRef.current
-      const localHidden = pickHiddenWordIndices(typableIndices.length, r, seed)
-      const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
-      startTransition(() => {
-        setWrongAttemptsTotal(ip.wrongAttempts)
-        setCorrectKeystrokesTotal(ip.correctKeystrokes)
-        setRoundIndex(r)
-        setHasTypedInRound(false)
-        setHiddenIndices(hidden)
-        setRevealed(new Set(hidden))
-        setConsecutiveWrong(0)
-        setAwaitingRoundAdvance(true)
-        setRoundAffirmation(pickRandomRoundAffirmation())
-        setPhase('practicing')
-        setPracticeMode(ip.practiceMode ?? 'type')
-      })
+      const modeRaw = ip.practiceMode ?? 'type'
+      if (modeRaw === 'reorder') {
+        const chunkList = buildMemorizationReorderChunks(verse.text, verse.reference)
+        const n = chunkList.length
+        const identitySlots = n === 0 ? [] : Array.from({ length: n }, (_, i) => i)
+        startTransition(() => {
+          setWrongAttemptsTotal(ip.wrongAttempts)
+          setCorrectKeystrokesTotal(ip.correctKeystrokes)
+          setRoundIndex(r)
+          setHasTypedInRound(false)
+          setHiddenIndices(new Set())
+          setRevealed(new Set())
+          setReorderSlotChunkIds(identitySlots)
+          setReorderRoundMovableIndices(new Set())
+          setConsecutiveWrong(0)
+          setAwaitingRoundAdvance(true)
+          setRoundAffirmation(pickRandomRoundAffirmation())
+          setPhase('practicing')
+          setPracticeMode('reorder')
+        })
+      } else {
+        const localHidden = pickHiddenWordIndices(typableIndices.length, r, seed)
+        const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
+        startTransition(() => {
+          setWrongAttemptsTotal(ip.wrongAttempts)
+          setCorrectKeystrokesTotal(ip.correctKeystrokes)
+          setRoundIndex(r)
+          setHasTypedInRound(false)
+          setHiddenIndices(hidden)
+          setRevealed(new Set(hidden))
+          setConsecutiveWrong(0)
+          setAwaitingRoundAdvance(true)
+          setRoundAffirmation(pickRandomRoundAffirmation())
+          setPhase('practicing')
+          setPracticeMode(modeRaw)
+        })
+      }
     } else {
       roundAdvanceHandledRef.current = null
       const r = ip.phase.roundIndex
-      const localHidden = pickHiddenWordIndices(typableIndices.length, r, sessionSeedRef.current)
-      const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
-      if (memorizeAndroidHost) androidScrollClampUntilRef.current = Date.now() + ANDROID_SCROLL_CLAMP_MS
-      startTransition(() => {
-        setWrongAttemptsTotal(ip.wrongAttempts)
-        setCorrectKeystrokesTotal(ip.correctKeystrokes)
-        setRoundIndex(r)
-        setHasTypedInRound(false)
-        setHiddenIndices(hidden)
-        setRevealed(new Set())
-        setConsecutiveWrong(0)
-        setAwaitingRoundAdvance(false)
-        setRoundAffirmation('')
-        setPhase('practicing')
-        setPracticeMode(ip.practiceMode ?? 'type')
-      })
+      const modeRaw = ip.practiceMode ?? 'type'
+      if (modeRaw === 'reorder') {
+        const seed = sessionSeedRef.current
+        const chunkList = buildMemorizationReorderChunks(verse.text, verse.reference)
+        const n = chunkList.length
+        const movableArr = pickReorderMovableIndices(n, r, seed)
+        const rng = seedRandom(stringToSeed(`${seed}-mem-reorder-assign-r${r}`))
+        const assignment = buildInitialReorderSlotAssignment(n, movableArr, rng)
+        if (memorizeAndroidHost) androidScrollClampUntilRef.current = Date.now() + ANDROID_SCROLL_CLAMP_MS
+        startTransition(() => {
+          setWrongAttemptsTotal(ip.wrongAttempts)
+          setCorrectKeystrokesTotal(ip.correctKeystrokes)
+          setRoundIndex(r)
+          setHasTypedInRound(false)
+          setReorderSlotChunkIds(assignment)
+          setReorderRoundMovableIndices(new Set(movableArr))
+          setHiddenIndices(new Set())
+          setRevealed(new Set())
+          setConsecutiveWrong(0)
+          setAwaitingRoundAdvance(false)
+          setRoundAffirmation('')
+          setPhase('practicing')
+          setPracticeMode('reorder')
+        })
+      } else {
+        const localHidden = pickHiddenWordIndices(typableIndices.length, r, sessionSeedRef.current)
+        const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
+        if (memorizeAndroidHost) androidScrollClampUntilRef.current = Date.now() + ANDROID_SCROLL_CLAMP_MS
+        startTransition(() => {
+          setWrongAttemptsTotal(ip.wrongAttempts)
+          setCorrectKeystrokesTotal(ip.correctKeystrokes)
+          setRoundIndex(r)
+          setHasTypedInRound(false)
+          setHiddenIndices(hidden)
+          setRevealed(new Set())
+          setConsecutiveWrong(0)
+          setAwaitingRoundAdvance(false)
+          setRoundAffirmation('')
+          setPhase('practicing')
+          setPracticeMode(modeRaw)
+        })
+      }
     }
     requestAnimationFrame(() => {
       if (isMemorizeAndroidWebHost() && practiceScrollRef.current) {
@@ -547,7 +631,7 @@ export default function MemorizationPracticeSession({
         practiceInputRef.current?.focus({ preventScroll: true })
       }
     })
-  }, [memorizeAndroidHost, verse.id, verse.inProgressPractice, typableIndices])
+  }, [memorizeAndroidHost, verse.id, verse.text, verse.reference, verse.inProgressPractice, typableIndices])
 
   /**
    * Scroll the active blank within the practice column, then nudge so it stays visible. **Type mode**
@@ -616,10 +700,15 @@ export default function MemorizationPracticeSession({
    * Taps hit the verse / Hint control, not the hidden input — the browser blurs the input and dismisses the keyboard.
    * Capture-phase listeners with passive:false on touchstart let us preventDefault when the input is already focused,
    * so the keyboard stays up; otherwise we focus to bring it back (no scroll — avoids iOS fighting the keyboard).
+   * Skip when the interaction started on **Hint** so hold-to-peek and pointer capture work on desktop.
    */
   const keepPracticeInputOnPointerCapture = useCallback((e: PointerEvent | TouchEvent) => {
     if (awaitingRoundAdvanceRef.current) return
     if (practiceModeRef.current !== 'type') return
+    const t = e.target
+    if (t instanceof Element && t.closest('[data-testid="memorize-hint-button"]')) {
+      return
+    }
     const input = practiceInputRef.current
     if (!input) return
     if (document.activeElement === input) {
@@ -785,6 +874,8 @@ export default function MemorizationPracticeSession({
       setHasTypedInRound(false)
       setHiddenIndices(new Set())
       setRevealed(new Set())
+      setReorderSlotChunkIds([])
+      setReorderRoundMovableIndices(new Set())
       setWrongAttemptsTotal(0)
       setCorrectKeystrokesTotal(0)
       setAwaitingRoundAdvance(false)
@@ -1003,7 +1094,39 @@ export default function MemorizationPracticeSession({
   ])
 
   useEffect(() => {
-    if (phase !== 'practicing' || hiddenIndices.size === 0) return
+    if (phase !== 'practicing' || awaitingRoundAdvance) return
+
+    if (practiceMode === 'reorder') {
+      const n = reorderChunks.length
+      if (n === 0 || reorderSlotChunkIds.length !== n) return
+      if (!reorderSlotChunkIds.every((id, i) => id === i)) return
+      if (roundIndex >= MEMORIZATION_FULL_HIDE_ROUND) {
+        if (completedRef.current) return
+        completedRef.current = true
+        onComplete({
+          wrongAttempts: wrongAttemptsRef.current,
+          correctKeystrokes: correctKeystrokesRef.current,
+          completed: true,
+        })
+        startTransition(() => {
+          setCompletionMessage(pickRandomAllDoneMessage())
+          setPhase('done')
+        })
+      } else {
+        if (roundAdvanceHandledRef.current === roundIndex) return
+        roundAdvanceHandledRef.current = roundIndex
+        if (onPersistInProgress && sessionSeedRef.current) {
+          persistPracticeSnapshot({ kind: 'betweenRounds', completedRoundIndex: roundIndex })
+        }
+        startTransition(() => {
+          setRoundAffirmation(pickRandomRoundAffirmation())
+          setAwaitingRoundAdvance(true)
+        })
+      }
+      return
+    }
+
+    if (hiddenIndices.size === 0) return
     const allDone = [...hiddenIndices].every((i) => revealed.has(i))
     if (!allDone) return
     if (roundIndex >= MEMORIZATION_FULL_HIDE_ROUND) {
@@ -1029,7 +1152,19 @@ export default function MemorizationPracticeSession({
         setAwaitingRoundAdvance(true)
       })
     }
-  }, [phase, hiddenIndices, revealed, roundIndex, onComplete, onPersistInProgress, persistPracticeSnapshot])
+  }, [
+    phase,
+    awaitingRoundAdvance,
+    practiceMode,
+    reorderChunks,
+    reorderSlotChunkIds,
+    hiddenIndices,
+    revealed,
+    roundIndex,
+    onComplete,
+    onPersistInProgress,
+    persistPracticeSnapshot,
+  ])
 
   const processWordGuess = useCallback(
     (picked: string) => {
@@ -1073,6 +1208,17 @@ export default function MemorizationPracticeSession({
     },
     [phase, currentTargetIndex, tokens, hintActive]
   )
+
+  const handleReorderInvalidDrop = useCallback(() => {
+    setWrongAttemptsTotal((w) => w + 1)
+    setFlashError(true)
+    window.setTimeout(() => setFlashError(false), 120)
+  }, [])
+
+  const handleReorderSlotsBecameCorrect = useCallback((slots: number[]) => {
+    if (slots.length === 0) return
+    setCorrectKeystrokesTotal((c) => c + slots.length)
+  }, [])
 
   const wordChoiceLabels = useMemo(() => {
     if (practiceMode !== 'word') return []
@@ -1410,7 +1556,9 @@ export default function MemorizationPracticeSession({
                 Start over
               </button>
             )}
-            {phase === 'practicing' && !awaitingRoundAdvance && (
+            {phase === 'practicing' &&
+              !awaitingRoundAdvance &&
+              (practiceMode === 'type' || practiceMode === 'word' || practiceMode === 'reorder') && (
               <button
                 ref={hintButtonRef}
                 type="button"
@@ -1418,24 +1566,52 @@ export default function MemorizationPracticeSession({
                 tabIndex={-1}
                 className="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors border border-blue-200 dark:border-blue-700 bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900/60 hover:border-blue-300 dark:hover:border-blue-600 active:bg-blue-200 dark:active:bg-blue-900/70 select-none touch-manipulation"
                 aria-pressed={hintActive}
-                aria-label="Hold to peek at hidden words; adds the next word every second"
-                title="Hold to peek; next blank every 1s while held"
+                aria-label={
+                  practiceMode === 'reorder'
+                    ? 'Hold to peek at the correct phrase for the first section still out of order'
+                    : 'Hold to peek at hidden words; adds the next word every second'
+                }
+                title={
+                  practiceMode === 'reorder'
+                    ? 'Hold to peek at the first wrong section'
+                    : 'Hold to peek; next blank every 1s while held'
+                }
                 onPointerDown={(e) => {
                   e.preventDefault()
                   setHintPeekCount(1)
                   setHintHeld(true)
+                  try {
+                    e.currentTarget.setPointerCapture(e.pointerId)
+                  } catch {
+                    /* e.g. pointer type unsupported */
+                  }
                 }}
-                onPointerUp={() => {
+                onPointerUp={(e) => {
+                  try {
+                    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+                      e.currentTarget.releasePointerCapture(e.pointerId)
+                    }
+                  } catch {
+                    /* ignore */
+                  }
                   setHintPeekCount(1)
                   setHintHeld(false)
                   restorePracticeInputFocusAfterHint()
                 }}
-                onPointerLeave={() => {
+                onPointerLeave={(e) => {
+                  if (e.buttons !== 0) return
                   setHintPeekCount(1)
                   setHintHeld(false)
                   restorePracticeInputFocusAfterHint()
                 }}
-                onPointerCancel={() => {
+                onPointerCancel={(e) => {
+                  try {
+                    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+                      e.currentTarget.releasePointerCapture(e.pointerId)
+                    }
+                  } catch {
+                    /* ignore */
+                  }
                   setHintPeekCount(1)
                   setHintHeld(false)
                   restorePracticeInputFocusAfterHint()
@@ -1477,15 +1653,6 @@ export default function MemorizationPracticeSession({
               onInput={handlePracticeInput}
             />
           )}
-          <div
-            ref={practiceScrollRef}
-            className="relative px-4 py-4 flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y"
-            style={
-              keyboardInsetPx > 0
-                ? { paddingBottom: `calc(${keyboardInsetPx}px + 0.5rem)` }
-                : undefined
-            }
-          >
           {phase !== 'done' && listenViaEsvPassageUrl && (
             <audio
               ref={passageAudioRef}
@@ -1500,6 +1667,68 @@ export default function MemorizationPracticeSession({
               }}
             />
           )}
+          {phase === 'intro' ? (
+            <>
+              <div
+                ref={practiceScrollRef}
+                className="relative px-4 py-4 flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y"
+              >
+                <div>
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                    <strong>Start practice</strong> when you're ready; <strong>Round</strong> sets where you begin in the
+                    five-round run (1 is easiest).
+                  </p>
+                  <p
+                    className="text-base leading-relaxed text-slate-900 dark:text-slate-100 font-serif"
+                    data-testid="memorize-intro-text"
+                  >
+                    {formatMemorizationTokensPlain(tokens)}
+                  </p>
+                </div>
+              </div>
+              <div
+                className="shrink-0 border-t border-slate-200 dark:border-slate-600 px-4 py-3 bg-slate-50 dark:bg-slate-900/60"
+                data-testid="memorize-intro-footer"
+              >
+                <div className="flex min-w-0 flex-nowrap items-stretch gap-3">
+                  <button
+                    type="button"
+                    data-tour="memorize-start-practice"
+                    onClick={() => {
+                      setModePickerOpen(true)
+                    }}
+                    className="min-w-0 flex-1 px-4 py-3 text-center sm:flex-none sm:w-auto sm:shrink-0 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600"
+                  >
+                    Start practice
+                  </button>
+                  <div className="w-38 shrink-0 min-w-0 sm:w-auto sm:max-w-48 sm:shrink-0">
+                    <select
+                      data-testid="memorize-intro-start-round"
+                      aria-label="Starting round (1 to 5)"
+                      value={startRoundChoice}
+                      onChange={(e) => setStartRoundChoice(Number(e.target.value))}
+                      className="memorize-intro-start-round-select box-border h-12.5 w-full min-w-0 rounded-lg border border-slate-300 bg-white pl-4 pr-10 text-sm font-medium text-slate-800 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 appearance-none"
+                    >
+                      {Array.from({ length: MEMORIZATION_FULL_HIDE_ROUND }, (_, i) => i + 1).map((n) => (
+                        <option key={n} value={n}>
+                          Round {n}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div
+              ref={practiceScrollRef}
+              className="relative px-4 py-4 flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y"
+              style={
+                keyboardInsetPx > 0
+                  ? { paddingBottom: `calc(${keyboardInsetPx}px + 0.5rem)` }
+                  : undefined
+              }
+            >
           {phase === 'practicing' && practiceMode === 'type' && !memorizeAndroidHost && (
             <input
               id={practiceInputDomId}
@@ -1520,52 +1749,6 @@ export default function MemorizationPracticeSession({
               onInput={handlePracticeInput}
             />
           )}
-          {phase === 'intro' && (
-            <div>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
-                Read the verse and reference. Tap <strong>Start practice</strong>, then choose{' '}
-                <strong>Type mode</strong> (first letter of each blank word and each reference digit) or{' '}
-                <strong>Word mode</strong> (word blanks: tap a word; number blanks: tap a digit—choices stay in the bottom bar). Colons and
-                dashes in the reference stay visible and are not answers.
-              </p>
-              <p
-                className="text-base leading-relaxed text-slate-900 dark:text-slate-100 font-serif"
-                data-testid="memorize-intro-text"
-              >
-                {formatMemorizationTokensPlain(tokens)}
-              </p>
-              <div className="mt-6 flex min-w-0 flex-nowrap items-stretch gap-3">
-                <button
-                  type="button"
-                  data-tour="memorize-start-practice"
-                  onClick={() => {
-                    setModePickerOpen(true)
-                  }}
-                  className="min-w-0 flex-1 px-4 py-3 text-center sm:flex-none sm:w-auto sm:shrink-0 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600"
-                >
-                  Start practice
-                </button>
-                <div className="w-38 shrink-0 min-w-0 sm:w-auto sm:max-w-48 sm:shrink-0">
-                  <select
-                    data-testid="memorize-intro-start-round"
-                    aria-label="Starting round (1 to 5)"
-                    value={startRoundChoice}
-                    onChange={(e) => setStartRoundChoice(Number(e.target.value))}
-                    className="memorize-intro-start-round-select box-border h-12.5 w-full min-w-0 rounded-lg border border-slate-300 bg-white pl-4 pr-10 text-sm font-medium text-slate-800 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 appearance-none"
-                  >
-                    {Array.from({ length: MEMORIZATION_FULL_HIDE_ROUND }, (_, i) => i + 1).map(
-                      (n) => (
-                        <option key={n} value={n}>
-                          Round {n}
-                        </option>
-                      )
-                    )}
-                  </select>
-                </div>
-              </div>
-            </div>
-          )}
-
           {phase === 'practicing' && (
             <div>
               <div className="mb-2">
@@ -1573,6 +1756,11 @@ export default function MemorizationPracticeSession({
                   {awaitingRoundAdvance ? (
                     <>
                       Round {roundIndex} complete — repeat or continue to round {roundIndex + 1}.
+                    </>
+                  ) : practiceMode === 'reorder' ? (
+                    <>
+                      Round {roundIndex} of {MEMORIZATION_FULL_HIDE_ROUND} — reorder about{' '}
+                      {reorderMovableCountForRound(roundIndex, reorderChunks.length)} of {reorderChunks.length} parts.
                     </>
                   ) : (
                     <>
@@ -1584,7 +1772,12 @@ export default function MemorizationPracticeSession({
               </div>
               {!awaitingRoundAdvance && (
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-                  {practiceMode === 'word' ? (
+                  {practiceMode === 'reorder' ? (
+                    <>
+                      Drag the <strong>highlighted</strong> parts into reading order. Drop a part onto another highlighted part—fixed parts stay put. Hold <strong>Hint</strong> to peek
+                      at what belongs in the first slot that is still wrong.
+                    </>
+                  ) : practiceMode === 'word' ? (
                     <>
                       {currentTargetIndex !== null &&
                         (currentTargetToken?.kind === 'digit'
@@ -1603,13 +1796,27 @@ export default function MemorizationPracticeSession({
                   )}
                 </p>
               )}
-              {practiceMode === 'word' ? (
+              {practiceMode === 'reorder' ? (
+                <MemorizationReorderPanel
+                  chunks={reorderChunks}
+                  slotChunkIds={reorderSlotChunkIds}
+                  onSlotChunkIdsChange={setReorderSlotChunkIds}
+                  roundMovableIndices={reorderRoundMovableIndices}
+                  onInvalidDrop={handleReorderInvalidDrop}
+                  onSlotsBecameCorrect={handleReorderSlotsBecameCorrect}
+                  listFlashError={flashError}
+                  holdHintPeekFirstWrong={
+                    practiceMode === 'reorder' && hintActive
+                  }
+                  scrollParentRef={practiceScrollRef}
+                />
+              ) : practiceMode === 'word' ? (
                 <>
                   <div
                     ref={practiceWordsWordRef}
                     role="group"
                     aria-label="Verse practice area"
-                    className={`touch-manipulation text-base leading-relaxed font-serif flex flex-wrap gap-x-1 gap-y-2 items-baseline rounded-md p-1 ring-2 ring-inset transition-shadow ${
+                    className={`touch-manipulation text-base leading-relaxed font-serif flex flex-wrap gap-x-2 gap-y-2.5 sm:gap-x-1 sm:gap-y-2 items-baseline rounded-md p-1 ring-2 ring-inset transition-shadow ${
                       flashError
                         ? 'ring-red-400 dark:ring-red-500'
                         : 'ring-transparent'
@@ -1645,7 +1852,7 @@ export default function MemorizationPracticeSession({
                         <span
                           key={`tok-${i}`}
                           data-memorize-current-blank={isCurrent ? 'true' : undefined}
-                          className={`inline-flex items-baseline border-b-2 box-border px-0.5 min-h-[1.5em] min-w-[0.6em] justify-center ${
+                          className={`inline-flex items-baseline border-b-2 box-border px-1 sm:px-0.5 min-h-[1.5em] min-w-[0.6em] justify-center ${
                             showBlankUnderline
                               ? 'border-slate-400 dark:border-slate-500'
                               : 'border-transparent'
@@ -1695,7 +1902,7 @@ export default function MemorizationPracticeSession({
                       if (document.activeElement !== input) input.focus({ preventScroll: true })
                     }, 0)
                   }}
-                  className={`touch-manipulation cursor-text text-base leading-relaxed font-serif flex flex-wrap gap-x-1 gap-y-2 items-baseline rounded-md p-1 ring-2 ring-inset transition-shadow ${
+                  className={`touch-manipulation cursor-text text-base leading-relaxed font-serif flex flex-wrap gap-x-2 gap-y-2.5 sm:gap-x-1 sm:gap-y-2 items-baseline rounded-md p-1 ring-2 ring-inset transition-shadow ${
                     flashError
                       ? 'ring-red-400 dark:ring-red-500'
                       : 'ring-transparent'
@@ -1731,7 +1938,7 @@ export default function MemorizationPracticeSession({
                       <span
                         key={`tok-${i}`}
                         data-memorize-current-blank={isCurrent ? 'true' : undefined}
-                        className={`inline-flex items-baseline border-b-2 box-border px-0.5 min-h-[1.5em] min-w-[0.6em] justify-center ${
+                        className={`inline-flex items-baseline border-b-2 box-border px-1 sm:px-0.5 min-h-[1.5em] min-w-[0.6em] justify-center ${
                           showBlankUnderline
                             ? 'border-slate-400 dark:border-slate-500'
                             : 'border-transparent'
@@ -1772,7 +1979,8 @@ export default function MemorizationPracticeSession({
               </button>
             </div>
           )}
-          </div>
+            </div>
+          )}
 
           {phase === 'practicing' &&
             practiceMode === 'word' &&
@@ -1783,7 +1991,7 @@ export default function MemorizationPracticeSession({
                 data-testid="memorize-word-choices"
               >
                 <div className="max-h-[min(42vh,360px)] overflow-y-auto overscroll-y-contain px-4 py-3 touch-pan-y">
-                  <div className="flex w-full max-w-2xl mx-auto flex-wrap justify-center gap-3 sm:gap-4">
+                  <div className="flex w-full max-w-2xl mx-auto flex-wrap justify-center gap-4">
                     {wordChoiceLabels.map((label, choiceIdx) => (
                       <button
                         key={`${label}-${choiceIdx}`}
@@ -1791,8 +1999,8 @@ export default function MemorizationPracticeSession({
                         onClick={() => processWordGuess(label)}
                         className={
                           currentTargetToken?.kind === 'digit'
-                            ? 'shrink-0 min-w-11 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-base font-medium tabular-nums whitespace-nowrap text-center hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors'
-                            : 'max-w-full w-max shrink-0 px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm font-medium text-center leading-snug whitespace-normal wrap-anywhere hyphens-auto hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors'
+                            ? 'shrink-0 min-w-11 px-4 py-2.5 sm:px-3 sm:py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-base font-medium tabular-nums whitespace-nowrap text-center hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors'
+                            : 'max-w-full w-max shrink-0 px-4 py-3 sm:px-3 sm:py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm font-medium text-center leading-snug whitespace-normal wrap-anywhere hyphens-auto hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors'
                         }
                       >
                         {label}
@@ -1854,6 +2062,7 @@ export default function MemorizationPracticeSession({
           role="dialog"
           aria-modal="true"
           aria-labelledby={modePickerTitleId}
+          data-tour="memorize-practice-mode-picker"
           className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-600"
           onClick={(e) => e.stopPropagation()}
         >
@@ -1864,8 +2073,9 @@ export default function MemorizationPracticeSession({
             Choose practice mode
           </h2>
           <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-            <strong>Type mode:</strong> first letter of each blank word, and each digit in the reference.{' '}
-            <strong>Word mode:</strong> choices stay in a bar at the bottom—words for word blanks, digits for number blanks (no keyboard).
+            <strong>Type mode:</strong> keyboard — first letters and reference digits.{' '}
+            <strong>Word mode:</strong> tap choices in the bottom bar (no keyboard).{' '}
+            <strong>Reorder mode:</strong> drag chunks into reading order.
           </p>
           <div className="flex flex-col gap-3">
             <button
@@ -1885,6 +2095,15 @@ export default function MemorizationPracticeSession({
               className="w-full px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700"
             >
               Word mode
+            </button>
+            <button
+              type="button"
+              data-tour="memorize-practice-mode-reorder"
+              data-testid="memorize-practice-mode-reorder"
+              onClick={() => beginPracticeWithMode('reorder')}
+              className="w-full px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700"
+            >
+              Reorder mode
             </button>
             <button
               type="button"

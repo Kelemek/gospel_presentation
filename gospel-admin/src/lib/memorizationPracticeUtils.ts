@@ -100,6 +100,138 @@ export function hiddenFractionForRound(roundIndex: number): number {
 /** How many practice rounds until 100% hidden (inclusive). */
 export const MEMORIZATION_FULL_HIDE_ROUND = 5
 
+/** One draggable unit for reorder mode (verse clauses / word groups + reference chunk). */
+export type MemorizationReorderChunk = {
+  id: number
+  text: string
+}
+
+const REORDER_CLAUSE_SPLIT = /[,;:\u2014\u2013]+/
+const REORDER_MAX_CLAUSE_CHARS = 40
+const REORDER_WORDS_PER_FALLBACK_GROUP = 3
+
+/**
+ * Split verse body on clause punctuation (comma, semicolon, colon, em/en dash); sub-split long
+ * segments into word groups. Append reference as a single final chunk.
+ */
+export function buildMemorizationReorderChunks(
+  versePlainText: string,
+  reference: string
+): MemorizationReorderChunk[] {
+  const verse = versePlainText.trim()
+  const textParts: string[] = []
+  if (verse.length > 0) {
+    const raw = verse
+      .split(REORDER_CLAUSE_SPLIT)
+      .map((p) => p.trim())
+      .filter(Boolean)
+    const clauses = raw.length > 0 ? raw : [verse]
+    for (const c of clauses) {
+      textParts.push(...splitReorderClausePart(c))
+    }
+  }
+  const refT = reference.trim()
+  if (refT.length > 0) {
+    textParts.push(refT)
+  }
+  return textParts.map((text, id) => ({ id, text }))
+}
+
+function splitReorderClausePart(part: string): string[] {
+  const words = part.split(/\s+/).filter(Boolean)
+  if (
+    part.length <= REORDER_MAX_CLAUSE_CHARS &&
+    words.length <= REORDER_WORDS_PER_FALLBACK_GROUP
+  ) {
+    return [part]
+  }
+  if (words.length === 0) return [part]
+  const out: string[] = []
+  for (let i = 0; i < words.length; i += REORDER_WORDS_PER_FALLBACK_GROUP) {
+    out.push(words.slice(i, i + REORDER_WORDS_PER_FALLBACK_GROUP).join(' '))
+  }
+  return out
+}
+
+/** How many chunks participate in shuffling this round (monotone in round; ≥2 when n≥2) except full round uses all. */
+export function reorderMovableCountForRound(roundIndex: number, chunkCount: number): number {
+  if (chunkCount <= 1 || roundIndex <= 0) return 0
+  const fraction = hiddenFractionForRound(roundIndex)
+  const fromFrac = Math.ceil(chunkCount * fraction)
+  let k = Math.max(2, fromFrac)
+  if (roundIndex >= MEMORIZATION_FULL_HIDE_ROUND) {
+    k = chunkCount
+  }
+  return Math.min(chunkCount, k)
+}
+
+/** Seeded subset of chunk indices (sorted ascending) that are shuffled this round. */
+export function pickReorderMovableIndices(
+  chunkCount: number,
+  roundIndex: number,
+  seedStr: string
+): number[] {
+  const need = reorderMovableCountForRound(roundIndex, chunkCount)
+  if (need <= 0 || chunkCount === 0) return []
+  const rng = seedRandom(stringToSeed(`${seedStr}-mem-reorder-movable-r${roundIndex}`))
+  const ix = Array.from({ length: chunkCount }, (_, i) => i)
+  for (let i = ix.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[ix[i], ix[j]] = [ix[j]!, ix[i]!]
+  }
+  const chosen = ix.slice(0, need)
+  chosen.sort((a, b) => a - b)
+  return chosen
+}
+
+/**
+ * `assignment[slot]` = id of chunk shown at that slot. Locked slots stay identity; movable slots
+ * get a derangement so no movable slot starts with its own chunk id.
+ */
+export function buildInitialReorderSlotAssignment(
+  chunkCount: number,
+  movableIndices: number[],
+  rng: () => number
+): number[] {
+  const assignment = Array.from({ length: chunkCount }, (_, i) => i)
+  const m = [...movableIndices].sort((a, b) => a - b)
+  if (m.length < 2) {
+    return assignment
+  }
+  const permutedIds = derangeMovableChunkIds(m, rng)
+  for (let k = 0; k < m.length; k++) {
+    assignment[m[k]!] = permutedIds[k]!
+  }
+  return assignment
+}
+
+/** Permutation of chunk ids for movable slots so no id sits in its home slot. */
+function derangeMovableChunkIds(sortedSlots: number[], rng: () => number): number[] {
+  const n = sortedSlots.length
+  const ids = sortedSlots.map((s) => s)
+  for (let attempt = 0; attempt < 80; attempt++) {
+    for (let i = n - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1))
+      ;[ids[i], ids[j]] = [ids[j]!, ids[i]!]
+    }
+    let ok = true
+    for (let k = 0; k < n; k++) {
+      if (ids[k] === sortedSlots[k]) {
+        ok = false
+        break
+      }
+    }
+    if (ok) return ids
+  }
+  const rot = ids.slice(1).concat(ids[0]!)
+  for (let k = 0; k < n; k++) {
+    if (rot[k] === sortedSlots[k]) {
+      return [...rot].reverse()
+    }
+  }
+  return rot
+}
+
 /** Unique per practice run so blanked words differ each session (still stable per round within one session). */
 export function generateMemorizationSessionSeed(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {

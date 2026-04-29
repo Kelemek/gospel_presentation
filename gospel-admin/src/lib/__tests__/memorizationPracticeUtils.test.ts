@@ -1,5 +1,7 @@
 import {
+  buildInitialReorderSlotAssignment,
   buildMemorizationChoiceLabels,
+  buildMemorizationReorderChunks,
   buildMemorizationTokens,
   firstLetterOfWord,
   formatMemorizationTokensPlain,
@@ -9,6 +11,8 @@ import {
   hiddenFractionForRound,
   parseReferenceMemorizationTokens,
   pickHiddenWordIndices,
+  pickReorderMovableIndices,
+  reorderMovableCountForRound,
   seedRandom,
   stringToSeed,
   MEMORIZATION_FULL_HIDE_ROUND,
@@ -147,5 +151,51 @@ describe('memorizationPracticeUtils', () => {
     const t = buildMemorizationTokens('A B', '')
     const typable = getTypableTokenIndices(t)
     expect(buildMemorizationChoiceLabels(t, typable, 1, 4, seedRandom(1))).toEqual([])
+  })
+
+  it('buildMemorizationReorderChunks splits clauses and appends reference', () => {
+    const c = buildMemorizationReorderChunks('a, b; c', 'John 3:16')
+    expect(c.map((x) => x.text)).toEqual(['a', 'b', 'c', 'John 3:16'])
+    expect(c.map((x) => x.id)).toEqual([0, 1, 2, 3])
+  })
+
+  it('buildMemorizationReorderChunks uses whole verse when no clause punctuation', () => {
+    const c = buildMemorizationReorderChunks('one two three four five', 'Ref')
+    expect(c[c.length - 1]!.text).toBe('Ref')
+    expect(c.length).toBeGreaterThan(1)
+  })
+
+  it('buildMemorizationReorderChunks handles very short verse', () => {
+    const c = buildMemorizationReorderChunks('Hi', 'R 1:1')
+    expect(c.map((x) => x.text)).toEqual(['Hi', 'R 1:1'])
+  })
+
+  it('reorderMovableCountForRound increases through rounds', () => {
+    const n = 10
+    const k1 = reorderMovableCountForRound(1, n)
+    const k3 = reorderMovableCountForRound(3, n)
+    const k5 = reorderMovableCountForRound(MEMORIZATION_FULL_HIDE_ROUND, n)
+    expect(k1).toBeGreaterThanOrEqual(2)
+    expect(k3).toBeGreaterThanOrEqual(k1)
+    expect(k5).toBe(n)
+  })
+
+  it('pickReorderMovableIndices is deterministic for same seed', () => {
+    const a = pickReorderMovableIndices(8, 2, 's1')
+    const b = pickReorderMovableIndices(8, 2, 's1')
+    expect(a).toEqual(b)
+    expect(a.length).toBe(reorderMovableCountForRound(2, 8))
+  })
+
+  it('buildInitialReorderSlotAssignment deranges movable slots only', () => {
+    const n = 5
+    const movable = [1, 2, 3]
+    const rng = seedRandom(stringToSeed('der'))
+    const assign = buildInitialReorderSlotAssignment(n, movable, rng)
+    expect(assign[0]).toBe(0)
+    expect(assign[4]).toBe(4)
+    for (const s of movable) {
+      expect(assign[s]).not.toBe(s)
+    }
   })
 })

@@ -2,6 +2,8 @@
  * @jest-environment jsdom
  */
 
+const memorizeUtilsTestOverrides: { sessionSeed: string | null } = { sessionSeed: null }
+
 jest.mock('@/lib/memorizationPracticeUtils', () => {
   const actual = jest.requireActual<typeof import('@/lib/memorizationPracticeUtils')>(
     '@/lib/memorizationPracticeUtils'
@@ -14,6 +16,8 @@ jest.mock('@/lib/memorizationPracticeUtils', () => {
         return actual.pickHiddenWordIndices(wordCount, roundIndex, seedStr)
       }
     ),
+    generateMemorizationSessionSeed: () =>
+      memorizeUtilsTestOverrides.sessionSeed ?? actual.generateMemorizationSessionSeed(),
   }
 })
 
@@ -74,8 +78,8 @@ describe('MemorizationPracticeSession', () => {
       <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
     )
     expect(screen.getByTestId('memorize-listen-open')).toHaveTextContent('Listen')
-    const startRow = screen.getByRole('button', { name: /Start practice/i }).closest('div.mt-6')
-    expect(startRow?.querySelector('[data-tour="memorize-start-practice"]')).toBeTruthy()
+    const startFooter = screen.getByTestId('memorize-intro-footer')
+    expect(startFooter.querySelector('[data-tour="memorize-start-practice"]')).toBeTruthy()
     expect(screen.getByRole('button', { name: /Start practice/i })).toBeInTheDocument()
   })
 
@@ -332,6 +336,32 @@ describe('MemorizationPracticeSession', () => {
     expect(screen.queryByTestId('memorize-listen-passage')).not.toBeInTheDocument()
   })
 
+  it('resumes reorder betweenRounds with verse chunks in correct order visible', () => {
+    const verseComma: MemorizedVerse = {
+      ...baseVerse,
+      text: 'alpha, beta, gamma',
+      inProgressPractice: {
+        sessionSeed: 'resume-reorder-between',
+        wrongAttempts: 0,
+        correctKeystrokes: 2,
+        updatedAt: 1,
+        phase: { kind: 'betweenRounds', completedRoundIndex: 1 },
+        practiceMode: 'reorder',
+      },
+    }
+    render(
+      <MemorizationPracticeSession verse={verseComma} onClose={jest.fn()} onComplete={jest.fn()} />
+    )
+    expect(screen.getByTestId('memorize-round-advance-footer')).toBeInTheDocument()
+    const list = screen.getByTestId('memorize-reorder-list')
+    const items = list.querySelectorAll('li')
+    expect(items.length).toBe(4)
+    expect(items[0]).toHaveTextContent('alpha')
+    expect(items[1]).toHaveTextContent('beta')
+    expect(items[2]).toHaveTextContent('gamma')
+    expect(items[3]).toHaveTextContent('John 3:16')
+  })
+
   it('opens mode picker when Start practice is tapped; Cancel returns to intro', async () => {
     const user = userEvent.setup()
     render(
@@ -391,6 +421,77 @@ describe('MemorizationPracticeSession', () => {
         phase: { kind: 'inRound', roundIndex: 1 },
       })
     )
+  })
+
+  it('reorder mode shows draggable list; holding Hint peeks first wrong section without persisting swaps', async () => {
+    const user = userEvent.setup()
+    const onPersistInProgress = jest.fn()
+    const verseComma: MemorizedVerse = {
+      ...baseVerse,
+      text: 'alpha, beta, gamma',
+    }
+    memorizeUtilsTestOverrides.sessionSeed = 'test-mem-id'
+    try {
+      render(
+        <MemorizationPracticeSession
+          verse={verseComma}
+          onClose={jest.fn()}
+          onComplete={jest.fn()}
+          onPersistInProgress={onPersistInProgress}
+        />
+      )
+      await user.click(screen.getByRole('button', { name: /Start practice/i }))
+      await user.click(screen.getByTestId('memorize-practice-mode-reorder'))
+      const list = screen.getByTestId('memorize-reorder-list')
+      const hintBtn = screen.getByTestId('memorize-hint-button')
+      expect(hintBtn).toBeInTheDocument()
+      expect(list.querySelector('li')?.textContent).toBe('beta')
+      expect(screen.getByRole('dialog', { name: /Memorize practice/i }).textContent).toMatch(
+        /Hold Hint to peek/i
+      )
+      fireEvent.pointerDown(hintBtn)
+      expect(list.querySelector('li')?.textContent).toBe('alpha')
+      fireEvent.pointerUp(hintBtn)
+      expect(list.querySelector('li')?.textContent).toBe('beta')
+      expect(onPersistInProgress).toHaveBeenCalledTimes(1)
+      expect(onPersistInProgress).toHaveBeenCalledWith(
+        expect.objectContaining({
+          practiceMode: 'reorder',
+          phase: { kind: 'inRound', roundIndex: 1 },
+        })
+      )
+    } finally {
+      memorizeUtilsTestOverrides.sessionSeed = null
+    }
+  })
+
+  it('reorder mode invalid drop on fixed slot flashes list error ring', async () => {
+    const verseComma: MemorizedVerse = {
+      ...baseVerse,
+      text: 'alpha, beta, gamma',
+    }
+    render(<MemorizationPracticeSession verse={verseComma} onClose={jest.fn()} onComplete={jest.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /Start practice/i }))
+    fireEvent.click(screen.getByTestId('memorize-practice-mode-reorder'))
+    const list = screen.getByTestId('memorize-reorder-list')
+    const items = list.querySelectorAll('li[draggable="true"]')
+    expect(items.length).toBeGreaterThanOrEqual(1)
+    const dragSrc = items[0] as HTMLElement
+    const fixedLi = Array.from(list.querySelectorAll('li')).find((li) => li.getAttribute('draggable') === 'false')
+    expect(fixedLi).toBeDefined()
+    fireEvent.dragStart(dragSrc, {
+      dataTransfer: { setData: jest.fn(), getData: jest.fn(), effectAllowed: 'move' },
+    })
+    fireEvent.dragOver(fixedLi!, {
+      preventDefault: jest.fn(),
+      dataTransfer: { dropEffect: 'move', getData: jest.fn() },
+    })
+    fireEvent.drop(fixedLi!, {
+      preventDefault: jest.fn(),
+      dataTransfer: { getData: jest.fn() },
+    })
+    const wrapper = list.parentElement as HTMLElement
+    expect(wrapper.className).toMatch(/ring-red/)
   })
 
   it('clamps Android scroll to 0 for the first 600ms after practice starts', async () => {

@@ -47,6 +47,9 @@ const ADD_MEMORIZE_ADD = '[data-tour="add-memorize-add"]'
 const MEMORIZE_PRACTICE_DIALOG = '[data-tour="memorize-practice-dialog"]'
 const MEMORIZE_START_PRACTICE = '[data-tour="memorize-start-practice"]'
 const MEMORIZE_PRACTICE_MODE_TYPE = '[data-tour="memorize-practice-mode-type"]'
+const MEMORIZE_PRACTICE_MODE_WORD = '[data-tour="memorize-practice-mode-word"]'
+const MEMORIZE_PRACTICE_MODE_REORDER = '[data-tour="memorize-practice-mode-reorder"]'
+const MEMORIZE_PRACTICE_MODE_PICKER = '[data-tour="memorize-practice-mode-picker"]'
 const MEMORIZE_PRACTICE_CLOSE = '[data-tour="memorize-practice-close"]'
 /** Open **Listen** in the practice session header; tour uses this so read-aloud steps can be skipped (e.g. non-ESV on Android) via `moveTo`. */
 const MEMORIZE_LISTEN_OPEN = '[data-tour="memorize-listen-open"]'
@@ -1460,6 +1463,20 @@ function skipReadAloudTourIfListenButtonMissing(drv: Driver): boolean {
   return true
 }
 
+/** After mode-picker steps, start **Type mode** so the tour can continue with Listen + typing preview. */
+function clickMemorizeTourTypeModeAndAdvanceToListenBlock(drv: Driver): void {
+  document.querySelector<HTMLElement>(MEMORIZE_PRACTICE_MODE_TYPE)?.click()
+  void waitUntil(
+    () => !!document.querySelector('[data-testid="memorize-practice-words"]'),
+    6000
+  ).then(() => {
+    window.setTimeout(() => {
+      drv.refresh()
+      drv.moveNext()
+    }, prefersReducedMotion() ? 80 : 200)
+  })
+}
+
 function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions): void {
   let memorizeTourTargetVerseId: string | null = null
   const narrow = isNarrowProfileHelpTourViewport()
@@ -1652,25 +1669,24 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
       popover: {
         title: 'Before you practice',
         description:
-          'You see the full verse and reference first. When you are ready, <strong>Start practice</strong> opens a short choice: <strong>Type mode</strong> or <strong>Word mode</strong>, then begins five rounds with more words hidden each time. Use <strong>Next</strong> to start round 1 in <strong>Type mode</strong> for this tour.',
+          'You see the full verse and reference first. The <strong>Round</strong> dropdown in the footer sets which of the five rounds you begin on (round 1 is easiest). When you are ready, <strong>Start practice</strong> opens <strong>Choose practice mode</strong>. Use <strong>Next</strong> to open that dialog for the tour.',
         ...pop({ side: 'right', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           const start = document.querySelector<HTMLElement>(MEMORIZE_START_PRACTICE)
           if (start) {
             start.click()
-            void waitUntil(() => !!document.querySelector(MEMORIZE_PRACTICE_MODE_TYPE), 4000).then((picker) => {
-              if (picker) {
-                document.querySelector<HTMLElement>(MEMORIZE_PRACTICE_MODE_TYPE)?.click()
-              }
-              void waitUntil(
-                () => !!document.querySelector('[data-testid="memorize-practice-words"]'),
-                6000
-              ).then(() => {
+            void waitUntil(() => !!document.querySelector(MEMORIZE_PRACTICE_MODE_PICKER), 4000).then((opened) => {
+              if (!opened) {
                 window.setTimeout(() => {
                   drv.refresh()
                   drv.moveNext()
-                }, prefersReducedMotion() ? 80 : 200)
-              })
+                }, 120)
+                return
+              }
+              window.setTimeout(() => {
+                drv.refresh()
+                drv.moveNext()
+              }, prefersReducedMotion() ? 80 : 200)
             })
             return
           }
@@ -1678,6 +1694,76 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
             drv.refresh()
             drv.moveNext()
           }, 120)
+        },
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(MEMORIZE_PRACTICE_MODE_PICKER) ??
+        document.querySelector(MEMORIZE_PRACTICE_MODE_TYPE) ??
+        document.querySelector(MEMORIZE_PRACTICE_DIALOG) ??
+        document.body,
+      popover: {
+        title: 'Choose practice mode',
+        description:
+          'Pick how you want to work through the <strong>same five rounds</strong>: all three paths end at round 5—in <strong>Type</strong> and <strong>Word</strong> mode more words are hidden each round; in <strong>Reorder</strong> mode more phrase chunks are shuffled. Use <strong>Next</strong> to walk each option, then the tour continues in <strong>Type mode</strong> for Listen and typing.',
+        ...pop({ side: 'right', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          window.setTimeout(() => {
+            drv.refresh()
+            drv.moveNext()
+          }, prefersReducedMotion() ? 60 : 120)
+        },
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(MEMORIZE_PRACTICE_MODE_TYPE) ??
+        document.querySelector(MEMORIZE_PRACTICE_MODE_PICKER) ??
+        document.body,
+      popover: {
+        title: 'Type mode',
+        description:
+          '<strong>Type mode</strong> uses the keyboard: type the <strong>first letter</strong> of each blank word and each <strong>digit</strong> in the reference (punctuation stays on screen). Use <strong>Next</strong> to see <strong>Word mode</strong>.',
+        ...pop({ side: 'right', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          window.setTimeout(() => {
+            drv.refresh()
+            drv.moveNext()
+          }, prefersReducedMotion() ? 60 : 120)
+        },
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(MEMORIZE_PRACTICE_MODE_WORD) ??
+        document.querySelector(MEMORIZE_PRACTICE_MODE_PICKER) ??
+        document.body,
+      popover: {
+        title: 'Word mode',
+        description:
+          '<strong>Word mode</strong> skips the keyboard: tap <strong>word</strong> choices and <strong>digit</strong> buttons in the bottom bar instead. Use <strong>Next</strong> to see <strong>Reorder mode</strong>.',
+        ...pop({ side: 'right', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          window.setTimeout(() => {
+            drv.refresh()
+            drv.moveNext()
+          }, prefersReducedMotion() ? 60 : 120)
+        },
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(MEMORIZE_PRACTICE_MODE_REORDER) ??
+        document.querySelector(MEMORIZE_PRACTICE_MODE_PICKER) ??
+        document.body,
+      popover: {
+        title: 'Reorder mode',
+        description:
+          '<strong>Reorder mode</strong> splits the verse (reference last) into <strong>draggable chunks</strong> you put back in reading order—hold <strong>Hint</strong> like other modes to peek at the first section still wrong. Use <strong>Next</strong> to start round 1 in <strong>Type mode</strong> for the rest of the tour (Listen, then blanks).',
+        ...pop({ side: 'right', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          clickMemorizeTourTypeModeAndAdvanceToListenBlock(drv)
         },
       },
     },
