@@ -40,7 +40,10 @@ function useMemorizeReorderPointerPath(): boolean {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
     const mq = window.matchMedia('(hover: none), (any-pointer: coarse)')
     const apply = (): void => {
-      setV(mq.matches)
+      const touchCapable =
+        mq.matches ||
+        (typeof navigator !== 'undefined' && navigator.maxTouchPoints > 0)
+      setV(touchCapable)
     }
     apply()
     mq.addEventListener('change', apply)
@@ -281,13 +284,13 @@ export function MemorizationReorderPanel({
       commitPointerDrop(ev.clientX, ev.clientY)
     }
 
-    document.addEventListener('pointermove', onMove, { passive: false })
-    document.addEventListener('pointerup', onUpOrCancel)
-    document.addEventListener('pointercancel', onUpOrCancel)
+    document.addEventListener('pointermove', onMove, { capture: true, passive: false })
+    document.addEventListener('pointerup', onUpOrCancel, { capture: true })
+    document.addEventListener('pointercancel', onUpOrCancel, { capture: true })
     const teardown = (): void => {
-      document.removeEventListener('pointermove', onMove)
-      document.removeEventListener('pointerup', onUpOrCancel)
-      document.removeEventListener('pointercancel', onUpOrCancel)
+      document.removeEventListener('pointermove', onMove, { capture: true })
+      document.removeEventListener('pointerup', onUpOrCancel, { capture: true })
+      document.removeEventListener('pointercancel', onUpOrCancel, { capture: true })
     }
     purgePointerListenersRef.current = teardown
   }, [
@@ -480,7 +483,13 @@ export function MemorizationReorderPanel({
               onDragEnd={handleDragEnd}
               className={`min-w-0 max-w-full rounded-md text-slate-900 dark:text-slate-100 transition-shadow wrap-anywhere hyphens-auto select-none [-webkit-touch-callout:none] ${spacingAfter} ${pad} ${rowRing} ${
                 isDragging ? 'opacity-60' : ''
-              } ${draggable ? 'cursor-move touch-none' : 'cursor-default touch-manipulation'}`}
+              } ${
+                draggable
+                  ? usePointerPath
+                    ? 'cursor-move touch-none'
+                    : 'cursor-move touch-manipulation'
+                  : 'cursor-default touch-manipulation'
+              }`}
               aria-label={
                 lockedByRound
                   ? `Verse part ${slotIndex + 1} (fixed)`

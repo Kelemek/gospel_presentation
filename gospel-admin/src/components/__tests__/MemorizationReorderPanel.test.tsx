@@ -34,21 +34,33 @@ describe('MemorizationReorderPanel', () => {
 
   it('uses native draggable on fine-pointer layouts', async () => {
     mockMatchMedia(false)
-    const { getByTestId } = render(
-      <MemorizationReorderPanel
-        chunks={chunks}
-        slotChunkIds={slotChunkIds}
-        onSlotChunkIdsChange={jest.fn()}
-        roundMovableIndices={movable}
-        onInvalidDrop={jest.fn()}
-      />
-    )
-    await waitFor(() => {
-      const trues = getByTestId('memorize-reorder-list').querySelectorAll('li[draggable="true"]')
-      expect(trues.length).toBe(2)
+    const prev = navigator.maxTouchPoints
+    Object.defineProperty(navigator, 'maxTouchPoints', {
+      value: 0,
+      configurable: true,
     })
-    expect(chunks.length).toBe(4)
-    expect(getByTestId('memorize-reorder-list').querySelectorAll('li[draggable="false"]').length).toBe(2)
+    try {
+      const { getByTestId } = render(
+        <MemorizationReorderPanel
+          chunks={chunks}
+          slotChunkIds={slotChunkIds}
+          onSlotChunkIdsChange={jest.fn()}
+          roundMovableIndices={movable}
+          onInvalidDrop={jest.fn()}
+        />
+      )
+      await waitFor(() => {
+        const trues = getByTestId('memorize-reorder-list').querySelectorAll('li[draggable="true"]')
+        expect(trues.length).toBe(2)
+      })
+      expect(chunks.length).toBe(4)
+      expect(getByTestId('memorize-reorder-list').querySelectorAll('li[draggable="false"]').length).toBe(2)
+    } finally {
+      Object.defineProperty(navigator, 'maxTouchPoints', {
+        value: prev,
+        configurable: true,
+      })
+    }
   })
 
   it('turns off native draggable on coarse / no-hover layouts (pointer reorder; avoids WebKit long-press)', async () => {
@@ -66,5 +78,33 @@ describe('MemorizationReorderPanel', () => {
       expect(getByTestId('memorize-reorder-list').querySelector('li[draggable="true"]')).toBeNull()
     })
     expect(getByTestId('memorize-reorder-list').querySelectorAll('li').length).toBe(chunks.length)
+  })
+
+  it('enables pointer path when maxTouchPoints > 0 even if matchMedia reports fine pointer', async () => {
+    mockMatchMedia(false)
+    const prev = navigator.maxTouchPoints
+    Object.defineProperty(navigator, 'maxTouchPoints', {
+      value: 8,
+      configurable: true,
+    })
+    try {
+      const { getByTestId } = render(
+        <MemorizationReorderPanel
+          chunks={chunks}
+          slotChunkIds={slotChunkIds}
+          onSlotChunkIdsChange={jest.fn()}
+          roundMovableIndices={movable}
+          onInvalidDrop={jest.fn()}
+        />
+      )
+      await waitFor(() => {
+        expect(getByTestId('memorize-reorder-list').querySelector('li[draggable="true"]')).toBeNull()
+      })
+    } finally {
+      Object.defineProperty(navigator, 'maxTouchPoints', {
+        value: prev,
+        configurable: true,
+      })
+    }
   })
 })
