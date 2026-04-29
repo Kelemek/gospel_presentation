@@ -9,6 +9,7 @@ import {
   type DragEvent,
   type RefObject,
 } from 'react'
+import { createPortal } from 'react-dom'
 import type { MemorizationReorderChunk } from '@/lib/memorizationPracticeUtils'
 
 export interface MemorizationReorderPanelProps {
@@ -90,6 +91,10 @@ export function MemorizationReorderPanel({
   const usePointerPath = useMemorizeReorderPointerPath()
   const [draggedSlot, setDraggedSlot] = useState<number | null>(null)
   const [dragOverSlot, setDragOverSlot] = useState<number | null>(null)
+  /** Finger/client position for the floating chip while pointer-dragging (touch / coarse path only). */
+  const [pointerDragPreview, setPointerDragPreview] = useState<{ x: number; y: number } | null>(
+    null
+  )
 
   const listRef = useRef<HTMLUListElement>(null)
   const slotChunkIdsRef = useRef(slotChunkIds)
@@ -145,10 +150,31 @@ export function MemorizationReorderPanel({
     pendingRef.current = null
   }, [])
 
+  const pointerDragLabel = useMemo(() => {
+    if (draggedSlot === null) return ''
+    const slotIndex = draggedSlot
+    const chunkId = slotChunkIds[slotIndex] ?? slotIndex
+    const chunk = chunks[chunkId]
+    const text = chunk?.text ?? ''
+    const showHoldPeek =
+      holdHintPeekFirstWrong &&
+      firstWrongSlotIndex === slotIndex &&
+      slotChunkIds[slotIndex] !== slotIndex
+    const peekText = chunks[slotIndex]?.text ?? ''
+    return showHoldPeek ? peekText : text
+  }, [
+    draggedSlot,
+    slotChunkIds,
+    chunks,
+    holdHintPeekFirstWrong,
+    firstWrongSlotIndex,
+  ])
+
   const endPointerDragGesture = useCallback(() => {
     activeDragPointerIdRef.current = null
     draggedSlotRef.current = null
     dragOverSlotRef.current = null
+    setPointerDragPreview(null)
     setDraggedSlot(null)
     setDragOverSlot(null)
   }, [])
@@ -171,6 +197,11 @@ export function MemorizationReorderPanel({
         window.getSelection()?.removeAllRanges()
       }
       setDraggedSlot(slotIndex)
+      const r = li.getBoundingClientRect()
+      setPointerDragPreview({
+        x: r.left + r.width / 2,
+        y: r.top + r.height / 2,
+      })
       requestAnimationFrame(() => {
         li.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
       })
@@ -204,6 +235,7 @@ export function MemorizationReorderPanel({
       activeDragPointerIdRef.current = null
       draggedSlotRef.current = null
       dragOverSlotRef.current = null
+      setPointerDragPreview(null)
       setDraggedSlot(null)
       setDragOverSlot(null)
 
@@ -252,6 +284,7 @@ export function MemorizationReorderPanel({
 
       if (ev.pointerId !== activeDragPointerIdRef.current) return
       ev.preventDefault()
+      setPointerDragPreview({ x: ev.clientX, y: ev.clientY })
       const root = listRef.current
       if (root) {
         const over = slotIndexUnderPointer(root, ev.clientX, ev.clientY)
@@ -428,6 +461,7 @@ export function MemorizationReorderPanel({
   const n = chunks.length
 
   return (
+    <>
     <div
       className={`rounded-md transition-shadow ${listFlashError ? 'ring-2 ring-red-400 dark:ring-red-500 p-1' : ''}`}
     >
@@ -482,7 +516,11 @@ export function MemorizationReorderPanel({
               onDrop={(e) => handleDrop(e, slotIndex)}
               onDragEnd={handleDragEnd}
               className={`min-w-0 max-w-full rounded-md text-slate-900 dark:text-slate-100 transition-shadow wrap-anywhere hyphens-auto select-none [-webkit-touch-callout:none] ${spacingAfter} ${pad} ${rowRing} ${
-                isDragging ? 'opacity-60' : ''
+                isDragging
+                  ? usePointerPath
+                    ? 'opacity-35'
+                    : 'opacity-60'
+                  : ''
               } ${
                 draggable
                   ? usePointerPath
@@ -512,5 +550,27 @@ export function MemorizationReorderPanel({
         })}
       </ul>
     </div>
+    {usePointerPath &&
+    draggedSlot !== null &&
+    pointerDragPreview != null &&
+    pointerDragLabel !== '' &&
+    typeof document !== 'undefined'
+      ? createPortal(
+          <div
+            aria-hidden
+            data-testid="memorize-reorder-drag-preview"
+            className="fixed z-200 max-w-[min(90vw,28rem)] rounded-md px-2.5 py-1 text-base leading-relaxed font-serif wrap-anywhere hyphens-auto pointer-events-none select-none shadow-xl border-2 border-amber-300 dark:border-amber-600/80 bg-amber-50/95 dark:bg-amber-950/90 text-slate-900 dark:text-slate-100"
+            style={{
+              left: pointerDragPreview.x,
+              top: pointerDragPreview.y,
+              transform: 'translate(-50%, calc(-100% - 10px))',
+            }}
+          >
+            {pointerDragLabel}
+          </div>,
+          document.body
+        )
+      : null}
+    </>
   )
 }
