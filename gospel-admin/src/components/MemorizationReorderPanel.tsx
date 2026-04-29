@@ -49,10 +49,8 @@ function useMemorizeReorderPointerPath(): boolean {
   return v
 }
 
-/** Touch / pen: short hold before drag starts so quick scrolls still work. */
+/** Touch / pen: short hold before drag starts (lets the browser settle; scroll is not started on movable chips — see `touch-none`). */
 const POINTER_REORDER_TOUCH_DELAY_MS = 110
-/** If the finger moves farther before the delay elapses, treat as scroll — cancel reorder activation. */
-const POINTER_REORDER_TOUCH_CANCEL_MOVE_PX = 12
 /** Mouse (or mouse on hybrid): start drag after a small move so clicks do not drag. */
 const POINTER_REORDER_MOUSE_MOVE_THRESHOLD_PX = 5
 
@@ -239,11 +237,7 @@ export function MemorizationReorderPanel({
         const dx = ev.clientX - pending.startX
         const dy = ev.clientY - pending.startY
         const dist = Math.hypot(dx, dy)
-        if (pending.touchLike && pending.timer != null && dist > POINTER_REORDER_TOUCH_CANCEL_MOVE_PX) {
-          purgePointerListenersRef.current?.()
-          purgePointerListenersRef.current = null
-          clearPending()
-        } else if (!pending.touchLike && dist > POINTER_REORDER_MOUSE_MOVE_THRESHOLD_PX) {
+        if (!pending.touchLike && dist > POINTER_REORDER_MOUSE_MOVE_THRESHOLD_PX) {
           const slot = pending.slotIndex
           const pid = pending.pointerId
           if (pending.timer != null) window.clearTimeout(pending.timer)
@@ -486,7 +480,7 @@ export function MemorizationReorderPanel({
               onDragEnd={handleDragEnd}
               className={`min-w-0 max-w-full rounded-md text-slate-900 dark:text-slate-100 transition-shadow wrap-anywhere hyphens-auto select-none [-webkit-touch-callout:none] ${spacingAfter} ${pad} ${rowRing} ${
                 isDragging ? 'opacity-60' : ''
-              } ${draggable ? 'cursor-move touch-manipulation' : 'cursor-default'}`}
+              } ${draggable ? 'cursor-move touch-none' : 'cursor-default touch-manipulation'}`}
               aria-label={
                 lockedByRound
                   ? `Verse part ${slotIndex + 1} (fixed)`
