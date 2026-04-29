@@ -166,6 +166,9 @@ export function MemorizationReorderPanel({
       }
       activeDragPointerIdRef.current = pointerId
       draggedSlotRef.current = slotIndex
+      if (typeof window !== 'undefined' && typeof window.getSelection === 'function') {
+        window.getSelection()?.removeAllRanges()
+      }
       setDraggedSlot(slotIndex)
       requestAnimationFrame(() => {
         li.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
@@ -317,6 +320,10 @@ export function MemorizationReorderPanel({
       const isSolved = slotChunkIds[slotIndex] === slotIndex
       const canDrag = !lockedByRound && !isSolved
       if (!canDrag) return
+
+      if (typeof window !== 'undefined' && typeof window.getSelection === 'function') {
+        window.getSelection()?.removeAllRanges()
+      }
 
       const touchLike = e.pointerType === 'touch' || e.pointerType === 'pen'
       clearPending()
@@ -477,7 +484,7 @@ export function MemorizationReorderPanel({
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, slotIndex)}
               onDragEnd={handleDragEnd}
-              className={`min-w-0 max-w-full rounded-md text-slate-900 dark:text-slate-100 transition-shadow wrap-anywhere hyphens-auto ${spacingAfter} ${pad} ${rowRing} ${
+              className={`min-w-0 max-w-full rounded-md text-slate-900 dark:text-slate-100 transition-shadow wrap-anywhere hyphens-auto select-none [-webkit-touch-callout:none] ${spacingAfter} ${pad} ${rowRing} ${
                 isDragging ? 'opacity-60' : ''
               } ${draggable ? 'cursor-move touch-manipulation' : 'cursor-default'}`}
               aria-label={
@@ -491,8 +498,8 @@ export function MemorizationReorderPanel({
               <span
                 className={
                   showHoldPeek
-                    ? 'text-blue-800 dark:text-blue-200 italic'
-                    : ''
+                    ? 'pointer-events-none text-blue-800 dark:text-blue-200 italic'
+                    : 'pointer-events-none'
                 }
               >
                 {displayText}
