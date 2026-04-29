@@ -1760,7 +1760,7 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
       popover: {
         title: 'Reorder mode',
         description:
-          '<strong>Reorder mode</strong> splits the verse (reference last) into <strong>draggable chunks</strong> you put back in reading order—hold <strong>Hint</strong> like other modes to peek at the first section still wrong. Use <strong>Next</strong> to start round 1 in <strong>Type mode</strong> for the rest of the tour (Listen, then blanks).',
+          '<strong>Reorder mode</strong> splits the verse into <strong>draggable chunks</strong> you put back in reading order, with the <strong>reference</strong> as separate pieces (book, chapter number, verse); a colon appears between chapter and verse but is not a chip. Hold <strong>Hint</strong> like other modes to peek at the first section still wrong. Use <strong>Next</strong> to start round 1 in <strong>Type mode</strong> for the rest of the tour (Listen, then blanks).',
         ...pop({ side: 'right', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           clickMemorizeTourTypeModeAndAdvanceToListenBlock(drv)

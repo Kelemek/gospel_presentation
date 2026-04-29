@@ -50,6 +50,7 @@ import {
   hiddenFractionForRound,
   pickHiddenWordIndices,
   pickReorderMovableIndices,
+  reorderReferenceColonAfterSlotIndex,
   reorderMovableCountForRound,
   seedRandom,
   stringToSeed,
@@ -119,6 +120,10 @@ export default function MemorizationPracticeSession({
   const reorderChunks = useMemo(
     () => buildMemorizationReorderChunks(verse.text, verse.reference),
     [verse.text, verse.reference]
+  )
+  const reorderColonAfterSlotIndex = useMemo(
+    () => reorderReferenceColonAfterSlotIndex(reorderChunks.length, verse.reference),
+    [reorderChunks.length, verse.reference]
   )
   const typableIndices = useMemo(() => getTypableTokenIndices(tokens), [tokens])
   /** Hide IME field outside the verse scroller so Android does not scrollTo focused input (top of column). */
@@ -1809,6 +1814,7 @@ export default function MemorizationPracticeSession({
                     practiceMode === 'reorder' && hintActive
                   }
                   scrollParentRef={practiceScrollRef}
+                  colonAfterSlotIndex={reorderColonAfterSlotIndex}
                 />
               ) : practiceMode === 'word' ? (
                 <>

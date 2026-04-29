@@ -12,6 +12,8 @@ import {
   parseReferenceMemorizationTokens,
   pickHiddenWordIndices,
   pickReorderMovableIndices,
+  referenceTextsForMemorizationReorder,
+  reorderReferenceColonAfterSlotIndex,
   reorderMovableCountForRound,
   seedRandom,
   stringToSeed,
@@ -153,10 +155,34 @@ describe('memorizationPracticeUtils', () => {
     expect(buildMemorizationChoiceLabels(t, typable, 1, 4, seedRandom(1))).toEqual([])
   })
 
-  it('buildMemorizationReorderChunks splits clauses and appends reference', () => {
+  it('buildMemorizationReorderChunks splits clauses and appends reference as book, chapter, verse', () => {
     const c = buildMemorizationReorderChunks('a, b; c', 'John 3:16')
-    expect(c.map((x) => x.text)).toEqual(['a', 'b', 'c', 'John 3:16'])
-    expect(c.map((x) => x.id)).toEqual([0, 1, 2, 3])
+    expect(c.map((x) => x.text)).toEqual(['a', 'b', 'c', 'John', '3', '16'])
+    expect(c.map((x) => x.id)).toEqual([0, 1, 2, 3, 4, 5])
+  })
+
+  it('referenceTextsForMemorizationReorder splits ranges and chapter-only refs', () => {
+    expect(referenceTextsForMemorizationReorder('Isaiah 40:25–26')).toEqual(['Isaiah', '40', '25-26'])
+    expect(referenceTextsForMemorizationReorder('Psalm 23')).toEqual(['Psalm', '23'])
+    expect(referenceTextsForMemorizationReorder('not a ref')).toEqual(['not a ref'])
+  })
+
+  it('reorderReferenceColonAfterSlotIndex marks the chapter slot before a parsed verse', () => {
+    expect(
+      reorderReferenceColonAfterSlotIndex(
+        buildMemorizationReorderChunks('a, b', 'John 3:16').length,
+        'John 3:16'
+      )
+    ).toBe(3)
+    expect(reorderReferenceColonAfterSlotIndex(3, 'Psalm 23')).toBeNull()
+    expect(reorderReferenceColonAfterSlotIndex(4, 'weird')).toBeNull()
+  })
+
+  it('buildMemorizationReorderChunks can omit reference chunk for reorder UI', () => {
+    const c = buildMemorizationReorderChunks('a, b; c', 'John 3:16', {
+      includeReferenceChunk: false,
+    })
+    expect(c.map((x) => x.text)).toEqual(['a', 'b', 'c'])
   })
 
   it('buildMemorizationReorderChunks uses whole verse when no clause punctuation', () => {
@@ -167,7 +193,7 @@ describe('memorizationPracticeUtils', () => {
 
   it('buildMemorizationReorderChunks handles very short verse', () => {
     const c = buildMemorizationReorderChunks('Hi', 'R 1:1')
-    expect(c.map((x) => x.text)).toEqual(['Hi', 'R 1:1'])
+    expect(c.map((x) => x.text)).toEqual(['Hi', 'R', '1', '1'])
   })
 
   it('reorderMovableCountForRound increases through rounds', () => {

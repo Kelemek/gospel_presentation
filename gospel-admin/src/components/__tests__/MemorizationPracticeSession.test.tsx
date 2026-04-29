@@ -354,12 +354,15 @@ describe('MemorizationPracticeSession', () => {
     )
     expect(screen.getByTestId('memorize-round-advance-footer')).toBeInTheDocument()
     const list = screen.getByTestId('memorize-reorder-list')
-    const items = list.querySelectorAll('li')
-    expect(items.length).toBe(4)
+    const items = list.querySelectorAll('[data-reorder-slot]')
+    expect(items.length).toBe(6)
     expect(items[0]).toHaveTextContent('alpha')
     expect(items[1]).toHaveTextContent('beta')
     expect(items[2]).toHaveTextContent('gamma')
-    expect(items[3]).toHaveTextContent('John 3:16')
+    expect(items[3]).toHaveTextContent('John')
+    expect(items[4]).toHaveTextContent('3')
+    expect(items[5]).toHaveTextContent('16')
+    expect(screen.getByTestId('memorize-reorder-chapter-verse-colon')).toHaveTextContent(':')
   })
 
   it('opens mode picker when Start practice is tapped; Cancel returns to intro', async () => {
@@ -445,14 +448,26 @@ describe('MemorizationPracticeSession', () => {
       const list = screen.getByTestId('memorize-reorder-list')
       const hintBtn = screen.getByTestId('memorize-hint-button')
       expect(hintBtn).toBeInTheDocument()
-      expect(list.querySelector('li')?.textContent).toBe('beta')
+      const correctOrder = ['alpha', 'beta', 'gamma', 'John', '3', '16']
+      const items = list.querySelectorAll('[data-reorder-slot]')
+      expect(items.length).toBe(correctOrder.length)
+      let firstWrongIdx = -1
+      for (let i = 0; i < correctOrder.length; i++) {
+        if (items[i]?.textContent !== correctOrder[i]) {
+          firstWrongIdx = i
+          break
+        }
+      }
+      expect(firstWrongIdx).toBeGreaterThanOrEqual(0)
+      const wrongSlot = items[firstWrongIdx] as HTMLElement
+      expect(wrongSlot.textContent).not.toBe(correctOrder[firstWrongIdx])
       expect(screen.getByRole('dialog', { name: /Memorize practice/i }).textContent).toMatch(
         /Hold Hint to peek/i
       )
       fireEvent.pointerDown(hintBtn)
-      expect(list.querySelector('li')?.textContent).toBe('alpha')
+      expect(wrongSlot.textContent).toBe(correctOrder[firstWrongIdx])
       fireEvent.pointerUp(hintBtn)
-      expect(list.querySelector('li')?.textContent).toBe('beta')
+      expect(wrongSlot.textContent).not.toBe(correctOrder[firstWrongIdx])
       expect(onPersistInProgress).toHaveBeenCalledTimes(1)
       expect(onPersistInProgress).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -474,19 +489,21 @@ describe('MemorizationPracticeSession', () => {
     fireEvent.click(screen.getByRole('button', { name: /Start practice/i }))
     fireEvent.click(screen.getByTestId('memorize-practice-mode-reorder'))
     const list = screen.getByTestId('memorize-reorder-list')
-    const items = list.querySelectorAll('li[draggable="true"]')
+    const items = list.querySelectorAll('[data-reorder-slot][draggable="true"]')
     expect(items.length).toBeGreaterThanOrEqual(1)
     const dragSrc = items[0] as HTMLElement
-    const fixedLi = Array.from(list.querySelectorAll('li')).find((li) => li.getAttribute('draggable') === 'false')
-    expect(fixedLi).toBeDefined()
+    const fixedEl = Array.from(list.querySelectorAll('[data-reorder-slot]')).find(
+      (el) => el.getAttribute('draggable') === 'false'
+    )
+    expect(fixedEl).toBeDefined()
     fireEvent.dragStart(dragSrc, {
       dataTransfer: { setData: jest.fn(), getData: jest.fn(), effectAllowed: 'move' },
     })
-    fireEvent.dragOver(fixedLi!, {
+    fireEvent.dragOver(fixedEl!, {
       preventDefault: jest.fn(),
       dataTransfer: { dropEffect: 'move', getData: jest.fn() },
     })
-    fireEvent.drop(fixedLi!, {
+    fireEvent.drop(fixedEl!, {
       preventDefault: jest.fn(),
       dataTransfer: { getData: jest.fn() },
     })

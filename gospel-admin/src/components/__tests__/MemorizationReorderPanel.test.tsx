@@ -24,7 +24,7 @@ function mockMatchMedia(matches: boolean): void {
 }
 
 describe('MemorizationReorderPanel', () => {
-  const chunks = buildMemorizationReorderChunks('alpha, beta, gamma', 'Gen 1:1')
+  const chunks = buildMemorizationReorderChunks('alpha, beta, gamma', '')
   const slotChunkIds = [1, 0, 2]
   const movable = new Set([0, 1])
 
@@ -50,11 +50,11 @@ describe('MemorizationReorderPanel', () => {
         />
       )
       await waitFor(() => {
-        const trues = getByTestId('memorize-reorder-list').querySelectorAll('li[draggable="true"]')
+        const trues = getByTestId('memorize-reorder-list').querySelectorAll('[data-reorder-slot][draggable="true"]')
         expect(trues.length).toBe(2)
       })
-      expect(chunks.length).toBe(4)
-      expect(getByTestId('memorize-reorder-list').querySelectorAll('li[draggable="false"]').length).toBe(2)
+      expect(chunks.length).toBe(3)
+      expect(getByTestId('memorize-reorder-list').querySelectorAll('[data-reorder-slot][draggable="false"]').length).toBe(1)
     } finally {
       Object.defineProperty(navigator, 'maxTouchPoints', {
         value: prev,
@@ -75,9 +75,9 @@ describe('MemorizationReorderPanel', () => {
       />
     )
     await waitFor(() => {
-      expect(getByTestId('memorize-reorder-list').querySelector('li[draggable="true"]')).toBeNull()
+      expect(getByTestId('memorize-reorder-list').querySelector('[data-reorder-slot][draggable="true"]')).toBeNull()
     })
-    expect(getByTestId('memorize-reorder-list').querySelectorAll('li').length).toBe(chunks.length)
+    expect(getByTestId('memorize-reorder-list').querySelectorAll('[data-reorder-slot]').length).toBe(chunks.length)
   })
 
   it('enables pointer path when maxTouchPoints > 0 even if matchMedia reports fine pointer', async () => {
@@ -98,7 +98,7 @@ describe('MemorizationReorderPanel', () => {
         />
       )
       await waitFor(() => {
-        expect(getByTestId('memorize-reorder-list').querySelector('li[draggable="true"]')).toBeNull()
+        expect(getByTestId('memorize-reorder-list').querySelector('[data-reorder-slot][draggable="true"]')).toBeNull()
       })
     } finally {
       Object.defineProperty(navigator, 'maxTouchPoints', {

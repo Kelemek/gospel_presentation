@@ -1,8 +1,10 @@
 'use client'
 
 import {
+  Fragment,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -32,6 +34,11 @@ export interface MemorizationReorderPanelProps {
    */
   scrollParentRef?: RefObject<HTMLElement | null>
   className?: string
+  /**
+   * After this slot (the chapter-number chip), render a static **:** between chapter and verse.
+   * Null when the reference has no parsed chapter:verse shape.
+   */
+  colonAfterSlotIndex?: number | null
 }
 
 /** Prefer pointer-driven reorder so WebKit does not require a long-press before HTML5 drag (Capacitor / phones). */
@@ -62,7 +69,7 @@ function slotIndexUnderPointer(listRoot: HTMLElement, clientX: number, clientY: 
   const stack = document.elementsFromPoint(clientX, clientY)
   for (const node of stack) {
     if (!(node instanceof Element)) continue
-    const li = node.closest('li[data-reorder-slot]')
+    const li = node.closest('[data-reorder-slot]')
     if (!li || !listRoot.contains(li)) continue
     const raw = li.getAttribute('data-reorder-slot')
     if (raw == null) continue
@@ -87,6 +94,7 @@ export function MemorizationReorderPanel({
   holdHintPeekFirstWrong = false,
   scrollParentRef,
   className = '',
+  colonAfterSlotIndex = null,
 }: MemorizationReorderPanelProps) {
   const usePointerPath = useMemorizeReorderPointerPath()
   const [draggedSlot, setDraggedSlot] = useState<number | null>(null)
@@ -96,13 +104,20 @@ export function MemorizationReorderPanel({
     null
   )
 
-  const listRef = useRef<HTMLUListElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
   const slotChunkIdsRef = useRef(slotChunkIds)
-  slotChunkIdsRef.current = slotChunkIds
   const draggedSlotRef = useRef<number | null>(null)
-  draggedSlotRef.current = draggedSlot
   const dragOverSlotRef = useRef<number | null>(null)
-  dragOverSlotRef.current = dragOverSlot
+
+  useLayoutEffect(() => {
+    slotChunkIdsRef.current = slotChunkIds
+  }, [slotChunkIds])
+  useLayoutEffect(() => {
+    draggedSlotRef.current = draggedSlot
+  }, [draggedSlot])
+  useLayoutEffect(() => {
+    dragOverSlotRef.current = dragOverSlot
+  }, [dragOverSlot])
 
   type PendingSession = {
     pointerId: number
@@ -184,7 +199,7 @@ export function MemorizationReorderPanel({
       clearPending()
       const root = listRef.current
       if (!root) return
-      const li = root.querySelector(`li[data-reorder-slot="${slotIndex}"]`)
+      const li = root.querySelector(`[data-reorder-slot="${slotIndex}"]`)
       if (!(li instanceof HTMLElement)) return
       try {
         li.setPointerCapture(pointerId)
@@ -218,7 +233,7 @@ export function MemorizationReorderPanel({
         return
       }
       const releaseCapture = (): void => {
-        const li = root.querySelector(`li[data-reorder-slot="${src}"]`)
+        const li = root.querySelector(`[data-reorder-slot="${src}"]`)
         const pid = activeDragPointerIdRef.current
         if (li instanceof HTMLElement && pid != null) {
           try {
@@ -334,11 +349,11 @@ export function MemorizationReorderPanel({
   ])
 
   const handleListPointerDown = useCallback(
-    (e: React.PointerEvent<HTMLUListElement>) => {
+    (e: React.PointerEvent<HTMLDivElement>) => {
       if (!usePointerPath) return
       const root = listRef.current
       if (!root) return
-      const li = (e.target as Element | null)?.closest?.('li[data-reorder-slot]')
+      const li = (e.target as Element | null)?.closest?.('[data-reorder-slot]')
       if (!li || !root.contains(li)) return
       const raw = li.getAttribute('data-reorder-slot')
       if (raw == null) return
@@ -465,11 +480,10 @@ export function MemorizationReorderPanel({
     <div
       className={`rounded-md transition-shadow ${listFlashError ? 'ring-2 ring-red-400 dark:ring-red-500 p-1' : ''}`}
     >
-      <ul
+      <div
         ref={listRef}
-        role="list"
         data-testid="memorize-reorder-list"
-        className={`list-none m-0 p-0 flex flex-wrap items-baseline gap-x-0 gap-y-2 sm:gap-y-1 text-base leading-relaxed font-serif ${className}`}
+        className={`flex flex-wrap items-baseline gap-x-0 gap-y-2 sm:gap-y-1 text-base leading-relaxed font-serif ${className}`}
         onPointerDown={handleListPointerDown}
       >
         {Array.from({ length: n }, (_, slotIndex) => {
@@ -507,49 +521,59 @@ export function MemorizationReorderPanel({
           const nativeDraggable = draggable && !usePointerPath
 
           return (
-            <li
-              key={`reorder-slot-${slotIndex}-${chunkId}`}
-              data-reorder-slot={slotIndex}
-              draggable={nativeDraggable}
-              onDragStart={(e) => handleDragStart(e, slotIndex)}
-              onDragOver={(e) => handleDragOver(e, slotIndex)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, slotIndex)}
-              onDragEnd={handleDragEnd}
-              className={`min-w-0 max-w-full rounded-md text-slate-900 dark:text-slate-100 wrap-anywhere hyphens-auto select-none [-webkit-touch-callout:none] ${draggedSlot === null ? 'transition-shadow' : ''} ${spacingAfter} ${pad} ${rowRing} ${
-                isDragging
-                  ? usePointerPath
-                    ? 'opacity-35'
-                    : 'opacity-60'
-                  : ''
-              } ${
-                draggable
-                  ? usePointerPath
-                    ? 'cursor-move touch-none'
-                    : 'cursor-move touch-manipulation'
-                  : 'cursor-default touch-manipulation'
-              }`}
-              aria-label={
-                lockedByRound
-                  ? `Verse part ${slotIndex + 1} (fixed)`
-                  : isSolved
-                    ? `Verse part ${slotIndex + 1} (in correct order)`
-                    : `Verse part ${slotIndex + 1}; drag to reorder`
-              }
-            >
-              <span
-                className={
-                  showHoldPeek
-                    ? 'pointer-events-none text-blue-800 dark:text-blue-200 italic'
-                    : 'pointer-events-none'
+            <Fragment key={`reorder-slot-wrap-${slotIndex}`}>
+              <div
+                data-reorder-slot={slotIndex}
+                draggable={nativeDraggable}
+                onDragStart={(e) => handleDragStart(e, slotIndex)}
+                onDragOver={(e) => handleDragOver(e, slotIndex)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, slotIndex)}
+                onDragEnd={handleDragEnd}
+                className={`min-w-0 max-w-full rounded-md text-slate-900 dark:text-slate-100 wrap-anywhere hyphens-auto select-none [-webkit-touch-callout:none] ${draggedSlot === null ? 'transition-shadow' : ''} ${spacingAfter} ${pad} ${rowRing} ${
+                  isDragging
+                    ? usePointerPath
+                      ? 'opacity-35'
+                      : 'opacity-60'
+                    : ''
+                } ${
+                  draggable
+                    ? usePointerPath
+                      ? 'cursor-move touch-none'
+                      : 'cursor-move touch-manipulation'
+                    : 'cursor-default touch-manipulation'
+                }`}
+                aria-label={
+                  lockedByRound
+                    ? `Verse part ${slotIndex + 1} (fixed)`
+                    : isSolved
+                      ? `Verse part ${slotIndex + 1} (in correct order)`
+                      : `Verse part ${slotIndex + 1}; drag to reorder`
                 }
               >
-                {displayText}
-              </span>
-            </li>
+                <span
+                  className={
+                    showHoldPeek
+                      ? 'pointer-events-none text-blue-800 dark:text-blue-200 italic'
+                      : 'pointer-events-none'
+                  }
+                >
+                  {displayText}
+                </span>
+              </div>
+              {colonAfterSlotIndex === slotIndex ? (
+                <span
+                  data-testid="memorize-reorder-chapter-verse-colon"
+                  aria-hidden
+                  className="text-slate-900 dark:text-slate-100 shrink-0 self-baseline -mx-px pointer-events-none select-none"
+                >
+                  :
+                </span>
+              ) : null}
+            </Fragment>
           )
         })}
-      </ul>
+      </div>
     </div>
     {usePointerPath &&
     draggedSlot !== null &&

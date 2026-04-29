@@ -1,3 +1,5 @@
+import { parseReference } from '@/lib/parse-scripture-reference'
+
 /** Seeded PRNG (mulberry32). */
 export function seedRandom(seed: number): () => number {
   return function () {
@@ -100,7 +102,7 @@ export function hiddenFractionForRound(roundIndex: number): number {
 /** How many practice rounds until 100% hidden (inclusive). */
 export const MEMORIZATION_FULL_HIDE_ROUND = 5
 
-/** One draggable unit for reorder mode (verse clauses / word groups + reference chunk). */
+/** One draggable unit for reorder mode (verse clauses / word groups plus reference pieces when enabled). */
 export type MemorizationReorderChunk = {
   id: number
   text: string
@@ -111,13 +113,50 @@ const REORDER_MAX_CLAUSE_CHARS = 40
 const REORDER_WORDS_PER_FALLBACK_GROUP = 3
 
 /**
+ * Split a saved reference into separate reorder chips: **book**, **chapter** (plain digits), and
+ * **verse span** when the reference parses (`parseReference`). The **:** between chapter and verse
+ * is not a chip; use {@link reorderReferenceColonAfterSlotIndex} for UI. Chapter-only refs yield
+ * two chips; unparsable refs become a single chip.
+ */
+export function referenceTextsForMemorizationReorder(reference: string): string[] {
+  const refT = reference.trim()
+  if (refT.length === 0) return []
+  const parsed = parseReference(refT)
+  if (!parsed) return [refT]
+  const parts: string[] = [parsed.book]
+  if (parsed.verseStart != null) {
+    parts.push(String(parsed.chapter))
+    if (parsed.verseEnd != null && parsed.verseEnd !== parsed.verseStart) {
+      parts.push(`${parsed.verseStart}-${parsed.verseEnd}`)
+    } else {
+      parts.push(String(parsed.verseStart))
+    }
+  } else {
+    parts.push(String(parsed.chapter))
+  }
+  return parts
+}
+
+/** Slot index of the chapter-number chip after which a static **:** is rendered (before the verse chip). */
+export function reorderReferenceColonAfterSlotIndex(chunkCount: number, reference: string): number | null {
+  if (chunkCount < 3) return null
+  if (referenceTextsForMemorizationReorder(reference).length !== 3) return null
+  return chunkCount - 2
+}
+
+/**
  * Split verse body on clause punctuation (comma, semicolon, colon, em/en dash); sub-split long
- * segments into word groups. Append reference as a single final chunk.
+ * segments into word groups. By default appends **reference** as one or more trailing chunks
+ * (book, chapter, verse span; a **:** between chapter and verse is UI-only —
+ * {@link referenceTextsForMemorizationReorder}, {@link reorderReferenceColonAfterSlotIndex}). Pass
+ * `includeReferenceChunk: false` to omit reference pieces (e.g. tests).
  */
 export function buildMemorizationReorderChunks(
   versePlainText: string,
-  reference: string
+  reference: string,
+  options?: { includeReferenceChunk?: boolean }
 ): MemorizationReorderChunk[] {
+  const includeRef = options?.includeReferenceChunk ?? true
   const verse = versePlainText.trim()
   const textParts: string[] = []
   if (verse.length > 0) {
@@ -131,8 +170,8 @@ export function buildMemorizationReorderChunks(
     }
   }
   const refT = reference.trim()
-  if (refT.length > 0) {
-    textParts.push(refT)
+  if (refT.length > 0 && includeRef) {
+    textParts.push(...referenceTextsForMemorizationReorder(refT))
   }
   return textParts.map((text, id) => ({ id, text }))
 }
