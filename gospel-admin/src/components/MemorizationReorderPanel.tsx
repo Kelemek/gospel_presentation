@@ -560,7 +560,7 @@ export function MemorizationReorderPanel({
           <div
             aria-hidden
             data-testid="memorize-reorder-drag-preview"
-            className="fixed z-200 max-w-[min(90vw,28rem)] rounded-md px-2.5 py-1 text-base leading-relaxed font-serif wrap-anywhere hyphens-auto pointer-events-none select-none shadow-xl border-2 border-amber-300 dark:border-amber-600/80 bg-amber-50/95 dark:bg-amber-950/90 text-slate-900 dark:text-slate-100"
+            className="fixed z-200 w-max max-w-none whitespace-nowrap rounded-md px-2.5 py-1 text-base leading-relaxed font-serif pointer-events-none select-none shadow-xl border-2 border-amber-300 dark:border-amber-600/80 bg-amber-50/95 dark:bg-amber-950/90 text-slate-900 dark:text-slate-100"
             style={{
               left: pointerDragPreview.x,
               top: pointerDragPreview.y,
