@@ -15,6 +15,7 @@ import {
 import { flushSync } from 'react-dom'
 import type {
   MemorizationInProgressSavePayload,
+  MemorizationPracticeMode,
   MemorizedVerse,
 } from '@/lib/verseMemorizationStorage'
 import {
@@ -37,6 +38,7 @@ import {
 } from '@/lib/memorizeListenSpeedStorage'
 import {
   MEMORIZATION_FULL_HIDE_ROUND,
+  buildMemorizationChoiceLabels,
   buildMemorizationTokens,
   firstLetterOfWord,
   formatMemorizationTokensPlain,
@@ -44,6 +46,8 @@ import {
   getTypableTokenIndices,
   hiddenFractionForRound,
   pickHiddenWordIndices,
+  seedRandom,
+  stringToSeed,
   type MemorizationToken,
 } from '@/lib/memorizationPracticeUtils'
 
@@ -66,6 +70,9 @@ interface MemorizationPracticeSessionProps {
 type Phase = 'intro' | 'practicing' | 'done'
 
 const MAX_WRONG_BEFORE_REVEAL = 3
+
+const MEMORIZATION_WORD_CHOICE_COUNT_WORD = 8
+const MEMORIZATION_WORD_CHOICE_COUNT_DIGIT = 4
 
 /** Extra inset beyond the viewport edge so the current blank sits higher above the soft keyboard. */
 const MEMORIZE_EXTRA_GAP_ABOVE_KEYBOARD_PX = 48
@@ -109,6 +116,9 @@ export default function MemorizationPracticeSession({
   const memorizeAndroidHost = useMemo(() => isMemorizeAndroidWebHost(), [])
 
   const [phase, setPhase] = useState<Phase>('intro')
+  /** Set when user picks from the start modal; restored from saved in-progress. Null on intro before starting. */
+  const [practiceMode, setPracticeMode] = useState<MemorizationPracticeMode | null>(null)
+  const [modePickerOpen, setModePickerOpen] = useState(false)
   /** Intro-only: which round to begin at (1…MEMORIZATION_FULL_HIDE_ROUND); chains forward to round 5. */
   const [startRoundChoice, setStartRoundChoice] = useState(1)
   const [roundIndex, setRoundIndex] = useState(0)
@@ -121,6 +131,7 @@ export default function MemorizationPracticeSession({
   /** Latest totals for persist / onComplete without churning callbacks on every wrong key. */
   const wrongAttemptsRef = useRef(0)
   const correctKeystrokesRef = useRef(0)
+  const practiceModeRef = useRef<MemorizationPracticeMode | null>(null)
   const [flashError, setFlashError] = useState(false)
   const [hintHeld, setHintHeld] = useState(false)
   /** While hint is held: how many unrevealed blanks (left-to-right) to peek, starting at 1; +1 each tick. */
@@ -297,7 +308,8 @@ export default function MemorizationPracticeSession({
     wrongAttemptsRef.current = wrongAttemptsTotal
     correctKeystrokesRef.current = correctKeystrokesTotal
     awaitingRoundAdvanceRef.current = awaitingRoundAdvance
-  }, [wrongAttemptsTotal, correctKeystrokesTotal, awaitingRoundAdvance])
+    practiceModeRef.current = practiceMode
+  }, [wrongAttemptsTotal, correctKeystrokesTotal, awaitingRoundAdvance, practiceMode])
   /**
    * On Android, Chrome scrolls the overflow column during the keyboard-open animation,
    * overriding our scrollTop=0. This timestamp lets a scroll-event listener clamp the
@@ -308,7 +320,10 @@ export default function MemorizationPracticeSession({
   const suppressInputFromKeydownRef = useRef(false)
   const practiceScrollRef = useRef<HTMLDivElement>(null)
   const practiceInputDomId = useId()
-  const practiceWordsRef = useRef<HTMLLabelElement | null>(null)
+  const modePickerTitleId = useId()
+  /** Word mode: verse wrapper `div`. Type mode: focus target `label`. Only one mounts per mode. */
+  const practiceWordsWordRef = useRef<HTMLDivElement | null>(null)
+  const practiceWordsTypeRef = useRef<HTMLLabelElement | null>(null)
   /** Distinguish verse tap (refocus keyboard) from vertical scroll — movement past threshold = scroll. */
   const verseTouchMovedRef = useRef(false)
   const verseTouchStartRef = useRef({ x: 0, y: 0 })
@@ -342,6 +357,8 @@ export default function MemorizationPracticeSession({
       setRevealed(new Set())
       setWrongAttemptsTotal(0)
       setCorrectKeystrokesTotal(0)
+      setPracticeMode(null)
+      setModePickerOpen(false)
     })
   }, [verse.id, verse.inProgressPractice])
 
@@ -500,6 +517,7 @@ export default function MemorizationPracticeSession({
         setAwaitingRoundAdvance(true)
         setRoundAffirmation(pickRandomRoundAffirmation())
         setPhase('practicing')
+        setPracticeMode(ip.practiceMode ?? 'type')
       })
     } else {
       roundAdvanceHandledRef.current = null
@@ -518,26 +536,31 @@ export default function MemorizationPracticeSession({
         setAwaitingRoundAdvance(false)
         setRoundAffirmation('')
         setPhase('practicing')
+        setPracticeMode(ip.practiceMode ?? 'type')
       })
     }
     requestAnimationFrame(() => {
       if (isMemorizeAndroidWebHost() && practiceScrollRef.current) {
         practiceScrollRef.current.scrollTop = 0
       }
-      practiceInputRef.current?.focus({ preventScroll: true })
+      if ((ip.practiceMode ?? 'type') === 'type') {
+        practiceInputRef.current?.focus({ preventScroll: true })
+      }
     })
   }, [memorizeAndroidHost, verse.id, verse.inProgressPractice, typableIndices])
 
   /**
-   * Scroll the active blank only as needed in the practice column (same min-scroll path as Android),
-   * then nudge using `visualViewport` so the blank stays above the soft keyboard. We avoid
+   * Scroll the active blank within the practice column, then nudge so it stays visible. **Type mode**
+   * uses `visualViewport` so blanks sit above the soft keyboard. **Word mode** uses the scroll pane’s
+   * bounds so blanks stay above the pinned choice strip below. We avoid
    * `scrollIntoView({ block: 'center' })` on iOS: it centers in the scroll box and ignores the keyboard,
    * so the viewport nudge then scrolls the other way — a visible down-then-up. Android already used
    * min-scroll + instant nudge + double measure to avoid IME jitter; iOS now matches the instant nudge.
    */
   const scrollCurrentBlankIntoView = useCallback(() => {
     requestAnimationFrame(() => {
-      const root = practiceWordsRef.current
+      const root =
+        practiceWordsWordRef.current ?? practiceWordsTypeRef.current
       const scrollEl = practiceScrollRef.current
       if (!root || !scrollEl) return
       const el = root.querySelector<HTMLElement>('[data-memorize-current-blank="true"]')
@@ -550,12 +573,24 @@ export default function MemorizationPracticeSession({
         }
       }
       scrollMemorizeBlankNearestInPracticeColumn(scrollEl, el)
+      const scrollRect = scrollEl.getBoundingClientRect()
       const vv = window.visualViewport
-      if (!vv) return
       const edgeMargin = 12
-      const viewTop = vv.offsetTop + edgeMargin
-      const viewBottom =
-        vv.offsetTop + vv.height - edgeMargin - MEMORIZE_EXTRA_GAP_ABOVE_KEYBOARD_PX
+      const isWordMode = practiceModeRef.current === 'word'
+      let viewTop: number
+      let viewBottom: number
+      if (isWordMode) {
+        // Scroll area ends above the pinned word-choice strip; keep blanks inside that region only.
+        viewTop = scrollRect.top + edgeMargin
+        viewBottom = scrollRect.bottom - edgeMargin
+      } else if (vv) {
+        viewTop = vv.offsetTop + edgeMargin
+        viewBottom =
+          vv.offsetTop + vv.height - edgeMargin - MEMORIZE_EXTRA_GAP_ABOVE_KEYBOARD_PX
+      } else {
+        viewTop = scrollRect.top + edgeMargin
+        viewBottom = scrollRect.bottom - edgeMargin
+      }
       const reduceMotion =
         typeof window.matchMedia === 'function' &&
         window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -584,6 +619,7 @@ export default function MemorizationPracticeSession({
    */
   const keepPracticeInputOnPointerCapture = useCallback((e: PointerEvent | TouchEvent) => {
     if (awaitingRoundAdvanceRef.current) return
+    if (practiceModeRef.current !== 'type') return
     const input = practiceInputRef.current
     if (!input) return
     if (document.activeElement === input) {
@@ -602,8 +638,8 @@ export default function MemorizationPracticeSession({
    * - Mouse/pen: pointerdown capture keeps focus when tapping the verse.
    */
   useLayoutEffect(() => {
-    if (phase !== 'practicing') return
-    const el = practiceWordsRef.current
+    if (phase !== 'practicing' || practiceMode !== 'type') return
+    const el = practiceWordsTypeRef.current
     if (!el) return
     const onTouchStartCaptureVerse = (e: TouchEvent) => {
       if (awaitingRoundAdvanceRef.current) return
@@ -623,10 +659,10 @@ export default function MemorizationPracticeSession({
       el.removeEventListener('touchstart', onTouchStartCaptureVerse, { capture: true })
       el.removeEventListener('pointerdown', onPointerDownCapture, { capture: true })
     }
-  }, [phase, keepPracticeInputOnPointerCapture])
+  }, [phase, practiceMode, keepPracticeInputOnPointerCapture])
 
   useLayoutEffect(() => {
-    if (phase !== 'practicing' || awaitingRoundAdvance) return
+    if (phase !== 'practicing' || awaitingRoundAdvance || practiceMode !== 'type') return
     const el = hintButtonRef.current
     if (!el) return
     el.addEventListener('touchstart', keepPracticeInputOnPointerCapture, { capture: true, passive: false })
@@ -635,18 +671,51 @@ export default function MemorizationPracticeSession({
       el.removeEventListener('touchstart', keepPracticeInputOnPointerCapture, { capture: true })
       el.removeEventListener('pointerdown', keepPracticeInputOnPointerCapture, { capture: true })
     }
-  }, [phase, awaitingRoundAdvance, keepPracticeInputOnPointerCapture])
+  }, [phase, awaitingRoundAdvance, practiceMode, keepPracticeInputOnPointerCapture])
 
   /** After releasing Hint, WebKit may leave focus on the button — put it back on the hidden field. */
   const restorePracticeInputFocusAfterHint = useCallback(() => {
     requestAnimationFrame(() => {
       if (awaitingRoundAdvanceRef.current) return
       if (phase !== 'practicing') return
+      if (practiceModeRef.current !== 'type') return
       practiceInputRef.current?.focus({ preventScroll: true })
     })
   }, [phase])
 
-  /** flushSync + immediate focus keeps iOS / Capacitor WebView keyboard in the same user gesture as the tap. */
+  const beginPracticeWithMode = useCallback(
+    (mode: MemorizationPracticeMode) => {
+      stopPassageAudio()
+      setModePickerOpen(false)
+      completedRef.current = false
+      sessionSeedRef.current = generateMemorizationSessionSeed()
+      practiceModeRef.current = mode
+      const r = Math.min(
+        MEMORIZATION_FULL_HIDE_ROUND,
+        Math.max(1, Math.floor(startRoundChoice))
+      )
+      flushSync(() => {
+        setPracticeMode(mode)
+        startRound(r)
+      })
+      if (practiceScrollRef.current) {
+        practiceScrollRef.current.scrollTop = 0
+      }
+      if (mode === 'type') {
+        practiceInputRef.current?.focus({ preventScroll: true })
+      }
+      onPersistInProgress?.({
+        sessionSeed: sessionSeedRef.current,
+        wrongAttempts: 0,
+        correctKeystrokes: 0,
+        phase: { kind: 'inRound', roundIndex: r },
+        practiceMode: mode,
+      })
+    },
+    [onPersistInProgress, startRound, startRoundChoice, stopPassageAudio]
+  )
+
+  /** flushSync + optional focus keeps iOS / Capacitor WebView keyboard in the same user gesture as type-mode start. */
   const startRoundAndFocusInput = useCallback(
     (r: number) => {
       flushSync(() => {
@@ -657,7 +726,9 @@ export default function MemorizationPracticeSession({
       if (practiceScrollRef.current) {
         practiceScrollRef.current.scrollTop = 0
       }
-      practiceInputRef.current?.focus({ preventScroll: true })
+      if (practiceModeRef.current === 'type') {
+        practiceInputRef.current?.focus({ preventScroll: true })
+      }
     },
     [startRound]
   )
@@ -665,11 +736,13 @@ export default function MemorizationPracticeSession({
   const persistPracticeSnapshot = useCallback(
     (phasePayload: MemorizationInProgressSavePayload['phase']) => {
       if (!onPersistInProgress || !sessionSeedRef.current) return
+      const mode = practiceModeRef.current ?? 'type'
       onPersistInProgress({
         sessionSeed: sessionSeedRef.current,
         wrongAttempts: wrongAttemptsRef.current,
         correctKeystrokes: correctKeystrokesRef.current,
         phase: phasePayload,
+        practiceMode: mode,
       })
     },
     [onPersistInProgress]
@@ -717,6 +790,8 @@ export default function MemorizationPracticeSession({
       setAwaitingRoundAdvance(false)
       setRoundAffirmation('')
       setCompletionMessage('')
+      setPracticeMode(null)
+      setModePickerOpen(false)
     })
   }, [verse.id, onClearInProgress, stopPassageAudio])
 
@@ -956,6 +1031,80 @@ export default function MemorizationPracticeSession({
     }
   }, [phase, hiddenIndices, revealed, roundIndex, onComplete, onPersistInProgress, persistPracticeSnapshot])
 
+  const processWordGuess = useCallback(
+    (picked: string) => {
+      if (hintActive) return
+      if (phase !== 'practicing' || currentTargetIndex === null) return
+      const token = tokens[currentTargetIndex]
+      if (!token || token.kind === 'punct') return
+
+      setHasTypedInRound(true)
+
+      const correct = picked === token.text
+
+      if (correct) {
+        const idx = currentTargetIndex
+        setRevealed((prev) => {
+          const next = new Set(prev)
+          next.add(idx)
+          return next
+        })
+        setConsecutiveWrong(0)
+        setCorrectKeystrokesTotal((c) => c + 1)
+      } else {
+        setWrongAttemptsTotal((w) => w + 1)
+        setConsecutiveWrong((c) => {
+          const n = c + 1
+          if (n >= MAX_WRONG_BEFORE_REVEAL) {
+            const idx = currentTargetIndex
+            setRevealed((prev) => {
+              const next = new Set(prev)
+              next.add(idx)
+              return next
+            })
+            setCorrectKeystrokesTotal((ck) => ck + 1)
+            return 0
+          }
+          return n
+        })
+        setFlashError(true)
+        window.setTimeout(() => setFlashError(false), 120)
+      }
+    },
+    [phase, currentTargetIndex, tokens, hintActive]
+  )
+
+  const wordChoiceLabels = useMemo(() => {
+    if (practiceMode !== 'word') return []
+    if (phase !== 'practicing' || awaitingRoundAdvance) return []
+    if (currentTargetIndex === null) return []
+    const seed = sessionSeedRef.current
+    if (!seed) return []
+    const rng = seedRandom(
+      stringToSeed(`${seed}-mem-word-r${roundIndex}-t${currentTargetIndex}`)
+    )
+    const targetTok = currentTargetIndex !== null ? tokens[currentTargetIndex] : null
+    const choiceCount =
+      targetTok?.kind === 'digit'
+        ? MEMORIZATION_WORD_CHOICE_COUNT_DIGIT
+        : MEMORIZATION_WORD_CHOICE_COUNT_WORD
+    return buildMemorizationChoiceLabels(
+      tokens,
+      typableIndices,
+      currentTargetIndex,
+      choiceCount,
+      rng
+    )
+  }, [
+    practiceMode,
+    phase,
+    awaitingRoundAdvance,
+    currentTargetIndex,
+    roundIndex,
+    tokens,
+    typableIndices,
+  ])
+
   const processKeystroke = useCallback(
     (key: string) => {
       if (hintActive) return
@@ -1066,7 +1215,13 @@ export default function MemorizationPracticeSession({
   )
 
   useEffect(() => {
-    if (phase !== 'practicing' || awaitingRoundAdvance || currentTargetIndex === null || hintActive) {
+    if (
+      phase !== 'practicing' ||
+      awaitingRoundAdvance ||
+      currentTargetIndex === null ||
+      hintActive ||
+      practiceMode !== 'type'
+    ) {
       if (phase !== 'practicing' || awaitingRoundAdvance) {
         practiceInputRef.current?.blur()
       }
@@ -1077,17 +1232,51 @@ export default function MemorizationPracticeSession({
       if (hasTypedInRound) scrollCurrentBlankIntoView()
     }, 0)
     return () => window.clearTimeout(id)
-  }, [phase, awaitingRoundAdvance, roundIndex, currentTargetIndex, hintActive, hasTypedInRound, scrollCurrentBlankIntoView])
+  }, [
+    phase,
+    awaitingRoundAdvance,
+    roundIndex,
+    currentTargetIndex,
+    hintActive,
+    practiceMode,
+    hasTypedInRound,
+    scrollCurrentBlankIntoView,
+  ])
 
-  /** Keep the active blank centered as you advance (and after round changes). */
+  /** Word mode: pinned choice strip below — scroll verse whenever the active blank changes. */
   useEffect(() => {
     if (phase !== 'practicing' || awaitingRoundAdvance || currentTargetIndex === null) return
+    if (practiceMode !== 'word') return
+    scrollCurrentBlankIntoView()
+  }, [
+    phase,
+    awaitingRoundAdvance,
+    currentTargetIndex,
+    roundIndex,
+    practiceMode,
+    scrollCurrentBlankIntoView,
+    wordChoiceLabels.length,
+  ])
+
+  /** Type mode: after first keystroke, keep the active blank in view as it advances. */
+  useEffect(() => {
+    if (phase !== 'practicing' || awaitingRoundAdvance || currentTargetIndex === null) return
+    if (practiceMode === 'word') return
     if (!hasTypedInRound) return
     scrollCurrentBlankIntoView()
-  }, [phase, awaitingRoundAdvance, currentTargetIndex, roundIndex, hasTypedInRound, scrollCurrentBlankIntoView])
+  }, [
+    phase,
+    awaitingRoundAdvance,
+    currentTargetIndex,
+    roundIndex,
+    hasTypedInRound,
+    scrollCurrentBlankIntoView,
+    practiceMode,
+  ])
 
-  /** When the keyboard resizes the visual viewport, re-nudge so the current blank stays above it. */
+  /** When the keyboard resizes the visual viewport, re-nudge so the current blank stays above it (type mode). */
   useEffect(() => {
+    if (practiceMode !== 'type') return
     if (phase !== 'practicing' || awaitingRoundAdvance || currentTargetIndex === null) return
     if (!hasTypedInRound) return
     const delayMs = isMemorizeAndroidWebHost() ? 120 : 80
@@ -1100,6 +1289,7 @@ export default function MemorizationPracticeSession({
     currentTargetIndex,
     hasTypedInRound,
     scrollCurrentBlankIntoView,
+    practiceMode,
   ])
 
   useEffect(() => {
@@ -1129,6 +1319,10 @@ export default function MemorizationPracticeSession({
   useEffect(() => {
     const onEsc = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
+      if (modePickerOpen) {
+        setModePickerOpen(false)
+        return
+      }
       if (listenPanelOpen) {
         setListenPanelOpen(false)
         return
@@ -1137,7 +1331,7 @@ export default function MemorizationPracticeSession({
     }
     window.addEventListener('keydown', onEsc)
     return () => window.removeEventListener('keydown', onEsc)
-  }, [handleClose, listenPanelOpen])
+  }, [handleClose, listenPanelOpen, modePickerOpen])
 
   const showStartOver =
     typeof onClearInProgress === 'function' &&
@@ -1263,7 +1457,7 @@ export default function MemorizationPracticeSession({
         </div>
 
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          {phase !== 'done' && memorizeAndroidHost && (
+          {phase === 'practicing' && practiceMode === 'type' && memorizeAndroidHost && (
             <input
               id={practiceInputDomId}
               ref={assignPracticeInputRef}
@@ -1274,10 +1468,10 @@ export default function MemorizationPracticeSession({
               autoCapitalize="off"
               spellCheck={false}
               enterKeyHint="done"
-              disabled={phase === 'intro' || awaitingRoundAdvance}
+              disabled={awaitingRoundAdvance}
               aria-label="Type the first letter of each blank word, or each digit for number blanks"
               data-testid="memorize-practice-input"
-              tabIndex={phase === 'intro' || awaitingRoundAdvance ? -1 : 0}
+              tabIndex={awaitingRoundAdvance ? -1 : 0}
               className="pointer-events-none fixed top-[25vh] left-1/2 z-110 h-10 w-32 max-w-[min(12rem,45vw)] -translate-x-1/2 border-0 bg-transparent p-0 opacity-[0.02] text-transparent caret-transparent"
               onKeyDown={handlePracticeInputKeyDown}
               onInput={handlePracticeInput}
@@ -1306,7 +1500,7 @@ export default function MemorizationPracticeSession({
               }}
             />
           )}
-          {phase !== 'done' && !memorizeAndroidHost && (
+          {phase === 'practicing' && practiceMode === 'type' && !memorizeAndroidHost && (
             <input
               id={practiceInputDomId}
               ref={assignPracticeInputRef}
@@ -1317,10 +1511,10 @@ export default function MemorizationPracticeSession({
               autoCapitalize="off"
               spellCheck={false}
               enterKeyHint="done"
-              disabled={phase === 'intro' || awaitingRoundAdvance}
+              disabled={awaitingRoundAdvance}
               aria-label="Type the first letter of each blank word, or each digit for number blanks"
               data-testid="memorize-practice-input"
-              tabIndex={phase === 'intro' || awaitingRoundAdvance ? -1 : 0}
+              tabIndex={awaitingRoundAdvance ? -1 : 0}
               className="absolute left-0 top-0 z-0 h-px w-full max-w-full border-0 bg-transparent p-0 opacity-[0.02] text-transparent caret-transparent"
               onKeyDown={handlePracticeInputKeyDown}
               onInput={handlePracticeInput}
@@ -1329,8 +1523,10 @@ export default function MemorizationPracticeSession({
           {phase === 'intro' && (
             <div>
               <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
-                Read the verse and reference, then practice: first letter of each word, each digit separately; colons
-                and dashes in the reference are shown and are not typed.
+                Read the verse and reference. Tap <strong>Start practice</strong>, then choose{' '}
+                <strong>Type mode</strong> (first letter of each blank word and each reference digit) or{' '}
+                <strong>Word mode</strong> (word blanks: tap a word; number blanks: tap a digit—choices stay in the bottom bar). Colons and
+                dashes in the reference stay visible and are not answers.
               </p>
               <p
                 className="text-base leading-relaxed text-slate-900 dark:text-slate-100 font-serif"
@@ -1343,20 +1539,7 @@ export default function MemorizationPracticeSession({
                   type="button"
                   data-tour="memorize-start-practice"
                   onClick={() => {
-                    stopPassageAudio()
-                    completedRef.current = false
-                    sessionSeedRef.current = generateMemorizationSessionSeed()
-                    const r = Math.min(
-                      MEMORIZATION_FULL_HIDE_ROUND,
-                      Math.max(1, Math.floor(startRoundChoice))
-                    )
-                    startRoundAndFocusInput(r)
-                    onPersistInProgress?.({
-                      sessionSeed: sessionSeedRef.current,
-                      wrongAttempts: 0,
-                      correctKeystrokes: 0,
-                      phase: { kind: 'inRound', roundIndex: r },
-                    })
+                    setModePickerOpen(true)
                   }}
                   className="min-w-0 flex-1 px-4 py-3 text-center sm:flex-none sm:w-auto sm:shrink-0 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600"
                 >
@@ -1401,99 +1584,171 @@ export default function MemorizationPracticeSession({
               </div>
               {!awaitingRoundAdvance && (
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
-                  {currentTargetIndex !== null &&
-                    (currentTargetToken?.kind === 'digit'
-                      ? 'Type the next digit (left to right). Colons and dashes in the reference are not typed.'
-                      : 'Type the first letter of the next blank (left to right). Hold Hint to peek; another blank appears every second while you hold.')}
-                  {currentTargetIndex !== null && ' '}
-                  Tap the verse or blanks if the keyboard closed.
+                  {practiceMode === 'word' ? (
+                    <>
+                      {currentTargetIndex !== null &&
+                        (currentTargetToken?.kind === 'digit'
+                          ? 'Tap the digit in the choice bar at the bottom that fills the next blank (left to right).'
+                          : 'Tap the word in the bottom choice bar that fills the next blank (left to right). Hold Hint to peek; another blank appears every second while you hold.')}
+                    </>
+                  ) : (
+                    <>
+                      {currentTargetIndex !== null &&
+                        (currentTargetToken?.kind === 'digit'
+                          ? 'Type the next digit (left to right). Colons and dashes in the reference are not typed.'
+                          : 'Type the first letter of the next blank (left to right). Hold Hint to peek; another blank appears every second while you hold.')}
+                      {currentTargetIndex !== null && ' '}
+                      Tap the verse or blanks if the keyboard closed.
+                    </>
+                  )}
                 </p>
               )}
-              <label
-                ref={practiceWordsRef}
-                htmlFor={practiceInputDomId}
-                aria-label="Verse practice area; tap to show the keyboard again"
-                onTouchStart={(e) => {
-                  verseTouchMovedRef.current = false
-                  const t = e.touches[0]
-                  if (t) verseTouchStartRef.current = { x: t.clientX, y: t.clientY }
-                }}
-                onTouchMove={(e) => {
-                  const t = e.touches[0]
-                  if (!t) return
-                  const dx = t.clientX - verseTouchStartRef.current.x
-                  const dy = t.clientY - verseTouchStartRef.current.y
-                  if (dx * dx + dy * dy > 144) verseTouchMovedRef.current = true
-                }}
-                onTouchCancel={() => {
-                  verseTouchMovedRef.current = false
-                }}
-                onTouchEnd={() => {
-                  if (awaitingRoundAdvance) return
-                  const wasScroll = verseTouchMovedRef.current
-                  verseTouchMovedRef.current = false
-                  if (wasScroll) return
-                  // iOS/Capacitor: same-gesture focus; `htmlFor` + native label tap also focus the field.
-                  const input = practiceInputRef.current
-                  if (!input) return
-                  input.focus({ preventScroll: true })
-                  window.setTimeout(() => {
-                    if (document.activeElement !== input) input.focus({ preventScroll: true })
-                  }, 0)
-                }}
-                className={`touch-manipulation cursor-text text-base leading-relaxed font-serif flex flex-wrap gap-x-1 gap-y-2 items-baseline rounded-md p-1 ring-2 ring-inset transition-shadow ${
-                  flashError
-                    ? 'ring-red-400 dark:ring-red-500'
-                    : 'ring-transparent'
-                }`}
-                data-testid="memorize-practice-words"
-              >
-                {tokens.map((token, i) => {
-                  if (token.kind === 'punct') {
+              {practiceMode === 'word' ? (
+                <>
+                  <div
+                    ref={practiceWordsWordRef}
+                    role="group"
+                    aria-label="Verse practice area"
+                    className={`touch-manipulation text-base leading-relaxed font-serif flex flex-wrap gap-x-1 gap-y-2 items-baseline rounded-md p-1 ring-2 ring-inset transition-shadow ${
+                      flashError
+                        ? 'ring-red-400 dark:ring-red-500'
+                        : 'ring-transparent'
+                    }`}
+                    data-testid="memorize-practice-words"
+                  >
+                    {tokens.map((token, i) => {
+                      if (token.kind === 'punct') {
+                        return (
+                          <span
+                            key={`tok-${i}`}
+                            className="inline text-slate-900 dark:text-slate-100 whitespace-pre"
+                          >
+                            {token.text}
+                          </span>
+                        )
+                      }
+                      const w = token.text
+                      const isHidden = hiddenIndices.has(i)
+                      const isRevealed = revealed.has(i)
+                      const showViaHint = hintActive && isHidden && !isRevealed && hintPeekIndices.has(i)
+                      const showBlankUnderline = isHidden && !isRevealed
+                      const isCurrent = showBlankUnderline && i === currentTargetIndex
+
+                      let innerClass = 'text-slate-900 dark:text-slate-100'
+                      if (showBlankUnderline) {
+                        innerClass = showViaHint
+                          ? 'text-blue-800 dark:text-blue-200 italic'
+                          : 'text-transparent select-none pointer-events-none'
+                      }
+
+                      return (
+                        <span
+                          key={`tok-${i}`}
+                          data-memorize-current-blank={isCurrent ? 'true' : undefined}
+                          className={`inline-flex items-baseline border-b-2 box-border px-0.5 min-h-[1.5em] min-w-[0.6em] justify-center ${
+                            showBlankUnderline
+                              ? 'border-slate-400 dark:border-slate-500'
+                              : 'border-transparent'
+                          } ${isCurrent ? 'bg-blue-100/80 dark:bg-blue-900/40' : ''}`}
+                          aria-current={isCurrent ? 'true' : undefined}
+                        >
+                          <span
+                            className={innerClass}
+                            aria-hidden={showBlankUnderline && !showViaHint}
+                          >
+                            {w}
+                          </span>
+                        </span>
+                      )
+                    })}
+                  </div>
+                </>
+              ) : (
+                <label
+                  ref={practiceWordsTypeRef}
+                  htmlFor={practiceInputDomId}
+                  aria-label="Verse practice area; tap to show the keyboard again"
+                  onTouchStart={(e) => {
+                    verseTouchMovedRef.current = false
+                    const t = e.touches[0]
+                    if (t) verseTouchStartRef.current = { x: t.clientX, y: t.clientY }
+                  }}
+                  onTouchMove={(e) => {
+                    const t = e.touches[0]
+                    if (!t) return
+                    const dx = t.clientX - verseTouchStartRef.current.x
+                    const dy = t.clientY - verseTouchStartRef.current.y
+                    if (dx * dx + dy * dy > 144) verseTouchMovedRef.current = true
+                  }}
+                  onTouchCancel={() => {
+                    verseTouchMovedRef.current = false
+                  }}
+                  onTouchEnd={() => {
+                    if (awaitingRoundAdvance) return
+                    const wasScroll = verseTouchMovedRef.current
+                    verseTouchMovedRef.current = false
+                    if (wasScroll) return
+                    const input = practiceInputRef.current
+                    if (!input) return
+                    input.focus({ preventScroll: true })
+                    window.setTimeout(() => {
+                      if (document.activeElement !== input) input.focus({ preventScroll: true })
+                    }, 0)
+                  }}
+                  className={`touch-manipulation cursor-text text-base leading-relaxed font-serif flex flex-wrap gap-x-1 gap-y-2 items-baseline rounded-md p-1 ring-2 ring-inset transition-shadow ${
+                    flashError
+                      ? 'ring-red-400 dark:ring-red-500'
+                      : 'ring-transparent'
+                  }`}
+                  data-testid="memorize-practice-words"
+                >
+                  {tokens.map((token, i) => {
+                    if (token.kind === 'punct') {
+                      return (
+                        <span
+                          key={`tok-${i}`}
+                          className="inline text-slate-900 dark:text-slate-100 whitespace-pre"
+                        >
+                          {token.text}
+                        </span>
+                      )
+                    }
+                    const w = token.text
+                    const isHidden = hiddenIndices.has(i)
+                    const isRevealed = revealed.has(i)
+                    const showViaHint = hintActive && isHidden && !isRevealed && hintPeekIndices.has(i)
+                    const showBlankUnderline = isHidden && !isRevealed
+                    const isCurrent = showBlankUnderline && i === currentTargetIndex
+
+                    let innerClass = 'text-slate-900 dark:text-slate-100'
+                    if (showBlankUnderline) {
+                      innerClass = showViaHint
+                        ? 'text-blue-800 dark:text-blue-200 italic'
+                        : 'text-transparent select-none pointer-events-none'
+                    }
+
                     return (
                       <span
                         key={`tok-${i}`}
-                        className="inline text-slate-900 dark:text-slate-100 whitespace-pre"
+                        data-memorize-current-blank={isCurrent ? 'true' : undefined}
+                        className={`inline-flex items-baseline border-b-2 box-border px-0.5 min-h-[1.5em] min-w-[0.6em] justify-center ${
+                          showBlankUnderline
+                            ? 'border-slate-400 dark:border-slate-500'
+                            : 'border-transparent'
+                        } ${isCurrent ? 'bg-blue-100/80 dark:bg-blue-900/40' : ''}`}
+                        aria-current={isCurrent ? 'true' : undefined}
                       >
-                        {token.text}
+                        <span
+                          className={innerClass}
+                          aria-hidden={showBlankUnderline && !showViaHint}
+                        >
+                          {w}
+                        </span>
                       </span>
                     )
-                  }
-                  const w = token.text
-                  const isHidden = hiddenIndices.has(i)
-                  const isRevealed = revealed.has(i)
-                  const showViaHint = hintActive && isHidden && !isRevealed && hintPeekIndices.has(i)
-                  const showBlankUnderline = isHidden && !isRevealed
-                  const isCurrent = showBlankUnderline && i === currentTargetIndex
-
-                  let innerClass = 'text-slate-900 dark:text-slate-100'
-                  if (showBlankUnderline) {
-                    innerClass = showViaHint
-                      ? 'text-blue-800 dark:text-blue-200 italic'
-                      : 'text-transparent select-none pointer-events-none'
-                  }
-
-                  return (
-                    <span
-                      key={`tok-${i}`}
-                      data-memorize-current-blank={isCurrent ? 'true' : undefined}
-                      className={`inline-flex items-baseline border-b-2 box-border px-0.5 min-h-[1.5em] min-w-[0.6em] justify-center ${
-                        showBlankUnderline
-                          ? 'border-slate-400 dark:border-slate-500'
-                          : 'border-transparent'
-                      } ${isCurrent ? 'bg-blue-100/80 dark:bg-blue-900/40' : ''}`}
-                      aria-current={isCurrent ? 'true' : undefined}
-                    >
-                      <span
-                        className={innerClass}
-                        aria-hidden={showBlankUnderline && !showViaHint}
-                      >
-                        {w}
-                      </span>
-                    </span>
-                  )
-                })}
-              </label>
+                  })}
+                </label>
+              )}
             </div>
           )}
 
@@ -1518,6 +1773,35 @@ export default function MemorizationPracticeSession({
             </div>
           )}
           </div>
+
+          {phase === 'practicing' &&
+            practiceMode === 'word' &&
+            !awaitingRoundAdvance &&
+            wordChoiceLabels.length > 0 && (
+              <div
+                className="shrink-0 border-t border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900/60"
+                data-testid="memorize-word-choices"
+              >
+                <div className="max-h-[min(42vh,360px)] overflow-y-auto overscroll-y-contain px-4 py-3 touch-pan-y">
+                  <div className="flex w-full max-w-2xl mx-auto flex-wrap justify-center gap-3 sm:gap-4">
+                    {wordChoiceLabels.map((label, choiceIdx) => (
+                      <button
+                        key={`${label}-${choiceIdx}`}
+                        type="button"
+                        onClick={() => processWordGuess(label)}
+                        className={
+                          currentTargetToken?.kind === 'digit'
+                            ? 'shrink-0 min-w-11 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-base font-medium tabular-nums whitespace-nowrap text-center hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors'
+                            : 'max-w-full w-max shrink-0 px-3 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm font-medium text-center leading-snug whitespace-normal wrap-anywhere hyphens-auto hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors'
+                        }
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
           {phase === 'practicing' && awaitingRoundAdvance && (
             <div
@@ -1557,6 +1841,63 @@ export default function MemorizationPracticeSession({
         </div>
       </div>
     </div>
+
+    {modePickerOpen && phase === 'intro' && (
+      <div
+        className="fixed inset-0 z-110 flex items-center justify-center bg-black/40 dark:bg-black/50 p-4"
+        role="presentation"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) setModePickerOpen(false)
+        }}
+      >
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={modePickerTitleId}
+          className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full p-6 border border-slate-200 dark:border-slate-600"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h2
+            id={modePickerTitleId}
+            className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4"
+          >
+            Choose practice mode
+          </h2>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            <strong>Type mode:</strong> first letter of each blank word, and each digit in the reference.{' '}
+            <strong>Word mode:</strong> choices stay in a bar at the bottom—words for word blanks, digits for number blanks (no keyboard).
+          </p>
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              data-tour="memorize-practice-mode-type"
+              data-testid="memorize-practice-mode-type"
+              onClick={() => beginPracticeWithMode('type')}
+              className="w-full px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700"
+            >
+              Type mode
+            </button>
+            <button
+              type="button"
+              data-tour="memorize-practice-mode-word"
+              data-testid="memorize-practice-mode-word"
+              onClick={() => beginPracticeWithMode('word')}
+              className="w-full px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700"
+            >
+              Word mode
+            </button>
+            <button
+              type="button"
+              data-testid="memorize-practice-mode-cancel"
+              onClick={() => setModePickerOpen(false)}
+              className="w-full px-4 py-3 rounded-lg font-medium border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {listenPanelOpen && showListenOpeners && (
       <MemorizeListenControlsDialog

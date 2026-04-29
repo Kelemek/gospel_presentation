@@ -101,8 +101,24 @@ describe('verseMemorizationStorage', () => {
     const mid = loadMemorizedVerses()[0]
     expect(mid.inProgressPractice?.phase).toEqual({ kind: 'betweenRounds', completedRoundIndex: 2 })
     expect(mid.inProgressPractice?.sessionSeed).toBe('seed-1')
+    expect(mid.inProgressPractice?.practiceMode).toBeUndefined()
     clearMemorizationInProgress(id)
     expect(loadMemorizedVerses()[0].inProgressPractice).toBeUndefined()
+  })
+
+  it('saveMemorizationInProgress persists practiceMode word', () => {
+    addMemorizedVerse('Ps 23:1', 'The Lord is my shepherd', 'esv')
+    const id = loadMemorizedVerses()[0].id
+    saveMemorizationInProgress(id, {
+      sessionSeed: 'seed-w',
+      wrongAttempts: 0,
+      correctKeystrokes: 2,
+      phase: { kind: 'inRound', roundIndex: 2 },
+      practiceMode: 'word',
+    })
+    expect(loadMemorizedVerses()[0].inProgressPractice?.practiceMode).toBe('word')
+    const raw = window.localStorage.getItem(VERSE_MEMORIZATION_STORAGE_KEY)
+    expect(raw).toContain('"practiceMode":"word"')
   })
 
   it('updatePracticeStats clears inProgressPractice when a session completes', () => {

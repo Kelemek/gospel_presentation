@@ -21,12 +21,16 @@ export type MemorizationInProgressPhase =
   | { kind: 'betweenRounds'; completedRoundIndex: number }
   | { kind: 'inRound'; roundIndex: number }
 
+/** How blanks are filled during an in-flight multi-round session. Omitted in storage means legacy type-only. */
+export type MemorizationPracticeMode = 'type' | 'word'
+
 export interface MemorizationInProgress {
   sessionSeed: string
   wrongAttempts: number
   correctKeystrokes: number
   updatedAt: number
   phase: MemorizationInProgressPhase
+  practiceMode?: MemorizationPracticeMode
 }
 
 /** Payload from the practice UI (storage sets `updatedAt`). */
@@ -76,6 +80,9 @@ function normalizeInProgress(raw: unknown): MemorizationInProgress | undefined {
   ) {
     return undefined
   }
+  const practiceModeRaw = o.practiceMode
+  const practiceMode: MemorizationPracticeMode | undefined =
+    practiceModeRaw === 'type' || practiceModeRaw === 'word' ? practiceModeRaw : undefined
   const p = phase as Record<string, unknown>
   const kind = p.kind
   if (kind === 'betweenRounds') {
@@ -93,6 +100,7 @@ function normalizeInProgress(raw: unknown): MemorizationInProgress | undefined {
       correctKeystrokes,
       updatedAt,
       phase: { kind: 'betweenRounds', completedRoundIndex },
+      ...(practiceMode ? { practiceMode } : {}),
     }
   }
   if (kind === 'inRound') {
@@ -106,6 +114,7 @@ function normalizeInProgress(raw: unknown): MemorizationInProgress | undefined {
       correctKeystrokes,
       updatedAt,
       phase: { kind: 'inRound', roundIndex },
+      ...(practiceMode ? { practiceMode } : {}),
     }
   }
   return undefined

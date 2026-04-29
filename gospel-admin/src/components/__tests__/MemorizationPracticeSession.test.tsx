@@ -45,6 +45,16 @@ const baseVerse: MemorizedVerse = {
   practiceSessions: [],
 }
 
+async function chooseTypeModeAfterStart(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: /Start practice/i }))
+  await user.click(screen.getByTestId('memorize-practice-mode-type'))
+}
+
+function chooseTypeModeSync() {
+  fireEvent.click(screen.getByRole('button', { name: /Start practice/i }))
+  fireEvent.click(screen.getByTestId('memorize-practice-mode-type'))
+}
+
 describe('MemorizationPracticeSession', () => {
   let playSpy: jest.SpiedFunction<() => Promise<void>>
 
@@ -177,12 +187,12 @@ describe('MemorizationPracticeSession', () => {
     )
   })
 
-  it('enters practice mode when Start practice is clicked', async () => {
+  it('enters practice mode when Start practice is clicked and Type mode is chosen', async () => {
     const user = userEvent.setup()
     render(
       <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
     )
-    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    await chooseTypeModeAfterStart(user)
     expect(screen.getByTestId('memorize-practice-words')).toBeInTheDocument()
     expect(screen.getByText(/Round 1 of 5/i)).toBeInTheDocument()
     expect(screen.getByTestId('memorize-listen-open')).toBeInTheDocument()
@@ -200,11 +210,12 @@ describe('MemorizationPracticeSession', () => {
       />
     )
     await user.selectOptions(screen.getByTestId('memorize-intro-start-round'), '2')
-    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    await chooseTypeModeAfterStart(user)
     expect(screen.getByText(/Round 2 of 5/i)).toBeInTheDocument()
     expect(onPersistInProgress).toHaveBeenLastCalledWith(
       expect.objectContaining({
         phase: { kind: 'inRound', roundIndex: 2 },
+        practiceMode: 'type',
       })
     )
   })
@@ -214,7 +225,7 @@ describe('MemorizationPracticeSession', () => {
     render(
       <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
     )
-    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    await chooseTypeModeAfterStart(user)
     const input = screen.getByTestId('memorize-practice-input') as HTMLInputElement
     const focusSpy = jest.spyOn(input, 'focus')
     input.blur()
@@ -227,7 +238,7 @@ describe('MemorizationPracticeSession', () => {
     render(
       <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
     )
-    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    await chooseTypeModeAfterStart(user)
     const hint = screen.getByTestId('memorize-hint-button')
     expect(hint).toHaveAttribute('aria-pressed', 'false')
     fireEvent.pointerDown(hint)
@@ -250,7 +261,7 @@ describe('MemorizationPracticeSession', () => {
     render(
       <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Start practice/i }))
+    chooseTypeModeSync()
     const hint = screen.getByTestId('memorize-hint-button')
     fireEvent.pointerDown(hint)
     const countItalic = () =>
@@ -269,7 +280,7 @@ describe('MemorizationPracticeSession', () => {
     render(
       <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
     )
-    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    await chooseTypeModeAfterStart(user)
     await user.keyboard('f')
     expect(screen.getByTestId('memorize-practice-words')).toHaveTextContent(/For/)
     expect(screen.getByTestId('memorize-round-advance-footer')).toBeInTheDocument()
@@ -292,11 +303,12 @@ describe('MemorizationPracticeSession', () => {
         onPersistInProgress={onPersistInProgress}
       />
     )
-    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    await chooseTypeModeAfterStart(user)
     await user.keyboard('f')
     expect(onPersistInProgress).toHaveBeenLastCalledWith(
       expect.objectContaining({
         phase: { kind: 'betweenRounds', completedRoundIndex: 1 },
+        practiceMode: 'type',
       })
     )
   })
@@ -320,6 +332,67 @@ describe('MemorizationPracticeSession', () => {
     expect(screen.queryByTestId('memorize-listen-passage')).not.toBeInTheDocument()
   })
 
+  it('opens mode picker when Start practice is tapped; Cancel returns to intro', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
+    )
+    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    expect(screen.getByText(/Choose practice mode/i)).toBeInTheDocument()
+    await user.click(screen.getByTestId('memorize-practice-mode-cancel'))
+    expect(screen.queryByText(/Choose practice mode/i)).not.toBeInTheDocument()
+    expect(screen.getByTestId('memorize-intro-text')).toBeInTheDocument()
+  })
+
+  it('word mode shows choice buttons and fills blank on correct tap', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
+    )
+    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    await user.click(screen.getByTestId('memorize-practice-mode-word'))
+    expect(screen.queryByTestId('memorize-practice-input')).not.toBeInTheDocument()
+    expect(screen.getByTestId('memorize-word-choices')).toBeInTheDocument()
+    const forBtn = screen.getByRole('button', { name: /^For$/i })
+    await user.click(forBtn)
+    expect(screen.getByTestId('memorize-practice-words')).toHaveTextContent(/For/)
+  })
+
+  it('word mode flashes error ring on wrong choice', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
+    )
+    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    await user.click(screen.getByTestId('memorize-practice-mode-word'))
+    const choices = screen.getByTestId('memorize-word-choices')
+    const wrongBtn = Array.from(choices.querySelectorAll('button')).find((b) => b.textContent !== 'For')
+    expect(wrongBtn).toBeDefined()
+    await user.click(wrongBtn!)
+    expect(screen.getByTestId('memorize-practice-words').className).toMatch(/ring-red/)
+  })
+
+  it('persists practiceMode word when starting word mode', async () => {
+    const user = userEvent.setup()
+    const onPersistInProgress = jest.fn()
+    render(
+      <MemorizationPracticeSession
+        verse={baseVerse}
+        onClose={jest.fn()}
+        onComplete={jest.fn()}
+        onPersistInProgress={onPersistInProgress}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    await user.click(screen.getByTestId('memorize-practice-mode-word'))
+    expect(onPersistInProgress).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        practiceMode: 'word',
+        phase: { kind: 'inRound', roundIndex: 1 },
+      })
+    )
+  })
+
   it('clamps Android scroll to 0 for the first 600ms after practice starts', async () => {
     ;(isMemorizeAndroidWebHost as jest.Mock).mockReturnValue(true)
     jest.useFakeTimers()
@@ -327,7 +400,7 @@ describe('MemorizationPracticeSession', () => {
     render(
       <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
     )
-    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    await chooseTypeModeAfterStart(user)
 
     const scrollEl = screen
       .getByTestId('memorize-practice-words')

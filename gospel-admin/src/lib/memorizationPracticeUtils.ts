@@ -132,3 +132,95 @@ export function firstLetterOfWord(word: string): string {
   const m = word.match(/[A-Za-zÀ-ÿ]/u)
   return m ? m[0].toLowerCase() : ''
 }
+
+/**
+ * Labels for word-mode multiple choice: always includes the correct `tokens[targetIndex].text`.
+ * - **Word** blanks: distractors are other **word** tokens only (no reference digits).
+ * - **Digit** blanks: distractors use other **digit** tokens first, then random digits **not** appearing
+ *   anywhere in the passage as a digit; if still short, any unused digit.
+ * Caller supplies `rng` so order is stable across re-renders for a given blank.
+ */
+export function buildMemorizationChoiceLabels(
+  tokens: MemorizationToken[],
+  typableIndices: number[],
+  targetIndex: number,
+  choiceCount: number,
+  rng: () => number
+): string[] {
+  const targetToken = tokens[targetIndex]
+  if (
+    !targetToken ||
+    (targetToken.kind !== 'word' && targetToken.kind !== 'digit') ||
+    !typableIndices.includes(targetIndex)
+  ) {
+    return []
+  }
+  const correct = targetToken.text
+
+  const verseDigitChars = new Set<string>()
+  for (const idx of typableIndices) {
+    const t = tokens[idx]
+    if (t?.kind === 'digit') verseDigitChars.add(t.text)
+  }
+
+  const wrongPool: string[] = []
+  const seen = new Set<string>()
+  for (const idx of typableIndices) {
+    if (idx === targetIndex) continue
+    const t = tokens[idx]
+    if (!t || t.kind === 'punct') continue
+    if (targetToken.kind === 'word' && t.kind !== 'word') continue
+    if (targetToken.kind === 'digit' && t.kind !== 'digit') continue
+    const label = t.text
+    if (label === correct) continue
+    if (seen.has(label)) continue
+    seen.add(label)
+    wrongPool.push(label)
+  }
+
+  const takeDistractors = (pool: string[], n: number): string[] => {
+    if (n <= 0 || pool.length === 0) return []
+    const copy = [...pool]
+    const out: string[] = []
+    let remaining = copy.length
+    for (let k = 0; k < n && remaining > 0; k++) {
+      const pick = Math.floor(rng() * remaining)
+      out.push(copy[pick]!)
+      copy[pick] = copy[remaining - 1]!
+      remaining--
+    }
+    return out
+  }
+
+  const needWrong = Math.max(0, choiceCount - 1)
+  const distractors = takeDistractors(wrongPool, needWrong)
+
+  if (targetToken.kind === 'digit' && distractors.length < needWrong) {
+    const used = new Set<string>([correct, ...distractors])
+    const pickExtraDigits = (candidates: string[]) => {
+      const copy = [...candidates]
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1))
+        ;[copy[i], copy[j]] = [copy[j]!, copy[i]!]
+      }
+      for (const d of copy) {
+        if (distractors.length >= needWrong) return
+        if (used.has(d)) continue
+        distractors.push(d)
+        used.add(d)
+      }
+    }
+    const notInVerse = '0123456789'.split('').filter((d) => !verseDigitChars.has(d))
+    pickExtraDigits(notInVerse)
+    if (distractors.length < needWrong) {
+      pickExtraDigits('0123456789'.split('').filter((d) => !used.has(d)))
+    }
+  }
+
+  const labels = [correct, ...distractors]
+  for (let i = labels.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[labels[i], labels[j]] = [labels[j]!, labels[i]!]
+  }
+  return labels
+}

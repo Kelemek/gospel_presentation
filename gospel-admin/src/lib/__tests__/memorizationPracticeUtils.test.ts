@@ -1,4 +1,5 @@
 import {
+  buildMemorizationChoiceLabels,
   buildMemorizationTokens,
   firstLetterOfWord,
   formatMemorizationTokensPlain,
@@ -8,6 +9,8 @@ import {
   hiddenFractionForRound,
   parseReferenceMemorizationTokens,
   pickHiddenWordIndices,
+  seedRandom,
+  stringToSeed,
   MEMORIZATION_FULL_HIDE_ROUND,
 } from '@/lib/memorizationPracticeUtils'
 
@@ -74,5 +77,75 @@ describe('memorizationPracticeUtils', () => {
     const t = buildMemorizationTokens('For God', 'John 3:16')
     expect(formatMemorizationTokensPlain(t)).toBe('For God John 3:16')
     expect(getTypableTokenIndices(t)).toEqual([0, 2, 4, 6, 8, 9])
+  })
+
+  it('buildMemorizationChoiceLabels includes correct answer and respects choiceCount', () => {
+    const t = buildMemorizationTokens('For God so loved', 'John 3:16')
+    const typable = getTypableTokenIndices(t)
+    const rng = seedRandom(stringToSeed('test-seed'))
+    const labels = buildMemorizationChoiceLabels(t, typable, 2, 4, rng)
+    expect(labels).toContain('God')
+    expect(labels.length).toBeLessThanOrEqual(4)
+    expect(labels.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('buildMemorizationChoiceLabels is deterministic for same rng sequence start', () => {
+    const t = buildMemorizationTokens('For God so loved', 'John 3:16')
+    const typable = getTypableTokenIndices(t)
+    const seed = stringToSeed('stable')
+    const a = buildMemorizationChoiceLabels(t, typable, 2, 4, seedRandom(seed))
+    const b = buildMemorizationChoiceLabels(t, typable, 2, 4, seedRandom(seed))
+    expect(a).toEqual(b)
+  })
+
+  it('buildMemorizationChoiceLabels for word blanks excludes verse reference digits', () => {
+    const t = buildMemorizationTokens('For God so loved', 'John 3:16')
+    const typable = getTypableTokenIndices(t)
+    const rng = seedRandom(stringToSeed('word-blank'))
+    const labels = buildMemorizationChoiceLabels(t, typable, 2, 6, rng)
+    expect(labels).toContain('God')
+    for (const l of labels) {
+      expect(l).not.toMatch(/^[0-9]$/)
+    }
+  })
+
+  it('buildMemorizationChoiceLabels for digit blanks uses only single digits', () => {
+    const t = buildMemorizationTokens('For God so loved', 'John 3:16')
+    const typable = getTypableTokenIndices(t)
+    const digitIdx = typable.find((i) => t[i]!.kind === 'digit')
+    expect(digitIdx).toBeDefined()
+    const rng = seedRandom(stringToSeed('digit-blank'))
+    const labels = buildMemorizationChoiceLabels(t, typable, digitIdx!, 4, rng)
+    for (const l of labels) {
+      expect(l).toMatch(/^[0-9]$/)
+    }
+  })
+
+  it('buildMemorizationChoiceLabels pads digit distractors with digits not in the verse', () => {
+    const t = buildMemorizationTokens('One line', 'Z 9:9')
+    const typable = getTypableTokenIndices(t)
+    const digitIdx = typable.find((i) => t[i]!.kind === 'digit')
+    expect(digitIdx).toBeDefined()
+    const rng = seedRandom(123)
+    const labels = buildMemorizationChoiceLabels(t, typable, digitIdx!, 4, rng)
+    expect(labels).toHaveLength(4)
+    const inPassageDigits = new Set(
+      typable.filter((i) => t[i]!.kind === 'digit').map((i) => t[i]!.text)
+    )
+    const fillers = labels.filter((l) => /^[0-9]$/.test(l) && !inPassageDigits.has(l))
+    expect(fillers.length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('buildMemorizationChoiceLabels returns only correct when no distractors', () => {
+    const t = buildMemorizationTokens('Only', '')
+    const typable = getTypableTokenIndices(t)
+    const labels = buildMemorizationChoiceLabels(t, typable, 0, 4, seedRandom(1))
+    expect(labels).toEqual(['Only'])
+  })
+
+  it('buildMemorizationChoiceLabels returns empty for non-typable target', () => {
+    const t = buildMemorizationTokens('A B', '')
+    const typable = getTypableTokenIndices(t)
+    expect(buildMemorizationChoiceLabels(t, typable, 1, 4, seedRandom(1))).toEqual([])
   })
 })

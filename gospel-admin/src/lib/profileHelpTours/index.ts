@@ -46,6 +46,7 @@ const ADD_MEMORIZE_VERSE = '[data-tour="add-memorize-verse"]'
 const ADD_MEMORIZE_ADD = '[data-tour="add-memorize-add"]'
 const MEMORIZE_PRACTICE_DIALOG = '[data-tour="memorize-practice-dialog"]'
 const MEMORIZE_START_PRACTICE = '[data-tour="memorize-start-practice"]'
+const MEMORIZE_PRACTICE_MODE_TYPE = '[data-tour="memorize-practice-mode-type"]'
 const MEMORIZE_PRACTICE_CLOSE = '[data-tour="memorize-practice-close"]'
 /** Open **Listen** in the practice session header; tour uses this so read-aloud steps can be skipped (e.g. non-ESV on Android) via `moveTo`. */
 const MEMORIZE_LISTEN_OPEN = '[data-tour="memorize-listen-open"]'
@@ -1651,20 +1652,25 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
       popover: {
         title: 'Before you practice',
         description:
-          'You see the full verse and reference first. When you are ready, <strong>Start practice</strong> begins five rounds with more words hidden each time. Use <strong>Next</strong> to start round 1 for this tour.',
+          'You see the full verse and reference first. When you are ready, <strong>Start practice</strong> opens a short choice: <strong>Type mode</strong> or <strong>Word mode</strong>, then begins five rounds with more words hidden each time. Use <strong>Next</strong> to start round 1 in <strong>Type mode</strong> for this tour.',
         ...pop({ side: 'right', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           const start = document.querySelector<HTMLElement>(MEMORIZE_START_PRACTICE)
           if (start) {
             start.click()
-            void waitUntil(
-              () => !!document.querySelector('[data-testid="memorize-practice-words"]'),
-              6000
-            ).then(() => {
-              window.setTimeout(() => {
-                drv.refresh()
-                drv.moveNext()
-              }, prefersReducedMotion() ? 80 : 200)
+            void waitUntil(() => !!document.querySelector(MEMORIZE_PRACTICE_MODE_TYPE), 4000).then((picker) => {
+              if (picker) {
+                document.querySelector<HTMLElement>(MEMORIZE_PRACTICE_MODE_TYPE)?.click()
+              }
+              void waitUntil(
+                () => !!document.querySelector('[data-testid="memorize-practice-words"]'),
+                6000
+              ).then(() => {
+                window.setTimeout(() => {
+                  drv.refresh()
+                  drv.moveNext()
+                }, prefersReducedMotion() ? 80 : 200)
+              })
             })
             return
           }
@@ -1788,7 +1794,7 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
       popover: {
         title: 'Guided practice',
         description:
-          'Blanks mark what to type next—<strong>first letter</strong> of each word, or each <strong>digit</strong> in the reference. <strong>Hint</strong> temporarily peeks at hidden words. Use <strong>Next</strong> to close this preview and return to the list.',
+          'Blanks mark what to fill next—in <strong>Type mode</strong>: <strong>first letter</strong> of each word, or each <strong>digit</strong> in the reference. <strong>Word mode</strong> uses <strong>buttons</strong> (from the verse) instead of the keyboard. <strong>Hint</strong> temporarily peeks at hidden words. Use <strong>Next</strong> to close this preview and return to the list.',
         ...pop({ side: 'right', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           void (async () => {
