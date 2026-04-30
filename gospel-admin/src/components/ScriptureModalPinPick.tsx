@@ -2,8 +2,8 @@
 
 import { useEffect, useId, useRef, useState } from 'react'
 import VersePinGlyph from '@/components/VersePinGlyph'
-import type { VersePinColorId } from '@/lib/versePinStorage'
-import { VERSE_PIN_COLOR_IDS } from '@/lib/versePinStorage'
+import type { VerseBookmarkColorId, VersePinColorId } from '@/lib/versePinStorage'
+import { VERSE_BOOKMARK_COLOR_IDS } from '@/lib/versePinStorage'
 
 const SR_LABEL: Record<VersePinColorId, string> = {
   red: 'Red',
@@ -30,7 +30,7 @@ export interface ScriptureModalPinPickProps {
   reference: string
   draftColor: VersePinColorId
   onDraftColorChange: (value: VersePinColorId) => void
-  colorsAvailableInDropdown: VersePinColorId[]
+  colorsAvailableInDropdown: readonly VerseBookmarkColorId[]
   disabled: boolean
 }
 
@@ -42,23 +42,22 @@ export default function ScriptureModalPinPick({
   colorsAvailableInDropdown,
   disabled,
 }: ScriptureModalPinPickProps) {
-  const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const listboxId = useId()
 
-  const available = VERSE_PIN_COLOR_IDS.filter((id) => colorsAvailableInDropdown.includes(id))
-  const canOpenMenu = available.length > 0
+  /** Which `reference` the listbox was opened for; clears automatically when `reference` prop changes. */
+  const [dropdownForReference, setDropdownForReference] = useState<string | null>(null)
+  const open = dropdownForReference !== null && dropdownForReference === reference
 
-  useEffect(() => {
-    setOpen(false)
-  }, [reference])
+  const available = VERSE_BOOKMARK_COLOR_IDS.filter((id) => colorsAvailableInDropdown.includes(id))
+  const canOpenMenu = available.length > 0
 
   useEffect(() => {
     if (!open) return
     const fn = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        setOpen(false)
+        setDropdownForReference(null)
       }
     }
     document.addEventListener('mousedown', fn)
@@ -69,7 +68,7 @@ export default function ScriptureModalPinPick({
     if (!open) return
     const fn = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setOpen(false)
+        setDropdownForReference(null)
         triggerRef.current?.focus()
       }
     }
@@ -77,9 +76,9 @@ export default function ScriptureModalPinPick({
     return () => document.removeEventListener('keydown', fn)
   }, [open])
 
-  const choose = (v: VersePinColorId) => {
+  const choose = (v: VerseBookmarkColorId) => {
     onDraftColorChange(v)
-    setOpen(false)
+    setDropdownForReference(null)
     triggerRef.current?.focus()
   }
 
@@ -100,7 +99,7 @@ export default function ScriptureModalPinPick({
             : 'Bookmark colors are in use elsewhere; closing still moves the yellow last-verse marker to this passage.'
         }
         className={triggerButtonInteractiveClass}
-        onClick={() => !disabled && canOpenMenu && setOpen((o) => !o)}
+        onClick={() => !disabled && canOpenMenu && setDropdownForReference(open ? null : reference)}
       >
         <span className="flex items-center gap-0.5" aria-hidden>
           <span className="inline-flex h-5.5 w-5.5 items-center justify-center text-lg leading-none select-none">

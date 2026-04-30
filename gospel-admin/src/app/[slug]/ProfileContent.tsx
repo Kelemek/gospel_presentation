@@ -15,17 +15,18 @@ import ProfileHelpMenu from '@/components/ProfileHelpMenu'
 import PresentationFirstVisitWelcome from '@/components/PresentationFirstVisitWelcome'
 import { ScriptureFooterAttributionParagraphs } from '@/components/ScriptureFooterAttributionParagraphs'
 import { GospelSection as GospelSectionType, GospelProfile, SavedAnswer } from '@/lib/types'
-import type { VersePinColorId, VersePinMapState, VersePinSlotEntry } from '@/lib/versePinStorage'
+import type { VersePinAnchoredEntry, VersePinColorId, VersePinsStoredState, VersePinSlotEntry } from '@/lib/versePinStorage'
 import {
   assignVersePin,
   assignYellowLastViewed,
   availablePinColorsForModalChoice,
   clearAllVersePins,
-  createEmptyVersePinMap,
+  createEmptyVersePinsState,
   loadVersePins,
-  removeVersePinByColor,
+  removeVersePin,
+  shouldAdvanceYellowLastViewed,
   versePinColorForPassage,
-  versePinsListFromMap,
+  versePinsListFromState,
 } from '@/lib/versePinStorage'
 import { logger } from '@/lib/logger'
 import { createClient } from '@/lib/supabase/client'
@@ -68,7 +69,7 @@ interface ScriptureRefNav {
   }
 }
 
-function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps) {
+function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const router = useRouter()
   const [selectedScripture, setSelectedScripture] = useState<{
     reference: string
@@ -147,8 +148,8 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     }
   }, [isHydrated, sectionCount, profileInfo?.slug])
 
-  // Scripture verse pins (localStorage only — up to five color slots per profile slug)
-  const [versePinMap, setVersePinMap] = useState<VersePinMapState>(createEmptyVersePinMap)
+  // Scripture verse pins (localStorage only — yellow slot + tinted bookmarks per profile slug)
+  const [versePinMap, setVersePinMap] = useState<VersePinsStoredState>(createEmptyVersePinsState)
   const [modalPinDraftColor, setModalPinDraftColor] = useState<VersePinColorId>('yellow')
 
   /** Picker draft when anchors/reference last synced — detect user edits vs synced default */
@@ -166,7 +167,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     setVersePinMap(loadVersePins(profileInfo.slug))
   }, [profileInfo?.slug])
 
-  const versePinsList = useMemo(() => versePinsListFromMap(versePinMap), [versePinMap])
+  const versePinsList = useMemo(() => versePinsListFromState(versePinMap), [versePinMap])
 
   const syncModalAnchorsForNav = useCallback(
     (reference: string, explicit?: { sectionId: string; subsectionId: string }) => {
@@ -199,10 +200,14 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
   )
 
   const handleRemoveVersePin = useCallback(
-    (colorId: VersePinColorId) => {
+    (pin: Pick<VersePinAnchoredEntry, 'bookmarkId' | 'colorId'>) => {
       const s = profileInfo?.slug
       if (!s) return
-      setVersePinMap(removeVersePinByColor(s, colorId))
+      const next =
+        pin.bookmarkId != null && pin.bookmarkId !== ''
+          ? removeVersePin(s, { kind: 'bookmark', bookmarkId: pin.bookmarkId })
+          : removeVersePin(s, { kind: 'yellow' })
+      setVersePinMap(next)
     },
     [profileInfo?.slug]
   )
@@ -297,38 +302,42 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
   }, [selectedScripture.isOpen, favoriteReferences, currentReferenceIndex])
 
   // All scripture *cards* in profile order, with DOM anchors (duplicate references = separate entries).
-  const allScriptureRefs: ScriptureRefNav[] = sections
-    ? sections.flatMap(section => {
-        const sid = `section-${section.section}`
-        return section.subsections.flatMap((subsection, subIndex) => {
-          const subId = `${sid}-${subIndex}`
-          const main: ScriptureRefNav[] = (subsection.scriptureReferences || []).map(ref => ({
-            reference: ref.reference,
-            sectionId: sid,
-            subsectionId: subId,
-            context: {
-              sectionTitle: section.title,
-              subsectionTitle: subsection.title,
-              content: subsection.content ?? '',
-            },
-          }))
-          const nested: ScriptureRefNav[] = (subsection.nestedSubsections || []).flatMap((nested, n) => {
-            const nestedId = `${sid}-${subIndex}-${n}`
-            return (nested.scriptureReferences || []).map(ref => ({
-              reference: ref.reference,
-              sectionId: sid,
-              subsectionId: nestedId,
-              context: {
-                sectionTitle: section.title,
-                subsectionTitle: `${subsection.title} - ${nested.title}`,
-                content: nested.content ?? '',
-              },
-            }))
+  const allScriptureRefs: ScriptureRefNav[] = useMemo(
+    () =>
+      sections
+        ? sections.flatMap((section) => {
+            const sid = `section-${section.section}`
+            return section.subsections.flatMap((subsection, subIndex) => {
+              const subId = `${sid}-${subIndex}`
+              const main: ScriptureRefNav[] = (subsection.scriptureReferences || []).map((ref) => ({
+                reference: ref.reference,
+                sectionId: sid,
+                subsectionId: subId,
+                context: {
+                  sectionTitle: section.title,
+                  subsectionTitle: subsection.title,
+                  content: subsection.content ?? '',
+                },
+              }))
+              const nested: ScriptureRefNav[] = (subsection.nestedSubsections || []).flatMap((nested, n) => {
+                const nestedId = `${sid}-${subIndex}-${n}`
+                return (nested.scriptureReferences || []).map((ref) => ({
+                  reference: ref.reference,
+                  sectionId: sid,
+                  subsectionId: nestedId,
+                  context: {
+                    sectionTitle: section.title,
+                    subsectionTitle: `${subsection.title} - ${nested.title}`,
+                    content: nested.content ?? '',
+                  },
+                }))
+              })
+              return [...main, ...nested]
+            })
           })
-          return [...main, ...nested]
-        })
-      })
-    : []
+        : [],
+    [sections]
+  )
 
   const handleScriptureClick = (
     reference: string,
@@ -475,6 +484,9 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
   const hasNext = navListLength > 1
 
   const modalPassageAnchorsForPins: VersePinSlotEntry | null = useMemo(() => {
+    // When the same reference string appears on multiple cards, prev/next updates
+    // `modalOpenAnchorsRef` + `currentReferenceIndex`; reference alone may not change.
+    void currentReferenceIndex
     if (!selectedScripture.isOpen || !selectedScripture.reference.trim()) return null
     const refStr = selectedScripture.reference
     const snap = modalOpenAnchorsRef.current
@@ -514,13 +526,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     const synced: VersePinColorId = existing ?? 'yellow'
     modalPinBaselineRef.current = synced
     setModalPinDraftColor(synced)
-  }, [
-    selectedScripture.isOpen,
-    selectedScripture.reference,
-    modalPassageAnchorsForPins?.sectionId,
-    modalPassageAnchorsForPins?.subsectionId,
-    versePinMap,
-  ])
+  }, [selectedScripture.isOpen, selectedScripture.reference, modalPassageAnchorsForPins, versePinMap])
 
   const modalPinDropdownColors = useMemo(
     () =>
@@ -555,8 +561,10 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
       const unchanged = draft === baseline
 
       if (unchanged) {
-        const nextMap = assignYellowLastViewed(profileInfo.slug, entry)
-        setVersePinMap(nextMap)
+        if (shouldAdvanceYellowLastViewed(versePinMap, entry)) {
+          const nextMap = assignYellowLastViewed(profileInfo.slug, entry)
+          setVersePinMap(nextMap)
+        }
       } else {
         const nextMap = assignVersePin(profileInfo.slug, draft, entry)
         setVersePinMap(nextMap)
@@ -781,11 +789,14 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                   {versePinsList.length > 0 ? (
                     <div className="space-y-2">
                       <div className="text-xs font-medium text-slate-600 dark:text-slate-300">
-                        Pinned passages ({versePinsList.length}/5)
+                        Pinned passages ({versePinsList.length})
                       </div>
                       <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1 max-h-32 overflow-y-auto">
                         {versePinsList.map((p) => (
-                          <li key={p.colorId} className="flex items-center gap-1.5 truncate">
+                          <li
+                            key={p.bookmarkId ?? `y-${p.reference}-${p.sectionId}-${p.subsectionId}`}
+                            className="flex items-center gap-1.5 truncate"
+                          >
                             <span className="shrink-0" aria-hidden>
                               📌
                             </span>
@@ -807,7 +818,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                     </div>
                   ) : (
                     <div className="text-xs text-slate-500 dark:text-slate-400 italic">
-                      Open scripture and choose a pin color beside Memorize — up to five colors, saved on this device only.
+                      Open scripture and choose a pin color beside Memorize — yellow tracks your last passage; other tints can repeat across passages. Saved on this device only.
                     </div>
                   )}
                 </div>

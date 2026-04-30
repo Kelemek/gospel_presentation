@@ -1,16 +1,21 @@
 /**
- * Up to five color-keyed scripture pins per profile (localStorage only).
+ * Scripture pins per profile (localStorage only): one yellow (“last verse viewed”) + unlimited
+ * tinted bookmarks (red/blue/green/violet repeats allowed across passages).
  */
 
 export const VERSE_PIN_COLOR_IDS = ['red', 'blue', 'yellow', 'green', 'violet'] as const
 export type VersePinColorId = (typeof VERSE_PIN_COLOR_IDS)[number]
+
+/** Colors stored as repeatable bookmarks (not the yellow slot). */
+export const VERSE_BOOKMARK_COLOR_IDS = ['red', 'blue', 'green', 'violet'] as const
+export type VerseBookmarkColorId = (typeof VERSE_BOOKMARK_COLOR_IDS)[number]
 
 export const VERSE_PIN_STORAGE_KEY_PREFIX = 'gospel-verse-pins-'
 
 /** Removed hook `useScriptureProgress` — one-time migrate from this key into verse pins (`yellow`). */
 export const LEGACY_SCRIPTURE_PROGRESS_KEY_PREFIX = 'gospel-scripture-progress-'
 
-const SCHEMA_VERSION = 1
+const STORAGE_VERSION = 2
 
 export interface VersePinSlotEntry {
   reference: string
@@ -18,19 +23,50 @@ export interface VersePinSlotEntry {
   subsectionId: string
 }
 
-/** One row per color (null = slot empty). */
+export interface VersePinBookmarkStored extends VersePinSlotEntry {
+  id: string
+  colorId: VerseBookmarkColorId
+}
+
+export interface VersePinsStoredState {
+  yellow: VersePinSlotEntry | null
+  bookmarks: VersePinBookmarkStored[]
+}
+
+/** @deprecated v1-only shape kept for migrating old localStorage payloads */
 export type VersePinMapState = Record<VersePinColorId, VersePinSlotEntry | null>
 
 export interface VersePinAnchoredEntry extends VersePinSlotEntry {
   colorId: VersePinColorId
+  /** Set for red/blue/green/violet bookmarks; omit for yellow (“last verse viewed”). */
+  bookmarkId?: string
 }
 
-interface StoredShape {
-  v: number
+export type VersePinRemovalTarget =
+  | { kind: 'yellow' }
+  | { kind: 'bookmark'; bookmarkId: string }
+
+interface StoredShapeV1 {
+  v: 1
   byColor: VersePinMapState
 }
 
-function emptyByColor(): VersePinMapState {
+interface StoredShapeV2 {
+  v: 2
+  yellow: VersePinSlotEntry | null
+  bookmarks: VersePinBookmarkStored[]
+}
+
+function emptyState(): VersePinsStoredState {
+  return { yellow: null, bookmarks: [] }
+}
+
+export function createEmptyVersePinsState(): VersePinsStoredState {
+  return emptyState()
+}
+
+/** @deprecated use createEmptyVersePinsState */
+export function createEmptyVersePinMap(): VersePinMapState {
   return {
     red: null,
     blue: null,
@@ -40,9 +76,15 @@ function emptyByColor(): VersePinMapState {
   }
 }
 
-/** Empty map for SSR / initial React state */
-export function createEmptyVersePinMap(): VersePinMapState {
-  return emptyByColor()
+export function newVerseBookmarkId(): string {
+  try {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID()
+    }
+  } catch {
+    /* ignore */
+  }
+  return `vk-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`
 }
 
 function normalizeSlot(raw: unknown): VersePinSlotEntry | null {
@@ -55,22 +97,98 @@ function normalizeSlot(raw: unknown): VersePinSlotEntry | null {
   return { reference, sectionId, subsectionId }
 }
 
-function parseStored(value: string | null): VersePinMapState {
-  if (!value) return emptyByColor()
+function normalizeBookmarkStored(raw: unknown): VersePinBookmarkStored | null {
+  const slot = normalizeSlot(raw)
+  if (!slot) return null
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as Record<string, unknown>
+  const id = typeof o.id === 'string' && o.id.trim() !== '' ? o.id.trim() : ''
+  const colorId = o.colorId
+  const isBookmarkColor =
+    colorId === 'red' ||
+    colorId === 'blue' ||
+    colorId === 'green' ||
+    colorId === 'violet'
+  if (!id || !isBookmarkColor) return null
+  return { id, colorId: colorId as VerseBookmarkColorId, ...slot }
+}
+
+/** True when a non-yellow bookmark pins the same display row as `entry`. */
+export function hasNonYellowBookmarkForRow(
+  state: VersePinsStoredState,
+  entry: Pick<VersePinSlotEntry, 'reference' | 'sectionId' | 'subsectionId'>
+): boolean {
+  return state.bookmarks.some((b) => pinnedVerseMatchesRow(b, entry))
+}
+
+/**
+ * When closing the scripture modal unchanged, advance yellow (“last verse viewed”) only if
+ * nothing else bookmarks this passage.
+ */
+export function shouldAdvanceYellowLastViewed(
+  state: VersePinsStoredState,
+  entry: Pick<VersePinSlotEntry, 'reference' | 'sectionId' | 'subsectionId'>
+): boolean {
+  return !hasNonYellowBookmarkForRow(state, entry)
+}
+
+function migrateV1ByColorToState(byColor: Partial<VersePinMapState> | null | undefined): VersePinsStoredState {
+  const map = emptyByColor()
+  if (byColor && typeof byColor === 'object') {
+    for (const id of VERSE_PIN_COLOR_IDS) {
+      map[id] = normalizeSlot((byColor as Record<string, unknown>)[id])
+    }
+  }
+  const bookmarks: VersePinBookmarkStored[] = []
+  for (const colorId of VERSE_BOOKMARK_COLOR_IDS) {
+    const slot = map[colorId]
+    if (slot) {
+      bookmarks.push({ id: newVerseBookmarkId(), colorId, ...slot })
+    }
+  }
+  return { yellow: map.yellow, bookmarks }
+}
+
+function emptyByColor(): VersePinMapState {
+  return {
+    red: null,
+    blue: null,
+    yellow: null,
+    green: null,
+    violet: null,
+  }
+}
+
+function parseStoredJSON(value: string | null): { state: VersePinsStoredState; needsV2Persist: boolean } {
+  if (!value) return { state: emptyState(), needsV2Persist: false }
   try {
     const parsed = JSON.parse(value) as unknown
-    if (!parsed || typeof parsed !== 'object') return emptyByColor()
-    const shape = parsed as Partial<StoredShape>
-    const byColor = shape.byColor
-    if (!byColor || typeof byColor !== 'object') return emptyByColor()
-    const out = emptyByColor()
-    for (const id of VERSE_PIN_COLOR_IDS) {
-      const slot = normalizeSlot((byColor as Record<string, unknown>)[id])
-      out[id] = slot
+    if (!parsed || typeof parsed !== 'object') return { state: emptyState(), needsV2Persist: false }
+    const o = parsed as Record<string, unknown>
+    const v = o.v
+
+    if (v === 2) {
+      const yellowRaw = o.yellow
+      const yellow = yellowRaw == null ? null : normalizeSlot(yellowRaw)
+      const bookmarksRaw = o.bookmarks
+      const bookmarks: VersePinBookmarkStored[] = []
+      if (Array.isArray(bookmarksRaw)) {
+        for (const item of bookmarksRaw) {
+          const b = normalizeBookmarkStored(item)
+          if (b) bookmarks.push(b)
+        }
+      }
+      return { state: { yellow, bookmarks }, needsV2Persist: false }
     }
-    return out
+
+    const byColor = (o as Partial<StoredShapeV1>).byColor
+    if (byColor && typeof byColor === 'object') {
+      return { state: migrateV1ByColorToState(byColor as Partial<VersePinMapState>), needsV2Persist: true }
+    }
+
+    return { state: emptyState(), needsV2Persist: false }
   } catch {
-    return emptyByColor()
+    return { state: emptyState(), needsV2Persist: false }
   }
 }
 
@@ -82,10 +200,6 @@ export function legacyScriptureProgressStorageKey(profileSlug: string): string {
   return `${LEGACY_SCRIPTURE_PROGRESS_KEY_PREFIX}${profileSlug}`
 }
 
-/**
- * Parses legacy `{ reference, sectionId?, subsectionId?, viewedAt? }` from useScriptureProgress.
- * Returns null when missing/invalid — same anchors as verse pins (`modal-view` when empty).
- */
 export function parseLegacyScriptureProgress(value: string | null): VersePinSlotEntry | null {
   if (!value) return null
   try {
@@ -104,7 +218,6 @@ export function parseLegacyScriptureProgress(value: string | null): VersePinSlot
   }
 }
 
-/** Missing or modal-view anchors match any display row with that reference; explicit section/subsection match that card. */
 export function anchoredPinMatchesDisplayRow(
   pin: Pick<VersePinSlotEntry, 'reference' | 'sectionId' | 'subsectionId'>,
   rowReference: string,
@@ -128,47 +241,65 @@ export function pinnedVerseMatchesRow(
   return anchoredPinMatchesDisplayRow(entry, candidate.reference, candidate.sectionId, candidate.subsectionId)
 }
 
-export function loadVersePins(profileSlug: string): VersePinMapState {
-  if (typeof window === 'undefined') return emptyByColor()
-  try {
-    const map = parseStored(localStorage.getItem(versePinStorageKey(profileSlug)))
-    const hasAnyPin = VERSE_PIN_COLOR_IDS.some((id) => map[id] != null)
-    const legacyKey = legacyScriptureProgressStorageKey(profileSlug)
+function hasAnyStoredPin(state: VersePinsStoredState): boolean {
+  return state.yellow != null || state.bookmarks.length > 0
+}
 
-    if (hasAnyPin) {
-      try {
-        localStorage.removeItem(legacyKey)
-      } catch {
-        /* ignore */
-      }
-      return map
-    }
-
-    const legacySlot = parseLegacyScriptureProgress(localStorage.getItem(legacyKey))
-    if (!legacySlot) {
-      return map
-    }
-
-    map.yellow = { ...legacySlot }
-    if (persistVersePinsOrFalse(profileSlug, map)) {
-      try {
-        localStorage.removeItem(legacyKey)
-      } catch {
-        /* ignore */
-      }
-    }
-    return map
-  } catch {
-    return emptyByColor()
+/** Removes bookmarks and optionally yellow targeting the same row as `entry`. */
+function clearRowConflictsMutable(state: VersePinsStoredState, entry: VersePinSlotEntry): void {
+  state.bookmarks = state.bookmarks.filter((b) => !pinnedVerseMatchesRow(b, entry))
+  if (state.yellow && pinnedVerseMatchesRow(state.yellow, entry)) {
+    state.yellow = null
   }
 }
 
-/** Returns true iff the map was written and read-back matches (avoids orphaning migration source on failed persist). */
-function persistVersePinsOrFalse(profileSlug: string, map: VersePinMapState): boolean {
+export function loadVersePins(profileSlug: string): VersePinsStoredState {
+  if (typeof window === 'undefined') return emptyState()
+  try {
+    const { state, needsV2Persist } = parseStoredJSON(localStorage.getItem(versePinStorageKey(profileSlug)))
+    const legacyKey = legacyScriptureProgressStorageKey(profileSlug)
+
+    if (needsV2Persist) {
+      persistVersePinsOrFalse(profileSlug, state)
+    }
+
+    if (hasAnyStoredPin(state)) {
+      try {
+        localStorage.removeItem(legacyKey)
+      } catch {
+        /* ignore */
+      }
+      return state
+    }
+
+    const legacySlot = parseLegacyScriptureProgress(localStorage.getItem(legacyKey))
+    if (legacySlot) {
+      state.yellow = { ...legacySlot }
+      if (persistVersePinsOrFalse(profileSlug, state)) {
+        try {
+          localStorage.removeItem(legacyKey)
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+
+    return state
+  } catch {
+    return emptyState()
+  }
+}
+
+/** Returns true iff persisted and read-back matches. */
+function persistVersePinsOrFalse(profileSlug: string, state: VersePinsStoredState): boolean {
   if (typeof window === 'undefined') return false
   try {
     const key = versePinStorageKey(profileSlug)
-    const payload: StoredShape = { v: SCHEMA_VERSION, byColor: map }
+    const payload: StoredShapeV2 = {
+      v: STORAGE_VERSION,
+      yellow: state.yellow,
+      bookmarks: state.bookmarks,
+    }
     const serialized = JSON.stringify(payload)
     localStorage.setItem(key, serialized)
     return localStorage.getItem(key) === serialized
@@ -177,8 +308,8 @@ function persistVersePinsOrFalse(profileSlug: string, map: VersePinMapState): bo
   }
 }
 
-function savePins(profileSlug: string, map: VersePinMapState): void {
-  void persistVersePinsOrFalse(profileSlug, map)
+function savePins(profileSlug: string, state: VersePinsStoredState): void {
+  void persistVersePinsOrFalse(profileSlug, state)
 }
 
 export function clearAllVersePins(profileSlug: string): void {
@@ -190,114 +321,144 @@ export function clearAllVersePins(profileSlug: string): void {
   }
 }
 
-/** Flat map → list of non-null pins (UI). */
-export function versePinsListFromMap(map: VersePinMapState): VersePinAnchoredEntry[] {
+/** Bookmarks first; then yellow if it is not shadowed by a bookmark on the same row. */
+export function versePinsListFromState(state: VersePinsStoredState): VersePinAnchoredEntry[] {
   const list: VersePinAnchoredEntry[] = []
-  for (const colorId of VERSE_PIN_COLOR_IDS) {
-    const slot = map[colorId]
-    if (slot) list.push({ colorId, ...slot })
+  for (const b of state.bookmarks) {
+    list.push({
+      bookmarkId: b.id,
+      colorId: b.colorId,
+      reference: b.reference,
+      sectionId: b.sectionId,
+      subsectionId: b.subsectionId,
+    })
+  }
+  if (state.yellow && !hasNonYellowBookmarkForRow(state, state.yellow)) {
+    list.push({
+      colorId: 'yellow',
+      reference: state.yellow.reference,
+      sectionId: state.yellow.sectionId,
+      subsectionId: state.yellow.subsectionId,
+    })
   }
   return list
 }
 
-export function removeVersePinByColor(profileSlug: string, colorId: VersePinColorId): VersePinMapState {
-  const map = loadVersePins(profileSlug)
-  map[colorId] = null
-  const anyLeft = VERSE_PIN_COLOR_IDS.some(id => map[id] != null)
-  if (!anyLeft) {
-    clearAllVersePins(profileSlug)
-    return emptyByColor()
-  }
-  savePins(profileSlug, map)
-  return map
+/** @deprecated use versePinsListFromState */
+export function versePinsListFromMap(map: VersePinMapState): VersePinAnchoredEntry[] {
+  const state = migrateV1ByColorToState(map)
+  return versePinsListFromState(state)
 }
 
-/**
- * Assign color slot to verse; clears any other color that pointed at the same display row as `entry`.
- */
+/** @deprecated use removeVersePin with VersePinRemovalTarget */
+export function removeVersePinByColor(profileSlug: string, colorId: VersePinColorId): VersePinsStoredState {
+  if (colorId === 'yellow') {
+    return removeVersePin(profileSlug, { kind: 'yellow' })
+  }
+  const state = loadVersePins(profileSlug)
+  const bm = state.bookmarks.find((b) => b.colorId === colorId)
+  if (!bm) return state
+  return removeVersePin(profileSlug, { kind: 'bookmark', bookmarkId: bm.id })
+}
+
+export function removeVersePin(profileSlug: string, target: VersePinRemovalTarget): VersePinsStoredState {
+  const state = loadVersePins(profileSlug)
+
+  if (target.kind === 'yellow') {
+    state.yellow = null
+  } else {
+    state.bookmarks = state.bookmarks.filter((b) => b.id !== target.bookmarkId)
+  }
+
+  if (!hasAnyStoredPin(state)) {
+    clearAllVersePins(profileSlug)
+    return emptyState()
+  }
+  savePins(profileSlug, state)
+  return state
+}
+
 export function assignVersePin(
   profileSlug: string,
   colorId: VersePinColorId,
   entry: VersePinSlotEntry
-): VersePinMapState {
-  const map = loadVersePins(profileSlug)
+): VersePinsStoredState {
+  const state = loadVersePins(profileSlug)
+  clearRowConflictsMutable(state, entry)
 
-  for (const id of VERSE_PIN_COLOR_IDS) {
-    const slot = map[id]
-    if (slot && pinnedVerseMatchesRow(slot, entry)) {
-      map[id] = null
-    }
+  if (colorId === 'yellow') {
+    state.yellow = { ...entry }
+    savePins(profileSlug, state)
+    return state
   }
 
-  map[colorId] = { ...entry }
-  savePins(profileSlug, map)
-  return map
+  state.bookmarks.push({
+    id: newVerseBookmarkId(),
+    colorId,
+    reference: entry.reference,
+    sectionId: entry.sectionId,
+    subsectionId: entry.subsectionId,
+  })
+  savePins(profileSlug, state)
+  return state
 }
 
-/**
- * Moves only the yellow slot to this passage (“last verse viewed”).
- * Does not clear other colored pins that share this row — use when closing the modal without changing Pin.
- */
-export function assignYellowLastViewed(profileSlug: string, entry: VersePinSlotEntry): VersePinMapState {
-  const map = loadVersePins(profileSlug)
-  map.yellow = { ...entry }
-  savePins(profileSlug, map)
-  return map
+export function assignYellowLastViewed(profileSlug: string, entry: VersePinSlotEntry): VersePinsStoredState {
+  const state = loadVersePins(profileSlug)
+  if (!shouldAdvanceYellowLastViewed(state, entry)) {
+    return state
+  }
+  state.yellow = { ...entry }
+  savePins(profileSlug, state)
+  return state
 }
 
-/** Removes every pinned color that resolves to this display row */
-export function clearVersePinsMatchingRow(profileSlug: string, entry: VersePinSlotEntry): VersePinMapState {
-  const map = loadVersePins(profileSlug)
+export function clearVersePinsMatchingRow(profileSlug: string, entry: VersePinSlotEntry): VersePinsStoredState {
+  const state = loadVersePins(profileSlug)
   let touched = false
-  for (const id of VERSE_PIN_COLOR_IDS) {
-    const slot = map[id]
-    if (slot && pinnedVerseMatchesRow(slot, entry)) {
-      map[id] = null
+  state.bookmarks = state.bookmarks.filter((b) => {
+    if (pinnedVerseMatchesRow(b, entry)) {
       touched = true
+      return false
     }
+    return true
+  })
+  if (state.yellow && pinnedVerseMatchesRow(state.yellow, entry)) {
+    state.yellow = null
+    touched = true
   }
   if (!touched) {
-    return map
+    return state
   }
-  const anyLeft = VERSE_PIN_COLOR_IDS.some((cid) => map[cid] != null)
-  if (!anyLeft) {
+  if (!hasAnyStoredPin(state)) {
     clearAllVersePins(profileSlug)
-    return emptyByColor()
+    return emptyState()
   }
-  savePins(profileSlug, map)
-  return map
+  savePins(profileSlug, state)
+  return state
 }
 
-/** Colors available in the modal: empty slots, plus any slot pinned to this same passage row. */
+/** Modal pin dropdown: bookmark tints only — yellow comes from closing unchanged, not the picker. */
 export function availablePinColorsForModalChoice(
-  map: VersePinMapState,
+  state: VersePinsStoredState,
   currentPassageAnchors: VersePinSlotEntry | null
-): VersePinColorId[] {
-  const available: VersePinColorId[] = []
-  for (const id of VERSE_PIN_COLOR_IDS) {
-    const slot = map[id]
-    if (!slot) {
-      available.push(id)
-      continue
-    }
-    if (
-      currentPassageAnchors?.reference.trim() &&
-      pinnedVerseMatchesRow(slot, currentPassageAnchors)
-    ) {
-      available.push(id)
-    }
-  }
-  return available
+): VerseBookmarkColorId[] {
+  void state
+  void currentPassageAnchors
+  return [...VERSE_BOOKMARK_COLOR_IDS]
 }
 
-/** Resolve which color pins the current modal passage (same row as anchors + reference). */
-export function versePinColorForPassage(map: VersePinMapState, anchors: VersePinSlotEntry | null): VersePinColorId | null {
+/** Prefer non-yellow bookmarks for this passage row; otherwise yellow slot; else none. */
+export function versePinColorForPassage(
+  state: VersePinsStoredState,
+  anchors: VersePinSlotEntry | null
+): VersePinColorId | null {
   if (!anchors?.reference.trim()) return null
-  for (const id of VERSE_PIN_COLOR_IDS) {
-    const slot = map[id]
-    if (slot && pinnedVerseMatchesRow(slot, anchors)) {
-      return id
-    }
+  const bmHit = state.bookmarks.find((b) => pinnedVerseMatchesRow(b, anchors))
+  if (bmHit) return bmHit.colorId as VersePinColorId
+
+  if (state.yellow && pinnedVerseMatchesRow(state.yellow, anchors)) {
+    return 'yellow'
   }
   return null
 }

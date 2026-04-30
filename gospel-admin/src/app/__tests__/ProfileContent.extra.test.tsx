@@ -25,10 +25,11 @@ jest.mock('@/components/TableOfContents', () => ({
 beforeEach(() => {
   jest.clearAllMocks()
   localStorage.clear()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  global.fetch = jest.fn((input: RequestInfo | URL | any) => {
+  global.fetch = jest.fn((input: Parameters<typeof fetch>[0]) => {
     const url = typeof input === 'string' ? input : String(input)
-    if (url.includes('/visit')) return Promise.resolve({ ok: true, json: async () => ({}) }) as any
+    if (url.includes('/visit')) {
+      return Promise.resolve({ ok: true, json: async () => ({}) }) as unknown as Response
+    }
     if (url.includes('/api/scripture')) {
       return Promise.resolve({
         ok: true,
@@ -36,13 +37,12 @@ beforeEach(() => {
       }) as unknown as Response
     }
     return Promise.resolve({ ok: true, json: async () => ({}) }) as unknown as Response
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  }) as any
+  }) as unknown as typeof fetch
 })
 
 afterEach(() => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  delete (global as any).fetch
+  const g = globalThis as Omit<typeof globalThis, 'fetch'> & { fetch?: typeof fetch }
+  delete g.fetch
 })
 
 describe('ProfileContent extra interactions', () => {
@@ -113,7 +113,9 @@ describe('ProfileContent extra interactions', () => {
     expect(raw).toBeTruthy()
     expect(raw).toContain('John 3:16')
     expect(raw).toContain('red')
-    expect(JSON.parse(raw!).byColor.red.reference).toBe('John 3:16')
+    const parsed = JSON.parse(raw!) as { v: number; bookmarks: Array<{ colorId: string; reference: string }> }
+    expect(parsed.v).toBe(2)
+    expect(parsed.bookmarks.some((b) => b.colorId === 'red' && b.reference === 'John 3:16')).toBe(true)
   })
 
   test('closing without changing Pin updates yellow slot as last verse viewed (localStorage)', async () => {
@@ -146,6 +148,8 @@ describe('ProfileContent extra interactions', () => {
 
     const raw = localStorage.getItem('gospel-verse-pins-p1')
     expect(raw).toBeTruthy()
-    expect(JSON.parse(raw!).byColor.yellow.reference).toBe('John 3:16')
+    const parsed = JSON.parse(raw!) as { v: number; yellow: { reference: string } }
+    expect(parsed.v).toBe(2)
+    expect(parsed.yellow.reference).toBe('John 3:16')
   })
 })

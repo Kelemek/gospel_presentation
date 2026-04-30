@@ -2619,7 +2619,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
       popover: {
         title: 'Pin a passage (optional)',
         description:
-          'Use the <strong>pin</strong> button to open tinted 📌 pins—saved when you <strong>close</strong> the reader (this device only). It starts on <strong>yellow</strong> (“last verse viewed”); leave it unchanged or pick another tint. Clearing pins uses the 📌 on the card or **Clear pinned passages** in the menu. Use <strong>Next</strong> to choose another tint for this tour.',
+          'Use the <strong>pin</strong> button to open bookmark tints (<strong>red</strong>, <strong>blue</strong>, <strong>green</strong>, <strong>violet</strong>)—saved when you <strong>close</strong> the reader (this device only). The control shows <strong>yellow</strong> for “last verse viewed”; leave it unchanged or pick a menu tint. Clearing pins uses the 📌 on the card or **Clear pinned passages** in the menu. Use <strong>Next</strong> to choose a menu tint for this tour.',
         ...pop({ side: 'bottom', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           const root = document.querySelector(SCRIPTURE_MODAL_PIN_COLOR)
@@ -2664,7 +2664,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
       popover: {
         title: 'Pinned passage',
         description:
-          'The prior step saves a colored <strong>pin</strong> on this passage. Pinned cards stay <strong>tinted and bold</strong> so you can spot them quickly—up to <strong>five</strong> colors at once. The next step spotlights the mini <strong>pin</strong> on the card (one tap removes only that color). Then we open <strong>Menu</strong> for the pin list and clear-all control.',
+          'The prior step saves a colored <strong>pin</strong> on this passage. Pinned cards stay <strong>tinted and bold</strong> so you can spot them quickly—tints like red and blue can repeat on different passages when you bookmark more of them; <strong>yellow</strong> tracks your latest passage unless another tint bookmarks that verse. The next step spotlights the mini <strong>pin</strong> on the card (one tap removes that bookmark). Then we open <strong>Menu</strong> for the pin list and clear-all control.',
         ...pop({ side: 'top', align: 'start' }),
       },
     },
@@ -2677,7 +2677,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
       popover: {
         title: 'Pin on the card',
         description:
-          'Tap the colored <strong>pin</strong> to remove <strong>only that color’s</strong> slot. <strong>Clear pinned passages</strong> in the menu removes every pin at once. This tour skips unpinning so the next steps can show the menu.',
+          'Tap the colored <strong>pin</strong> to remove <strong>only that bookmark</strong> (or yellow’s last-passage marker). <strong>Clear pinned passages</strong> in the menu removes every pin at once. This tour skips unpinning so the next steps can show the menu.',
         ...pop({ side: 'top', align: 'start' }),
       },
     },
@@ -2727,7 +2727,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
       popover: {
         title: 'Pinned passages',
         description:
-          'This block lists the colors you have marked and matches the <strong>tinted cards</strong> on the page. Use <strong>Next</strong> to spotlight <strong>Clear pinned passages</strong>.',
+          'This block lists bookmarks and your yellow “last verse” marker and matches the <strong>tinted cards</strong> on the page. Use <strong>Next</strong> to spotlight <strong>Clear pinned passages</strong>.',
         ...pop({ side: 'right', align: 'start' }),
       },
     },

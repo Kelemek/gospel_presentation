@@ -7,15 +7,17 @@ import {
   assignYellowLastViewed,
   availablePinColorsForModalChoice,
   anchoredPinMatchesDisplayRow,
-  clearAllVersePins,
   clearVersePinsMatchingRow,
+  createEmptyVersePinsState,
   legacyScriptureProgressStorageKey,
   loadVersePins,
   parseLegacyScriptureProgress,
   pinnedVerseMatchesRow,
+  removeVersePin,
   removeVersePinByColor,
+  shouldAdvanceYellowLastViewed,
   versePinStorageKey,
-  versePinsListFromMap,
+  versePinsListFromState,
 } from '@/lib/versePinStorage'
 
 describe('versePinStorage', () => {
@@ -69,23 +71,22 @@ describe('versePinStorage', () => {
     ).toBe(false)
   })
 
-  test('assignVersePin sets slot and persists', () => {
+  test('assignVersePin adds bookmark and persists v2', () => {
     const slug = 'p1'
-    const map = assignVersePin(slug, 'red', {
+    const state = assignVersePin(slug, 'red', {
       reference: 'John 3:16',
       sectionId: 's1',
       subsectionId: 'ss1',
     })
-    expect(map.red).toEqual({
-      reference: 'John 3:16',
-      sectionId: 's1',
-      subsectionId: 'ss1',
-    })
+    expect(state.bookmarks).toHaveLength(1)
+    expect(state.bookmarks[0]?.colorId).toBe('red')
 
-    expect(loadVersePins(slug).red?.reference).toBe('John 3:16')
+    const re = loadVersePins(slug)
+    expect(re.bookmarks.some((b) => b.reference === 'John 3:16')).toBe(true)
+    expect(JSON.parse(localStorage.getItem(versePinStorageKey(slug))!).v).toBe(2)
   })
 
-  test('assignYellowLastViewed moves yellow only — keeps red on same verse row', () => {
+  test('assignYellowLastViewed does not set yellow when a bookmark pins that row', () => {
     const slug = 'pz'
     assignVersePin(slug, 'red', {
       reference: 'Jn 3:16',
@@ -99,11 +100,26 @@ describe('versePinStorage', () => {
     }
     assignYellowLastViewed(slug, row)
     const m = loadVersePins(slug)
-    expect(m.red).toEqual(row)
-    expect(m.yellow).toEqual(row)
+    expect(m.bookmarks.some((b) => b.colorId === 'red')).toBe(true)
+    expect(m.yellow).toBeNull()
   })
 
-  test('clearVersePinsMatchingRow clears every pin for that row only', () => {
+  test('assignYellowLastViewed advances yellow when no bookmark on that row', () => {
+    const slug = 'py'
+    const row = { reference: 'Ps 23:1', sectionId: 's1', subsectionId: 'a' }
+    assignYellowLastViewed(slug, row)
+    const m = loadVersePins(slug)
+    expect(m.yellow?.reference).toBe('Ps 23:1')
+  })
+
+  test('shouldAdvanceYellowLastViewed matches assignYellow behavior', () => {
+    let s = createEmptyVersePinsState()
+    expect(shouldAdvanceYellowLastViewed(s, { reference: 'A', sectionId: '1', subsectionId: '2' })).toBe(true)
+    s = assignVersePin('z', 'red', { reference: 'A', sectionId: '1', subsectionId: '2' })
+    expect(shouldAdvanceYellowLastViewed(s, { reference: 'A', sectionId: '1', subsectionId: '2' })).toBe(false)
+  })
+
+  test('clearVersePinsMatchingRow clears bookmarks and skips yellow tied to bookmarked row', () => {
     const slug = 'pq'
     assignVersePin(slug, 'red', {
       reference: 'A',
@@ -126,12 +142,12 @@ describe('versePinStorage', () => {
       subsectionId: 'a',
     })
     const m = loadVersePins(slug)
-    expect(m.red).toBeNull()
+    expect(m.bookmarks.every((b) => b.reference !== 'A')).toBe(true)
     expect(m.yellow).toBeNull()
-    expect(m.blue?.reference).toBe('B')
+    expect(m.bookmarks.find((b) => b.reference === 'B')).toBeTruthy()
   })
 
-  test('assignVersePin clears other colors that pinned the same row', () => {
+  test('assignVersePin clears other bookmarks pinned to same row', () => {
     const slug = 'p1'
     assignVersePin(slug, 'red', {
       reference: 'John 3:16',
@@ -144,60 +160,85 @@ describe('versePinStorage', () => {
       subsectionId: 'ss1',
     })
     const m = loadVersePins(slug)
-    expect(m.red).toBeNull()
-    expect(m.blue?.sectionId).toBe('s1')
+    expect(m.bookmarks.filter((b) => b.reference === 'John 3:16')).toHaveLength(1)
+    expect(m.bookmarks[0]?.colorId).toBe('blue')
+    expect(m.bookmarks[0]?.sectionId).toBe('s1')
   })
 
-  test('availablePinColorsForModalChoice excludes taken colors unless same passage', () => {
-    const map = loadVersePins('x')
-    map.red = { reference: 'A 1:1', sectionId: 's1', subsectionId: 'a' }
-    map.blue = null
+  test('same bookmark color allowed on multiple different passages', () => {
+    const slug = 'dup'
+    assignVersePin(slug, 'red', { reference: 'A', sectionId: 's1', subsectionId: 'a' })
+    assignVersePin(slug, 'red', { reference: 'B', sectionId: 's2', subsectionId: 'b' })
+    const m = loadVersePins(slug)
+    const reds = m.bookmarks.filter((b) => b.colorId === 'red')
+    expect(reds).toHaveLength(2)
+  })
+
+  test('availablePinColorsForModalChoice returns bookmark colors only (no yellow)', () => {
     const anchors = { reference: 'B 2:2', sectionId: 's2', subsectionId: 'b' }
-    const avail = availablePinColorsForModalChoice(map, anchors)
-    expect(avail).toContain('blue')
-    expect(avail).not.toContain('red')
-
-    const anchorsA = { reference: 'A 1:1', sectionId: 's1', subsectionId: 'a' }
-    const availAgain = availablePinColorsForModalChoice(map, anchorsA)
-    expect(availAgain).toContain('red')
-    expect(availAgain).toContain('blue')
+    assignVersePin('x', 'red', { reference: 'A 1:1', sectionId: 's1', subsectionId: 'a' })
+    const after = loadVersePins('x')
+    expect(availablePinColorsForModalChoice(after, anchors)).toEqual(['red', 'blue', 'green', 'violet'])
   })
 
-  test('removeVersePinByColor clears one slot', () => {
+  test('removeVersePinByColor removes first bookmark of that color', () => {
     const slug = 'p9'
     assignVersePin(slug, 'red', { reference: 'X', sectionId: 'a', subsectionId: 'b' })
     const after = removeVersePinByColor(slug, 'red')
-    expect(after.red).toBeNull()
+    expect(after.bookmarks.filter((b) => b.colorId === 'red')).toHaveLength(0)
   })
 
-  test('removeVersePinByColor removes storage when last pin cleared', () => {
-    const slug = 'pa'
-    assignVersePin(slug, 'green', { reference: 'Y', sectionId: 'a', subsectionId: 'b' })
-    removeVersePinByColor(slug, 'green')
-    expect(localStorage.getItem(versePinStorageKey(slug))).toBeNull()
-    expect(loadVersePins(slug).green).toBeNull()
+  test('removeVersePin clears yellow', () => {
+    const slug = 'pyel'
+    assignYellowLastViewed(slug, { reference: 'Q', sectionId: '1', subsectionId: '2' })
+    const after = removeVersePin(slug, { kind: 'yellow' })
+    expect(after.yellow).toBeNull()
   })
 
-  test('versePinsListFromMap returns non-null entries with colorId', () => {
-    assignVersePin('pb', 'violet', { reference: 'Z', sectionId: '', subsectionId: '' })
-    const list = versePinsListFromMap(loadVersePins('pb'))
-    expect(list).toHaveLength(1)
-    expect(list[0]!.colorId).toBe('violet')
-
-    assignVersePin('pb', 'red', { reference: 'Z2', sectionId: 'm', subsectionId: 'n' })
-    const list2 = versePinsListFromMap(loadVersePins('pb'))
-    expect(list2).toHaveLength(2)
+  test('removeVersePin clears one bookmark id', () => {
+    const slug = 'pb'
+    assignVersePin(slug, 'violet', { reference: 'Z', sectionId: '', subsectionId: '' })
+    const id = loadVersePins(slug).bookmarks[0]!.id
+    const after = removeVersePin(slug, { kind: 'bookmark', bookmarkId: id })
+    expect(after.bookmarks).toHaveLength(0)
   })
 
-  test('clearAllVersePins removes item', () => {
-    assignVersePin('pc', 'yellow', { reference: 'Q', sectionId: '1', subsectionId: '2' })
-    clearAllVersePins('pc')
+  test('clearAllVersePins removes storage item when last bookmark removed indirectly', () => {
+    assignVersePin('pc', 'yellow', {
+      reference: 'Q',
+      sectionId: '1',
+      subsectionId: '2',
+    })
+    removeVersePin('pc', { kind: 'yellow' })
     expect(localStorage.getItem(versePinStorageKey('pc'))).toBeNull()
   })
 
-  test('invalid JSON yields empty map', () => {
+  test('invalid JSON yields empty state', () => {
     localStorage.setItem(versePinStorageKey('bad'), '{{')
-    expect(loadVersePins('bad').red).toBeNull()
+    expect(loadVersePins('bad').bookmarks).toHaveLength(0)
+  })
+
+  test('v1 byColor payload migrates to v2 on load', () => {
+    const slug = 'v1m'
+    localStorage.setItem(
+      versePinStorageKey(slug),
+      JSON.stringify({
+        v: 1,
+        byColor: {
+          red: { reference: 'Gen 1:1', sectionId: 's', subsectionId: 't' },
+          blue: null,
+          yellow: { reference: 'Jn 1:1', sectionId: 'm', subsectionId: 'n' },
+          green: null,
+          violet: null,
+        },
+      })
+    )
+    loadVersePins(slug)
+    const raw = localStorage.getItem(versePinStorageKey(slug))!
+    const parsed = JSON.parse(raw)
+    expect(parsed.v).toBe(2)
+    expect(parsed.bookmarks).toHaveLength(1)
+    expect(parsed.yellow.reference).toBe('Jn 1:1')
   })
 
   test('parseLegacyScriptureProgress ignores viewedAt', () => {
@@ -240,13 +281,14 @@ describe('versePinStorage', () => {
       })
     )
 
-    const map = loadVersePins(slug)
-    expect(map.yellow?.reference).toBe('John 3:16')
-    expect(map.yellow?.sectionId).toBe('modal-view')
+    const state = loadVersePins(slug)
+    expect(state.yellow?.reference).toBe('John 3:16')
+    expect(state.yellow?.sectionId).toBe('modal-view')
     expect(localStorage.getItem(legacyKey)).toBeNull()
     const rawNew = localStorage.getItem(versePinStorageKey(slug))
     expect(rawNew).toBeTruthy()
-    expect(JSON.parse(rawNew!).byColor.yellow.reference).toBe('John 3:16')
+    expect(JSON.parse(rawNew!).v).toBe(2)
+    expect(JSON.parse(rawNew!).yellow.reference).toBe('John 3:16')
   })
 
   test('loadVersePins keeps legacy key when persist fails (e.g. quota exceeded)', () => {
@@ -263,8 +305,8 @@ describe('versePinStorage', () => {
       throw new DOMException('Quota has been exceeded', 'QuotaExceededError')
     })
 
-    const map = loadVersePins(slug)
-    expect(map.yellow?.reference).toBe('Ex 20:1')
+    const state = loadVersePins(slug)
+    expect(state.yellow?.reference).toBe('Ex 20:1')
     expect(localStorage.getItem(legacyKey)).toBe(legacyPayload)
     expect(localStorage.getItem(versePinStorageKey(slug))).toBeNull()
 
@@ -280,9 +322,9 @@ describe('versePinStorage', () => {
       JSON.stringify({ reference: 'Luke 1:1', sectionId: '', subsectionId: '' })
     )
 
-    const map = loadVersePins(slug)
-    expect(map.red?.reference).toBe('A')
-    expect(map.yellow).toBeNull()
+    const state = loadVersePins(slug)
+    expect(state.bookmarks[0]?.reference).toBe('A')
+    expect(state.yellow).toBeNull()
     expect(localStorage.getItem(legacyKey)).toBeNull()
   })
 
@@ -290,8 +332,16 @@ describe('versePinStorage', () => {
     const slug = 'legacy-bad'
     const legacyKey = legacyScriptureProgressStorageKey(slug)
     localStorage.setItem(legacyKey, '{"notReference":true}')
-    const map = loadVersePins(slug)
-    expect(map.yellow).toBeNull()
+    const state = loadVersePins(slug)
+    expect(state.yellow).toBeNull()
     expect(localStorage.getItem(legacyKey)).not.toBeNull()
+  })
+
+  test('versePinsListFromState lists bookmarks before yellow when both present', () => {
+    assignVersePin('pl', 'red', { reference: 'A', sectionId: '1', subsectionId: '2' })
+    assignYellowLastViewed('pl', { reference: 'B', sectionId: '3', subsectionId: '4' })
+    const list = versePinsListFromState(loadVersePins('pl'))
+    expect(list[0]?.colorId).toBe('red')
+    expect(list[list.length - 1]?.colorId).toBe('yellow')
   })
 })

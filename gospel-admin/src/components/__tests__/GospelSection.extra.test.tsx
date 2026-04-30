@@ -31,9 +31,7 @@ describe('GospelSection (extra tests)', () => {
   beforeEach(() => {
     // use fake timers for tests that advance the saved-confirmation timeout
     jest.useFakeTimers()
-    // reset fetch mock
-    // @ts-expect-error mocking incompatible types
-    global.fetch = jest.fn()
+    global.fetch = jest.fn() as unknown as typeof fetch
   })
 
   afterEach(() => {
@@ -69,6 +67,7 @@ describe('GospelSection (extra tests)', () => {
         onScriptureClick={onScriptureClick}
         versePins={[
           {
+            bookmarkId: 'bm-r1',
             colorId: 'red',
             reference: 'John 3:16',
             sectionId: 'section-s1',
@@ -89,7 +88,10 @@ describe('GospelSection (extra tests)', () => {
     const pin = await screen.findByRole('button', { name: /remove red pin/i })
     expect(pin).toBeInTheDocument()
     fireEvent.click(pin)
-    expect(onRemoveVersePin).toHaveBeenCalledWith('red')
+    expect(onRemoveVersePin).toHaveBeenCalledWith({
+      bookmarkId: 'bm-r1',
+      colorId: 'red',
+    })
   })
 
   it('highlights only one pill when duplicate references match a single anchored verse pin', async () => {
@@ -161,7 +163,7 @@ describe('GospelSection (extra tests)', () => {
 
     const pin = await screen.findByRole('button', { name: /remove yellow pin/i })
     fireEvent.click(pin)
-    expect(onRemoveVersePin).toHaveBeenCalledWith('yellow')
+    expect(onRemoveVersePin).toHaveBeenCalledWith({ colorId: 'yellow' })
   })
 
   it('loads saved answers, expands detail, saves successfully and clears saved state after timeout', async () => {

@@ -10,7 +10,7 @@ import {
   GOSPEL_MEMORIZATION_CHANGED_EVENT,
   isMemoizedForReference,
 } from '@/lib/verseMemorizationStorage'
-import type { VersePinColorId } from '@/lib/versePinStorage'
+import type { VerseBookmarkColorId, VersePinColorId } from '@/lib/versePinStorage'
 import ScriptureModalPinPick from '@/components/ScriptureModalPinPick'
 
 interface ScriptureModalProps {
@@ -30,7 +30,7 @@ interface ScriptureModalProps {
   versePinControl?: {
     draftColor: VersePinColorId
     onDraftColorChange: (value: VersePinColorId) => void
-    colorsAvailableInDropdown: VersePinColorId[]
+    colorsAvailableInDropdown: readonly VerseBookmarkColorId[]
   }
 }
 
@@ -163,7 +163,6 @@ export default function ScriptureModal({
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const behavior: ScrollBehavior = reduceMotion ? 'auto' : 'smooth'
 
-    const scrollPane = scrollAreaRef.current
     const verseNumbers = getVerseNumbers(reference)
     if (verseNumbers.length === 0) return
 
@@ -320,7 +319,6 @@ export default function ScriptureModal({
         abortController.abort()
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, reference, translation])
 
   const handleMemorize = () => {

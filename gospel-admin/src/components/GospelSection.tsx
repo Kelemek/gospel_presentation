@@ -16,6 +16,8 @@ type ScriptureClickHandler = (
   anchorSubsectionId?: string
 ) => void
 
+type VersePinRemoveHandler = (pin: Pick<VersePinAnchoredEntry, 'bookmarkId' | 'colorId'>) => void
+
 const ANSWERS_STORAGE_KEY_PREFIX = 'gospel-answers-'
 
 
@@ -103,7 +105,7 @@ function TextWithComaButtons({
   anchorSectionId?: string;
   anchorSubsectionId?: string;
   versePins?: VersePinAnchoredEntry[];
-  onRemoveVersePin?: (colorId: VersePinColorId) => void;
+  onRemoveVersePin?: VersePinRemoveHandler
 }) {
   const safeText = text ?? ''
 
@@ -254,7 +256,7 @@ function TextWithComaButtons({
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
-                    onRemoveVersePin(rowPin.colorId)
+                    onRemoveVersePin({ colorId: rowPin.colorId, bookmarkId: rowPin.bookmarkId })
                   }}
                   className={`absolute right-0 top-1/2 -translate-y-1/2 transition-colors cursor-pointer p-0.5 ${VERSE_PIN_PILL_STYLES[rowPin.colorId].unpinWrap}`}
                   title="Remove pin for this passage"
@@ -291,7 +293,7 @@ interface GospelSectionProps {
   section: GospelSectionType
   onScriptureClick: ScriptureClickHandler
   versePins?: VersePinAnchoredEntry[]
-  onRemoveVersePin?: (colorId: VersePinColorId) => void
+  onRemoveVersePin?: VersePinRemoveHandler
   profileSlug: string
   savedAnswers?: SavedAnswer[]
   isLoggedIn?: boolean
@@ -303,7 +305,7 @@ interface ScriptureReferencesProps {
   anchorSectionId: string
   anchorSubsectionId: string
   versePins?: VersePinAnchoredEntry[]
-  onRemoveVersePin?: (colorId: VersePinColorId) => void
+  onRemoveVersePin?: VersePinRemoveHandler
 }
 
 interface SubsectionProps {
@@ -312,7 +314,7 @@ interface SubsectionProps {
   subsectionIndex: number
   onScriptureClick: ScriptureClickHandler
   versePins?: VersePinAnchoredEntry[]
-  onRemoveVersePin?: (colorId: VersePinColorId) => void
+  onRemoveVersePin?: VersePinRemoveHandler
   profileSlug: string
   savedAnswers?: SavedAnswer[]
   isLoggedIn?: boolean
@@ -324,7 +326,7 @@ interface NestedSubsectionProps {
   nestedId: string
   onScriptureClick: ScriptureClickHandler
   versePins?: VersePinAnchoredEntry[]
-  onRemoveVersePin?: (colorId: VersePinColorId) => void
+  onRemoveVersePin?: VersePinRemoveHandler
   profileSlug: string
   savedAnswers?: SavedAnswer[]
   isLoggedIn?: boolean
@@ -376,7 +378,7 @@ function ScriptureReferences({
                   onClick={(e) => {
                     e.stopPropagation()
                     e.preventDefault()
-                    onRemoveVersePin(rowPin.colorId)
+                    onRemoveVersePin({ colorId: rowPin.colorId, bookmarkId: rowPin.bookmarkId })
                   }}
                   className={`absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer transition-colors p-1 z-10 ${VERSE_PIN_PILL_STYLES[rowPin.colorId].unpinWrap}`}
                   title={`Remove ${rowPin.colorId} pin for this passage`}
