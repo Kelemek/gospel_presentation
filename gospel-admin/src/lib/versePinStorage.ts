@@ -7,6 +7,9 @@ export type VersePinColorId = (typeof VERSE_PIN_COLOR_IDS)[number]
 
 export const VERSE_PIN_STORAGE_KEY_PREFIX = 'gospel-verse-pins-'
 
+/** Removed hook `useScriptureProgress` — one-time migrate from this key into verse pins (`yellow`). */
+export const LEGACY_SCRIPTURE_PROGRESS_KEY_PREFIX = 'gospel-scripture-progress-'
+
 const SCHEMA_VERSION = 1
 
 export interface VersePinSlotEntry {
@@ -75,6 +78,32 @@ export function versePinStorageKey(profileSlug: string): string {
   return `${VERSE_PIN_STORAGE_KEY_PREFIX}${profileSlug}`
 }
 
+export function legacyScriptureProgressStorageKey(profileSlug: string): string {
+  return `${LEGACY_SCRIPTURE_PROGRESS_KEY_PREFIX}${profileSlug}`
+}
+
+/**
+ * Parses legacy `{ reference, sectionId?, subsectionId?, viewedAt? }` from useScriptureProgress.
+ * Returns null when missing/invalid — same anchors as verse pins (`modal-view` when empty).
+ */
+export function parseLegacyScriptureProgress(value: string | null): VersePinSlotEntry | null {
+  if (!value) return null
+  try {
+    const parsed = JSON.parse(value) as unknown
+    if (!parsed || typeof parsed !== 'object') return null
+    const o = parsed as Record<string, unknown>
+    const reference = typeof o.reference === 'string' ? o.reference.trim() : ''
+    if (!reference) return null
+    const sectionId =
+      typeof o.sectionId === 'string' && o.sectionId.trim() !== '' ? o.sectionId.trim() : 'modal-view'
+    const subsectionId =
+      typeof o.subsectionId === 'string' && o.subsectionId.trim() !== '' ? o.subsectionId.trim() : 'modal-view'
+    return { reference, sectionId, subsectionId }
+  } catch {
+    return null
+  }
+}
+
 /** Missing or modal-view anchors match any display row with that reference; explicit section/subsection match that card. */
 export function anchoredPinMatchesDisplayRow(
   pin: Pick<VersePinSlotEntry, 'reference' | 'sectionId' | 'subsectionId'>,
@@ -102,20 +131,54 @@ export function pinnedVerseMatchesRow(
 export function loadVersePins(profileSlug: string): VersePinMapState {
   if (typeof window === 'undefined') return emptyByColor()
   try {
-    return parseStored(localStorage.getItem(versePinStorageKey(profileSlug)))
+    const map = parseStored(localStorage.getItem(versePinStorageKey(profileSlug)))
+    const hasAnyPin = VERSE_PIN_COLOR_IDS.some((id) => map[id] != null)
+    const legacyKey = legacyScriptureProgressStorageKey(profileSlug)
+
+    if (hasAnyPin) {
+      try {
+        localStorage.removeItem(legacyKey)
+      } catch {
+        /* ignore */
+      }
+      return map
+    }
+
+    const legacySlot = parseLegacyScriptureProgress(localStorage.getItem(legacyKey))
+    if (!legacySlot) {
+      return map
+    }
+
+    map.yellow = { ...legacySlot }
+    if (persistVersePinsOrFalse(profileSlug, map)) {
+      try {
+        localStorage.removeItem(legacyKey)
+      } catch {
+        /* ignore */
+      }
+    }
+    return map
   } catch {
     return emptyByColor()
   }
 }
 
-function savePins(profileSlug: string, map: VersePinMapState): void {
-  if (typeof window === 'undefined') return
+/** Returns true iff the map was written and read-back matches (avoids orphaning migration source on failed persist). */
+function persistVersePinsOrFalse(profileSlug: string, map: VersePinMapState): boolean {
+  if (typeof window === 'undefined') return false
   try {
+    const key = versePinStorageKey(profileSlug)
     const payload: StoredShape = { v: SCHEMA_VERSION, byColor: map }
-    localStorage.setItem(versePinStorageKey(profileSlug), JSON.stringify(payload))
+    const serialized = JSON.stringify(payload)
+    localStorage.setItem(key, serialized)
+    return localStorage.getItem(key) === serialized
   } catch {
-    /* ignore quota / privacy mode */
+    return false
   }
+}
+
+function savePins(profileSlug: string, map: VersePinMapState): void {
+  void persistVersePinsOrFalse(profileSlug, map)
 }
 
 export function clearAllVersePins(profileSlug: string): void {

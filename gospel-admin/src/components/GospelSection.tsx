@@ -10,6 +10,12 @@ import { useAlertModal } from '@/contexts/AlertModalContext'
 import type { VersePinAnchoredEntry, VersePinColorId } from '@/lib/versePinStorage'
 import { anchoredPinMatchesDisplayRow } from '@/lib/versePinStorage'
 
+type ScriptureClickHandler = (
+  reference: string,
+  anchorSectionId?: string,
+  anchorSubsectionId?: string
+) => void
+
 const ANSWERS_STORAGE_KEY_PREFIX = 'gospel-answers-'
 
 
@@ -409,7 +415,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
   // Load: localStorage first, then merge with DB if logged in (DB overrides)
   useEffect(() => {
     if (!isInitialized && questions.length >= 0) {
-      let loadedAnswers: Record<string, string> = {}
+      const loadedAnswers: Record<string, string> = {}
 
       try {
         const stored = localStorage.getItem(storageKey)

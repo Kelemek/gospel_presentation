@@ -9,7 +9,9 @@ import {
   anchoredPinMatchesDisplayRow,
   clearAllVersePins,
   clearVersePinsMatchingRow,
+  legacyScriptureProgressStorageKey,
   loadVersePins,
+  parseLegacyScriptureProgress,
   pinnedVerseMatchesRow,
   removeVersePinByColor,
   versePinStorageKey,
@@ -196,5 +198,100 @@ describe('versePinStorage', () => {
   test('invalid JSON yields empty map', () => {
     localStorage.setItem(versePinStorageKey('bad'), '{{')
     expect(loadVersePins('bad').red).toBeNull()
+  })
+
+  test('parseLegacyScriptureProgress ignores viewedAt', () => {
+    const slot = parseLegacyScriptureProgress(
+      JSON.stringify({
+        reference: 'Rom 8:1',
+        sectionId: '1',
+        subsectionId: 'b',
+        viewedAt: '2020-01-01T00:00:00.000Z',
+      })
+    )
+    expect(slot).toEqual({
+      reference: 'Rom 8:1',
+      sectionId: '1',
+      subsectionId: 'b',
+    })
+  })
+
+  test('parseLegacyScriptureProgress normalizes empty anchors to modal-view', () => {
+    const slot = parseLegacyScriptureProgress(
+      JSON.stringify({ reference: 'John 3:16', sectionId: '', subsectionId: '' })
+    )
+    expect(slot).toEqual({
+      reference: 'John 3:16',
+      sectionId: 'modal-view',
+      subsectionId: 'modal-view',
+    })
+  })
+
+  test('loadVersePins migrates legacy gospel-scripture-progress into yellow and removes legacy key', () => {
+    const slug = 'migrate-me'
+    const legacyKey = legacyScriptureProgressStorageKey(slug)
+    localStorage.setItem(
+      legacyKey,
+      JSON.stringify({
+        reference: 'John 3:16',
+        sectionId: '',
+        subsectionId: '',
+        viewedAt: '2025-04-01T12:00:00.000Z',
+      })
+    )
+
+    const map = loadVersePins(slug)
+    expect(map.yellow?.reference).toBe('John 3:16')
+    expect(map.yellow?.sectionId).toBe('modal-view')
+    expect(localStorage.getItem(legacyKey)).toBeNull()
+    const rawNew = localStorage.getItem(versePinStorageKey(slug))
+    expect(rawNew).toBeTruthy()
+    expect(JSON.parse(rawNew!).byColor.yellow.reference).toBe('John 3:16')
+  })
+
+  test('loadVersePins keeps legacy key when persist fails (e.g. quota exceeded)', () => {
+    const slug = 'quota'
+    const legacyKey = legacyScriptureProgressStorageKey(slug)
+    const legacyPayload = JSON.stringify({
+      reference: 'Ex 20:1',
+      sectionId: '',
+      subsectionId: '',
+    })
+    localStorage.setItem(legacyKey, legacyPayload)
+
+    const setItemSpy = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Quota has been exceeded', 'QuotaExceededError')
+    })
+
+    const map = loadVersePins(slug)
+    expect(map.yellow?.reference).toBe('Ex 20:1')
+    expect(localStorage.getItem(legacyKey)).toBe(legacyPayload)
+    expect(localStorage.getItem(versePinStorageKey(slug))).toBeNull()
+
+    setItemSpy.mockRestore()
+  })
+
+  test('loadVersePins does not migrate when verse pins already exist; drops stale legacy key', () => {
+    const slug = 'has-new'
+    assignVersePin(slug, 'red', { reference: 'A', sectionId: 's', subsectionId: 't' })
+    const legacyKey = legacyScriptureProgressStorageKey(slug)
+    localStorage.setItem(
+      legacyKey,
+      JSON.stringify({ reference: 'Luke 1:1', sectionId: '', subsectionId: '' })
+    )
+
+    const map = loadVersePins(slug)
+    expect(map.red?.reference).toBe('A')
+    expect(map.yellow).toBeNull()
+    expect(localStorage.getItem(legacyKey)).toBeNull()
+  })
+
+  test('loadVersePins skips invalid legacy data without migrating', () => {
+    const slug = 'legacy-bad'
+    const legacyKey = legacyScriptureProgressStorageKey(slug)
+    localStorage.setItem(legacyKey, '{"notReference":true}')
+    const map = loadVersePins(slug)
+    expect(map.yellow).toBeNull()
+    expect(localStorage.getItem(legacyKey)).not.toBeNull()
   })
 })

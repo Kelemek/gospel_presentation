@@ -51,6 +51,8 @@ When users click a scripture reference, a modal displays the full text with thes
 
 On profile pages, readers can mark up to **five** passages at once (one per color) for quick visual wayfinding. Pins are **device-only** (`localStorage`); they are not written to Supabase.
 
+**First-load migration (localStorage)**: If there is nothing under `gospel-verse-pins-{profileSlug}` but the old **`gospel-scripture-progress-{profileSlug}`** key still exists from the earlier single-slot progress store, **`loadVersePins`** copies that passage into the **yellow** pin, persists the new key, and removes the legacy key **only after** a successful verified write (so quota / storage failures cannot delete the legacy key before the migration is durable). Invalid legacy JSON is ignored (the stale key stays until cleared manually).
+
 **Legacy note**: The `last_viewed_scripture` column and `GospelProfile.lastViewedScripture` in types remain in the schema and API for older data/admins but the **presentation viewer** no longer uses them for highlights or sync.
 
 ## Profile Features
