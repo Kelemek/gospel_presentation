@@ -1,11 +1,14 @@
 'use client'
 
-import { GospelSection as GospelSectionType, Subsection, NestedSubsection, ScriptureReference, QuestionAnswer, PROFILE_VALIDATION, SavedAnswer, ScriptureProgressPin } from '@/lib/types'
+import { GospelSection as GospelSectionType, Subsection, NestedSubsection, ScriptureReference, QuestionAnswer, PROFILE_VALIDATION, SavedAnswer } from '@/lib/types'
 import ScriptureHoverModal from './ScriptureHoverModal'
 import ComaModal from './ComaModal'
 import FourRulesModal from './FourRulesModal'
+import VersePinGlyph from './VersePinGlyph'
 import React, { useState, useEffect } from 'react'
 import { useAlertModal } from '@/contexts/AlertModalContext'
+import type { VersePinAnchoredEntry, VersePinColorId } from '@/lib/versePinStorage'
+import { anchoredPinMatchesDisplayRow } from '@/lib/versePinStorage'
 
 const ANSWERS_STORAGE_KEY_PREFIX = 'gospel-answers-'
 
@@ -13,26 +16,67 @@ const ANSWERS_STORAGE_KEY_PREFIX = 'gospel-answers-'
 const PILL_LINK_CLASS = 'px-1.5 py-0.5 font-medium text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-800/50 border border-blue-200 dark:border-blue-700 rounded transition-colors cursor-pointer whitespace-nowrap no-underline'
 const PILL_STYLE: React.CSSProperties = { display: 'inline', margin: '0 2px', verticalAlign: 'baseline', fontSize: 'inherit' }
 
-export type ScriptureClickHandler = (reference: string, sectionId?: string, subsectionId?: string) => void
+const VERSE_PIN_PILL_STYLES: Record<
+  VersePinColorId,
+  { pill: string; unpinWrap: string }
+> = {
+  red: {
+    pill:
+      'px-1.5 py-0.5 font-semibold text-red-900 dark:text-red-100 bg-red-200 dark:bg-red-950/55 hover:bg-red-300 dark:hover:bg-red-900/65 border-2 border-red-500 dark:border-red-700 hover:border-red-600 dark:hover:border-red-500 rounded transition-colors cursor-pointer whitespace-nowrap no-underline pr-5',
+    unpinWrap:
+      'text-red-800 dark:text-red-200 hover:text-red-950 dark:hover:text-red-50',
+  },
+  blue: {
+    pill:
+      'px-1.5 py-0.5 font-semibold text-blue-900 dark:text-blue-100 bg-blue-200 dark:bg-blue-950/50 hover:bg-blue-300 dark:hover:bg-blue-900/60 border-2 border-blue-500 dark:border-blue-700 hover:border-blue-600 dark:hover:border-blue-500 rounded transition-colors cursor-pointer whitespace-nowrap no-underline pr-5',
+    unpinWrap:
+      'text-blue-800 dark:text-blue-200 hover:text-blue-950 dark:hover:text-blue-50',
+  },
+  yellow: {
+    pill:
+      'px-1.5 py-0.5 font-semibold text-yellow-900 dark:text-yellow-100 bg-yellow-200 dark:bg-yellow-900/45 hover:bg-yellow-300 dark:hover:bg-yellow-900/65 border-2 border-yellow-500 dark:border-yellow-700 hover:border-yellow-600 dark:hover:border-yellow-500 rounded transition-colors cursor-pointer whitespace-nowrap no-underline pr-5',
+    unpinWrap:
+      'text-yellow-900 dark:text-yellow-200 hover:text-yellow-950 dark:hover:text-yellow-50',
+  },
+  green: {
+    pill:
+      'px-1.5 py-0.5 font-semibold text-emerald-950 dark:text-emerald-50 bg-emerald-200 dark:bg-emerald-950/45 hover:bg-emerald-300 dark:hover:bg-emerald-900/60 border-2 border-emerald-600 dark:border-emerald-700 hover:border-emerald-700 dark:hover:border-emerald-500 rounded transition-colors cursor-pointer whitespace-nowrap no-underline pr-5',
+    unpinWrap:
+      'text-emerald-900 dark:text-emerald-200 hover:text-emerald-950 dark:hover:text-emerald-50',
+  },
+  violet: {
+    pill:
+      'px-1.5 py-0.5 font-semibold text-violet-900 dark:text-violet-100 bg-violet-200 dark:bg-violet-950/45 hover:bg-violet-300 dark:hover:bg-violet-900/60 border-2 border-violet-600 dark:border-violet-700 hover:border-violet-700 dark:hover:border-violet-500 rounded transition-colors cursor-pointer whitespace-nowrap no-underline pr-5',
+    unpinWrap:
+      'text-violet-900 dark:text-violet-200 hover:text-violet-950 dark:hover:text-violet-50',
+  },
+}
 
-function scripturePinMatchesRow(
-  pin: ScriptureProgressPin | undefined,
-  ref: ScriptureReference,
-  anchorSectionId: string,
-  anchorSubsectionId: string
-): boolean {
-  if (pin == null || pin === '') return false
-  if (typeof pin === 'string') {
-    return pin === ref.reference
-  }
-  if (pin.reference !== ref.reference) return false
-  const isModalPlaceholder =
-    pin.sectionId === 'modal-view' && pin.subsectionId === 'modal-view'
-  const missingAnchors = !pin.sectionId?.trim() || !pin.subsectionId?.trim()
-  if (missingAnchors || isModalPlaceholder) {
-    return true
-  }
-  return pin.sectionId === anchorSectionId && pin.subsectionId === anchorSubsectionId
+const VERSE_PIN_CARD_CLASSES: Record<VersePinColorId, string> = {
+  red:
+    'bg-red-200 dark:bg-red-950/45 hover:bg-red-300 dark:hover:bg-red-900/60 text-red-900 dark:text-red-100 border-2 border-red-500 dark:border-red-700 hover:border-red-600 dark:hover:border-red-500 font-semibold shadow-md pr-10',
+  blue:
+    'bg-blue-200 dark:bg-blue-950/40 hover:bg-blue-300 dark:hover:bg-blue-900/55 text-blue-900 dark:text-blue-100 border-2 border-blue-500 dark:border-blue-700 hover:border-blue-600 dark:hover:border-blue-500 font-semibold shadow-md pr-10',
+  yellow:
+    'bg-yellow-200 dark:bg-yellow-900/40 hover:bg-yellow-300 dark:hover:bg-yellow-900/60 text-yellow-900 dark:text-yellow-100 border-2 border-yellow-500 dark:border-yellow-700 hover:border-yellow-600 dark:hover:border-yellow-500 font-semibold shadow-md pr-10',
+  green:
+    'bg-emerald-200 dark:bg-emerald-950/40 hover:bg-emerald-300 dark:hover:bg-emerald-900/55 text-emerald-950 dark:text-emerald-50 border-2 border-emerald-600 dark:border-emerald-700 hover:border-emerald-700 dark:hover:border-emerald-500 font-semibold shadow-md pr-10',
+  violet:
+    'bg-violet-200 dark:bg-violet-950/40 hover:bg-violet-300 dark:hover:bg-violet-900/55 text-violet-900 dark:text-violet-100 border-2 border-violet-600 dark:border-violet-700 hover:border-violet-700 dark:hover:border-violet-500 font-semibold shadow-md pr-10',
+}
+
+function versePinForRow(
+  versePins: VersePinAnchoredEntry[] | undefined,
+  reference: string,
+  anchorSectionId: string | undefined,
+  anchorSubsectionId: string | undefined
+): VersePinAnchoredEntry | null {
+  if (!versePins?.length || !anchorSectionId || !anchorSubsectionId) return null
+  return (
+    versePins.find((pin) =>
+      anchoredPinMatchesDisplayRow(pin, reference, anchorSectionId, anchorSubsectionId)
+    ) ?? null
+  )
 }
 
 // Helper component to render text with COMA buttons, Four Rules button, and inline scripture references
@@ -43,8 +87,8 @@ function TextWithComaButtons({
   onFourRulesClick,
   anchorSectionId,
   anchorSubsectionId,
-  lastViewedScripture,
-  onClearProgress,
+  versePins,
+  onRemoveVersePin,
 }: {
   text: string;
   onComaClick: () => void;
@@ -52,8 +96,8 @@ function TextWithComaButtons({
   onFourRulesClick?: () => void;
   anchorSectionId?: string;
   anchorSubsectionId?: string;
-  lastViewedScripture?: ScriptureProgressPin;
-  onClearProgress?: () => void;
+  versePins?: VersePinAnchoredEntry[];
+  onRemoveVersePin?: (colorId: VersePinColorId) => void;
 }) {
   const safeText = text ?? ''
 
@@ -171,15 +215,10 @@ function TextWithComaButtons({
       )
     } else if (part === scriptureMarker && scriptureIndex < cleanReferences.length) {
       const reference = cleanReferences[scriptureIndex++]
-      const isLastViewedInline =
-        anchorSectionId != null &&
-        anchorSubsectionId != null &&
-        scripturePinMatchesRow(
-          lastViewedScripture,
-          { reference, favorite: false },
-          anchorSectionId,
-          anchorSubsectionId
-        )
+      const rowPin =
+        anchorSectionId != null && anchorSubsectionId != null
+          ? versePinForRow(versePins, reference, anchorSectionId, anchorSubsectionId)
+          : null
 
       if (onScriptureClick) {
         return (
@@ -191,8 +230,8 @@ function TextWithComaButtons({
               <button
                 type="button"
                 className={
-                  isLastViewedInline
-                    ? 'px-1.5 py-0.5 font-semibold text-yellow-900 dark:text-yellow-100 bg-yellow-200 dark:bg-yellow-900/50 hover:bg-yellow-300 dark:hover:bg-yellow-900/70 border-2 border-yellow-500 dark:border-yellow-600 hover:border-yellow-600 dark:hover:border-yellow-500 rounded transition-colors cursor-pointer whitespace-nowrap no-underline pr-5'
+                  rowPin
+                    ? VERSE_PIN_PILL_STYLES[rowPin.colorId].pill
                     : PILL_LINK_CLASS
                 }
                 onClick={(e) => {
@@ -204,17 +243,18 @@ function TextWithComaButtons({
               >
                 {reference}
               </button>
-              {isLastViewedInline && onClearProgress && (
+              {rowPin && onRemoveVersePin && (
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation()
-                    onClearProgress()
+                    onRemoveVersePin(rowPin.colorId)
                   }}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 text-yellow-700 dark:text-yellow-300 hover:text-yellow-800 dark:hover:text-yellow-200 transition-colors cursor-pointer p-0.5"
-                  title="Click to clear progress"
+                  className={`absolute right-0 top-1/2 -translate-y-1/2 transition-colors cursor-pointer p-0.5 ${VERSE_PIN_PILL_STYLES[rowPin.colorId].unpinWrap}`}
+                  title="Remove pin for this passage"
+                  aria-label={`Remove ${rowPin.colorId} pin for ${reference}`}
                 >
-                  📍
+                  <VersePinGlyph colorId={rowPin.colorId} />
                 </button>
               )}
             </span>
@@ -244,8 +284,8 @@ function TextWithComaButtons({
 interface GospelSectionProps {
   section: GospelSectionType
   onScriptureClick: ScriptureClickHandler
-  lastViewedScripture?: ScriptureProgressPin
-  onClearProgress?: () => void  // Function to clear progress when pin is clicked
+  versePins?: VersePinAnchoredEntry[]
+  onRemoveVersePin?: (colorId: VersePinColorId) => void
   profileSlug: string
   savedAnswers?: SavedAnswer[]
   isLoggedIn?: boolean
@@ -256,8 +296,8 @@ interface ScriptureReferencesProps {
   onScriptureClick: ScriptureClickHandler
   anchorSectionId: string
   anchorSubsectionId: string
-  lastViewedScripture?: ScriptureProgressPin
-  onClearProgress?: () => void
+  versePins?: VersePinAnchoredEntry[]
+  onRemoveVersePin?: (colorId: VersePinColorId) => void
 }
 
 interface SubsectionProps {
@@ -265,8 +305,8 @@ interface SubsectionProps {
   sectionId: string
   subsectionIndex: number
   onScriptureClick: ScriptureClickHandler
-  lastViewedScripture?: ScriptureProgressPin
-  onClearProgress?: () => void
+  versePins?: VersePinAnchoredEntry[]
+  onRemoveVersePin?: (colorId: VersePinColorId) => void
   profileSlug: string
   savedAnswers?: SavedAnswer[]
   isLoggedIn?: boolean
@@ -277,30 +317,35 @@ interface NestedSubsectionProps {
   sectionAnchorId: string
   nestedId: string
   onScriptureClick: ScriptureClickHandler
-  lastViewedScripture?: ScriptureProgressPin
-  onClearProgress?: () => void
+  versePins?: VersePinAnchoredEntry[]
+  onRemoveVersePin?: (colorId: VersePinColorId) => void
   profileSlug: string
   savedAnswers?: SavedAnswer[]
   isLoggedIn?: boolean
 }
 
-function ScriptureReferences({ references, onScriptureClick, anchorSectionId, anchorSubsectionId, lastViewedScripture, onClearProgress }: ScriptureReferencesProps) {
+function ScriptureReferences({
+  references,
+  onScriptureClick,
+  anchorSectionId,
+  anchorSubsectionId,
+  versePins,
+  onRemoveVersePin,
+}: ScriptureReferencesProps) {
   if (!references || references.length === 0) return null
-
-  const handlePinClick = (e: React.MouseEvent) => {
-    e.stopPropagation() // Prevent the button click from firing
-    e.preventDefault() // Prevent any default behavior
-    if (onClearProgress) {
-      onClearProgress()
-    }
-  }
 
   return (
     <div className="mt-3 print-scripture">
       <div className="flex flex-wrap gap-2">
         {references.map((ref, index) => {
-          const isLastViewed = scripturePinMatchesRow(lastViewedScripture, ref, anchorSectionId, anchorSubsectionId)
-          
+          const rowPin = versePinForRow(versePins, ref.reference, anchorSectionId, anchorSubsectionId)
+
+          const cardTone = rowPin
+            ? VERSE_PIN_CARD_CLASSES[rowPin.colorId]
+            : ref.favorite
+              ? 'bg-blue-200 dark:bg-blue-900/50 hover:bg-blue-300 dark:hover:bg-blue-900/70 text-blue-900 dark:text-blue-100 border-2 border-blue-400 dark:border-blue-600 hover:border-blue-500 dark:hover:border-blue-500 font-medium'
+              : 'bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600'
+
           return (
             <div key={index} className="relative inline-block">
               <ScriptureHoverModal
@@ -310,29 +355,28 @@ function ScriptureReferences({ references, onScriptureClick, anchorSectionId, an
                 <button
                   type="button"
                   data-tour="scripture-card"
-                  data-scripture-last-viewed={isLastViewed ? 'true' : undefined}
+                  data-scripture-verse-pinned={rowPin ? 'true' : undefined}
+                  data-scripture-pin-color={rowPin?.colorId}
                   onClick={() => onScriptureClick(ref.reference, anchorSectionId, anchorSubsectionId)}
-                  className={`px-4 py-2 text-base md:text-lg rounded-md transition-colors cursor-pointer print-compact min-h-[44px] flex items-center ${
-                    isLastViewed
-                      ? 'bg-yellow-200 dark:bg-yellow-900/50 hover:bg-yellow-300 dark:hover:bg-yellow-900/70 text-yellow-900 dark:text-yellow-100 border-2 border-yellow-500 dark:border-yellow-600 hover:border-yellow-600 dark:hover:border-yellow-500 font-semibold shadow-md pr-10'
-                      : ref.favorite 
-                        ? 'bg-blue-200 dark:bg-blue-900/50 hover:bg-blue-300 dark:hover:bg-blue-900/70 text-blue-900 dark:text-blue-100 border-2 border-blue-400 dark:border-blue-600 hover:border-blue-500 dark:hover:border-blue-500 font-medium' 
-                        : 'bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600'
-                  }`}
+                  className={`px-4 py-2 text-base md:text-lg rounded-md transition-colors cursor-pointer print-compact min-h-[44px] flex items-center ${cardTone}`}
                 >
                   {ref.reference}
                 </button>
               </ScriptureHoverModal>
-              {isLastViewed && (
+              {rowPin && onRemoveVersePin && (
                 <button
                   type="button"
                   data-tour="scripture-progress-unpin"
-                  onClick={handlePinClick}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-yellow-700 dark:text-yellow-300 hover:text-yellow-800 dark:hover:text-yellow-200 cursor-pointer transition-colors p-1 z-10"
-                  title="Click to clear progress"
-                  aria-label="Clear reading progress for this passage"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    e.preventDefault()
+                    onRemoveVersePin(rowPin.colorId)
+                  }}
+                  className={`absolute right-2 top-1/2 transform -translate-y-1/2 cursor-pointer transition-colors p-1 z-10 ${VERSE_PIN_PILL_STYLES[rowPin.colorId].unpinWrap}`}
+                  title={`Remove ${rowPin.colorId} pin for this passage`}
+                  aria-label={`Remove ${rowPin.colorId} pin for ${ref.reference}`}
                 >
-                  📍
+                  <VersePinGlyph colorId={rowPin.colorId} />
                 </button>
               )}
             </div>
@@ -644,7 +688,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
   )
 }
 
-function NestedSubsectionComponent({ nestedSubsection, sectionAnchorId, nestedId, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers, isLoggedIn }: NestedSubsectionProps) {
+function NestedSubsectionComponent({ nestedSubsection, sectionAnchorId, nestedId, onScriptureClick, versePins, onRemoveVersePin, profileSlug, savedAnswers, isLoggedIn }: NestedSubsectionProps) {
   const [showComaModal, setShowComaModal] = useState(false)
   const [showFourRulesModal, setShowFourRulesModal] = useState(false)
 
@@ -663,8 +707,8 @@ function NestedSubsectionComponent({ nestedSubsection, sectionAnchorId, nestedId
             onFourRulesClick={() => setShowFourRulesModal(true)}
             anchorSectionId={sectionAnchorId}
             anchorSubsectionId={nestedId}
-            lastViewedScripture={lastViewedScripture}
-            onClearProgress={onClearProgress}
+            versePins={versePins}
+            onRemoveVersePin={onRemoveVersePin}
           />
         </h5>
         <div className="text-slate-700 dark:text-slate-300 mb-2 print-content text-base md:text-lg leading-relaxed">
@@ -675,8 +719,8 @@ function NestedSubsectionComponent({ nestedSubsection, sectionAnchorId, nestedId
             onFourRulesClick={() => setShowFourRulesModal(true)}
             anchorSectionId={sectionAnchorId}
             anchorSubsectionId={nestedId}
-            lastViewedScripture={lastViewedScripture}
-            onClearProgress={onClearProgress}
+            versePins={versePins}
+            onRemoveVersePin={onRemoveVersePin}
           />
         </div>
         {nestedSubsection.scriptureReferences && (
@@ -685,8 +729,8 @@ function NestedSubsectionComponent({ nestedSubsection, sectionAnchorId, nestedId
             onScriptureClick={onScriptureClick} 
             anchorSectionId={sectionAnchorId}
             anchorSubsectionId={nestedId}
-            lastViewedScripture={lastViewedScripture}
-            onClearProgress={onClearProgress}
+            versePins={versePins}
+            onRemoveVersePin={onRemoveVersePin}
           />
         )}
         {nestedSubsection.questions && (
@@ -703,7 +747,7 @@ function NestedSubsectionComponent({ nestedSubsection, sectionAnchorId, nestedId
   )
 }
 
-function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers, isLoggedIn }: SubsectionProps) {
+function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptureClick, versePins, onRemoveVersePin, profileSlug, savedAnswers, isLoggedIn }: SubsectionProps) {
   const [showComaModal, setShowComaModal] = useState(false)
   const [showFourRulesModal, setShowFourRulesModal] = useState(false)
 
@@ -722,8 +766,8 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
             onFourRulesClick={() => setShowFourRulesModal(true)}
             anchorSectionId={sectionId}
             anchorSubsectionId={`${sectionId}-${subsectionIndex}`}
-            lastViewedScripture={lastViewedScripture}
-            onClearProgress={onClearProgress}
+            versePins={versePins}
+            onRemoveVersePin={onRemoveVersePin}
           />
         </h4>
         {subsection.content && !subsection.nestedSubsections?.length && (
@@ -735,8 +779,8 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
               onFourRulesClick={() => setShowFourRulesModal(true)}
               anchorSectionId={sectionId}
               anchorSubsectionId={`${sectionId}-${subsectionIndex}`}
-              lastViewedScripture={lastViewedScripture}
-              onClearProgress={onClearProgress}
+              versePins={versePins}
+              onRemoveVersePin={onRemoveVersePin}
             />
           </div>
         )}
@@ -747,8 +791,8 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
             onScriptureClick={onScriptureClick} 
             anchorSectionId={sectionId}
             anchorSubsectionId={`${sectionId}-${subsectionIndex}`}
-            lastViewedScripture={lastViewedScripture}
-            onClearProgress={onClearProgress}
+            versePins={versePins}
+            onRemoveVersePin={onRemoveVersePin}
           />
         )}
       
@@ -771,8 +815,8 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
               sectionAnchorId={sectionId}
               nestedId={`${sectionId}-${subsectionIndex}-${nestedIndex}`}
               onScriptureClick={onScriptureClick}
-              lastViewedScripture={lastViewedScripture}
-              onClearProgress={onClearProgress}
+              versePins={versePins}
+              onRemoveVersePin={onRemoveVersePin}
               profileSlug={profileSlug}
               savedAnswers={savedAnswers}
               isLoggedIn={isLoggedIn}
@@ -789,8 +833,8 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
             onFourRulesClick={() => setShowFourRulesModal(true)}
             anchorSectionId={sectionId}
             anchorSubsectionId={`${sectionId}-${subsectionIndex}`}
-            lastViewedScripture={lastViewedScripture}
-            onClearProgress={onClearProgress}
+            versePins={versePins}
+            onRemoveVersePin={onRemoveVersePin}
           />
         </div>
       )}
@@ -799,7 +843,7 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
   )
 }
 
-export default function GospelSection({ section, onScriptureClick, lastViewedScripture, onClearProgress, profileSlug, savedAnswers, isLoggedIn }: GospelSectionProps) {
+export default function GospelSection({ section, onScriptureClick, versePins, onRemoveVersePin, profileSlug, savedAnswers, isLoggedIn }: GospelSectionProps) {
   const sectionId = `section-${section.section}`
   const [showComaModal, setShowComaModal] = useState(false)
   const [showFourRulesModal, setShowFourRulesModal] = useState(false)
@@ -818,8 +862,8 @@ export default function GospelSection({ section, onScriptureClick, lastViewedScr
           onFourRulesClick={() => setShowFourRulesModal(true)}
           anchorSectionId={sectionId}
           anchorSubsectionId={sectionId}
-          lastViewedScripture={lastViewedScripture}
-          onClearProgress={onClearProgress}
+          versePins={versePins}
+          onRemoveVersePin={onRemoveVersePin}
         />
       </h3>
       
@@ -846,8 +890,8 @@ export default function GospelSection({ section, onScriptureClick, lastViewedScr
             sectionId={sectionId}
             subsectionIndex={index}
             onScriptureClick={onScriptureClick}
-            lastViewedScripture={lastViewedScripture}
-            onClearProgress={onClearProgress}
+            versePins={versePins}
+            onRemoveVersePin={onRemoveVersePin}
             profileSlug={profileSlug}
             savedAnswers={savedAnswers}
             isLoggedIn={isLoggedIn}

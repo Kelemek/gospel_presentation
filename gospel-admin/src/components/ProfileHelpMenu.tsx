@@ -98,7 +98,7 @@ const TUTORIALS: TutorialItem[] = [
   {
     id: 'scriptureModal',
     label: 'Scripture reader',
-    description: 'Cards, compare, chapter context, pin, and Menu reset',
+    description: 'Cards, compare, chapter context, colored local pins, and Menu clear-all',
     run: runScriptureModalFeatureTour,
   },
   {

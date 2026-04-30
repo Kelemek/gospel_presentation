@@ -34,7 +34,7 @@ export default function PrivacyPage() {
             <ul className="text-slate-700 dark:text-slate-200 space-y-3 leading-relaxed text-base md:text-lg">
               <li className="flex items-start">
                 <span className="text-slate-600 dark:text-slate-400 font-bold mr-3">•</span>
-                <span><strong className="text-slate-800 dark:text-slate-100">Usage data:</strong> which gospel profile you view, scripture reading progress, and saved answers to questions—all stored only on your device.</span>
+                <span><strong className="text-slate-800 dark:text-slate-100">Usage data:</strong> which gospel profile you view, locally pinned scripture passages, and saved answers to questions—all stored only on your device.</span>
               </li>
               <li className="flex items-start">
                 <span className="text-slate-600 dark:text-slate-400 font-bold mr-3">•</span>

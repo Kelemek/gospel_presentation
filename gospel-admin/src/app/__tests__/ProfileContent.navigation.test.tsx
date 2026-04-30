@@ -1,33 +1,27 @@
 /**
- * Tests for ProfileContent navigation and progress interactions.
- *
- * - Mocks `useScriptureProgress` to capture calls to trackScriptureView/resetProgress
- * - Renders ProfileContent with a minimal sections payload
+ * Navigation + scripture modal smoke tests (pins are localStorage-only).
  */
 import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-// Create mutable mocks that the jest.mock factory below will close over.
-const trackMock = jest.fn()
-const resetMock = jest.fn()
-const lastViewed: { reference: string | null } = { reference: null }
+jest.mock('@/components/ThemeToggle', () => ({ __esModule: true, default: () => null }))
+jest.mock('@/components/BookmarksDropdown', () => ({ __esModule: true, default: () => null }))
+jest.mock('@/components/SidebarAuthNav', () => ({ __esModule: true, default: () => null }))
+jest.mock('@/components/ProfileHelpMenu', () => ({ __esModule: true, default: () => null }))
+jest.mock('@/components/PresentationFirstVisitWelcome', () => ({ __esModule: true, default: () => null }))
+jest.mock('@/components/TableOfContents', () => ({ __esModule: true, default: () => null }))
+jest.mock('@/components/MemorizationPracticeSession', () => ({ __esModule: true, default: () => null }))
 
-jest.mock('@/lib/useScriptureProgress', () => ({
-  useScriptureProgress: (_profile: any) => ({
-    trackScriptureView: trackMock,
-    resetProgress: resetMock,
-    lastViewedScripture: lastViewed.reference ? { reference: lastViewed.reference } : null,
-    isLoading: false,
-    error: null,
-  })
+jest.mock('@/lib/supabase/client', () => ({
+  __esModule: true,
+  createClient: () => ({
+    auth: {
+      getUser: async () => ({ data: { user: null } }),
+    },
+  }),
 }))
 
-jest.mock('@/components/ThemeToggle', () => ({ __esModule: true, default: () => null }))
-
-jest.mock('@/components/BookmarksDropdown', () => ({ __esModule: true, default: () => null }))
-
-// Import after mocking hooks
 import ProfileContent from '@/app/[slug]/ProfileContent'
 
 const sectionsPayload = [
@@ -40,64 +34,79 @@ const sectionsPayload = [
         content: '<p>Some content</p>',
         scriptureReferences: [
           { reference: 'John 3:16', favorite: false },
-          { reference: 'John 4:1', favorite: false }
-        ]
-      }
-    ]
-  }
+          { reference: 'John 4:1', favorite: false },
+        ],
+      },
+    ],
+  },
 ]
 
 const profileInfo = {
   title: 'Profile',
   slug: 'p1',
-  favoriteScriptures: []
+  favoriteScriptures: [],
 }
 
-describe('ProfileContent navigation & progress', () => {
+describe('ProfileContent navigation & pins', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    // Ensure unauthenticated by default; tests can set this localStorage marker
-    // to simulate an authenticated user (the jest.setup client reads this).
-    ;(global.localStorage as any).getItem = jest.fn(() => undefined)
-    lastViewed.reference = null
+    localStorage.clear()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(global as any).fetch = jest.fn((input: RequestInfo | URL | any) => {
+      const url = typeof input === 'string' ? input : String(input)
+      if (url.includes('/visit')) return Promise.resolve({ ok: true, json: async () => ({}) }) as any
+      if (url.includes('/api/scripture')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ text: '[1] Scripture text.' }),
+        }) as unknown as Response
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) }) as unknown as Response
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    }) as any
   })
 
-  test('clicking a scripture opens modal and calls trackScriptureView when profile is non-default', async () => {
-  // Simulate an authenticated, non-default profile -> createClient.auth.getUser returns user
-  ;(global.localStorage as any).getItem = jest.fn(() => JSON.stringify({ isAuthenticated: true, sessionToken: 't' }))
-
-    // Provide a non-default profile object so tracking runs
+  test('clicking scripture opens modal', async () => {
+    const user = userEvent.setup()
     const profile = { id: 'p', isDefault: false }
 
     render(<ProfileContent sections={sectionsPayload as any} profileInfo={profileInfo as any} profile={profile as any} />)
 
-  // Wait for scripture button to appear then click the first matching button
-  const btns = await screen.findAllByRole('button', { name: /John 3:16/i })
-  // The first matching button is the scripture button rendered inside GospelSection
-  await userEvent.click(btns[0])
+    const john = await screen.findByRole('button', { name: /^John 3:16$/i })
+    await user.click(john)
 
-    // trackScriptureView should have been called once for the click
-    await waitFor(() => expect(trackMock).toHaveBeenCalled())
-
-    // The ScriptureModal should render the reference heading when open
-  const heading = await screen.findByRole('heading', { name: /John 3:16/i })
-    expect(heading).toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /john 3:16/i })).toBeInTheDocument()
+    )
   })
 
-  test('clicking the last-viewed pin calls resetProgress', async () => {
-    // Simulate a last-viewed scripture so the pin is rendered
-  ;(global.localStorage as any).getItem = jest.fn(() => JSON.stringify({ isAuthenticated: true, sessionToken: 't' }))
-  lastViewed.reference = 'John 3:16'
-
+  test('removing verse pin invokes onRemove handler', async () => {
+    const user = userEvent.setup()
     const profile = { id: 'p', isDefault: false }
+
+    localStorage.setItem(
+      'gospel-verse-pins-p1',
+      JSON.stringify({
+        v: 1,
+        byColor: {
+          red: {
+            reference: 'John 3:16',
+            sectionId: 'section-1',
+            subsectionId: 'section-1-0',
+          },
+          blue: null,
+          yellow: null,
+          green: null,
+          violet: null,
+        },
+      })
+    )
 
     render(<ProfileContent sections={sectionsPayload as any} profileInfo={profileInfo as any} profile={profile as any} />)
 
-    // The pin button has a title 'Click to clear progress' - find it and click
-    const pin = await screen.findByTitle(/Click to clear progress/i)
-    await userEvent.click(pin)
+    const unpinBtn = await screen.findByRole('button', { name: /remove red pin/i })
+    await user.click(unpinBtn)
 
-    // resetProgress should have been invoked via the handler
-    await waitFor(() => expect(resetMock).toHaveBeenCalled())
+    await waitFor(() => expect(localStorage.getItem('gospel-verse-pins-p1')).toBeNull())
   })
 })

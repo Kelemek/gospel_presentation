@@ -64,13 +64,30 @@ describe('ScriptureModal additional behaviors', () => {
     expect(inner).toMatch(/And then/)
   })
 
-  it('calls onScriptureViewed after successful scripture fetch', async () => {
-    const onViewed = jest.fn()
+  it('shows pin icon picker when versePinControl is provided', async () => {
+    const user = userEvent.setup()
+    const onDraft = jest.fn()
     mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ text: 'Scripture body' }) } as unknown as Response)
 
-    render(<ScriptureModal {...defaultProps} onScriptureViewed={onViewed} />)
+    render(
+      <ScriptureModal
+        {...defaultProps}
+        versePinControl={{
+          draftColor: 'yellow',
+          onDraftColorChange: onDraft,
+          colorsAvailableInDropdown: ['red', 'blue'],
+        }}
+      />
+    )
 
-    await waitFor(() => expect(onViewed).toHaveBeenCalledWith('Genesis 1:1-2'))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^Pin color:/i })).toBeInTheDocument()
+    )
+    await user.click(screen.getByRole('button', { name: /^Pin color:/i }))
+    expect(screen.getByRole('option', { name: /^Red pin$/i })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('option', { name: /^Blue pin$/i }))
+    expect(onDraft).toHaveBeenCalledWith('blue')
   })
 
   it('handles left and right swipe to trigger navigation', async () => {

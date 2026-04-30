@@ -47,9 +47,9 @@ describe('GospelSection (extra tests)', () => {
     jest.resetAllMocks()
   })
 
-  it('renders scripture button, handles click, and shows pin which calls onClearProgress', async () => {
+  it('renders scripture button, handles click, and shows pin control that calls onRemoveVersePin', async () => {
     const onScriptureClick = jest.fn()
-    const onClearProgress = jest.fn()
+    const onRemoveVersePin = jest.fn()
 
     const section = {
       section: 's1',
@@ -58,51 +58,41 @@ describe('GospelSection (extra tests)', () => {
         {
           title: 'Sub 1',
           content: 'Some content',
-          scriptureReferences: [
-            { reference: 'John 3:16', favorite: true },
-          ],
-        }
-      ]
+          scriptureReferences: [{ reference: 'John 3:16', favorite: true }],
+        },
+      ],
     }
 
-    const { rerender } = render(
+    render(
       <GospelSection
         section={section}
         onScriptureClick={onScriptureClick}
+        versePins={[
+          {
+            colorId: 'red',
+            reference: 'John 3:16',
+            sectionId: 'section-s1',
+            subsectionId: 'section-s1-0',
+          },
+        ]}
+        onRemoveVersePin={onRemoveVersePin}
         profileSlug={'test-profile'}
       />
     )
 
-    const btn = await screen.findByRole('button', { name: /John 3:16/i })
+    const btn = await screen.findByRole('button', { name: /^John 3:16$/i })
     expect(btn).toBeInTheDocument()
 
-    // click scripture button (pills pass section/subsection anchors for progress)
     fireEvent.click(btn)
     expect(onScriptureClick).toHaveBeenCalledWith('John 3:16', 'section-s1', 'section-s1-0')
 
-    // re-render with anchored lastViewedScripture (same ids the pill passes on click) so pin renders
-    rerender(
-      <GospelSection
-        section={section}
-        onScriptureClick={onScriptureClick}
-        lastViewedScripture={{
-          reference: 'John 3:16',
-          sectionId: 'section-s1',
-          subsectionId: 'section-s1-0',
-        }}
-        onClearProgress={onClearProgress}
-        profileSlug={'test-profile'}
-      />
-    )
-
-    // pin uses title="Click to clear progress" in the component
-    const pin = await screen.findByTitle('Click to clear progress')
+    const pin = await screen.findByRole('button', { name: /remove red pin/i })
     expect(pin).toBeInTheDocument()
     fireEvent.click(pin)
-    expect(onClearProgress).toHaveBeenCalled()
+    expect(onRemoveVersePin).toHaveBeenCalledWith('red')
   })
 
-  it('highlights only one pill when the same reference appears in two subsections and pin has anchors', async () => {
+  it('highlights only one pill when duplicate references match a single anchored verse pin', async () => {
     const section = {
       section: 'dup',
       title: 'Dup',
@@ -116,22 +106,26 @@ describe('GospelSection (extra tests)', () => {
       <GospelSection
         section={section}
         onScriptureClick={() => {}}
-        lastViewedScripture={{
-          reference: 'Rom 8:28',
-          sectionId: 'section-dup',
-          subsectionId: 'section-dup-1',
-        }}
+        onRemoveVersePin={jest.fn()}
+        versePins={[
+          {
+            colorId: 'blue',
+            reference: 'Rom 8:28',
+            sectionId: 'section-dup',
+            subsectionId: 'section-dup-1',
+          },
+        ]}
         profileSlug="profile-dup"
       />
     )
 
-    const pins = screen.queryAllByTitle('Click to clear progress')
+    const pins = screen.queryAllByRole('button', { name: /remove blue pin/i })
     expect(pins).toHaveLength(1)
   })
 
-  it('shows pin features for inline scripture references in subsection content', async () => {
+  it('shows pin controls for inline scripture references when versePins match anchors', async () => {
     const onScriptureClick = jest.fn()
-    const onClearProgress = jest.fn()
+    const onRemoveVersePin = jest.fn()
 
     const section = {
       section: 'inline',
@@ -144,35 +138,30 @@ describe('GospelSection (extra tests)', () => {
       ],
     }
 
-    const { rerender } = render(
+    render(
       <GospelSection
         section={section}
         onScriptureClick={onScriptureClick}
         profileSlug="profile-inline"
+        versePins={[
+          {
+            colorId: 'yellow',
+            reference: 'Genesis 2:18',
+            sectionId: 'section-inline',
+            subsectionId: 'section-inline-0',
+          },
+        ]}
+        onRemoveVersePin={onRemoveVersePin}
       />
     )
 
-    const inlineBtn = await screen.findByRole('button', { name: /Genesis 2:18/i })
+    const inlineBtn = await screen.findByTitle(/Click to view Genesis 2:18/i)
     fireEvent.click(inlineBtn)
     expect(onScriptureClick).toHaveBeenCalledWith('Genesis 2:18', 'section-inline', 'section-inline-0')
 
-    rerender(
-      <GospelSection
-        section={section}
-        onScriptureClick={onScriptureClick}
-        profileSlug="profile-inline"
-        lastViewedScripture={{
-          reference: 'Genesis 2:18',
-          sectionId: 'section-inline',
-          subsectionId: 'section-inline-0',
-        }}
-        onClearProgress={onClearProgress}
-      />
-    )
-
-    const pin = await screen.findByTitle('Click to clear progress')
+    const pin = await screen.findByRole('button', { name: /remove yellow pin/i })
     fireEvent.click(pin)
-    expect(onClearProgress).toHaveBeenCalled()
+    expect(onRemoveVersePin).toHaveBeenCalledWith('yellow')
   })
 
   it('loads saved answers, expands detail, saves successfully and clears saved state after timeout', async () => {

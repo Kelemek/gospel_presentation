@@ -60,7 +60,7 @@ const MEMORIZE_LISTEN_CLOSE = '[data-tour="memorize-listen-close"]'
 /** Number of driver.js steps for Listen → read-aloud panel walkthrough; must match the block in `runMemorizeFeatureTourOnCurrentPage`. */
 const MEMORIZE_READ_ALOUD_TOUR_STEPS = 5
 const TOC_SECTION_LINKS = '[data-tour="toc-section-links"]'
-const TOC_READING_PROGRESS = '[data-tour="toc-reading-progress"]'
+const TOC_VERSE_PINS = '[data-tour="toc-verse-pins"]'
 const TOC_RESET_PROGRESS = '[data-tour="toc-reset-progress"]'
 const SCRIPTURE_CARD = '[data-tour="scripture-card"]'
 const SCRIPTURE_MODAL_TOOLBAR = '[data-tour="scripture-modal-toolbar"]'
@@ -77,8 +77,9 @@ const SCRIPTURE_MODAL_PREV = '[data-tour="scripture-modal-prev"]'
 const SCRIPTURE_MODAL_NEXT = '[data-tour="scripture-modal-next"]'
 const SCRIPTURE_MODAL_CLOSE = '[data-tour="scripture-modal-close"]'
 const SCRIPTURE_MODAL_MEMORIZE = '[data-tour="scripture-modal-memorize"]'
+const SCRIPTURE_MODAL_PIN_COLOR = '[data-tour="scripture-modal-pin-color"]'
 const ALERT_MODAL_OK = '[data-tour="alert-modal-ok"]'
-const SCRIPTURE_LAST_VIEWED_CARD = '[data-scripture-last-viewed="true"]'
+const SCRIPTURE_VERSE_PINNED_CARD = '[data-scripture-verse-pinned="true"]'
 const SCRIPTURE_PROGRESS_UNPIN = '[data-tour="scripture-progress-unpin"]'
 const RESOURCES_LIST_PANEL = '[data-tour="resources-list-panel"]'
 const RESOURCE_CATEGORY = '[data-tour="resource-category"]'
@@ -2369,8 +2370,8 @@ export function runScriptureHoverPreviewFeatureTour(options?: ProfileFeatureTour
 
 /**
  * Scripture modal tour: opens the first scripture **card** on the page, then walks compare, chapter context,
- * Verse tab (back to single passage), next/prev arrows, close, pinned card, pin spotlight (explained only—no unpin),
- * **Menu** reading progress, and **Reset Progress**.
+ * Verse tab (back to single passage), next/prev arrows, optional **Pin** color (saved on close), close, pinned card,
+ * per-color unpin on the card (explained only—no tap), **Menu** pinned-passage summary, and **Clear pinned passages**.
  *
  * When the reader is not already on the public **default** presentation (`/default`), this stores resume state and
  * navigates there first (`ProfilePageClient` calls `tryStartScriptureReaderTourAfterNavigation`).
@@ -2611,6 +2612,35 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
       },
     },
     {
+      element: () =>
+        document.querySelector(SCRIPTURE_MODAL_PIN_COLOR) ??
+        document.querySelector(SCRIPTURE_MODAL_TOOLBAR) ??
+        document.body,
+      popover: {
+        title: 'Pin a passage (optional)',
+        description:
+          'Use the <strong>pin</strong> button to open tinted 📌 pins—saved when you <strong>close</strong> the reader (this device only). It starts on <strong>yellow</strong> (“last verse viewed”); leave it unchanged or pick another tint. Clearing pins uses the 📌 on the card or **Clear pinned passages** in the menu. Use <strong>Next</strong> to choose another tint for this tour.',
+        ...pop({ side: 'bottom', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          const root = document.querySelector(SCRIPTURE_MODAL_PIN_COLOR)
+          const trigger = root?.querySelector<HTMLButtonElement>('[data-tour="scripture-modal-pin-trigger"]')
+          if (trigger && !trigger.disabled && trigger.getAttribute('aria-expanded') !== 'true') {
+            trigger.click()
+          }
+          void waitUntil(
+            () => !!root?.querySelector<HTMLButtonElement>('[role="option"][data-pin-slot]'),
+            3000
+          ).then(() => {
+            root?.querySelector<HTMLButtonElement>('[role="option"][data-pin-slot]')?.click()
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, prefersReducedMotion() ? 80 : 160)
+          })
+        },
+      },
+    },
+    {
       element: SCRIPTURE_MODAL_CLOSE,
       popover: {
         title: 'Close when you are done',
@@ -2630,40 +2660,40 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
     },
     {
       element: () =>
-        document.querySelector(SCRIPTURE_LAST_VIEWED_CARD) ?? document.querySelector(SCRIPTURE_CARD) ?? document.body,
+        document.querySelector(SCRIPTURE_VERSE_PINNED_CARD) ?? document.querySelector(SCRIPTURE_CARD) ?? document.body,
       popover: {
         title: 'Pinned passage',
         description:
-          'After you close the reader, the <strong>last passage you were viewing</strong> stays marked on its blue card: yellow highlight and bold text so you can find it quickly. The next step spotlights the <strong>pin</strong> on that card (this tour will not clear progress there), then the tour shows <strong>Reset Progress</strong> in <strong>Menu</strong>.',
+          'The prior step saves a colored <strong>pin</strong> on this passage. Pinned cards stay <strong>tinted and bold</strong> so you can spot them quickly—up to <strong>five</strong> colors at once. The next step spotlights the mini <strong>pin</strong> on the card (one tap removes only that color). Then we open <strong>Menu</strong> for the pin list and clear-all control.',
         ...pop({ side: 'top', align: 'start' }),
       },
     },
     {
       element: () =>
         document.querySelector(SCRIPTURE_PROGRESS_UNPIN) ??
-        document.querySelector(SCRIPTURE_LAST_VIEWED_CARD) ??
+        document.querySelector(SCRIPTURE_VERSE_PINNED_CARD) ??
         document.querySelector(SCRIPTURE_CARD) ??
         document.body,
       popover: {
         title: 'Pin on the card',
         description:
-          'Tap this <strong>pin</strong> anytime to clear reading progress for this presentation—the yellow highlight goes away until you open another passage. It does the same job as <strong>Reset Progress</strong> in the slide-out menu. This tour skips tapping it so your progress stays pinned while we show the menu reset next.',
+          'Tap the colored <strong>pin</strong> to remove <strong>only that color’s</strong> slot. <strong>Clear pinned passages</strong> in the menu removes every pin at once. This tour skips unpinning so the next steps can show the menu.',
         ...pop({ side: 'top', align: 'start' }),
       },
     },
     {
       element: PROFILE_MENU_BUTTON,
       popover: {
-        title: 'Reset from the menu',
+        title: 'Pins in the menu',
         description:
-          'The same reading progress appears at the <strong>bottom</strong> of the slide-out menu under the profile details. Use <strong>Next</strong> to open <strong>Menu</strong> and scroll there.',
+          'Pinned passages are listed at the <strong>bottom</strong> of the slide-out menu (under profile details). Use <strong>Next</strong> to open <strong>Menu</strong> and scroll there.',
         ...pop({ side: 'bottom', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           openProfileMenuIfClosed()
           const behavior: ScrollBehavior = prefersReducedMotion() ? 'auto' : 'smooth'
           const settleMs = prefersReducedMotion() ? 120 : 680
-          void waitUntil(() => !!document.querySelector(TOC_READING_PROGRESS), 5000).then(() => {
-            document.querySelector(TOC_READING_PROGRESS)?.scrollIntoView({
+          void waitUntil(() => !!document.querySelector(TOC_VERSE_PINS), 5000).then(() => {
+            document.querySelector(TOC_VERSE_PINS)?.scrollIntoView({
               block: 'nearest',
               behavior,
             })
@@ -2677,12 +2707,12 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
     },
     {
       element: () =>
-        document.querySelector(TOC_READING_PROGRESS) ??
+        document.querySelector(TOC_VERSE_PINS) ??
         document.querySelector(PROFILE_SLIDEOUT_MENU) ??
         document.body,
       onHighlighted: (_el, _step, { driver: drv }) => {
-        const progress = document.querySelector<HTMLElement>(TOC_READING_PROGRESS)
-        progress?.scrollIntoView({
+        const versePinsBlock = document.querySelector<HTMLElement>(TOC_VERSE_PINS)
+        versePinsBlock?.scrollIntoView({
           block: 'nearest',
           behavior: prefersReducedMotion() ? 'auto' : 'smooth',
         })
@@ -2695,28 +2725,28 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         })
       },
       popover: {
-        title: 'Reading progress',
+        title: 'Pinned passages',
         description:
-          'This block matches the <strong>highlighted card</strong> on the page. <strong>Reset Progress</strong> clears the saved passage for this presentation (and removes the yellow styling). Use <strong>Next</strong> to spotlight the reset control.',
+          'This block lists the colors you have marked and matches the <strong>tinted cards</strong> on the page. Use <strong>Next</strong> to spotlight <strong>Clear pinned passages</strong>.',
         ...pop({ side: 'right', align: 'start' }),
       },
     },
     {
       element: () =>
         document.querySelector(TOC_RESET_PROGRESS) ??
-        document.querySelector(TOC_READING_PROGRESS) ??
+        document.querySelector(TOC_VERSE_PINS) ??
         document.querySelector(PROFILE_SLIDEOUT_MENU) ??
         document.body,
       popover: {
-        title: 'Reset Progress',
+        title: 'Clear pinned passages',
         description:
-          'Tap <strong>Reset Progress</strong> when you want a fresh start. Use <strong>Next</strong> (or <strong>Done</strong>) and the tour will tap it for you—then the tour ends while the page updates.',
+          'Tap <strong>Clear pinned passages</strong> when you want every pin gone for this presentation. Use <strong>Next</strong> (or <strong>Done</strong>) and the tour will tap it for you—then the tour ends while the page updates.',
         ...pop({ side: 'right', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           const btn = document.querySelector<HTMLButtonElement>(TOC_RESET_PROGRESS)
           if (btn && !btn.disabled) {
             btn.click()
-            void waitUntil(() => !document.querySelector(SCRIPTURE_LAST_VIEWED_CARD), 8000).then(() => {
+            void waitUntil(() => !document.querySelector(SCRIPTURE_VERSE_PINNED_CARD), 8000).then(() => {
               window.setTimeout(() => {
                 drv.destroy()
               }, 200)
@@ -3375,7 +3405,7 @@ const FULL_WALKTHROUGH_SEGMENTS: Array<{
     intro: {
       title: 'Scripture reader',
       description:
-        'The full-screen reader: compare translations, chapter view, next and previous passages, pins, and resetting progress from the menu.',
+        'Full-screen reader: compare translations, chapter view, stepping next/previous, optional colored pins saved when you close (local only), and clearing pins from the menu.',
     },
   },
   {

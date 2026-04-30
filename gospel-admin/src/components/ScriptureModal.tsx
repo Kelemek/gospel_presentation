@@ -10,8 +10,8 @@ import {
   GOSPEL_MEMORIZATION_CHANGED_EVENT,
   isMemoizedForReference,
 } from '@/lib/verseMemorizationStorage'
-
-
+import type { VersePinColorId } from '@/lib/versePinStorage'
+import ScriptureModalPinPick from '@/components/ScriptureModalPinPick'
 
 interface ScriptureModalProps {
   reference: string
@@ -26,8 +26,12 @@ interface ScriptureModalProps {
     subsectionTitle: string
     content: string
   }
-  // Progress tracking props
-  onScriptureViewed?: (reference: string) => void
+  /** When set (e.g. profile presentation), show pin-color icon picker beside Memorize. */
+  versePinControl?: {
+    draftColor: VersePinColorId
+    onDraftColorChange: (value: VersePinColorId) => void
+    colorsAvailableInDropdown: VersePinColorId[]
+  }
 }
 
 export default function ScriptureModal({ 
@@ -39,7 +43,7 @@ export default function ScriptureModal({
   hasPrevious = false, 
   hasNext = false,
   context,
-  onScriptureViewed
+  versePinControl,
 }: ScriptureModalProps) {
   const { translation, setTranslation, enabledTranslations } = useTranslation()
   const { showAlert } = useAlertModal()
@@ -300,10 +304,6 @@ export default function ScriptureModal({
             setError(errMsg)
           } else {
             setScriptureText(typeof data.text === 'string' ? data.text : '')
-            // Track scripture progress when successfully viewed in modal
-            if (onScriptureViewed) {
-              onScriptureViewed(reference)
-            }
           }
         })
         .catch((err) => {
@@ -673,6 +673,15 @@ export default function ScriptureModal({
               >
                 Memorize
               </button>
+              {versePinControl && (
+                <ScriptureModalPinPick
+                  reference={reference}
+                  draftColor={versePinControl.draftColor}
+                  onDraftColorChange={versePinControl.onDraftColorChange}
+                  colorsAvailableInDropdown={versePinControl.colorsAvailableInDropdown}
+                  disabled={loading || !!error || !reference.trim()}
+                />
+              )}
             </div>
           </div>
         </div>

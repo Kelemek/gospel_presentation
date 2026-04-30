@@ -72,7 +72,7 @@ export interface GospelProfile {
   createdAt: Date
   updatedAt: Date
   lastVisited?: Date              // Last time this profile was accessed by a visitor
-  lastViewedScripture?: {         // Track reading progress (non-default profiles only)
+  lastViewedScripture?: {         // Legacy DB field; presentation viewer uses local verse pins only (see versePinStorage)
     reference: string
     sectionId: string             // For navigation purposes
     subsectionId: string          // For navigation purposes

@@ -23,18 +23,6 @@ jest.mock('@/lib/supabase/client', () => ({
   })
 }))
 
-// Mock scripture progress hook
-jest.mock('@/lib/useScriptureProgress', () => ({
-  __esModule: true,
-  useScriptureProgress: () => ({
-    trackScriptureView: jest.fn(),
-    resetProgress: jest.fn(),
-    lastViewedScripture: null,
-    isLoading: false,
-    error: null
-  })
-}))
-
 jest.mock('@/components/ThemeToggle', () => ({ __esModule: true, default: () => null }))
 
 jest.mock('@/components/BookmarksDropdown', () => ({ __esModule: true, default: () => null }))

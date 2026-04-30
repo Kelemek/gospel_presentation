@@ -14,8 +14,19 @@ import BookmarksDropdown from '@/components/BookmarksDropdown'
 import ProfileHelpMenu from '@/components/ProfileHelpMenu'
 import PresentationFirstVisitWelcome from '@/components/PresentationFirstVisitWelcome'
 import { ScriptureFooterAttributionParagraphs } from '@/components/ScriptureFooterAttributionParagraphs'
-import { GospelSection as GospelSectionType, GospelProfile, SavedAnswer, ScriptureProgressPin } from '@/lib/types'
-import { useScriptureProgress } from '@/lib/useScriptureProgress'
+import { GospelSection as GospelSectionType, GospelProfile, SavedAnswer } from '@/lib/types'
+import type { VersePinColorId, VersePinMapState, VersePinSlotEntry } from '@/lib/versePinStorage'
+import {
+  assignVersePin,
+  assignYellowLastViewed,
+  availablePinColorsForModalChoice,
+  clearAllVersePins,
+  createEmptyVersePinMap,
+  loadVersePins,
+  removeVersePinByColor,
+  versePinColorForPassage,
+  versePinsListFromMap,
+} from '@/lib/versePinStorage'
 import { logger } from '@/lib/logger'
 import { createClient } from '@/lib/supabase/client'
 import { useAlertModal } from '@/contexts/AlertModalContext'
@@ -136,97 +147,72 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     }
   }, [isHydrated, sectionCount, profileInfo?.slug])
 
-  // Scripture progress tracking
-  const { 
-    trackScriptureView, 
-    resetProgress, 
-    lastViewedScripture, 
-    isLoading: progressLoading,
-    error: progressError 
-  } = useScriptureProgress(profile || null, !!userEmail)
+  // Scripture verse pins (localStorage only — up to five color slots per profile slug)
+  const [versePinMap, setVersePinMap] = useState<VersePinMapState>(createEmptyVersePinMap)
+  const [modalPinDraftColor, setModalPinDraftColor] = useState<VersePinColorId>('yellow')
 
-  /** Anchors for the verse that opened the modal (exact pill); used so modal onScriptureViewed does not fall back to modal-view. */
+  /** Picker draft when anchors/reference last synced — detect user edits vs synced default */
+  const modalPinBaselineRef = useRef<VersePinColorId>('yellow')
+
+  /** Anchors for navigation + pin commit (matches the passage row in the modal). */
   const modalOpenAnchorsRef = useRef<{
     reference: string
     sectionId: string
     subsectionId: string
   } | null>(null)
-  
-  // Local state to track the current progress for immediate UI updates
-  const [localLastViewed, setLocalLastViewed] = useState<string | null>(null)
-  
-  // Update local state when profile changes or lastViewedScripture changes
-  useEffect(() => {
-    setLocalLastViewed(lastViewedScripture?.reference || null)
-  }, [lastViewedScripture])
-  
-  // Current last viewed scripture (use local state for immediate updates)
-  const currentLastViewed = localLastViewed || lastViewedScripture?.reference
 
-  // Prefer hook state for pin shape: it updates synchronously when tracking writes localProgress,
-  // while localLastViewed may still be stale until after await trackScriptureView (e.g. logged-in fetch).
-  const lastViewedScripturePin: ScriptureProgressPin | undefined = useMemo(() => {
-    if (lastViewedScripture?.reference) {
-      return {
-        reference: lastViewedScripture.reference,
-        sectionId: lastViewedScripture.sectionId ?? '',
-        subsectionId: lastViewedScripture.subsectionId ?? '',
-      }
-    }
-    if (localLastViewed) return localLastViewed
-    return undefined
-  }, [localLastViewed, lastViewedScripture])
+  useLayoutEffect(() => {
+    if (!profileInfo?.slug) return
+    setVersePinMap(loadVersePins(profileInfo.slug))
+  }, [profileInfo?.slug])
 
-  const handleModalScriptureViewed = useCallback(
-    async (
-      reference: string,
-      explicitAnchors?: { sectionId: string; subsectionId: string }
-    ) => {
-      if (!profile) return
-      try {
-        let sectionId = ''
-        let subsectionId = ''
-        if (explicitAnchors?.sectionId && explicitAnchors?.subsectionId) {
-          sectionId = explicitAnchors.sectionId
-          subsectionId = explicitAnchors.subsectionId
-        } else {
-          const pinned = modalOpenAnchorsRef.current
-          if (pinned?.reference === reference) {
-            sectionId = pinned.sectionId
-            subsectionId = pinned.subsectionId
-          } else if (sections) {
-            const found = findFirstScriptureCardAnchors(sections, reference)
-            if (found) {
-              sectionId = found.sectionId
-              subsectionId = found.subsectionId
-            }
+  const versePinsList = useMemo(() => versePinsListFromMap(versePinMap), [versePinMap])
+
+  const syncModalAnchorsForNav = useCallback(
+    (reference: string, explicit?: { sectionId: string; subsectionId: string }) => {
+      let sectionId = explicit?.sectionId?.trim() ?? ''
+      let subsectionId = explicit?.subsectionId?.trim() ?? ''
+      if (!sectionId || !subsectionId) {
+        const pinned = modalOpenAnchorsRef.current
+        if (pinned?.reference === reference) {
+          sectionId = pinned.sectionId
+          subsectionId = pinned.subsectionId
+        } else if (sections) {
+          const found = findFirstScriptureCardAnchors(sections, reference)
+          if (found) {
+            sectionId = found.sectionId
+            subsectionId = found.subsectionId
           }
         }
-        setLocalLastViewed(reference)
-        // Pin ref before await so ScriptureModal's onScriptureViewed (after fetch) sees the right anchors
-        // (e.g. favorites prev/next + duplicate refs).
-        if (sectionId && subsectionId) {
-          modalOpenAnchorsRef.current = { reference, sectionId, subsectionId }
-          await trackScriptureView(reference, sectionId, subsectionId)
-        } else {
-          modalOpenAnchorsRef.current = null
-          await trackScriptureView(reference, 'modal-view', 'modal-view')
+      }
+      if (sectionId && subsectionId) {
+        modalOpenAnchorsRef.current = { reference, sectionId, subsectionId }
+      } else {
+        modalOpenAnchorsRef.current = {
+          reference,
+          sectionId: 'modal-view',
+          subsectionId: 'modal-view',
         }
-      } catch (error) {
-        console.warn('Failed to track scripture progress from modal:', error)
       }
     },
-    [profile, sections, trackScriptureView]
+    [sections]
   )
-  
-  // Wrapper function to reset progress and update local state immediately
-  const handleClearProgress = useCallback(async () => {
-    await resetProgress()
-    setLocalLastViewed(null)
-    modalOpenAnchorsRef.current = null
-    // Refresh the page data to get updated profile from server
-    router.refresh()
-  }, [resetProgress, router])
+
+  const handleRemoveVersePin = useCallback(
+    (colorId: VersePinColorId) => {
+      const s = profileInfo?.slug
+      if (!s) return
+      setVersePinMap(removeVersePinByColor(s, colorId))
+    },
+    [profileInfo?.slug]
+  )
+
+  const handleClearAllVersePins = useCallback(() => {
+    const s = profileInfo?.slug
+    if (!s) return
+    clearAllVersePins(s)
+    setVersePinMap(loadVersePins(s))
+  }, [profileInfo?.slug])
 
   // Collect favorite references from gospel data
   const collectFavoriteReferences = (data: GospelSectionType[]) => {
@@ -344,7 +330,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
       })
     : []
 
-  const handleScriptureClick = async (
+  const handleScriptureClick = (
     reference: string,
     anchorSectionId?: string,
     anchorSubsectionId?: string
@@ -372,22 +358,13 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     if (sectionId && subsectionId) {
       modalOpenAnchorsRef.current = { reference, sectionId, subsectionId }
     } else {
-      modalOpenAnchorsRef.current = null
-    }
-    
-    // Track scripture progress (localStorage for all; DB sync only for logged-in + non-default)
-    if (profile) {
-      try {
-        if (sectionId && subsectionId) {
-          setLocalLastViewed(reference)
-          await trackScriptureView(reference, sectionId, subsectionId)
-        }
-      } catch (error) {
-        console.warn('Failed to track scripture progress:', error)
-        // Don't break the user experience
+      modalOpenAnchorsRef.current = {
+        reference,
+        sectionId: 'modal-view',
+        subsectionId: 'modal-view',
       }
     }
-    
+
     if (favoriteReferences.length > 0) {
       const favIndex = favoriteReferences.indexOf(reference)
       if (favIndex !== -1) setCurrentReferenceIndex(favIndex)
@@ -417,7 +394,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
       setCurrentReferenceIndex(newIndex)
       const reference = favoriteReferences[newIndex]!
       const entry = allScriptureRefs.find(r => r.reference === reference)
-      void handleModalScriptureViewed(
+      syncModalAnchorsForNav(
         reference,
         entry
           ? { sectionId: entry.sectionId, subsectionId: entry.subsectionId }
@@ -434,7 +411,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     const newIndex = (currentReferenceIndex - 1 + allScriptureRefs.length) % allScriptureRefs.length
     setCurrentReferenceIndex(newIndex)
     const item = allScriptureRefs[newIndex]!
-    void handleModalScriptureViewed(item.reference, {
+    syncModalAnchorsForNav(item.reference, {
       sectionId: item.sectionId,
       subsectionId: item.subsectionId,
     })
@@ -448,7 +425,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     navListLength,
     currentReferenceIndex,
     allScriptureRefs,
-    handleModalScriptureViewed,
+    syncModalAnchorsForNav,
   ])
 
   const navigateToNext = useCallback(() => {
@@ -459,7 +436,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
       setCurrentReferenceIndex(newIndex)
       const reference = favoriteReferences[newIndex]!
       const entry = allScriptureRefs.find(r => r.reference === reference)
-      void handleModalScriptureViewed(
+      syncModalAnchorsForNav(
         reference,
         entry
           ? { sectionId: entry.sectionId, subsectionId: entry.subsectionId }
@@ -476,7 +453,7 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     const newIndex = (currentReferenceIndex + 1) % allScriptureRefs.length
     setCurrentReferenceIndex(newIndex)
     const item = allScriptureRefs[newIndex]!
-    void handleModalScriptureViewed(item.reference, {
+    syncModalAnchorsForNav(item.reference, {
       sectionId: item.sectionId,
       subsectionId: item.subsectionId,
     })
@@ -490,14 +467,103 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
     navListLength,
     currentReferenceIndex,
     allScriptureRefs,
-    handleModalScriptureViewed,
+    syncModalAnchorsForNav,
   ])
 
   // Navigation state: enabled if more than one reference available
   const hasPrevious = navListLength > 1
   const hasNext = navListLength > 1
 
+  const modalPassageAnchorsForPins: VersePinSlotEntry | null = useMemo(() => {
+    if (!selectedScripture.isOpen || !selectedScripture.reference.trim()) return null
+    const refStr = selectedScripture.reference
+    const snap = modalOpenAnchorsRef.current
+    if (
+      snap?.reference === refStr &&
+      snap.sectionId?.trim() !== '' &&
+      snap.subsectionId?.trim() !== ''
+    ) {
+      return {
+        reference: refStr,
+        sectionId: snap.sectionId,
+        subsectionId: snap.subsectionId,
+      }
+    }
+    if (sections) {
+      const found = findFirstScriptureCardAnchors(sections, refStr)
+      if (found) {
+        return {
+          reference: refStr,
+          sectionId: found.sectionId,
+          subsectionId: found.subsectionId,
+        }
+      }
+    }
+    return { reference: refStr, sectionId: '', subsectionId: '' }
+  }, [
+    selectedScripture.isOpen,
+    selectedScripture.reference,
+    sections,
+    currentReferenceIndex,
+  ])
+
+  useEffect(() => {
+    if (!selectedScripture.isOpen || !modalPassageAnchorsForPins?.reference) return
+    const existing = versePinColorForPassage(versePinMap, modalPassageAnchorsForPins)
+    /** Yellow = last verse viewed for unpinned passages; otherwise whichever color pins this passage. */
+    const synced: VersePinColorId = existing ?? 'yellow'
+    modalPinBaselineRef.current = synced
+    setModalPinDraftColor(synced)
+  }, [
+    selectedScripture.isOpen,
+    selectedScripture.reference,
+    modalPassageAnchorsForPins?.sectionId,
+    modalPassageAnchorsForPins?.subsectionId,
+    versePinMap,
+  ])
+
+  const modalPinDropdownColors = useMemo(
+    () =>
+      modalPassageAnchorsForPins
+        ? availablePinColorsForModalChoice(versePinMap, modalPassageAnchorsForPins)
+        : [],
+    [versePinMap, modalPassageAnchorsForPins]
+  )
+
   const closeModal = () => {
+    const refTxt = selectedScripture.reference.trim()
+    if (refTxt && profileInfo?.slug) {
+      const snap = modalOpenAnchorsRef.current
+      let sectionId =
+        snap?.reference === refTxt ? (snap.sectionId?.trim() ?? '') : ''
+      let subsectionId =
+        snap?.reference === refTxt ? (snap.subsectionId?.trim() ?? '') : ''
+      if (!sectionId || !subsectionId) {
+        const found = sections ? findFirstScriptureCardAnchors(sections, refTxt) : null
+        if (found) {
+          sectionId = found.sectionId
+          subsectionId = found.subsectionId
+        }
+      }
+      const entry: VersePinSlotEntry = {
+        reference: refTxt,
+        sectionId: sectionId || 'modal-view',
+        subsectionId: subsectionId || 'modal-view',
+      }
+      const draft = modalPinDraftColor
+      const baseline = modalPinBaselineRef.current
+      const unchanged = draft === baseline
+
+      if (unchanged) {
+        const nextMap = assignYellowLastViewed(profileInfo.slug, entry)
+        setVersePinMap(nextMap)
+      } else {
+        const nextMap = assignVersePin(profileInfo.slug, draft, entry)
+        setVersePinMap(nextMap)
+      }
+    }
+    modalPinBaselineRef.current = 'yellow'
+    setModalPinDraftColor('yellow')
     modalOpenAnchorsRef.current = null
     setSelectedScripture({ reference: '', isOpen: false })
   }
@@ -637,8 +703,8 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                   <GospelSection 
                     section={section}
                     onScriptureClick={handleScriptureClick}
-                    lastViewedScripture={lastViewedScripturePin}
-                    onClearProgress={handleClearProgress}
+                    versePins={versePinsList}
+                    onRemoveVersePin={handleRemoveVersePin}
                     profileSlug={profileInfo.slug}
                     savedAnswers={profileInfo.savedAnswers}
                     isLoggedIn={!!userEmail}
@@ -708,45 +774,43 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
                 )}
                 
                 {/* Scripture Progress Section - show when profile exists (localStorage for anonymous/default) */}
-                {profile && (
                 <div
                   className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-600"
-                  data-tour="toc-reading-progress"
+                  data-tour="toc-verse-pins"
                 >
-                  {currentLastViewed ? (
+                  {versePinsList.length > 0 ? (
                     <div className="space-y-2">
-                      <div className="text-xs font-medium text-slate-600 dark:text-slate-300">Reading Progress</div>
-                      <div className="text-xs text-yellow-700 dark:text-yellow-200 bg-yellow-50 dark:bg-yellow-900/30 p-2 rounded border dark:border-yellow-700">
-                        📍 Last: {currentLastViewed}
+                      <div className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                        Pinned passages ({versePinsList.length}/5)
                       </div>
+                      <ul className="text-xs text-slate-600 dark:text-slate-400 space-y-1 max-h-32 overflow-y-auto">
+                        {versePinsList.map((p) => (
+                          <li key={p.colorId} className="flex items-center gap-1.5 truncate">
+                            <span className="shrink-0" aria-hidden>
+                              📌
+                            </span>
+                            <span className="truncate" title={`${p.colorId}: ${p.reference}`}>
+                              {p.reference}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
                       <button
                         type="button"
                         data-tour="toc-reset-progress"
-                        onClick={async () => {
-                          await resetProgress()
-                          setLocalLastViewed(null)
-                          router.refresh()
-                        }}
-                        disabled={progressLoading}
-                        className="w-full cursor-pointer rounded px-3 py-1 text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-200 dark:hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
-                        aria-label="Reset scripture reading progress for this presentation"
+                        onClick={handleClearAllVersePins}
+                        className="w-full cursor-pointer rounded px-3 py-1 text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-200 dark:hover:bg-slate-600"
+                        aria-label="Clear all pinned passages for this presentation"
                       >
-                        {progressLoading ? 'Resetting...' : 'Reset Progress'}
+                        Clear pinned passages
                       </button>
                     </div>
                   ) : (
                     <div className="text-xs text-slate-500 dark:text-slate-400 italic">
-                      Click any scripture to start tracking your progress
-                    </div>
-                  )}
-                  
-                  {progressError && (
-                    <div className="text-xs text-red-600 mt-2">
-                      Error: {progressError}
+                      Open scripture and choose a pin color beside Memorize — up to five colors, saved on this device only.
                     </div>
                   )}
                 </div>
-              )}
             </div>
 
               <SidebarAuthNav />
@@ -788,7 +852,11 @@ function ProfileContent({ sections, profileInfo, profile }: ProfileContentProps)
         hasPrevious={hasPrevious}
         hasNext={hasNext}
         context={selectedScripture.context}
-        onScriptureViewed={handleModalScriptureViewed}
+        versePinControl={{
+          draftColor: modalPinDraftColor,
+          onDraftColorChange: setModalPinDraftColor,
+          colorsAvailableInDropdown: modalPinDropdownColors,
+        }}
       />
 
       {typeof document !== 'undefined' &&
