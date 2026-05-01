@@ -158,6 +158,24 @@ describe('ScriptureModal Component', () => {
     })
   })
 
+  it('renders entity-encoded HTML in context content as real markup', async () => {
+    const context = {
+      sectionTitle: 'Section',
+      subsectionTitle: 'Sub',
+      content: '&lt;p&gt;Quoted &lt;strong&gt;A&lt;/strong&gt;.&lt;/p&gt;',
+    }
+    const { container } = render(<ScriptureModal {...defaultProps} context={context} />)
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'John 3:16' })).toBeInTheDocument()
+    )
+    const ctx = container.querySelector('[data-tour="scripture-modal-context"]')
+    expect(ctx).toBeTruthy()
+    expect(ctx!.querySelector('.prose strong')).toHaveTextContent('A')
+    expect(ctx).toHaveTextContent('Quoted')
+    expect(ctx).not.toHaveTextContent('<strong>')
+  })
+
   it('should toggle context display', async () => {
     const user = userEvent.setup()
     const context = {

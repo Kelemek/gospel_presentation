@@ -12,6 +12,7 @@ import {
 } from '@/lib/verseMemorizationStorage'
 import type { VerseBookmarkColorId, VersePinColorId } from '@/lib/versePinStorage'
 import ScriptureModalPinPick from '@/components/ScriptureModalPinPick'
+import { normalizeRichTextHtmlForInjection } from '@/lib/normalizeRichTextHtmlForInjection'
 
 interface ScriptureModalProps {
   reference: string
@@ -692,14 +693,28 @@ export default function ScriptureModal({
           >
             <div className="text-slate-700 dark:text-slate-200 text-base md:text-lg">
               <div className="flex items-center gap-2 mb-1">
-                <strong className="text-slate-800 dark:text-slate-100">Section:</strong> 
-                <span className="font-medium text-slate-600 dark:text-slate-300">{context.sectionTitle}</span>
+                <strong className="text-slate-800 dark:text-slate-100">Section:</strong>
+                <span
+                  className="font-medium text-slate-600 dark:text-slate-300"
+                  dangerouslySetInnerHTML={{
+                    __html: normalizeRichTextHtmlForInjection(context.sectionTitle ?? ''),
+                  }}
+                />
               </div>
               <div className="flex items-center gap-2 mb-2 text-slate-600 dark:text-slate-300">
-                <span className="font-medium">{context.subsectionTitle}</span>
+                <span
+                  className="font-medium"
+                  dangerouslySetInnerHTML={{
+                    __html: normalizeRichTextHtmlForInjection(context.subsectionTitle ?? ''),
+                  }}
+                />
               </div>
-              <div className="prose prose-sm max-w-none text-slate-600 dark:text-slate-300 text-sm md:text-base leading-relaxed">
-                <div dangerouslySetInnerHTML={{ __html: context.content }} />
+              <div className="prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-300 text-sm md:text-base leading-relaxed">
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: normalizeRichTextHtmlForInjection(context.content),
+                  }}
+                />
               </div>
             </div>
           </div>
