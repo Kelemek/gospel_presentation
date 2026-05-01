@@ -172,24 +172,42 @@ export function applyGospelLocalUserDataImport(payload: GospelLocalUserDataPaylo
   emitMemorizationChanged()
 }
 
-function triggerAnchorDownload(blob: Blob, filename: string): void {
+/**
+ * Programmatic `<a download>`. Revoking the blob URL immediately breaks downloads on some
+ * Android WebViews; use a delay on native when `revokeAfterMs > 0`.
+ */
+function triggerAnchorDownload(blob: Blob, filename: string, revokeAfterMs = 0): void {
   const url = URL.createObjectURL(blob)
-  try {
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename
-    a.rel = 'noopener'
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-  } finally {
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  const revoke = () => {
     URL.revokeObjectURL(url)
+    a.remove()
   }
+  requestAnimationFrame(() => {
+    try {
+      a.click()
+    } finally {
+      if (revokeAfterMs > 0) {
+        window.setTimeout(revoke, revokeAfterMs)
+      } else {
+        revoke()
+      }
+    }
+  })
 }
 
+/** Delay before revoking blob URL for native anchor fallback (Android WebView often needs this). */
+const NATIVE_ANCHOR_REVOKE_DELAY_MS = 90_000
+
 /**
- * Saves backup JSON. On Capacitor WebViews, programmatic `<a download>` is often ignored; we use the
- * Web Share API with a `File` when `navigator.share` is available so the system share sheet appears.
+ * Saves backup JSON. On Capacitor iOS we use the Web Share API with **files only** (no `text`/`title`),
+ * otherwise iOS can offer two items (text + file). On Android WebView, `navigator.share` with files is
+ * often missing or unreliable; we try it first, then fall back to `<a download>` with a delayed blob
+ * URL revoke. No extra Capacitor plugins required.
  */
 export async function downloadGospelLocalUserDataBackup(payload: GospelLocalUserDataPayload): Promise<void> {
   if (typeof window === 'undefined') return
@@ -197,25 +215,38 @@ export async function downloadGospelLocalUserDataBackup(payload: GospelLocalUser
   const filename = `gospel-local-backup-${date}.json`
   const json = JSON.stringify(payload, null, 2)
   const blob = new Blob([json], { type: 'application/json' })
+  const isNative = Capacitor.isNativePlatform()
+  const isAndroidNative = isNative && Capacitor.getPlatform() === 'android'
 
-  if (Capacitor.isNativePlatform() && typeof navigator.share === 'function') {
+  if (isNative && typeof navigator.share === 'function' && !isAndroidNative) {
     const file = new File([blob], filename, { type: 'application/json', lastModified: Date.now() })
     try {
-      await navigator.share({
-        files: [file],
-        title: 'Gospel backup',
-        text: 'Save a copy of your bookmarks, memorization, and other data from this device.',
-      })
+      await navigator.share({ files: [file] })
       return
     } catch (e) {
       const name = e instanceof DOMException ? e.name : e instanceof Error ? e.name : ''
       if (name === 'AbortError') {
         return
       }
-      triggerAnchorDownload(blob, filename)
+      triggerAnchorDownload(blob, filename, NATIVE_ANCHOR_REVOKE_DELAY_MS)
       return
     }
   }
 
-  triggerAnchorDownload(blob, filename)
+  if (isAndroidNative && typeof navigator.share === 'function') {
+    const file = new File([blob], filename, { type: 'application/json', lastModified: Date.now() })
+    try {
+      if (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file] })
+        return
+      }
+    } catch (e) {
+      const name = e instanceof DOMException ? e.name : e instanceof Error ? e.name : ''
+      if (name === 'AbortError') {
+        return
+      }
+    }
+  }
+
+  triggerAnchorDownload(blob, filename, isNative ? NATIVE_ANCHOR_REVOKE_DELAY_MS : 0)
 }
