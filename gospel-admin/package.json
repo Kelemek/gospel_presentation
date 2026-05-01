@@ -25,7 +25,9 @@
   "dependencies": {
     "@capacitor/android": "^8.1.0",
     "@capacitor/core": "^8.1.0",
+    "@capacitor/filesystem": "^8.1.2",
     "@capacitor/ios": "^8.1.0",
+    "@capacitor/share": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.1",
     "@capgo/capacitor-printer": "^8.0.10",
     "@sentry/nextjs": "^10.27.0",

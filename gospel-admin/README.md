@@ -70,3 +70,7 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Capacitor (iOS / Android app)
+
+Presentation backup **Save my data** on **Android** uses **`@capacitor/filesystem`** and **`@capacitor/share`** (see `gospelLocalUserDataBackup.ts`). After pulling these dependencies, run `npx cap sync` and ship a **new Play Store build** for Android users to get that path. **iOS** still uses the in-WebView **Web Share API** for the same button; you can defer an App Store update until convenient—the server JS only loads the new plugins on Android.
