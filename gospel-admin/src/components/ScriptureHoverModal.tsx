@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react'
 import { useTranslation } from '@/contexts/TranslationContext'
 import { Capacitor } from '@capacitor/core'
 import { formatScriptureApiError } from '@/lib/format-scripture-api-error'
@@ -18,12 +18,58 @@ interface ScriptureData {
   translation?: string
 }
 
+/** Narrow / default width cap (~Tailwind `max-w-md`). */
+const MODAL_WIDTH_CAP_DEFAULT_PX = 448
+/** Tablet / small laptop hover — wider for chapter-style or long single-verse fetches. */
+const MODAL_WIDTH_CAP_TABLET_PX = 520
+/** Desktop — use most horizontal space while keeping margin from viewport edges. */
+const MODAL_WIDTH_CAP_DESKTOP_PX = 600
+const MODAL_WIDTH_BREAKPOINT_TABLET = 640
+const MODAL_WIDTH_BREAKPOINT_DESKTOP = 900
+
+/** Absolute height cap; CSS max-height is also limited by free space above/below the anchor. */
+const MODAL_LAYOUT_HEIGHT_CAP_PX = 720
+/**
+ * Height assumption for "fits above / fits below" tests only. If this equals the full viewport
+ * height, both tests fail and the popover clamps to the top (feels detached from the hover).
+ */
+const PLACEMENT_PROBE_HEIGHT_PX = 520
+const MIN_POPOVER_MAX_HEIGHT_PX = 120
+const VIEWPORT_PADDING_PX = 12
+const ANCHOR_GAP_PX = 10
+
+function modalWidthCapPx(viewportWidth: number): number {
+  if (viewportWidth >= MODAL_WIDTH_BREAKPOINT_DESKTOP) return MODAL_WIDTH_CAP_DESKTOP_PX
+  if (viewportWidth >= MODAL_WIDTH_BREAKPOINT_TABLET) return MODAL_WIDTH_CAP_TABLET_PX
+  return MODAL_WIDTH_CAP_DEFAULT_PX
+}
+
+function modalMaxHeightPx(viewportHeight: number, pad: number): number {
+  const usable = viewportHeight - 2 * pad
+  return Math.min(MODAL_LAYOUT_HEIGHT_CAP_PX, Math.max(1, usable))
+}
+
+/** Width/height for layout math — avoids `100vw` > `innerWidth` when a scrollbar is present. */
+function layoutViewportSize(): { w: number; h: number } {
+  if (typeof window === 'undefined') return { w: 1024, h: 768 }
+  const vv = window.visualViewport
+  const rawW = vv?.width ?? document.documentElement?.clientWidth ?? window.innerWidth
+  const rawH = vv?.height ?? document.documentElement?.clientHeight ?? window.innerHeight
+  const w = Math.round(rawW > 0 ? rawW : window.innerWidth)
+  const h = Math.round(rawH > 0 ? rawH : window.innerHeight)
+  return { w: Math.max(1, w), h: Math.max(1, h) }
+}
+
 export default function ScriptureHoverModal({ reference, children, hoverDelayMs = 500, inline = false }: ScriptureHoverModalProps) {
   const [isVisible, setIsVisible] = useState(false)
   const [scriptureData, setScriptureData] = useState<ScriptureData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [position, setPosition] = useState({ x: 0, y: 0 })
+  const [popoverWidthPx, setPopoverWidthPx] = useState(MODAL_WIDTH_CAP_DEFAULT_PX)
+  const [popoverMaxHeightPx, setPopoverMaxHeightPx] = useState(() =>
+    modalMaxHeightPx(typeof window !== 'undefined' ? window.innerHeight : 768, VIEWPORT_PADDING_PX)
+  )
   const [isAbove, setIsAbove] = useState(true)
   
   const { translation } = useTranslation()
@@ -31,6 +77,8 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
   const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const longPressTriggeredRef = useRef(false)
   const containerRef = useRef<HTMLElement | null>(null)
+  const popoverRef = useRef<HTMLDivElement | null>(null)
+  const anchorPointRef = useRef({ cx: 0, cy: 0 })
   const [openedByLongPress, setOpenedByLongPress] = useState(false)
 
   // Clear cached scripture when translation changes
@@ -63,36 +111,106 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
     }
   }
 
-  const setPositionFromPoint = (centerX: number, centerY: number) => {
-    const screenWidth = window.innerWidth
-    const screenHeight = window.innerHeight
-    const modalWidth = Math.min(320, screenWidth - 40)
-    const modalHeight = 150
-    const padding = 20
+  const setPositionFromPoint = useCallback((centerX: number, centerY: number) => {
+    anchorPointRef.current = { cx: centerX, cy: centerY }
 
-    let x = centerX
-    let y = centerY - 10
+    const { w: sw, h: sh } = layoutViewportSize()
+    const pad = VIEWPORT_PADDING_PX
+    const inner = sw - 2 * pad
+    const widthCap = modalWidthCapPx(sw)
+    const modalWidth =
+      inner <= 0 ? Math.min(widthCap, sw) : Math.min(widthCap, inner)
+    const viewportMaxH = modalMaxHeightPx(sh, pad)
+    /** Only for above/below fit checks — keeps the popover tied to the anchor. */
+    const fitProbe = Math.min(PLACEMENT_PROBE_HEIGHT_PX, viewportMaxH)
+    const gap = ANCHOR_GAP_PX
 
-    if (x - modalWidth / 2 < padding) {
-      x = modalWidth / 2 + padding
-    } else if (x + modalWidth / 2 > window.innerWidth - padding) {
-      x = window.innerWidth - modalWidth / 2 - padding
+    const halfW = modalWidth / 2
+    const x = Math.min(Math.max(centerX, pad + halfW), sw - pad - halfW)
+
+    const aboveBottom = centerY - gap
+    const aboveTop = aboveBottom - fitProbe
+    const belowTop = centerY + gap
+    const belowBottom = belowTop + fitProbe
+    const spaceAbove = centerY - gap - pad
+    const spaceBelow = sh - pad - centerY - gap
+
+    let y: number
+    let positionAbove: boolean
+    let maxH: number
+
+    if (aboveTop >= pad) {
+      positionAbove = true
+      maxH = Math.min(
+        viewportMaxH,
+        Math.max(MIN_POPOVER_MAX_HEIGHT_PX, centerY - gap - pad)
+      )
+      y = aboveBottom
+      y = Math.min(y, sh - pad)
+      y = Math.max(y, pad + maxH)
+    } else if (belowBottom <= sh - pad) {
+      positionAbove = false
+      maxH = Math.min(
+        viewportMaxH,
+        Math.max(MIN_POPOVER_MAX_HEIGHT_PX, sh - pad - centerY - gap)
+      )
+      y = belowTop
+      y = Math.max(pad, Math.min(y, sh - pad - maxH))
+    } else if (spaceBelow >= spaceAbove) {
+      // Tall probe does not fit either side, but one side still has usable space —
+      // anchor there instead of "vertical center" with full maxH (which clamps y to ~pad).
+      positionAbove = false
+      maxH = Math.min(
+        viewportMaxH,
+        Math.max(MIN_POPOVER_MAX_HEIGHT_PX, spaceBelow)
+      )
+      y = belowTop
+      y = Math.max(pad, Math.min(y, sh - pad - maxH))
+    } else {
+      positionAbove = true
+      maxH = Math.min(
+        viewportMaxH,
+        Math.max(MIN_POPOVER_MAX_HEIGHT_PX, spaceAbove)
+      )
+      y = aboveBottom
+      y = Math.min(y, sh - pad)
+      y = Math.max(y, pad + maxH)
     }
 
-    let positionAbove = true
-    if (y - modalHeight < padding) {
-      const belowY = centerY + 10
-      if (belowY + modalHeight + padding < screenHeight) {
-        y = belowY
-        positionAbove = false
-      } else {
-        y = Math.max(modalHeight + padding, centerY - 10)
-      }
-    }
-
+    setPopoverWidthPx(modalWidth)
+    setPopoverMaxHeightPx(maxH)
     setPosition({ x, y })
     setIsAbove(positionAbove)
-  }
+  }, [])
+
+  // Re-clamp after verse text/error loads so tall content stays inside the viewport cap.
+  useLayoutEffect(() => {
+    if (!isVisible) return
+    const { cx, cy } = anchorPointRef.current
+    setPositionFromPoint(cx, cy)
+  }, [isVisible, scriptureData, error, loading, setPositionFromPoint])
+
+  // Post-layout nudge: horizontal (width vs `innerWidth` mismatch) and vertical (tall popover vs anchor).
+  useLayoutEffect(() => {
+    if (!isVisible || !popoverRef.current) return
+    const el = popoverRef.current
+    const pad = VIEWPORT_PADDING_PX
+    const { w: sw, h: sh } = layoutViewportSize()
+    const r = el.getBoundingClientRect()
+    // jsdom often reports 0×0 for un-laid-out fixed nodes; skip nudge to avoid bogus shifts.
+    if (r.width < 2 || r.height < 2) return
+
+    let dx = 0
+    if (r.left < pad - 0.5) dx = pad - r.left
+    else if (r.right > sw - pad + 0.5) dx = sw - pad - r.right
+
+    let dy = 0
+    if (r.top < pad - 0.5) dy = pad - r.top
+    else if (r.bottom > sh - pad + 0.5) dy = sh - pad - r.bottom
+
+    if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return
+    setPosition((p) => ({ ...p, x: p.x + dx, y: p.y + dy }))
+  }, [isVisible, popoverWidthPx, popoverMaxHeightPx, scriptureData, error, loading, isAbove])
 
   const isTouchOnly =
     typeof window !== 'undefined' &&
@@ -278,51 +396,54 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
       {/* Modal */}
       {isVisible && (
         <div
-          className="fixed z-50 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg shadow-xl p-6 w-96 max-w-[calc(100vw-40px)] min-h-[60px]"
+          ref={popoverRef}
+          className="fixed z-50 box-border flex min-h-0 max-w-none flex-col overflow-hidden rounded-lg border border-slate-300 bg-white shadow-xl dark:border-slate-600 dark:bg-slate-800"
           style={{
             left: `${position.x}px`,
             top: `${position.y}px`,
+            width: `${popoverWidthPx}px`,
+            maxHeight: `min(${popoverMaxHeightPx}px, min(90dvh, calc(100dvh - 24px)))`,
             transform: isAbove ? 'translate(-50%, -100%)' : 'translate(-50%, 0%)',
-            pointerEvents: openedByLongPress ? 'auto' : 'none'
+            pointerEvents: openedByLongPress ? 'auto' : 'none',
           }}
         >
-          {loading ? (
-            <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
-              <div
-                className="h-6 w-6 shrink-0 animate-spin rounded-full border-b-2 border-blue-600 dark:border-blue-400"
-                aria-hidden
-              />
-              <span className="text-base md:text-lg">Loading verse...</span>
-            </div>
-          ) : error ? (
-            <div className="text-red-600 dark:text-red-400 text-base md:text-lg">
-              <p className="font-medium">Error loading verse:</p>
-              <p>{error}</p>
-            </div>
-          ) : scriptureData ? (
-            <div className="text-slate-700 dark:text-slate-200">
-              <div className="font-medium text-slate-900 dark:text-slate-100 mb-2 text-base md:text-lg">
-                {scriptureData.reference}
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 pt-4 pb-8 sm:px-6 sm:pt-6 sm:pb-10">
+            {loading ? (
+              <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
+                <div
+                  className="h-6 w-6 shrink-0 animate-spin rounded-full border-b-2 border-blue-600 dark:border-blue-400"
+                  aria-hidden
+                />
+                <span className="text-base md:text-lg">Loading verse...</span>
               </div>
-              <div className="text-base md:text-lg leading-relaxed">
-                {scriptureData.text}
+            ) : error ? (
+              <div className="text-base text-red-600 md:text-lg dark:text-red-400">
+                <p className="font-medium">Error loading verse:</p>
+                <p>{error}</p>
               </div>
-            </div>
-          ) : (
-            <div className="text-slate-600 dark:text-slate-400 text-base md:text-lg">
-              Hover for 1 second to load verse text
-            </div>
-          )}
+            ) : scriptureData ? (
+              <div className="text-slate-700 dark:text-slate-200">
+                <div className="mb-2 text-base font-medium text-slate-900 md:text-lg dark:text-slate-100">
+                  {scriptureData.reference}
+                </div>
+                <div className="wrap-break-word text-base leading-relaxed md:text-lg">{scriptureData.text}</div>
+              </div>
+            ) : (
+              <div className="text-base text-slate-600 md:text-lg dark:text-slate-400">
+                Hover for 1 second to load verse text
+              </div>
+            )}
+          </div>
 
-          {/* Arrow - points down when above, points up when below */}
+          {/* Arrow — outside the scroll region so it stays attached to the card edge */}
           {isAbove ? (
-            <div 
-              className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white dark:border-t-slate-800"
+            <div
+              className="pointer-events-none absolute top-full left-1/2 h-0 w-0 -translate-x-1/2 border-t-4 border-r-4 border-l-4 border-transparent border-t-white dark:border-t-slate-800"
               style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.1))' }}
             />
           ) : (
-            <div 
-              className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-white dark:border-b-slate-800"
+            <div
+              className="pointer-events-none absolute bottom-full left-1/2 h-0 w-0 -translate-x-1/2 border-b-4 border-r-4 border-l-4 border-transparent border-b-white dark:border-b-slate-800"
               style={{ filter: 'drop-shadow(0 -1px 1px rgba(0,0,0,0.1))' }}
             />
           )}

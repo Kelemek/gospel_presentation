@@ -170,6 +170,51 @@ describe('ScriptureHoverModal', () => {
     jest.useRealTimers()
   })
 
+  it('keeps the popover within the viewport when the trigger is near the right edge', async () => {
+    ;(window as any).matchMedia = jest.fn(() => ({ matches: false }))
+    const Capacitor = require('@capacitor/core').Capacitor
+    Capacitor.isNativePlatform = () => false
+    const origIW = window.innerWidth
+    const origIH = window.innerHeight
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 400 })
+    Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: 700 })
+    jest.useFakeTimers()
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ reference: 'John 3:16', text: 'Short text.' }),
+    })
+    const { container } = render(
+      <ScriptureHoverModal reference="John 3:16" hoverDelayMs={100}>
+        <span>Edge</span>
+      </ScriptureHoverModal>
+    )
+    const wrapper = screen.getByText('Edge').parentElement!
+    jest.spyOn(wrapper, 'getBoundingClientRect').mockReturnValue({
+      width: 40,
+      height: 20,
+      top: 200,
+      left: 360,
+      right: 400,
+      bottom: 220,
+      x: 360,
+      y: 200,
+      toJSON: () => ({}),
+    } as DOMRect)
+    fireEvent.mouseEnter(wrapper)
+    act(() => {
+      jest.advanceTimersByTime(100)
+    })
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled())
+    await waitFor(() => expect(screen.getByText('Short text.')).toBeInTheDocument())
+    const pop = container.querySelector('.fixed.z-50') as HTMLElement
+    expect(pop).toBeTruthy()
+    // Center of trigger (380) is clamped so the popover (up to ~376px wide) fits inside 400px width.
+    expect(pop.style.left).toBe('200px')
+    jest.useRealTimers()
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: origIW })
+    Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: origIH })
+  })
+
   it('on touch-only device backdrop closes modal when tapping outside', async () => {
     ;(window as any).matchMedia = jest.fn(() => ({ matches: true }))
     const Capacitor = require('@capacitor/core').Capacitor

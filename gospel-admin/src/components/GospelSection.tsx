@@ -9,6 +9,8 @@ import React, { useState, useEffect } from 'react'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import type { VersePinAnchoredEntry, VersePinColorId } from '@/lib/versePinStorage'
 import { anchoredPinMatchesDisplayRow } from '@/lib/versePinStorage'
+import GospelInlineHtml from '@/components/GospelInlineHtml'
+import { VERSE_PIN_PILL_STYLES } from '@/components/gospelInlinePillStyles'
 
 type ScriptureClickHandler = (
   reference: string,
@@ -20,45 +22,6 @@ type VersePinRemoveHandler = (pin: Pick<VersePinAnchoredEntry, 'bookmarkId' | 'c
 
 const ANSWERS_STORAGE_KEY_PREFIX = 'gospel-answers-'
 
-
-const PILL_LINK_CLASS = 'px-1.5 py-0.5 font-medium text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/50 hover:bg-blue-100 dark:hover:bg-blue-800/50 border border-blue-200 dark:border-blue-700 rounded transition-colors cursor-pointer whitespace-nowrap no-underline'
-const PILL_STYLE: React.CSSProperties = { display: 'inline', margin: '0 2px', verticalAlign: 'baseline', fontSize: 'inherit' }
-
-const VERSE_PIN_PILL_STYLES: Record<
-  VersePinColorId,
-  { pill: string; unpinWrap: string }
-> = {
-  red: {
-    pill:
-      'px-1.5 py-0.5 font-semibold text-red-900 dark:text-red-100 bg-red-200 dark:bg-red-950/55 hover:bg-red-300 dark:hover:bg-red-900/65 border-2 border-red-500 dark:border-red-700 hover:border-red-600 dark:hover:border-red-500 rounded transition-colors cursor-pointer whitespace-nowrap no-underline pr-5',
-    unpinWrap:
-      'text-red-800 dark:text-red-200 hover:text-red-950 dark:hover:text-red-50',
-  },
-  blue: {
-    pill:
-      'px-1.5 py-0.5 font-semibold text-blue-900 dark:text-blue-100 bg-blue-200 dark:bg-blue-950/50 hover:bg-blue-300 dark:hover:bg-blue-900/60 border-2 border-blue-500 dark:border-blue-700 hover:border-blue-600 dark:hover:border-blue-500 rounded transition-colors cursor-pointer whitespace-nowrap no-underline pr-5',
-    unpinWrap:
-      'text-blue-800 dark:text-blue-200 hover:text-blue-950 dark:hover:text-blue-50',
-  },
-  yellow: {
-    pill:
-      'px-1.5 py-0.5 font-semibold text-yellow-900 dark:text-yellow-100 bg-yellow-200 dark:bg-yellow-900/45 hover:bg-yellow-300 dark:hover:bg-yellow-900/65 border-2 border-yellow-500 dark:border-yellow-700 hover:border-yellow-600 dark:hover:border-yellow-500 rounded transition-colors cursor-pointer whitespace-nowrap no-underline pr-5',
-    unpinWrap:
-      'text-yellow-900 dark:text-yellow-200 hover:text-yellow-950 dark:hover:text-yellow-50',
-  },
-  green: {
-    pill:
-      'px-1.5 py-0.5 font-semibold text-emerald-950 dark:text-emerald-50 bg-emerald-200 dark:bg-emerald-950/45 hover:bg-emerald-300 dark:hover:bg-emerald-900/60 border-2 border-emerald-600 dark:border-emerald-700 hover:border-emerald-700 dark:hover:border-emerald-500 rounded transition-colors cursor-pointer whitespace-nowrap no-underline pr-5',
-    unpinWrap:
-      'text-emerald-900 dark:text-emerald-200 hover:text-emerald-950 dark:hover:text-emerald-50',
-  },
-  violet: {
-    pill:
-      'px-1.5 py-0.5 font-semibold text-violet-900 dark:text-violet-100 bg-violet-200 dark:bg-violet-950/45 hover:bg-violet-300 dark:hover:bg-violet-900/60 border-2 border-violet-600 dark:border-violet-700 hover:border-violet-700 dark:hover:border-violet-500 rounded transition-colors cursor-pointer whitespace-nowrap no-underline pr-5',
-    unpinWrap:
-      'text-violet-900 dark:text-violet-200 hover:text-violet-950 dark:hover:text-violet-50',
-  },
-}
 
 const VERSE_PIN_CARD_CLASSES: Record<VersePinColorId, string> = {
   red:
@@ -87,7 +50,7 @@ function versePinForRow(
   )
 }
 
-// Helper component to render text with COMA buttons, Four Rules button, and inline scripture references
+/** Rich profile HTML with COMA / Four Rules / scripture inlines (DOM-safe; preserves lists). */
 function TextWithComaButtons({
   text,
   onComaClick,
@@ -98,195 +61,27 @@ function TextWithComaButtons({
   versePins,
   onRemoveVersePin,
 }: {
-  text: string;
-  onComaClick: () => void;
-  onScriptureClick?: ScriptureClickHandler;
-  onFourRulesClick?: () => void;
-  anchorSectionId?: string;
-  anchorSubsectionId?: string;
-  versePins?: VersePinAnchoredEntry[];
+  text: string
+  onComaClick: () => void
+  onScriptureClick?: ScriptureClickHandler
+  onFourRulesClick?: () => void
+  anchorSectionId?: string
+  anchorSubsectionId?: string
+  versePins?: VersePinAnchoredEntry[]
   onRemoveVersePin?: VersePinRemoveHandler
 }) {
-  const safeText = text ?? ''
-
-  // Bible book names lookup table - covers all 66 canonical books with common variations
-  const BIBLE_BOOKS = new Set([
-    // Old Testament - Pentateuch
-    'Genesis', 'Exodus', 'Leviticus', 'Numbers', 'Deuteronomy',
-    // Old Testament - Historical
-    'Joshua', 'Judges', 'Ruth', '1 Samuel', '2 Samuel', '1 Kings', '2 Kings',
-    '1 Chronicles', '2 Chronicles', 'Ezra', 'Nehemiah', 'Esther',
-    // Old Testament - Wisdom/Poetry
-    'Job', 'Psalms', 'Psalm', 'Proverbs', 'Ecclesiastes', 'Song of Songs', 'Song of Solomon',
-    // Old Testament - Major Prophets
-    'Isaiah', 'Jeremiah', 'Lamentations', 'Ezekiel', 'Daniel',
-    // Old Testament - Minor Prophets
-    'Hosea', 'Joel', 'Amos', 'Obadiah', 'Jonah', 'Micah', 'Nahum', 'Habakkuk',
-    'Zephaniah', 'Haggai', 'Zechariah', 'Malachi',
-    // New Testament - Gospels
-    'Matthew', 'Mark', 'Luke', 'John',
-    // New Testament - Acts and Paul's epistles
-    'Acts', 'Romans', '1 Corinthians', '2 Corinthians', 'Galatians', 'Ephesians',
-    'Philippians', 'Colossians', '1 Thessalonians', '2 Thessalonians', '1 Timothy',
-    '2 Timothy', 'Titus', 'Philemon',
-    // New Testament - Hebrews and James
-    'Hebrews', 'James',
-    // New Testament - Peter, John, Jude
-    '1 Peter', '2 Peter', '1 John', '2 John', '3 John', 'Jude',
-    // New Testament - Revelation
-    'Revelation', 'Apocalypse'
-  ])
-  
-  // Improved scripture reference pattern - matches book name (with optional number prefix) followed by chapter:verse
-  // Improved scripture reference pattern - matches book name followed by chapter:verse with optional ranges
-  // Handles: "John 3:16", "1 Corinthians 7:3-4", "Song of Solomon 7:10-12", "Psalm 23:1,3,5"
-  // Allows HTML tags between words for rich text content
-  const wordPattern = '[A-Z][a-z]+'
-  const spaceWithOptionalTags = '(?:<[^>]*>)*\\s+(?:<[^>]*>)*'
-  const scripturePattern = new RegExp(
-    `\\b((?:\\d${spaceWithOptionalTags})?${wordPattern}(?:${spaceWithOptionalTags}(?:of|and|the)${spaceWithOptionalTags}${wordPattern})*)` +
-    `${spaceWithOptionalTags}(\\d+)(?:<[^>]*>)*:(</[^>]*>)*(?:<[^>]*>)*(\\d+)(?:-\\d+)?(?:,\\s*\\d+(?::\\d+)?)*\\b`,
-    'g'
+  return (
+    <GospelInlineHtml
+      html={text ?? ''}
+      onComaClick={onComaClick}
+      onScriptureClick={onScriptureClick}
+      onFourRulesClick={onFourRulesClick}
+      anchorSectionId={anchorSectionId}
+      anchorSubsectionId={anchorSubsectionId}
+      versePins={versePins}
+      onRemoveVersePin={onRemoveVersePin}
+    />
   )
-  
-  // First, handle COMA markers
-  const comaMarker = '___COMA_BUTTON___'
-  let processedText = safeText.replace(/(C\.O\.M\.A\.|COMA)/gi, comaMarker)
-  const comaMatches = safeText.match(/(C\.O\.M\.A\.|COMA)/gi) || []
-
-  // Then, handle Four Rules of Communication (exact string, F/R/C capitalized)
-  const fourRulesMarker = '___FOUR_RULES_BUTTON___'
-  const fourRulesPhrase = 'Four Rules of Communication'
-  const fourRulesRegex = new RegExp(fourRulesPhrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
-  processedText = processedText.replace(fourRulesRegex, fourRulesMarker)
-
-  // Then, handle scripture references - match directly in the HTML text
-  const scriptureMarker = '___SCRIPTURE_REF___'
-  const scriptureMatches: string[] = []
-  const cleanReferences: string[] = []  // Store clean references without HTML tags
-
-  // Find all verse references in the text (with HTML tags)
-  let match
-  while ((match = scripturePattern.exec(processedText)) !== null) {
-    const fullMatch = match[0]
-    // Strip HTML tags from the book name for validation
-    const bookNameWithTags = match[1]
-    const bookName = bookNameWithTags.replace(/<[^>]*>/g, '').trim()
-    
-    // Only add if it's a valid book name from our lookup table
-    if (BIBLE_BOOKS.has(bookName)) {
-      scriptureMatches.push(fullMatch)
-      // Store the clean reference (without HTML tags) for display
-      const cleanRef = fullMatch.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
-      cleanReferences.push(cleanRef)
-      // Replace this match with a marker
-      processedText = processedText.substring(0, match.index) + scriptureMarker + processedText.substring(match.index + fullMatch.length)
-      // Reset regex lastIndex since we modified the string
-      scripturePattern.lastIndex = match.index + scriptureMarker.length
-    }
-  }
-  
-  // Split by all three markers and reconstruct
-  const parts = processedText.split(new RegExp(`(${comaMarker}|${fourRulesMarker}|${scriptureMarker})`))
-
-  // Build React node array for true inline flow with hover support on scripture refs
-  let comaIndex = 0
-  let scriptureIndex = 0
-
-  const nodes = parts.map((part, i) => {
-    if (part === comaMarker && comaMatches[comaIndex] !== undefined) {
-      const comaText = comaMatches[comaIndex++]
-      return (
-        <a
-          key={i}
-          href="#"
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onComaClick() }}
-          className={PILL_LINK_CLASS}
-          style={PILL_STYLE}
-          title="Learn about the C.O.M.A. method"
-        >
-          {comaText}
-        </a>
-      )
-    } else if (part === fourRulesMarker) {
-      return (
-        <a
-          key={i}
-          href="#"
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onFourRulesClick?.() }}
-          className={PILL_LINK_CLASS}
-          style={PILL_STYLE}
-          title="View the Four Rules of Communication"
-        >
-          Four Rules of Communication
-        </a>
-      )
-    } else if (part === scriptureMarker && scriptureIndex < cleanReferences.length) {
-      const reference = cleanReferences[scriptureIndex++]
-      const rowPin =
-        anchorSectionId != null && anchorSubsectionId != null
-          ? versePinForRow(versePins, reference, anchorSectionId, anchorSubsectionId)
-          : null
-
-      if (onScriptureClick) {
-        return (
-          <ScriptureHoverModal key={i} reference={reference} hoverDelayMs={500} inline>
-            <span
-              className="relative inline-flex items-center"
-              style={{ margin: '0 2px', verticalAlign: 'baseline' }}
-            >
-              <button
-                type="button"
-                className={
-                  rowPin
-                    ? VERSE_PIN_PILL_STYLES[rowPin.colorId].pill
-                    : PILL_LINK_CLASS
-                }
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onScriptureClick(reference, anchorSectionId, anchorSubsectionId)
-                }}
-                style={{ fontSize: 'inherit' }}
-                title={`Click to view ${reference}`}
-              >
-                {reference}
-              </button>
-              {rowPin && onRemoveVersePin && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onRemoveVersePin({ colorId: rowPin.colorId, bookmarkId: rowPin.bookmarkId })
-                  }}
-                  className={`absolute right-0 top-1/2 -translate-y-1/2 transition-colors cursor-pointer p-0.5 ${VERSE_PIN_PILL_STYLES[rowPin.colorId].unpinWrap}`}
-                  title="Remove pin for this passage"
-                  aria-label={`Remove ${rowPin.colorId} pin for ${reference}`}
-                >
-                  <VersePinGlyph colorId={rowPin.colorId} />
-                </button>
-              )}
-            </span>
-          </ScriptureHoverModal>
-        )
-      } else {
-        return (
-          <span
-            key={i}
-            className="px-1.5 py-0.5 font-medium text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900/50 border border-blue-200 dark:border-blue-700 rounded whitespace-nowrap"
-            style={PILL_STYLE}
-          >
-            {reference}
-          </span>
-        )
-      }
-    } else if (part) {
-      return <span key={i} dangerouslySetInnerHTML={{ __html: part }} />
-    }
-    return null
-  })
-
-  return <span>{nodes}</span>
-
 }
 
 interface GospelSectionProps {

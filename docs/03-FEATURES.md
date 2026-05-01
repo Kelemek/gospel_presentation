@@ -26,7 +26,7 @@ The COMA template provides a structured framework for reflection:
 
 ### Four Rules of Communication
 
-When the exact phrase "Four Rules of Communication" (F, R, C capitalized) appears in profile content (titles, subsection content, or questions), it is rendered as a pill-style button. Clicking it opens a modal that lists the four rule headers only: Rule One - Be Honest; Rule Two - Keep Current; Rule Three – Attack the Problem, Not the Person; Rule Four – Act, Don't React. The modal content is static (no API). Same pattern as the COMA link: implemented in `TextWithComaButtons` and `FourRulesModal.tsx` in `gospel-admin/src/components/`.
+When the exact phrase "Four Rules of Communication" (F, R, C capitalized) appears in profile content (titles, subsection content, or questions), it is rendered as a pill-style button. Clicking it opens a modal that lists the four rule headers only: Rule One - Be Honest; Rule Two - Keep Current; Rule Three – Attack the Problem, Not the Person; Rule Four – Act, Don't React. The modal content is static (no API). Same pattern as the COMA link: `GospelInlineHtml` / `injectGospelInlineMarkersInHtml.ts` flatten text per block (`p`, headings, table cells, `li` without a child `p`, or a sole wrapper `div`) and replace matches with mount spans via **DOM Ranges** so lists stay valid and references still match when rich text splits a verse across inline tags (e.g. bold book name); `FourRulesModal.tsx` lives in `gospel-admin/src/components/`.
 
 ## Scripture Modal
 
@@ -40,12 +40,13 @@ When users click a scripture reference, a modal displays the full text with thes
   - Compare options exclude the current main translation
 - **Verse view**: Single verse or verse range
 - **Chapter Context**: Expands to show full chapter with highlighted verse(s)
+- **Hover preview** (inline scripture pills in profile content): **`ScriptureHoverModal`** loads text from `/api/scripture` on **hover** (mouse, after a short delay) or **long-press** (touch). The popover uses **viewport-based width** (up to about **600px** on wide screens, less on phones). **Height** is capped by both a global max (~**720px**) and the **free space above or below the hovered reference** so the card stays next to the anchor; overflow **scrolls**. If a tall placement probe does not fit on either side, the popover **anchors to the roomier side** (below vs above) instead of vertically centering with full height (which used to pin the card to the top). Placement stays within the visible viewport.
 - **Attribution**: Footer displays copyright/attribution per translation; when comparing, attributions appear in each column
 - **Header title**: On narrow widths, the modal title truncates the **book name** (ellipsis) and keeps **chapter:verse** visible; full reference is in `title` and `aria-label` (so assistive tech and tests see the complete string)
 - **Memorize**: **Memorize** (`data-tour="scripture-modal-memorize"`) sits in the reader toolbar row with **Verse** and **Chapter Context** and saves the passage to the local memorization list when text has loaded; disabled while loading, on error, if already saved, or if there is no text. See **Verse memorization** below.
 - **Pin (local)**: **Pin** (`data-tour="scripture-modal-pin-color"`) is a compact **icon picker** next to **Memorize** (tap when the chevron shows). The menu lists **red**, **blue**, **green**, and **violet** 📌 pins only—**yellow** is not a menu choice; **there is no “none”** row; clearing uses the 📌 on the card or **Clear pinned passages** in the slide-out menu. **Yellow** is “last verse viewed”: passages that are not pinned with another tint show yellow on the control; closing without changing the picker advances yellow **only when** nothing else bookmarks that passage. **Red**, **blue**, **green**, and **violet** can repeat across different passages as bookmarks. Choosing a menu tint commits that bookmark color when you close the reader.
 
-**Implementation**: `ScriptureModal.tsx` (compare state, fetch, layout) + `ScriptureModalPinPick.tsx` (toolbar pin control); reference splitting: `gospel-admin/src/lib/splitScriptureReferenceForHeader.ts`.
+**Implementation**: `ScriptureModal.tsx` (compare state, fetch, layout) + `ScriptureModalPinPick.tsx` (toolbar pin control); reference splitting: `gospel-admin/src/lib/splitScriptureReferenceForHeader.ts`. Inline hover: `gospel-admin/src/components/ScriptureHoverModal.tsx`.
 
 ## Scripture pins (highlighted cards)
 
