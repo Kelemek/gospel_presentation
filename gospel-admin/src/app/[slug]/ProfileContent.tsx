@@ -9,6 +9,7 @@ import ScriptureModal from '@/components/ScriptureModal'
 import MemorizationPracticeSession from '@/components/MemorizationPracticeSession'
 import TableOfContents from '@/components/TableOfContents'
 import SidebarAuthNav from '@/components/SidebarAuthNav'
+import MenuLocalDataBackup from '@/components/MenuLocalDataBackup'
 import ThemeToggle from '@/components/ThemeToggle'
 import BookmarksDropdown from '@/components/BookmarksDropdown'
 import ProfileHelpMenu from '@/components/ProfileHelpMenu'
@@ -84,6 +85,8 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const [favoriteReferences, setFavoriteReferences] = useState<string[]>([])
   const [currentReferenceIndex, setCurrentReferenceIndex] = useState(0)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  /** Skip desktop `onMouseLeave` close while the restore JSON file picker is open (keeps `<input type="file">` mounted). */
+  const deferCloseMenuForFilePickerRef = useRef(false)
   const [memorizationPracticeVerse, setMemorizationPracticeVerse] = useState<MemorizedVerse | null>(null)
   const [canEdit, setCanEdit] = useState(false)
   const [fromEditor, setFromEditor] = useState(false)
@@ -739,6 +742,9 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
               if (typeof document !== 'undefined' && document.body.classList.contains('driver-active')) {
                 return
               }
+              if (deferCloseMenuForFilePickerRef.current) {
+                return
+              }
               // Only auto-close on desktop when mouse leaves
               if (window.innerWidth >= 1024) {
                 closeMenu()
@@ -824,6 +830,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                 </div>
             </div>
 
+              <MenuLocalDataBackup deferCloseMenuForFilePickerRef={deferCloseMenuForFilePickerRef} />
               <SidebarAuthNav />
             </div>
           </div>

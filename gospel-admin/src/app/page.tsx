@@ -5,6 +5,7 @@ import { GospelSection as GospelSectionType } from '@/lib/types'
 import ScriptureModal from '@/components/ScriptureModal'
 import TableOfContents from '@/components/TableOfContents'
 import SidebarAuthNav from '@/components/SidebarAuthNav'
+import MenuLocalDataBackup from '@/components/MenuLocalDataBackup'
 import GospelSection from '@/components/GospelSection'
 import { ScriptureFooterAttributionParagraphs } from '@/components/ScriptureFooterAttributionParagraphs'
 import Link from 'next/link'
@@ -271,6 +272,7 @@ export function GospelPresentationOld() {
               <div onClick={closeMenu}>
                 <TableOfContents sections={gospelData} />
               </div>
+              <MenuLocalDataBackup />
               <SidebarAuthNav />
             </div>
           </div>

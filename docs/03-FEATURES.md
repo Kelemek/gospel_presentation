@@ -93,11 +93,17 @@ On profile pages, readers bookmark passages with tinted pins for visual wayfindi
 
 ## Text size (presentation site)
 
-- On **`[slug]`** gospel profile pages, the slide-out **Table of Contents** drawer lists **Resources**, **Text size**, **Print** / **Bible Translation**, **Memorize** (below **Bible Translation**), section links, then profile summary; **Login** / **Dashboard** appear last at the bottom (`SidebarAuthNav.tsx`). **Login** is hidden on **Capacitor** native builds (same as before).
+- On **`[slug]`** gospel profile pages, the slide-out **Table of Contents** drawer lists **Resources**, **Text size**, **Print** / **Bible Translation**, **Memorize** (below **Bible Translation**), section links, then profile summary and pinned passages; **Save my data** / **Restore my data** appear **above** **Login** / **Dashboard** (`MenuLocalDataBackup.tsx`, then `SidebarAuthNav.tsx`). **Login** is hidden on **Capacitor** native builds (same as before).
 - **Closing the drawer**: **Mobile** uses a transparent full-viewport layer (`z-40`) under the drawer so tapping outside closes it. **Desktop** closes when the pointer **leaves** the slide-out panel **or** when you **click** the main content area below the header (`ProfileContent` attaches the dismiss handler to the flex-growing content column so “click away” works after guided tours and matches reader expectations).
 - In the sidebar below **Resources**, a **Text size** dropdown matches the Resources styling and offers **Normal**, **Larger**, and **Largest**.
 - The choice is saved in `localStorage` (`gospel-profile-text-size`) and scales root font size on the main site via `TextSizeContext`, `ApplyTextSize`, and `html.text-size-*` classes in `globals.css`.
 - **`/admin` routes are excluded**: text scaling is not applied on admin pages so the admin UI stays at default size.
+
+## Local data backup (slide-out menu)
+
+- **Save my data** downloads one **JSON** file of **this browser’s** gospel data: bookmarks, memorized verses, pinned passages (per-profile keys), reflection answers, preferred translation, theme, text size, memorize listen speed, and first-visit welcome dismissal (`gospelLocalUserDataBackup.ts`).
+- **Restore my data** picks a backup file, asks for **confirmation**, writes only allowed keys into **`localStorage`**, then **reloads** the page so the UI picks up the restored state. On profile pages, while the OS file picker is open, the slide-out does **not** auto-close from desktop **mouse-leave** (so the hidden file input stays mounted until you choose or cancel—fixes Edge and similar browsers).
+- **Not included**: admin session (`gospel-admin-auth`), card vs list admin view (`gospel-view-preference`), offline **profile HTML cache** keys (`gospel-profile-{slug}` blobs), and **`sessionStorage`**. Treat backup files as **private** (answers and memorized verse text can appear in JSON). Use backups on the **same site** (origin) they were created on.
 
 ## Verse memorization (presentation profile pages)
 
