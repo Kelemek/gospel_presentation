@@ -41,11 +41,11 @@ export default function MenuLocalDataBackup(props: MenuLocalDataBackupProps = {}
 
   useEffect(() => () => clearFilePickerWatch(), [clearFilePickerWatch])
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (typeof window === 'undefined') return
     try {
       const payload = buildGospelLocalUserDataPayload(window.localStorage)
-      downloadGospelLocalUserDataBackup(payload)
+      await downloadGospelLocalUserDataBackup(payload)
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Something went wrong.'
       void showAlert(`Could not save your data.\n\n${msg}`)

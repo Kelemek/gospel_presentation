@@ -101,7 +101,7 @@ On profile pages, readers bookmark passages with tinted pins for visual wayfindi
 
 ## Local data backup (slide-out menu)
 
-- **Save my data** downloads one **JSON** file of **this browser’s** gospel data: bookmarks, memorized verses, pinned passages (per-profile keys), reflection answers, preferred translation, theme, text size, memorize listen speed, and first-visit welcome dismissal (`gospelLocalUserDataBackup.ts`).
+- **Save my data** saves one **JSON** file of **this browser’s** gospel data: bookmarks, memorized verses, pinned passages (per-profile keys), reflection answers, preferred translation, theme, text size, memorize listen speed, and first-visit welcome dismissal (`gospelLocalUserDataBackup.ts`). In **Capacitor** (iOS/Android app), the **system share sheet** is used so you can copy the file to Files, Drive, AirDrop, etc.; the usual browser download link is used on the web.
 - **Restore my data** picks a backup file, asks for **confirmation**, writes only allowed keys into **`localStorage`**, then **reloads** the page so the UI picks up the restored state. On profile pages, while the OS file picker is open, the slide-out does **not** auto-close from desktop **mouse-leave** (so the hidden file input stays mounted until you choose or cancel—fixes Edge and similar browsers).
 - **Not included**: admin session (`gospel-admin-auth`), card vs list admin view (`gospel-view-preference`), offline **profile HTML cache** keys (`gospel-profile-{slug}` blobs), and **`sessionStorage`**. Treat backup files as **private** (answers and memorized verse text can appear in JSON). Use backups on the **same site** (origin) they were created on.
 

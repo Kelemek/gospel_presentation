@@ -1,3 +1,4 @@
+import { Capacitor } from '@capacitor/core'
 import { PROFILE_BOOKMARKS_STORAGE_KEY } from '@/lib/profileBookmarksStorage'
 import { VERSE_MEMORIZATION_STORAGE_KEY, emitMemorizationChanged } from '@/lib/verseMemorizationStorage'
 import { VERSE_PIN_STORAGE_KEY_PREFIX, LEGACY_SCRIPTURE_PROGRESS_KEY_PREFIX } from '@/lib/versePinStorage'
@@ -171,18 +172,50 @@ export function applyGospelLocalUserDataImport(payload: GospelLocalUserDataPaylo
   emitMemorizationChanged()
 }
 
-export function downloadGospelLocalUserDataBackup(payload: GospelLocalUserDataPayload): void {
+function triggerAnchorDownload(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob)
+  try {
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.rel = 'noopener'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+/**
+ * Saves backup JSON. On Capacitor WebViews, programmatic `<a download>` is often ignored; we use the
+ * Web Share API with a `File` when `navigator.share` is available so the system share sheet appears.
+ */
+export async function downloadGospelLocalUserDataBackup(payload: GospelLocalUserDataPayload): Promise<void> {
   if (typeof window === 'undefined') return
   const date = payload.exportedAt.slice(0, 10).replace(/-/g, '')
   const filename = `gospel-local-backup-${date}.json`
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.rel = 'noopener'
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  URL.revokeObjectURL(url)
+  const json = JSON.stringify(payload, null, 2)
+  const blob = new Blob([json], { type: 'application/json' })
+
+  if (Capacitor.isNativePlatform() && typeof navigator.share === 'function') {
+    const file = new File([blob], filename, { type: 'application/json', lastModified: Date.now() })
+    try {
+      await navigator.share({
+        files: [file],
+        title: 'Gospel backup',
+        text: 'Save a copy of your bookmarks, memorization, and other data from this device.',
+      })
+      return
+    } catch (e) {
+      const name = e instanceof DOMException ? e.name : e instanceof Error ? e.name : ''
+      if (name === 'AbortError') {
+        return
+      }
+      triggerAnchorDownload(blob, filename)
+      return
+    }
+  }
+
+  triggerAnchorDownload(blob, filename)
 }
