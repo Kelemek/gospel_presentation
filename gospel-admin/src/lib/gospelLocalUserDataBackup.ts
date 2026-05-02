@@ -204,6 +204,21 @@ function triggerAnchorDownload(blob: Blob, filename: string, revokeAfterMs = 0):
 const NATIVE_ANCHOR_REVOKE_DELAY_MS = 90_000
 
 /**
+ * Backup download filename. On **native Android** the extension is **`.txt`** so the system share intent
+ * uses **`text/plain`** and more targets (including **Files**) tend to appear; file contents are still JSON.
+ */
+export function gospelLocalBackupFilename(
+  dateCompact: string,
+  platform: string,
+  isNativePlatform: boolean
+): string {
+  if (isNativePlatform && platform === 'android') {
+    return `gospel-local-backup-${dateCompact}.txt`
+  }
+  return `gospel-local-backup-${dateCompact}.json`
+}
+
+/**
  * Saves backup JSON.
  * - **Capacitor Android:** writes JSON to app cache via `@capacitor/filesystem`, then `@capacitor/share`
  *   (native share sheet). Plugins are **only imported on Android** so an older iOS build never loads them.
@@ -213,10 +228,10 @@ const NATIVE_ANCHOR_REVOKE_DELAY_MS = 90_000
 export async function downloadGospelLocalUserDataBackup(payload: GospelLocalUserDataPayload): Promise<void> {
   if (typeof window === 'undefined') return
   const date = payload.exportedAt.slice(0, 10).replace(/-/g, '')
-  const filename = `gospel-local-backup-${date}.json`
+  const isNative = Capacitor.isNativePlatform()
+  const filename = gospelLocalBackupFilename(date, Capacitor.getPlatform(), isNative)
   const json = JSON.stringify(payload, null, 2)
   const blob = new Blob([json], { type: 'application/json' })
-  const isNative = Capacitor.isNativePlatform()
   const isAndroidNative = isNative && Capacitor.getPlatform() === 'android'
   const isIosNative = isNative && Capacitor.getPlatform() === 'ios'
 

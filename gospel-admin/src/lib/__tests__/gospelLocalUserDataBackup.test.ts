@@ -4,6 +4,7 @@ import {
   applyGospelLocalUserDataImport,
   buildGospelLocalUserDataPayload,
   collectGospelLocalUserDataForExport,
+  gospelLocalBackupFilename,
   parseGospelLocalUserDataImport,
 } from '@/lib/gospelLocalUserDataBackup'
 import { PROFILE_BOOKMARKS_STORAGE_KEY } from '@/lib/profileBookmarksStorage'
@@ -40,6 +41,13 @@ function createMemoryStorage(initial: Record<string, string | null> = {}): Stora
 }
 
 describe('gospelLocalUserDataBackup', () => {
+  it('gospelLocalBackupFilename uses .txt on native Android only', () => {
+    expect(gospelLocalBackupFilename('20260101', 'android', true)).toBe('gospel-local-backup-20260101.txt')
+    expect(gospelLocalBackupFilename('20260101', 'android', false)).toBe('gospel-local-backup-20260101.json')
+    expect(gospelLocalBackupFilename('20260101', 'ios', true)).toBe('gospel-local-backup-20260101.json')
+    expect(gospelLocalBackupFilename('20260101', 'web', false)).toBe('gospel-local-backup-20260101.json')
+  })
+
   it('collectGospelLocalUserDataForExport includes curated keys and prefix keys', () => {
     const s = createMemoryStorage({
       [PROFILE_BOOKMARKS_STORAGE_KEY]: '{"v":1,"bookmarks":[]}',

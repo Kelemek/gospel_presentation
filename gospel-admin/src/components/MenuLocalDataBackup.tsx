@@ -1,6 +1,7 @@
 'use client'
 
 import type { MutableRefObject } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { useCallback, useEffect, useRef } from 'react'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import {
@@ -120,6 +121,14 @@ export default function MenuLocalDataBackup(props: MenuLocalDataBackupProps = {}
       <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">
         Bookmarks, memorized verses, pins, answers, and display options saved on this device only.
       </p>
+      {Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android' ? (
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">
+          After <strong>Save my data</strong>, swipe up on the share sheet for the full app list—look for{' '}
+          <strong>Files</strong>, <strong>Drive</strong> (save then download in Drive), or another app you use
+          for downloads. The backup is JSON (Android may use a <code className="text-[11px]">.txt</code> name so
+          more save options appear).
+        </p>
+      ) : null}
       <div className="space-y-3">
         <button type="button" onClick={handleSave} className={tocControlButtonClass}>
           <span className={iconSlotClass} aria-hidden>
@@ -151,7 +160,7 @@ export default function MenuLocalDataBackup(props: MenuLocalDataBackupProps = {}
       <input
         ref={fileInputRef}
         type="file"
-        accept="application/json,.json"
+        accept="application/json,.json,text/plain,.txt"
         className="sr-only"
         aria-hidden
         tabIndex={-1}
