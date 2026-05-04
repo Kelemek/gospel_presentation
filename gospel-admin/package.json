@@ -21,7 +21,9 @@
     "physical-intimacy:transform": "node scripts/transform-physical-intimacy-outline.js",
     "physical-intimacy:migrations": "node scripts/generate-physical-intimacy-migrations.js",
     "postinstall": "patch-package",
-    "import-spurgeon": "tsx scripts/import-spurgeon-ccel.ts"
+    "import-spurgeon": "tsx scripts/import-spurgeon-ccel.ts",
+    "import-spurgeon-gaps": "tsx scripts/import-spurgeon-ccel-gaps.ts",
+    "backfill-spurgeon-passage-index": "tsx scripts/backfill-spurgeon-passage-index-from-profiles.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.1.0",

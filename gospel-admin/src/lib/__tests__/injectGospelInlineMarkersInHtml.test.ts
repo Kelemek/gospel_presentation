@@ -21,6 +21,15 @@ describe('segmentPlainTextForGospelInlines', () => {
     const segs = segmentPlainTextForGospelInlines('Hebrew 11:1 is not a book')
     expect(segs).toEqual([{ kind: 'text', value: 'Hebrew 11:1 is not a book' }])
   })
+
+  it('treats en-dash verse ranges like a hyphen so the full range is one scripture ref', () => {
+    const segs = segmentPlainTextForGospelInlines('See Acts 26:15–18 here.')
+    expect(segs).toEqual([
+      { kind: 'text', value: 'See ' },
+      { kind: 'scripture', cleanRef: 'Acts 26:15-18', rawLength: 'Acts 26:15-18'.length },
+      { kind: 'text', value: ' here.' },
+    ])
+  })
 })
 
 describe('injectGospelInlineMarkersInHtml', () => {

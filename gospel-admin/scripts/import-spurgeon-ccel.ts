@@ -6,12 +6,14 @@
  * Usage (from gospel-admin/):
  *   npx tsx scripts/import-spurgeon-ccel.ts --limit 5
  *   npx tsx scripts/import-spurgeon-ccel.ts --limit 5 --url https://www.ccel.org/ccel/spurgeon/sermons01.xml
+ *   npx tsx scripts/import-spurgeon-ccel.ts --url …/sermons02.xml --slug sg00062
+ *     (parses the whole volume XML, imports only the matching slug; needs high parse cost)
  */
 import { createClient } from '@supabase/supabase-js'
 import * as dotenv from 'dotenv'
 import * as path from 'path'
-import type { GospelPresentationData } from '../src/lib/types'
 import { parseCcelVolumeSermons } from '../src/lib/spurgeon/ccelSermonHtml'
+import { importCcelParsedSermonToSupabase } from '../src/lib/spurgeon/importCcelParsedSermonToSupabase'
 
 dotenv.config({ path: path.join(__dirname, '../.env.local') })
 
@@ -20,6 +22,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!
 
 function parseArgs(argv: string[]) {
   let limit = 5
+  let slug: string | null = null
   let url =
     process.env.CCEL_SPURGEON_VOLUME_URL ||
     'https://www.ccel.org/ccel/spurgeon/sermons01.xml'
@@ -32,8 +35,12 @@ function parseArgs(argv: string[]) {
       url = argv[i + 1]
       i++
     }
+    if (argv[i] === '--slug' && argv[i + 1]) {
+      slug = argv[i + 1].trim().toLowerCase()
+      i++
+    }
   }
-  return { limit, url }
+  return { limit, url, slug }
 }
 
 async function main() {
@@ -42,8 +49,11 @@ async function main() {
     process.exit(1)
   }
 
-  const { limit, url } = parseArgs(process.argv.slice(2))
-  console.log(`Fetching ${url} (limit ${limit} sermons)…`)
+  const { limit, url, slug } = parseArgs(process.argv.slice(2))
+  const parseLimit = slug ? 99_999 : limit
+  console.log(
+    `Fetching ${url} (${slug ? `slug ${slug}, full-volume parse` : `limit ${limit}`})…`
+  )
 
   const res = await fetch(url)
   if (!res.ok) {
@@ -51,94 +61,37 @@ async function main() {
     process.exit(1)
   }
   const xml = await res.text()
-  const sermons = parseCcelVolumeSermons(xml, { limit })
-  console.log(`Parsed ${sermons.length} sermon(s).`)
+  const parsed = parseCcelVolumeSermons(xml, { limit: parseLimit })
+  const sermons = slug ? parsed.filter((s) => s.slug === slug) : parsed
+  console.log(
+    slug
+      ? `Parsed ${parsed.length} sermon(s) from volume; ${sermons.length} match --slug.`
+      : `Parsed ${sermons.length} sermon(s).`
+  )
+
+  if (slug && sermons.length === 0) {
+    console.error(`No sermon with slug ${slug} in this volume (parsed ${parsed.length} sermon(s)).`)
+    process.exit(1)
+  }
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
   for (const sermon of sermons) {
-    const gospelData: GospelPresentationData = [sermon.gospelSection]
-
-    const { data: existing, error: selErr } = await supabase
-      .from('profiles')
-      .select('id,is_public')
-      .eq('slug', sermon.slug)
-      .maybeSingle()
-
-    if (selErr) {
-      console.error(`Lookup ${sermon.slug}:`, selErr)
+    try {
+      const r = await importCcelParsedSermonToSupabase(supabase, sermon)
+      if (r.action === 'updated') {
+        console.log(`Updated profile ${r.slug}`)
+      } else {
+        console.log(`Inserted profile ${r.slug}`)
+      }
+      if (r.passageKeyCount > 0) {
+        console.log(`  Indexed ${r.passageKeyCount} passage key(s)`)
+      } else {
+        console.log('  No passage keys extracted')
+      }
+    } catch (e) {
+      console.error(e)
       process.exit(1)
-    }
-
-    const keepPublic = existing?.is_public === true
-    const nextPublic = keepPublic
-
-    let profileId: string
-
-    if (existing?.id) {
-      profileId = existing.id
-      const { error: upErr } = await supabase
-        .from('profiles')
-        .update({
-          title: sermon.sermonTitle,
-          description: null,
-          gospel_data: gospelData as never,
-          is_template: true,
-          is_public: nextPublic,
-          include_in_resources_menu: false,
-        })
-        .eq('id', profileId)
-
-      if (upErr) {
-        console.error(`Update ${sermon.slug}:`, upErr)
-        process.exit(1)
-      }
-      console.log(`Updated profile ${sermon.slug}`)
-    } else {
-      const { data: inserted, error: insErr } = await supabase
-        .from('profiles')
-        .insert({
-          slug: sermon.slug,
-          title: sermon.sermonTitle,
-          description: null,
-          gospel_data: gospelData as never,
-          is_template: true,
-          is_public: false,
-          include_in_resources_menu: false,
-        })
-        .select('id')
-        .single()
-
-      if (insErr || !inserted?.id) {
-        console.error(`Insert ${sermon.slug}:`, insErr)
-        process.exit(1)
-      }
-      profileId = inserted.id
-      console.log(`Inserted profile ${sermon.slug}`)
-    }
-
-    const { error: delErr } = await supabase.from('spurgeon_passage_index').delete().eq('profile_id', profileId)
-    if (delErr) {
-      console.error(`Clear index for ${sermon.slug}:`, delErr)
-      process.exit(1)
-    }
-
-    const keys = sermon.passageKeys
-    if (keys.length > 0) {
-      const rows = keys.map((passage_key, i) => ({
-        passage_key,
-        profile_id: profileId,
-        sermon_no: sermon.sermonNo,
-        is_primary: i === 0,
-      }))
-      const { error: idxErr } = await supabase.from('spurgeon_passage_index').insert(rows)
-      if (idxErr) {
-        console.error(`Index ${sermon.slug}:`, idxErr)
-        process.exit(1)
-      }
-      console.log(`  Indexed ${keys.length} passage key(s)`)
-    } else {
-      console.log('  No passage keys extracted')
     }
   }
 

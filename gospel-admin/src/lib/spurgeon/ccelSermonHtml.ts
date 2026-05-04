@@ -11,7 +11,8 @@
  *
  * `scripRef` → passage text normalized so {@link injectGospelInlineMarkersInHtml} can turn refs into
  * scripture modal triggers; **`scripCom`** footnotes removed. Subsections do **not** duplicate refs in
- * `scriptureReferences` — only inline body text carries them.
+ * `scriptureReferences` — only inline body text carries them. Catalog **`(No. N)`** in the body sets the
+ * profile slug `sg` + N; when that line is missing, **`div1 @title`** (`Sermon N. …`) supplies N.
  */
 import type { GospelSection, NestedSubsection, Subsection } from '@/lib/types'
 import { bookNameToUsfm, canonicalScriptureCacheReference } from '@/lib/api-bible-passage-id'
@@ -348,6 +349,17 @@ export function extractSermonCatalogNumber(divInner: string): number | null {
   return parseInt(m[1], 10)
 }
 
+/**
+ * CCEL `div1 @title` is usually `Sermon N. …`. Some exposition sermons omit `(No. N)` in the
+ * body; then {@link parseCcelVolumeSermons} uses this as a fallback for the catalog / slug.
+ */
+export function extractSermonCatalogNumberFromDiv1Title(title: string): number | null {
+  const m = title.trim().match(/^\s*Sermon\s+(\d+)\b/i)
+  if (!m) return null
+  const n = parseInt(m[1], 10)
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
 export function slugForSermonNumber(n: number): string {
   const padded = String(n).padStart(5, '0')
   return `sg${padded}`
@@ -381,6 +393,33 @@ export function div1XmlToGospelSubsections(divInner: string): {
   return { subsections, allPassages, sermonNo }
 }
 
+/** Add per-verse keys for same-chapter USFM ranges so modal single-verse lookups hit the index. */
+function expandSameChapterRangeKeysToVerseKeys(keys: string[]): string[] {
+  const out: string[] = []
+  const seen = new Set<string>()
+  const push = (k: string) => {
+    const t = k.trim()
+    if (!t || seen.has(t)) return
+    seen.add(t)
+    out.push(t)
+  }
+
+  for (const k of keys) {
+    push(k)
+    const m = k.match(/^([A-Z0-9]+)\.(\d+)\.(\d+)-\1\.\2\.(\d+)$/)
+    if (!m) continue
+    const v0 = parseInt(m[3], 10)
+    const v1 = parseInt(m[4], 10)
+    if (!Number.isFinite(v0) || !Number.isFinite(v1)) continue
+    const lo = Math.min(v0, v1)
+    const hi = Math.max(v0, v1)
+    for (let v = lo; v <= hi; v++) {
+      push(`${m[1]}.${m[2]}.${v}`)
+    }
+  }
+  return out
+}
+
 export function passageKeysFromRefs(refs: string[]): string[] {
   const keys: string[] = []
   const seen = new Set<string>()
@@ -390,7 +429,7 @@ export function passageKeysFromRefs(refs: string[]): string[] {
     seen.add(k)
     keys.push(k)
   }
-  return keys
+  return expandSameChapterRangeKeysToVerseKeys(keys)
 }
 
 export interface ParsedCcelSermonDiv1 {
@@ -451,9 +490,10 @@ export function parseCcelVolumeSermons(xml: string, options?: { limit?: number }
     const innerMatch = block.match(/<div1\b[^>]*>([\s\S]*)<\/div1>\s*$/i)
     const divInner = innerMatch ? innerMatch[1] : block.replace(/^<div1\b[^>]*>/i, '').replace(/<\/div1>\s*$/i, '')
 
-    const { subsections, allPassages, sermonNo } = div1XmlToGospelSubsections(divInner)
+    const { subsections, allPassages, sermonNo: bodySermonNo } = div1XmlToGospelSubsections(divInner)
     if (subsections.length === 0) continue
 
+    const sermonNo = bodySermonNo ?? extractSermonCatalogNumberFromDiv1Title(sermonTitle)
     const n = sermonNo ?? sermons.length + 1
     const slug = slugForSermonNumber(n)
     const passageKeys = passageKeysFromRefs(

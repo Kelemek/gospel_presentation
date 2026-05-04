@@ -69,10 +69,13 @@ function splitFourRulesInText(value: string): GospelInlineSegment[] {
 function splitScriptureInText(value: string): GospelInlineSegment[] {
   const out: GospelInlineSegment[] = []
   let last = 0
+  // En/em dashes in verse ranges must become ASCII `-` so the plain-text regex matches full ranges
+  // (same normalization as {@link parseReference}); keeps `data-gospel-ref` aligned with passage index keys.
+  const norm = value.replace(/\u2013/g, '-').replace(/\u2014/g, '-')
   SCRIPTURE_PLAIN_RE.lastIndex = 0
   let m: RegExpExecArray | null
-  while ((m = SCRIPTURE_PLAIN_RE.exec(value)) !== null) {
-    if (m.index > last) out.push({ kind: 'text', value: value.slice(last, m.index) })
+  while ((m = SCRIPTURE_PLAIN_RE.exec(norm)) !== null) {
+    if (m.index > last) out.push({ kind: 'text', value: norm.slice(last, m.index) })
 
     const bookName = m[1].replace(/\s+/g, ' ').trim()
     if (!GOSPEL_BIBLE_BOOK_NAMES.has(bookName)) {
@@ -85,7 +88,7 @@ function splitScriptureInText(value: string): GospelInlineSegment[] {
     last = m.index + m[0].length
     SCRIPTURE_PLAIN_RE.lastIndex = last
   }
-  if (last < value.length) out.push({ kind: 'text', value: value.slice(last) })
+  if (last < norm.length) out.push({ kind: 'text', value: norm.slice(last) })
   if (out.length === 0 && value.length > 0) out.push({ kind: 'text', value })
   return out
 }

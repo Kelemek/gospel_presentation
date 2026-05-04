@@ -3,6 +3,10 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { canonicalScriptureCacheReference } from '@/lib/api-bible-passage-id'
 import { logger } from '@/lib/logger'
 import { sortSpurgeonSermonsByDisplayTitleAZ } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
+import {
+  spurgeonPassageIndexBroadOrFilter,
+  spurgeonPassageKeySpansOverlap,
+} from '@/lib/spurgeon/spurgeonPassageKeyMatch'
 
 const MAX_ITEMS = 8
 
@@ -23,7 +27,8 @@ export async function GET(request: NextRequest) {
     }
 
     const admin = createAdminClient()
-    const { data: indexRows, error: idxErr } = await admin
+    let indexRows: { profile_id: string; passage_key?: string }[] | null = null
+    const { data: exactRows, error: idxErr } = await admin
       .from('spurgeon_passage_index')
       .select('profile_id')
       .eq('passage_key', passageKey)
@@ -31,6 +36,27 @@ export async function GET(request: NextRequest) {
     if (idxErr) {
       logger.error('[API] scripture spurgeon-links index', { idxErr })
       return NextResponse.json({ error: 'Lookup failed' }, { status: 500 })
+    }
+
+    indexRows = exactRows || []
+
+    if (indexRows.length === 0) {
+      const orFilter = spurgeonPassageIndexBroadOrFilter(passageKey)
+      if (orFilter) {
+        const { data: broadRows, error: broadErr } = await admin
+          .from('spurgeon_passage_index')
+          .select('profile_id, passage_key')
+          .or(orFilter)
+
+        if (broadErr) {
+          logger.error('[API] scripture spurgeon-links index broad', { broadErr })
+          return NextResponse.json({ error: 'Lookup failed' }, { status: 500 })
+        }
+
+        indexRows = (broadRows || []).filter((r: { passage_key: string }) =>
+          spurgeonPassageKeySpansOverlap(passageKey, r.passage_key)
+        )
+      }
     }
 
     const ids = [...new Set((indexRows || []).map((r: { profile_id: string }) => r.profile_id))]

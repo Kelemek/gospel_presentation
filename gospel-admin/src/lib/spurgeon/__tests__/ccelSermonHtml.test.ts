@@ -3,6 +3,7 @@ import {
   extractPassageAttributes,
   normalizedPassageDisplayForInline,
   slugForSermonNumber,
+  extractSermonCatalogNumberFromDiv1Title,
   div1XmlToGospelSubsections,
   isOutlineSegmentStart,
   isMajorOutlineSegmentStart,
@@ -29,6 +30,12 @@ describe('ccelSermonHtml', () => {
   it('slugForSermonNumber pads sermon number', () => {
     expect(slugForSermonNumber(1)).toBe('sg00001')
     expect(slugForSermonNumber(12345)).toBe('sg12345')
+  })
+
+  it('extractSermonCatalogNumberFromDiv1Title reads CCEL-style Sermon N. titles', () => {
+    expect(extractSermonCatalogNumberFromDiv1Title('Sermon 62. Exposition: 1 John 3:1-10')).toBe(62)
+    expect(extractSermonCatalogNumberFromDiv1Title('  sermon 9. Foo')).toBe(9)
+    expect(extractSermonCatalogNumberFromDiv1Title('First Sermon')).toBe(null)
   })
 
   it('div1XmlToGospelSubsections merges non-outline Body paragraphs into one subsection', () => {
@@ -170,5 +177,32 @@ describe('ccelSermonHtml', () => {
     expect(sermons[0].slug).toBe('sg00001')
     expect(sermons[1].slug).toBe('sg00002')
     expect(sermons[0].passageKeys.length).toBeGreaterThan(0)
+  })
+
+  it('parseCcelVolumeSermons uses div1 title when body omits (No. N)', () => {
+    const xml = `
+      <body>
+        <div1 title="Sermon 62. Exposition: 1 John 3:1-10">
+          <p class="Body">Opening exposition without a catalog line in the body.</p>
+        </div1>
+      </body>
+    `
+    const sermons = parseCcelVolumeSermons(xml, { limit: 5 })
+    expect(sermons).toHaveLength(1)
+    expect(sermons[0].slug).toBe('sg00062')
+    expect(sermons[0].sermonNo).toBe(62)
+  })
+
+  it('parseCcelVolumeSermons prefers (No. N) in body over title sermon number', () => {
+    const xml = `
+      <body>
+        <div1 title="Sermon 99. Misleading title">
+          <p class="Body">(No. 5) Body catalog wins.</p>
+        </div1>
+      </body>
+    `
+    const sermons = parseCcelVolumeSermons(xml, { limit: 5 })
+    expect(sermons[0].slug).toBe('sg00005')
+    expect(sermons[0].sermonNo).toBe(5)
   })
 })

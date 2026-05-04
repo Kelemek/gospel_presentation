@@ -24,8 +24,10 @@ describe('GET /api/spurgeon/by-reference', () => {
     const from = jest.fn((table: string) => {
       if (table === 'spurgeon_passage_index') {
         return {
-          select: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockResolvedValue({ data: [{ profile_id: 'p1' }], error: null }),
+          select: jest.fn(() => ({
+            eq: jest.fn().mockResolvedValue({ data: [{ profile_id: 'p1' }], error: null }),
+            or: jest.fn().mockResolvedValue({ data: [], error: null }),
+          })),
         }
       }
       if (table === 'profiles') {
@@ -55,11 +57,13 @@ describe('GET /api/spurgeon/by-reference', () => {
     const from = jest.fn((table: string) => {
       if (table === 'spurgeon_passage_index') {
         return {
-          select: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockResolvedValue({
-            data: [{ profile_id: 'p1' }, { profile_id: 'p2' }, { profile_id: 'p3' }],
-            error: null,
-          }),
+          select: jest.fn(() => ({
+            eq: jest.fn().mockResolvedValue({
+              data: [{ profile_id: 'p1' }, { profile_id: 'p2' }, { profile_id: 'p3' }],
+              error: null,
+            }),
+            or: jest.fn().mockResolvedValue({ data: [], error: null }),
+          })),
         }
       }
       if (table === 'profiles') {
@@ -87,5 +91,77 @@ describe('GET /api/spurgeon/by-reference', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.items.map((x: { slug: string }) => x.slug)).toEqual(['sg00001', 'sg00002', 'sg00003'])
+  })
+
+  it('falls back to same-chapter range index rows when exact verse key misses', async () => {
+    const from = jest.fn((table: string) => {
+      if (table === 'spurgeon_passage_index') {
+        return {
+          select: jest.fn(() => ({
+            eq: jest.fn().mockResolvedValue({ data: [], error: null }),
+            or: jest.fn().mockResolvedValue({
+              data: [{ profile_id: 'p1', passage_key: 'ACT.26.15-ACT.26.18' }],
+              error: null,
+            }),
+          })),
+        }
+      }
+      if (table === 'profiles') {
+        return {
+          select: jest.fn().mockReturnThis(),
+          in: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          like: jest.fn().mockResolvedValue({
+            data: [{ slug: 'sg00001', title: 'Sermon' }],
+            error: null,
+          }),
+        }
+      }
+      return {}
+    })
+    mockCreateAdminClient.mockReturnValue({ from } as never)
+
+    const res = await GET(
+      new NextRequest('http://localhost/api/spurgeon/by-reference?reference=Acts%2026%3A17')
+    )
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.items).toEqual([{ slug: 'sg00001', title: 'Sermon' }])
+  })
+
+  it('falls back when modal range overlaps a single verse in the index', async () => {
+    const from = jest.fn((table: string) => {
+      if (table === 'spurgeon_passage_index') {
+        return {
+          select: jest.fn(() => ({
+            eq: jest.fn().mockResolvedValue({ data: [], error: null }),
+            or: jest.fn().mockResolvedValue({
+              data: [{ profile_id: 'p1', passage_key: 'PHP.2.3' }],
+              error: null,
+            }),
+          })),
+        }
+      }
+      if (table === 'profiles') {
+        return {
+          select: jest.fn().mockReturnThis(),
+          in: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          like: jest.fn().mockResolvedValue({
+            data: [{ slug: 'sg00001', title: 'Sermon' }],
+            error: null,
+          }),
+        }
+      }
+      return {}
+    })
+    mockCreateAdminClient.mockReturnValue({ from } as never)
+
+    const res = await GET(
+      new NextRequest('http://localhost/api/spurgeon/by-reference?reference=Philippians%202%3A1-5')
+    )
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.items).toEqual([{ slug: 'sg00001', title: 'Sermon' }])
   })
 })
