@@ -20,6 +20,13 @@ describe('ccelSpurgeonVolumeUrl', () => {
     expect(ccelSpurgeonVolumeUrlForCatalogNo(3563)).toBe(`${CCEL_SPURGEON_SERMONS_BASE}sermons63.xml`)
   })
 
+  it('maps duplicate CCEL boundary sermons (1331, 2237) only to the earlier volume', () => {
+    expect(ccelSpurgeonVolumeUrlForCatalogNo(1331)).toBe(`${CCEL_SPURGEON_SERMONS_BASE}sermons22.xml`)
+    expect(ccelSpurgeonVolumeUrlForCatalogNo(1332)).toBe(`${CCEL_SPURGEON_SERMONS_BASE}sermons23.xml`)
+    expect(ccelSpurgeonVolumeUrlForCatalogNo(2237)).toBe(`${CCEL_SPURGEON_SERMONS_BASE}sermons37.xml`)
+    expect(ccelSpurgeonVolumeUrlForCatalogNo(2238)).toBe(`${CCEL_SPURGEON_SERMONS_BASE}sermons38.xml`)
+  })
+
   it('returns null for Met Tab gaps, sequence holes, and out-of-range numbers', () => {
     expect(ccelSpurgeonVolumeUrlForCatalogNo(423)).toBe(null)
     expect(ccelSpurgeonVolumeUrlForCatalogNo(426)).toBe(null)

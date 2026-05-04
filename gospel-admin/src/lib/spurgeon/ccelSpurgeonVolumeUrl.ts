@@ -10,6 +10,10 @@ export const CCEL_SPURGEON_SERMONS_BASE = 'https://www.ccel.org/ccel/spurgeon/'
  * **2000**. Those numbers return `null` from {@link ccelSpurgeonVolumeUrlForCatalogNo}.
  *
  * **423–426** also have no `div1` anywhere on CCEL for this series (same as unmapped).
+ *
+ * CCEL duplicates the last sermon of a volume as the first `div1` of the next file (**1331**,
+ * **2237**). Ranges are **non-overlapping**: those numbers map only to the earlier volume so
+ * {@link ccelSpurgeonVolumeUrlForCatalogNo} is unambiguous (same XML still parses the sermon from either fetch).
  */
 export const SPURGEON_MET_TAB_CCEL_CATALOG_GAPS: readonly number[] = [423, 424, 425, 426]
 
@@ -39,7 +43,7 @@ const SPURGEON_CCEL_VOLUME_FILES: { catalogLo: number; catalogHi: number; file: 
   { catalogLo: 1150, catalogHi: 1209, file: 'sermons20.xml' },
   { catalogLo: 1210, catalogHi: 1270, file: 'sermons21.xml' },
   { catalogLo: 1271, catalogHi: 1331, file: 'sermons22.xml' },
-  { catalogLo: 1331, catalogHi: 1390, file: 'sermons23.xml' },
+  { catalogLo: 1332, catalogHi: 1390, file: 'sermons23.xml' },
   { catalogLo: 1391, catalogHi: 1450, file: 'sermons24.xml' },
   { catalogLo: 1453, catalogHi: 1510, file: 'sermons25.xml' },
   { catalogLo: 1511, catalogHi: 1574, file: 'sermons26.xml' },
@@ -54,7 +58,7 @@ const SPURGEON_CCEL_VOLUME_FILES: { catalogLo: number; catalogHi: number; file: 
   { catalogLo: 2062, catalogHi: 2120, file: 'sermons35.xml' },
   { catalogLo: 2121, catalogHi: 2181, file: 'sermons36.xml' },
   { catalogLo: 2182, catalogHi: 2237, file: 'sermons37.xml' },
-  { catalogLo: 2237, catalogHi: 2288, file: 'sermons38.xml' },
+  { catalogLo: 2238, catalogHi: 2288, file: 'sermons38.xml' },
   { catalogLo: 2289, catalogHi: 2341, file: 'sermons39.xml' },
   { catalogLo: 2342, catalogHi: 2393, file: 'sermons40.xml' },
   { catalogLo: 2394, catalogHi: 2445, file: 'sermons41.xml' },
