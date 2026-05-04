@@ -9,28 +9,9 @@ import { createAdminClient } from '@/lib/supabase/server'
 
 const mockCreateAdminClient = createAdminClient as jest.MockedFunction<typeof createAdminClient>
 
-function mockProfilesChain(result: { data: unknown; error: unknown; count?: number }) {
-  const range = jest.fn().mockResolvedValue(result)
-  const tail = { range }
-  const chain: {
-    select: jest.Mock
-    eq: jest.Mock
-    like: jest.Mock
-    order: jest.Mock
-    or: jest.Mock
-  } = {
-    select: jest.fn(),
-    eq: jest.fn(),
-    like: jest.fn(),
-    order: jest.fn(),
-    or: jest.fn(),
-  }
-  chain.select.mockImplementation(() => chain)
-  chain.eq.mockImplementation(() => chain)
-  chain.like.mockImplementation(() => chain)
-  chain.order.mockImplementation(() => tail)
-  chain.or.mockImplementation(() => chain)
-  return { chain, orFn: chain.or, range }
+function mockRpc(result: { data: unknown; error: unknown }) {
+  const rpc = jest.fn().mockResolvedValue(result)
+  return { rpc }
 }
 
 describe('GET /api/spurgeon/sermons', () => {
@@ -38,13 +19,12 @@ describe('GET /api/spurgeon/sermons', () => {
     jest.clearAllMocks()
   })
 
-  it('returns sermons and pagination metadata', async () => {
-    const { chain } = mockProfilesChain({
-      data: [{ slug: 'sg00001', title: 'Sermon A' }],
+  it('returns sermons and pagination metadata via RPC', async () => {
+    const { rpc } = mockRpc({
+      data: { total: 1, items: [{ slug: 'sg00001', title: 'Sermon A' }] },
       error: null,
-      count: 1,
     })
-    mockCreateAdminClient.mockReturnValue({ from: jest.fn(() => chain) } as never)
+    mockCreateAdminClient.mockReturnValue({ rpc } as never)
 
     const res = await GET(new NextRequest('http://localhost/api/spurgeon/sermons?page=1&pageSize=20'))
     expect(res.status).toBe(200)
@@ -53,19 +33,69 @@ describe('GET /api/spurgeon/sermons', () => {
     expect(body.total).toBe(1)
     expect(body.page).toBe(1)
     expect(body.pageSize).toBe(20)
+    expect(rpc).toHaveBeenCalledWith('spurgeon_public_sermons_page', {
+      p_q: null,
+      p_offset: 0,
+      p_limit: 20,
+    })
   })
 
-  it('passes search pattern when q is present', async () => {
-    const { chain, orFn } = mockProfilesChain({
-      data: [],
+  it('passes search text to RPC when q is present', async () => {
+    const { rpc } = mockRpc({
+      data: { total: 0, items: [] },
       error: null,
-      count: 0,
     })
-    mockCreateAdminClient.mockReturnValue({ from: jest.fn(() => chain) } as never)
+    mockCreateAdminClient.mockReturnValue({ rpc } as never)
 
     const res = await GET(new NextRequest('http://localhost/api/spurgeon/sermons?q=grace'))
     expect(res.status).toBe(200)
-    expect(orFn).toHaveBeenCalledWith('title.ilike."%grace%",slug.ilike."%grace%"')
+    expect(rpc).toHaveBeenCalledWith('spurgeon_public_sermons_page', {
+      p_q: 'grace',
+      p_offset: 0,
+      p_limit: 20,
+    })
     await res.json()
+  })
+
+  it('requests correct offset for pages beyond a 2500-row fetch cap (full-corpus pagination)', async () => {
+    const { rpc } = mockRpc({
+      data: { total: 3600, items: [{ slug: 'sg03501', title: 'Sermon 3501.' }] },
+      error: null,
+    })
+    mockCreateAdminClient.mockReturnValue({ rpc } as never)
+
+    const res = await GET(
+      new NextRequest('http://localhost/api/spurgeon/sermons?page=101&pageSize=25')
+    )
+    expect(res.status).toBe(200)
+    expect(rpc).toHaveBeenCalledWith('spurgeon_public_sermons_page', {
+      p_q: null,
+      p_offset: 2500,
+      p_limit: 25,
+    })
+    const body = await res.json()
+    expect(body.total).toBe(3600)
+    expect(body.items).toHaveLength(1)
+    expect(body.items[0].slug).toBe('sg03501')
+  })
+
+  it('returns RPC rows in catalog order (DB responsibility)', async () => {
+    const { rpc } = mockRpc({
+      data: {
+        total: 3,
+        items: [
+          { slug: 'sg00001', title: 'Sermon 1. First' },
+          { slug: 'sg00002', title: 'Sermon 2. The Remembrance of Christ' },
+          { slug: 'sg01162', title: 'Sermon 1162. Saving Faith' },
+        ],
+      },
+      error: null,
+    })
+    mockCreateAdminClient.mockReturnValue({ rpc } as never)
+
+    const res = await GET(new NextRequest('http://localhost/api/spurgeon/sermons?page=1&pageSize=20'))
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.items.map((x: { slug: string }) => x.slug)).toEqual(['sg00001', 'sg00002', 'sg01162'])
   })
 })

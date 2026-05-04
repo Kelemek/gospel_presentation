@@ -50,7 +50,7 @@ describe('SpurgeonSermonsModal', () => {
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/spurgeon/sermons'),
+        expect.stringMatching(/\/api\/spurgeon\/sermons\?[^]*page=1[^]*pageSize=25/),
         expect.any(Object)
       )
     })
@@ -131,7 +131,7 @@ describe('SpurgeonSermonsModal', () => {
           items: [{ slug: 'sg00999', title: 'Follow This Sermon' }],
           total: 1,
           page: 1,
-          pageSize: 30,
+          pageSize: 25,
         }),
     } as Response)
 

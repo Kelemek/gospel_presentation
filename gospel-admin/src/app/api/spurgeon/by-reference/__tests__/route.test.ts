@@ -33,8 +33,7 @@ describe('GET /api/spurgeon/by-reference', () => {
           select: jest.fn().mockReturnThis(),
           in: jest.fn().mockReturnThis(),
           eq: jest.fn().mockReturnThis(),
-          like: jest.fn().mockReturnThis(),
-          order: jest.fn().mockResolvedValue({
+          like: jest.fn().mockResolvedValue({
             data: [{ slug: 'sg00001', title: 'Sermon' }],
             error: null,
           }),

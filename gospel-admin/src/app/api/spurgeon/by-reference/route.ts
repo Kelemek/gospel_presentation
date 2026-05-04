@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { canonicalScriptureCacheReference } from '@/lib/api-bible-passage-id'
 import { logger } from '@/lib/logger'
+import { sortBySpurgeonSermonSlug } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
 
 /**
  * GET /api/spurgeon/by-reference?reference=John+3:16
@@ -42,14 +43,14 @@ export async function GET(request: NextRequest) {
       .eq('is_public', true)
       .eq('is_template', true)
       .like('slug', 'sg%')
-      .order('slug')
 
     if (profErr) {
       logger.error('[API] spurgeon by-reference profiles', { profErr })
       return NextResponse.json({ error: 'Lookup failed' }, { status: 500 })
     }
 
-    const items = ((profiles || []) as { slug: string; title: string }[]).map((p) => ({
+    const sorted = sortBySpurgeonSermonSlug((profiles || []) as { slug: string; title: string }[])
+    const items = sorted.map((p) => ({
       slug: p.slug,
       title: p.title || p.slug,
     }))

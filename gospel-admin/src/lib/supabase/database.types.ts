@@ -157,6 +157,10 @@ export interface Database {
         Args: { user_id: string }
         Returns: UserRole
       }
+      spurgeon_public_sermons_page: {
+        Args: { p_q?: string | null; p_offset?: number; p_limit?: number }
+        Returns: Json
+      }
     }
     Enums: {
       user_role: UserRole

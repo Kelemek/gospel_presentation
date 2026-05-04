@@ -5,7 +5,9 @@
  * the sermon title on the Gospel section). Inside the sermon, outline and prose are almost
  * entirely `<p class="Body">…</p>` — there are typically no per-point `<head>` / `<div2>`
  * wrappers in the XML, so structure is inferred from paragraph text (Roman heads, FIRST.,
- * and numbered **1.** … **2.** lines).
+ * and numbered **1.** … **2.** lines). A few sermons omit `class="Body"` and use plain
+ * `<p id="…">` (and sometimes `<p class="Centered">`); when no Body paragraphs exist, the
+ * parser falls back to those tags so those sermons are not skipped.
  *
  * `scripRef` → passage text normalized so {@link injectGospelInlineMarkersInHtml} can turn refs into
  * scripture modal triggers; **`scripCom`** footnotes removed. Subsections do **not** duplicate refs in
@@ -212,11 +214,27 @@ export function isOutlineSegmentStart(plain: string): boolean {
 }
 
 function extractBodyParagraphInners(divInner: string): string[] {
-  const pRe = /<p\b[^>]*class="Body"[^>]*>([\s\S]*?)<\/p>/gi
+  const bodyRe = /<p\b[^>]*class="Body"[^>]*>([\s\S]*?)<\/p>/gi
   const out: string[] = []
   let m: RegExpExecArray | null
-  while ((m = pRe.exec(divInner)) !== null) {
+  while ((m = bodyRe.exec(divInner)) !== null) {
     const inner = m[1].trim()
+    if (!inner || inner === '&#160;' || inner === '&nbsp;') continue
+    out.push(inner)
+  }
+  if (out.length > 0) return out
+
+  // Some ThML sermons use `<p id="…">` without `class="Body"` (e.g. sermons06.xml, No. 319).
+  // Include unclassed paragraphs and `class="Centered"` (hymn stanzas); skip other classes.
+  const looseRe = /<p\b([^>]*)>([\s\S]*?)<\/p>/gi
+  while ((m = looseRe.exec(divInner)) !== null) {
+    const attrs = m[1]
+    const clsMatch = /\bclass="([^"]*)"/i.exec(attrs)
+    if (clsMatch) {
+      const cn = clsMatch[1].trim().toLowerCase()
+      if (cn !== 'centered' && cn !== 'body') continue
+    }
+    const inner = m[2].trim()
     if (!inner || inner === '&#160;' || inner === '&nbsp;') continue
     out.push(inner)
   }

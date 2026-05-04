@@ -137,6 +137,23 @@ describe('ccelSermonHtml', () => {
     expect(subsections[1].nestedSubsections![3].title).toMatch(/^4\. Yet again/)
   })
 
+  it('div1XmlToGospelSubsections falls back to id-only and Centered paragraphs when no class="Body"', () => {
+    const inner = `
+      <p id="xxx-p1">(No. 319)</p>
+      <p id="xxx-p2">Opening line without Body class.</p>
+      <p class="Centered">"A centered stanza."</p>
+      <p id="xxx-p3">I. First main head in id-only paragraph format.</p>
+      <p id="xxx-p4">More under first head.</p>
+    `
+    const { subsections, sermonNo } = div1XmlToGospelSubsections(inner)
+    expect(sermonNo).toBe(319)
+    expect(subsections).toHaveLength(2)
+    expect(subsections[0].content).toContain('Opening line')
+    expect(subsections[0].content).toContain('centered stanza')
+    expect(subsections[1].title).toMatch(/^I\. First main/)
+    expect(subsections[1].content).toContain('More under first head')
+  })
+
   it('parseCcelVolumeSermons extracts limited sermons from div1 blocks', () => {
     const xml = `
       <body>
