@@ -64,7 +64,6 @@ const TOC_VERSE_PINS = '[data-tour="toc-verse-pins"]'
 const TOC_RESET_PROGRESS = '[data-tour="toc-reset-progress"]'
 const SCRIPTURE_CARD = '[data-tour="scripture-card"]'
 const SCRIPTURE_MODAL_TOOLBAR = '[data-tour="scripture-modal-toolbar"]'
-const SCRIPTURE_MODAL_CONTEXT = '[data-tour="scripture-modal-context"]'
 const SCRIPTURE_MODAL_VERSE_BODY = '[data-tour="scripture-modal-verse-body"]'
 const SCRIPTURE_MODAL_COMPARE = '[data-tour="scripture-modal-compare"]'
 const SCRIPTURE_MODAL_COMPARE_COLUMNS = '[data-tour="scripture-modal-compare-columns"]'
@@ -758,6 +757,7 @@ function resourcesListPanelReady(panel: Element): boolean {
   const t = panel.textContent ?? ''
   if (t.includes('No resources available')) return true
   if (panel.querySelector(RESOURCE_CATEGORY)) return true
+  if (panel.querySelector('[data-resource-spurgeon-library]')) return true
   if (panel.querySelector('a[href^="/"]')) return true
   return false
 }
@@ -776,14 +776,15 @@ async function fetchPublicResourceItemsForTour(): Promise<PublicResourceItem[]> 
   }
 }
 
-function resourcesListOverviewCopy(items: PublicResourceItem[], numCategories: number): string {
+function resourcesListOverviewCopy(items: PublicResourceItem[]): string {
+  const hasFolderLike = items.some((i) => i.type === 'category' || i.type === 'spurgeonLibrary')
   if (items.length === 0) {
     return 'Nothing is listed yet. When your church adds shared profiles or categories in admin, they will appear here.'
   }
-  if (numCategories === 0) {
+  if (!hasFolderLike) {
     return 'The next steps highlight each group of top-level links and explain what those presentations are for—tap a link when you want to open one.'
   }
-  return 'The next steps highlight each section: groups of top-level links and each category folder. Each step lists what is inside and what those resources are for. Folders expand automatically when highlighted—tap any link when you want to open a presentation.'
+  return 'The next steps highlight each section: groups of top-level links, the Spurgeon sermon library row when present, and each category folder. Each step lists what is inside and what those resources are for. Folders expand automatically when highlighted—tap any link when you want to open a presentation.'
 }
 
 function resourceTemplatesBlockTitle(count: number): string {
@@ -2430,18 +2431,6 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
     },
     {
       element: () =>
-        document.querySelector(SCRIPTURE_MODAL_CONTEXT) ??
-        document.querySelector(SCRIPTURE_MODAL_TOOLBAR) ??
-        document.body,
-      popover: {
-        title: 'Presentation context',
-        description:
-          'When available, this area shows which <strong>section</strong> and <strong>subsection</strong> you are in, plus a short summary from the outline—so you remember how this passage fits the lesson.',
-        ...pop({ side: 'bottom', align: 'start' }),
-      },
-    },
-    {
-      element: () =>
         document.querySelector(SCRIPTURE_MODAL_VERSE_BODY) ?? document.querySelector(SCRIPTURE_MODAL_TOOLBAR)!,
       popover: {
         title: 'The passage',
@@ -2801,7 +2790,6 @@ export function runResourcesFeatureTour(options?: ProfileFeatureTourOptions): vo
 
 async function runResourcesFeatureTourAsync(options?: ProfileFeatureTourOptions): Promise<void> {
   const items = await fetchPublicResourceItemsForTour()
-  const numCategories = items.filter((i) => i.type === 'category').length
   const groups = groupPublicResourceItems(items)
 
   const steps: DriveStep[] = [
@@ -2860,7 +2848,7 @@ async function runResourcesFeatureTourAsync(options?: ProfileFeatureTourOptions)
       element: RESOURCES_LIST_PANEL,
       popover: {
         title: 'What you will see',
-        description: resourcesListOverviewCopy(items, numCategories),
+        description: resourcesListOverviewCopy(items),
         side: 'right',
         align: 'start',
       },
@@ -2869,6 +2857,7 @@ async function runResourcesFeatureTourAsync(options?: ProfileFeatureTourOptions)
 
   let templateBlocksVisited = 0
   let categoriesVisited = 0
+  let spurgeonLibraryVisited = 0
 
   for (let gi = 0; gi < groups.length; gi++) {
     const g = groups[gi]
@@ -2884,6 +2873,26 @@ async function runResourcesFeatureTourAsync(options?: ProfileFeatureTourOptions)
         popover: {
           title: resourceTemplatesBlockTitle(g.items.length),
           description: resourceTemplatesBlockDescription(g.items),
+          side: 'right',
+          align: 'start',
+        },
+      })
+      continue
+    }
+
+    if (g.kind === 'spurgeonLibrary') {
+      if (spurgeonLibraryVisited >= 1) continue
+      spurgeonLibraryVisited++
+      const safeTitle = escapeForPopoverText(g.title.trim() || 'Spurgeon sermons')
+      steps.push({
+        element: () =>
+          document.querySelector(
+            `${RESOURCES_LIST_PANEL} [data-resource-spurgeon-library]`
+          ) ?? document.querySelector(RESOURCES_LIST_PANEL)!,
+        popover: {
+          title: safeTitle,
+          description:
+            '<p>This row opens the <strong>Spurgeon sermon library</strong>: search by keyword or by Bible reference, then open a sermon as a read-only presentation.</p><p class="mt-2">Tap it when you want to browse Charles Spurgeon’s sermons that your church has published.</p>',
           side: 'right',
           align: 'start',
         },

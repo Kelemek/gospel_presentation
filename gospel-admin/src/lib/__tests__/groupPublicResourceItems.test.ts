@@ -38,4 +38,17 @@ describe('groupPublicResourceItems', () => {
       { kind: 'templates', items: [tpl('b', 'B')] },
     ])
   })
+
+  it('emits spurgeonLibrary between template runs', () => {
+    const items: PublicResourceItem[] = [
+      tpl('a', 'A'),
+      { type: 'spurgeonLibrary', title: 'Spurgeon sermons' },
+      tpl('b', 'B'),
+    ]
+    expect(groupPublicResourceItems(items)).toEqual([
+      { kind: 'templates', items: [tpl('a', 'A')] },
+      { kind: 'spurgeonLibrary', title: 'Spurgeon sermons' },
+      { kind: 'templates', items: [tpl('b', 'B')] },
+    ])
+  })
 })

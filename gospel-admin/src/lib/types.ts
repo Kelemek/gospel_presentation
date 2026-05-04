@@ -68,6 +68,8 @@ export interface GospelProfile {
   isDefault: boolean              // True for the / route
   isTemplate: boolean             // True for template profiles (editable only by admins)
   isPublic?: boolean             // When true and isTemplate, anonymous users can view via Resources dropdown
+  /** When false, omitted from public Resources menu ordering (e.g. Spurgeon sermon templates). Default true. */
+  includeInResourcesMenu?: boolean
   visitCount: number              // Analytics counter
   createdAt: Date
   updatedAt: Date
@@ -142,7 +144,7 @@ export const PROFILE_VALIDATION = {
   QUESTION_MAX_LENGTH: 500,        // Max length for question text
   ANSWER_MAX_LENGTH: 2000,         // Max length for answer text (allows full explanation)
   MAX_PROFILES_PER_USER: 50,
-  RESERVED_SLUGS: ['admin', 'api', 'auth', '_next', 'favicon']
+  RESERVED_SLUGS: ['admin', 'api', 'auth', '_next', 'favicon', 'spurgeon']
 } as const
 
 // Resources dropdown order (admin_settings.public_template_order)
@@ -158,7 +160,16 @@ export interface ResourceOrderItemCategory {
   templateSlugs: string[]
 }
 
-export type ResourceOrderItem = ResourceOrderItemTemplate | ResourceOrderItemCategory
+/** Opens the in-app Spurgeon library modal (not a profile slug). */
+export interface ResourceOrderItemSpurgeonLibrary {
+  type: 'spurgeonLibrary'
+  title: string
+}
+
+export type ResourceOrderItem =
+  | ResourceOrderItemTemplate
+  | ResourceOrderItemCategory
+  | ResourceOrderItemSpurgeonLibrary
 
 export function isResourceOrderItemCategory(
   item: ResourceOrderItem
@@ -170,6 +181,12 @@ export function isResourceOrderItemTemplate(
   item: ResourceOrderItem
 ): item is ResourceOrderItemTemplate {
   return item.type === 'template'
+}
+
+export function isResourceOrderItemSpurgeonLibrary(
+  item: ResourceOrderItem
+): item is ResourceOrderItemSpurgeonLibrary {
+  return item.type === 'spurgeonLibrary'
 }
 
 /** Parse public_template_order JSON from DB into ResourceOrderItem[] (new format only). */
@@ -192,6 +209,11 @@ export function parseResourceOrder(raw: unknown): ResourceOrderItem[] {
           name: (el as any).name,
           templateSlugs: (el as any).templateSlugs.filter((s: unknown) => typeof s === 'string')
         })
+      } else if ((el as any).type === 'spurgeonLibrary') {
+        const rawTitle = (el as any).title
+        const title =
+          typeof rawTitle === 'string' && rawTitle.trim() ? rawTitle.trim() : 'Spurgeon sermons'
+        out.push({ type: 'spurgeonLibrary', title })
       }
     }
   }

@@ -3,10 +3,20 @@ import type { PublicResourceItem } from '@/lib/supabase-data-service'
 export type ResourceRenderGroup =
   | { kind: 'templates'; items: Extract<PublicResourceItem, { type: 'template' }>[] }
   | { kind: 'category'; item: Extract<PublicResourceItem, { type: 'category' }> }
+  | { kind: 'spurgeonLibrary'; title: string }
+
+function flushTemplates(
+  run: Extract<PublicResourceItem, { type: 'template' }>[],
+  groups: ResourceRenderGroup[]
+) {
+  if (run.length > 0) {
+    groups.push({ kind: 'templates', items: run })
+  }
+}
 
 /**
  * Groups consecutive top-level template rows so UI (and tours) can treat them as one block.
- * Category rows stay individual.
+ * Category rows and the Spurgeon library row stay individual.
  */
 export function groupPublicResourceItems(items: PublicResourceItem[]): ResourceRenderGroup[] {
   const groups: ResourceRenderGroup[] = []
@@ -16,15 +26,15 @@ export function groupPublicResourceItems(items: PublicResourceItem[]): ResourceR
     if (item.type === 'template') {
       run.push(item)
     } else {
-      if (run.length > 0) {
-        groups.push({ kind: 'templates', items: run })
-        run = []
+      flushTemplates(run, groups)
+      run = []
+      if (item.type === 'category') {
+        groups.push({ kind: 'category', item })
+      } else {
+        groups.push({ kind: 'spurgeonLibrary', title: item.title })
       }
-      groups.push({ kind: 'category', item })
     }
   }
-  if (run.length > 0) {
-    groups.push({ kind: 'templates', items: run })
-  }
+  flushTemplates(run, groups)
   return groups
 }

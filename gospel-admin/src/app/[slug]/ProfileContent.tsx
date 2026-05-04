@@ -8,6 +8,7 @@ import GospelSection from '@/components/GospelSection'
 import ScriptureModal from '@/components/ScriptureModal'
 import MemorizationPracticeSession from '@/components/MemorizationPracticeSession'
 import TableOfContents from '@/components/TableOfContents'
+import SpurgeonSermonsModal from '@/components/SpurgeonSermonsModal'
 import SidebarAuthNav from '@/components/SidebarAuthNav'
 import MenuLocalDataBackup from '@/components/MenuLocalDataBackup'
 import ThemeToggle from '@/components/ThemeToggle'
@@ -63,11 +64,6 @@ interface ScriptureRefNav {
   reference: string
   sectionId: string
   subsectionId: string
-  context: {
-    sectionTitle: string
-    subsectionTitle: string
-    content: string
-  }
 }
 
 function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
@@ -75,16 +71,14 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const [selectedScripture, setSelectedScripture] = useState<{
     reference: string
     isOpen: boolean
-    context?: {
-      sectionTitle: string
-      subsectionTitle: string
-      content: string
-    }
   }>({ reference: '', isOpen: false })
   
   const [favoriteReferences, setFavoriteReferences] = useState<string[]>([])
   const [currentReferenceIndex, setCurrentReferenceIndex] = useState(0)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isSpurgeonLibraryOpen, setIsSpurgeonLibraryOpen] = useState(false)
+  /** When opening Spurgeon from the scripture modal “Study”, pre-fill and search by this reference. */
+  const [spurgeonStudyReference, setSpurgeonStudyReference] = useState<string | null>(null)
   /** Skip desktop `onMouseLeave` close while the restore JSON file picker is open (keeps `<input type="file">` mounted). */
   const deferCloseMenuForFilePickerRef = useRef(false)
   const [memorizationPracticeVerse, setMemorizationPracticeVerse] = useState<MemorizedVerse | null>(null)
@@ -316,11 +310,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                 reference: ref.reference,
                 sectionId: sid,
                 subsectionId: subId,
-                context: {
-                  sectionTitle: section.title,
-                  subsectionTitle: subsection.title,
-                  content: subsection.content ?? '',
-                },
               }))
               const nested: ScriptureRefNav[] = (subsection.nestedSubsections || []).flatMap((nested, n) => {
                 const nestedId = `${sid}-${subIndex}-${n}`
@@ -328,11 +317,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                   reference: ref.reference,
                   sectionId: sid,
                   subsectionId: nestedId,
-                  context: {
-                    sectionTitle: section.title,
-                    subsectionTitle: `${subsection.title} - ${nested.title}`,
-                    content: nested.content ?? '',
-                  },
                 }))
               })
               return [...main, ...nested]
@@ -365,7 +349,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
             r => r.reference === reference && r.sectionId === sectionId && r.subsectionId === subsectionId
           )
         : undefined
-    const refForModal = navEntry ?? allScriptureRefs.find(ref => ref.reference === reference)
 
     if (sectionId && subsectionId) {
       modalOpenAnchorsRef.current = { reference, sectionId, subsectionId }
@@ -390,7 +373,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     setSelectedScripture({ 
       reference, 
       isOpen: true,
-      context: refForModal?.context
     })
   }
 
@@ -415,7 +397,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       setSelectedScripture({
         reference,
         isOpen: true,
-        context: entry?.context,
       })
       return
     }
@@ -430,7 +411,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     setSelectedScripture({
       reference: item.reference,
       isOpen: true,
-      context: item.context,
     })
   }, [
     favoriteReferences,
@@ -457,7 +437,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       setSelectedScripture({
         reference,
         isOpen: true,
-        context: entry?.context,
       })
       return
     }
@@ -472,7 +451,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     setSelectedScripture({
       reference: item.reference,
       isOpen: true,
-      context: item.context,
     })
   }, [
     favoriteReferences,
@@ -773,6 +751,10 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                 currentProfileSlug={profileInfo.slug}
                 onNavigate={closeMenu}
                 onMemorizationPracticeStart={handleMemorizationPracticeStart}
+                onOpenSpurgeonLibrary={() => {
+                  setSpurgeonStudyReference(null)
+                  setIsSpurgeonLibraryOpen(true)
+                }}
               />
               
               {/* Profile Info in Sidebar */}
@@ -869,11 +851,24 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
         onNext={hasNext ? navigateToNext : undefined}
         hasPrevious={hasPrevious}
         hasNext={hasNext}
-        context={selectedScripture.context}
         versePinControl={{
           draftColor: modalPinDraftColor,
           onDraftColorChange: setModalPinDraftColor,
           colorsAvailableInDropdown: modalPinDropdownColors,
+        }}
+        onOpenSpurgeonStudy={(ref) => {
+          setSpurgeonStudyReference(ref)
+          setIsSpurgeonLibraryOpen(true)
+        }}
+      />
+
+      <SpurgeonSermonsModal
+        isOpen={isSpurgeonLibraryOpen}
+        initialByReference={spurgeonStudyReference}
+        onFollowSermonLink={closeModal}
+        onClose={() => {
+          setIsSpurgeonLibraryOpen(false)
+          setSpurgeonStudyReference(null)
         }}
       />
 

@@ -155,6 +155,7 @@ export async function getProfiles(): Promise<GospelProfile[]> {
 export type PublicResourceItem =
   | { type: 'template'; slug: string; title: string }
   | { type: 'category'; id: string; name: string; templates: { slug: string; title: string }[] }
+  | { type: 'spurgeonLibrary'; title: string }
 
 /**
  * Gets public resources structure for the Resources dropdown (categories + templates with titles).
@@ -168,7 +169,7 @@ export async function getPublicResourcesStructure(): Promise<PublicResourceItem[
     const [profilesResult, orderResult] = await Promise.all([
       supabase
         .from('profiles')
-        .select('slug, title')
+        .select('slug, title, include_in_resources_menu')
         .eq('is_template', true)
         .eq('is_public', true),
       supabase
@@ -184,7 +185,9 @@ export async function getPublicResourcesStructure(): Promise<PublicResourceItem[
     }
 
     const bySlug = new Map(
-      (profilesResult.data || []).map((row: any) => [row.slug, { slug: row.slug, title: row.title || row.slug }])
+      (profilesResult.data || [])
+        .filter((row: any) => row.include_in_resources_menu !== false)
+        .map((row: any) => [row.slug, { slug: row.slug, title: row.title || row.slug }])
     )
     const order = parseResourceOrder(orderResult.data?.public_template_order)
     const usedSlugs = new Set<string>()
@@ -197,6 +200,11 @@ export async function getPublicResourcesStructure(): Promise<PublicResourceItem[
           items.push({ type: 'template', slug: p.slug, title: p.title })
           usedSlugs.add(p.slug)
         }
+      } else if (item.type === 'spurgeonLibrary') {
+        items.push({
+          type: 'spurgeonLibrary',
+          title: item.title?.trim() || 'Spurgeon sermons',
+        })
       } else {
         const templates: { slug: string; title: string }[] = []
         for (const slug of item.templateSlugs) {
@@ -339,6 +347,7 @@ export async function getProfileBySlug(slug: string): Promise<GospelProfile | nu
       isDefault: row.is_default,
       isTemplate: row.is_template || false,
       isPublic: row.is_public || false,
+      includeInResourcesMenu: row.include_in_resources_menu !== false,
       visitCount: row.visit_count,
       gospelData: row.gospel_data as unknown as GospelPresentationData,
       lastViewedScripture: row.last_viewed_scripture ? {

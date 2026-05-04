@@ -37,11 +37,6 @@ export function GospelPresentationOld() {
   const [selectedScripture, setSelectedScripture] = useState<{
     reference: string
     isOpen: boolean
-    context?: {
-      sectionTitle: string
-      subsectionTitle: string
-      content: string
-    }
   }>({ reference: '', isOpen: false })
   
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -132,35 +127,7 @@ export function GospelPresentationOld() {
     )
   }
 
-  // Collect all scripture references with context in order
-  const allScriptureRefs = gospelData.flatMap(section => 
-    section.subsections.flatMap(subsection => [
-      ...(subsection.scriptureReferences || []).map(ref => ({
-        reference: ref.reference,
-        context: {
-          sectionTitle: `${section.section}. ${section.title}`,
-          subsectionTitle: subsection.title,
-          content: subsection.content
-        }
-      })),
-      ...(subsection.nestedSubsections?.flatMap(nested => 
-        (nested.scriptureReferences || []).map(ref => ({
-          reference: ref.reference,
-          context: {
-            sectionTitle: `${section.section}. ${section.title}`,
-            subsectionTitle: `${subsection.title} - ${nested.title}`,
-            content: nested.content
-          }
-        }))
-      ) || [])
-    ])
-  )
-
   const handleScriptureClick = (reference: string) => {
-    // Find the context for this reference
-    const refWithContext = allScriptureRefs.find(ref => ref.reference === reference)
-    
-    // Update current reference index if this is a favorite
     const favoriteIndex = favoriteReferences.indexOf(reference)
     if (favoriteIndex !== -1) {
       setCurrentReferenceIndex(favoriteIndex)
@@ -169,7 +136,6 @@ export function GospelPresentationOld() {
     setSelectedScripture({ 
       reference, 
       isOpen: true,
-      context: refWithContext?.context
     })
   }
 
@@ -180,12 +146,10 @@ export function GospelPresentationOld() {
     const newIndex = (currentReferenceIndex - 1 + favoriteReferences.length) % favoriteReferences.length
     setCurrentReferenceIndex(newIndex)
     const reference = favoriteReferences[newIndex]
-    const refWithContext = allScriptureRefs.find(ref => ref.reference === reference)
     
     setSelectedScripture({ 
       reference, 
       isOpen: true,
-      context: refWithContext?.context
     })
   }
 
@@ -195,12 +159,10 @@ export function GospelPresentationOld() {
     const newIndex = (currentReferenceIndex + 1) % favoriteReferences.length
     setCurrentReferenceIndex(newIndex)
     const reference = favoriteReferences[newIndex]
-    const refWithContext = allScriptureRefs.find(ref => ref.reference === reference)
     
     setSelectedScripture({ 
       reference, 
       isOpen: true,
-      context: refWithContext?.context
     })
   }
 
@@ -322,7 +284,6 @@ export function GospelPresentationOld() {
         onNext={navigateToNext}
         hasPrevious={hasPrevious}
         hasNext={hasNext}
-        context={selectedScripture.context}
       />
     </div>
   )

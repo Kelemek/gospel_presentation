@@ -71,6 +71,13 @@ describe('injectGospelInlineMarkersInHtml', () => {
     expect(out).toContain('type="checkbox"')
   })
 
+  it('injects clickable scripture from CCEL-style sermon body (canonical ref in paragraph)', () => {
+    const html = '<p class="Body">(No. 7) Intro John 1:1 and more.</p>'
+    const out = injectGospelInlineMarkersInHtml(html, document)
+    expect(out).toContain('data-gospel-mount="scripture"')
+    expect(out).toContain('data-gospel-ref="John 1:1"')
+  })
+
   it('handles a single wrapper div with no paragraph', () => {
     const html = '<div>See Ephesians 5:8.</div>'
     const out = injectGospelInlineMarkersInHtml(html, document)

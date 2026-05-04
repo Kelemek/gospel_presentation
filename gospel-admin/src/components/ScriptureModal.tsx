@@ -12,7 +12,6 @@ import {
 } from '@/lib/verseMemorizationStorage'
 import type { VerseBookmarkColorId, VersePinColorId } from '@/lib/versePinStorage'
 import ScriptureModalPinPick from '@/components/ScriptureModalPinPick'
-import { normalizeRichTextHtmlForInjection } from '@/lib/normalizeRichTextHtmlForInjection'
 
 interface ScriptureModalProps {
   reference: string
@@ -22,17 +21,14 @@ interface ScriptureModalProps {
   onNext?: () => void
   hasPrevious?: boolean
   hasNext?: boolean
-  context?: {
-    sectionTitle: string
-    subsectionTitle: string
-    content: string
-  }
   /** When set (e.g. profile presentation), show pin-color icon picker beside Memorize. */
   versePinControl?: {
     draftColor: VersePinColorId
     onDraftColorChange: (value: VersePinColorId) => void
     colorsAvailableInDropdown: readonly VerseBookmarkColorId[]
   }
+  /** Opens Spurgeon library modal with “by scripture” search for this reference (profile pages). */
+  onOpenSpurgeonStudy?: (reference: string) => void
 }
 
 export default function ScriptureModal({ 
@@ -43,8 +39,8 @@ export default function ScriptureModal({
   onNext, 
   hasPrevious = false, 
   hasNext = false,
-  context,
   versePinControl,
+  onOpenSpurgeonStudy,
 }: ScriptureModalProps) {
   const { translation, setTranslation, enabledTranslations } = useTranslation()
   const { showAlert } = useAlertModal()
@@ -56,6 +52,7 @@ export default function ScriptureModal({
   const [contextLoading, setContextLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const verseTabButtonRef = useRef<HTMLButtonElement>(null)
   const scriptureModalTitleId = useId()
 
   // Compare translation (second column)
@@ -64,6 +61,9 @@ export default function ScriptureModal({
   const [compareChapterText, setCompareChapterText] = useState<string>('')
   const [compareLoading, setCompareLoading] = useState(false)
   const [compareError, setCompareError] = useState<string>('')
+
+  /** Whether indexed public Spurgeon sermons cite this passage (`/api/scripture/spurgeon-links`). */
+  const [spurgeonStudyMatch, setSpurgeonStudyMatch] = useState<'unset' | 'loading' | 'yes' | 'no'>('unset')
 
   // min-w in rem so width scales with global text-size (html); fits "Compare" at Normal/Larger/Largest
   const selectClassNameCompact =
@@ -136,6 +136,49 @@ export default function ScriptureModal({
     window.addEventListener(GOSPEL_MEMORIZATION_CHANGED_EVENT, onChanged)
     return () => window.removeEventListener(GOSPEL_MEMORIZATION_CHANGED_EVENT, onChanged)
   }, [reference, translation])
+
+  /** When the scripture modal opens, always start on the Verse view (not Chapter Context). */
+  useEffect(() => {
+    if (!isOpen) return
+    setShowingContext(false)
+    setChapterText('')
+  }, [isOpen])
+
+  /** Verse content first: scroll to top and move focus to Verse (not toolbar controls like Study). */
+  useEffect(() => {
+    if (!isOpen) return
+    const pane = scrollAreaRef.current
+    if (pane) pane.scrollTop = 0
+    const id = window.requestAnimationFrame(() => {
+      verseTabButtonRef.current?.focus({ preventScroll: true })
+    })
+    return () => window.cancelAnimationFrame(id)
+  }, [isOpen, reference])
+
+  useEffect(() => {
+    if (!isOpen || !onOpenSpurgeonStudy || !reference.trim()) {
+      setSpurgeonStudyMatch('unset')
+      return
+    }
+    let cancelled = false
+    setSpurgeonStudyMatch('loading')
+    void fetch(`/api/scripture/spurgeon-links?reference=${encodeURIComponent(reference.trim())}`, {
+      cache: 'no-store',
+    })
+      .then(async (res) => {
+        const data: unknown = await res.json().catch(() => ({}))
+        if (cancelled) return
+        const items = (data as { items?: unknown }).items
+        const list = Array.isArray(items) ? items : []
+        setSpurgeonStudyMatch(list.length > 0 ? 'yes' : 'no')
+      })
+      .catch(() => {
+        if (!cancelled) setSpurgeonStudyMatch('no')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, reference, onOpenSpurgeonStudy])
 
   // Prevent body scrolling when modal is open
   useEffect(() => {
@@ -631,6 +674,7 @@ export default function ScriptureModal({
 
             <div className="w-full sm:w-auto flex flex-wrap gap-1.5 justify-center sm:justify-start items-center">
               <button
+                ref={verseTabButtonRef}
                 type="button"
                 data-tour="scripture-modal-verse-tab"
                 onClick={() => setShowingContext(false)}
@@ -672,6 +716,20 @@ export default function ScriptureModal({
               >
                 Memorize
               </button>
+              {onOpenSpurgeonStudy &&
+                reference.trim() &&
+                spurgeonStudyMatch === 'yes' && (
+                  <button
+                    type="button"
+                    data-tour="scripture-modal-spurgeon-study"
+                    onClick={() => onOpenSpurgeonStudy(reference.trim())}
+                    title="Search public Spurgeon sermons that reference this passage"
+                    aria-label="Study: Spurgeon sermons for this passage"
+                    className="px-2 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors min-h-[36px] border-2 shrink-0 cursor-pointer text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500"
+                  >
+                    Study
+                  </button>
+                )}
               {versePinControl && (
                 <ScriptureModalPinPick
                   reference={reference}
@@ -685,40 +743,6 @@ export default function ScriptureModal({
           </div>
         </div>
 
-        {/* Context Information - Only show when available */}
-        {context && (
-          <div
-            className="px-4 py-2 bg-slate-50 dark:bg-slate-700/50 border-b dark:border-slate-600 shrink-0"
-            data-tour="scripture-modal-context"
-          >
-            <div className="text-slate-700 dark:text-slate-200 text-base md:text-lg">
-              <div className="flex items-center gap-2 mb-1">
-                <strong className="text-slate-800 dark:text-slate-100">Section:</strong>
-                <span
-                  className="font-medium text-slate-600 dark:text-slate-300"
-                  dangerouslySetInnerHTML={{
-                    __html: normalizeRichTextHtmlForInjection(context.sectionTitle ?? ''),
-                  }}
-                />
-              </div>
-              <div className="flex items-center gap-2 mb-2 text-slate-600 dark:text-slate-300">
-                <span
-                  className="font-medium"
-                  dangerouslySetInnerHTML={{
-                    __html: normalizeRichTextHtmlForInjection(context.subsectionTitle ?? ''),
-                  }}
-                />
-              </div>
-              <div className="prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-300 text-sm md:text-base leading-relaxed">
-                <div
-                  dangerouslySetInnerHTML={{
-                    __html: normalizeRichTextHtmlForInjection(context.content),
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        )}
         {/* Scrollable Content Area — data-tour scroll-area when single column so driver.js can spotlight this pane (pointer-events); compare mode uses compare-columns */}
         <div 
           ref={scrollAreaRef}
@@ -895,6 +919,7 @@ export default function ScriptureModal({
               )}
             </>
           )}
+
           {/* Attribution - inside scrollable area; same bg as section block (bg-slate-50 dark:bg-slate-700/50) */}
           <div className="scripture-modal-attribution space-y-2 bg-slate-50 dark:bg-slate-700/50 px-4 py-3 mt-4 border-y border-slate-200 dark:border-slate-600 md:col-span-2">
             {renderAttribution(translation)}

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { logger } from "@/lib/logger";
 import type { ResourceOrderItem } from "@/lib/types";
-import { parseResourceOrder } from "@/lib/types";
+import { parseResourceOrder, isResourceOrderItemSpurgeonLibrary } from "@/lib/types";
 
 // ============================================================================
 // Types & Interfaces
@@ -192,6 +192,21 @@ export default function AdminSettingsPage() {
       setDragSource({ kind: "top-level", index });
     }
   };
+
+  const hasSpurgeonLibraryRow = orderItems.some((i) => isResourceOrderItemSpurgeonLibrary(i));
+
+  const addSpurgeonLibraryRow = () => {
+    if (hasSpurgeonLibraryRow) return;
+    setOrderItems((prev) => [...prev, { type: "spurgeonLibrary", title: "Spurgeon sermons" }]);
+  };
+
+  const updateSpurgeonLibraryTitle = (index: number, title: string) => {
+    setOrderItems((prev) =>
+      prev.map((item, i) =>
+        i === index && isResourceOrderItemSpurgeonLibrary(item) ? { ...item, title } : item
+      )
+    );
+  };
   const handleDragStartCategoryTemplate = (e: React.DragEvent, categoryId: string, slug: string, indexInCategory: number) => {
     e.stopPropagation();
     setDragSource({ kind: "template", slug, categoryId, indexInCategory });
@@ -304,7 +319,7 @@ export default function AdminSettingsPage() {
   const slugsInOrder = new Set<string>();
   orderItems.forEach((item) => {
     if (item.type === "template") slugsInOrder.add(item.slug);
-    else item.templateSlugs.forEach((s) => slugsInOrder.add(s));
+    else if (item.type === "category") item.templateSlugs.forEach((s) => slugsInOrder.add(s));
   });
   const availableTemplates = publicTemplates.filter((t) => !slugsInOrder.has(t.slug));
 
@@ -520,7 +535,7 @@ export default function AdminSettingsPage() {
             <div className="border-b border-slate-200 px-6 sm:px-8 py-6">
               <h2 className="text-2xl font-bold text-slate-900">Resources dropdown order</h2>
               <p className="text-slate-600 text-sm mt-2">
-                Categories and templates in the Resources menu. Drag to reorder. Add categories and drag templates into them.
+                Categories, the Spurgeon sermon library row, and templates in the Resources menu. Drag to reorder. Add categories and drag templates into them.
               </p>
             </div>
             <div className="px-6 sm:px-8 py-6 space-y-4">
@@ -539,6 +554,19 @@ export default function AdminSettingsPage() {
                       className="px-3 py-1.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors"
                     >
                       Add category
+                    </button>
+                    <button
+                      type="button"
+                      onClick={addSpurgeonLibraryRow}
+                      disabled={hasSpurgeonLibraryRow}
+                      title={
+                        hasSpurgeonLibraryRow
+                          ? "Spurgeon library row is already in the list"
+                          : "Add a Resources row that opens the Spurgeon sermon finder"
+                      }
+                      className="px-3 py-1.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Add Spurgeon library
                     </button>
                     {availableTemplates.length > 0 && (
                       <select
@@ -588,6 +616,40 @@ export default function AdminSettingsPage() {
                               onClick={() => removeTopLevelTemplate(index)}
                               className="text-slate-400 hover:text-red-600 text-xs px-1"
                               aria-label="Remove"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ) : isResourceOrderItemSpurgeonLibrary(item) ? (
+                          <div
+                            key={`spurgeon-${index}`}
+                            draggable
+                            onDragStart={() => handleDragStartTopLevel(index)}
+                            onDragEnd={handleDragEnd}
+                            onDragOver={(e) => handleDragOverTopLevel(e, index)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDropTopLevel(e, index)}
+                            className={`flex flex-wrap items-center gap-2 px-4 py-3 text-sm text-slate-700 border-b border-slate-100 last:border-b-0 transition-colors cursor-grab active:cursor-grabbing ${dropTarget?.kind === "top-level" && dropTarget.index === index ? "bg-blue-100 ring-1 ring-blue-300" : "hover:bg-slate-50"}`}
+                          >
+                            <span className="shrink-0" aria-hidden>
+                              <GripIcon />
+                            </span>
+                            <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-violet-700">
+                              Spurgeon library
+                            </span>
+                            <input
+                              type="text"
+                              value={item.title}
+                              onChange={(e) => updateSpurgeonLibraryTitle(index, e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex-1 min-w-[8rem] px-2 py-1 border border-slate-300 rounded text-slate-900 text-sm"
+                              aria-label="Label shown in Resources menu"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeTopLevelTemplate(index)}
+                              className="text-slate-400 hover:text-red-600 text-xs px-1 ml-auto"
+                              aria-label="Remove Spurgeon library row"
                             >
                               Remove
                             </button>

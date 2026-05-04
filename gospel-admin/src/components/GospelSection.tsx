@@ -573,7 +573,7 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
             onRemoveVersePin={onRemoveVersePin}
           />
         </h4>
-        {subsection.content && !subsection.nestedSubsections?.length && (
+        {subsection.content && (
           <div className="text-slate-700 dark:text-slate-300 mb-3 leading-relaxed print-content text-base md:text-lg">
             <TextWithComaButtons 
               text={subsection.content} 
@@ -625,20 +625,6 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
               isLoggedIn={isLoggedIn}
             />
           ))}
-        </div>
-      )}
-      {subsection.content && Array.isArray(subsection.nestedSubsections) && subsection.nestedSubsections.length > 0 && (
-        <div className="text-slate-700 dark:text-slate-300 mt-6 pt-4 border-t border-slate-200 dark:border-slate-600 print-content text-base md:text-lg leading-relaxed">
-          <TextWithComaButtons 
-            text={subsection.content} 
-            onComaClick={() => setShowComaModal(true)}
-            onScriptureClick={onScriptureClick}
-            onFourRulesClick={() => setShowFourRulesModal(true)}
-            anchorSectionId={sectionId}
-            anchorSubsectionId={`${sectionId}-${subsectionIndex}`}
-            versePins={versePins}
-            onRemoveVersePin={onRemoveVersePin}
-          />
         </div>
       )}
       </div>

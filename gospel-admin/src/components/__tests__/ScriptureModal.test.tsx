@@ -5,6 +5,10 @@ import ScriptureModal from '../ScriptureModal'
 // Mock fetch for scripture API calls
 const mockFetch = global.fetch as jest.MockedFunction<typeof fetch>
 
+function fetchUrl(input: RequestInfo | URL): string {
+  return typeof input === 'string' ? input : (input as Request).url
+}
+
 describe('ScriptureModal Component', () => {
   const defaultProps = {
     reference: 'John 3:16',
@@ -13,13 +17,21 @@ describe('ScriptureModal Component', () => {
   }
 
   beforeEach(() => {
-    mockFetch.mockClear()
+    mockFetch.mockReset()
     jest.clearAllMocks()
-    // Default: success with data.text (component uses data.text)
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ text: 'Sample scripture text' })
-    } as Response)
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = fetchUrl(input)
+      if (url.includes('/api/scripture/spurgeon-links')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ items: [] }),
+        } as Response)
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ text: 'Sample scripture text' }),
+      } as Response)
+    })
   })
 
   it('should render modal when open', () => {
@@ -116,27 +128,42 @@ describe('ScriptureModal Component', () => {
   })
 
   it('should fetch scripture text when opened', async () => {
-    const mockScriptureResponse = {
-      ok: true,
-      json: () => Promise.resolve({
-        passages: ['For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.']
-      })
-    }
-    
-    mockFetch.mockResolvedValueOnce(mockScriptureResponse as Response)
-    
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = fetchUrl(input)
+      if (url.includes('/api/scripture?')) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              passages: [
+                'For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.',
+              ],
+            }),
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected fetch: ${url}`))
+    })
+
     render(<ScriptureModal {...defaultProps} />)
-    
+
     await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalled()
-      const calls = mockFetch.mock.calls
-      expect(calls[0][0]).toContain('/api/scripture?reference=John%203%3A16&translation=esv')
+      expect(
+        mockFetch.mock.calls.some((c) =>
+          String(c[0]).includes('/api/scripture?reference=John%203%3A16&translation=esv')
+        )
+      ).toBe(true)
     })
   })
 
   it('should handle scripture fetch errors', async () => {
-    mockFetch.mockRejectedValueOnce(new Error('API Error'))
-    
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = fetchUrl(input)
+      if (url.includes('/api/scripture?')) {
+        return Promise.reject(new Error('API Error'))
+      }
+      return Promise.reject(new Error(`Unexpected fetch: ${url}`))
+    })
+
     render(<ScriptureModal {...defaultProps} />)
     
     await waitFor(() => {
@@ -144,79 +171,40 @@ describe('ScriptureModal Component', () => {
     })
   })
 
-  it('should show context when provided', () => {
-    const context = {
-      sectionTitle: 'God',
-      subsectionTitle: 'God\'s Love',
-      content: 'This passage shows God\'s love for humanity.'
-    }
-    
-    render(<ScriptureModal {...defaultProps} context={context} />)
-
-    return waitFor(() => {
-      expect(screen.getByText(/Chapter Context/)).toBeInTheDocument()
-    })
-  })
-
-  it('renders entity-encoded HTML in context content as real markup', async () => {
-    const context = {
-      sectionTitle: 'Section',
-      subsectionTitle: 'Sub',
-      content: '&lt;p&gt;Quoted &lt;strong&gt;A&lt;/strong&gt;.&lt;/p&gt;',
-    }
-    const { container } = render(<ScriptureModal {...defaultProps} context={context} />)
-
-    await waitFor(() =>
-      expect(screen.getByRole('heading', { name: 'John 3:16' })).toBeInTheDocument()
-    )
-    const ctx = container.querySelector('[data-tour="scripture-modal-context"]')
-    expect(ctx).toBeTruthy()
-    expect(ctx!.querySelector('.prose strong')).toHaveTextContent('A')
-    expect(ctx).toHaveTextContent('Quoted')
-    expect(ctx).not.toHaveTextContent('<strong>')
-  })
-
-  it('should toggle context display', async () => {
-    const user = userEvent.setup()
-    const context = {
-      sectionTitle: 'God',
-      subsectionTitle: 'God\'s Love',
-      content: 'This passage shows God\'s love for humanity.'
-    }
-    
-    render(<ScriptureModal {...defaultProps} context={context} />)
-
-    await waitFor(() => expect(screen.getByText(/Chapter Context/)).toBeInTheDocument())
-
-    const contextButton = screen.getByText(/Chapter Context/)
-    await user.click(contextButton)
-
-    expect(screen.getByText('God')).toBeInTheDocument()
-    expect(screen.getByText('God\'s Love')).toBeInTheDocument()
-    expect(screen.getByText('This passage shows God\'s love for humanity.')).toBeInTheDocument()
-  })
-
-
-
   it('should show loading state', () => {
-    // Mock fetch to return a pending promise
-    let resolvePromise: (value: any) => void
-    const pendingPromise = new Promise((resolve) => {
-      resolvePromise = resolve
+    const pendingCtl: { resolve?: (r: Response) => void } = {}
+    const pendingScripture = new Promise<Response>((resolve) => {
+      pendingCtl.resolve = resolve
     })
-    
-    mockFetch.mockReturnValueOnce(pendingPromise as any)
-    
+
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = fetchUrl(input)
+      if (url.includes('/api/scripture?')) {
+        return pendingScripture
+      }
+      return Promise.reject(new Error(`Unexpected fetch: ${url}`))
+    })
+
     render(<ScriptureModal {...defaultProps} />)
-    
+
     expect(screen.getByText(/Loading scripture/)).toBeInTheDocument()
+    pendingCtl.resolve?.({
+      ok: true,
+      json: () => Promise.resolve({ text: 'done' }),
+    } as Response)
   })
 
   it('should show error when main fetch returns data.error', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ error: 'Verse not found' })
-    } as Response)
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = fetchUrl(input)
+      if (url.includes('/api/scripture?')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ error: 'Verse not found' }),
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected fetch: ${url}`))
+    })
     render(<ScriptureModal {...defaultProps} />)
     await waitFor(() => {
       expect(screen.getByText(/Verse not found/)).toBeInTheDocument()
@@ -224,9 +212,22 @@ describe('ScriptureModal Component', () => {
   })
 
   it('should show error when chapter context fetch returns data.error', async () => {
-    mockFetch
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ text: 'Main verse' }) } as Response)
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ error: 'Chapter not found' }) } as Response)
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = fetchUrl(input)
+      if (url.includes('reference=Genesis%201&') && !url.includes('%3A')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ error: 'Chapter not found' }),
+        } as Response)
+      }
+      if (url.includes('/api/scripture?')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ text: 'Main verse' }),
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected fetch: ${url}`))
+    })
     const user = userEvent.setup()
     render(<ScriptureModal {...defaultProps} reference="Genesis 1:1" />)
     await waitFor(() =>
@@ -237,9 +238,19 @@ describe('ScriptureModal Component', () => {
   })
 
   it('should show error when chapter context fetch throws', async () => {
-    mockFetch
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ text: 'Main verse' }) } as Response)
-      .mockRejectedValueOnce(new Error('Network error'))
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = fetchUrl(input)
+      if (url.includes('reference=Genesis%201&') && !url.includes('%3A')) {
+        return Promise.reject(new Error('Network error'))
+      }
+      if (url.includes('/api/scripture?')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ text: 'Main verse' }),
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected fetch: ${url}`))
+    })
     const user = userEvent.setup()
     render(<ScriptureModal {...defaultProps} reference="Genesis 1:2" />)
     await waitFor(() =>
@@ -250,9 +261,22 @@ describe('ScriptureModal Component', () => {
   })
 
   it('should fetch and show compare translation when Compare dropdown is selected', async () => {
-    mockFetch
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ text: 'Main verse ESV' }) } as Response)
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ text: 'Compare verse KJV' }) } as Response)
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = fetchUrl(input)
+      if (url.includes('translation=kjv') && url.includes('John%203%3A16')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ text: 'Compare verse KJV' }),
+        } as Response)
+      }
+      if (url.includes('/api/scripture?')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ text: 'Main verse ESV' }),
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected fetch: ${url}`))
+    })
     const user = userEvent.setup()
     render(<ScriptureModal {...defaultProps} />)
     await waitFor(() =>
@@ -264,9 +288,22 @@ describe('ScriptureModal Component', () => {
   })
 
   it('should show compare error when compare fetch returns data.error', async () => {
-    mockFetch
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ text: 'Main' }) } as Response)
-      .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ error: 'Compare translation unavailable' }) } as Response)
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = fetchUrl(input)
+      if (url.includes('translation=kjv') && url.includes('John%203%3A16')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ error: 'Compare translation unavailable' }),
+        } as Response)
+      }
+      if (url.includes('/api/scripture?')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ text: 'Main' }),
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected fetch: ${url}`))
+    })
     const user = userEvent.setup()
     render(<ScriptureModal {...defaultProps} />)
     await waitFor(() =>
@@ -275,5 +312,48 @@ describe('ScriptureModal Component', () => {
     const compareSelect = screen.getByLabelText(/Compare with another translation/i)
     await user.selectOptions(compareSelect, 'kjv')
     await waitFor(() => expect(screen.getByText(/Compare translation unavailable/)).toBeInTheDocument())
+  })
+
+  it('does not show Study without onOpenSpurgeonStudy', async () => {
+    render(<ScriptureModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'John 3:16' })).toBeInTheDocument())
+    expect(screen.queryByRole('button', { name: /Study: Spurgeon sermons for this passage/i })).not.toBeInTheDocument()
+  })
+
+  it('does not show Study when onOpenSpurgeonStudy is set but spurgeon-links returns no sermons', async () => {
+    const openStudy = jest.fn()
+    render(<ScriptureModal {...defaultProps} onOpenSpurgeonStudy={openStudy} />)
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'John 3:16' })).toBeInTheDocument())
+    await waitFor(() =>
+      expect(mockFetch.mock.calls.some((c) => String(c[0]).includes('spurgeon-links'))).toBe(true)
+    )
+    expect(screen.queryByRole('button', { name: /Study: Spurgeon sermons for this passage/i })).not.toBeInTheDocument()
+  })
+
+  it('calls onOpenSpurgeonStudy when Study is shown and clicked', async () => {
+    const user = userEvent.setup()
+    const openStudy = jest.fn()
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = fetchUrl(input)
+      if (url.includes('/api/scripture/spurgeon-links')) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              items: [{ slug: 'sg00001', title: 'A Sermon' }],
+            }),
+        } as Response)
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ text: 'Sample scripture text' }),
+      } as Response)
+    })
+    render(<ScriptureModal {...defaultProps} onOpenSpurgeonStudy={openStudy} />)
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Study: Spurgeon sermons for this passage/i })).toBeInTheDocument()
+    )
+    await user.click(screen.getByRole('button', { name: /Study: Spurgeon sermons for this passage/i }))
+    expect(openStudy).toHaveBeenCalledWith('John 3:16')
   })
 })

@@ -23,6 +23,7 @@ export interface Database {
           is_default: boolean
           is_template: boolean
           is_public: boolean
+          include_in_resources_menu: boolean
           visit_count: number
           gospel_data: Json
           last_viewed_scripture: Json | null
@@ -39,6 +40,7 @@ export interface Database {
           is_default?: boolean
           is_template?: boolean
           is_public?: boolean
+          include_in_resources_menu?: boolean
           visit_count?: number
           gospel_data: Json
           last_viewed_scripture?: Json | null
@@ -55,6 +57,7 @@ export interface Database {
           is_default?: boolean
           is_template?: boolean
           is_public?: boolean
+          include_in_resources_menu?: boolean
           visit_count?: number
           gospel_data?: Json
           last_viewed_scripture?: Json | null
@@ -62,6 +65,32 @@ export interface Database {
           updated_at?: string
           last_visited?: string | null
           created_by?: string | null
+        }
+      }
+      spurgeon_passage_index: {
+        Row: {
+          id: string
+          passage_key: string
+          profile_id: string
+          sermon_no: number | null
+          is_primary: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          passage_key: string
+          profile_id: string
+          sermon_no?: number | null
+          is_primary?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          passage_key?: string
+          profile_id?: string
+          sermon_no?: number | null
+          is_primary?: boolean
+          created_at?: string
         }
       }
       profile_access: {
