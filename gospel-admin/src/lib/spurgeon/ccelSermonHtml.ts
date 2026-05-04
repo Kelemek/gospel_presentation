@@ -13,6 +13,8 @@
  * scripture modal triggers; **`scripCom`** footnotes removed. Subsections do **not** duplicate refs in
  * `scriptureReferences` — only inline body text carries them. Catalog **`(No. N)`** in the body sets the
  * profile slug `sg` + N; when that line is missing, **`div1 @title`** (`Sermon N. …`) supplies N.
+ * If neither yields a catalog number, the `div1` is **skipped** (no positional slug), so later CCEL volumes
+ * cannot overwrite unrelated `sg…` profiles.
  */
 import type { GospelSection, NestedSubsection, Subsection } from '@/lib/types'
 import { bookNameToUsfm, canonicalScriptureCacheReference } from '@/lib/api-bible-passage-id'
@@ -486,7 +488,8 @@ export function parseCcelVolumeSermons(xml: string, options?: { limit?: number }
   for (const block of blocks) {
     if (sermons.length >= limit) break
     const titleMatch = block.match(/<div1\b[^>]*\btitle="([^"]*)"/i)
-    const sermonTitle = titleMatch?.[1]?.trim() || `Sermon ${sermons.length + 1}`
+    // Do not default to `Sermon ${k}` — that parses as catalog k and would collide across volumes.
+    const sermonTitle = titleMatch?.[1]?.trim() || 'Untitled'
     const innerMatch = block.match(/<div1\b[^>]*>([\s\S]*)<\/div1>\s*$/i)
     const divInner = innerMatch ? innerMatch[1] : block.replace(/^<div1\b[^>]*>/i, '').replace(/<\/div1>\s*$/i, '')
 
@@ -494,8 +497,9 @@ export function parseCcelVolumeSermons(xml: string, options?: { limit?: number }
     if (subsections.length === 0) continue
 
     const sermonNo = bodySermonNo ?? extractSermonCatalogNumberFromDiv1Title(sermonTitle)
-    const n = sermonNo ?? sermons.length + 1
-    const slug = slugForSermonNumber(n)
+    if (sermonNo == null) continue
+
+    const slug = slugForSermonNumber(sermonNo)
     const passageKeys = passageKeysFromRefs(
       allPassages.map((raw) => normalizedPassageDisplayForInline(raw))
     )

@@ -205,4 +205,16 @@ describe('ccelSermonHtml', () => {
     expect(sermons[0].slug).toBe('sg00005')
     expect(sermons[0].sermonNo).toBe(5)
   })
+
+  it('parseCcelVolumeSermons skips div1 when no catalog from body or title (no positional slug)', () => {
+    const xml = `
+      <body>
+        <div1 title="Publisher Preface">
+          <p class="Body">This block has outline prose but no (No. N) line and no Sermon N. title pattern.</p>
+        </div1>
+      </body>
+    `
+    const sermons = parseCcelVolumeSermons(xml, { limit: 5 })
+    expect(sermons).toHaveLength(0)
+  })
 })

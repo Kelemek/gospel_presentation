@@ -19,8 +19,8 @@ export async function importCcelParsedSermonToSupabase(
     throw new Error(`Lookup ${sermon.slug}: ${JSON.stringify(selErr)}`)
   }
 
-  const keepPublic = existing?.is_public === true
-  const nextPublic = keepPublic
+  /** Spurgeon CCEL sermons are public by default so the library modal and `/sg…` routes can list them. */
+  const nextPublic = true
 
   let profileId: string
   let action: 'inserted' | 'updated'
@@ -52,7 +52,7 @@ export async function importCcelParsedSermonToSupabase(
         description: null,
         gospel_data: gospelData as never,
         is_template: true,
-        is_public: false,
+        is_public: true,
         include_in_resources_menu: false,
       })
       .select('id')

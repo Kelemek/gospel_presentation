@@ -6,6 +6,9 @@
  *
  * Requires gospel-admin/.env.local: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_KEY
  *
+ * For every catalog sermon missing from the DB across mapped Met Tab volumes (**1–3563**), prefer
+ * `npm run import-spurgeon-missing` (see `import-spurgeon-ccel-missing.ts`).
+ *
  * Usage (from gospel-admin/):
  *   npx tsx scripts/import-spurgeon-ccel-gaps.ts --gaps 67,82,92 --dry-run
  *   npx tsx scripts/import-spurgeon-ccel-gaps.ts --gaps 92,141
