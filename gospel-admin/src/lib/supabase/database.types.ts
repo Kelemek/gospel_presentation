@@ -158,7 +158,7 @@ export interface Database {
         Returns: UserRole
       }
       spurgeon_public_sermons_page: {
-        Args: { p_q?: string | null; p_offset?: number; p_limit?: number }
+        Args: { p_q: string | null; p_offset: number; p_limit: number }
         Returns: Json
       }
     }

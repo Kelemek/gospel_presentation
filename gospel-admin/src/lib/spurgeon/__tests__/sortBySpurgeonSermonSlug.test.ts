@@ -2,9 +2,12 @@ import {
   compareSpurgeonSermonRows,
   compareSpurgeonSermonSlugs,
   sortBySpurgeonSermonSlug,
+  sortSpurgeonSermonsByDisplayTitleAZ,
   spurgeonCatalogNumberFromSlug,
   spurgeonCatalogNumberFromTitle,
+  spurgeonSermonDisplaySortKey,
   spurgeonSermonListSortKey,
+  spurgeonSermonTitleForModalDisplay,
 } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
 
 describe('spurgeon sermon list sort', () => {
@@ -19,6 +22,34 @@ describe('spurgeon sermon list sort', () => {
     expect(spurgeonCatalogNumberFromTitle('Sermon 297-8. Mr. Evil')).toBe(297)
     expect(spurgeonCatalogNumberFromTitle('sermon 2. The Remembrance')).toBe(2)
     expect(spurgeonCatalogNumberFromTitle('No sermon number')).toBeNull()
+  })
+
+  it('spurgeonSermonTitleForModalDisplay strips catalog prefix only', () => {
+    expect(spurgeonSermonTitleForModalDisplay('Sermon 42. Grace Abounding')).toBe('Grace Abounding')
+    expect(spurgeonSermonTitleForModalDisplay('Sermon 297-8. A Tale')).toBe('A Tale')
+    expect(spurgeonSermonTitleForModalDisplay('  sermon 1.  First  ')).toBe('First')
+    expect(spurgeonSermonTitleForModalDisplay('Custom title without prefix')).toBe('Custom title without prefix')
+    expect(spurgeonSermonTitleForModalDisplay('Sermon 12.')).toBe('Sermon 12.')
+  })
+
+  it('spurgeonSermonDisplaySortKey uses stripped title or slug', () => {
+    expect(spurgeonSermonDisplaySortKey({ slug: 'sg00002', title: 'Sermon 2. Zebra' })).toBe('zebra')
+    expect(spurgeonSermonDisplaySortKey({ slug: 'sg00001', title: 'Sermon 1. Alpha' })).toBe('alpha')
+    expect(spurgeonSermonDisplaySortKey({ slug: 'sg00099', title: '' })).toBe('sg00099')
+  })
+
+  it('sortSpurgeonSermonsByDisplayTitleAZ orders A–Z by visible title, tie-break slug', () => {
+    const rows = [
+      { slug: 'sg00003', title: 'Sermon 3. Mice' },
+      { slug: 'sg00001', title: 'Sermon 1. Ant' },
+      { slug: 'sg00002', title: 'Sermon 2. Boat' },
+    ]
+    expect(sortSpurgeonSermonsByDisplayTitleAZ(rows).map((r) => r.slug)).toEqual(['sg00001', 'sg00002', 'sg00003'])
+    const tie = [
+      { slug: 'sg00002', title: 'Sermon 1. Same' },
+      { slug: 'sg00001', title: 'Sermon 2. Same' },
+    ]
+    expect(sortSpurgeonSermonsByDisplayTitleAZ(tie).map((r) => r.slug)).toEqual(['sg00001', 'sg00002'])
   })
 
   it('sort key prefers title number over slug when both exist', () => {

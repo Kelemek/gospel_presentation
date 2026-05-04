@@ -20,7 +20,7 @@ describe('GET /api/scripture/spurgeon-links', () => {
     expect(res.status).toBe(400)
   })
 
-  it('queries index then profiles with limit', async () => {
+  it('queries index then profiles and caps sorted results', async () => {
     const from = jest.fn((table: string) => {
       if (table === 'spurgeon_passage_index') {
         return {
@@ -29,16 +29,14 @@ describe('GET /api/scripture/spurgeon-links', () => {
         }
       }
       if (table === 'profiles') {
-        const limit = jest.fn().mockResolvedValue({
-          data: [{ slug: 'sg00001', title: 'Sermon' }],
-          error: null,
-        })
         return {
           select: jest.fn().mockReturnThis(),
           in: jest.fn().mockReturnThis(),
           eq: jest.fn().mockReturnThis(),
-          like: jest.fn().mockReturnThis(),
-          order: jest.fn().mockReturnValue({ limit }),
+          like: jest.fn().mockResolvedValue({
+            data: [{ slug: 'sg00001', title: 'Sermon' }],
+            error: null,
+          }),
         }
       }
       return {}

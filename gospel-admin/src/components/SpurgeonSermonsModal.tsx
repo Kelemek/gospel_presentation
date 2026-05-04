@@ -3,6 +3,8 @@
 import { useId, useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 
+import { spurgeonSermonTitleForModalDisplay } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
+
 const SEARCH_PAGE_SIZE = 25
 
 interface SpurgeonSermonsModalProps {
@@ -255,7 +257,7 @@ export default function SpurgeonSermonsModal({
                           }}
                           className="block rounded-md px-2 py-2 text-sm text-blue-700 dark:text-blue-300 hover:bg-slate-100 dark:hover:bg-slate-700/80"
                         >
-                          {row.title}
+                          {spurgeonSermonTitleForModalDisplay(row.title)}
                         </Link>
                       </li>
                     ))}
@@ -306,7 +308,7 @@ export default function SpurgeonSermonsModal({
                         }}
                         className="block rounded-md px-2 py-2 text-sm text-blue-700 dark:text-blue-300 hover:bg-slate-100 dark:hover:bg-slate-700/80"
                       >
-                        {row.title}
+                        {spurgeonSermonTitleForModalDisplay(row.title)}
                       </Link>
                     </li>
                   ))}

@@ -79,14 +79,14 @@ describe('GET /api/spurgeon/sermons', () => {
     expect(body.items[0].slug).toBe('sg03501')
   })
 
-  it('returns RPC rows in catalog order (DB responsibility)', async () => {
+  it('returns RPC rows in DB order (A–Z by display title after stripping Sermon N.)', async () => {
     const { rpc } = mockRpc({
       data: {
         total: 3,
         items: [
-          { slug: 'sg00001', title: 'Sermon 1. First' },
-          { slug: 'sg00002', title: 'Sermon 2. The Remembrance of Christ' },
-          { slug: 'sg01162', title: 'Sermon 1162. Saving Faith' },
+          { slug: 'sg00002', title: 'Sermon 2. Alpha sermon' },
+          { slug: 'sg00001', title: 'Sermon 1. Beta lesson' },
+          { slug: 'sg09999', title: 'Sermon 999. Zebra talk' },
         ],
       },
       error: null,
@@ -96,6 +96,6 @@ describe('GET /api/spurgeon/sermons', () => {
     const res = await GET(new NextRequest('http://localhost/api/spurgeon/sermons?page=1&pageSize=20'))
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body.items.map((x: { slug: string }) => x.slug)).toEqual(['sg00001', 'sg00002', 'sg01162'])
+    expect(body.items.map((x: { slug: string }) => x.slug)).toEqual(['sg00002', 'sg00001', 'sg09999'])
   })
 })

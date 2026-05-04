@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { canonicalScriptureCacheReference } from '@/lib/api-bible-passage-id'
 import { logger } from '@/lib/logger'
+import { sortSpurgeonSermonsByDisplayTitleAZ } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
 
 const MAX_ITEMS = 8
 
 /**
  * GET /api/scripture/spurgeon-links?reference=...
- * Same backing data as by-reference; capped list for scripture modal "Study" links.
+ * Same backing data as by-reference; capped list for scripture modal "Study" links (A–Z by display title, max 8).
  */
 export async function GET(request: NextRequest) {
   try {
@@ -44,15 +45,14 @@ export async function GET(request: NextRequest) {
       .eq('is_public', true)
       .eq('is_template', true)
       .like('slug', 'sg%')
-      .order('slug')
-      .limit(MAX_ITEMS)
 
     if (profErr) {
       logger.error('[API] scripture spurgeon-links profiles', { profErr })
       return NextResponse.json({ error: 'Lookup failed' }, { status: 500 })
     }
 
-    const items = ((profiles || []) as { slug: string; title: string }[]).map((p) => ({
+    const sorted = sortSpurgeonSermonsByDisplayTitleAZ((profiles || []) as { slug: string; title: string }[])
+    const items = sorted.slice(0, MAX_ITEMS).map((p) => ({
       slug: p.slug,
       title: p.title || p.slug,
     }))

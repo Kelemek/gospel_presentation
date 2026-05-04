@@ -1,6 +1,27 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
+import type { Json } from '@/lib/supabase/database.types'
 import { logger } from '@/lib/logger'
+
+/**
+ * postgrest-js requires `Database['public']` to extend `GenericSchema` (tables need `Relationships`, etc.).
+ * This repo’s hand-maintained `Database` type does not, so `rpc` would otherwise infer `args` as `undefined`.
+ * Cast only for this RPC call site.
+ */
+type SpurgeonPublicSermonsRpcDatabase = {
+  public: {
+    Tables: Record<string, never>
+    Views: Record<string, never>
+    Functions: {
+      spurgeon_public_sermons_page: {
+        Args: { p_q: string | null; p_offset: number; p_limit: number }
+        Returns: Json
+      }
+    }
+    Enums: Record<string, never>
+  }
+}
 
 type SermonsRpcPayload = { total: number; items: { slug: string; title: string }[] }
 
@@ -25,7 +46,7 @@ function isSermonsRpcPayload(v: unknown): v is SermonsRpcPayload {
 /**
  * GET /api/spurgeon/sermons?q=&page=&pageSize=
  * Public sermon templates: is_template, is_public, slug prefix sg.
- * Ordering and pagination use DB RPC `spurgeon_public_sermons_page` (matches catalog sort in sortBySpurgeonSermonSlug.ts).
+ * Ordering and pagination use DB RPC `spurgeon_public_sermons_page` (A–Z by display title; leading `Sermon N.` stripped, same rule as `spurgeonSermonTitleForModalDisplay`).
  */
 export async function GET(request: NextRequest) {
   try {
@@ -42,7 +63,7 @@ export async function GET(request: NextRequest) {
       .replace(/"/g, '')
       .trim()
 
-    const admin = createAdminClient()
+    const admin = createAdminClient() as unknown as SupabaseClient<SpurgeonPublicSermonsRpcDatabase>
     const { data, error } = await admin.rpc('spurgeon_public_sermons_page', {
       p_q: stripped.length > 0 ? stripped : null,
       p_offset: from,

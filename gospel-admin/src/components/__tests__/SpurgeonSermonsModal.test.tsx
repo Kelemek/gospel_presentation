@@ -120,6 +120,24 @@ describe('SpurgeonSermonsModal', () => {
     expect(await screen.findByRole('link', { name: /From Initial Ref/i })).toHaveAttribute('href', '/sg00002')
   })
 
+  it('shows sermon title without leading Sermon N. catalog prefix in search results', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          items: [{ slug: 'sg00042', title: 'Sermon 42. Grace Abounding' }],
+          total: 1,
+          page: 1,
+          pageSize: 25,
+        }),
+    } as Response)
+
+    render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} />)
+
+    expect(await screen.findByRole('link', { name: /^Grace Abounding$/i })).toHaveAttribute('href', '/sg00042')
+    expect(screen.queryByRole('link', { name: /Sermon 42/i })).not.toBeInTheDocument()
+  })
+
   it('calls onFollowSermonLink and onClose when following a sermon link from search', async () => {
     const user = userEvent.setup()
     const onFollowSermonLink = jest.fn()

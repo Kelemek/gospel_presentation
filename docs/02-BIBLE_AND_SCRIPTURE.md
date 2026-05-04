@@ -109,7 +109,7 @@ GET /api/scripture?reference=John%203:16&translation=esv
 
 On **profile** pages, the scripture modal uses **`GET /api/scripture/spurgeon-links?reference=…`** while the modal is open (with **`onOpenSpurgeonStudy`** wired) to see if any indexed public sermon cites that passage. **Study** is shown in the toolbar **only when** that response includes at least one `{ slug, title }`. Clicking **Study** opens the **Spurgeon sermons** modal on the **By scripture** tab with the current passage filled in and **`GET /api/spurgeon/by-reference`** run so **all** matching sermon templates (`sg…` slugs) appear in one list. The reader shows **verse text only** (no inline presentation subsection HTML). The modal still opens on the **Verse** tab (not Chapter Context).
 
-`spurgeon-links` returns `{ "items": [{ "slug", "title" }] }` for templates with a row in `spurgeon_passage_index` for the same **canonical passage key** as scripture cache (`canonicalScriptureCacheReference` in [`gospel-admin/src/lib/api-bible-passage-id.ts`](gospel-admin/src/lib/api-bible-passage-id.ts)). Related: `GET /api/spurgeon/sermons` (keyword search in the library modal).
+`spurgeon-links` returns `{ "items": [{ "slug", "title" }] }` for templates with a row in `spurgeon_passage_index` for the same **canonical passage key** as scripture cache (`canonicalScriptureCacheReference` in [`gospel-admin/src/lib/api-bible-passage-id.ts`](gospel-admin/src/lib/api-bible-passage-id.ts)). Items are **A–Z** by visible title (after stripping a leading `Sermon N.` prefix), capped at **8** for the toolbar hint. Related: `GET /api/spurgeon/sermons` (keyword search in the library modal).
 
 ### Response
 ```json

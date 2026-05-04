@@ -1,6 +1,7 @@
 /**
- * Spurgeon sermon list order: **title** “Sermon N…” when present (what users read),
- * else numeric **`sg…`** slug. Tie-break on slug so order is stable.
+ * Spurgeon helpers: strip **`Sermon N.`** for display; **A–Z** list sort via {@link sortSpurgeonSermonsByDisplayTitleAZ}.
+ *
+ * Catalog-based ordering (`spurgeonSermonListSortKey`, `sortBySpurgeonSermonSlug`) remains for any code that still needs sermon-number order.
  */
 
 /** Catalog index from slug `sg00001` → 1. */
@@ -22,6 +23,33 @@ export function spurgeonCatalogNumberFromTitle(title: string): number | null {
   if (!m) return null
   const n = parseInt(m[1], 10)
   return Number.isFinite(n) ? n : null
+}
+
+/**
+ * Strip leading `Sermon N.` / `Sermon N-M.` catalog prefix for UI (CCEL catalog has gaps; slug still identifies the sermon).
+ */
+export function spurgeonSermonTitleForModalDisplay(title: string): string {
+  const t = title.trim()
+  const stripped = t.replace(/^sermon\s+\d+(?:-\d+)?\.\s*/i, '').trim()
+  return stripped.length > 0 ? stripped : t
+}
+
+/** Lowercased label for A–Z ordering: stripped catalog prefix, else slug when title empty. */
+export function spurgeonSermonDisplaySortKey(row: { slug: string; title?: string }): string {
+  const raw = (row.title ?? '').trim()
+  const label = raw.length > 0 ? spurgeonSermonTitleForModalDisplay(raw) : row.slug.trim()
+  return label.toLowerCase()
+}
+
+/** Public sermon lists: alphabetical by visible title (after stripping `Sermon N.`), tie-break `slug`. */
+export function sortSpurgeonSermonsByDisplayTitleAZ<T extends { slug: string; title?: string }>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => {
+    const ka = spurgeonSermonDisplaySortKey(a)
+    const kb = spurgeonSermonDisplaySortKey(b)
+    const c = ka.localeCompare(kb, 'en', { sensitivity: 'base' })
+    if (c !== 0) return c
+    return a.slug.localeCompare(b.slug)
+  })
 }
 
 export function spurgeonSermonListSortKey(row: { slug: string; title?: string }): number {

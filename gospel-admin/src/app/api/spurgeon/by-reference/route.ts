@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { canonicalScriptureCacheReference } from '@/lib/api-bible-passage-id'
 import { logger } from '@/lib/logger'
-import { sortBySpurgeonSermonSlug } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
+import { sortSpurgeonSermonsByDisplayTitleAZ } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
 
 /**
  * GET /api/spurgeon/by-reference?reference=John+3:16
- * Returns public Spurgeon sermon profiles indexed on that passage key.
+ * Returns public Spurgeon sermon profiles indexed on that passage key (A–Z by display title).
  */
 export async function GET(request: NextRequest) {
   try {
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Lookup failed' }, { status: 500 })
     }
 
-    const sorted = sortBySpurgeonSermonSlug((profiles || []) as { slug: string; title: string }[])
+    const sorted = sortSpurgeonSermonsByDisplayTitleAZ((profiles || []) as { slug: string; title: string }[])
     const items = sorted.map((p) => ({
       slug: p.slug,
       title: p.title || p.slug,
