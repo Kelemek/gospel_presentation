@@ -9,6 +9,8 @@ import {
   isMajorOutlineSegmentStart,
   isNumberedSubpointStart,
   parseCcelVolumeSermons,
+  repairGospelPresentationDataRomanOneMerges,
+  repairSpurgeonSubsectionsMislumpedRomanOne,
 } from '@/lib/spurgeon/ccelSermonHtml'
 
 describe('ccelSermonHtml', () => {
@@ -73,8 +75,110 @@ describe('ccelSermonHtml', () => {
     expect(subsections[2].content).toContain('Only one paragraph')
   })
 
+  it('repairSpurgeonSubsectionsMislumpedRomanOne splits merged I. So, first, … into two subsections', () => {
+    const merged = [
+      {
+        title: '(No. 1) Intro line.',
+        content:
+          '<p>(No. 1) Intro line.</p>\n<p>More intro text.</p>\n<p>I. So, first, JESUS CHRIST came by water.</p>\n<p>Still under the first head.</p>',
+        questions: [],
+      },
+    ]
+    const { subsections, changed } = repairSpurgeonSubsectionsMislumpedRomanOne(merged)
+    expect(changed).toBe(true)
+    expect(subsections).toHaveLength(2)
+    expect(subsections[0].content).toContain('More intro')
+    expect(subsections[0].content).not.toContain('I. So, first')
+    expect(subsections[1].title).toMatch(/^I\. So, first/)
+    expect(subsections[1].content).toContain('Still under the first head')
+  })
+
+  it('repairSpurgeonSubsectionsMislumpedRomanOne re-attaches numbered nested blocks after a merged Roman I.', () => {
+    const merged = [
+      {
+        title: 'Intro',
+        content:
+          '<p>Opening intro only.</p>\n<p>I. So, first main head starts here.</p>\n<p>More exposition under I before any number.</p>',
+        nestedSubsections: [
+          {
+            title: '1. I shall offer first sub-point text.',
+            content: '<p>1. I shall offer first sub-point text.</p>\n<p>Continuation of first sub-point.</p>',
+          },
+          {
+            title: '2. He changes not in the second sub-point.',
+            content: '<p>2. He changes not in the second sub-point.</p>',
+          },
+        ],
+        questions: [],
+      },
+    ]
+    const { subsections, changed } = repairSpurgeonSubsectionsMislumpedRomanOne(merged)
+    expect(changed).toBe(true)
+    expect(subsections).toHaveLength(2)
+    expect(subsections[0].content).toContain('Opening intro')
+    expect(subsections[0].nestedSubsections?.length ?? 0).toBe(0)
+    expect(subsections[1].nestedSubsections).toHaveLength(2)
+    expect(subsections[1].content).toContain('I. So, first main')
+    expect(subsections[1].content).not.toContain('1. I shall offer')
+  })
+
+  it('repairSpurgeonSubsectionsMislumpedRomanOne does not split on pronoun I. mid-subsection', () => {
+    const merged = [
+      {
+        title: 'One block',
+        content: '<p>He promised peace.</p>\n<p>I. will never leave you nor forsake you.</p>',
+        questions: [],
+      },
+    ]
+    const { subsections, changed } = repairSpurgeonSubsectionsMislumpedRomanOne(merged)
+    expect(changed).toBe(false)
+    expect(subsections).toHaveLength(1)
+  })
+
+  it('repairGospelPresentationDataRomanOneMerges is a no-op on already-split div1 output', () => {
+    const inner = `
+      <p class="Body">(No. 1) Short intro line.</p>
+      <p class="Body">More intro without a new heading.</p>
+      <p class="Body">I. First of all, the first main head begins here.</p>
+      <p class="Body">Continuation still under point one.</p>
+      <p class="Body">II. Secondly, the next division starts.</p>
+      <p class="Body">Only one paragraph under II.</p>
+    `
+    const { subsections } = div1XmlToGospelSubsections(inner)
+    const gospelData = [
+      {
+        section: '1',
+        title: 'Sermon',
+        subsections,
+      },
+    ]
+    const r = repairGospelPresentationDataRomanOneMerges(gospelData)
+    expect(r.changed).toBe(false)
+    expect(r.gospelData).toBe(gospelData)
+  })
+
+  it('div1XmlToGospelSubsections splits on I. So, first, … style Roman heads', () => {
+    const inner = `
+      <p class="Body">(No. 1) Intro ends here.</p>
+      <p class="Body">I. So, first, JESUS CHRIST came by water—it was His purpose to purify.</p>
+      <p class="Body">More under the first head.</p>
+      <p class="Body">II. Secondly, He came by blood.</p>
+      <p class="Body">Closing under II.</p>
+    `
+    const { subsections } = div1XmlToGospelSubsections(inner)
+    expect(subsections).toHaveLength(3)
+    expect(subsections[0].content).toContain('Intro ends')
+    expect(subsections[0].content).not.toContain('I. So, first')
+    expect(subsections[1].title).toMatch(/^I\. So, first/)
+    expect(subsections[1].content).toContain('More under the first')
+    expect(subsections[2].title).toMatch(/^II\. Secondly/)
+    expect(subsections[2].content).toContain('Closing under II')
+  })
+
   it('isMajorOutlineSegmentStart vs isNumberedSubpointStart', () => {
     expect(isMajorOutlineSegmentStart('I. First of all, we begin.')).toBe(true)
+    expect(isMajorOutlineSegmentStart('I. So, first, JESUS CHRIST came by water.')).toBe(true)
+    expect(isMajorOutlineSegmentStart('I. Therefore we must believe.')).toBe(true)
     expect(isMajorOutlineSegmentStart('I. will never leave you.')).toBe(false)
     expect(isMajorOutlineSegmentStart('II. The second point.')).toBe(true)
     expect(isMajorOutlineSegmentStart('FIRST. We observe that God is good.')).toBe(true)

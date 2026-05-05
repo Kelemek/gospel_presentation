@@ -16,7 +16,7 @@
  * If neither yields a catalog number, the `div1` is **skipped** (no positional slug), so later CCEL volumes
  * cannot overwrite unrelated `sg…` profiles.
  */
-import type { GospelSection, NestedSubsection, Subsection } from '@/lib/types'
+import type { GospelPresentationData, GospelSection, NestedSubsection, Subsection } from '@/lib/types'
 import { bookNameToUsfm, canonicalScriptureCacheReference } from '@/lib/api-bible-passage-id'
 import { GOSPEL_BIBLE_BOOK_NAMES } from '@/lib/gospelBibleBookNames'
 import { parseReference } from '@/lib/parse-scripture-reference'
@@ -188,8 +188,10 @@ export function isMajorOutlineSegmentStart(plain: string): boolean {
 
   if (/^(II|III|IV|V|VI|VII|VIII|IX|X|XI|XII|XIII|XIV)\.\s+/i.test(t)) return true
 
+  // Roman I. must stay strict so pronoun sentences like "I. will never leave you." do not split.
+  // Word-boundary openers (So, Thus, …) cover homiletical "I. So, first, …" without matching "I. Solutions…".
   if (
-    /^I\.\s+(First|Second|Third|Fourth|Fifth|Sixth|Seventh|The\s|We\s|My\s|Here\s|Now\s|But\s|It\s|He\s|They\s|God\s|This\s|There\s|When\s|If\s|Let\s|Some\s|All\s|Ye\s|You\s|Our\s|A\s|An\s|\d)/i.test(
+    /^I\.\s+(First|Second|Third|Fourth|Fifth|Sixth|Seventh|The\s|We\s|My\s|Here\s|Now\s|But\s|It\s|He\s|They\s|God\s|This\s|There\s|When\s|If\s|Let\s|Some\s|All\s|Ye\s|You\s|Our\s|A\s|An\s|\d|So\b|Thus\b|Therefore\b|Moreover\b|Furthermore\b|Nevertheless\b|Accordingly\b|Brethren\b|Beloved\b|Friends\b|Behold\b|Yea\b|Nay\b|Come\b|Look\b|Remember\b|Consider\b|Hearken\b|Wherefore\b|Sinner\b|Sinners\b|Saint\b|Saints\b|Jesus\b|JESUS\b|CHRIST\b|Methinks\b|According\b)/i.test(
       t
     )
   ) {
@@ -342,6 +344,108 @@ function subsectionFromMajorGroup(majorInners: string[], majorIndex: number): Su
     nestedSubsections,
     questions: [],
   }
+}
+
+/** Paragraph inners as stored by {@link mergeInnersToHtml} (`<p>…</p>` only). */
+function extractPInnerBodiesFromMergedHtml(html: string): string[] {
+  if (!html?.trim()) return []
+  const re = /<p>([\s\S]*?)<\/p>/gi
+  const out: string[] = []
+  let m: RegExpExecArray | null
+  while ((m = re.exec(html)) !== null) {
+    const inner = m[1].trim()
+    if (inner) out.push(inner)
+  }
+  return out
+}
+
+/**
+ * Recover the original ThML paragraph order for one subsection: parent `content` `<p>` blocks,
+ * then each nested subsection’s `content` (same as the importer’s merge order).
+ */
+function subsectionToFlatInnerParagraphs(sub: Subsection): string[] {
+  const out = extractPInnerBodiesFromMergedHtml(sub.content)
+  if (sub.nestedSubsections) {
+    for (const n of sub.nestedSubsections) {
+      out.push(...extractPInnerBodiesFromMergedHtml(n.content))
+    }
+  }
+  return out
+}
+
+/**
+ * Split stored subsections when a major outline start (Roman **I.** with a homiletical opener,
+ * **II.**, **FIRST.**, etc.) was merged into the previous block. Re-runs {@link subsectionFromMajorGroup}
+ * on the head/tail so numbered **1.** / **2.** blocks stay under the correct Roman head.
+ *
+ * Only handles bodies shaped like importer output (`<p>…</p>` per ThML paragraph). No-op on
+ * data that does not need repair.
+ */
+export function repairSpurgeonSubsectionsMislumpedRomanOne(subsections: Subsection[]): {
+  subsections: Subsection[]
+  changed: boolean
+} {
+  let changed = false
+  let working = subsections.slice()
+
+  for (let iter = 0; iter < 200; iter++) {
+    const next: Subsection[] = []
+    let passChanged = false
+
+    for (const sub of working) {
+      const flat = subsectionToFlatInnerParagraphs(sub)
+      if (flat.length < 2) {
+        next.push(sub)
+        continue
+      }
+
+      let splitAt = -1
+      for (let j = 1; j < flat.length; j++) {
+        if (isMajorOutlineSegmentStart(stripTagsToPlain(flat[j]!))) {
+          splitAt = j
+          break
+        }
+      }
+
+      if (splitAt === -1) {
+        next.push(sub)
+        continue
+      }
+
+      const a = subsectionFromMajorGroup(flat.slice(0, splitAt), next.length)
+      const b = subsectionFromMajorGroup(flat.slice(splitAt), next.length + 1)
+      if (!a || !b) {
+        next.push(sub)
+        continue
+      }
+
+      passChanged = true
+      changed = true
+      next.push(a, b)
+    }
+
+    working = next
+    if (!passChanged) break
+  }
+
+  return { subsections: working, changed }
+}
+
+/**
+ * Apply {@link repairSpurgeonSubsectionsMislumpedRomanOne} to every top-level gospel section.
+ * Returns the original `gospelData` reference when nothing changed.
+ */
+export function repairGospelPresentationDataRomanOneMerges(
+  gospelData: GospelPresentationData
+): { gospelData: GospelPresentationData; changed: boolean } {
+  let changed = false
+  const next = gospelData.map((sec) => {
+    const r = repairSpurgeonSubsectionsMislumpedRomanOne(sec.subsections ?? [])
+    if (!r.changed) return sec
+    changed = true
+    return { ...sec, subsections: r.subsections }
+  })
+  return { gospelData: changed ? next : gospelData, changed }
 }
 
 /** Parse "(No. 12)" style sermon number from early body paragraphs. */

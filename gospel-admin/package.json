@@ -24,6 +24,7 @@
     "import-spurgeon": "tsx scripts/import-spurgeon-ccel.ts",
     "import-spurgeon-gaps": "tsx scripts/import-spurgeon-ccel-gaps.ts",
     "import-spurgeon-missing": "tsx scripts/import-spurgeon-ccel-missing.ts",
+    "fix-spurgeon-roman-one-gospel-json": "tsx scripts/fix-spurgeon-roman-one-gospel-json.ts",
     "spurgeon-set-all-public": "tsx scripts/spurgeon-profiles-set-all-public.ts",
     "backfill-spurgeon-passage-index": "tsx scripts/backfill-spurgeon-passage-index-from-profiles.ts"
   },
