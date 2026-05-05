@@ -42,7 +42,7 @@ export default function ScriptureModalToolbarMenu({
   dataTour,
   ariaLabel,
   listboxAriaLabel,
-  triggerClassName = 'min-w-[7.5rem]',
+  triggerClassName = 'w-[6.5rem]',
 }: ScriptureModalToolbarMenuProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -95,7 +95,7 @@ export default function ScriptureModalToolbarMenu({
         aria-controls={canOpen && open ? listboxId : undefined}
         aria-label={ariaLabel}
         title={canOpen ? `${ariaLabel}. Tap to open.` : ariaLabel}
-        className={`${triggerButtonInteractiveClass} ${triggerClassName} max-w-[min(100%,14rem)] justify-between`}
+        className={`${triggerButtonInteractiveClass} ${triggerClassName} justify-between`}
         onClick={() => !disabled && canOpen && setOpen((o) => !o)}
       >
         <span className="truncate text-left text-sm font-medium text-slate-800 dark:text-slate-200">
