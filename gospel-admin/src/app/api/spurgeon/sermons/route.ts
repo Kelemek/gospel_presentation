@@ -46,7 +46,7 @@ function isSermonsRpcPayload(v: unknown): v is SermonsRpcPayload {
 /**
  * GET /api/spurgeon/sermons?q=&page=&pageSize=
  * Public sermon templates: is_template, is_public, slug prefix sg.
- * Ordering and pagination use DB RPC `spurgeon_public_sermons_page` (A–Z by display title; leading `Sermon N.` stripped, same rule as `spurgeonSermonTitleForModalDisplay`).
+ * Ordering and pagination use DB RPC `spurgeon_public_sermons_page` (A–Z by display title; leading `Sermon N.` stripped, same rule as `spurgeonSermonTitleForModalDisplay`). Search matches `ILIKE` and a punctuation-stripped alphanumeric path (e.g. `davids` matches `David's`) once migration `20260505_spurgeon_public_sermons_page_alpha_search.sql` is applied.
  */
 export async function GET(request: NextRequest) {
   try {
