@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 import { PROFILE_BOOKMARKS_STORAGE_KEY } from '@/lib/profileBookmarksStorage'
+import { PROFILE_HIGHLIGHTS_STORAGE_KEY } from '@/lib/profileHighlightsStorage'
 import { VERSE_MEMORIZATION_STORAGE_KEY, emitMemorizationChanged } from '@/lib/verseMemorizationStorage'
 import { VERSE_PIN_STORAGE_KEY_PREFIX, LEGACY_SCRIPTURE_PROGRESS_KEY_PREFIX } from '@/lib/versePinStorage'
 import { MEMORIZE_LISTEN_SPEED_STORAGE_KEY } from '@/lib/memorizeListenSpeedStorage'
@@ -18,6 +19,7 @@ const TEXT_SIZE_STORAGE_KEY = 'gospel-profile-text-size'
 /** Keys we always consider for export when present (exact match). */
 export const GOSPEL_LOCAL_USER_DATA_FIXED_KEYS = [
   PROFILE_BOOKMARKS_STORAGE_KEY,
+  PROFILE_HIGHLIGHTS_STORAGE_KEY,
   VERSE_MEMORIZATION_STORAGE_KEY,
   TRANSLATION_STORAGE_KEY,
   THEME_STORAGE_KEY,
@@ -37,6 +39,7 @@ const BLOCKED_EXACT_KEYS = new Set<string>(['gospel-admin-auth', 'gospel-view-pr
 
 const ALLOWED_GOSPEL_PROFILE_SUFFIXES = new Set([
   'bookmarks',
+  'highlights',
   'theme',
   'text-size',
 ])

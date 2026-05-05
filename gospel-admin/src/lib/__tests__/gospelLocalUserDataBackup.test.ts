@@ -8,6 +8,7 @@ import {
   parseGospelLocalUserDataImport,
 } from '@/lib/gospelLocalUserDataBackup'
 import { PROFILE_BOOKMARKS_STORAGE_KEY } from '@/lib/profileBookmarksStorage'
+import { PROFILE_HIGHLIGHTS_STORAGE_KEY } from '@/lib/profileHighlightsStorage'
 import { VERSE_MEMORIZATION_STORAGE_KEY } from '@/lib/verseMemorizationStorage'
 
 function createMemoryStorage(initial: Record<string, string | null> = {}): Storage {
@@ -51,6 +52,7 @@ describe('gospelLocalUserDataBackup', () => {
   it('collectGospelLocalUserDataForExport includes curated keys and prefix keys', () => {
     const s = createMemoryStorage({
       [PROFILE_BOOKMARKS_STORAGE_KEY]: '{"v":1,"bookmarks":[]}',
+      [PROFILE_HIGHLIGHTS_STORAGE_KEY]: '{"v":1,"highlights":[]}',
       [VERSE_MEMORIZATION_STORAGE_KEY]: '{"v":1,"verses":[]}',
       'gospel-verse-pins-myprofile': '{"v":2,"yellow":null,"bookmarks":[]}',
       'gospel-answers-myprofile': '{}',
@@ -58,6 +60,7 @@ describe('gospelLocalUserDataBackup', () => {
     })
     const map = collectGospelLocalUserDataForExport(s)
     expect(map[PROFILE_BOOKMARKS_STORAGE_KEY]).toBeDefined()
+    expect(map[PROFILE_HIGHLIGHTS_STORAGE_KEY]).toBeDefined()
     expect(map[VERSE_MEMORIZATION_STORAGE_KEY]).toBeDefined()
     expect(map['gospel-verse-pins-myprofile']).toBeDefined()
     expect(map['gospel-answers-myprofile']).toBeDefined()
