@@ -284,8 +284,8 @@ function isBlockishChild(el: Element): boolean {
 }
 
 function blockAncestorWithin(node: Node, scope: HTMLElement): HTMLElement | null {
-  const base = node instanceof Element ? node : node.parentElement
-  let cur: HTMLElement | null = base
+  const base: Element | null = node instanceof Element ? node : node.parentElement
+  let cur: HTMLElement | null = base instanceof HTMLElement ? base : null
   while (cur && cur !== scope) {
     const tag = cur.tagName
     if (tag === 'DIV' || tag === 'P' || tag === 'BLOCKQUOTE' || tag === 'LI') return cur
