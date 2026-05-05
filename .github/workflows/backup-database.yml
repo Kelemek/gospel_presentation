@@ -22,7 +22,7 @@ jobs:
       
       - name: Install dependencies
         run: |
-          npm install @supabase/supabase-js
+          npm install @supabase/supabase-js ws
       
       - name: Create backup directory
         run: mkdir -p backups
@@ -34,8 +34,10 @@ jobs:
         run: |
           node -e "
           const { createClient } = require('@supabase/supabase-js');
+          const ws = require('ws');
           const fs = require('fs');
           const path = require('path');
+          if (!globalThis.WebSocket) globalThis.WebSocket = ws;
           
           const supabase = createClient(
             process.env.SUPABASE_URL,

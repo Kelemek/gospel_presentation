@@ -22,7 +22,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm install @supabase/supabase-js
+          npm install @supabase/supabase-js ws
 
       - name: Run verification codes cleanup
         env:
@@ -31,6 +31,8 @@ jobs:
         run: |
           node -e "
           const { createClient } = require('@supabase/supabase-js');
+          const ws = require('ws');
+          if (!globalThis.WebSocket) globalThis.WebSocket = ws;
 
           const supabase = createClient(
             process.env.SUPABASE_URL,
