@@ -171,12 +171,12 @@ export default function SpurgeonSermonsModal({
 
   return (
     <div
-      className="fixed inset-0 z-60 flex items-start justify-center pt-10 pb-8 sm:pt-14 px-4 bg-black/50 dark:bg-black/70"
+      className="fixed inset-0 z-60 flex items-start justify-center bg-black/50 dark:bg-black/70 pt-[max(2.5rem,env(safe-area-inset-top,0px))] sm:pt-[max(3.5rem,env(safe-area-inset-top,0px))] pb-[max(2rem,max(48px,env(safe-area-inset-bottom,0px)))] pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))]"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full max-h-[calc(100vh-2.5rem)] sm:max-h-[calc(100vh-3.5rem)] overflow-hidden flex flex-col"
+        className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full max-h-[calc(100dvh-max(2.5rem,env(safe-area-inset-top,0px))-max(2rem,max(48px,env(safe-area-inset-bottom,0px))))] sm:max-h-[calc(100dvh-max(3.5rem,env(safe-area-inset-top,0px))-max(2rem,max(48px,env(safe-area-inset-bottom,0px))))] overflow-hidden flex flex-col"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
