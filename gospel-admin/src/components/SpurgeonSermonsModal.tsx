@@ -171,12 +171,12 @@ export default function SpurgeonSermonsModal({
 
   return (
     <div
-      className="fixed inset-0 z-60 flex items-start justify-center bg-black/50 dark:bg-black/70 pt-[max(2.5rem,env(safe-area-inset-top,0px))] sm:pt-[max(3.5rem,env(safe-area-inset-top,0px))] pb-[max(2rem,max(48px,env(safe-area-inset-bottom,0px)))] pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))]"
+      className="fixed inset-0 z-60 flex items-start justify-center overflow-x-hidden bg-black/50 dark:bg-black/70 pt-[max(2.5rem,env(safe-area-inset-top,0px))] sm:pt-[max(3.5rem,env(safe-area-inset-top,0px))] pb-[max(2rem,max(48px,env(safe-area-inset-bottom,0px)))] pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))]"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full max-h-[calc(100dvh-max(2.5rem,env(safe-area-inset-top,0px))-max(2rem,max(48px,env(safe-area-inset-bottom,0px))))] sm:max-h-[calc(100dvh-max(3.5rem,env(safe-area-inset-top,0px))-max(2rem,max(48px,env(safe-area-inset-bottom,0px))))] overflow-hidden flex flex-col"
+        className="min-w-0 bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full max-h-[calc(100dvh-max(2.5rem,env(safe-area-inset-top,0px))-max(2rem,max(48px,env(safe-area-inset-bottom,0px))))] sm:max-h-[calc(100dvh-max(3.5rem,env(safe-area-inset-top,0px))-max(2rem,max(48px,env(safe-area-inset-bottom,0px))))] overflow-hidden flex flex-col"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -223,7 +223,7 @@ export default function SpurgeonSermonsModal({
           </button>
         </div>
 
-        <div className="flex-1 min-h-0 flex flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {tab === 'search' && (
             <div className="shrink-0 space-y-2 border-b border-slate-200 dark:border-slate-600 px-5 pt-4 pb-3">
               <label className="block text-sm text-slate-600 dark:text-slate-300">
@@ -233,7 +233,7 @@ export default function SpurgeonSermonsModal({
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   placeholder="Title or keyword (e.g. grace)"
-                  className="w-full px-3 py-2 text-sm rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
+                  className="w-full min-w-0 px-3 py-2 text-base rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
                   autoComplete="off"
                   data-tour="spurgeon-modal-search"
                 />
@@ -256,7 +256,7 @@ export default function SpurgeonSermonsModal({
                     value={scriptureRef}
                     onChange={(e) => setScriptureRef(e.target.value)}
                     placeholder="e.g. John 3:16"
-                    className="w-full px-3 py-2 text-sm rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                    className="w-full min-w-0 px-3 py-2 text-base rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
                     aria-label="Scripture reference"
                     autoComplete="off"
                     data-tour="spurgeon-modal-by-ref"
