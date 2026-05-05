@@ -137,5 +137,5 @@ jobs:
         with:
           name: database-backup-${{ github.run_number }}
           path: backups/
-          retention-days: 90
+          retention-days: 2
           compression-level: 9
