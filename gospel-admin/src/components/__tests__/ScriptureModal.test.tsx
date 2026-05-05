@@ -282,8 +282,8 @@ describe('ScriptureModal Component', () => {
     await waitFor(() =>
       expect(screen.getByRole('heading', { name: /John 3:16/ })).toBeInTheDocument()
     )
-    const compareSelect = screen.getByLabelText(/Compare with another translation/i)
-    await user.selectOptions(compareSelect, 'kjv')
+    await user.click(screen.getByRole('button', { name: /Compare with another translation/i }))
+    await user.click(await screen.findByRole('option', { name: /^KJV$/i }))
     await waitFor(() => expect(screen.getByText(/Compare verse KJV/)).toBeInTheDocument())
   })
 
@@ -309,8 +309,8 @@ describe('ScriptureModal Component', () => {
     await waitFor(() =>
       expect(screen.getByRole('heading', { name: /John 3:16/ })).toBeInTheDocument()
     )
-    const compareSelect = screen.getByLabelText(/Compare with another translation/i)
-    await user.selectOptions(compareSelect, 'kjv')
+    await user.click(screen.getByRole('button', { name: /Compare with another translation/i }))
+    await user.click(await screen.findByRole('option', { name: /^KJV$/i }))
     await waitFor(() => expect(screen.getByText(/Compare translation unavailable/)).toBeInTheDocument())
   })
 

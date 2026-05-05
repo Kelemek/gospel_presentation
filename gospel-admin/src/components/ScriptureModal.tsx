@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useState, useEffect, useRef, type TouchEvent } from 'react'
+import { useId, useState, useEffect, useRef, useMemo, type TouchEvent } from 'react'
 import { useTranslation, type BibleTranslation } from '@/contexts/TranslationContext'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import { splitScriptureReferenceForHeader } from '@/lib/splitScriptureReferenceForHeader'
@@ -12,6 +12,7 @@ import {
 } from '@/lib/verseMemorizationStorage'
 import type { VerseBookmarkColorId, VersePinColorId } from '@/lib/versePinStorage'
 import ScriptureModalPinPick from '@/components/ScriptureModalPinPick'
+import ScriptureModalToolbarMenu from '@/components/ScriptureModalToolbarMenu'
 
 interface ScriptureModalProps {
   reference: string
@@ -65,9 +66,20 @@ export default function ScriptureModal({
   /** Whether indexed public Spurgeon sermons cite this passage (`/api/scripture/spurgeon-links`). */
   const [spurgeonStudyMatch, setSpurgeonStudyMatch] = useState<'unset' | 'loading' | 'yes' | 'no'>('unset')
 
-  // min-w in rem so width scales with global text-size (html); fits "Compare" at Normal/Larger/Largest
-  const selectClassNameCompact =
-    "min-w-[7.5rem] w-auto max-w-[min(100%,14rem)] shrink-0 pl-2 pr-8 py-1.5 text-sm font-medium rounded-md transition-colors min-h-[2.25rem] border-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-600 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 cursor-pointer appearance-none bg-no-repeat bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1rem] bg-position-[right_6px_center]"
+  const compareMenuOptions = useMemo(
+    () => [
+      { value: '', label: 'Compare' },
+      ...enabledTranslations
+        .filter((trans) => trans !== translation)
+        .map((trans) => ({ value: trans, label: trans.toUpperCase() })),
+    ],
+    [enabledTranslations, translation]
+  )
+
+  const translationMenuOptions = useMemo(
+    () => enabledTranslations.map((trans) => ({ value: trans, label: trans.toUpperCase() })),
+    [enabledTranslations]
+  )
 
   // Touch/swipe state for mobile navigation
   const [touchStart, setTouchStart] = useState<number | null>(null)
@@ -623,53 +635,47 @@ export default function ScriptureModal({
             </div>
           </div>
           
-          {/* Context Toggle Buttons - Always Visible. Small: row1 = selects, row2 = Verse + Chapter Context + Memorize */}
+          {/* Context Toggle Buttons - Always Visible. Small: row1 = Compare + Translation + pin, row2 = Verse + Chapter Context + Memorize (+ Study) */}
           <div className="flex flex-wrap gap-1.5 justify-center items-center">
             <div className="w-full sm:w-auto flex flex-wrap gap-1.5 justify-center sm:justify-start items-center">
-              {/* Compare dropdown - to the left of main translation */}
-              <select
-                data-tour="scripture-modal-compare"
+              {/* Compare menu — custom listbox to match pin control styling (no native select). */}
+              <ScriptureModalToolbarMenu
+                dataTour="scripture-modal-compare"
+                ariaLabel="Compare with another translation"
+                listboxAriaLabel="Compare with a translation"
                 value={compareTranslation ?? ''}
-                onChange={(e) => {
-                  const val = e.target.value
+                options={compareMenuOptions}
+                onSelect={(val) => {
                   setCompareTranslation(val === '' ? null : val)
-                  if (!val) {
+                  if (val === '') {
                     setCompareText('')
                     setCompareChapterText('')
                     setCompareError('')
                   }
                 }}
-                aria-label="Compare with another translation"
-                className={selectClassNameCompact}
-              >
-                <option value="">Compare</option>
-                {enabledTranslations
-                  .filter((trans) => trans !== translation)
-                  .map((trans) => (
-                    <option key={trans} value={trans}>
-                      {trans.toUpperCase()}
-                    </option>
-                  ))}
-              </select>
+              />
 
-              {/* Translation Selector */}
-              <select
-                data-tour="scripture-modal-translation"
+              <ScriptureModalToolbarMenu
+                dataTour="scripture-modal-translation"
+                ariaLabel="Select Bible translation"
+                listboxAriaLabel="Bible translation"
                 value={translation}
-                onChange={async (e) => {
-                  await setTranslation(e.target.value as BibleTranslation)
+                options={translationMenuOptions}
+                onSelect={async (val) => {
+                  await setTranslation(val as BibleTranslation)
                   setChapterText('')
                   setShowingContext(false)
                 }}
-                aria-label="Select Bible translation"
-                className={selectClassNameCompact}
-              >
-                {enabledTranslations.map((trans) => (
-                  <option key={trans} value={trans}>
-                    {trans.toUpperCase()}
-                  </option>
-                ))}
-              </select>
+              />
+              {versePinControl && (
+                <ScriptureModalPinPick
+                  reference={reference}
+                  draftColor={versePinControl.draftColor}
+                  onDraftColorChange={versePinControl.onDraftColorChange}
+                  colorsAvailableInDropdown={versePinControl.colorsAvailableInDropdown}
+                  disabled={loading || !!error || !reference.trim()}
+                />
+              )}
             </div>
 
             <div className="w-full sm:w-auto flex flex-wrap gap-1.5 justify-center sm:justify-start items-center">
@@ -730,15 +736,6 @@ export default function ScriptureModal({
                     Study
                   </button>
                 )}
-              {versePinControl && (
-                <ScriptureModalPinPick
-                  reference={reference}
-                  draftColor={versePinControl.draftColor}
-                  onDraftColorChange={versePinControl.onDraftColorChange}
-                  colorsAvailableInDropdown={versePinControl.colorsAvailableInDropdown}
-                  disabled={loading || !!error || !reference.trim()}
-                />
-              )}
             </div>
           </div>
         </div>
