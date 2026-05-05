@@ -865,7 +865,10 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       <SpurgeonSermonsModal
         isOpen={isSpurgeonLibraryOpen}
         initialByReference={spurgeonStudyReference}
-        onFollowSermonLink={closeModal}
+        onFollowSermonLink={() => {
+          closeModal()
+          setMemorizationPracticeVerse(null)
+        }}
         onClose={() => {
           setIsSpurgeonLibraryOpen(false)
           setSpurgeonStudyReference(null)
@@ -893,6 +896,10 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                 correctKeystrokes: result.correctKeystrokes,
                 completed: result.completed,
               })
+            }}
+            onOpenSpurgeonStudy={(ref) => {
+              setSpurgeonStudyReference(ref)
+              setIsSpurgeonLibraryOpen(true)
             }}
           />,
           document.body

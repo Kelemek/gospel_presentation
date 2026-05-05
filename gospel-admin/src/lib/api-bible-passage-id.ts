@@ -51,6 +51,8 @@ const BOOK_ALIAS_TO_USFM: Record<string, string> = {
   luke: 'LUK',
   john: 'JHN',
   acts: 'ACT',
+  /** Common abbreviation (e.g. "Rom 8:28") */
+  rom: 'ROM',
   romans: 'ROM',
   '1 corinthians': '1CO',
   '2 corinthians': '2CO',
@@ -102,6 +104,58 @@ export function bookNameToUsfm(book: string): string | null {
   const key = normalizeBookKey(book)
   if (BOOK_ALIAS_TO_USFM[key]) return BOOK_ALIAS_TO_USFM[key]
   return null
+}
+
+/** Distinct USFM book codes used in passage keys (API.Bible style). */
+const ALL_USFM_BOOK_CODES = new Set(Object.values(BOOK_ALIAS_TO_USFM))
+
+/**
+ * When a query is not a full verse reference, map it to USFM book codes for
+ * {@code spurgeon_passage_index} prefix search (any passage in that book).
+ * Matches if a canonical alias or any word in an alias starts with the query,
+ * or if a USFM code starts with a compact alphanumeric query (e.g. {@code jhn}, {@code 1co}).
+ * Single-digit-only queries are ignored as too ambiguous.
+ */
+export function usfmBookPrefixesForSearchQuery(query: string): string[] {
+  const raw = query.trim()
+  if (!raw) return []
+
+  const q = normalizeBookKey(raw)
+  if (!/^[a-z0-9\s]+$/i.test(q)) return []
+  if (q.length === 1 && /^\d$/.test(q)) return []
+
+  const exact = BOOK_ALIAS_TO_USFM[q]
+  if (exact) {
+    return [exact]
+  }
+
+  const codes = new Set<string>()
+
+  for (const [alias, usfm] of Object.entries(BOOK_ALIAS_TO_USFM)) {
+    const a = normalizeBookKey(alias)
+    if (a.startsWith(q)) {
+      codes.add(usfm)
+      continue
+    }
+    for (const w of a.split(/\s+/)) {
+      if (w.length > 0 && w.startsWith(q)) {
+        codes.add(usfm)
+        break
+      }
+    }
+  }
+
+  const compact = q.replace(/\s/g, '')
+  if (compact.length > 0 && /^[0-9a-z]+$/i.test(compact)) {
+    const cl = compact.toUpperCase()
+    for (const code of ALL_USFM_BOOK_CODES) {
+      if (code.toLowerCase().startsWith(cl.toLowerCase())) {
+        codes.add(code)
+      }
+    }
+  }
+
+  return [...codes]
 }
 
 /**

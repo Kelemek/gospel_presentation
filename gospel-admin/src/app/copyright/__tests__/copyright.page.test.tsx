@@ -41,6 +41,12 @@ describe('Copyright page', () => {
     const techHeading = screen.getByRole('heading', { name: /Technical Implementation/i })
     expect(techHeading).toBeInTheDocument()
 
+    expect(screen.getByText(/Charles H\. Spurgeon sermons/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Christian Classics Ethereal Library \(CCEL\)/i })).toHaveAttribute(
+      'href',
+      'https://www.ccel.org/ccel/spurgeon/'
+    )
+
     const year = new Date().getFullYear().toString()
     expect(screen.getByText(new RegExp(year))).toBeInTheDocument()
   })

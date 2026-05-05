@@ -5,7 +5,7 @@ import Link from 'next/link'
 
 import { spurgeonSermonTitleForModalDisplay } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
 
-const SEARCH_PAGE_SIZE = 25
+const SEARCH_PAGE_SIZE = 100
 
 interface SpurgeonSermonsModalProps {
   isOpen: boolean
@@ -37,6 +37,7 @@ export default function SpurgeonSermonsModal({
   const [q, setQ] = useState('')
   const [debouncedQ, setDebouncedQ] = useState('')
   const [scriptureRef, setScriptureRef] = useState('')
+  const [debouncedScriptureRef, setDebouncedScriptureRef] = useState('')
   const [searchItems, setSearchItems] = useState<SermonRow[]>([])
   const [refItems, setRefItems] = useState<SermonRow[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
@@ -55,6 +56,14 @@ export default function SpurgeonSermonsModal({
     }, 320)
     return () => window.clearTimeout(t)
   }, [q])
+
+  /** Short debounce for by-reference API (same order of magnitude as title search). */
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      setDebouncedScriptureRef(scriptureRef.trim())
+    }, 350)
+    return () => window.clearTimeout(t)
+  }, [scriptureRef])
 
   const loadSearch = useCallback(async () => {
     setSearchLoading(true)
@@ -128,8 +137,6 @@ export default function SpurgeonSermonsModal({
     }
   }, [])
 
-  const runScriptureLookup = () => void runScriptureLookupForRef(scriptureRef)
-
   useEffect(() => {
     if (!isOpen) {
       setTab('search')
@@ -137,6 +144,7 @@ export default function SpurgeonSermonsModal({
       setDebouncedQ('')
       setSearchPage(1)
       setScriptureRef('')
+      setDebouncedScriptureRef('')
       setSearchItems([])
       setRefItems([])
       setSearchError('')
@@ -151,9 +159,9 @@ export default function SpurgeonSermonsModal({
   }, [isOpen, initialByReference])
 
   useEffect(() => {
-    if (!isOpen || !initialByReference?.trim()) return
-    void runScriptureLookupForRef(initialByReference.trim())
-  }, [isOpen, initialByReference, runScriptureLookupForRef])
+    if (!isOpen || tab !== 'scripture') return
+    void runScriptureLookupForRef(debouncedScriptureRef)
+  }, [isOpen, tab, debouncedScriptureRef, runScriptureLookupForRef])
 
   if (!isOpen) return null
 
@@ -163,12 +171,12 @@ export default function SpurgeonSermonsModal({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 dark:bg-black/70"
+      className="fixed inset-0 z-60 flex items-start justify-center pt-10 pb-8 sm:pt-14 px-4 bg-black/50 dark:bg-black/70"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full max-h-[85vh] overflow-hidden flex flex-col"
+        className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full max-h-[calc(100vh-2.5rem)] sm:max-h-[calc(100vh-3.5rem)] overflow-hidden flex flex-col"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -216,38 +224,106 @@ export default function SpurgeonSermonsModal({
         </div>
 
         <div className="flex-1 min-h-0 flex flex-col">
+          {tab === 'search' && (
+            <div className="shrink-0 space-y-2 border-b border-slate-200 dark:border-slate-600 px-5 pt-4 pb-3">
+              <label className="block text-sm text-slate-600 dark:text-slate-300">
+                <span className="sr-only">Search by title or keyword</span>
+                <input
+                  type="search"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Title or keyword (e.g. grace)"
+                  className="w-full px-3 py-2 text-sm rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
+                  autoComplete="off"
+                  data-tour="spurgeon-modal-search"
+                />
+              </label>
+              {searchError && (
+                <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+                  {searchError}
+                </p>
+              )}
+            </div>
+          )}
+
+          {tab === 'scripture' && (
+            <div className="shrink-0 space-y-2 border-b border-slate-200 dark:border-slate-600 px-5 pt-4 pb-3">
+              <div className="flex flex-col gap-1">
+                <label className="block text-sm text-slate-600 dark:text-slate-300">
+                  <span className="sr-only">Scripture reference</span>
+                  <input
+                    type="text"
+                    value={scriptureRef}
+                    onChange={(e) => setScriptureRef(e.target.value)}
+                    placeholder="e.g. John 3:16"
+                    className="w-full px-3 py-2 text-sm rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                    aria-label="Scripture reference"
+                    autoComplete="off"
+                    data-tour="spurgeon-modal-by-ref"
+                  />
+                </label>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {refLoading ? 'Searching…' : 'Results update shortly after you stop typing.'}
+                </p>
+              </div>
+              {refError && (
+                <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+                  {refError}
+                </p>
+              )}
+            </div>
+          )}
+
           <div
             ref={searchListScrollRef}
-            className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4"
+            className="flex-1 min-h-0 overflow-y-auto px-5 py-3 space-y-4"
           >
             {tab === 'search' && (
               <>
-                <label className="block text-sm text-slate-600 dark:text-slate-300">
-                  <span className="sr-only">Search by title or keyword</span>
-                  <input
-                    type="search"
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    placeholder="Title or keyword (e.g. grace)"
-                    className="w-full px-3 py-2 text-sm rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
-                    autoComplete="off"
-                    data-tour="spurgeon-modal-search"
-                  />
-                </label>
-                {searchError && (
-                  <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-                    {searchError}
+                {/* Stable min-height so loading ↔ results does not shift the dialog vertically */}
+                <div className="min-h-56">
+                  {searchLoading ? (
+                    <div className="flex h-56 items-center justify-center">
+                      <div className="h-8 w-8 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+                    </div>
+                  ) : searchItems.length === 0 ? (
+                    <div className="flex h-56 items-start pt-2">
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        No matching public sermons.
+                      </p>
+                    </div>
+                  ) : (
+                    <ul className="space-y-1">
+                      {searchItems.map((row) => (
+                        <li key={row.slug}>
+                          <Link
+                            href={`/${row.slug}`}
+                            onClick={() => {
+                              onFollowSermonLink?.()
+                              onClose()
+                            }}
+                            className="block rounded-md px-2 py-2 text-sm text-blue-700 dark:text-blue-300 hover:bg-slate-100 dark:hover:bg-slate-700/80"
+                          >
+                            {spurgeonSermonTitleForModalDisplay(row.title)}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </>
+            )}
+
+            {tab === 'scripture' && (
+              <div className="min-h-40">
+                {!refLoading && refItems.length === 0 && scriptureRef.trim() && !refError && (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    No indexed sermons for that reference.
                   </p>
                 )}
-                {searchLoading ? (
-                  <div className="flex justify-center py-8">
-                    <div className="h-8 w-8 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
-                  </div>
-                ) : searchItems.length === 0 ? (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">No matching public sermons.</p>
-                ) : (
+                {refItems.length > 0 && (
                   <ul className="space-y-1">
-                    {searchItems.map((row) => (
+                    {refItems.map((row) => (
                       <li key={row.slug}>
                         <Link
                           href={`/${row.slug}`}
@@ -263,58 +339,7 @@ export default function SpurgeonSermonsModal({
                     ))}
                   </ul>
                 )}
-              </>
-            )}
-
-            {tab === 'scripture' && (
-              <>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="text"
-                  value={scriptureRef}
-                  onChange={(e) => setScriptureRef(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && void runScriptureLookup()}
-                  placeholder="e.g. John 3:16"
-                  className="flex-1 px-3 py-2 text-sm rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
-                  aria-label="Scripture reference"
-                  data-tour="spurgeon-modal-by-ref"
-                />
-                <button
-                  type="button"
-                  onClick={() => void runScriptureLookup()}
-                  disabled={refLoading}
-                  className="shrink-0 px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
-                >
-                  {refLoading ? 'Searching…' : 'Find sermons'}
-                </button>
               </div>
-              {refError && (
-                <p className="text-sm text-red-600 dark:text-red-400" role="alert">
-                  {refError}
-                </p>
-              )}
-              {!refLoading && refItems.length === 0 && scriptureRef.trim() && !refError && (
-                <p className="text-sm text-slate-500 dark:text-slate-400">No indexed sermons for that reference.</p>
-              )}
-              {refItems.length > 0 && (
-                <ul className="space-y-1">
-                  {refItems.map((row) => (
-                    <li key={row.slug}>
-                      <Link
-                        href={`/${row.slug}`}
-                        onClick={() => {
-                          onFollowSermonLink?.()
-                          onClose()
-                        }}
-                        className="block rounded-md px-2 py-2 text-sm text-blue-700 dark:text-blue-300 hover:bg-slate-100 dark:hover:bg-slate-700/80"
-                      >
-                        {spurgeonSermonTitleForModalDisplay(row.title)}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              </>
             )}
           </div>
 

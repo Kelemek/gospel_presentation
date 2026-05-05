@@ -4,6 +4,30 @@
  * Catalog-based ordering (`spurgeonSermonListSortKey`, `sortBySpurgeonSermonSlug`) remains for any code that still needs sermon-number order.
  */
 
+/**
+ * CCEL / DB titles sometimes store HTML entities (`&quot;`, `&amp;`, numeric refs). Decode for plain-text UI.
+ * Iterates so double-encoded values (e.g. `&amp;quot;`) collapse safely.
+ */
+function decodeSpurgeonTitleHtmlEntities(title: string): string {
+  let s = title
+  let prev = ''
+  while (s !== prev) {
+    prev = s
+    s = s
+      .replace(/&quot;/g, "'")
+      .replace(/&#34;/g, "'")
+      .replace(/&#39;/g, "'")
+      .replace(/&apos;/g, "'")
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+      .replace(/&#x([0-9a-fA-F]+);/gi, (_, h) => String.fromCharCode(parseInt(h, 16)))
+      .replace(/&amp;/g, '&')
+  }
+  return s
+}
+
 /** Catalog index from slug `sg00001` → 1. */
 export function spurgeonCatalogNumberFromSlug(slug: string): number {
   const s = slug.trim().toLowerCase()
@@ -31,7 +55,8 @@ export function spurgeonCatalogNumberFromTitle(title: string): number | null {
 export function spurgeonSermonTitleForModalDisplay(title: string): string {
   const t = title.trim()
   const stripped = t.replace(/^sermon\s+\d+(?:-\d+)?\.\s*/i, '').trim()
-  return stripped.length > 0 ? stripped : t
+  const base = stripped.length > 0 ? stripped : t
+  return decodeSpurgeonTitleHtmlEntities(base)
 }
 
 /** Lowercased label for A–Z ordering: stripped catalog prefix, else slug when title empty. */

@@ -2,6 +2,7 @@ import {
   bookNameToUsfm,
   canonicalScriptureCacheReference,
   referenceToApiBiblePassageId,
+  usfmBookPrefixesForSearchQuery,
 } from '@/lib/api-bible-passage-id'
 
 describe('api-bible-passage-id', () => {
@@ -17,11 +18,39 @@ describe('api-bible-passage-id', () => {
     expect(referenceToApiBiblePassageId('John 3:16')).toBe('JHN.3.16')
     expect(referenceToApiBiblePassageId('John 3:16-18')).toBe('JHN.3.16-JHN.3.18')
     expect(referenceToApiBiblePassageId('Psalm 23')).toBe('PSA.23')
+    expect(referenceToApiBiblePassageId('Rom 8:28')).toBe('ROM.8.28')
   })
 
   it('returns null for unknown books or invalid references', () => {
     expect(referenceToApiBiblePassageId('Unknown 1:1')).toBeNull()
     expect(referenceToApiBiblePassageId('not a ref')).toBeNull()
+  })
+
+  describe('usfmBookPrefixesForSearchQuery', () => {
+    it('maps full or partial book names to USFM codes', () => {
+      expect(usfmBookPrefixesForSearchQuery('John').sort()).toEqual(['JHN'])
+      expect(usfmBookPrefixesForSearchQuery('john').sort()).toEqual(['JHN'])
+      expect(usfmBookPrefixesForSearchQuery('rom').sort()).toEqual(['ROM'])
+      expect(usfmBookPrefixesForSearchQuery('1 joh').sort()).toEqual(['1JN'])
+      expect(usfmBookPrefixesForSearchQuery('1 john').sort()).toEqual(['1JN'])
+    })
+
+    it('matches USFM-style prefixes', () => {
+      expect(usfmBookPrefixesForSearchQuery('jhn').sort()).toEqual(['JHN'])
+      expect(usfmBookPrefixesForSearchQuery('1co').sort()).toEqual(['1CO'])
+    })
+
+    it('returns multiple books when the prefix is ambiguous', () => {
+      const j = usfmBookPrefixesForSearchQuery('j')
+      expect(j).toContain('JHN')
+      expect(j).toContain('JAS')
+      expect(j.length).toBeGreaterThan(3)
+    })
+
+    it('returns empty for punctuation-only or single ambiguous digit', () => {
+      expect(usfmBookPrefixesForSearchQuery('???')).toEqual([])
+      expect(usfmBookPrefixesForSearchQuery('3')).toEqual([])
+    })
   })
 
   describe('canonicalScriptureCacheReference', () => {

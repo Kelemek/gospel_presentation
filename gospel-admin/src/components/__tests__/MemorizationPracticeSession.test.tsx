@@ -34,7 +34,7 @@ jest.mock('@/lib/memorizationViewportPlatform', () => ({
 import { MEMORIZE_LISTEN_SPEED_STORAGE_KEY } from '@/lib/memorizeListenSpeedStorage'
 import { pickHiddenWordIndices } from '@/lib/memorizationPracticeUtils'
 import { isMemorizeAndroidWebHost } from '@/lib/memorizationViewportPlatform'
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import MemorizationPracticeSession from '@/components/MemorizationPracticeSession'
 import type { MemorizedVerse } from '@/lib/verseMemorizationStorage'
@@ -536,5 +536,71 @@ describe('MemorizationPracticeSession', () => {
     expect(scrollEl.scrollTop).toBe(500)
 
     jest.useRealTimers()
+  })
+
+  it('does not show Spurgeon Study without onOpenSpurgeonStudy', () => {
+    render(<MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />)
+    expect(screen.queryByTestId('memorize-practice-spurgeon-study')).not.toBeInTheDocument()
+  })
+
+  it('does not show Spurgeon Study when spurgeon-links returns no items', async () => {
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      writable: true,
+      value: jest.fn(),
+    })
+    const fetchSpy = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ items: [] }),
+    } as Response)
+    render(
+      <MemorizationPracticeSession
+        verse={baseVerse}
+        onClose={jest.fn()}
+        onComplete={jest.fn()}
+        onOpenSpurgeonStudy={jest.fn()}
+      />
+    )
+    await waitFor(() => {
+      expect(screen.queryByTestId('memorize-practice-spurgeon-study')).not.toBeInTheDocument()
+    })
+    fetchSpy.mockRestore()
+    delete (HTMLElement.prototype as unknown as { scrollIntoView?: unknown }).scrollIntoView
+  })
+
+  it('shows Spurgeon Study when spurgeon-links returns items and calls onOpenSpurgeonStudy on click', async () => {
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
+      configurable: true,
+      writable: true,
+      value: jest.fn(),
+    })
+    const user = userEvent.setup()
+    const openStudy = jest.fn()
+    const onClose = jest.fn()
+    const fetchSpy = jest.spyOn(global, 'fetch').mockImplementation((input) => {
+      const url = String(input)
+      if (url.includes('spurgeon-links')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ items: [{ slug: 'sg00001', title: 'A Sermon' }] }),
+        } as Response)
+      }
+      return Promise.reject(new Error(`unexpected fetch: ${url}`))
+    })
+    render(
+      <MemorizationPracticeSession
+        verse={baseVerse}
+        onClose={onClose}
+        onComplete={jest.fn()}
+        onOpenSpurgeonStudy={openStudy}
+      />
+    )
+    const study = await screen.findByTestId('memorize-practice-spurgeon-study')
+    expect(study).toHaveTextContent('Study')
+    await user.click(study)
+    expect(onClose).toHaveBeenCalled()
+    expect(openStudy).toHaveBeenCalledWith('John 3:16')
+    fetchSpy.mockRestore()
+    delete (HTMLElement.prototype as unknown as { scrollIntoView?: unknown }).scrollIntoView
   })
 })

@@ -129,6 +129,44 @@ describe('GET /api/spurgeon/by-reference', () => {
     expect(body.items).toEqual([{ slug: 'sg00001', title: 'Sermon' }])
   })
 
+  it('returns profiles for partial book name (no chapter)', async () => {
+    const from = jest.fn((table: string) => {
+      if (table === 'spurgeon_passage_index') {
+        return {
+          select: jest.fn(() => ({
+            eq: jest.fn(),
+            or: jest.fn(() => ({
+              limit: jest.fn().mockResolvedValue({
+                data: [{ profile_id: 'pJohn' }],
+                error: null,
+              }),
+            })),
+          })),
+        }
+      }
+      if (table === 'profiles') {
+        return {
+          select: jest.fn().mockReturnThis(),
+          in: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          like: jest.fn().mockResolvedValue({
+            data: [{ slug: 'sg00099', title: 'A John Gospel Sermon' }],
+            error: null,
+          }),
+        }
+      }
+      return {}
+    })
+    mockCreateAdminClient.mockReturnValue({ from } as never)
+
+    const res = await GET(
+      new NextRequest('http://localhost/api/spurgeon/by-reference?reference=John')
+    )
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.items).toEqual([{ slug: 'sg00099', title: 'A John Gospel Sermon' }])
+  })
+
   it('falls back when modal range overlaps a single verse in the index', async () => {
     const from = jest.fn((table: string) => {
       if (table === 'spurgeon_passage_index') {

@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const rawQ = (searchParams.get('q') || '').trim()
     const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1', 10) || 1)
-    const pageSize = Math.min(1000, Math.max(1, Number.parseInt(searchParams.get('pageSize') || '20', 10) || 20))
+    const pageSize = Math.min(1000, Math.max(1, Number.parseInt(searchParams.get('pageSize') || '100', 10) || 100))
     const from = (page - 1) * pageSize
 
     const stripped = rawQ

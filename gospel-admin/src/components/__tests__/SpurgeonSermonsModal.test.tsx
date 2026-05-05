@@ -36,7 +36,7 @@ describe('SpurgeonSermonsModal', () => {
     mockFetch.mockReset()
     mockFetch.mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ items: [], total: 0, page: 1, pageSize: 20 }),
+      json: () => Promise.resolve({ items: [], total: 0, page: 1, pageSize: 100 }),
     } as Response)
   })
 
@@ -50,17 +50,17 @@ describe('SpurgeonSermonsModal', () => {
 
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringMatching(/\/api\/spurgeon\/sermons\?[^]*page=1[^]*pageSize=25/),
+        expect.stringMatching(/\/api\/spurgeon\/sermons\?[^]*page=1[^]*pageSize=100/),
         expect.any(Object)
       )
     })
     expect(screen.getByRole('heading', { name: /Spurgeon sermons/i })).toBeInTheDocument()
   })
 
-  it('switches to by scripture tab and runs lookup', async () => {
+  it('switches to by scripture tab and runs lookup after debounced typing', async () => {
     const user = userEvent.setup()
-    mockFetch.mockImplementation((input: RequestInfo) => {
-      const url = typeof input === 'string' ? input : input.toString()
+    mockFetch.mockImplementation((input: string | URL | Request) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
       if (url.includes('by-reference')) {
         return Promise.resolve({
           ok: true,
@@ -69,7 +69,7 @@ describe('SpurgeonSermonsModal', () => {
       }
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ items: [], total: 0, page: 1, pageSize: 20 }),
+        json: () => Promise.resolve({ items: [], total: 0, page: 1, pageSize: 100 }),
       } as Response)
     })
 
@@ -77,20 +77,23 @@ describe('SpurgeonSermonsModal', () => {
 
     await user.click(screen.getByRole('button', { name: /By scripture/i }))
     await user.type(screen.getByLabelText(/Scripture reference/i), 'John 3:16')
-    await user.click(screen.getByRole('button', { name: /Find sermons/i }))
 
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/spurgeon/by-reference?reference='),
-        expect.any(Object)
-      )
-    })
+    await waitFor(
+      () => {
+        expect(mockFetch).toHaveBeenCalledWith(
+          expect.stringContaining('/api/spurgeon/by-reference?reference='),
+          expect.any(Object)
+        )
+      },
+      { timeout: 5000 }
+    )
     expect(await screen.findByRole('link', { name: /Test Sermon/i })).toHaveAttribute('href', '/sg00001')
+    expect(screen.queryByRole('button', { name: /Find sermons/i })).not.toBeInTheDocument()
   })
 
   it('opens By scripture with initialByReference and runs lookup', async () => {
-    mockFetch.mockImplementation((input: RequestInfo) => {
-      const url = typeof input === 'string' ? input : input.toString()
+    mockFetch.mockImplementation((input: string | URL | Request) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
       if (url.includes('by-reference')) {
         return Promise.resolve({
           ok: true,
@@ -99,7 +102,7 @@ describe('SpurgeonSermonsModal', () => {
       }
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ items: [], total: 0, page: 1, pageSize: 20 }),
+        json: () => Promise.resolve({ items: [], total: 0, page: 1, pageSize: 100 }),
       } as Response)
     })
 
@@ -111,12 +114,15 @@ describe('SpurgeonSermonsModal', () => {
       />
     )
 
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringMatching(/\/api\/spurgeon\/by-reference\?reference=/),
-        expect.any(Object)
-      )
-    })
+    await waitFor(
+      () => {
+        expect(mockFetch).toHaveBeenCalledWith(
+          expect.stringMatching(/\/api\/spurgeon\/by-reference\?reference=/),
+          expect.any(Object)
+        )
+      },
+      { timeout: 5000 }
+    )
     expect(await screen.findByRole('link', { name: /From Initial Ref/i })).toHaveAttribute('href', '/sg00002')
   })
 
@@ -128,7 +134,7 @@ describe('SpurgeonSermonsModal', () => {
           items: [{ slug: 'sg00042', title: 'Sermon 42. Grace Abounding' }],
           total: 1,
           page: 1,
-          pageSize: 25,
+          pageSize: 100,
         }),
     } as Response)
 
@@ -149,7 +155,7 @@ describe('SpurgeonSermonsModal', () => {
           items: [{ slug: 'sg00999', title: 'Follow This Sermon' }],
           total: 1,
           page: 1,
-          pageSize: 25,
+          pageSize: 100,
         }),
     } as Response)
 

@@ -52,7 +52,7 @@ describe('GET /api/spurgeon/sermons', () => {
     expect(rpc).toHaveBeenCalledWith('spurgeon_public_sermons_page', {
       p_q: 'grace',
       p_offset: 0,
-      p_limit: 20,
+      p_limit: 100,
     })
     await res.json()
   })

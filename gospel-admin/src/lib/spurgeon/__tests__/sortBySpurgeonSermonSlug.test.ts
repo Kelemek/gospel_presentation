@@ -32,6 +32,14 @@ describe('spurgeon sermon list sort', () => {
     expect(spurgeonSermonTitleForModalDisplay('Sermon 12.')).toBe('Sermon 12.')
   })
 
+  it('spurgeonSermonTitleForModalDisplay decodes common HTML entities in titles', () => {
+    expect(spurgeonSermonTitleForModalDisplay('&quot;Behold the Lamb of God&quot;')).toBe(
+      "'Behold the Lamb of God'"
+    )
+    expect(spurgeonSermonTitleForModalDisplay('Sermon 1. &quot;Feed My Lambs&quot;')).toBe("'Feed My Lambs'")
+    expect(spurgeonSermonTitleForModalDisplay('&amp;quot;Twice-encoded&amp;quot;')).toBe("'Twice-encoded'")
+  })
+
   it('spurgeonSermonDisplaySortKey uses stripped title or slug', () => {
     expect(spurgeonSermonDisplaySortKey({ slug: 'sg00002', title: 'Sermon 2. Zebra' })).toBe('zebra')
     expect(spurgeonSermonDisplaySortKey({ slug: 'sg00001', title: 'Sermon 1. Alpha' })).toBe('alpha')

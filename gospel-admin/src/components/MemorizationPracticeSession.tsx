@@ -71,6 +71,11 @@ interface MemorizationPracticeSessionProps {
   onPersistInProgress?: (payload: MemorizationInProgressSavePayload) => void
   /** Clear saved in-progress for this verse (e.g. Start over). */
   onClearInProgress?: () => void
+  /**
+   * When set, shows **Study** when indexed public Spurgeon sermons cite this passage
+   * (`GET /api/scripture/spurgeon-links`), same rule as `ScriptureModal` Study.
+   */
+  onOpenSpurgeonStudy?: (reference: string) => void
 }
 
 type Phase = 'intro' | 'practicing' | 'done'
@@ -107,6 +112,7 @@ export default function MemorizationPracticeSession({
   onComplete,
   onPersistInProgress,
   onClearInProgress,
+  onOpenSpurgeonStudy,
 }: MemorizationPracticeSessionProps) {
   /**
    * `verse.text` is whatever was saved when the verse was added (from `/api/scripture`).
@@ -208,6 +214,9 @@ export default function MemorizationPracticeSession({
   const [listenUiTick, setListenUiTick] = useState(0)
   const bumpListen = useCallback(() => setListenUiTick((n) => n + 1), [])
 
+  /** Indexed Spurgeon sermons for this verse (`/api/scripture/spurgeon-links`); mirrors ScriptureModal. */
+  const [spurgeonStudyMatch, setSpurgeonStudyMatch] = useState<'unset' | 'loading' | 'yes' | 'no'>('unset')
+
   const [listenPanelOpen, setListenPanelOpen] = useState(false)
   const [listenPlaybackRate, setListenPlaybackRate] = useState<MemorizeListenSpeed>(1)
   /** Latest rate for timeouts / stale `beginTtsUtterance` closures (e.g. repeat gap after speed change in-dialog). */
@@ -232,6 +241,32 @@ export default function MemorizationPracticeSession({
   useEffect(() => {
     setListenPlaybackRate(readMemorizeListenSpeedFromStorage())
   }, [])
+
+  useEffect(() => {
+    if (!onOpenSpurgeonStudy || !verse.reference.trim()) {
+      setSpurgeonStudyMatch('unset')
+      return
+    }
+    let cancelled = false
+    setSpurgeonStudyMatch('loading')
+    void fetch(
+      `/api/scripture/spurgeon-links?reference=${encodeURIComponent(verse.reference.trim())}`,
+      { cache: 'no-store' }
+    )
+      .then(async (res) => {
+        const data: unknown = await res.json().catch(() => ({}))
+        if (cancelled) return
+        const items = (data as { items?: unknown }).items
+        const list = Array.isArray(items) ? items : []
+        setSpurgeonStudyMatch(list.length > 0 ? 'yes' : 'no')
+      })
+      .catch(() => {
+        if (!cancelled) setSpurgeonStudyMatch('no')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [verse.reference, onOpenSpurgeonStudy])
 
   useEffect(() => {
     const el = passageAudioRef.current
@@ -1549,6 +1584,25 @@ export default function MemorizationPracticeSession({
                 Listen
               </button>
             )}
+            {onOpenSpurgeonStudy &&
+              verse.reference.trim() &&
+              spurgeonStudyMatch === 'yes' && (
+                <button
+                  type="button"
+                  data-tour="memorize-practice-spurgeon-study"
+                  data-testid="memorize-practice-spurgeon-study"
+                  onClick={() => {
+                    const ref = verse.reference.trim()
+                    handleClose()
+                    onOpenSpurgeonStudy(ref)
+                  }}
+                  title="Search public Spurgeon sermons that reference this passage"
+                  aria-label="Study: Spurgeon sermons for this passage"
+                  className="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700"
+                >
+                  Study
+                </button>
+              )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {showStartOver && (
