@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 import GospelSection from '@/components/GospelSection'
 import ScriptureModal from '@/components/ScriptureModal'
 import MemorizationPracticeSession from '@/components/MemorizationPracticeSession'
@@ -13,6 +12,7 @@ import SidebarAuthNav from '@/components/SidebarAuthNav'
 import MenuLocalDataBackup from '@/components/MenuLocalDataBackup'
 import ThemeToggle from '@/components/ThemeToggle'
 import BookmarksDropdown from '@/components/BookmarksDropdown'
+import HighlightsDropdown from '@/components/HighlightsDropdown'
 import ProfileHelpMenu from '@/components/ProfileHelpMenu'
 import PresentationFirstVisitWelcome from '@/components/PresentationFirstVisitWelcome'
 import { ScriptureFooterAttributionParagraphs } from '@/components/ScriptureFooterAttributionParagraphs'
@@ -37,6 +37,16 @@ import { useTranslation } from '@/contexts/TranslationContext'
 import { GOSPEL_CLOSE_PROFILE_SLIDEOUT_MENU_EVENT } from '@/lib/bookmarksPanelCloseEvent'
 import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
 import { findFirstScriptureCardAnchors } from '@/lib/findFirstScriptureCardAnchors'
+import {
+  plainTextForProfileHighlightUi,
+  visibleTextLengthBeforeBoundary,
+} from '@/lib/profileHighlightVisibleText'
+import {
+  addHighlight,
+  highlightsForSlug,
+  removeHighlight,
+  type ProfileHighlight,
+} from '@/lib/profileHighlightsStorage'
 import {
   clearMemorizationInProgress,
   loadMemorizedVerses,
@@ -66,8 +76,23 @@ interface ScriptureRefNav {
   subsectionId: string
 }
 
+function closestElement(node: Node | null, selector: string): HTMLElement | null {
+  if (!node) return null
+  const base = node instanceof Element ? node : node.parentElement
+  if (!base) return null
+  const found = base.closest(selector)
+  return found instanceof HTMLElement ? found : null
+}
+
+function isInsideHighlightIgnoredMount(node: Node | null): boolean {
+  return !!closestElement(node, '[data-gospel-mount]')
+}
+
+function textOffsetWithinScope(scopeEl: HTMLElement, node: Node, nodeOffset: number): number {
+  return visibleTextLengthBeforeBoundary(scopeEl, node, nodeOffset)
+}
+
 function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
-  const router = useRouter()
   const [selectedScripture, setSelectedScripture] = useState<{
     reference: string
     isOpen: boolean
@@ -86,6 +111,9 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const [fromEditor, setFromEditor] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [isHydrated, setIsHydrated] = useState(false)
+  const [profileHighlights, setProfileHighlights] = useState<ProfileHighlight[]>([])
+  const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null)
+  const activeHighlightTimerRef = useRef<number | null>(null)
   const { showConfirm } = useAlertModal()
   const { enabledTranslations, isLoading: translationsLoading } = useTranslation()
   const footerAttributionEnabledCodes = translationsLoading ? null : enabledTranslations
@@ -126,6 +154,22 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   }, [isHydrated])
 
   const sectionCount = sections?.length ?? 0
+  const refreshHighlights = useCallback(() => {
+    if (!profileInfo?.slug) {
+      setProfileHighlights([])
+      return
+    }
+    setProfileHighlights(highlightsForSlug(profileInfo.slug))
+  }, [profileInfo?.slug])
+
+  const highlightsByScopeId = useMemo(() => {
+    const out: Record<string, Array<{ id: string; startOffset: number; endOffset: number }>> = {}
+    profileHighlights.forEach((h) => {
+      if (!out[h.scopeId]) out[h.scopeId] = []
+      out[h.scopeId]!.push({ id: h.id, startOffset: h.startOffset, endOffset: h.endOffset })
+    })
+    return out
+  }, [profileHighlights])
 
   // Deep-link / bookmark: scroll to #section-* when hash is present after paint
   useEffect(() => {
@@ -145,6 +189,71 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     }
   }, [isHydrated, sectionCount, profileInfo?.slug])
 
+  useEffect(() => {
+    if (!isHydrated || !profileInfo?.slug) return
+
+    const handleSelectionEnd = () => {
+      const sel = window.getSelection()
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return
+
+      const range = sel.getRangeAt(0)
+      if (!range || range.collapsed) return
+      if (isInsideHighlightIgnoredMount(range.startContainer) || isInsideHighlightIgnoredMount(range.endContainer)) {
+        return
+      }
+
+      const startScope = closestElement(range.startContainer, '[data-highlight-scope]')
+      const endScope = closestElement(range.endContainer, '[data-highlight-scope]')
+      if (!startScope || !endScope || startScope !== endScope) return
+
+      const scopeId = startScope.getAttribute('data-highlight-scope')?.trim()
+      const anchorId = startScope.getAttribute('data-highlight-anchor-id')?.trim()
+      if (!scopeId || !anchorId) return
+
+      const quote = plainTextForProfileHighlightUi(sel.toString() ?? '')
+      if (!quote) return
+
+      let startOffset = 0
+      let endOffset = 0
+      try {
+        startOffset = textOffsetWithinScope(startScope, range.startContainer, range.startOffset)
+        endOffset = textOffsetWithinScope(startScope, range.endContainer, range.endOffset)
+      } catch {
+        return
+      }
+      if (endOffset <= startOffset) return
+
+      const locationLabel = plainTextForProfileHighlightUi(
+        startScope.getAttribute('data-highlight-location-label')?.trim() || 'Highlighted text'
+      )
+
+      const added = addHighlight({
+        slug: profileInfo.slug,
+        resourceTitle: profileInfo.title,
+        anchorId,
+        locationLabel,
+        scopeId,
+        quote,
+        startOffset,
+        endOffset,
+      })
+      if (!added) return
+
+      refreshHighlights()
+      setActiveHighlightId(added.id)
+      if (activeHighlightTimerRef.current != null) window.clearTimeout(activeHighlightTimerRef.current)
+      activeHighlightTimerRef.current = window.setTimeout(() => setActiveHighlightId(null), 1800)
+      sel.removeAllRanges()
+    }
+
+    document.addEventListener('mouseup', handleSelectionEnd)
+    document.addEventListener('touchend', handleSelectionEnd)
+    return () => {
+      document.removeEventListener('mouseup', handleSelectionEnd)
+      document.removeEventListener('touchend', handleSelectionEnd)
+    }
+  }, [isHydrated, profileInfo?.slug, profileInfo?.title, refreshHighlights])
+
   // Scripture verse pins (localStorage only — yellow slot + tinted bookmarks per profile slug)
   const [versePinMap, setVersePinMap] = useState<VersePinsStoredState>(createEmptyVersePinsState)
   const [modalPinDraftColor, setModalPinDraftColor] = useState<VersePinColorId>('yellow')
@@ -163,6 +272,18 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     if (!profileInfo?.slug) return
     setVersePinMap(loadVersePins(profileInfo.slug))
   }, [profileInfo?.slug])
+
+  useLayoutEffect(() => {
+    refreshHighlights()
+  }, [refreshHighlights])
+
+  useEffect(() => {
+    return () => {
+      if (activeHighlightTimerRef.current != null) {
+        window.clearTimeout(activeHighlightTimerRef.current)
+      }
+    }
+  }, [])
 
   const versePinsList = useMemo(() => versePinsListFromState(versePinMap), [versePinMap])
 
@@ -215,6 +336,23 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     clearAllVersePins(s)
     setVersePinMap(loadVersePins(s))
   }, [profileInfo?.slug])
+
+  const focusHighlightById = useCallback((highlightId: string) => {
+    setActiveHighlightId(highlightId)
+    if (activeHighlightTimerRef.current != null) window.clearTimeout(activeHighlightTimerRef.current)
+    activeHighlightTimerRef.current = window.setTimeout(() => setActiveHighlightId(null), 2400)
+  }, [])
+
+  const requestRemoveHighlightFromBody = useCallback(
+    async (highlightId: string) => {
+      const ok = await showConfirm('Remove this highlight?')
+      if (!ok) return
+      removeHighlight(highlightId)
+      refreshHighlights()
+      setActiveHighlightId((cur) => (cur === highlightId ? null : cur))
+    },
+    [showConfirm, refreshHighlights]
+  )
 
   // Collect favorite references from gospel data
   const collectFavoriteReferences = (data: GospelSectionType[]) => {
@@ -613,33 +751,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
               
               {/* Right side content */}
               <div className="flex items-center gap-3">
-                {/* Logged in indicator - clickable to logout with confirmation */}
-                {userEmail && (
-                  <button
-                    onClick={async () => {
-                      const confirmed = await showConfirm('Are you sure you want to log out?')
-                      if (confirmed) {
-                        const supabase = createClient()
-                        await supabase.auth.signOut()
-                        // Clear user state immediately before redirecting
-                        setUserEmail(null)
-                        setCanEdit(false)
-                        router.push('/default')
-                      }
-                    }}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/40 border border-green-200 dark:border-green-700 rounded-md hover:bg-green-100 dark:hover:bg-green-900/60 transition-colors cursor-pointer"
-                    title="Click to log out"
-                  >
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-xs text-green-700 dark:text-green-300 font-medium hidden sm:inline">
-                      {userEmail}
-                    </span>
-                    <span className="text-xs text-green-700 dark:text-green-300 font-medium sm:hidden">
-                      Logged in
-                    </span>
-                  </button>
-                )}
-                
                 {/* Profile Info and Edit Button - only show when previewing from editor */}
                 {canEdit && fromEditor && (
                   <>
@@ -663,6 +774,11 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                   </>
                 )}
                 <ProfileHelpMenu />
+                <HighlightsDropdown
+                  profileSlug={profileInfo.slug}
+                  onOpenHighlight={(h) => focusHighlightById(h.id)}
+                  onHighlightsChanged={refreshHighlights}
+                />
                 <BookmarksDropdown
                   sections={sections}
                   profileTitle={profileInfo.title}
@@ -697,6 +813,9 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                     profileSlug={profileInfo.slug}
                     savedAnswers={profileInfo.savedAnswers}
                     isLoggedIn={!!userEmail}
+                    highlightsByScopeId={highlightsByScopeId}
+                    activeHighlightId={activeHighlightId}
+                    onHighlightMarkClick={requestRemoveHighlightFromBody}
                   />
                 </div>
               ))}

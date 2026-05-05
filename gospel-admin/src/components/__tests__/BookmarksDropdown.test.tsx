@@ -189,6 +189,55 @@ describe('BookmarksDropdown', () => {
       expect(loadBookmarks()).toHaveLength(0)
     })
   })
+
+  it('filters bookmarks by debounced search', async () => {
+    jest.useFakeTimers()
+    try {
+      window.localStorage.setItem(
+        PROFILE_BOOKMARKS_STORAGE_KEY,
+        JSON.stringify({
+          v: 1,
+          bookmarks: [
+            {
+              id: 'b1',
+              slug: 'slug-a',
+              resourceTitle: 'Alpha Guide',
+              anchorId: 'section-1-0',
+              locationLabel: 'Intro',
+              createdAt: 2,
+            },
+            {
+              id: 'b2',
+              slug: 'slug-b',
+              resourceTitle: 'Beta Handbook',
+              anchorId: 'section-2-0',
+              locationLabel: 'Middle',
+              createdAt: 1,
+            },
+          ],
+        })
+      )
+
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
+      render(
+        <BookmarksDropdown sections={sections} profileTitle="My Resource" profileSlug="slug-a" />
+      )
+
+      await user.click(screen.getByRole('button', { name: 'Bookmarks' }))
+      await user.type(screen.getByRole('searchbox', { name: 'Search bookmarks' }), 'beta')
+
+      await act(async () => {
+        jest.advanceTimersByTime(260)
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('Beta Handbook')).toBeInTheDocument()
+        expect(screen.queryByText('Alpha Guide')).not.toBeInTheDocument()
+      })
+    } finally {
+      jest.useRealTimers()
+    }
+  })
 })
 
 describe('bookmarksPanelStyleFromTrigger', () => {

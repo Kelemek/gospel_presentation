@@ -577,7 +577,7 @@ export default function ScriptureModal({
                   }
                 }}
                 disabled={!hasPrevious}
-                className={`min-h-[36px] min-w-[36px] p-1.5 rounded-md transition-colors flex items-center justify-center text-lg font-bold ${
+                className={`h-9 min-h-[36px] min-w-[36px] box-border rounded-md transition-colors inline-flex items-center justify-center px-1.5 text-lg font-bold leading-none ${
                   hasPrevious 
                     ? 'cursor-pointer text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500' 
                     : 'text-slate-300 dark:text-slate-500 cursor-not-allowed'
@@ -611,7 +611,7 @@ export default function ScriptureModal({
                   }
                 }}
                 disabled={!hasNext}
-                className={`min-h-[36px] min-w-[36px] p-1.5 rounded-md transition-colors flex items-center justify-center text-lg font-bold ${
+                className={`h-9 min-h-[36px] min-w-[36px] box-border rounded-md transition-colors inline-flex items-center justify-center px-1.5 text-lg font-bold leading-none ${
                   hasNext 
                     ? 'cursor-pointer text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500' 
                     : 'text-slate-300 dark:text-slate-500 cursor-not-allowed'
@@ -627,7 +627,7 @@ export default function ScriptureModal({
                 type="button"
                 data-tour="scripture-modal-close"
                 onClick={onClose}
-                className="cursor-pointer text-slate-600 dark:text-slate-200 text-xl font-bold min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center bg-white dark:bg-slate-600 shadow-sm ring-1 ring-slate-300/80 dark:ring-slate-500/60 hover:bg-slate-50 dark:hover:bg-slate-500 hover:ring-slate-400 dark:hover:ring-slate-400 active:bg-slate-100 dark:active:bg-slate-400"
+                className="cursor-pointer text-slate-600 dark:text-slate-200 text-xl font-bold h-9 min-h-[36px] min-w-[36px] box-border rounded-md inline-flex items-center justify-center leading-none bg-white dark:bg-slate-600 shadow-sm ring-1 ring-slate-300/80 dark:ring-slate-500/60 hover:bg-slate-50 dark:hover:bg-slate-500 hover:ring-slate-400 dark:hover:ring-slate-400 active:bg-slate-100 dark:active:bg-slate-400"
                 aria-label="Close modal"
               >
                 ×
@@ -684,7 +684,7 @@ export default function ScriptureModal({
                 type="button"
                 data-tour="scripture-modal-verse-tab"
                 onClick={() => setShowingContext(false)}
-                className={`cursor-pointer px-3 py-1.5 text-sm font-medium rounded-md transition-colors min-h-[36px] border-2 ${
+                className={`cursor-pointer px-3 h-9 min-h-[36px] box-border inline-flex items-center justify-center text-sm font-medium leading-none rounded-md transition-colors border-2 ${
                   !showingContext 
                     ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border-blue-400 dark:border-blue-600' 
                     : 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 border-slate-400 dark:border-slate-500'
@@ -698,7 +698,7 @@ export default function ScriptureModal({
                 data-tour="scripture-modal-chapter-context"
                 onClick={fetchChapterContext}
                 disabled={contextLoading}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors min-h-[36px] border-2 ${
+                className={`px-3 h-9 min-h-[36px] box-border inline-flex items-center justify-center text-sm font-medium leading-none rounded-md transition-colors border-2 ${
                   showingContext 
                     ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border-blue-400 dark:border-blue-600' 
                     : 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 border-slate-400 dark:border-slate-500'
@@ -714,7 +714,7 @@ export default function ScriptureModal({
                 disabled={loading || !!error || !(scriptureText ?? '').trim() || isMemoized}
                 title={isMemoized ? 'Already in memorization list' : 'Save this verse to memorize later'}
                 aria-label={isMemoized ? 'Verse already in memorization list' : 'Memorize this verse'}
-                className={`px-2 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors min-h-[36px] border-2 shrink-0 ${
+                className={`px-2 h-9 min-h-[36px] box-border inline-flex items-center justify-center text-xs sm:text-sm font-medium leading-none rounded-md transition-colors border-2 shrink-0 ${
                   isMemoized || loading || !!error || !(scriptureText ?? '').trim()
                     ? 'text-slate-400 dark:text-slate-500 border-slate-300 dark:border-slate-600 cursor-not-allowed bg-slate-50 dark:bg-slate-700/50'
                     : 'cursor-pointer text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500'
@@ -731,7 +731,7 @@ export default function ScriptureModal({
                     onClick={() => onOpenSpurgeonStudy(reference.trim())}
                     title="Search public Spurgeon sermons that reference this passage"
                     aria-label="Study: Spurgeon sermons for this passage"
-                    className="px-2 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors min-h-[36px] border-2 shrink-0 cursor-pointer text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500"
+                    className="px-2 h-9 min-h-[36px] box-border inline-flex items-center justify-center text-xs sm:text-sm font-medium leading-none rounded-md transition-colors border-2 shrink-0 cursor-pointer text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500"
                   >
                     Study
                   </button>

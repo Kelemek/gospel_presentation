@@ -99,6 +99,137 @@ describe('GospelInlineHtml', () => {
     expect(screen.queryByRole('button', { name: 'Galatians 1:1' })).not.toBeInTheDocument()
   })
 
+  it('inserts highlights as mark[data-resource-highlight-id] in the injected container', async () => {
+    const { container } = render(
+      <GospelInlineHtml
+        html="<p>ABCDEFGHIJ</p>"
+        onComaClick={jest.fn()}
+        highlights={[{ id: 'h1', startOffset: 1, endOffset: 5 }]}
+        activeHighlightId={null}
+      />
+    )
+
+    await waitFor(() => {
+      const m = container.querySelector('mark[data-resource-highlight-id="h1"]')
+      expect(m).toBeTruthy()
+      expect(m?.textContent).toBe('BCDE')
+      expect(m?.hasAttribute('data-resource-highlight-active')).toBe(false)
+    })
+  })
+
+  it('sets data-resource-highlight-active on the matching mark', async () => {
+    const { container } = render(
+      <GospelInlineHtml
+        html="<p>ABCDEFGHIJ</p>"
+        onComaClick={jest.fn()}
+        highlights={[{ id: 'h1', startOffset: 1, endOffset: 5 }]}
+        activeHighlightId="h1"
+      />
+    )
+
+    await waitFor(() => {
+      const m = container.querySelector('mark[data-resource-highlight-id="h1"]')
+      expect(m?.getAttribute('data-resource-highlight-active')).toBe('true')
+    })
+  })
+
+  it('calls onHighlightMarkClick when a removable highlight mark is clicked', async () => {
+    const onHighlightMarkClick = jest.fn()
+    const { container } = render(
+      <GospelInlineHtml
+        html="<p>ABCDEFGHIJ</p>"
+        onComaClick={jest.fn()}
+        highlights={[{ id: 'h1', startOffset: 1, endOffset: 5 }]}
+        activeHighlightId={null}
+        onHighlightMarkClick={onHighlightMarkClick}
+      />
+    )
+
+    await waitFor(() => {
+      const m = container.querySelector('mark[data-resource-highlight-id="h1"]')
+      expect(m).toBeTruthy()
+      expect(m?.getAttribute('data-resource-highlight-removable')).toBe('true')
+    })
+    const mark = container.querySelector('mark[data-resource-highlight-id="h1"]')!
+    fireEvent.click(mark)
+    expect(onHighlightMarkClick).toHaveBeenCalledWith('h1')
+  })
+
+  it('splits highlights across sibling inner div blocks (TipTap-style) into one mark per div', async () => {
+    const { container } = render(
+      <GospelInlineHtml
+        html="<div><div>AB</div><div>CD</div></div>"
+        onComaClick={jest.fn()}
+        highlights={[{ id: 'h1', startOffset: 0, endOffset: 4 }]}
+        activeHighlightId={null}
+      />
+    )
+
+    await waitFor(() => {
+      const marks = container.querySelectorAll('mark[data-resource-highlight-id="h1"]')
+      expect(marks.length).toBe(2)
+      const chunks = [...marks].map((m) => (m.textContent ?? '').trim()).sort()
+      expect(chunks).toEqual(['AB', 'CD'])
+    })
+  })
+
+  it('splits highlights inside blockquote with div lines into one mark per div', async () => {
+    const { container } = render(
+      <GospelInlineHtml
+        html="<blockquote><div>WX</div><div>YZ</div></blockquote>"
+        onComaClick={jest.fn()}
+        highlights={[{ id: 'h1', startOffset: 0, endOffset: 4 }]}
+        activeHighlightId={null}
+      />
+    )
+
+    await waitFor(() => {
+      const marks = container.querySelectorAll('mark[data-resource-highlight-id="h1"]')
+      expect(marks.length).toBe(2)
+      const chunks = [...marks].map((m) => (m.textContent ?? '').trim()).sort()
+      expect(chunks).toEqual(['WX', 'YZ'])
+    })
+  })
+
+  it('splits highlights that span sibling paragraphs into one mark per paragraph', async () => {
+    const { container } = render(
+      <GospelInlineHtml
+        html="<p>ABCDEFGHIJ</p><p>KLMNOP</p>"
+        onComaClick={jest.fn()}
+        highlights={[{ id: 'h1', startOffset: 8, endOffset: 12 }]}
+        activeHighlightId={null}
+      />
+    )
+
+    await waitFor(() => {
+      const marks = container.querySelectorAll('mark[data-resource-highlight-id="h1"]')
+      expect(marks.length).toBe(2)
+      const chunks = [...marks].map((m) => (m.textContent ?? '').trim())
+      expect(new Set(chunks)).toEqual(new Set(['IJ', 'KL']))
+    })
+  })
+
+  it('does not nest multiple <p> inside a single mark when paragraphs sit under an outer wrapper <div>', async () => {
+    const { container } = render(
+      <GospelInlineHtml
+        html="<div><p>ABCDEFGHIJ</p><p>KLMNOP</p></div>"
+        onComaClick={jest.fn()}
+        highlights={[{ id: 'h1', startOffset: 8, endOffset: 12 }]}
+        activeHighlightId={null}
+      />
+    )
+
+    await waitFor(() => {
+      const marks = container.querySelectorAll('mark[data-resource-highlight-id="h1"]')
+      expect(marks.length).toBe(2)
+      marks.forEach((m) => {
+        expect(m.querySelectorAll('p').length).toBe(0)
+      })
+      const chunks = [...marks].map((m) => (m.textContent ?? '').trim())
+      expect(new Set(chunks)).toEqual(new Set(['IJ', 'KL']))
+    })
+  })
+
   it('shows verse pin styling and remove control when a pin matches the row', async () => {
     const onRemoveVersePin = jest.fn()
     render(

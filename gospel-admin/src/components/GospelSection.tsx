@@ -60,6 +60,9 @@ function TextWithComaButtons({
   anchorSubsectionId,
   versePins,
   onRemoveVersePin,
+  highlights,
+  activeHighlightId,
+  onHighlightMarkClick,
 }: {
   text: string
   onComaClick: () => void
@@ -69,6 +72,9 @@ function TextWithComaButtons({
   anchorSubsectionId?: string
   versePins?: VersePinAnchoredEntry[]
   onRemoveVersePin?: VersePinRemoveHandler
+  highlights?: Array<{ id: string; startOffset: number; endOffset: number }>
+  activeHighlightId?: string | null
+  onHighlightMarkClick?: (highlightId: string) => void
 }) {
   return (
     <GospelInlineHtml
@@ -80,6 +86,9 @@ function TextWithComaButtons({
       anchorSubsectionId={anchorSubsectionId}
       versePins={versePins}
       onRemoveVersePin={onRemoveVersePin}
+      highlights={highlights}
+      activeHighlightId={activeHighlightId}
+      onHighlightMarkClick={onHighlightMarkClick}
     />
   )
 }
@@ -92,6 +101,9 @@ interface GospelSectionProps {
   profileSlug: string
   savedAnswers?: SavedAnswer[]
   isLoggedIn?: boolean
+  highlightsByScopeId?: Record<string, Array<{ id: string; startOffset: number; endOffset: number }>>
+  activeHighlightId?: string | null
+  onHighlightMarkClick?: (highlightId: string) => void
 }
 
 interface ScriptureReferencesProps {
@@ -113,6 +125,9 @@ interface SubsectionProps {
   profileSlug: string
   savedAnswers?: SavedAnswer[]
   isLoggedIn?: boolean
+  highlightsByScopeId?: Record<string, Array<{ id: string; startOffset: number; endOffset: number }>>
+  activeHighlightId?: string | null
+  onHighlightMarkClick?: (highlightId: string) => void
 }
 
 interface NestedSubsectionProps {
@@ -125,6 +140,9 @@ interface NestedSubsectionProps {
   profileSlug: string
   savedAnswers?: SavedAnswer[]
   isLoggedIn?: boolean
+  highlightsByScopeId?: Record<string, Array<{ id: string; startOffset: number; endOffset: number }>>
+  activeHighlightId?: string | null
+  onHighlightMarkClick?: (highlightId: string) => void
 }
 
 function ScriptureReferences({
@@ -491,7 +509,20 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
   )
 }
 
-function NestedSubsectionComponent({ nestedSubsection, sectionAnchorId, nestedId, onScriptureClick, versePins, onRemoveVersePin, profileSlug, savedAnswers, isLoggedIn }: NestedSubsectionProps) {
+function NestedSubsectionComponent({
+  nestedSubsection,
+  sectionAnchorId,
+  nestedId,
+  onScriptureClick,
+  versePins,
+  onRemoveVersePin,
+  profileSlug,
+  savedAnswers,
+  isLoggedIn,
+  highlightsByScopeId,
+  activeHighlightId,
+  onHighlightMarkClick,
+}: NestedSubsectionProps) {
   const [showComaModal, setShowComaModal] = useState(false)
   const [showFourRulesModal, setShowFourRulesModal] = useState(false)
 
@@ -512,9 +543,15 @@ function NestedSubsectionComponent({ nestedSubsection, sectionAnchorId, nestedId
             anchorSubsectionId={nestedId}
             versePins={versePins}
             onRemoveVersePin={onRemoveVersePin}
+            onHighlightMarkClick={onHighlightMarkClick}
           />
         </h5>
-        <div className="text-slate-700 dark:text-slate-300 mb-2 print-content text-base md:text-lg leading-relaxed">
+        <div
+          className="text-slate-700 dark:text-slate-300 mb-2 print-content text-base md:text-lg leading-relaxed"
+          data-highlight-scope={nestedId}
+          data-highlight-anchor-id={nestedId}
+          data-highlight-location-label={nestedSubsection.title}
+        >
           <TextWithComaButtons 
             text={nestedSubsection.content} 
             onComaClick={() => setShowComaModal(true)}
@@ -524,6 +561,9 @@ function NestedSubsectionComponent({ nestedSubsection, sectionAnchorId, nestedId
             anchorSubsectionId={nestedId}
             versePins={versePins}
             onRemoveVersePin={onRemoveVersePin}
+            highlights={highlightsByScopeId?.[nestedId] ?? []}
+            activeHighlightId={activeHighlightId}
+            onHighlightMarkClick={onHighlightMarkClick}
           />
         </div>
         {nestedSubsection.scriptureReferences && (
@@ -550,15 +590,30 @@ function NestedSubsectionComponent({ nestedSubsection, sectionAnchorId, nestedId
   )
 }
 
-function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptureClick, versePins, onRemoveVersePin, profileSlug, savedAnswers, isLoggedIn }: SubsectionProps) {
+function SubsectionComponent({
+  subsection,
+  sectionId,
+  subsectionIndex,
+  onScriptureClick,
+  versePins,
+  onRemoveVersePin,
+  profileSlug,
+  savedAnswers,
+  isLoggedIn,
+  highlightsByScopeId,
+  activeHighlightId,
+  onHighlightMarkClick,
+}: SubsectionProps) {
   const [showComaModal, setShowComaModal] = useState(false)
   const [showFourRulesModal, setShowFourRulesModal] = useState(false)
+  const subsectionId = `${sectionId}-${subsectionIndex}`
+  const subsectionContentScopeId = `${subsectionId}__content`
 
   return (
     <>
       <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
       <FourRulesModal isOpen={showFourRulesModal} onClose={() => setShowFourRulesModal(false)} />
-      <div id={`${sectionId}-${subsectionIndex}`} className="scroll-mt-20 mb-6 print-subsection">
+      <div id={subsectionId} className="scroll-mt-20 mb-6 print-subsection">
         <h4 
           className="text-xl md:text-2xl font-semibold text-slate-800 dark:text-slate-100 mb-3 print-subsection-title"
         >
@@ -568,22 +623,31 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
             onScriptureClick={onScriptureClick}
             onFourRulesClick={() => setShowFourRulesModal(true)}
             anchorSectionId={sectionId}
-            anchorSubsectionId={`${sectionId}-${subsectionIndex}`}
+            anchorSubsectionId={subsectionId}
             versePins={versePins}
             onRemoveVersePin={onRemoveVersePin}
+            onHighlightMarkClick={onHighlightMarkClick}
           />
         </h4>
         {subsection.content && (
-          <div className="text-slate-700 dark:text-slate-300 mb-3 leading-relaxed print-content text-base md:text-lg">
+          <div
+            className="text-slate-700 dark:text-slate-300 mb-3 leading-relaxed print-content text-base md:text-lg"
+            data-highlight-scope={subsectionContentScopeId}
+            data-highlight-anchor-id={subsectionId}
+            data-highlight-location-label={subsection.title}
+          >
             <TextWithComaButtons 
               text={subsection.content} 
               onComaClick={() => setShowComaModal(true)}
               onScriptureClick={onScriptureClick}
               onFourRulesClick={() => setShowFourRulesModal(true)}
               anchorSectionId={sectionId}
-              anchorSubsectionId={`${sectionId}-${subsectionIndex}`}
+              anchorSubsectionId={subsectionId}
               versePins={versePins}
               onRemoveVersePin={onRemoveVersePin}
+              highlights={highlightsByScopeId?.[subsectionContentScopeId] ?? []}
+              activeHighlightId={activeHighlightId}
+              onHighlightMarkClick={onHighlightMarkClick}
             />
           </div>
         )}
@@ -593,7 +657,7 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
             references={subsection.scriptureReferences} 
             onScriptureClick={onScriptureClick} 
             anchorSectionId={sectionId}
-            anchorSubsectionId={`${sectionId}-${subsectionIndex}`}
+            anchorSubsectionId={subsectionId}
             versePins={versePins}
             onRemoveVersePin={onRemoveVersePin}
           />
@@ -623,6 +687,9 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
               profileSlug={profileSlug}
               savedAnswers={savedAnswers}
               isLoggedIn={isLoggedIn}
+              highlightsByScopeId={highlightsByScopeId}
+              activeHighlightId={activeHighlightId}
+              onHighlightMarkClick={onHighlightMarkClick}
             />
           ))}
         </div>
@@ -632,7 +699,18 @@ function SubsectionComponent({ subsection, sectionId, subsectionIndex, onScriptu
   )
 }
 
-export default function GospelSection({ section, onScriptureClick, versePins, onRemoveVersePin, profileSlug, savedAnswers, isLoggedIn }: GospelSectionProps) {
+export default function GospelSection({
+  section,
+  onScriptureClick,
+  versePins,
+  onRemoveVersePin,
+  profileSlug,
+  savedAnswers,
+  isLoggedIn,
+  highlightsByScopeId,
+  activeHighlightId,
+  onHighlightMarkClick,
+}: GospelSectionProps) {
   const sectionId = `section-${section.section}`
   const [showComaModal, setShowComaModal] = useState(false)
   const [showFourRulesModal, setShowFourRulesModal] = useState(false)
@@ -653,6 +731,7 @@ export default function GospelSection({ section, onScriptureClick, versePins, on
           anchorSubsectionId={sectionId}
           versePins={versePins}
           onRemoveVersePin={onRemoveVersePin}
+          onHighlightMarkClick={onHighlightMarkClick}
         />
       </h3>
       
@@ -684,6 +763,9 @@ export default function GospelSection({ section, onScriptureClick, versePins, on
             profileSlug={profileSlug}
             savedAnswers={savedAnswers}
             isLoggedIn={isLoggedIn}
+            highlightsByScopeId={highlightsByScopeId}
+            activeHighlightId={activeHighlightId}
+            onHighlightMarkClick={onHighlightMarkClick}
           />
         ))}
       </div>

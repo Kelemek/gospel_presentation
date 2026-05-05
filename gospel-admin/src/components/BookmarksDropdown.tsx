@@ -19,6 +19,14 @@ import {
 import { GOSPEL_CLOSE_BOOKMARKS_PANEL_EVENT } from '@/lib/bookmarksPanelCloseEvent'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 
+const BOOKMARK_SEARCH_DEBOUNCE_MS = 250
+
+function bookmarkMatchesSearch(b: ProfileBookmark, trimmedLowerNeedle: string): boolean {
+  if (!trimmedLowerNeedle) return true
+  const parts = [b.resourceTitle, b.locationLabel, b.slug, b.anchorId]
+  return parts.some((t) => t.toLowerCase().includes(trimmedLowerNeedle))
+}
+
 const TRIGGER_CLASS =
   'p-2 rounded-md flex items-center justify-center min-h-[36px] min-w-[36px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white transition-colors cursor-pointer'
 
@@ -79,6 +87,8 @@ export default function BookmarksDropdown({
   const { showConfirm } = useAlertModal()
   const [open, setOpen] = useState(false)
   const [bookmarks, setBookmarks] = useState<ProfileBookmark[]>([])
+  const [searchInput, setSearchInput] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [addHint, setAddHint] = useState<string | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -131,6 +141,24 @@ export default function BookmarksDropdown({
     const t = window.setTimeout(() => setAddHint(null), 2500)
     return () => window.clearTimeout(t)
   }, [addHint])
+
+  useEffect(() => {
+    if (!open) {
+      setSearchInput('')
+      setDebouncedSearch('')
+    }
+  }, [open])
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      setDebouncedSearch(searchInput.trim().toLowerCase())
+    }, BOOKMARK_SEARCH_DEBOUNCE_MS)
+    return () => window.clearTimeout(t)
+  }, [searchInput])
+
+  const filteredBookmarks = debouncedSearch
+    ? bookmarks.filter((b) => bookmarkMatchesSearch(b, debouncedSearch))
+    : bookmarks
 
   const handleAdd = () => {
     const anchorId = getCurrentTocAnchorId(sections)
@@ -217,17 +245,17 @@ export default function BookmarksDropdown({
             <div
               ref={panelRef}
               data-tour="bookmarks-panel"
-              className="flex flex-col overflow-hidden rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-xl"
+              className="flex flex-col overflow-hidden rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-xl min-h-0"
               style={panelStyle}
               role="dialog"
               aria-label="Bookmarks"
             >
-              <div className="border-b border-slate-200 dark:border-slate-600 px-3 py-2">
+              <div className="border-b border-slate-200 dark:border-slate-600 px-3 py-2 shrink-0">
                 <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">
                   Bookmarks
                 </p>
               </div>
-              <div className="overflow-y-auto p-2 space-y-2">
+              <div className="min-h-0 flex-1 overflow-y-auto p-2 space-y-2">
                 <button
                   type="button"
                   data-tour="bookmarks-add"
@@ -239,65 +267,87 @@ export default function BookmarksDropdown({
                   </span>
                   Add bookmark
                 </button>
+                <div className="border-b border-slate-200 dark:border-slate-600 -mx-2 px-2 pb-2 shrink-0">
+                  <label htmlFor="bookmarks-panel-search" className="sr-only">
+                    Search bookmarks
+                  </label>
+                  <input
+                    id="bookmarks-panel-search"
+                    type="search"
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    placeholder="Search…"
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/40 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+                    aria-controls="bookmarks-panel-filtered-rows"
+                  />
+                </div>
                 {addHint && (
                   <p className="text-xs text-amber-700 dark:text-amber-300 px-1">
                     {addHint}
                   </p>
                 )}
-                {bookmarks.length > 0 && (
-                  <div
-                    className="mt-1 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-sm overflow-hidden"
-                    role="list"
-                  >
-                    {bookmarks.map((b) => (
-                      <div
-                        key={b.id}
-                        role="listitem"
-                        data-tour="bookmarks-row"
-                        data-bookmark-id={b.id}
-                        className="flex border-b border-slate-100 dark:border-slate-600 last:border-b-0"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => handleOpenBookmark(b)}
-                          className="min-w-0 flex-1 cursor-pointer text-left px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors"
-                        >
-                          <span className="font-medium line-clamp-2 block">
-                            {b.resourceTitle}
-                          </span>
-                          <span className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5 block">
-                            {b.locationLabel}
-                          </span>
-                        </button>
-                        <button
-                          type="button"
-                          data-tour="bookmarks-remove"
-                          data-bookmark-id={b.id}
-                          onClick={(e) => handleRemove(e, b.id)}
-                          className="shrink-0 flex cursor-pointer items-center justify-center px-3 min-h-[48px] text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 hover:bg-slate-50 dark:hover:bg-slate-700/80"
-                          aria-label="Remove bookmark"
-                          title="Remove"
-                        >
-                          <svg
-                            className="w-5 h-5"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={1.5}
-                            stroke="currentColor"
-                            aria-hidden
+                <div id="bookmarks-panel-filtered-rows" aria-live="polite">
+                  {bookmarks.length > 0 && filteredBookmarks.length === 0 && (
+                    <p className="px-1 py-2 text-sm text-slate-600 dark:text-slate-300">
+                      No bookmarks match your search.
+                    </p>
+                  )}
+                  {filteredBookmarks.length > 0 && (
+                    <div className="mt-1 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-sm overflow-hidden">
+                      <div role="list">
+                        {filteredBookmarks.map((b) => (
+                          <div
+                            key={b.id}
+                            role="listitem"
+                            data-tour="bookmarks-row"
+                            data-bookmark-id={b.id}
+                            className="flex border-b border-slate-100 dark:border-slate-600 last:border-b-0"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-                            />
-                          </svg>
-                        </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenBookmark(b)}
+                              className="min-w-0 flex-1 cursor-pointer text-left px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors"
+                            >
+                              <span className="font-medium line-clamp-2 block">
+                                {b.resourceTitle}
+                              </span>
+                              <span className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5 block">
+                                {b.locationLabel}
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              data-tour="bookmarks-remove"
+                              data-bookmark-id={b.id}
+                              onClick={(e) => handleRemove(e, b.id)}
+                              className="shrink-0 flex cursor-pointer items-center justify-center px-3 min-h-[48px] text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 hover:bg-slate-50 dark:hover:bg-slate-700/80"
+                              aria-label="Remove bookmark"
+                              title="Remove"
+                            >
+                              <svg
+                                className="w-5 h-5"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.5}
+                                stroke="currentColor"
+                                aria-hidden
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </>,

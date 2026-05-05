@@ -78,6 +78,53 @@ body.dark::before {
   color: #93c5fd; /* blue-300 */
 }
 
+/* Profile body highlights: programmatic <mark data-resource-highlight-id>. Use explicit paints +
+   !important so nested rich-text colors / typography cannot leave “marker ink” without a backing
+   fill; box-decoration-break helps multi-line wraps in WebKit/Capacitor. */
+mark[data-resource-highlight-id] {
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  border-radius: 0.125rem;
+  padding: 0 0.125rem;
+  font-weight: inherit;
+  font-style: inherit;
+  background-color: rgb(254 240 138 / 0.95) !important; /* yellow-200 */
+  color: rgb(15 23 42) !important; /* slate-900 */
+}
+
+html.dark mark[data-resource-highlight-id],
+body.dark mark[data-resource-highlight-id] {
+  background-color: rgb(245 158 11 / 0.9) !important; /* amber-500 */
+  color: rgb(12 10 9) !important; /* stone-950 */
+}
+
+mark[data-resource-highlight-id][data-resource-highlight-removable="true"] {
+  cursor: pointer;
+}
+
+mark[data-resource-highlight-id][data-resource-highlight-active="true"] {
+  box-shadow: 0 0 0 2px rgb(234 179 8 / 0.65); /* amber-600 ring */
+}
+
+html.dark mark[data-resource-highlight-id][data-resource-highlight-active="true"],
+body.dark mark[data-resource-highlight-id][data-resource-highlight-active="true"] {
+  box-shadow: 0 0 0 2px rgb(252 211 77 / 0.8); /* amber-300 */
+}
+
+/* Highlighted excerpt text should stay readable even if TipTap/HTML nested spans pin a dark ink. */
+mark[data-resource-highlight-id] *,
+mark[data-resource-highlight-id] strong,
+mark[data-resource-highlight-id] em {
+  color: inherit !important;
+}
+
+/* Opaque decorator spans inside rich HTML paint over <mark>'s amber fill — only streaks survive. */
+mark[data-resource-highlight-id] span:not([data-gospel-mount]):not(:has([data-gospel-mount])) {
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
 /* Print Styles - Highly Condensed Format */
 @media print {
   /* Force light scheme and dark-on-white so print is readable (fixes Android in dark mode) */

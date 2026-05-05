@@ -14,7 +14,7 @@ const SR_LABEL: Record<VersePinColorId, string> = {
 }
 
 const triggerButtonClass =
-  'inline-flex items-center gap-1 rounded-md border-2 min-h-[36px] px-2 py-1 transition-colors shrink-0 ' +
+  'inline-flex items-center gap-1 rounded-md border-2 h-9 min-h-[36px] px-2 box-border transition-colors shrink-0 ' +
   'border-slate-400 dark:border-slate-500 bg-slate-100 dark:bg-slate-700 ' +
   'text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 ' +
   'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-100 dark:disabled:hover:bg-slate-700'

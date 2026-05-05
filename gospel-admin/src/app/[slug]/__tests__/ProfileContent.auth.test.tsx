@@ -1,5 +1,6 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 // Keep the test focused by mocking child components
 jest.mock('@/components/GospelSection', () => ({
@@ -26,21 +27,7 @@ beforeEach(() => {
   global.fetch = jest.fn((url, opts) => Promise.resolve({ ok: true, json: async () => ({}) }))
 })
 
-afterEach(() => {
-  // restore any modified location
-  try {
-    if ((global as any).__origLocation) {
-      window.location = (global as any).__origLocation
-      delete (global as any).__origLocation
-    }
-  } catch (e) {
-    // ignore
-  }
-})
-
-test('shows Edit button when user is admin and preview param present', async () => {
-  // Use spyOn on the already-loaded client module to avoid resetting modules
-   
+test('slide-out menu shows Dashboard link when Supabase reports a logged-in admin', async () => {
   const clientMod = require('@/lib/supabase/client')
   jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({
     auth: {
@@ -56,12 +43,7 @@ test('shows Edit button when user is admin and preview param present', async () 
     })
   }))
 
-  // Simulate preview=true in the URL so fromEditor becomes true
-  // window.location is read-only in JSDOM; temporarily replace it
-  if (!(global as any).__origLocation) (global as any).__origLocation = window.location
-  delete (window as any).location
-  ;(window as any).location = { search: '?preview=true' }
-
+  const user = userEvent.setup()
   const { ProfileContent } = await import('../ProfileContent')
 
   const sections = [
@@ -83,10 +65,9 @@ test('shows Edit button when user is admin and preview param present', async () 
 
   render(<ProfileContent sections={sections as any} profileInfo={profileInfo as any} profile={null} />)
 
-  // Authenticated indicator should show the user's email (admin path exercised)
-  const userEmail = await screen.findByText(/admin@x.com/i)
-  expect(userEmail).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: 'Menu' }))
+  const dashboard = await screen.findByRole('link', { name: /^Dashboard$/i })
+  expect(dashboard).toHaveAttribute('href', '/admin')
 
-  // And the gospel section should render
   expect(screen.getByTestId('gospel-section')).toHaveTextContent('Intro')
 })
