@@ -190,8 +190,9 @@ export function isMajorOutlineSegmentStart(plain: string): boolean {
 
   // Roman I. must stay strict so pronoun sentences like "I. will never leave you." do not split.
   // Word-boundary openers (So, Thus, …) cover homiletical "I. So, first, …" without matching "I. Solutions…".
+  // `In\b` covers e.g. Sermon 858: "I. In discussing this text I shall first remind you…"
   if (
-    /^I\.\s+(First|Second|Third|Fourth|Fifth|Sixth|Seventh|The\s|We\s|My\s|Here\s|Now\s|But\s|It\s|He\s|They\s|God\s|This\s|There\s|When\s|If\s|Let\s|Some\s|All\s|Ye\s|You\s|Our\s|A\s|An\s|\d|So\b|Thus\b|Therefore\b|Moreover\b|Furthermore\b|Nevertheless\b|Accordingly\b|Brethren\b|Beloved\b|Friends\b|Behold\b|Yea\b|Nay\b|Come\b|Look\b|Remember\b|Consider\b|Hearken\b|Wherefore\b|Sinner\b|Sinners\b|Saint\b|Saints\b|Jesus\b|JESUS\b|CHRIST\b|Methinks\b|According\b)/i.test(
+    /^I\.\s+(First|Second|Third|Fourth|Fifth|Sixth|Seventh|The\s|We\s|My\s|Here\s|Now\s|But\s|It\s|He\s|They\s|God\s|This\s|There\s|When\s|If\s|Let\s|Some\s|All\s|Ye\s|You\s|Our\s|A\s|An\s|In\b|At\b|For\b|By\b|Unto\b|Upon\b|\d|So\b|Thus\b|Therefore\b|Moreover\b|Furthermore\b|Nevertheless\b|Accordingly\b|Brethren\b|Beloved\b|Friends\b|Behold\b|Yea\b|Nay\b|Come\b|Look\b|Remember\b|Consider\b|Hearken\b|Wherefore\b|Sinner\b|Sinners\b|Saint\b|Saints\b|Jesus\b|JESUS\b|CHRIST\b|Methinks\b|According\b)/i.test(
       t
     )
   ) {

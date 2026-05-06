@@ -157,6 +157,21 @@ describe('ccelSermonHtml', () => {
     expect(r.gospelData).toBe(gospelData)
   })
 
+  it('div1XmlToGospelSubsections splits Sermon 858 style I. In discussing… from intro', () => {
+    const inner = `
+      <p class="Body">(No. 858) Intro paragraph.</p>
+      <p class="Body">I. In discussing this text I shall first remind you of the ONE GLORIOUS PERSON.</p>
+      <p class="Body">More under I.</p>
+      <p class="Body">II. Secondly, there are TWO PRECIOUS DOCTRINES.</p>
+    `
+    const { subsections } = div1XmlToGospelSubsections(inner)
+    expect(subsections).toHaveLength(3)
+    expect(subsections[0].content).toContain('Intro paragraph')
+    expect(subsections[0].content).not.toContain('I. In discussing')
+    expect(subsections[1].title).toMatch(/I\. In discussing/i)
+    expect(subsections[2].title).toMatch(/^II\./i)
+  })
+
   it('div1XmlToGospelSubsections splits on I. So, first, … style Roman heads', () => {
     const inner = `
       <p class="Body">(No. 1) Intro ends here.</p>
@@ -179,6 +194,11 @@ describe('ccelSermonHtml', () => {
     expect(isMajorOutlineSegmentStart('I. First of all, we begin.')).toBe(true)
     expect(isMajorOutlineSegmentStart('I. So, first, JESUS CHRIST came by water.')).toBe(true)
     expect(isMajorOutlineSegmentStart('I. Therefore we must believe.')).toBe(true)
+    expect(
+      isMajorOutlineSegmentStart(
+        'I. In discussing this text I shall first remind you of the ONE GLORIOUS PERSON concerning whom this verse is written.'
+      )
+    ).toBe(true)
     expect(isMajorOutlineSegmentStart('I. will never leave you.')).toBe(false)
     expect(isMajorOutlineSegmentStart('II. The second point.')).toBe(true)
     expect(isMajorOutlineSegmentStart('FIRST. We observe that God is good.')).toBe(true)
