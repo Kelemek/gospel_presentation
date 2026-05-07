@@ -85,7 +85,7 @@ node scripts/backup-database.js
 Full-database restore from monolithic JSON is not a supported CLI path. Use **`restore-profile-from-backup`** Edge Function for a **single profile** from Storage (see [backups/README.md](../backups/README.md)). Broader recovery: download shards from Storage / use Supabase backups and migrations as appropriate.
 
 ### Recovery Steps
-1. Confirm latest automated run in `public.backup_runs` and Storage `db-backups`
+1. Confirm latest automated run in `public.backup_runs` and Storage `db-backups`. For **`restore-profile-from-backup`**, use a manifest from a **full** backup (`latest/latest-backup.json` points at full runs; differential-only manifests omit unchanged rows).
 2. For one profile: invoke `restore-profile-from-backup` with manifest path + slug or id
 3. For full disaster recovery: plan outside this repo (hosted backups, point-in-time recovery, or custom tooling)
 

@@ -13,6 +13,8 @@ const corsHeaders = {
 };
 
 const DEFAULT_KEEP_DAILY = 7;
+/** Retention for `differential/YYYY-MM-DD/` calendar folders (newest N dates kept). */
+const DEFAULT_KEEP_DIFFERENTIAL = 7;
 const DEFAULT_MAX_BYTES = 50 * 1024 * 1024; // 50MB
 /** Rows per PostgREST `.range()` page — larger = fewer DB round trips (helps finish under ~150s Edge wall clock). */
 const DEFAULT_FETCH_RANGE_ROWS = 500;
@@ -64,6 +66,11 @@ interface BackupCheckpointV1 {
   /** Rows already written for `tables_to_backup[table_idx]` in prior slices */
   partial_table_rows: number;
   run_started_at_iso: string;
+  /** Differential backup continuation (optional for legacy checkpoints). */
+  backup_kind?: "full" | "differential";
+  differential_since_iso?: string | null;
+  base_full_run_id?: string | null;
+  storage_prefix_kind?: "daily" | "differential";
 }
 
 interface BackupRunRow {
@@ -71,15 +78,12 @@ interface BackupRunRow {
   table_names: string[] | null;
 }
 
-interface ReaderClient {
-  from: (tableName: string) => {
-    select: (columns: string) => {
-      range: (
-        from: number,
-        to: number
-      ) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>;
-    };
-  };
+type ServiceClient = ReturnType<typeof createClient>;
+
+interface BackupRequestBody {
+  resume_run_id?: string;
+  /** Omit or `"full"` = complete export; `"differential"` = rows with `updated_at` >= last full completion. */
+  mode?: string;
 }
 
 function envInt(name: string, fallback: number): number {
@@ -224,7 +228,7 @@ async function saveCheckpoint(
 }
 
 async function loadCheckpoint(
-  supabase: ReaderClient & StorageUploader,
+  supabase: ServiceClient,
   runId: string
 ): Promise<BackupCheckpointV1 | null> {
   const path = checkpointObjectPath(runId);
@@ -258,9 +262,19 @@ type TableBackupOutcome =
       resumeShardIndex: number;
     };
 
+type TableBackupFilter =
+  | { kind: "full" }
+  | { kind: "differential"; sinceIso: string };
+
+/** Stable pagination order; `translation_settings` has no `id` (PK is `translation_code`). */
+function orderColumnForBackupTable(tableName: string): string {
+  if (tableName === "translation_settings") return "translation_code";
+  return "id";
+}
+
 /** One table, possibly resuming; stops between PostgREST pages after flush when `sliceDeadlineMs` is hit. */
 async function backupOneTableWithSlice(
-  supabase: ReaderClient & StorageUploader,
+  supabase: ServiceClient,
   tableName: string,
   runPrefix: string,
   fetchChunk: number,
@@ -270,7 +284,8 @@ async function backupOneTableWithSlice(
   runWarnings: string[],
   checkDeadline: () => void,
   start: { rangeFrom: number; shardIndex: number; paths: string[]; slugMap: Record<string, string> },
-  sliceDeadlineMs: number
+  sliceDeadlineMs: number,
+  tableFilter: TableBackupFilter
 ): Promise<TableBackupOutcome> {
   const paths = [...start.paths];
   let rowCount = 0;
@@ -311,10 +326,12 @@ async function backupOneTableWithSlice(
 
   for (;;) {
     checkDeadline();
-    const { data, error } = await supabase
-      .from(tableName)
-      .select("*")
-      .range(rangeFrom, rangeFrom + fetchChunk - 1);
+    let query = supabase.from(tableName).select("*");
+    if (tableFilter.kind === "differential") {
+      query = query.gte("updated_at", tableFilter.sinceIso);
+    }
+    const orderCol = orderColumnForBackupTable(tableName);
+    const { data, error } = await query.order(orderCol, { ascending: true }).range(rangeFrom, rangeFrom + fetchChunk - 1);
     if (error) throw new Error(`${tableName}: ${error.message}`);
     const rows = data ?? [];
 
@@ -442,17 +459,17 @@ function diffTables(current: string[], previous: string[]) {
 
 type StorageObjectsClient = ReturnType<typeof createClient>;
 
-/** Child names under `daily/` whose names look like `YYYY-MM-DD` (calendar folders). */
-async function listDailyCalendarFolderNames(supabase: StorageObjectsClient): Promise<string[]> {
+/** Child names under `daily/` or `differential/` whose names look like `YYYY-MM-DD` (calendar folders). */
+async function listCalendarFolderDates(supabase: StorageObjectsClient, rootFolder: string): Promise<string[]> {
   const dates: string[] = [];
   let offset = 0;
   for (;;) {
-    const { data: items, error } = await supabase.storage.from(BUCKET).list("daily", {
+    const { data: items, error } = await supabase.storage.from(BUCKET).list(rootFolder, {
       limit: 1000,
       offset,
       sortBy: { column: "name", order: "asc" },
     });
-    if (error) throw new Error(`storage.list(daily): ${error.message}`);
+    if (error) throw new Error(`storage.list(${rootFolder}): ${error.message}`);
     if (!items?.length) break;
     for (const it of items) {
       if (/^\d{4}-\d{2}-\d{2}$/.test(it.name)) dates.push(it.name);
@@ -495,19 +512,20 @@ async function listStorageFilePathsUnderPrefix(
 }
 
 /** When PostgREST cannot query `storage.objects` (only `public` / `graphql_public` exposed), prune via Storage list + remove. */
-async function pruneDailyBackupPrefixesViaStorageList(
+async function pruneBackupCalendarPrefixesViaStorageList(
   supabase: StorageObjectsClient,
-  keepDaily: number,
+  rootFolder: "daily" | "differential",
+  keepCount: number,
   runWarnings: string[]
 ): Promise<void> {
-  const folderDates = await listDailyCalendarFolderNames(supabase);
+  const folderDates = await listCalendarFolderDates(supabase, rootFolder);
   const sorted = [...new Set(folderDates)].sort().reverse();
-  const obsolete = sorted.slice(keepDaily);
+  const obsolete = sorted.slice(keepCount);
   if (obsolete.length === 0) return;
 
   const chunkSize = 100;
   for (const date of obsolete) {
-    const root = `daily/${date}`;
+    const root = `${rootFolder}/${date}`;
     let names: string[];
     try {
       names = await listStorageFilePathsUnderPrefix(supabase, root);
@@ -524,28 +542,38 @@ async function pruneDailyBackupPrefixesViaStorageList(
   }
 }
 
-/** Keep newest `keepDaily` calendar date folders under `daily/YYYY-MM-DD/` (including all `/<run_id>/` objects); deletes entire older date prefixes. */
-async function pruneDailyBackupPrefixes(supabase: StorageObjectsClient, keepDaily: number, runWarnings: string[]) {
+/**
+ * Keep newest `keepCount` calendar date folders under `{rootFolder}/YYYY-MM-DD/` (including all `/<run_id>/` objects);
+ * deletes entire older date prefixes.
+ */
+async function pruneBackupCalendarPrefixes(
+  supabase: StorageObjectsClient,
+  rootFolder: "daily" | "differential",
+  keepCount: number,
+  runWarnings: string[]
+): Promise<void> {
+  const likePattern = `${rootFolder}/%`;
   const { data: objects, error: objErr } = await supabase
     .schema("storage")
     .from("objects")
     .select("name")
     .eq("bucket_id", BUCKET)
-    .like("name", "daily/%");
+    .like("name", likePattern);
 
   if (!objErr) {
+    const folderRe = new RegExp(`^${rootFolder}/([^/]+)/`);
     const dates = new Set<string>();
     for (const row of (objects ?? []) as { name: string }[]) {
-      const m = /^daily\/([^/]+)\//.exec(row.name);
+      const m = folderRe.exec(row.name);
       if (m) dates.add(m[1]);
     }
     const sorted = [...dates].sort().reverse();
-    const obsolete = sorted.slice(keepDaily);
+    const obsolete = sorted.slice(keepCount);
     if (obsolete.length === 0) return;
 
     const chunkSize = 100;
     for (const date of obsolete) {
-      const prefix = `daily/${date}/`;
+      const prefix = `${rootFolder}/${date}/`;
       const { data: dayObjs, error: dayErr } = await supabase
         .schema("storage")
         .from("objects")
@@ -570,15 +598,18 @@ async function pruneDailyBackupPrefixes(supabase: StorageObjectsClient, keepDail
   console.warn(
     JSON.stringify({
       event: "backup_prune_using_storage_list_fallback",
+      rootFolder,
       reason,
       hint: "PostgREST often exposes only public/graphql_public; retention still runs via Storage API.",
     })
   );
   try {
-    await pruneDailyBackupPrefixesViaStorageList(supabase, keepDaily, runWarnings);
+    await pruneBackupCalendarPrefixesViaStorageList(supabase, rootFolder, keepCount, runWarnings);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    runWarnings.push(`Could not prune old backups (objects API: ${reason}; list fallback: ${msg})`);
+    runWarnings.push(
+      `Could not prune old ${rootFolder} backups (objects API: ${reason}; list fallback: ${msg})`
+    );
   }
 }
 
@@ -618,6 +649,27 @@ function sumTableStats(stats: Record<string, number>): number {
   return s;
 }
 
+/** Last successful full backup row — used as differential watermark (`updated_at` filter floor). */
+async function fetchLastFullBackupWatermark(
+  supabase: ServiceClient
+): Promise<{ id: string; run_completed_at: string } | null> {
+  const { data, error } = await supabase
+    .from("backup_runs")
+    .select("id, run_completed_at")
+    .eq("backup_kind", "full")
+    .in("status", ["success", "warning"])
+    .not("run_completed_at", "is", null)
+    .order("run_completed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) {
+    console.warn(JSON.stringify({ event: "fetchLastFullBackupWatermark_error", message: error.message }));
+    return null;
+  }
+  if (!data?.run_completed_at || typeof data.id !== "string") return null;
+  return { id: data.id, run_completed_at: data.run_completed_at };
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") {
@@ -637,6 +689,7 @@ serve(async (req: Request) => {
   }
 
   const keepDaily = envInt("BACKUP_KEEP_DAILY", DEFAULT_KEEP_DAILY);
+  const keepDifferential = envInt("BACKUP_KEEP_DIFFERENTIAL_DAYS", DEFAULT_KEEP_DIFFERENTIAL);
   const maxBytes = envInt("BACKUP_MAX_BYTES", DEFAULT_MAX_BYTES);
   const shardMaxRows = envInt("BACKUP_TABLE_SHARD_MAX_ROWS", DEFAULT_SHARD_MAX_ROWS);
   const shardMaxApproxUtf8 = envInt("BACKUP_SHARD_APPROX_UTF8_BYTES", DEFAULT_SHARD_APPROX_UTF8_BYTES);
@@ -649,9 +702,9 @@ serve(async (req: Request) => {
   const supabase = createClient(supabaseUrl, serviceRole);
   const sliceDeadlineMs = Date.now() + sliceMs;
 
-  let body: { resume_run_id?: string } = {};
+  let body: BackupRequestBody = {};
   try {
-    body = (await req.json()) as { resume_run_id?: string };
+    body = (await req.json()) as BackupRequestBody;
   } catch {
     /* empty POST body from pg_net */
   }
@@ -670,11 +723,14 @@ serve(async (req: Request) => {
   };
 
   let runId = "";
+  let backupKind: "full" | "differential" = "full";
+  let differentialSinceIso: string | null = null;
+  let baseFullRunId: string | null = null;
   const runWarnings: string[] = [];
   let preloadedCp: BackupCheckpointV1 | null = null;
 
   if (resumeRunId) {
-    preloadedCp = await loadCheckpoint(supabase as ReaderClient & StorageUploader, resumeRunId);
+    preloadedCp = await loadCheckpoint(supabase, resumeRunId);
     if (!preloadedCp) {
       return new Response(
         JSON.stringify({ error: `No checkpoint found for resume_run_id=${resumeRunId}` }),
@@ -683,7 +739,25 @@ serve(async (req: Request) => {
     }
     runId = preloadedCp.run_id;
     runWarnings.push(...preloadedCp.warnings);
+    backupKind = preloadedCp.backup_kind ?? "full";
+    differentialSinceIso = preloadedCp.differential_since_iso ?? null;
+    baseFullRunId = preloadedCp.base_full_run_id ?? null;
   } else {
+    backupKind = body.mode === "differential" ? "differential" : "full";
+    if (backupKind === "differential") {
+      const wm = await fetchLastFullBackupWatermark(supabase);
+      if (!wm?.run_completed_at) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "No successful full backup found (backup_kind=full, status success|warning). Run a full backup before differential.",
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      differentialSinceIso = wm.run_completed_at;
+      baseFullRunId = wm.id;
+    }
     const runStartedAt = new Date().toISOString();
     const { data: runInsert, error: runInsertError } = await supabase
       .from("backup_runs")
@@ -691,6 +765,8 @@ serve(async (req: Request) => {
         status: "running",
         run_started_at: runStartedAt,
         warnings: [],
+        backup_kind: backupKind,
+        incremental_base_completed_at: differentialSinceIso,
       })
       .select("id")
       .single();
@@ -750,7 +826,8 @@ serve(async (req: Request) => {
 
       const now = new Date();
       isoDate = now.toISOString().split("T")[0];
-      runPrefix = `daily/${isoDate}/${runId}`;
+      const prefixFolder = backupKind === "differential" ? "differential" : "daily";
+      runPrefix = `${prefixFolder}/${isoDate}/${runId}`;
       tableHash = await sha256Hex(tablesToBackup.join("|"));
       const { data: previousRun } = await supabase
         .from("backup_runs")
@@ -768,6 +845,15 @@ serve(async (req: Request) => {
       if (missingTables.length > 0) runWarnings.push(`Missing previously discovered tables: ${missingTables.join(", ")}`);
     }
 
+    const tableFilter: TableBackupFilter =
+      backupKind === "differential" && differentialSinceIso
+        ? { kind: "differential", sinceIso: differentialSinceIso }
+        : { kind: "full" };
+
+    if (backupKind === "differential" && !differentialSinceIso) {
+      throw new Error("Differential backup missing watermark (incremental_base_completed_at); cannot continue.");
+    }
+
     while (tableIdx < tablesToBackup.length) {
       checkDeadline();
       const tableName = tablesToBackup[tableIdx];
@@ -781,7 +867,7 @@ serve(async (req: Request) => {
       };
 
       const outcome = await backupOneTableWithSlice(
-        supabase as ReaderClient & StorageUploader,
+        supabase,
         tableName,
         runPrefix,
         fetchChunk,
@@ -791,7 +877,8 @@ serve(async (req: Request) => {
         runWarnings,
         checkDeadline,
         start,
-        sliceDeadlineMs
+        sliceDeadlineMs,
+        tableFilter
       );
 
       totalCompressedBytes += outcome.bytes;
@@ -822,6 +909,10 @@ serve(async (req: Request) => {
           resume_shard_index: outcome.resumeShardIndex,
           partial_table_rows: partialTableRows,
           run_started_at_iso: runStartedAtIso,
+          backup_kind: backupKind,
+          differential_since_iso: differentialSinceIso,
+          base_full_run_id: baseFullRunId,
+          storage_prefix_kind: backupKind === "differential" ? "differential" : "daily",
         };
         await saveCheckpoint(supabase as StorageUploader, cp);
         const { error: partialErr } = await supabase
@@ -888,7 +979,7 @@ serve(async (req: Request) => {
       manifest_version: MANIFEST_VERSION,
       backup_date: now.toISOString(),
       backup_type: "supabase_storage_automated",
-      backup_version: "4.1",
+      backup_version: "4.2",
       run_id: runId,
       run_prefix: runPrefix,
       tables: tablePaths,
@@ -901,6 +992,9 @@ serve(async (req: Request) => {
         table_hash: tableHash,
         new_tables: newTables,
         missing_tables: missingTables,
+        backup_kind: backupKind,
+        differential_since: differentialSinceIso,
+        base_full_run_id: baseFullRunId,
       },
     };
 
@@ -926,25 +1020,39 @@ serve(async (req: Request) => {
       updated_at: now.toISOString(),
       compressed_bytes_total: totalCompressedBytes,
       table_count: tablesToBackup.length,
+      backup_kind: backupKind,
     });
     try {
-      await storageUploadWithRetry(
-        supabase as StorageUploader,
-        "latest/latest-backup.json",
-        new TextEncoder().encode(latestPointer),
-        "application/json"
-      );
+      if (backupKind === "full") {
+        await storageUploadWithRetry(
+          supabase as StorageUploader,
+          "latest/latest-backup.json",
+          new TextEncoder().encode(latestPointer),
+          "application/json"
+        );
+      } else {
+        await storageUploadWithRetry(
+          supabase as StorageUploader,
+          "latest/latest-differential-backup.json",
+          new TextEncoder().encode(latestPointer),
+          "application/json"
+        );
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      runWarnings.push(`Could not update latest pointer: ${msg}`);
+      runWarnings.push(`Could not update latest ${backupKind} pointer: ${msg}`);
     }
 
     try {
-      await pruneDailyBackupPrefixes(supabase, keepDaily, runWarnings);
+      if (backupKind === "full") {
+        await pruneBackupCalendarPrefixes(supabase, "daily", keepDaily, runWarnings);
+      } else {
+        await pruneBackupCalendarPrefixes(supabase, "differential", keepDifferential, runWarnings);
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       runWarnings.push(`Retention pruning crashed (non-fatal): ${msg}`);
-      console.error("pruneDailyBackupPrefixes:", e);
+      console.error("pruneBackupCalendarPrefixes:", e);
     }
 
     // Find admin recipient emails by joining admin ids with auth users
@@ -1004,33 +1112,13 @@ serve(async (req: Request) => {
       }
     }
 
-    // Email only on warning/failure conditions
-    if (status === "warning") {
-      try {
-        await sendAlertEmail(
-          uniqueRecipients,
-          "[Backup Warning] Supabase storage backup completed with warnings",
-          [
-            `Run ID: ${runId}`,
-            `Status: ${status}`,
-            `Backup path: ${dailyPath}`,
-            `Compressed bytes (shards + manifest): ${totalCompressedBytes}`,
-            `Table count: ${tablesToBackup.length}`,
-            `Row total: ${rowCountTotal}`,
-            "",
-            "Warnings:",
-            ...runWarnings.map((w) => `- ${w}`),
-          ].join("\n")
-        );
-      } catch (e) {
-        console.error("sendAlertEmail (warning) failed:", e);
-      }
-    }
+    // Email only on hard failure (catch block); warnings stay in backup_runs / logs.
 
     console.log(
       JSON.stringify({
         event: "backup_to_storage_success",
         runId,
+        backupKind,
         status,
         backupPath: dailyPath,
         artifactsBytesTotal: totalCompressedBytes,
@@ -1044,6 +1132,7 @@ serve(async (req: Request) => {
       JSON.stringify({
         success: true,
         runId,
+        backupKind,
         status,
         backupPath: dailyPath,
         backupFormat: CHUNKED_FORMAT,
@@ -1100,9 +1189,10 @@ serve(async (req: Request) => {
     try {
       await sendAlertEmail(
         uniqueRecipients,
-        "[Backup Failed] Supabase storage backup failed",
+        `[Backup Failed] Supabase storage ${backupKind} backup failed`,
         [
           `Run ID: ${runId}`,
+          `Backup kind: ${backupKind}`,
           "Status: failed",
           `Error: ${message}`,
           "",

@@ -30,13 +30,16 @@ There is **no** `npm run restore` or full-database restore from a monolithic JSO
 Automated backups are performed by the Supabase Edge Function `backup-to-storage` and stored in the private Storage bucket `db-backups`.
 
 **Storage layout (per run — multipart gzip shards):**
-- `daily/YYYY-MM-DD/<run_id>/manifest.json` — run metadata + `tables` map: each table name → **ordered list** of shard paths. `metadata.row_layout` is `multipart_gz_shards` (manifest `manifest_version` **4**+); `metadata.backup_chained_slices: true` when the run used multiple Edge invocations.
-- `daily/YYYY-MM-DD/<run_id>/tables/<table>/part-NNNN.json.gz` — gzipped `{ "table", "shard_index", "rows": [ … ] }`. Multiple rows per shard to stay under Edge **memory** / **wall clock** (HTTP **546** / `WORKER_RESOURCE_LIMIT`). Large tables are split across invocations using **checkpoints** (see below), not only smaller shards.
-- `daily/YYYY-MM-DD/<run_id>/tables/profiles/_slug_index.json` — optional `{ "by_slug": { "<slug>": "<uuid>" } }` so `restore-profile-from-backup` can resolve a slug to an id without scanning every shard first.
+- **Full backup** (default): prefix `daily/YYYY-MM-DD/<run_id>/` — complete export of all rows from `get_backup_tables()`.
+- **Differential backup**: POST body `{"mode":"differential"}` — prefix `differential/YYYY-MM-DD/<run_id>/`; each table exports rows with `updated_at >= run_completed_at` of the **latest successful full** backup (`backup_runs.backup_kind = full`, status `success` or `warning`). Deletes are **not** captured; rely on the weekly full + Supabase platform backups for tombstones.
+- `daily/…` or `differential/…/<run_id>/manifest.json` — run metadata + `tables` map: each table name → **ordered list** of shard paths. Manifest `metadata.backup_kind` is `full` or `differential`; `metadata.differential_since` is set when differential. `metadata.row_layout` is `multipart_gz_shards` (manifest `manifest_version` **4**+); `metadata.backup_chained_slices: true` when the run used multiple Edge invocations.
+- `daily/…` or `differential/…/<run_id>/tables/<table>/part-NNNN.json.gz` — gzipped `{ "table", "shard_index", "rows": [ … ] }`. Multiple rows per shard to stay under Edge **memory** / **wall clock** (HTTP **546** / `WORKER_RESOURCE_LIMIT`). Large tables are split across invocations using **checkpoints** (see below), not only smaller shards.
+- `daily/…` or `differential/…/<run_id>/tables/profiles/_slug_index.json` — optional `{ "by_slug": { "<slug>": "<uuid>" } }` so `restore-profile-from-backup` can resolve a slug to an id without scanning every shard first (full backups with changed profiles; differential may omit unchanged profiles).
 - `checkpoints/<run_id>.json` — **resume state** while a run is in progress (`backup_runs.status` = `running` or `partial`). Removed after the run finishes and `backup_runs` is updated successfully.
 - **Older layouts:** objects directly under `daily/YYYY-MM-DD/` (no `<run_id>`), `metadata.row_layout: one_file_per_row`, legacy single-object table dumps, or monolithic JSON — still read by restore logic when present.
-- `latest/latest-backup.json` pointer — JSON with `format: "chunked_v1"` and `manifest_path` (full path includes `daily/…/<run_id>/manifest.json` for current runs).
-- Legacy monolith: `daily/YYYY-MM-DD/database-backup-YYYY-MM-DD.json.gz`; retention prunes by **calendar day** prefix under `daily/` (all run folders under that day are removed together when the date rolls out of the window).
+- `latest/latest-backup.json` pointer — updated **only on successful full backups**; JSON with `format: "chunked_v1"`, `manifest_path`, and `backup_kind: "full"` (use this path for **`restore-profile-from-backup`** so every profile may appear in shards).
+- `latest/latest-differential-backup.json` — updated on successful **differential** runs (`backup_kind: "differential"`). Do **not** use this alone for single-profile restore unless you know the profile row changed since the last full.
+- Legacy monolith: `daily/YYYY-MM-DD/database-backup-YYYY-MM-DD.json.gz`; retention prunes by **calendar day** prefix under `daily/` or `differential/` (see env vars below).
 
 **Edge Function env (memory + ~150s timeout):**
 
@@ -49,21 +52,26 @@ Automated backups are performed by the Supabase Edge Function `backup-to-storage
 | `BACKUP_STORAGE_UPLOAD_MAX_ATTEMPTS` | `5` | Retries per Storage `upload` on transient errors (**Gateway Timeout**, 5xx, etc.). |
 | `BACKUP_STORAGE_RETRY_BASE_MS` | `400` | Base delay for exponential backoff between upload retries (capped ~10s + jitter). |
 | `BACKUP_SOFT_DEADLINE_MS` | _(unset)_ | Optional: e.g. `130000` aborts with a clear error before the platform ~150s kill. Unset or `0` = off. |
+| `BACKUP_KEEP_DIFFERENTIAL_DAYS` | `7` | Retention for **`differential/`** calendar-date folders (newest N dates kept). Pruning runs after **differential** backups only. |
 
 **Metadata/logging:**
-- `public.backup_runs` records status (`running` → `partial` while continuations run → `success|warning|failed`), bytes, table deltas, warnings, and errors. Requires migration allowing `partial` (`sql/migrations/20260508_backup_runs_checkpoint_status.sql`).
+- `public.backup_runs` records status (`running` → `partial` while continuations run → `success|warning|failed`), bytes, table deltas, warnings, and errors; **`backup_kind`** (`full` \| `differential`) and **`incremental_base_completed_at`** (differential watermark). Requires migrations: `partial` status (`sql/migrations/20260508_backup_runs_checkpoint_status.sql`), differential columns (`sql/migrations/20260510_backup_runs_differential.sql`).
 
 **Table discovery:**
 - Uses `get_backup_tables()` to dynamically include new `public` tables (excludes cache/log/session tables, `backup_runs`, `bible_verses`, `scripture_access_logs`, `verification_codes`; apply **`sql/migrations/20260509_get_backup_tables_fix_log_exclusions.sql`** if an older migration still listed the wrong log table name and pulled full access logs into backups).
 
 **Retention (free-tier guardrail):**
-- Keep a short rolling window (recommended: 7 daily backups).
+- Keep a short rolling window for **full** backups (recommended: 7): **`BACKUP_KEEP_DAILY`** prunes **`daily/`** date folders on successful **full** runs.
+- Differential artifacts prune separately: **`BACKUP_KEEP_DIFFERENTIAL_DAYS`** applies to **`differential/`** on successful **differential** runs.
 
 **Failure notifications:**
-- On warning/failure, the function sends email using the existing Supabase email pipeline (`send-email`) to users who have `role='admin'` in `user_profiles`.
+- On **failure** only (not `warning` or `success`), the function sends email via `send-email` to users who have `role='admin'` in `user_profiles`. Warnings are stored on `backup_runs` and in Edge logs—no email.
 
 ### Backup Schedule
-- **Automated (primary)**: Supabase cron invokes `backup-to-storage` with an empty body `{}` — that starts a **new** run (`backup_runs` row + new `daily/<date>/<run_id>/` prefix) once per schedule.
+- **Recommended**: Two **pg_cron** jobs (UTC — adjust for local Sunday if needed); see [`sql/migrations/20260512_backup_cron_differential.sql`](../gospel-admin/sql/migrations/20260512_backup_cron_differential.sql):
+  - **Sunday** (full): `run_backup_to_storage_job(...)` → POST **`{}`** → `daily/<date>/<run_id>/`.
+  - **Monday–Saturday** (differential): `run_backup_to_storage_differential_job(...)` → POST **`{"mode":"differential"}`** → `differential/<date>/<run_id>/`. Requires at least one successful **full** backup row in `backup_runs` first; otherwise the function returns **400**.
+- **Legacy single daily job**: cron with `{}` only runs **full** backups (same as today).
 - **Within one run**: After each slice hits `BACKUP_SLICE_MS`, the function returns **200** with `continuing: true` and saves a checkpoint; **`EdgeRuntime.waitUntil`** issues the next `POST` with `{"resume_run_id":"<that run's uuid>"}` so the **same** logical backup continues. You do **not** need a second cron for that chain.
 - **If a run stays `partial`**: The self-POST may have failed (check logs for `backup_continuation_http_error`). Optionally add a **staggered** cron (e.g. hourly) that POSTs resume for rows in `partial` older than a few minutes, or invoke resume manually from SQL/API.
 - **Manual local**: Run anytime with `npm run backup` (stored locally)
