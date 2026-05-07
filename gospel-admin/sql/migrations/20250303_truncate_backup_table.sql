@@ -1,5 +1,5 @@
--- Migration: Safe truncate for restore operations
--- Run in Supabase SQL Editor. Used by restore-backup.js to clear tables before restore.
+-- Migration: Safe truncate helper (optional manual DBA / one-off use)
+-- Whitelist matches tables that were historically restored from JSON exports.
 
 CREATE OR REPLACE FUNCTION truncate_backup_table(tname text)
 RETURNS void
@@ -18,4 +18,4 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION truncate_backup_table(text) IS 'Truncates a table for restore. Used by restore-backup.js. Whitelist tables in the restore script.';
+COMMENT ON FUNCTION truncate_backup_table(text) IS 'SECURITY DEFINER truncate for whitelisted public tables only. No in-repo CLI uses this; optional manual recovery.';

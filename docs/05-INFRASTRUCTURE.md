@@ -81,17 +81,13 @@ cd gospel-admin
 node scripts/backup-database.js
 ```
 
-### Restore Backup
-```bash
-node scripts/restore-backup.js
-```
+### Restore (Supabase)
+Full-database restore from monolithic JSON is not a supported CLI path. Use **`restore-profile-from-backup`** Edge Function for a **single profile** from Storage (see [backups/README.md](../backups/README.md)). Broader recovery: download shards from Storage / use Supabase backups and migrations as appropriate.
 
 ### Recovery Steps
-1. Export backup from production
-2. Verify backup integrity
-3. Restore to test environment
-4. Verify all data present
-5. Promote to production if needed
+1. Confirm latest automated run in `public.backup_runs` and Storage `db-backups`
+2. For one profile: invoke `restore-profile-from-backup` with manifest path + slug or id
+3. For full disaster recovery: plan outside this repo (hosted backups, point-in-time recovery, or custom tooling)
 
 ## Testing
 

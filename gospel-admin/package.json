@@ -12,7 +12,6 @@
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --watchAll=false",
     "backup": "node scripts/backup-database.js",
-    "restore": "node scripts/restore-backup.js",
     "cap:sync": "npx cap sync",
     "cap:ios": "npx cap open ios",
     "cap:android": "npx cap open android",

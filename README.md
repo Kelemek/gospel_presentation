@@ -460,8 +460,7 @@ npm test             # Run tests
 npm run test:coverage # Generate coverage report
 
 # Database
-npm run backup       # Backup all profiles
-npm run restore      # Restore from backup
+npm run backup       # Manual local JSON backup (see backups/README.md)
 
 # Utilities
 npm run lint         # Run ESLint
