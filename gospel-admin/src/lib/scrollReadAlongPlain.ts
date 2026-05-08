@@ -1,8 +1,5 @@
-import {
-  locateListenVisibleTextOffset,
-  preferLaterEquivalentListenTextBoundary,
-} from '@/lib/profileHighlightVisibleText'
-import { visibleListenRawText } from '@/lib/profileResourceListenText'
+import { preferLaterEquivalentListenTextBoundary } from '@/lib/profileHighlightVisibleText'
+import { locateListenRawTextOffset, visibleListenRawText } from '@/lib/profileResourceListenText'
 
 /**
  * Maps a **collapsed** offset (same string as {@link plainTextForProfileResourceListen}) into a
@@ -115,7 +112,7 @@ function getCaretClientRectForReadAlongPlainOffset(
   plainOffset: number
 ): DOMRect | null {
   const walkerOff = walkerOffsetForReadAlongPlainOffset(scope, plainCollapsedLen, plainOffset)
-  let pos = locateListenVisibleTextOffset(scope, walkerOff)
+  let pos = locateListenRawTextOffset(scope, walkerOff)
   if (!pos) return null
   pos = preferLaterEquivalentListenTextBoundary(scope, pos)
 

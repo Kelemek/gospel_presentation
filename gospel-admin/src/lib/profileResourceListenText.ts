@@ -125,3 +125,58 @@ export function visibleListenRawText(root: HTMLElement): string {
 export function plainTextForProfileResourceListen(root: HTMLElement): string {
   return visibleListenRawText(root).replace(/\s+/g, ' ').trim()
 }
+
+/**
+ * Maps a code-unit index into {@link visibleListenRawText} to a `(Text, offset)` boundary.
+ *
+ * **Do not** pass this index to {@link locateListenVisibleTextOffset}: that function counts a flat
+ * stream with **no** implicit `\n` between block-level siblings, so indices diverge from TTS /
+ * {@link walkerOffsetForReadAlongPlainOffset} whenever paragraphs, list items, headings, etc. break
+ * the DOM — the read-along underline then creeps to the wrong line on long sections.
+ */
+export function locateListenRawTextOffset(
+  root: HTMLElement,
+  rawTarget: number
+): { node: Text; offset: number } | null {
+  if (rawTarget < 0) return null
+
+  let position = 0
+  let prevEligible: Text | null = null
+  let lastEligible: Text | null = null
+
+  const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  let node: Node | null = walker.nextNode()
+  while (node) {
+    if (!(node instanceof Text)) {
+      node = walker.nextNode()
+      continue
+    }
+    if (isWithinGospelMount(node, root) || isWithinButton(node, root)) {
+      node = walker.nextNode()
+      continue
+    }
+
+    if (prevEligible && listenNeedsImplicitBreak(prevEligible, node, root)) {
+      if (rawTarget === position) {
+        return { node, offset: 0 }
+      }
+      position += 1
+    }
+
+    const text = node.textContent ?? ''
+    const len = text.length
+    lastEligible = node
+
+    if (len > 0 && rawTarget < position + len) {
+      return { node, offset: rawTarget - position }
+    }
+    position += len
+    prevEligible = node
+    node = walker.nextNode()
+  }
+
+  if (lastEligible && rawTarget === position) {
+    return { node: lastEligible, offset: lastEligible.length }
+  }
+  return null
+}

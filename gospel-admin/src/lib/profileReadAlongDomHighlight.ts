@@ -1,7 +1,5 @@
-import {
-  locateListenVisibleTextOffset,
-  preferLaterEquivalentListenTextBoundary,
-} from '@/lib/profileHighlightVisibleText'
+import { preferLaterEquivalentListenTextBoundary } from '@/lib/profileHighlightVisibleText'
+import { locateListenRawTextOffset } from '@/lib/profileResourceListenText'
 import { walkerOffsetForReadAlongPlainOffset } from '@/lib/scrollReadAlongPlain'
 
 /** Thickness of each underline segment (viewport px). */
@@ -60,8 +58,8 @@ export function updateReadAlongDomHighlight(opts: {
   const wStart = walkerOffsetForReadAlongPlainOffset(scope, plainCollapsedLen, start)
   const wEnd = walkerOffsetForReadAlongPlainOffset(scope, plainCollapsedLen, end)
 
-  const startRaw = locateListenVisibleTextOffset(scope, wStart)
-  const endRaw = locateListenVisibleTextOffset(scope, wEnd)
+  const startRaw = locateListenRawTextOffset(scope, wStart)
+  const endRaw = locateListenRawTextOffset(scope, wEnd)
   if (!startRaw || !endRaw) return
 
   const startP = preferLaterEquivalentListenTextBoundary(scope, startRaw)
