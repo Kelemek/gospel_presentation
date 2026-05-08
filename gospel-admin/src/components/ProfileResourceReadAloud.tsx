@@ -4,7 +4,8 @@ import type { GospelSection } from '@/lib/types'
 import { MemorizeListenControlsDialog } from '@/components/MemorizeListenControlsDialog'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import { useProfileResourceReadAloud } from '@/hooks/useProfileResourceReadAloud'
-import { useCallback } from 'react'
+import { isMemorizeAndroidWebHost } from '@/lib/memorizationViewportPlatform'
+import { useCallback, useMemo } from 'react'
 
 const TRIGGER_CLASS =
   'p-2 rounded-md flex items-center justify-center min-h-[36px] min-w-[36px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white transition-colors cursor-pointer'
@@ -17,6 +18,7 @@ interface ProfileResourceReadAloudProps {
 }
 
 export default function ProfileResourceReadAloud({ sections }: ProfileResourceReadAloudProps) {
+  const androidHost = useMemo(() => isMemorizeAndroidWebHost(), [])
   const { showAlert } = useAlertModal()
   const onNothingToRead = useCallback(
     (message: string) => {
@@ -36,6 +38,10 @@ export default function ProfileResourceReadAloud({ sections }: ProfileResourceRe
     readAloudDialogPrimaryAriaLabel,
     listenAriaPressed,
   } = useProfileResourceReadAloud({ sections, onNothingToRead })
+
+  if (androidHost) {
+    return null
+  }
 
   return (
     <>

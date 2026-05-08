@@ -3,6 +3,8 @@ import ProfileResourceReadAloud from '@/components/ProfileResourceReadAloud'
 import type { GospelSection } from '@/lib/types'
 
 describe('ProfileResourceReadAloud', () => {
+  const originalUserAgent = typeof navigator !== 'undefined' ? navigator.userAgent : ''
+
   const sections: GospelSection[] = [
     {
       section: '1',
@@ -45,6 +47,19 @@ describe('ProfileResourceReadAloud', () => {
 
   afterEach(() => {
     delete (window as unknown as { speechSynthesis?: unknown }).speechSynthesis
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: originalUserAgent,
+    })
+  })
+
+  it('renders nothing on Android user agents', () => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36',
+    })
+    render(<ProfileResourceReadAloud sections={sections} />)
+    expect(screen.queryByRole('button', { name: /read aloud/i })).not.toBeInTheDocument()
   })
 
   it('opens read-aloud dialog when trigger is clicked', async () => {
