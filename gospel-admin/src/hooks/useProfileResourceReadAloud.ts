@@ -29,7 +29,7 @@ import {
   saveProfileReadAlongLastSession,
   saveProfileReadAlongProgress,
 } from '@/lib/profileReadAlongProgressStorage'
-import { READ_ALONG_BOUNDARY_UI_LAG_MS } from '@/lib/readAlongBoundaryUiLag'
+import { getReadAlongBoundaryUiLagMs } from '@/lib/readAlongBoundaryUiLag'
 import { currentWordRangeInChunk, firstWordRangeInChunk } from '@/lib/readAlongSpeechWordRange'
 import {
   prefersReducedMotionReadAlong,
@@ -431,7 +431,7 @@ export function useProfileResourceReadAloud({
         const target = chunkStart + inChunk
         const clampedTarget = Math.min(Math.max(0, plainLen - 1), target)
 
-        const lagMs = prefersReducedMotionReadAlong() ? 0 : READ_ALONG_BOUNDARY_UI_LAG_MS
+        const lagMs = prefersReducedMotionReadAlong() ? 0 : getReadAlongBoundaryUiLagMs()
 
         const applyBoundaryUi = () => {
           if (birthGen !== ttsCancelGenerationRef.current) return

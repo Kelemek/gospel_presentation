@@ -3,10 +3,10 @@
  *
  * We **do not use `charLength`**: on Chromium it often spans multiple words ahead of audio.
  * We map **`charIndex`** to a whitespace-delimited token, then walk **backward** by
- * {@link READ_ALONG_WORDS_TRAIL_ENGINE_CHAR_INDEX} tokens so the underline tracks heard speech.
+ * {@link getReadAlongWordsTrail} tokens so the underline tracks heard speech.
  */
 
-import { READ_ALONG_WORDS_TRAIL_ENGINE_CHAR_INDEX } from '@/lib/readAlongBoundaryUiLag'
+import { getReadAlongWordsTrail } from '@/lib/readAlongBoundaryUiLag'
 
 /** Expand index to the contiguous non-whitespace run (skips leading whitespace from index). */
 export function wordExtentAtChunkOffset(
@@ -68,5 +68,5 @@ export function currentWordRangeInChunk(
   ev: SpeechSynthesisEvent
 ): { relStart: number; relEndExclusive: number } | null {
   const ci = typeof ev.charIndex === 'number' ? ev.charIndex : 0
-  return wordRangeTrailingBehindCharIndex(chunk, ci, READ_ALONG_WORDS_TRAIL_ENGINE_CHAR_INDEX)
+  return wordRangeTrailingBehindCharIndex(chunk, ci, getReadAlongWordsTrail())
 }
