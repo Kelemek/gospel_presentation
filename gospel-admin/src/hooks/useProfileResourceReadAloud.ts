@@ -64,6 +64,8 @@ export function useProfileResourceReadAloud({
   const readAlongPendingUiRef = useRef<{
     scroll?: number
     highlight?: { start: number; endExclusive: number } | null
+    /** Word boundaries fire rapidly; smooth scroll stacks and lags behind fixed underlines — use `auto` there. */
+    scrollBehavior?: ScrollBehavior
   }>({})
   const readAlongUiRafRef = useRef(0)
 
@@ -82,10 +84,15 @@ export function useProfileResourceReadAloud({
   }, [])
 
   const scheduleReadAlongUi = useCallback(
-    (patch: { scroll?: number; highlight?: { start: number; endExclusive: number } | null }) => {
+    (patch: {
+      scroll?: number
+      highlight?: { start: number; endExclusive: number } | null
+      scrollBehavior?: ScrollBehavior
+    }) => {
       const acc = readAlongPendingUiRef.current
       if (patch.scroll !== undefined) acc.scroll = patch.scroll
       if (patch.highlight !== undefined) acc.highlight = patch.highlight
+      if (patch.scrollBehavior !== undefined) acc.scrollBehavior = patch.scrollBehavior
 
       if (readAlongUiRafRef.current !== 0) return
       readAlongUiRafRef.current = requestAnimationFrame(() => {
@@ -97,7 +104,9 @@ export function useProfileResourceReadAloud({
         const plainLen = readAlongPlainLenRef.current
 
         if (pending.scroll !== undefined && scope && plainLen > 0) {
-          const behavior: ScrollBehavior = prefersReducedMotionReadAlong() ? 'auto' : 'smooth'
+          const behavior: ScrollBehavior = prefersReducedMotionReadAlong()
+            ? 'auto'
+            : (pending.scrollBehavior ?? 'smooth')
           scrollReadAlongPlainOffsetIntoViewCenter(scope, plainLen, pending.scroll, behavior)
         }
 
@@ -274,7 +283,7 @@ export function useProfileResourceReadAloud({
         const plainOffsetScrollOnly = Math.min(Math.max(0, plainLen - 1), target)
 
         if (prefersReducedMotionReadAlong()) {
-          scheduleReadAlongUi({ scroll: plainOffsetScrollOnly })
+          scheduleReadAlongUi({ scroll: plainOffsetScrollOnly, scrollBehavior: 'auto' })
           return
         }
 
@@ -287,9 +296,10 @@ export function useProfileResourceReadAloud({
           scheduleReadAlongUi({
             scroll: plainOffset,
             highlight: { start: plainWordStart, endExclusive: plainWordEnd },
+            scrollBehavior: 'auto',
           })
         } else {
-          scheduleReadAlongUi({ scroll: plainOffsetScrollOnly })
+          scheduleReadAlongUi({ scroll: plainOffsetScrollOnly, scrollBehavior: 'auto' })
         }
       }
 
