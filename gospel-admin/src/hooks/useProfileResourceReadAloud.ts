@@ -29,10 +29,8 @@ import {
   saveProfileReadAlongLastSession,
   saveProfileReadAlongProgress,
 } from '@/lib/profileReadAlongProgressStorage'
-import {
-  currentWordRangeInChunk,
-  firstWordRangeInChunk,
-} from '@/lib/readAlongSpeechWordRange'
+import { READ_ALONG_BOUNDARY_UI_LAG_MS } from '@/lib/readAlongBoundaryUiLag'
+import { currentWordRangeInChunk, firstWordRangeInChunk } from '@/lib/readAlongSpeechWordRange'
 import {
   prefersReducedMotionReadAlong,
   scrollReadAlongPlainOffsetIntoViewCenter,
@@ -89,6 +87,11 @@ export function useProfileResourceReadAloud({
   const readAlongFingerprintRef = useRef<string | null>(null)
   const lastPersistedPlainOffsetRef = useRef(0)
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** Word underline while speaking (profile read-aloud); immediate ref for `speakChunkInternal`. */
+  const readAlongUnderlineEnabledRef = useRef(true)
+  const [readAlongUnderlineOn, setReadAlongUnderlineOn] = useState(true)
+  /** Invalidates delayed boundary UI when clearing session or superseding with a newer boundary. */
+  const readAlongBoundaryLagSeqRef = useRef(0)
 
   const androidHost = useMemo(() => isMemorizeAndroidWebHost(), [])
 
@@ -210,6 +213,7 @@ export function useProfileResourceReadAloud({
     readAlongAnchorIdRef.current = null
     readAlongFingerprintRef.current = null
     lastPersistedPlainOffsetRef.current = 0
+    readAlongBoundaryLagSeqRef.current += 1
   }, [cancelReadAlongUiScheduling])
 
   useEffect(() => {
@@ -242,6 +246,7 @@ export function useProfileResourceReadAloud({
 
   useEffect(() => {
     return () => {
+      readAlongBoundaryLagSeqRef.current += 1
       flushReadAlongProgressPersist()
       cancelReadAlongUiScheduling()
       if (typeof document !== 'undefined') clearReadAlongDomHighlight(document)
@@ -359,10 +364,12 @@ export function useProfileResourceReadAloud({
         if (prefersReducedMotionReadAlong()) {
           scheduleReadAlongUi({
             scroll: chunkStart,
-            highlight: {
-              start: chunkStart,
-              endExclusive: chunkStart + text.length,
-            },
+            highlight: readAlongUnderlineEnabledRef.current
+              ? {
+                  start: chunkStart,
+                  endExclusive: chunkStart + text.length,
+                }
+              : null,
           })
           return
         }
@@ -376,7 +383,9 @@ export function useProfileResourceReadAloud({
           const plainOffset = Math.min(Math.max(0, plainLen - 1), Math.max(chunkStart, mid))
           scheduleReadAlongUi({
             scroll: plainOffset,
-            highlight: { start: plainWordStart, endExclusive: plainWordEnd },
+            highlight: readAlongUnderlineEnabledRef.current
+              ? { start: plainWordStart, endExclusive: plainWordEnd }
+              : null,
           })
         } else {
           scheduleReadAlongUi({ scroll: chunkStart })
@@ -393,29 +402,57 @@ export function useProfileResourceReadAloud({
         const ci = typeof ev.charIndex === 'number' ? ev.charIndex : 0
         const inChunk = Math.max(0, Math.min(ci, text.length))
         const target = chunkStart + inChunk
-        recordReadAlongProgressPlainOffset(target)
-        const plainOffsetScrollOnly = Math.min(Math.max(0, plainLen - 1), target)
+        const clampedTarget = Math.min(Math.max(0, plainLen - 1), target)
 
-        if (prefersReducedMotionReadAlong()) {
-          scheduleReadAlongUi({ scroll: plainOffsetScrollOnly, scrollBehavior: 'auto' })
+        const lagMs = prefersReducedMotionReadAlong() ? 0 : READ_ALONG_BOUNDARY_UI_LAG_MS
+
+        const applyBoundaryUi = () => {
+          if (birthGen !== ttsCancelGenerationRef.current) return
+          if (!ttsActiveRef.current) return
+          if (typeof window !== 'undefined' && window.speechSynthesis.paused) return
+          if (ttsChunkIndexRef.current !== chunkIndex) return
+
+          const wr = currentWordRangeInChunk(text, ev)
+          const progressPlain = wr
+            ? Math.min(Math.max(0, plainLen - 1), chunkStart + wr.relStart)
+            : clampedTarget
+          recordReadAlongProgressPlainOffset(progressPlain)
+
+          if (prefersReducedMotionReadAlong()) {
+            scheduleReadAlongUi({ scroll: progressPlain, scrollBehavior: 'auto' })
+            return
+          }
+
+          if (wr) {
+            const plainWordStart = chunkStart + wr.relStart
+            const plainWordEnd = chunkStart + wr.relEndExclusive
+            const scrollMid = Math.min(
+              Math.max(0, plainLen - 1),
+              chunkStart + Math.floor((wr.relStart + wr.relEndExclusive - 1) / 2)
+            )
+            scheduleReadAlongUi({
+              scroll: scrollMid,
+              highlight: readAlongUnderlineEnabledRef.current
+                ? { start: plainWordStart, endExclusive: plainWordEnd }
+                : null,
+              scrollBehavior: 'auto',
+            })
+          } else {
+            scheduleReadAlongUi({ scroll: progressPlain, scrollBehavior: 'auto' })
+          }
+        }
+
+        if (lagMs <= 0) {
+          applyBoundaryUi()
           return
         }
 
-        const wr = currentWordRangeInChunk(text, ev)
-        if (wr) {
-          const plainWordStart = chunkStart + wr.relStart
-          const plainWordEnd = chunkStart + wr.relEndExclusive
-          recordReadAlongProgressPlainOffset(Math.max(target, plainWordEnd - 1))
-          const mid = Math.floor((plainWordStart + plainWordEnd - 1) / 2)
-          const plainOffset = Math.min(Math.max(0, plainLen - 1), Math.max(chunkStart, mid))
-          scheduleReadAlongUi({
-            scroll: plainOffset,
-            highlight: { start: plainWordStart, endExclusive: plainWordEnd },
-            scrollBehavior: 'auto',
-          })
-        } else {
-          scheduleReadAlongUi({ scroll: plainOffsetScrollOnly, scrollBehavior: 'auto' })
-        }
+        readAlongBoundaryLagSeqRef.current += 1
+        const seq = readAlongBoundaryLagSeqRef.current
+        window.setTimeout(() => {
+          if (seq !== readAlongBoundaryLagSeqRef.current) return
+          applyBoundaryUi()
+        }, lagMs)
       }
 
       u.onend = () => {
@@ -575,7 +612,7 @@ export function useProfileResourceReadAloud({
   const handlePrimaryClick = useCallback(() => {
     if (androidHost) return
     if (typeof window === 'undefined' || !window.speechSynthesis) {
-      onNothingToRead?.('Read aloud is not supported in this browser.')
+      onNothingToRead?.('Listen is not supported in this browser.')
       return
     }
     const syn = window.speechSynthesis
@@ -649,6 +686,20 @@ export function useProfileResourceReadAloud({
   const openControls = useCallback(() => setControlsOpen(true), [])
   const closeControls = useCallback(() => setControlsOpen(false), [])
 
+  const toggleReadAlongUnderline = useCallback(() => {
+    setReadAlongUnderlineOn((prev) => {
+      const next = !prev
+      readAlongUnderlineEnabledRef.current = next
+      if (!next) {
+        readAlongHighlightPlainRef.current = null
+        if (typeof document !== 'undefined') clearReadAlongDomHighlight(document)
+        scheduleReadAlongUi({ highlight: null })
+      }
+      queueMicrotask(bumpListen)
+      return next
+    })
+  }, [bumpListen, scheduleReadAlongUi])
+
   const onSelectSpeed = useCallback(
     (r: MemorizeListenSpeed) => {
       listenPlaybackRateRef.current = r
@@ -682,5 +733,7 @@ export function useProfileResourceReadAloud({
     readAloudDialogPrimaryAriaLabel,
     listenAriaPressed,
     restartReadAloudFromBeginning,
+    readAlongUnderlineOn,
+    toggleReadAlongUnderline,
   }
 }

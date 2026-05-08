@@ -60,15 +60,15 @@ describe('ProfileResourceReadAloud', () => {
       value: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36',
     })
     render(<ProfileResourceReadAloud sections={sections} profileSlug="p1" />)
-    expect(screen.queryByRole('button', { name: /read aloud/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /listen/i })).not.toBeInTheDocument()
   })
 
-  it('opens read-aloud dialog when trigger is clicked', async () => {
+  it('opens Listen dialog when trigger is clicked', async () => {
     render(<ProfileResourceReadAloud sections={sections} profileSlug="p1" />)
 
-    fireEvent.click(screen.getByRole('button', { name: /read aloud/i }))
-    expect(screen.getByRole('dialog', { name: /read aloud/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /read aloud/i })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /listen/i }))
+    expect(screen.getByRole('dialog', { name: /listen/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /listen/i })).toBeInTheDocument()
     expect(screen.getByTestId('memorize-listen-passage')).toBeInTheDocument()
   })
 
@@ -84,7 +84,7 @@ describe('ProfileResourceReadAloud', () => {
     const speak = window.speechSynthesis.speak as jest.Mock
     render(<ProfileResourceReadAloud sections={sections} profileSlug="p1" />)
 
-    fireEvent.click(screen.getByRole('button', { name: /read aloud/i }))
+    fireEvent.click(screen.getByRole('button', { name: /listen/i }))
     fireEvent.click(screen.getByTestId('memorize-listen-passage'))
 
     expect(speak).toHaveBeenCalled()
@@ -102,7 +102,7 @@ describe('ProfileResourceReadAloud', () => {
     const cancel = window.speechSynthesis.cancel as jest.Mock
 
     render(<ProfileResourceReadAloud sections={sections} profileSlug="p1" />)
-    fireEvent.click(screen.getByRole('button', { name: /read aloud/i }))
+    fireEvent.click(screen.getByRole('button', { name: /listen/i }))
     fireEvent.click(screen.getByTestId('memorize-listen-passage'))
     expect(speak).toHaveBeenCalledTimes(1)
     const firstRate = (speak.mock.calls[0][0] as SpeechSynthesisUtterance).rate
@@ -160,7 +160,7 @@ describe('ProfileResourceReadAloud', () => {
     })
 
     render(<ProfileResourceReadAloud sections={sections} profileSlug="p1" />)
-    fireEvent.click(screen.getByRole('button', { name: /read aloud/i }))
+    fireEvent.click(screen.getByRole('button', { name: /listen/i }))
     fireEvent.click(screen.getByTestId('memorize-listen-passage'))
 
     await waitFor(() => expect(speak).toHaveBeenCalledTimes(2))

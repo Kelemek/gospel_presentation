@@ -5,6 +5,10 @@ import { VERSE_MEMORIZATION_STORAGE_KEY, emitMemorizationChanged } from '@/lib/v
 import { VERSE_PIN_STORAGE_KEY_PREFIX, LEGACY_SCRIPTURE_PROGRESS_KEY_PREFIX } from '@/lib/versePinStorage'
 import { MEMORIZE_LISTEN_SPEED_STORAGE_KEY } from '@/lib/memorizeListenSpeedStorage'
 import { PRESENTATION_FIRST_VISIT_WELCOME_KEY } from '@/lib/presentationWelcomeStorage'
+import {
+  PROFILE_READ_ALONG_LAST_SESSION_KEY_PREFIX,
+  PROFILE_READ_ALONG_PROGRESS_KEY_PREFIX,
+} from '@/lib/profileReadAlongProgressStorage'
 
 /** Keep in sync with `ANSWERS_STORAGE_KEY_PREFIX` in `GospelSection.tsx`. */
 export const GOSPEL_ANSWERS_KEY_PREFIX = 'gospel-answers-'
@@ -52,7 +56,16 @@ export interface GospelLocalUserDataPayload {
   localStorage: Record<string, string>
 }
 
+function isProfileReadAlongPersistenceKey(key: string): boolean {
+  return (
+    key.startsWith(PROFILE_READ_ALONG_PROGRESS_KEY_PREFIX) ||
+    key.startsWith(PROFILE_READ_ALONG_LAST_SESSION_KEY_PREFIX)
+  )
+}
+
+/** Offline profile HTML blobs (`gospel-profile-{slug}`) stay out of backup; user-owned `gospel-profile-*` keys are allowlisted or matched above. */
 function isProfileCacheKey(key: string): boolean {
+  if (isProfileReadAlongPersistenceKey(key)) return false
   if (!key.startsWith('gospel-profile-')) return false
   const rest = key.slice('gospel-profile-'.length)
   return !ALLOWED_GOSPEL_PROFILE_SUFFIXES.has(rest)
@@ -60,6 +73,7 @@ function isProfileCacheKey(key: string): boolean {
 
 export function isGospelLocalUserDataImportKey(key: string): boolean {
   if (BLOCKED_EXACT_KEYS.has(key)) return false
+  if (isProfileReadAlongPersistenceKey(key)) return true
   if (isProfileCacheKey(key)) return false
   if ((GOSPEL_LOCAL_USER_DATA_FIXED_KEYS as readonly string[]).includes(key)) return true
   return KEY_PREFIXES.some((p) => key.startsWith(p))

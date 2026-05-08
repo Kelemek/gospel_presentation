@@ -39,6 +39,8 @@ export default function ProfileResourceReadAloud({ sections, profileSlug }: Prof
     readAloudDialogPrimaryAriaLabel,
     listenAriaPressed,
     restartReadAloudFromBeginning,
+    readAlongUnderlineOn,
+    toggleReadAlongUnderline,
   } = useProfileResourceReadAloud({ sections, profileSlug, onNothingToRead })
 
   if (androidHost) {
@@ -56,8 +58,8 @@ export default function ProfileResourceReadAloud({ sections, profileSlug }: Prof
           aria-haspopup="dialog"
           aria-expanded={controlsOpen}
           aria-controls={PROFILE_RESOURCE_LISTEN_DIALOG_ID}
-          aria-label="Read aloud"
-          title="Read aloud"
+          aria-label="Listen"
+          title="Listen"
         >
           <svg
             className="w-5 h-5 shrink-0"
@@ -89,6 +91,8 @@ export default function ProfileResourceReadAloud({ sections, profileSlug }: Prof
         primaryAriaPressed={listenAriaPressed}
         listenPlaybackRate={listenPlaybackRate}
         onSelectSpeed={onSelectSpeed}
+        readAlongUnderlineOn={readAlongUnderlineOn}
+        onToggleReadAlongUnderline={toggleReadAlongUnderline}
         onStartFromBeginning={restartReadAloudFromBeginning}
       />
     </>

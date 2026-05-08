@@ -1777,7 +1777,7 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
       popover: {
         title: 'Read aloud: Listen',
         description:
-          '**Listen** in the session header opens the <strong>Read aloud</strong> panel. Use it during intro and typing rounds. Use <strong>Next</strong> to open the panel for a quick look (or skip ahead if you do not see **Listen** on this device).',
+          '**Listen** in the session header opens the <strong>Listen</strong> panel. Use it during intro and typing rounds. Use <strong>Next</strong> to open the panel for a quick look (or skip ahead if you do not see **Listen** on this device).',
         ...pop({ side: 'right', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           if (skipReadAloudTourIfListenButtonMissing(drv)) return

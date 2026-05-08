@@ -18,6 +18,9 @@ interface MemorizeListenControlsDialogPropsBase {
   primaryAriaPressed: boolean
   listenPlaybackRate: MemorizeListenSpeed
   onSelectSpeed: (r: MemorizeListenSpeed) => void
+  /** Profile read-aloud: optional word-underline toggle between Play and speed. */
+  readAlongUnderlineOn?: boolean
+  onToggleReadAlongUnderline?: () => void
   /** Profile read-aloud only: clears saved resume position and restarts the section from the top. */
   onStartFromBeginning?: () => void
   /**
@@ -49,6 +52,58 @@ function isRepeatVariant(
   return props.showRepeat !== false
 }
 
+/** U + underline; when `on` is false, prohibition mark overlays (circle + slash). */
+function ReadAlongUnderlineGlyph({ on }: { on: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      overflow="visible"
+      className="w-6 h-6 shrink-0"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+    >
+      <g transform="translate(12 12) scale(0.82) translate(-12 -12)">
+        <path
+          d="M 7 3.5 L 7 12.5 C 7 15 9 16.5 12 16.5 C 15 16.5 17 15 17 12.5 L 17 3.5"
+          stroke="currentColor"
+          strokeWidth={1.35}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="nonScalingStroke"
+        />
+        <path
+          d="M 5.5 20.5 L 18.5 20.5"
+          stroke="currentColor"
+          strokeWidth={1.35}
+          strokeLinecap="round"
+          vectorEffect="nonScalingStroke"
+        />
+      </g>
+      {!on ? (
+        <g
+          stroke="#dc2626"
+          strokeLinecap="round"
+          transform="translate(12 12) scale(1.38) translate(-12 -12)"
+        >
+          <circle
+            cx={12}
+            cy={12}
+            r={11.5}
+            strokeWidth={1.1}
+            vectorEffect="nonScalingStroke"
+          />
+          <path
+            d="M 3.87 3.87 L 20.13 20.13"
+            strokeWidth={1.1}
+            vectorEffect="nonScalingStroke"
+          />
+        </g>
+      ) : null}
+    </svg>
+  )
+}
+
 /**
  * Read-aloud sub-dialog: play/pause, optional repeat, speed.
  * Portaled to `document.body` so `position: fixed` is viewport-relative (ancestors with
@@ -66,6 +121,8 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
     primaryAriaPressed,
     listenPlaybackRate,
     onSelectSpeed,
+    readAlongUnderlineOn,
+    onToggleReadAlongUnderline,
     onStartFromBeginning,
     presentation = 'modal',
   } = props
@@ -117,7 +174,7 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
             id={titleId}
             className="text-lg font-semibold text-slate-900 dark:text-slate-100 min-w-0"
           >
-            Read aloud
+            Listen
           </h2>
           <div className="flex justify-center shrink-0 px-1">
             {!showRepeatControls && onStartFromBeginning ? (
@@ -194,6 +251,26 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
               >
                 {primaryLabel}
               </button>
+              {readAlongUnderlineOn !== undefined && onToggleReadAlongUnderline ? (
+                <button
+                  type="button"
+                  data-testid="memorize-listen-read-along-underline"
+                  onClick={onToggleReadAlongUnderline}
+                  className="shrink-0 px-3 py-3 rounded-lg text-sm font-medium text-center transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 min-h-[48px] min-w-[48px] inline-flex items-center justify-center"
+                  data-on={readAlongUnderlineOn ? 'true' : 'false'}
+                  aria-pressed={readAlongUnderlineOn}
+                  aria-label={
+                    readAlongUnderlineOn
+                      ? 'Word underline while reading is on. Press to turn off underline.'
+                      : 'Word underline while reading is off. Press to turn on underline.'
+                  }
+                  title={readAlongUnderlineOn ? 'Underline on (tap to hide)' : 'Underline off (tap to show)'}
+                >
+                  <span className="inline-flex items-center justify-center">
+                    <ReadAlongUnderlineGlyph on={readAlongUnderlineOn} />
+                  </span>
+                </button>
+              ) : null}
               <MemorizeListenSpeedButton
                 inline
                 value={listenPlaybackRate}

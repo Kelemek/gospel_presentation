@@ -57,6 +57,8 @@ describe('gospelLocalUserDataBackup', () => {
       'gospel-verse-pins-myprofile': '{"v":2,"yellow":null,"bookmarks":[]}',
       'gospel-answers-myprofile': '{}',
       'gospel-preferred-translation': 'esv',
+      'gospel-profile-read-along:slug:section-1': '{"v":1,"plainOffset":0,"fingerprint":"x"}',
+      'gospel-profile-read-along-last:slug': '{"v":1,"anchorId":"section-1","plainOffset":0,"fingerprint":"x"}',
     })
     const map = collectGospelLocalUserDataForExport(s)
     expect(map[PROFILE_BOOKMARKS_STORAGE_KEY]).toBeDefined()
@@ -65,6 +67,8 @@ describe('gospelLocalUserDataBackup', () => {
     expect(map['gospel-verse-pins-myprofile']).toBeDefined()
     expect(map['gospel-answers-myprofile']).toBeDefined()
     expect(map['gospel-preferred-translation']).toBe('esv')
+    expect(map['gospel-profile-read-along:slug:section-1']).toBe('{"v":1,"plainOffset":0,"fingerprint":"x"}')
+    expect(map['gospel-profile-read-along-last:slug']).toBe('{"v":1,"anchorId":"section-1","plainOffset":0,"fingerprint":"x"}')
   })
 
   it('collectGospelLocalUserDataForExport excludes auth, view preference, and profile cache keys', () => {
@@ -72,12 +76,14 @@ describe('gospelLocalUserDataBackup', () => {
       'gospel-admin-auth': '{"token":"x"}',
       'gospel-view-preference': 'card',
       'gospel-profile-my-slug': '{"profile":{"slug":"my-slug"}}',
+      'gospel-profile-read-along:my-slug:section-1': '{"v":1,"plainOffset":3,"fingerprint":"fp"}',
       [PROFILE_BOOKMARKS_STORAGE_KEY]: '{"v":1,"bookmarks":[]}',
     })
     const map = collectGospelLocalUserDataForExport(s)
     expect(map['gospel-admin-auth']).toBeUndefined()
     expect(map['gospel-view-preference']).toBeUndefined()
     expect(map['gospel-profile-my-slug']).toBeUndefined()
+    expect(map['gospel-profile-read-along:my-slug:section-1']).toBe('{"v":1,"plainOffset":3,"fingerprint":"fp"}')
     expect(map[PROFILE_BOOKMARKS_STORAGE_KEY]).toBeDefined()
   })
 
@@ -147,6 +153,25 @@ describe('gospelLocalUserDataBackup', () => {
         })
       )
     ).toThrow(/cannot be restored safely/i)
+  })
+
+  it('applyGospelLocalUserDataImport restores read-along persistence keys', () => {
+    const target = createMemoryStorage()
+    const payload = parseGospelLocalUserDataImport(
+      JSON.stringify({
+        kind: GOSPEL_LOCAL_USER_DATA_KIND,
+        schemaVersion: GOSPEL_LOCAL_USER_DATA_SCHEMA_VERSION,
+        exportedAt: '2026-01-01T00:00:00.000Z',
+        origin: '',
+        localStorage: {
+          'gospel-profile-read-along:slug:section-1': '{"v":1,"plainOffset":10,"fingerprint":"fp"}',
+          'gospel-profile-read-along-last:slug': '{"v":1,"anchorId":"section-1","plainOffset":10,"fingerprint":"fp"}',
+        },
+      })
+    )
+    applyGospelLocalUserDataImport(payload, target)
+    expect(target.getItem('gospel-profile-read-along:slug:section-1')).toContain('10')
+    expect(target.getItem('gospel-profile-read-along-last:slug')).toContain('section-1')
   })
 
   it('applyGospelLocalUserDataImport round-trips into storage', () => {
