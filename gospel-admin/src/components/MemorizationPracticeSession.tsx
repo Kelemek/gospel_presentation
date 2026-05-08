@@ -38,6 +38,7 @@ import {
   writeMemorizeListenSpeedToStorage,
   type MemorizeListenSpeed,
 } from '@/lib/memorizeListenSpeedStorage'
+import { dispatchWebSpeechExclusiveOwner } from '@/lib/exclusiveWebSpeechListen'
 import {
   MEMORIZATION_FULL_HIDE_ROUND,
   buildInitialReorderSlotAssignment,
@@ -207,6 +208,8 @@ export default function MemorizationPracticeSession({
   const memorizeListenTtsUserPausedRef = useRef(false)
   /** Set after `speechSynthesis.resume()` until `!paused` is observed (pause flag can lag; `onstart` may not re-fire on resume). */
   const memorizeListenTtsPostResumeRef = useRef(false)
+  /** True while the active `speechSynthesis` utterance was started by this memorize session (not profile Listen). */
+  const memorizeWebSpeechUtteranceIsOursRef = useRef(false)
   const [passageAudioPlaying, setPassageAudioPlaying] = useState(false)
   /** Bumps on speechSynthesis start/end/pause so Play / Pause labels re-render. */
   const [listenUiTick, setListenUiTick] = useState(0)
@@ -293,6 +296,14 @@ export default function MemorizationPracticeSession({
     setPassageAudioPlaying(false)
     bumpListen()
   }, [bumpListen, clearListenRepeatGapTimer])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    dispatchWebSpeechExclusiveOwner({ owner: 'memorize-practice' })
+    stopPassageAudio()
+    memorizeWebSpeechUtteranceIsOursRef.current = false
+    bumpListen()
+  }, [bumpListen, stopPassageAudio])
 
   const listenButtonLabel = useMemo(() => {
     // `listenUiTick` bumps on speech / audio, panel open, and rate changes (see effects that call `bumpListen`).
@@ -982,6 +993,7 @@ export default function MemorizationPracticeSession({
     memorizeListenTtsUserPausedRef.current = false
     memorizeListenTtsPostResumeRef.current = false
     const syn = window.speechSynthesis
+    memorizeWebSpeechUtteranceIsOursRef.current = false
     syn.cancel()
     const u = new SpeechSynthesisUtterance(text)
     u.lang = 'en-US'
@@ -989,10 +1001,12 @@ export default function MemorizationPracticeSession({
     u.rate = toMemorizeWebSpeechUtteranceRate(rate, isMemorizeIosWebHost())
     memorizeListenTtsRateAtStartRef.current = rate
     u.onstart = () => {
+      memorizeWebSpeechUtteranceIsOursRef.current = true
       memorizeListenTtsPostResumeRef.current = false
       bumpListen()
     }
     u.onend = () => {
+      memorizeWebSpeechUtteranceIsOursRef.current = false
       memorizeListenTtsUserPausedRef.current = false
       memorizeListenTtsPostResumeRef.current = false
       memorizeListenTtsRateAtStartRef.current = null
@@ -1010,6 +1024,7 @@ export default function MemorizationPracticeSession({
       }, MEMORIZE_LISTEN_REPEAT_GAP_MS)
     }
     u.onerror = () => {
+      memorizeWebSpeechUtteranceIsOursRef.current = false
       memorizeListenTtsUserPausedRef.current = false
       memorizeListenTtsPostResumeRef.current = false
       memorizeListenTtsRateAtStartRef.current = null
@@ -1036,6 +1051,10 @@ export default function MemorizationPracticeSession({
       }
       void (async () => {
         try {
+          if (typeof window !== 'undefined' && window.speechSynthesis?.speaking) {
+            window.speechSynthesis.cancel()
+          }
+          memorizeWebSpeechUtteranceIsOursRef.current = false
           el.src = memorizePassageAudioUrl
           applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRateRef.current)
           await el.play()
@@ -1054,6 +1073,15 @@ export default function MemorizationPracticeSession({
     }
     const syn = window.speechSynthesis
     if (syn.speaking) {
+      if (!memorizeWebSpeechUtteranceIsOursRef.current) {
+        memorizeListenTtsUserPausedRef.current = false
+        memorizeListenTtsPostResumeRef.current = false
+        syn.cancel()
+        beginTtsUtterance()
+        bumpListen()
+        queueMicrotask(bumpListen)
+        return
+      }
       if (syn.paused) {
         memorizeListenTtsUserPausedRef.current = false
         const atStart = memorizeListenTtsRateAtStartRef.current
@@ -1100,6 +1128,10 @@ export default function MemorizationPracticeSession({
         if (el?.paused) {
           void (async () => {
             try {
+              if (typeof window !== 'undefined' && window.speechSynthesis?.speaking) {
+                window.speechSynthesis.cancel()
+              }
+              memorizeWebSpeechUtteranceIsOursRef.current = false
               el.src = memorizePassageAudioUrl
               el.currentTime = 0
               applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRateRef.current)
@@ -1116,6 +1148,9 @@ export default function MemorizationPracticeSession({
         return
       }
       if (!window.speechSynthesis.speaking) {
+        beginTtsUtterance()
+      } else if (!memorizeWebSpeechUtteranceIsOursRef.current) {
+        window.speechSynthesis.cancel()
         beginTtsUtterance()
       }
     } else {
@@ -1576,7 +1611,7 @@ export default function MemorizationPracticeSession({
                 }}
                 aria-expanded={listenPanelOpen}
                 aria-controls={MEMORIZE_LISTEN_CONTROLS_DIALOG_ID}
-                aria-label="Open read-aloud controls"
+                aria-label="Open Listen controls for this verse"
                 className="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700"
               >
                 Listen

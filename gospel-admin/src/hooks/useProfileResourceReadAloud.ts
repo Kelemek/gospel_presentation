@@ -33,8 +33,12 @@ import { READ_ALONG_BOUNDARY_UI_LAG_MS } from '@/lib/readAlongBoundaryUiLag'
 import { currentWordRangeInChunk, firstWordRangeInChunk } from '@/lib/readAlongSpeechWordRange'
 import {
   prefersReducedMotionReadAlong,
-  scrollReadAlongPlainOffsetIntoViewCenter,
+  scrollReadAlongPlainOffsetIntoViewIfNeeded,
 } from '@/lib/scrollReadAlongPlain'
+import {
+  GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT,
+  type GospelWebSpeechExclusiveOwnerDetail,
+} from '@/lib/exclusiveWebSpeechListen'
 
 export interface UseProfileResourceReadAloudOptions {
   sections: GospelSection[]
@@ -174,7 +178,7 @@ export function useProfileResourceReadAloud({
           const behavior: ScrollBehavior = prefersReducedMotionReadAlong()
             ? 'auto'
             : (pending.scrollBehavior ?? 'smooth')
-          scrollReadAlongPlainOffsetIntoViewCenter(scope, plainLen, pending.scroll, behavior)
+          scrollReadAlongPlainOffsetIntoViewIfNeeded(scope, plainLen, pending.scroll, behavior)
         }
 
         if (pending.highlight !== undefined) {
@@ -243,6 +247,29 @@ export function useProfileResourceReadAloud({
       if (raf !== 0) cancelAnimationFrame(raf)
     }
   }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const onExclusive = (ev: Event) => {
+      const ce = ev as CustomEvent<GospelWebSpeechExclusiveOwnerDetail>
+      if (!ce.detail || ce.detail.owner !== 'memorize-practice') return
+      ttsCancelGenerationRef.current += 1
+      ttsActiveRef.current = false
+      ttsChunkIndexRef.current = 0
+      memorizeListenTtsRateAtStartRef.current = null
+      memorizeListenTtsUserPausedRef.current = false
+      memorizeListenTtsPostResumeRef.current = false
+      flushReadAlongProgressPersist()
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel()
+      }
+      clearReadAlongSession()
+      setControlsOpen(false)
+      bumpListen()
+    }
+    window.addEventListener(GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT, onExclusive)
+    return () => window.removeEventListener(GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT, onExclusive)
+  }, [bumpListen, clearReadAlongSession, flushReadAlongProgressPersist])
 
   useEffect(() => {
     return () => {

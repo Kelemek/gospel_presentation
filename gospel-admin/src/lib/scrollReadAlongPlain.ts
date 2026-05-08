@@ -59,23 +59,64 @@ export function prefersReducedMotionReadAlong(): boolean {
   }
 }
 
+function readAlongComfortTopMarginPx(win: Window): number {
+  let safeTop = 0
+  try {
+    const vv = win.visualViewport
+    if (vv && vv.offsetTop > 0) safeTop = Math.max(safeTop, vv.offsetTop)
+  } catch {
+    /* ignore */
+  }
+  /** ~sticky header (`scroll-mt-20` / toolbar) + padding below Listen bar when floating. */
+  return Math.round(Math.max(100, safeTop + 76))
+}
+
+function readAlongComfortBottomMarginPx(win: Window): number {
+  let inset = 0
+  try {
+    const vv = win.visualViewport
+    if (vv) {
+      const gap = win.innerHeight - vv.height - vv.offsetTop
+      if (gap > 0) inset = Math.max(inset, gap)
+    }
+  } catch {
+    /* ignore */
+  }
+  /** Extra space above home indicator / browser chrome; larger → scroll kicks in sooner so lines sit higher. */
+  return Math.round(Math.max(130, inset + 92))
+}
+
 /**
- * Scrolls so the plain-text position (collapsed offset into the spoken string) sits near the
- * vertical center of the viewport.
+ * Pure helper: how far to `window.scrollBy({ top })` so a caret rect stays inside top/bottom margins.
+ * Prefer fixing bottom overflow (reading forward / line wrap) before top overflow.
  */
-export function scrollReadAlongPlainOffsetIntoViewCenter(
+export function computeReadAlongVerticalScrollDeltaForComfortZone(
+  caretRect: Pick<DOMRectReadOnly, 'top' | 'bottom'>,
+  viewportHeight: number,
+  topMarginPx: number,
+  bottomMarginPx: number
+): number {
+  const zoneBottom = viewportHeight - bottomMarginPx
+  if (caretRect.top >= topMarginPx && caretRect.bottom <= zoneBottom) {
+    return 0
+  }
+  if (caretRect.bottom > zoneBottom) {
+    return caretRect.bottom - zoneBottom
+  }
+  if (caretRect.top < topMarginPx) {
+    return caretRect.top - topMarginPx
+  }
+  return 0
+}
+
+function getCaretClientRectForReadAlongPlainOffset(
   scope: HTMLElement,
   plainCollapsedLen: number,
-  plainOffset: number,
-  behavior: ScrollBehavior = 'smooth'
-): void {
-  if (typeof window === 'undefined') return
-  const win = scope.ownerDocument?.defaultView
-  if (!win) return
-
+  plainOffset: number
+): DOMRect | null {
   const walkerOff = walkerOffsetForReadAlongPlainOffset(scope, plainCollapsedLen, plainOffset)
   let pos = locateListenVisibleTextOffset(scope, walkerOff)
-  if (!pos) return
+  if (!pos) return null
   pos = preferLaterEquivalentListenTextBoundary(scope, pos)
 
   const doc = scope.ownerDocument
@@ -84,14 +125,36 @@ export function scrollReadAlongPlainOffsetIntoViewCenter(
     r.setStart(pos.node, pos.offset)
     r.collapse(true)
   } catch {
-    return
+    return null
   }
 
   const rect = r.getBoundingClientRect()
-  if (rect.height === 0 && rect.width === 0) return
+  if (rect.height === 0 && rect.width === 0) return null
+  return rect
+}
+
+/**
+ * Scrolls the window only if the plain-text caret falls outside a comfortable band (below the sticky
+ * header / safe area and above the bottom of the viewport). Word-by-word updates on the **same line**
+ * therefore do not move the page; a **new line** or chunk that leaves the band still scrolls.
+ */
+export function scrollReadAlongPlainOffsetIntoViewIfNeeded(
+  scope: HTMLElement,
+  plainCollapsedLen: number,
+  plainOffset: number,
+  behavior: ScrollBehavior = 'auto'
+): void {
+  if (typeof window === 'undefined') return
+  const win = scope.ownerDocument?.defaultView
+  if (!win) return
+
+  const rect = getCaretClientRectForReadAlongPlainOffset(scope, plainCollapsedLen, plainOffset)
+  if (!rect) return
 
   const vpH = win.innerHeight
-  const lineCenter = rect.top + rect.height / 2
-  const delta = lineCenter - vpH / 2
+  const topM = readAlongComfortTopMarginPx(win)
+  const botM = readAlongComfortBottomMarginPx(win)
+  const delta = computeReadAlongVerticalScrollDeltaForComfortZone(rect, vpH, topM, botM)
+  if (delta === 0) return
   win.scrollBy({ top: delta, behavior })
 }
