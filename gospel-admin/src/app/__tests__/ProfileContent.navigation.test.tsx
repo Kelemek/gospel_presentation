@@ -51,7 +51,6 @@ describe('ProfileContent navigation & pins', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     localStorage.clear()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(global as any).fetch = jest.fn((input: RequestInfo | URL | any) => {
       const url = typeof input === 'string' ? input : String(input)
       if (url.includes('/visit')) return Promise.resolve({ ok: true, json: async () => ({}) }) as any
@@ -62,7 +61,6 @@ describe('ProfileContent navigation & pins', () => {
         }) as unknown as Response
       }
       return Promise.resolve({ ok: true, json: async () => ({}) }) as unknown as Response
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     }) as any
   })
 

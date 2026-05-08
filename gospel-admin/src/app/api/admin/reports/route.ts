@@ -4,63 +4,6 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { createClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
 
-type ReportType = 'unique_sessions' | 'all_translations' | 'top_scriptures' | string
-
-// Generate translation-specific summary query
-function getTranslationSummaryQuery(translation: string): string {
-  return `
-    SELECT 
-      EXTRACT(YEAR FROM timestamp)::INTEGER as year,
-      COUNT(DISTINCT session_id)::INTEGER as unique_sessions,
-      COUNT(*)::INTEGER as total_scripture_views,
-      COUNT(DISTINCT scripture_reference)::INTEGER as unique_scriptures,
-      ROUND(COUNT(*) / COUNT(DISTINCT session_id)::numeric, 2) as avg_views_per_session
-    FROM scripture_access_logs
-    WHERE translation = '${translation}'
-    GROUP BY year
-    ORDER BY year DESC
-  `
-}
-
-// Direct SQL queries that will be executed
-const reportQueries: Record<ReportType, string> = {
-  unique_sessions: `
-    SELECT 
-      EXTRACT(YEAR FROM timestamp)::INTEGER as year,
-      translation,
-      COUNT(DISTINCT session_id)::INTEGER as unique_sessions,
-      COUNT(*)::INTEGER as total_scripture_views
-    FROM scripture_access_logs
-    GROUP BY year, translation
-    ORDER BY year DESC, translation
-  `,
-  all_translations: `
-    SELECT 
-      EXTRACT(YEAR FROM timestamp)::INTEGER as year,
-      translation,
-      COUNT(DISTINCT session_id)::INTEGER as unique_sessions,
-      COUNT(*)::INTEGER as total_scripture_views,
-      COUNT(DISTINCT scripture_reference)::INTEGER as unique_scriptures,
-      ROUND(COUNT(*) / COUNT(DISTINCT session_id)::numeric, 2) as avg_views_per_session
-    FROM scripture_access_logs
-    GROUP BY year, translation
-    ORDER BY year DESC, translation
-  `,
-  top_scriptures: `
-    SELECT 
-      translation,
-      scripture_reference,
-      EXTRACT(YEAR FROM timestamp)::INTEGER as year,
-      COUNT(*)::INTEGER as access_count,
-      COUNT(DISTINCT session_id)::INTEGER as unique_sessions
-    FROM scripture_access_logs
-    GROUP BY translation, scripture_reference, year
-    HAVING COUNT(*) >= 5
-    ORDER BY year DESC, translation, access_count DESC
-    LIMIT 50
-  `
-}
-
 export async function POST(request: NextRequest) {
   try {
     // Check if user is authenticated

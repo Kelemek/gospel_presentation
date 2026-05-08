@@ -1,3 +1,6 @@
+/** Pause between repeated plays (memorize listen + profile read-aloud). */
+export const MEMORIZE_LISTEN_REPEAT_GAP_MS = 650
+
 export const MEMORIZE_LISTEN_SPEED_STORAGE_KEY = 'gospel-admin:memorize-listen-speed'
 
 export const MEMORIZE_LISTEN_SPEEDS = [0.75, 1, 1.25, 1.5, 1.75, 2] as const

@@ -29,7 +29,8 @@ export default function PresentationFirstVisitWelcome() {
 
   useEffect(() => {
     if (hasPresentationWelcomeBeenDismissed()) return
-    setShow(true)
+    const id = window.requestAnimationFrame(() => setShow(true))
+    return () => window.cancelAnimationFrame(id)
   }, [])
 
   useEffect(() => {

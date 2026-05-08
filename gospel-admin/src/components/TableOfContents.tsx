@@ -45,9 +45,7 @@ function handleTocClick(
 }
 
 export default function TableOfContents({
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   sections,
-  currentProfileSlug: _currentProfileSlug,
   onNavigate,
   onMemorizationPracticeStart,
   onOpenSpurgeonLibrary,

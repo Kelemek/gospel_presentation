@@ -112,7 +112,6 @@ export function useProfileWithCache(slug: string): UseProfileWithCacheResult {
           answeredAt: a.answeredAt ? new Date(a.answeredAt) : new Date()
         }))
       }
-      const updatedAt = profileObj.updatedAt instanceof Date ? profileObj.updatedAt.toISOString() : String(profileObj.updatedAt)
       if (typeof window !== 'undefined') {
         try {
           localStorage.setItem(getCacheKey(slug), serializeForCache(profileObj))
@@ -122,7 +121,7 @@ export function useProfileWithCache(slug: string): UseProfileWithCacheResult {
       }
       setProfile(profileObj)
       setError(null)
-    } catch (err) {
+    } catch {
       setError('Failed to load profile')
     } finally {
       setIsLoading(false)

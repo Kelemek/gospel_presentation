@@ -48,4 +48,71 @@ describe('MemorizeListenControlsDialog', () => {
     fireEvent.touchStart(screen.getByTestId('memorize-listen-passage'))
     expect(onClose).not.toHaveBeenCalled()
   })
+
+  it('with showRepeat false, omits Repeat and places speed beside Play', () => {
+    render(
+      <MemorizeListenControlsDialog
+        open
+        onClose={jest.fn()}
+        dialogId="profile-resource-listen-controls-dialog"
+        titleId="profile-resource-listen-controls-title"
+        showRepeat={false}
+        onPrimaryClick={jest.fn()}
+        primaryLabel="Play"
+        primaryAriaLabel="Play"
+        primaryAriaPressed={false}
+        listenPlaybackRate={1}
+        onSelectSpeed={jest.fn()}
+      />
+    )
+    expect(screen.queryByTestId('memorize-listen-repeat')).not.toBeInTheDocument()
+    expect(screen.getByTestId('memorize-listen-passage')).toBeInTheDocument()
+    expect(screen.getByTestId('memorize-listen-speed')).toBeInTheDocument()
+  })
+
+  it('with showRepeat false and presentation floating, uses non-modal dialog and no dimmed backdrop', () => {
+    render(
+      <MemorizeListenControlsDialog
+        open
+        onClose={jest.fn()}
+        dialogId="profile-resource-listen-controls-dialog"
+        titleId="profile-resource-listen-controls-title"
+        showRepeat={false}
+        presentation="floating"
+        onPrimaryClick={jest.fn()}
+        primaryLabel="Play"
+        primaryAriaLabel="Play"
+        primaryAriaPressed={false}
+        listenPlaybackRate={1}
+        onSelectSpeed={jest.fn()}
+      />
+    )
+    const dialog = screen.getByRole('dialog', { name: 'Read aloud' })
+    expect(dialog).toHaveAttribute('aria-modal', 'false')
+    const slot = dialog.parentElement
+    expect(slot).toHaveClass('pointer-events-auto')
+    expect(slot?.parentElement).toHaveClass('pointer-events-none')
+  })
+
+  it('with presentation floating, clicking outside the panel does not close (no backdrop)', () => {
+    const onClose = jest.fn()
+    render(
+      <MemorizeListenControlsDialog
+        open
+        onClose={onClose}
+        dialogId="profile-resource-listen-controls-dialog"
+        titleId="profile-resource-listen-controls-title"
+        showRepeat={false}
+        presentation="floating"
+        onPrimaryClick={jest.fn()}
+        primaryLabel="Play"
+        primaryAriaLabel="Play"
+        primaryAriaPressed={false}
+        listenPlaybackRate={1}
+        onSelectSpeed={jest.fn()}
+      />
+    )
+    fireEvent.click(document.body)
+    expect(onClose).not.toHaveBeenCalled()
+  })
 })

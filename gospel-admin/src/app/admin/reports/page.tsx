@@ -85,7 +85,7 @@ export default function ReportsPage() {
           setTranslations([...BIBLE_TRANSLATION_CODES])
           setSelectedReport('esv_summary')
         }
-      } catch (err) {
+      } catch {
         setTranslations([...BIBLE_TRANSLATION_CODES])
         setSelectedReport('esv_summary')
       }

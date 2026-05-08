@@ -1,10 +1,11 @@
 'use client'
 
 import { useLayoutEffect, useRef, type MouseEvent } from 'react'
+import { createPortal } from 'react-dom'
 import { MemorizeListenSpeedButton } from '@/components/MemorizeListenSpeedButton'
 import type { MemorizeListenSpeed } from '@/lib/memorizeListenSpeedStorage'
 
-export interface MemorizeListenControlsDialogProps {
+interface MemorizeListenControlsDialogPropsBase {
   open: boolean
   onClose: () => void
   /** Root element `id` for `aria-controls` on openers. */
@@ -15,34 +16,63 @@ export interface MemorizeListenControlsDialogProps {
   primaryLabel: string
   primaryAriaLabel: string
   primaryAriaPressed: boolean
-  repeatListenOn: boolean
-  onRepeatToggle: () => void
   listenPlaybackRate: MemorizeListenSpeed
   onSelectSpeed: (r: MemorizeListenSpeed) => void
+  /**
+   * `modal` — centered card + dimmed backdrop (memorize practice).
+   * `floating` — narrow bar near the top, no backdrop; page stays scrollable and interactive (profile read-aloud).
+   */
+  presentation?: 'modal' | 'floating'
+}
+
+export type MemorizeListenControlsDialogProps =
+  | (MemorizeListenControlsDialogPropsBase & {
+      /** Default: memorize practice layout — full-width Play, then Repeat + speed. */
+      showRepeat?: true
+      repeatListenOn: boolean
+      onRepeatToggle: () => void
+    })
+  | (MemorizeListenControlsDialogPropsBase & {
+      /** Profile body read-aloud: no Repeat; Play and speed share one row. */
+      showRepeat: false
+    })
+
+function isRepeatVariant(
+  props: MemorizeListenControlsDialogProps
+): props is MemorizeListenControlsDialogPropsBase & {
+  showRepeat?: true
+  repeatListenOn: boolean
+  onRepeatToggle: () => void
+} {
+  return props.showRepeat !== false
 }
 
 /**
- * Read-aloud sub-dialog for memorize practice: play/pause, repeat, speed.
- * Rendered as a second fixed layer above the practice modal (`z-120`).
+ * Read-aloud sub-dialog: play/pause, optional repeat, speed.
+ * Portaled to `document.body` so `position: fixed` is viewport-relative (ancestors with
+ * `backdrop-filter` / `filter` would otherwise create a containing block — e.g. profile sticky header).
  */
-export function MemorizeListenControlsDialog({
-  open,
-  onClose,
-  dialogId,
-  titleId,
-  onPrimaryClick,
-  primaryLabel,
-  primaryAriaLabel,
-  primaryAriaPressed,
-  repeatListenOn,
-  onRepeatToggle,
-  listenPlaybackRate,
-  onSelectSpeed,
-}: MemorizeListenControlsDialogProps) {
+export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialogProps) {
+  const {
+    open,
+    onClose,
+    dialogId,
+    titleId,
+    onPrimaryClick,
+    primaryLabel,
+    primaryAriaLabel,
+    primaryAriaPressed,
+    listenPlaybackRate,
+    onSelectSpeed,
+    presentation = 'modal',
+  } = props
+  const repeatListenOn = isRepeatVariant(props) ? props.repeatListenOn : false
+  const showRepeatControls = isRepeatVariant(props)
   const backdropRef = useRef<HTMLDivElement | null>(null)
+  const isFloating = presentation === 'floating'
 
   useLayoutEffect(() => {
-    if (!open) return
+    if (!open || isFloating) return
     const el = backdropRef.current
     if (!el) return
     /**
@@ -59,7 +89,7 @@ export function MemorizeListenControlsDialog({
     }
     el.addEventListener('touchstart', onTouchStart, { passive: false })
     return () => el.removeEventListener('touchstart', onTouchStart)
-  }, [open, onClose])
+  }, [open, onClose, isFloating])
 
   if (!open) {
     return null
@@ -70,22 +100,12 @@ export function MemorizeListenControlsDialog({
     onClose()
   }
 
-  return (
-    <div
-      ref={backdropRef}
-      className="fixed inset-0 z-120 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4"
-      style={{
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
-      }}
-      role="presentation"
-      onClick={handleBackdropPointerClose}
-    >
+  const panel = (
       <div
         id={dialogId}
         className="relative w-full max-w-md rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-xl"
         role="dialog"
-        aria-modal="true"
+        aria-modal={isFloating ? false : true}
         aria-labelledby={titleId}
         onClick={(e) => e.stopPropagation()}
       >
@@ -107,40 +127,85 @@ export function MemorizeListenControlsDialog({
           </button>
         </div>
         <div className="flex flex-col gap-3 p-4">
-          <button
-            type="button"
-            data-testid="memorize-listen-passage"
-            onClick={onPrimaryClick}
-            className="w-full px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
-            aria-pressed={primaryAriaPressed}
-            aria-label={primaryAriaLabel}
-          >
-            {primaryLabel}
-          </button>
-          <div className="flex flex-wrap items-stretch gap-2 sm:gap-3 min-w-0">
-            <button
-              type="button"
-              data-testid="memorize-listen-repeat"
-              onClick={onRepeatToggle}
-              className="min-w-0 flex-1 px-4 py-3 rounded-lg font-medium text-center transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 data-[on=true]:bg-amber-50 data-[on=true]:dark:bg-amber-900/20 data-[on=true]:border-amber-300 data-[on=true]:dark:border-amber-800 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
-              data-on={repeatListenOn ? 'true' : 'false'}
-              aria-pressed={repeatListenOn}
-              aria-label={
-                repeatListenOn
-                  ? 'Stop repeating the read-aloud after this play ends'
-                  : 'Repeat the read-aloud with a short pause between each play'
-              }
-            >
-              {repeatListenOn ? 'Repeat on' : 'Repeat'}
-            </button>
-            <MemorizeListenSpeedButton
-              inline
-              value={listenPlaybackRate}
-              onSelect={onSelectSpeed}
-            />
-          </div>
+          {showRepeatControls ? (
+            <>
+              <button
+                type="button"
+                data-testid="memorize-listen-passage"
+                onClick={onPrimaryClick}
+                className="w-full px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
+                aria-pressed={primaryAriaPressed}
+                aria-label={primaryAriaLabel}
+              >
+                {primaryLabel}
+              </button>
+              <div className="flex flex-wrap items-stretch gap-2 sm:gap-3 min-w-0">
+                <button
+                  type="button"
+                  data-testid="memorize-listen-repeat"
+                  onClick={() => {
+                    if (!isRepeatVariant(props)) return
+                    props.onRepeatToggle()
+                  }}
+                  className="min-w-0 flex-1 px-4 py-3 rounded-lg font-medium text-center transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 data-[on=true]:bg-amber-50 data-[on=true]:dark:bg-amber-900/20 data-[on=true]:border-amber-300 data-[on=true]:dark:border-amber-800 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
+                  data-on={repeatListenOn ? 'true' : 'false'}
+                  aria-pressed={repeatListenOn}
+                  aria-label={
+                    repeatListenOn
+                      ? 'Stop repeating the read-aloud after this play ends'
+                      : 'Repeat the read-aloud with a short pause between each play'
+                  }
+                >
+                  {repeatListenOn ? 'Repeat on' : 'Repeat'}
+                </button>
+                <MemorizeListenSpeedButton
+                  inline
+                  value={listenPlaybackRate}
+                  onSelect={onSelectSpeed}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-wrap items-stretch gap-2 sm:gap-3 min-w-0">
+              <button
+                type="button"
+                data-testid="memorize-listen-passage"
+                onClick={onPrimaryClick}
+                className="min-w-0 flex-1 px-4 py-3 rounded-lg font-medium text-center transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
+                aria-pressed={primaryAriaPressed}
+                aria-label={primaryAriaLabel}
+              >
+                {primaryLabel}
+              </button>
+              <MemorizeListenSpeedButton
+                inline
+                value={listenPlaybackRate}
+                onSelect={onSelectSpeed}
+              />
+            </div>
+          )}
         </div>
       </div>
+  )
+
+  const overlay = isFloating ? (
+    <div className="fixed inset-x-0 top-0 z-120 flex justify-center px-4 pb-2 pointer-events-none pt-[calc(env(safe-area-inset-top,0px)+3.5rem)]">
+      <div className="pointer-events-auto w-full max-w-md">{panel}</div>
+    </div>
+  ) : (
+    <div
+      ref={backdropRef}
+      className="fixed inset-0 z-120 flex items-center justify-center bg-black/50 dark:bg-black/70 p-4"
+      style={{
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
+      role="presentation"
+      onClick={handleBackdropPointerClose}
+    >
+      {panel}
     </div>
   )
+
+  return createPortal(overlay, document.body)
 }

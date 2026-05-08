@@ -3,14 +3,14 @@
 // provide testing-library DOM matchers
 try {
   require('@testing-library/jest-dom')
-} catch (e) {
+} catch {
   // ignore if not available — tests will still run but some assertions may fail
 }
 
 // Provide a minimal global Response.redirect for route tests that call Response.redirect
 if (typeof global.Response === 'undefined') {
   global.Response = {
-    redirect: (url, status) => ({ status })
+    redirect: (_url, status) => ({ status })
   }
 }
 
@@ -55,4 +55,4 @@ process.env.SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || 'service'
 process.env.ESV_API_KEY = process.env.ESV_API_KEY || 'esv'
 
 // Minimal fetch mock
-global.fetch = jest.fn((url, opts) => Promise.resolve({ ok: true, json: async () => ({}) }))
+global.fetch = jest.fn(() => Promise.resolve({ ok: true, json: async () => ({}) }))

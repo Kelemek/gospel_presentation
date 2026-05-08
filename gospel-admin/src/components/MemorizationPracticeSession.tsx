@@ -32,6 +32,7 @@ import { MemorizationReorderPanel } from '@/components/MemorizationReorderPanel'
 import { MemorizeListenControlsDialog } from '@/components/MemorizeListenControlsDialog'
 import {
   applyMemorizeListenPlaybackRateToMediaElement,
+  MEMORIZE_LISTEN_REPEAT_GAP_MS,
   readMemorizeListenSpeedFromStorage,
   toMemorizeWebSpeechUtteranceRate,
   writeMemorizeListenSpeedToStorage,
@@ -93,9 +94,6 @@ const MEMORIZE_HINT_EXTRA_PEEK_INTERVAL_MS = 1000
 
 /** On Android, clamp the practice column scrollTop to 0 for this many ms after a round starts. */
 const ANDROID_SCROLL_CLAMP_MS = 600
-
-/** Gap between end of one read-aloud and the next when "Repeat" is on (ESV and TTS). */
-const MEMORIZE_LISTEN_REPEAT_GAP_MS = 650
 
 const MEMORIZE_LISTEN_CONTROLS_DIALOG_ID = 'memorize-listen-controls-dialog'
 const MEMORIZE_LISTEN_CONTROLS_TITLE_ID = 'memorize-listen-controls-title'
@@ -1734,7 +1732,7 @@ export default function MemorizationPracticeSession({
               >
                 <div>
                   <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
-                    <strong>Start practice</strong> when you're ready; <strong>Round</strong> sets where you begin in the
+                    <strong>Start practice</strong> when you{"'"}re ready; <strong>Round</strong> sets where you begin in the
                     five-round run (1 is easiest).
                   </p>
                   <p

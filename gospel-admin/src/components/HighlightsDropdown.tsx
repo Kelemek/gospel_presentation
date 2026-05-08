@@ -81,6 +81,16 @@ export default function HighlightsDropdown({
     setHighlights(list)
   }, [])
 
+  const resetSearch = useCallback(() => {
+    setSearchInput('')
+    setDebouncedSearch('')
+  }, [])
+
+  const closeDropdown = useCallback(() => {
+    resetSearch()
+    setOpen(false)
+  }, [resetSearch])
+
   const positionPanel = useCallback(() => {
     if (!open || !triggerRef.current) return
     setPanelStyle(highlightsPanelStyleFromTrigger(triggerRef.current.getBoundingClientRect()))
@@ -104,24 +114,17 @@ export default function HighlightsDropdown({
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node
       if (panelRef.current?.contains(t) || triggerRef.current?.contains(t)) return
-      setOpen(false)
+      closeDropdown()
     }
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)
-  }, [open])
+  }, [open, closeDropdown])
 
   useEffect(() => {
-    const onTourClose = (): void => setOpen(false)
+    const onTourClose = (): void => closeDropdown()
     window.addEventListener(GOSPEL_CLOSE_BOOKMARKS_PANEL_EVENT, onTourClose)
     return () => window.removeEventListener(GOSPEL_CLOSE_BOOKMARKS_PANEL_EVENT, onTourClose)
-  }, [])
-
-  useEffect(() => {
-    if (!open) {
-      setSearchInput('')
-      setDebouncedSearch('')
-    }
-  }, [open])
+  }, [closeDropdown])
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -142,7 +145,7 @@ export default function HighlightsDropdown({
   }, {})
 
   const openHighlight = (h: ProfileHighlight) => {
-    setOpen(false)
+    closeDropdown()
     if (h.slug === profileSlug) {
       const ok = scrollToTocAnchor(h.anchorId)
       if (ok) onOpenHighlight(h)
@@ -174,6 +177,7 @@ export default function HighlightsDropdown({
         onClick={() => {
           const next = !open
           if (next) refreshList()
+          else resetSearch()
           setOpen(next)
         }}
       >
@@ -199,7 +203,7 @@ export default function HighlightsDropdown({
             <div
               className="fixed inset-0 z-55 print-hide cursor-pointer bg-slate-950/55 dark:bg-slate-950/70"
               aria-hidden
-              onClick={() => setOpen(false)}
+              onClick={() => closeDropdown()}
             />
             <div
               ref={panelRef}

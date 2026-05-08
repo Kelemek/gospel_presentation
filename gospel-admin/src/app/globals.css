@@ -33,6 +33,16 @@ html.text-size-largest {
   font-size: 125%;
 }
 
+/* Sticky profile toolbar (Menu + header icons): rem-based controls scale with html font-size,
+   which pushes buttons off-screen at Larger/Largest. Inverse zoom keeps chrome ~the same visual
+   size as Normal while body text still scales. */
+html.text-size-larger [data-profile-sticky-header] {
+  zoom: 0.8888888889;
+}
+html.text-size-largest [data-profile-sticky-header] {
+  zoom: 0.8;
+}
+
 body {
   font-family: Arial, Helvetica, sans-serif;
   /* Respect safe areas in Capacitor app (notch, home indicator) */

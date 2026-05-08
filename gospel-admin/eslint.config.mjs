@@ -12,7 +12,17 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated / tooling output (not authored source)
+    "android/**",
+    "coverage/**",
   ]),
+  // Legacy Node scripts and Jest CJS setups use require()
+  {
+    files: ["scripts/**/*.js", "**/*.cjs"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
   // Allow require(), unused vars, and any types in test files for module mocking and fixtures
   {
     files: ["**/*.test.ts", "**/*.test.tsx", "**/jest.setup.js"],

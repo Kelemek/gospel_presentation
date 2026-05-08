@@ -2,7 +2,7 @@
 // Purpose: Fetch admin settings (code length, expiry, etc.) for public access
 // Used by: Login page to dynamically configure verification code input
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET() {

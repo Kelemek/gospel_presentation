@@ -23,7 +23,7 @@ async function createTable() {
   
   const sql = fs.readFileSync(path.join(__dirname, '../sql/create_bible_verses_table.sql'), 'utf8');
   
-  const { data, error } = await supabase.rpc('exec_sql', { sql_query: sql });
+  const { error } = await supabase.rpc('exec_sql', { sql_query: sql });
   
   if (error) {
     console.error('Error creating table:', error);

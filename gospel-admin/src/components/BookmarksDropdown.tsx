@@ -98,6 +98,16 @@ export default function BookmarksDropdown({
     setBookmarks(loadBookmarks())
   }, [])
 
+  const resetSearch = useCallback(() => {
+    setSearchInput('')
+    setDebouncedSearch('')
+  }, [])
+
+  const closeDropdown = useCallback(() => {
+    resetSearch()
+    setOpen(false)
+  }, [resetSearch])
+
   const positionPanel = useCallback(() => {
     if (!open || !triggerRef.current) return
     const rect = triggerRef.current.getBoundingClientRect()
@@ -122,32 +132,25 @@ export default function BookmarksDropdown({
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node
       if (panelRef.current?.contains(t) || triggerRef.current?.contains(t)) return
-      setOpen(false)
+      closeDropdown()
     }
     document.addEventListener('mousedown', onDown)
     return () => document.removeEventListener('mousedown', onDown)
-  }, [open])
+  }, [open, closeDropdown])
 
   useEffect(() => {
     const onTourClose = (): void => {
-      setOpen(false)
+      closeDropdown()
     }
     window.addEventListener(GOSPEL_CLOSE_BOOKMARKS_PANEL_EVENT, onTourClose)
     return () => window.removeEventListener(GOSPEL_CLOSE_BOOKMARKS_PANEL_EVENT, onTourClose)
-  }, [])
+  }, [closeDropdown])
 
   useEffect(() => {
     if (!addHint) return
     const t = window.setTimeout(() => setAddHint(null), 2500)
     return () => window.clearTimeout(t)
   }, [addHint])
-
-  useEffect(() => {
-    if (!open) {
-      setSearchInput('')
-      setDebouncedSearch('')
-    }
-  }, [open])
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -191,7 +194,7 @@ export default function BookmarksDropdown({
   }
 
   const handleOpenBookmark = (b: ProfileBookmark) => {
-    setOpen(false)
+    closeDropdown()
     if (b.slug === profileSlug) {
       scrollToTocAnchor(b.anchorId)
       return
@@ -213,6 +216,7 @@ export default function BookmarksDropdown({
         onClick={() => {
           const next = !open
           if (next) refreshList()
+          else resetSearch()
           setOpen(next)
         }}
       >
@@ -240,7 +244,7 @@ export default function BookmarksDropdown({
               data-bookmarks-dropdown-backdrop="true"
               className="bookmarks-dropdown-backdrop fixed inset-0 z-55 print-hide cursor-pointer bg-slate-950/55 dark:bg-slate-950/70"
               aria-hidden
-              onClick={() => setOpen(false)}
+              onClick={() => closeDropdown()}
             />
             <div
               ref={panelRef}

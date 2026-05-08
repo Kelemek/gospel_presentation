@@ -57,7 +57,7 @@ async function main() {
 
   for (;;) {
     const to = from + PAGE - 1
-    let q = supabase
+    const q = supabase
       .from('profiles')
       .select('id, slug, gospel_data')
       .like('slug', 'sg%')

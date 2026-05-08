@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/nextjs";
+import { attachSupabaseContextFromHint } from "@/lib/sentrySupabaseHintContext";
 
 Sentry.init({
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
@@ -11,17 +12,7 @@ Sentry.init({
   
   // Monitor Supabase operations
   beforeSend(event, hint) {
-    // Add Supabase context to errors
-    if (hint.originalException) {
-      const error = hint.originalException as any;
-      if (error?.message?.includes('supabase') || error?.code) {
-        Sentry.setContext('supabase', {
-          errorCode: error.code,
-          details: error.details,
-          hint: error.hint,
-        });
-      }
-    }
+    attachSupabaseContextFromHint(hint, false);
     return event;
   },
 });

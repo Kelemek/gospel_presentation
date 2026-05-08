@@ -9,7 +9,7 @@ async function checkDatabase() {
   console.log('Checking database state...\n');
   
   // Check profile_access table
-  const { data: accessData, error: accessError } = await supabase
+  const { error: accessError } = await supabase
     .from('profile_access')
     .select('*')
     .limit(1);

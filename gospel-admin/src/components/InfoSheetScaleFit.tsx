@@ -43,10 +43,7 @@ export function InfoSheetScaleFit({ children }: { children: React.ReactNode }) {
   const [layoutHeightPx, setLayoutHeightPx] = useState<number | null>(null)
 
   useLayoutEffect(() => {
-    if (!sheetNarrow) {
-      setLayoutHeightPx(null)
-      return
-    }
+    if (!sheetNarrow) return
     const outer = outerRef.current
     const inner = innerRef.current
     if (!outer || !inner) return

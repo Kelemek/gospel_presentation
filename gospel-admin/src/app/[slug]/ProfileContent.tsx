@@ -13,6 +13,7 @@ import MenuLocalDataBackup from '@/components/MenuLocalDataBackup'
 import ThemeToggle from '@/components/ThemeToggle'
 import BookmarksDropdown from '@/components/BookmarksDropdown'
 import HighlightsDropdown from '@/components/HighlightsDropdown'
+import ProfileResourceReadAloud from '@/components/ProfileResourceReadAloud'
 import ProfileHelpMenu from '@/components/ProfileHelpMenu'
 import PresentationFirstVisitWelcome from '@/components/PresentationFirstVisitWelcome'
 import { ScriptureFooterAttributionParagraphs } from '@/components/ScriptureFooterAttributionParagraphs'
@@ -774,6 +775,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                   </>
                 )}
                 <ProfileHelpMenu />
+                <ProfileResourceReadAloud sections={sections} />
                 <HighlightsDropdown
                   profileSlug={profileInfo.slug}
                   onOpenHighlight={(h) => focusHighlightById(h.id)}
