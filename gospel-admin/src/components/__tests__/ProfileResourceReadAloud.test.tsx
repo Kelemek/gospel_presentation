@@ -107,7 +107,8 @@ describe('ProfileResourceReadAloud', () => {
     expect(speak).toHaveBeenCalledTimes(1)
     const firstRate = (speak.mock.calls[0][0] as SpeechSynthesisUtterance).rate
 
-    fireEvent.change(screen.getByTestId('memorize-listen-speed'), { target: { value: '2' } })
+    fireEvent.click(screen.getByTestId('memorize-listen-speed'))
+    fireEvent.click(screen.getByTestId('memorize-listen-speed-option-2'))
 
     await waitFor(() => {
       expect(cancel).toHaveBeenCalled()

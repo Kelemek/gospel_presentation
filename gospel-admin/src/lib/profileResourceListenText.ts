@@ -70,6 +70,12 @@ function listenBlockAncestor(el: Element | null, scope: HTMLElement): HTMLElemen
   return scope
 }
 
+/** Nearest block-level ancestor of a text position, capped at `scope` (matches listen implicit breaks). */
+export function readAlongListenBlockAncestor(node: Node, scope: HTMLElement): HTMLElement {
+  const el = node.nodeType === Node.TEXT_NODE ? (node as Text).parentElement : (node as Element | null)
+  return listenBlockAncestor(el, scope)
+}
+
 function listenHasBrOrHrBetween(prevText: Text, curText: Text): boolean {
   const doc = prevText.ownerDocument
   if (!doc) return false

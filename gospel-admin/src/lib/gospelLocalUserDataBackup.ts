@@ -4,6 +4,7 @@ import { PROFILE_HIGHLIGHTS_STORAGE_KEY } from '@/lib/profileHighlightsStorage'
 import { VERSE_MEMORIZATION_STORAGE_KEY, emitMemorizationChanged } from '@/lib/verseMemorizationStorage'
 import { VERSE_PIN_STORAGE_KEY_PREFIX, LEGACY_SCRIPTURE_PROGRESS_KEY_PREFIX } from '@/lib/versePinStorage'
 import { MEMORIZE_LISTEN_SPEED_STORAGE_KEY } from '@/lib/memorizeListenSpeedStorage'
+import { PROFILE_READ_ALONG_UNDERLINE_STYLE_STORAGE_KEY } from '@/lib/profileReadAlongUnderlineStyleStorage'
 import { PRESENTATION_FIRST_VISIT_WELCOME_KEY } from '@/lib/presentationWelcomeStorage'
 import {
   PROFILE_READ_ALONG_LAST_SESSION_KEY_PREFIX,
@@ -29,6 +30,7 @@ export const GOSPEL_LOCAL_USER_DATA_FIXED_KEYS = [
   THEME_STORAGE_KEY,
   TEXT_SIZE_STORAGE_KEY,
   MEMORIZE_LISTEN_SPEED_STORAGE_KEY,
+  PROFILE_READ_ALONG_UNDERLINE_STYLE_STORAGE_KEY,
   PRESENTATION_FIRST_VISIT_WELCOME_KEY,
 ] as const
 

@@ -186,4 +186,56 @@ describe('MemorizeListenControlsDialog', () => {
     expect(screen.getByTestId('memorize-listen-read-along-underline')).toHaveAttribute('data-on', 'false')
     expect(screen.getByTestId('memorize-listen-read-along-underline').querySelector('circle')).toBeTruthy()
   })
+
+  it('with showRepeat false and underline on, renders Word and Line style controls', () => {
+    const onStyle = jest.fn()
+    render(
+      <MemorizeListenControlsDialog
+        open
+        onClose={jest.fn()}
+        dialogId="profile-resource-listen-controls-dialog"
+        titleId="profile-resource-listen-controls-title"
+        showRepeat={false}
+        presentation="floating"
+        onPrimaryClick={jest.fn()}
+        primaryLabel="Play"
+        primaryAriaLabel="Play"
+        primaryAriaPressed={false}
+        listenPlaybackRate={1}
+        onSelectSpeed={jest.fn()}
+        readAlongUnderlineOn={true}
+        onToggleReadAlongUnderline={jest.fn()}
+        readAlongUnderlineStyle="word"
+        onReadAlongUnderlineStyle={onStyle}
+      />
+    )
+    fireEvent.click(screen.getByTestId('memorize-listen-read-along-style-line'))
+    expect(onStyle).toHaveBeenCalledWith('line')
+    fireEvent.click(screen.getByTestId('memorize-listen-read-along-style-word'))
+    expect(onStyle).toHaveBeenCalledWith('word')
+  })
+
+  it('hides Word/Line controls when underline is off', () => {
+    render(
+      <MemorizeListenControlsDialog
+        open
+        onClose={jest.fn()}
+        dialogId="profile-resource-listen-controls-dialog"
+        titleId="profile-resource-listen-controls-title"
+        showRepeat={false}
+        presentation="floating"
+        onPrimaryClick={jest.fn()}
+        primaryLabel="Play"
+        primaryAriaLabel="Play"
+        primaryAriaPressed={false}
+        listenPlaybackRate={1}
+        onSelectSpeed={jest.fn()}
+        readAlongUnderlineOn={false}
+        onToggleReadAlongUnderline={jest.fn()}
+        readAlongUnderlineStyle="line"
+        onReadAlongUnderlineStyle={jest.fn()}
+      />
+    )
+    expect(screen.queryByTestId('memorize-listen-read-along-style-word')).not.toBeInTheDocument()
+  })
 })

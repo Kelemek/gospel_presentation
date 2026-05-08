@@ -1,11 +1,16 @@
 import { preferLaterEquivalentListenTextBoundary } from '@/lib/profileHighlightVisibleText'
-import { locateListenRawTextOffset } from '@/lib/profileResourceListenText'
+import { locateListenRawTextOffset, readAlongListenBlockAncestor } from '@/lib/profileResourceListenText'
 import { walkerOffsetForReadAlongPlainOffset } from '@/lib/scrollReadAlongPlain'
 
 /** Thickness of each underline segment (viewport px). */
 const READ_ALONG_UNDERLINE_THICKNESS_PX = 2
 
 export const READ_ALONG_HIGHLIGHT_ROOT_ID = 'gospel-read-along-highlight-root'
+
+/** What to paint after the next read-along UI flush (word span vs visual line at caret). */
+export type ReadAlongHighlightPaint =
+  | { kind: 'word'; start: number; endExclusive: number }
+  | { kind: 'line'; plainCaret: number }
 
 /**
  * Clears read-along underline segments (does not remove the root node).
@@ -77,6 +82,24 @@ export function updateReadAlongDomHighlight(opts: {
   const root = ensureHighlightRoot(doc)
   root.replaceChildren()
 
+  paintUnderlineRects(doc, root, rects)
+}
+
+/** Viewport Y tolerance (px) for matching `getClientRects()` rows to the caret line. */
+const VISUAL_LINE_MATCH_PAD_PX = 4
+
+export function clientRectsOnSameVisualLineAsCaret(
+  caretRect: Pick<DOMRectReadOnly, 'top' | 'bottom' | 'height'>,
+  rects: ReadonlyArray<Pick<DOMRectReadOnly, 'top' | 'bottom' | 'width' | 'height' | 'left'>>
+): DOMRectReadOnly[] {
+  const midY = caretRect.top + caretRect.height / 2
+  return rects.filter((r) => {
+    if (r.width <= 0 || r.height <= 0) return false
+    return midY >= r.top - VISUAL_LINE_MATCH_PAD_PX && midY <= r.bottom + VISUAL_LINE_MATCH_PAD_PX
+  }) as DOMRectReadOnly[]
+}
+
+function paintUnderlineRects(doc: Document, root: HTMLElement, rects: ReadonlyArray<DOMRectReadOnly>): void {
   for (const rect of rects) {
     const div = doc.createElement('div')
     div.className =
@@ -89,4 +112,61 @@ export function updateReadAlongDomHighlight(opts: {
     div.style.boxSizing = 'border-box'
     root.appendChild(div)
   }
+}
+
+/**
+ * Underlines every **wrapped visual line** in the current block that shares the caret’s row
+ * (layout-based), using the same plain offset → DOM mapping as scrolling.
+ */
+export function updateReadAlongDomHighlightVisualLine(opts: {
+  scope: HTMLElement
+  plainCollapsedLen: number
+  plainCaret: number
+}): void {
+  const { scope, plainCollapsedLen, plainCaret } = opts
+  const doc = scope.ownerDocument
+  const win = doc.defaultView
+  if (!win) return
+
+  const L = plainCollapsedLen
+  if (L <= 0) {
+    clearReadAlongDomHighlight(doc)
+    return
+  }
+
+  const caretPlain = Math.max(0, Math.min(plainCaret, L - 1))
+  const wCaret = walkerOffsetForReadAlongPlainOffset(scope, L, caretPlain)
+  let rawPos = locateListenRawTextOffset(scope, wCaret)
+  if (!rawPos) return
+  rawPos = preferLaterEquivalentListenTextBoundary(scope, rawPos)
+
+  const caretRange = doc.createRange()
+  try {
+    caretRange.setStart(rawPos.node, rawPos.offset)
+    caretRange.collapse(true)
+  } catch {
+    return
+  }
+
+  const caretRect = caretRange.getBoundingClientRect()
+  if (caretRect.height === 0 && caretRect.width === 0) return
+
+  const block = readAlongListenBlockAncestor(rawPos.node, scope)
+  const blockRange = doc.createRange()
+  try {
+    blockRange.selectNodeContents(block)
+  } catch {
+    return
+  }
+
+  const blockRects = [...blockRange.getClientRects()].filter((r) => r.width > 0 && r.height > 0)
+  let lineRects = clientRectsOnSameVisualLineAsCaret(caretRect, blockRects)
+
+  if (lineRects.length === 0) {
+    lineRects = [caretRect]
+  }
+
+  const root = ensureHighlightRoot(doc)
+  root.replaceChildren()
+  paintUnderlineRects(doc, root, lineRects)
 }

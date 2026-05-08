@@ -1799,7 +1799,7 @@ export default function MemorizationPracticeSession({
                       aria-label="Starting round (1 to 5)"
                       value={startRoundChoice}
                       onChange={(e) => setStartRoundChoice(Number(e.target.value))}
-                      className="memorize-intro-start-round-select box-border h-12.5 w-full min-w-0 rounded-lg border border-slate-300 bg-white pl-4 pr-10 text-sm font-medium text-slate-800 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 appearance-none"
+                      className="memorize-intro-start-round-select box-border h-12.5 w-full min-w-0 rounded-lg border border-slate-300 bg-white pl-3 pr-10 text-sm font-medium text-slate-800 shadow-sm transition-colors hover:border-slate-400 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-slate-500 appearance-none"
                     >
                       {Array.from({ length: MEMORIZATION_FULL_HIDE_ROUND }, (_, i) => i + 1).map((n) => (
                         <option key={n} value={n}>

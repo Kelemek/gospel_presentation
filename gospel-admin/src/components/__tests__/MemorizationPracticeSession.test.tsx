@@ -142,7 +142,8 @@ describe('MemorizationPracticeSession', () => {
       expect(speech.text).toContain('For God so loved the world')
       expect(speech.text).toMatch(/John chapter 3, verse 16/i)
       expect(speech.rate).toBe(1)
-      await user.selectOptions(screen.getByTestId('memorize-listen-speed'), '1.25')
+      await user.click(screen.getByTestId('memorize-listen-speed'))
+      await user.click(screen.getByTestId('memorize-listen-speed-option-1.25'))
       await user.click(screen.getByTestId('memorize-listen-passage'))
       expect(speak).toHaveBeenCalledTimes(2)
       const [utt2] = speak.mock.calls[1] ?? []
@@ -177,7 +178,8 @@ describe('MemorizationPracticeSession', () => {
       <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
     )
     await user.click(screen.getByTestId('memorize-listen-open'))
-    await user.selectOptions(screen.getByTestId('memorize-listen-speed'), '1.5')
+    await user.click(screen.getByTestId('memorize-listen-speed'))
+    await user.click(screen.getByTestId('memorize-listen-speed-option-1.5'))
     expect(setItemSpy).toHaveBeenCalledWith(MEMORIZE_LISTEN_SPEED_STORAGE_KEY, '1.5')
     setItemSpy.mockRestore()
   })

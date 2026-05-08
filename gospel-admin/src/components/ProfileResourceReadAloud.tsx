@@ -41,6 +41,8 @@ export default function ProfileResourceReadAloud({ sections, profileSlug }: Prof
     restartReadAloudFromBeginning,
     readAlongUnderlineOn,
     toggleReadAlongUnderline,
+    readAlongUnderlineStyle,
+    setReadAlongUnderlineStyle,
   } = useProfileResourceReadAloud({ sections, profileSlug, onNothingToRead })
 
   if (androidHost) {
@@ -93,6 +95,8 @@ export default function ProfileResourceReadAloud({ sections, profileSlug }: Prof
         onSelectSpeed={onSelectSpeed}
         readAlongUnderlineOn={readAlongUnderlineOn}
         onToggleReadAlongUnderline={toggleReadAlongUnderline}
+        readAlongUnderlineStyle={readAlongUnderlineStyle}
+        onReadAlongUnderlineStyle={setReadAlongUnderlineStyle}
         onStartFromBeginning={restartReadAloudFromBeginning}
       />
     </>

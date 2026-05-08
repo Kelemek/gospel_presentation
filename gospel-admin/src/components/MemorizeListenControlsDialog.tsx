@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef, type MouseEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { MemorizeListenSpeedButton } from '@/components/MemorizeListenSpeedButton'
 import type { MemorizeListenSpeed } from '@/lib/memorizeListenSpeedStorage'
+import type { ProfileReadAlongUnderlineStyle } from '@/lib/profileReadAlongUnderlineStyleStorage'
 
 interface MemorizeListenControlsDialogPropsBase {
   open: boolean
@@ -21,6 +22,9 @@ interface MemorizeListenControlsDialogPropsBase {
   /** Profile read-aloud: optional word-underline toggle between Play and speed. */
   readAlongUnderlineOn?: boolean
   onToggleReadAlongUnderline?: () => void
+  /** When underline is on: word vs full wrapped-line highlight. */
+  readAlongUnderlineStyle?: ProfileReadAlongUnderlineStyle
+  onReadAlongUnderlineStyle?: (style: ProfileReadAlongUnderlineStyle) => void
   /** Profile read-aloud only: clears saved resume position and restarts the section from the top. */
   onStartFromBeginning?: () => void
   /**
@@ -123,6 +127,8 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
     onSelectSpeed,
     readAlongUnderlineOn,
     onToggleReadAlongUnderline,
+    readAlongUnderlineStyle,
+    onReadAlongUnderlineStyle,
     onStartFromBeginning,
     presentation = 'modal',
   } = props
@@ -240,12 +246,12 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
               </div>
             </>
           ) : (
-            <div className="flex flex-wrap items-stretch gap-2 sm:gap-3 min-w-0">
+            <div className="flex flex-nowrap items-stretch gap-1.5 sm:gap-2 min-w-0 overflow-x-auto">
               <button
                 type="button"
                 data-testid="memorize-listen-passage"
                 onClick={onPrimaryClick}
-                className="min-w-0 flex-1 px-4 py-3 rounded-lg font-medium text-center transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100"
+                className="min-w-0 min-h-12.5 flex-1 px-3 sm:px-4 rounded-lg font-medium text-center transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 text-sm sm:text-base shrink"
                 aria-pressed={primaryAriaPressed}
                 aria-label={primaryAriaLabel}
               >
@@ -256,20 +262,56 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
                   type="button"
                   data-testid="memorize-listen-read-along-underline"
                   onClick={onToggleReadAlongUnderline}
-                  className="shrink-0 px-3 py-3 rounded-lg text-sm font-medium text-center transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 min-h-[48px] min-w-[48px] inline-flex items-center justify-center"
+                  className="shrink-0 h-12.5 w-12.5 rounded-lg text-sm font-medium transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 inline-flex items-center justify-center"
                   data-on={readAlongUnderlineOn ? 'true' : 'false'}
                   aria-pressed={readAlongUnderlineOn}
                   aria-label={
                     readAlongUnderlineOn
-                      ? 'Word underline while reading is on. Press to turn off underline.'
-                      : 'Word underline while reading is off. Press to turn on underline.'
+                      ? 'Read-along underline while listening is on. Press to turn off.'
+                      : 'Read-along underline while listening is off. Press to turn on.'
                   }
                   title={readAlongUnderlineOn ? 'Underline on (tap to hide)' : 'Underline off (tap to show)'}
                 >
-                  <span className="inline-flex items-center justify-center">
+                  <span className="inline-flex items-center justify-center scale-90">
                     <ReadAlongUnderlineGlyph on={readAlongUnderlineOn} />
                   </span>
                 </button>
+              ) : null}
+              {readAlongUnderlineOn &&
+              onReadAlongUnderlineStyle &&
+              readAlongUnderlineStyle !== undefined ? (
+                <div
+                  className="flex shrink-0 h-12.5 rounded-lg border border-slate-300 dark:border-slate-600 overflow-hidden divide-x divide-slate-300 dark:divide-slate-600"
+                  role="group"
+                  aria-label="Read-along highlight width"
+                >
+                  <button
+                    type="button"
+                    data-testid="memorize-listen-read-along-style-word"
+                    onClick={() => onReadAlongUnderlineStyle('word')}
+                    className={`px-2 sm:px-2.5 min-w-11 text-xs font-medium transition-colors ${
+                      readAlongUnderlineStyle === 'word'
+                        ? 'bg-amber-50 dark:bg-amber-900/25 text-amber-900 dark:text-amber-100'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
+                    }`}
+                    aria-pressed={readAlongUnderlineStyle === 'word'}
+                  >
+                    Word
+                  </button>
+                  <button
+                    type="button"
+                    data-testid="memorize-listen-read-along-style-line"
+                    onClick={() => onReadAlongUnderlineStyle('line')}
+                    className={`px-2 sm:px-2.5 min-w-11 text-xs font-medium transition-colors ${
+                      readAlongUnderlineStyle === 'line'
+                        ? 'bg-amber-50 dark:bg-amber-900/25 text-amber-900 dark:text-amber-100'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
+                    }`}
+                    aria-pressed={readAlongUnderlineStyle === 'line'}
+                  >
+                    Line
+                  </button>
+                </div>
               ) : null}
               <MemorizeListenSpeedButton
                 inline

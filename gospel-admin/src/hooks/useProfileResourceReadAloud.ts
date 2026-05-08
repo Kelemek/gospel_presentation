@@ -19,6 +19,8 @@ import {
 import {
   clearReadAlongDomHighlight,
   updateReadAlongDomHighlight,
+  updateReadAlongDomHighlightVisualLine,
+  type ReadAlongHighlightPaint,
 } from '@/lib/profileReadAlongDomHighlight'
 import { findNextReadAlongScope } from '@/lib/profileReadAlongNextAnchor'
 import {
@@ -39,6 +41,11 @@ import {
   GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT,
   type GospelWebSpeechExclusiveOwnerDetail,
 } from '@/lib/exclusiveWebSpeechListen'
+import {
+  readProfileReadAlongUnderlineStyleFromStorage,
+  writeProfileReadAlongUnderlineStyleToStorage,
+  type ProfileReadAlongUnderlineStyle,
+} from '@/lib/profileReadAlongUnderlineStyleStorage'
 
 export interface UseProfileResourceReadAloudOptions {
   sections: GospelSection[]
@@ -76,11 +83,11 @@ export function useProfileResourceReadAloud({
 
   const readAlongScopeRef = useRef<HTMLElement | null>(null)
   const readAlongPlainLenRef = useRef(0)
-  /** Last painted highlight range for scroll/resize refresh */
-  const readAlongHighlightPlainRef = useRef<{ start: number; endExclusive: number } | null>(null)
+  /** Last painted highlight for scroll/resize refresh */
+  const readAlongHighlightPaintRef = useRef<ReadAlongHighlightPaint | null>(null)
   const readAlongPendingUiRef = useRef<{
     scroll?: number
-    highlight?: { start: number; endExclusive: number } | null
+    highlight?: ReadAlongHighlightPaint | null
     /** Word boundaries fire rapidly; smooth scroll stacks and lags behind fixed underlines — use `auto` there. */
     scrollBehavior?: ScrollBehavior
   }>({})
@@ -94,6 +101,10 @@ export function useProfileResourceReadAloud({
   /** Word underline while speaking (profile read-aloud); immediate ref for `speakChunkInternal`. */
   const readAlongUnderlineEnabledRef = useRef(true)
   const [readAlongUnderlineOn, setReadAlongUnderlineOn] = useState(true)
+  const [readAlongUnderlineStyle, setReadAlongUnderlineStyleState] = useState<ProfileReadAlongUnderlineStyle>(() =>
+    typeof window === 'undefined' ? 'word' : readProfileReadAlongUnderlineStyleFromStorage()
+  )
+  const readAlongUnderlineStyleRef = useRef(readAlongUnderlineStyle)
   /** Invalidates delayed boundary UI when clearing session or superseding with a newer boundary. */
   const readAlongBoundaryLagSeqRef = useRef(0)
 
@@ -102,6 +113,10 @@ export function useProfileResourceReadAloud({
   useLayoutEffect(() => {
     profileSlugRef.current = profileSlug
   }, [profileSlug])
+
+  useLayoutEffect(() => {
+    readAlongUnderlineStyleRef.current = readAlongUnderlineStyle
+  }, [readAlongUnderlineStyle])
 
   const bumpListen = useCallback(() => {
     setListenUiTick((t) => t + 1)
@@ -157,7 +172,7 @@ export function useProfileResourceReadAloud({
   const scheduleReadAlongUi = useCallback(
     (patch: {
       scroll?: number
-      highlight?: { start: number; endExclusive: number } | null
+      highlight?: ReadAlongHighlightPaint | null
       scrollBehavior?: ScrollBehavior
     }) => {
       const acc = readAlongPendingUiRef.current
@@ -183,17 +198,23 @@ export function useProfileResourceReadAloud({
 
         if (pending.highlight !== undefined) {
           if (pending.highlight === null) {
-            readAlongHighlightPlainRef.current = null
+            readAlongHighlightPaintRef.current = null
             if (typeof document !== 'undefined') clearReadAlongDomHighlight(document)
           } else if (scope && plainLen > 0) {
-            const { start, endExclusive } = pending.highlight
-            readAlongHighlightPlainRef.current = pending.highlight
-            if (endExclusive > start) {
+            const h = pending.highlight
+            readAlongHighlightPaintRef.current = h
+            if (h.kind === 'word' && h.endExclusive > h.start) {
               updateReadAlongDomHighlight({
                 scope,
                 plainCollapsedLen: plainLen,
-                plainStart: start,
-                plainEndExclusive: endExclusive,
+                plainStart: h.start,
+                plainEndExclusive: h.endExclusive,
+              })
+            } else if (h.kind === 'line') {
+              updateReadAlongDomHighlightVisualLine({
+                scope,
+                plainCollapsedLen: plainLen,
+                plainCaret: h.plainCaret,
               })
             }
           }
@@ -209,7 +230,7 @@ export function useProfileResourceReadAloud({
       persistTimerRef.current = null
     }
     cancelReadAlongUiScheduling()
-    readAlongHighlightPlainRef.current = null
+    readAlongHighlightPaintRef.current = null
     if (typeof document !== 'undefined') clearReadAlongDomHighlight(document)
     readAlongScopeRef.current = null
     readAlongPlainLenRef.current = 0
@@ -227,16 +248,25 @@ export function useProfileResourceReadAloud({
       if (raf !== 0) return
       raf = requestAnimationFrame(() => {
         raf = 0
-        const hl = readAlongHighlightPlainRef.current
+        const hl = readAlongHighlightPaintRef.current
         const scope = readAlongScopeRef.current
         const plainLen = readAlongPlainLenRef.current
-        if (!hl || !scope || plainLen <= 0 || hl.endExclusive <= hl.start) return
-        updateReadAlongDomHighlight({
-          scope,
-          plainCollapsedLen: plainLen,
-          plainStart: hl.start,
-          plainEndExclusive: hl.endExclusive,
-        })
+        if (!hl || !scope || plainLen <= 0) return
+        if (hl.kind === 'word' && hl.endExclusive <= hl.start) return
+        if (hl.kind === 'word') {
+          updateReadAlongDomHighlight({
+            scope,
+            plainCollapsedLen: plainLen,
+            plainStart: hl.start,
+            plainEndExclusive: hl.endExclusive,
+          })
+        } else {
+          updateReadAlongDomHighlightVisualLine({
+            scope,
+            plainCollapsedLen: plainLen,
+            plainCaret: hl.plainCaret,
+          })
+        }
       })
     }
     window.addEventListener('scroll', onViewportChange, { passive: true })
@@ -393,6 +423,7 @@ export function useProfileResourceReadAloud({
             scroll: chunkStart,
             highlight: readAlongUnderlineEnabledRef.current
               ? {
+                  kind: 'word',
                   start: chunkStart,
                   endExclusive: chunkStart + text.length,
                 }
@@ -408,10 +439,13 @@ export function useProfileResourceReadAloud({
           recordReadAlongProgressPlainOffset(plainWordStart)
           const mid = Math.floor((plainWordStart + plainWordEnd - 1) / 2)
           const plainOffset = Math.min(Math.max(0, plainLen - 1), Math.max(chunkStart, mid))
+          const lineMode = readAlongUnderlineStyleRef.current === 'line'
           scheduleReadAlongUi({
             scroll: plainOffset,
             highlight: readAlongUnderlineEnabledRef.current
-              ? { start: plainWordStart, endExclusive: plainWordEnd }
+              ? lineMode
+                ? { kind: 'line', plainCaret: plainOffset }
+                : { kind: 'word', start: plainWordStart, endExclusive: plainWordEnd }
               : null,
           })
         } else {
@@ -457,15 +491,25 @@ export function useProfileResourceReadAloud({
               Math.max(0, plainLen - 1),
               chunkStart + Math.floor((wr.relStart + wr.relEndExclusive - 1) / 2)
             )
+            const lineMode = readAlongUnderlineStyleRef.current === 'line'
             scheduleReadAlongUi({
               scroll: scrollMid,
               highlight: readAlongUnderlineEnabledRef.current
-                ? { start: plainWordStart, endExclusive: plainWordEnd }
+                ? lineMode
+                  ? { kind: 'line', plainCaret: scrollMid }
+                  : { kind: 'word', start: plainWordStart, endExclusive: plainWordEnd }
                 : null,
               scrollBehavior: 'auto',
             })
           } else {
-            scheduleReadAlongUi({ scroll: progressPlain, scrollBehavior: 'auto' })
+            const lineMode = readAlongUnderlineStyleRef.current === 'line'
+            scheduleReadAlongUi({
+              scroll: progressPlain,
+              scrollBehavior: 'auto',
+              ...(readAlongUnderlineEnabledRef.current && lineMode
+                ? { highlight: { kind: 'line', plainCaret: progressPlain } as const }
+                : {}),
+            })
           }
         }
 
@@ -573,7 +617,7 @@ export function useProfileResourceReadAloud({
       const syn = window.speechSynthesis
       syn.cancel()
       cancelReadAlongUiScheduling()
-      readAlongHighlightPlainRef.current = null
+      readAlongHighlightPaintRef.current = null
       if (typeof document !== 'undefined') clearReadAlongDomHighlight(document)
       ttsCancelGenerationRef.current += 1
 
@@ -718,7 +762,7 @@ export function useProfileResourceReadAloud({
       const next = !prev
       readAlongUnderlineEnabledRef.current = next
       if (!next) {
-        readAlongHighlightPlainRef.current = null
+        readAlongHighlightPaintRef.current = null
         if (typeof document !== 'undefined') clearReadAlongDomHighlight(document)
         scheduleReadAlongUi({ highlight: null })
       }
@@ -726,6 +770,16 @@ export function useProfileResourceReadAloud({
       return next
     })
   }, [bumpListen, scheduleReadAlongUi])
+
+  const setReadAlongUnderlineStyle = useCallback(
+    (style: ProfileReadAlongUnderlineStyle) => {
+      readAlongUnderlineStyleRef.current = style
+      setReadAlongUnderlineStyleState(style)
+      writeProfileReadAlongUnderlineStyleToStorage(style)
+      queueMicrotask(bumpListen)
+    },
+    [bumpListen]
+  )
 
   const onSelectSpeed = useCallback(
     (r: MemorizeListenSpeed) => {
@@ -762,5 +816,7 @@ export function useProfileResourceReadAloud({
     restartReadAloudFromBeginning,
     readAlongUnderlineOn,
     toggleReadAlongUnderline,
+    readAlongUnderlineStyle,
+    setReadAlongUnderlineStyle,
   }
 }
