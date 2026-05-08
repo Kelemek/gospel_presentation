@@ -1,6 +1,6 @@
 import {
-  locateVisibleTextOffset,
-  preferLaterEquivalentTextBoundary,
+  locateListenVisibleTextOffset,
+  preferLaterEquivalentListenTextBoundary,
 } from '@/lib/profileHighlightVisibleText'
 import { walkerOffsetForReadAlongPlainOffset } from '@/lib/scrollReadAlongPlain'
 
@@ -60,11 +60,11 @@ export function updateReadAlongDomHighlight(opts: {
   const wStart = walkerOffsetForReadAlongPlainOffset(scope, plainCollapsedLen, start)
   const wEnd = walkerOffsetForReadAlongPlainOffset(scope, plainCollapsedLen, end)
 
-  const startRaw = locateVisibleTextOffset(scope, wStart)
-  const endRaw = locateVisibleTextOffset(scope, wEnd)
+  const startRaw = locateListenVisibleTextOffset(scope, wStart)
+  const endRaw = locateListenVisibleTextOffset(scope, wEnd)
   if (!startRaw || !endRaw) return
 
-  const startP = preferLaterEquivalentTextBoundary(scope, startRaw)
+  const startP = preferLaterEquivalentListenTextBoundary(scope, startRaw)
 
   const range = doc.createRange()
   try {

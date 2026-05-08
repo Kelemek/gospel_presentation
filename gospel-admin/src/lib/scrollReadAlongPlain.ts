@@ -1,23 +1,53 @@
 import {
-  locateVisibleTextOffset,
-  preferLaterEquivalentTextBoundary,
-  totalVisiblePlainTextLength,
+  locateListenVisibleTextOffset,
+  preferLaterEquivalentListenTextBoundary,
 } from '@/lib/profileHighlightVisibleText'
+import { visibleListenRawText } from '@/lib/profileResourceListenText'
 
 /**
- * Maps an offset into {@link plainTextForProfileResourceListen} (single-space collapsed) to an
- * approximate offset in the highlight/walker visible-text stream. Lengths often differ (innerText
- * vs raw text nodes); proportional mapping keeps scroll position roughly aligned for read-along.
+ * Maps a **collapsed** offset (same string as {@link plainTextForProfileResourceListen}) into a
+ * **raw listen-stream** index: concatenation of eligible `Text` nodes (no mounts/buttons), before
+ * `\s+ → ` ` collapse. Using proportional scaling (`plainLen` vs walkerLen) drifts badly on WebKit
+ * when block boundaries add/remove implicit whitespace vs `innerText`; this walk stays aligned with
+ * what is spoken.
  */
 export function walkerOffsetForReadAlongPlainOffset(
   scope: HTMLElement,
   plainCollapsedLen: number,
   plainOffset: number
 ): number {
-  const walkerLen = totalVisiblePlainTextLength(scope)
-  if (walkerLen <= 0 || plainCollapsedLen <= 0) return 0
-  const clamped = Math.max(0, Math.min(plainOffset, plainCollapsedLen))
-  return Math.min(walkerLen, Math.round((clamped / plainCollapsedLen) * walkerLen))
+  const raw = visibleListenRawText(scope)
+  const full = raw.replace(/\s+/g, ' ').trim()
+  const L = full.length
+  if (L === 0 || plainCollapsedLen <= 0) return 0
+
+  const target = Math.max(0, Math.min(plainOffset, L))
+  if (target >= L) return raw.length
+
+  let wi = 0
+  while (wi < raw.length && /\s/.test(raw[wi]!)) wi += 1
+
+  let pi = 0
+  const maxSteps = raw.length + L + 8
+  let steps = 0
+  while (pi < target && wi < raw.length && steps++ < maxSteps) {
+    const fc = full[pi]!
+    if (fc === ' ') {
+      while (wi < raw.length && /\s/.test(raw[wi]!)) wi += 1
+      pi += 1
+    } else {
+      while (wi < raw.length && /\s/.test(raw[wi]!)) wi += 1
+      if (wi >= raw.length) break
+      if (raw[wi] !== fc) {
+        wi += 1
+        continue
+      }
+      wi += 1
+      pi += 1
+    }
+  }
+
+  return Math.min(wi, raw.length)
 }
 
 export function prefersReducedMotionReadAlong(): boolean {
@@ -44,9 +74,9 @@ export function scrollReadAlongPlainOffsetIntoViewCenter(
   if (!win) return
 
   const walkerOff = walkerOffsetForReadAlongPlainOffset(scope, plainCollapsedLen, plainOffset)
-  let pos = locateVisibleTextOffset(scope, walkerOff)
+  let pos = locateListenVisibleTextOffset(scope, walkerOff)
   if (!pos) return
-  pos = preferLaterEquivalentTextBoundary(scope, pos)
+  pos = preferLaterEquivalentListenTextBoundary(scope, pos)
 
   const doc = scope.ownerDocument
   const r = doc.createRange()

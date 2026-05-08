@@ -16,6 +16,16 @@ export function isWithinGospelMount(node: Node, root: HTMLElement): boolean {
   return false
 }
 
+/** Text inside `<button>` is omitted from profile read-aloud (same as highlight/listen plain text). */
+export function isWithinButton(node: Node, root: HTMLElement): boolean {
+  let cur: Node | null = node
+  while (cur && cur !== root) {
+    if (cur instanceof Element && cur.tagName === 'BUTTON') return true
+    cur = cur.parentNode
+  }
+  return false
+}
+
 export function visibleTextLengthBeforeBoundary(
   scope: HTMLElement,
   boundaryNode: Node,
@@ -156,6 +166,122 @@ export function locateVisibleTextOffset(
     return { node: lastEligible, offset: len }
   }
   return null
+}
+
+function listenIneligibleText(node: Text, scope: HTMLElement): boolean {
+  return isWithinGospelMount(node, scope) || isWithinButton(node, scope)
+}
+
+/** Same as {@link locateVisibleTextOffset} but skips `[data-gospel-mount]` **and** `<button>` text — matches {@link visibleListenRawText}. */
+export function locateListenVisibleTextOffset(
+  container: HTMLElement,
+  targetOffset: number
+): { node: Text; offset: number } | null {
+  const doc = container.ownerDocument
+  if (!doc) return null
+  let running = 0
+  const matches: Array<{ node: Text; offset: number }> = []
+  let lastEligible: Text | null = null
+
+  const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT)
+  let node: Node | null = walker.nextNode()
+  while (node) {
+    if (!(node instanceof Text) || listenIneligibleText(node, container)) {
+      node = walker.nextNode()
+      continue
+    }
+    const textNode = node
+    lastEligible = textNode
+    const len = textNode.length
+    for (let offset = 0; offset <= len; offset += 1) {
+      if (running + offset === targetOffset) {
+        matches.push({ node: textNode, offset })
+      }
+    }
+    running += len
+    node = walker.nextNode()
+  }
+
+  if (matches.length > 0) {
+    matches.sort(sortCollapsedTextBoundariesDocumentOrder)
+    const first = matches[0]!
+    const last = matches[matches.length - 1]!
+    if (first.node === last.node && first.offset === last.offset) return first
+    if (hasGospelMountIntersectingOpenRangeBetween(container, first, last)) return first
+    return last
+  }
+
+  if (lastEligible) {
+    const len = lastEligible.length
+    return { node: lastEligible, offset: len }
+  }
+  return null
+}
+
+export function visibleListenTextLengthBeforeBoundary(
+  scope: HTMLElement,
+  boundaryNode: Node,
+  boundaryOffset: number
+): number {
+  const doc = scope.ownerDocument
+  if (!doc) return 0
+
+  const boundary = doc.createRange()
+  boundary.setStart(boundaryNode, boundaryOffset)
+  boundary.collapse(true)
+
+  let count = 0
+  const walker = doc.createTreeWalker(scope, NodeFilter.SHOW_TEXT)
+  let step: Node | null
+  while ((step = walker.nextNode())) {
+    if (!(step instanceof Text)) continue
+    if (listenIneligibleText(step, scope)) continue
+    const t = step
+    const len = t.length
+    for (let i = 0; i < len; i++) {
+      const startOfChar = doc.createRange()
+      startOfChar.setStart(t, i)
+      startOfChar.collapse(true)
+      const cmp = boundary.compareBoundaryPoints(Range.START_TO_START, startOfChar)
+      if (cmp > 0) count++
+      else return count
+    }
+  }
+  return count
+}
+
+function nextEligibleListenTextNodeAfter(scope: HTMLElement, prev: Text): Text | null {
+  const doc = scope.ownerDocument
+  if (!doc) return null
+
+  let seenPrev = false
+  const walker = doc.createTreeWalker(scope, NodeFilter.SHOW_TEXT)
+  let step: Node | null
+  while ((step = walker.nextNode())) {
+    if (!(step instanceof Text) || listenIneligibleText(step, scope)) continue
+    if (seenPrev) return step
+    if (step === prev) seenPrev = true
+  }
+  return null
+}
+
+export function preferLaterEquivalentListenTextBoundary(
+  scope: HTMLElement,
+  point: { node: Text; offset: number }
+): { node: Text; offset: number } {
+  let cur = point
+  const vbGoal = visibleListenTextLengthBeforeBoundary(scope, cur.node, cur.offset)
+
+  let guard = 0
+  while (guard++ < 512) {
+    if (cur.offset !== cur.node.length) break
+    const nx = nextEligibleListenTextNodeAfter(scope, cur.node)
+    if (!nx) break
+    if (visibleListenTextLengthBeforeBoundary(scope, nx, 0) !== vbGoal) break
+    cur = { node: nx, offset: 0 }
+  }
+
+  return cur
 }
 
 function nextEligibleTextNodeAfter(scope: HTMLElement, prev: Text): Text | null {
