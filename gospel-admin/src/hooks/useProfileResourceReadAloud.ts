@@ -12,11 +12,23 @@ import {
 import { isMemorizeAndroidWebHost, isMemorizeIosWebHost } from '@/lib/memorizationViewportPlatform'
 import { getCurrentTocAnchorId } from '@/lib/tocAnchorFromScroll'
 import { plainTextForProfileResourceListen } from '@/lib/profileResourceListenText'
-import { splitTextForTtsChunksWithOffsets } from '@/lib/splitTextForTtsChunks'
+import {
+  chunkIndexContainingPlainOffset,
+  splitTextForTtsChunksWithOffsets,
+} from '@/lib/splitTextForTtsChunks'
 import {
   clearReadAlongDomHighlight,
   updateReadAlongDomHighlight,
 } from '@/lib/profileReadAlongDomHighlight'
+import { findNextReadAlongScope } from '@/lib/profileReadAlongNextAnchor'
+import {
+  clearProfileReadAlongProgress,
+  loadProfileReadAlongLastSession,
+  loadProfileReadAlongProgress,
+  readAlongTextFingerprint,
+  saveProfileReadAlongLastSession,
+  saveProfileReadAlongProgress,
+} from '@/lib/profileReadAlongProgressStorage'
 import {
   currentWordRangeInChunk,
   firstWordRangeInChunk,
@@ -28,12 +40,15 @@ import {
 
 export interface UseProfileResourceReadAloudOptions {
   sections: GospelSection[]
+  /** Profile slug — enables saved resume position per TOC anchor in localStorage. */
+  profileSlug?: string
   /** Optional alert when there is nothing to read or the anchor is missing */
   onNothingToRead?: (message: string) => void
 }
 
 export function useProfileResourceReadAloud({
   sections,
+  profileSlug,
   onNothingToRead,
 }: UseProfileResourceReadAloudOptions) {
   const [controlsOpen, setControlsOpen] = useState(false)
@@ -69,11 +84,60 @@ export function useProfileResourceReadAloud({
   }>({})
   const readAlongUiRafRef = useRef(0)
 
+  const profileSlugRef = useRef(profileSlug)
+  const readAlongAnchorIdRef = useRef<string | null>(null)
+  const readAlongFingerprintRef = useRef<string | null>(null)
+  const lastPersistedPlainOffsetRef = useRef(0)
+  const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const androidHost = useMemo(() => isMemorizeAndroidWebHost(), [])
+
+  useLayoutEffect(() => {
+    profileSlugRef.current = profileSlug
+  }, [profileSlug])
 
   const bumpListen = useCallback(() => {
     setListenUiTick((t) => t + 1)
   }, [])
+
+  const flushReadAlongProgressPersist = useCallback(() => {
+    if (persistTimerRef.current) {
+      clearTimeout(persistTimerRef.current)
+      persistTimerRef.current = null
+    }
+    if (androidHost) return
+    const slug = profileSlugRef.current
+    if (!slug) return
+    const anchor = readAlongAnchorIdRef.current
+    const fp = readAlongFingerprintRef.current
+    const plainLen = readAlongPlainLenRef.current
+    const off = lastPersistedPlainOffsetRef.current
+    if (!anchor || !fp || plainLen <= 0 || off < 0) return
+    if (off >= plainLen) return
+    saveProfileReadAlongProgress(slug, anchor, off, fp)
+    saveProfileReadAlongLastSession(slug, anchor, off, fp)
+  }, [androidHost])
+
+  const scheduleReadAlongProgressPersist = useCallback(() => {
+    if (androidHost || !profileSlugRef.current) return
+    if (persistTimerRef.current) clearTimeout(persistTimerRef.current)
+    persistTimerRef.current = setTimeout(() => {
+      persistTimerRef.current = null
+      flushReadAlongProgressPersist()
+    }, 450)
+  }, [androidHost, flushReadAlongProgressPersist])
+
+  const recordReadAlongProgressPlainOffset = useCallback(
+    (plainOffset: number) => {
+      if (androidHost || !profileSlugRef.current || !ttsActiveRef.current) return
+      const plainLen = readAlongPlainLenRef.current
+      if (plainLen <= 0) return
+      const clamped = Math.max(0, Math.min(plainOffset, plainLen - 1))
+      lastPersistedPlainOffsetRef.current = Math.max(lastPersistedPlainOffsetRef.current, clamped)
+      scheduleReadAlongProgressPersist()
+    },
+    [androidHost, scheduleReadAlongProgressPersist]
+  )
 
   const cancelReadAlongUiScheduling = useCallback(() => {
     if (readAlongUiRafRef.current !== 0) {
@@ -133,12 +197,19 @@ export function useProfileResourceReadAloud({
   )
 
   const clearReadAlongSession = useCallback(() => {
+    if (persistTimerRef.current) {
+      clearTimeout(persistTimerRef.current)
+      persistTimerRef.current = null
+    }
     cancelReadAlongUiScheduling()
     readAlongHighlightPlainRef.current = null
     if (typeof document !== 'undefined') clearReadAlongDomHighlight(document)
     readAlongScopeRef.current = null
     readAlongPlainLenRef.current = 0
     ttsChunkPlainStartsRef.current = []
+    readAlongAnchorIdRef.current = null
+    readAlongFingerprintRef.current = null
+    lastPersistedPlainOffsetRef.current = 0
   }, [cancelReadAlongUiScheduling])
 
   useEffect(() => {
@@ -171,13 +242,14 @@ export function useProfileResourceReadAloud({
 
   useEffect(() => {
     return () => {
+      flushReadAlongProgressPersist()
       cancelReadAlongUiScheduling()
       if (typeof document !== 'undefined') clearReadAlongDomHighlight(document)
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         window.speechSynthesis.cancel()
       }
     }
-  }, [cancelReadAlongUiScheduling])
+  }, [cancelReadAlongUiScheduling, flushReadAlongProgressPersist])
 
   const resolveListenScopeAndText = useCallback((): {
     scope: HTMLElement
@@ -209,10 +281,49 @@ export function useProfileResourceReadAloud({
 
       const chunks = ttsChunksRef.current
       if (chunkIndex >= chunks.length) {
-        ttsActiveRef.current = false
-        ttsChunkIndexRef.current = 0
+        const slug = profileSlugRef.current
+        const anchorDone = readAlongAnchorIdRef.current
+        const completedScope = readAlongScopeRef.current
+        if (persistTimerRef.current) {
+          clearTimeout(persistTimerRef.current)
+          persistTimerRef.current = null
+        }
         memorizeListenTtsRateAtStartRef.current = null
         clearReadAlongSession()
+        if (slug && anchorDone) clearProfileReadAlongProgress(slug, anchorDone)
+
+        const next =
+          anchorDone && typeof document !== 'undefined'
+            ? findNextReadAlongScope(sections, completedScope, anchorDone)
+            : null
+
+        if (next && !androidHost) {
+          const fingerprint = readAlongTextFingerprint(next.text)
+          const chunkMeta = splitTextForTtsChunksWithOffsets(next.text)
+          if (chunkMeta.length > 0) {
+            lastPersistedPlainOffsetRef.current = 0
+            readAlongAnchorIdRef.current = next.anchorId
+            readAlongFingerprintRef.current = fingerprint
+            readAlongScopeRef.current = next.scope
+            readAlongPlainLenRef.current = next.text.length
+            ttsChunkPlainStartsRef.current = chunkMeta.map((c) => c.plainStart)
+            ttsChunksRef.current = chunkMeta.map((c) => c.text)
+            ttsActiveRef.current = true
+            if (slug) {
+              saveProfileReadAlongLastSession(slug, next.anchorId, 0, fingerprint)
+            }
+            next.scope.scrollIntoView({
+              block: 'center',
+              behavior: prefersReducedMotionReadAlong() ? 'auto' : 'smooth',
+            })
+            bumpListen()
+            speakChunkInternalRef.current(0)
+            return
+          }
+        }
+
+        ttsActiveRef.current = false
+        ttsChunkIndexRef.current = 0
         bumpListen()
         return
       }
@@ -242,6 +353,7 @@ export function useProfileResourceReadAloud({
         const scope = readAlongScopeRef.current
         const plainLen = readAlongPlainLenRef.current
         const chunkStart = ttsChunkPlainStartsRef.current[chunkIndex] ?? 0
+        recordReadAlongProgressPlainOffset(chunkStart)
         if (!scope || plainLen <= 0) return
 
         if (prefersReducedMotionReadAlong()) {
@@ -259,6 +371,7 @@ export function useProfileResourceReadAloud({
         if (fw) {
           const plainWordStart = chunkStart + fw.relStart
           const plainWordEnd = chunkStart + fw.relEndExclusive
+          recordReadAlongProgressPlainOffset(plainWordStart)
           const mid = Math.floor((plainWordStart + plainWordEnd - 1) / 2)
           const plainOffset = Math.min(Math.max(0, plainLen - 1), Math.max(chunkStart, mid))
           scheduleReadAlongUi({
@@ -280,6 +393,7 @@ export function useProfileResourceReadAloud({
         const ci = typeof ev.charIndex === 'number' ? ev.charIndex : 0
         const inChunk = Math.max(0, Math.min(ci, text.length))
         const target = chunkStart + inChunk
+        recordReadAlongProgressPlainOffset(target)
         const plainOffsetScrollOnly = Math.min(Math.max(0, plainLen - 1), target)
 
         if (prefersReducedMotionReadAlong()) {
@@ -291,6 +405,7 @@ export function useProfileResourceReadAloud({
         if (wr) {
           const plainWordStart = chunkStart + wr.relStart
           const plainWordEnd = chunkStart + wr.relEndExclusive
+          recordReadAlongProgressPlainOffset(Math.max(target, plainWordEnd - 1))
           const mid = Math.floor((plainWordStart + plainWordEnd - 1) / 2)
           const plainOffset = Math.min(Math.max(0, plainLen - 1), Math.max(chunkStart, mid))
           scheduleReadAlongUi({
@@ -321,7 +436,14 @@ export function useProfileResourceReadAloud({
       syn.speak(u)
       bumpListen()
     },
-    [androidHost, bumpListen, clearReadAlongSession, scheduleReadAlongUi]
+    [
+      androidHost,
+      bumpListen,
+      clearReadAlongSession,
+      recordReadAlongProgressPlainOffset,
+      scheduleReadAlongUi,
+      sections,
+    ]
   )
 
   useLayoutEffect(() => {
@@ -332,34 +454,122 @@ export function useProfileResourceReadAloud({
     speakChunkInternalRef.current = speakChunkInternal
   }, [speakChunkInternal])
 
-  const beginTtsUtterance = useCallback(() => {
+  const startReadAloudSession = useCallback(
+    (fromBeginning: boolean) => {
+      if (androidHost) return
+      if (typeof window === 'undefined' || !window.speechSynthesis) return
+
+      const resolvedScroll = resolveListenScopeAndText()
+      if (!resolvedScroll) return
+
+      let resolved = resolvedScroll
+      const slug = profileSlugRef.current
+
+      if (!fromBeginning && slug) {
+        const scrollAnchorId = resolvedScroll.scope.id
+        const textScroll = resolvedScroll.text
+        const fpScroll = readAlongTextFingerprint(textScroll)
+        const savedScroll = loadProfileReadAlongProgress(slug, scrollAnchorId)
+        const hasScrollResume =
+          savedScroll &&
+          savedScroll.fingerprint === fpScroll &&
+          savedScroll.plainOffset > 0 &&
+          savedScroll.plainOffset < textScroll.length
+
+        if (!hasScrollResume) {
+          const last = loadProfileReadAlongLastSession(slug)
+          if (last) {
+            const el = document.getElementById(last.anchorId)
+            if (el instanceof HTMLElement) {
+              const text = plainTextForProfileResourceListen(el)
+              const fp = readAlongTextFingerprint(text)
+              const offsetOk = last.plainOffset >= 0 && last.plainOffset < text.length
+              const fpOk = text.length > 0 && last.fingerprint === fp
+              const useOtherAnchor = last.anchorId !== scrollAnchorId
+              const midProgress = last.plainOffset > 0
+              if (fpOk && offsetOk && (useOtherAnchor || midProgress)) {
+                resolved = { scope: el, text }
+                el.scrollIntoView({
+                  block: 'center',
+                  behavior: prefersReducedMotionReadAlong() ? 'auto' : 'smooth',
+                })
+              }
+            }
+          }
+        }
+      }
+
+      const anchorId = resolved.scope.id
+      const fingerprint = readAlongTextFingerprint(resolved.text)
+
+      if (fromBeginning && slug) {
+        clearProfileReadAlongProgress(slug, anchorId)
+      }
+
+      const syn = window.speechSynthesis
+      syn.cancel()
+      cancelReadAlongUiScheduling()
+      readAlongHighlightPlainRef.current = null
+      if (typeof document !== 'undefined') clearReadAlongDomHighlight(document)
+      ttsCancelGenerationRef.current += 1
+
+      const chunkMeta = splitTextForTtsChunksWithOffsets(resolved.text)
+      if (chunkMeta.length === 0) return
+
+      let startChunk = 0
+      lastPersistedPlainOffsetRef.current = 0
+      if (!fromBeginning && slug) {
+        const saved = loadProfileReadAlongProgress(slug, anchorId)
+        if (
+          saved &&
+          saved.fingerprint === fingerprint &&
+          saved.plainOffset > 0 &&
+          saved.plainOffset < resolved.text.length
+        ) {
+          startChunk = chunkIndexContainingPlainOffset(chunkMeta, saved.plainOffset)
+          lastPersistedPlainOffsetRef.current = saved.plainOffset
+        }
+      }
+
+      readAlongAnchorIdRef.current = anchorId
+      readAlongFingerprintRef.current = fingerprint
+      readAlongScopeRef.current = resolved.scope
+      readAlongPlainLenRef.current = resolved.text.length
+      ttsChunkPlainStartsRef.current = chunkMeta.map((c) => c.plainStart)
+      ttsChunksRef.current = chunkMeta.map((c) => c.text)
+      ttsActiveRef.current = true
+      speakChunkInternal(startChunk)
+    },
+    [androidHost, cancelReadAlongUiScheduling, resolveListenScopeAndText, speakChunkInternal]
+  )
+
+  const restartReadAloudFromBeginning = useCallback(() => {
     if (androidHost) return
-    if (typeof window === 'undefined' || !window.speechSynthesis) return
-
-    const resolved = resolveListenScopeAndText()
-    if (!resolved) return
-
-    const syn = window.speechSynthesis
-    syn.cancel()
-    cancelReadAlongUiScheduling()
-    readAlongHighlightPlainRef.current = null
-    if (typeof document !== 'undefined') clearReadAlongDomHighlight(document)
+    if (persistTimerRef.current) {
+      clearTimeout(persistTimerRef.current)
+      persistTimerRef.current = null
+    }
+    const slug = profileSlugRef.current
+    if (slug && typeof document !== 'undefined') {
+      const r = resolveListenScopeAndText()
+      if (r) {
+        clearProfileReadAlongProgress(slug, r.scope.id)
+        saveProfileReadAlongLastSession(slug, r.scope.id, 0, readAlongTextFingerprint(r.text))
+      }
+    }
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel()
+    }
     ttsCancelGenerationRef.current += 1
-
-    const chunkMeta = splitTextForTtsChunksWithOffsets(resolved.text)
-    if (chunkMeta.length === 0) return
-
-    readAlongScopeRef.current = resolved.scope
-    readAlongPlainLenRef.current = resolved.text.length
-    ttsChunkPlainStartsRef.current = chunkMeta.map((c) => c.plainStart)
-    ttsChunksRef.current = chunkMeta.map((c) => c.text)
-    ttsActiveRef.current = true
-    speakChunkInternal(0)
+    cancelReadAlongUiScheduling()
+    clearReadAlongSession()
+    startReadAloudSession(true)
   }, [
     androidHost,
     cancelReadAlongUiScheduling,
+    clearReadAlongSession,
     resolveListenScopeAndText,
-    speakChunkInternal,
+    startReadAloudSession,
   ])
 
   const handlePrimaryClick = useCallback(() => {
@@ -390,6 +600,7 @@ export function useProfileResourceReadAloud({
         memorizeListenTtsUserPausedRef.current = true
         memorizeListenTtsPostResumeRef.current = false
         syn.pause()
+        flushReadAlongProgressPersist()
       }
       bumpListen()
       queueMicrotask(bumpListen)
@@ -397,14 +608,15 @@ export function useProfileResourceReadAloud({
     }
 
     if (!ttsActiveRef.current) {
-      beginTtsUtterance()
+      startReadAloudSession(false)
     }
     bumpListen()
   }, [
     androidHost,
-    beginTtsUtterance,
     bumpListen,
+    flushReadAlongProgressPersist,
     onNothingToRead,
+    startReadAloudSession,
   ])
 
   const listenButtonLabel = useMemo(() => {
@@ -469,5 +681,6 @@ export function useProfileResourceReadAloud({
     readAloudDialogPrimaryLabel,
     readAloudDialogPrimaryAriaLabel,
     listenAriaPressed,
+    restartReadAloudFromBeginning,
   }
 }

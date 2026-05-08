@@ -15,9 +15,10 @@ const PROFILE_RESOURCE_LISTEN_TITLE_ID = 'profile-resource-listen-controls-title
 
 interface ProfileResourceReadAloudProps {
   sections: GospelSection[]
+  profileSlug: string
 }
 
-export default function ProfileResourceReadAloud({ sections }: ProfileResourceReadAloudProps) {
+export default function ProfileResourceReadAloud({ sections, profileSlug }: ProfileResourceReadAloudProps) {
   const androidHost = useMemo(() => isMemorizeAndroidWebHost(), [])
   const { showAlert } = useAlertModal()
   const onNothingToRead = useCallback(
@@ -37,7 +38,8 @@ export default function ProfileResourceReadAloud({ sections }: ProfileResourceRe
     readAloudDialogPrimaryLabel,
     readAloudDialogPrimaryAriaLabel,
     listenAriaPressed,
-  } = useProfileResourceReadAloud({ sections, onNothingToRead })
+    restartReadAloudFromBeginning,
+  } = useProfileResourceReadAloud({ sections, profileSlug, onNothingToRead })
 
   if (androidHost) {
     return null
@@ -87,6 +89,7 @@ export default function ProfileResourceReadAloud({ sections }: ProfileResourceRe
         primaryAriaPressed={listenAriaPressed}
         listenPlaybackRate={listenPlaybackRate}
         onSelectSpeed={onSelectSpeed}
+        onStartFromBeginning={restartReadAloudFromBeginning}
       />
     </>
   )

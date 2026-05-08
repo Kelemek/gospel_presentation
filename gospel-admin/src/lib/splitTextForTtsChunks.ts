@@ -44,6 +44,21 @@ function splitTextForTtsChunkStrings(trimmed: string): string[] {
 
 export type TtsTextChunk = { text: string; plainStart: number }
 
+/** Chunk index to resume speaking from for a collapsed plain offset (read-along persistence). */
+export function chunkIndexContainingPlainOffset(chunks: TtsTextChunk[], plainOffset: number): number {
+  if (chunks.length === 0) return 0
+  const o = Math.max(0, plainOffset)
+  let best = 0
+  for (let i = 0; i < chunks.length; i++) {
+    const c = chunks[i]!
+    const start = c.plainStart
+    const end = start + c.text.length
+    if (o >= start && o < end) return i
+    if (start <= o) best = i
+  }
+  return best
+}
+
 /**
  * Same chunks as {@link splitTextForTtsChunks}, plus start index of each chunk in `text.trim()`
  * for mapping read-along scroll position to DOM.

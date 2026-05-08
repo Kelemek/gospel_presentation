@@ -115,4 +115,27 @@ describe('MemorizeListenControlsDialog', () => {
     fireEvent.click(document.body)
     expect(onClose).not.toHaveBeenCalled()
   })
+
+  it('with showRepeat false and onStartFromBeginning, renders Start from beginning control', () => {
+    const onStart = jest.fn()
+    render(
+      <MemorizeListenControlsDialog
+        open
+        onClose={jest.fn()}
+        dialogId="profile-resource-listen-controls-dialog"
+        titleId="profile-resource-listen-controls-title"
+        showRepeat={false}
+        presentation="floating"
+        onPrimaryClick={jest.fn()}
+        primaryLabel="Play"
+        primaryAriaLabel="Play"
+        primaryAriaPressed={false}
+        listenPlaybackRate={1}
+        onSelectSpeed={jest.fn()}
+        onStartFromBeginning={onStart}
+      />
+    )
+    fireEvent.click(screen.getByTestId('memorize-listen-start-from-beginning'))
+    expect(onStart).toHaveBeenCalledTimes(1)
+  })
 })

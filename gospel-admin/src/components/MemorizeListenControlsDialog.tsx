@@ -18,6 +18,8 @@ interface MemorizeListenControlsDialogPropsBase {
   primaryAriaPressed: boolean
   listenPlaybackRate: MemorizeListenSpeed
   onSelectSpeed: (r: MemorizeListenSpeed) => void
+  /** Profile read-aloud only: clears saved resume position and restarts the section from the top. */
+  onStartFromBeginning?: () => void
   /**
    * `modal` — centered card + dimmed backdrop (memorize practice).
    * `floating` — narrow bar near the top, no backdrop; page stays scrollable and interactive (profile read-aloud).
@@ -64,6 +66,7 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
     primaryAriaPressed,
     listenPlaybackRate,
     onSelectSpeed,
+    onStartFromBeginning,
     presentation = 'modal',
   } = props
   const repeatListenOn = isRepeatVariant(props) ? props.repeatListenOn : false
@@ -109,22 +112,36 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
         aria-labelledby={titleId}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-2 border-b border-slate-200 dark:border-slate-600 px-4 pt-3 pb-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1 border-b border-slate-200 dark:border-slate-600 px-4 pt-3 pb-2">
           <h2
             id={titleId}
-            className="text-lg font-semibold text-slate-900 dark:text-slate-100"
+            className="text-lg font-semibold text-slate-900 dark:text-slate-100 min-w-0"
           >
             Read aloud
           </h2>
-          <button
-            type="button"
-            data-tour="memorize-listen-close"
-            onClick={onClose}
-            className="shrink-0 text-slate-600 dark:text-slate-200 text-xl font-bold min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-600"
-            aria-label="Close"
-          >
-            ×
-          </button>
+          <div className="flex justify-center shrink-0 px-1">
+            {!showRepeatControls && onStartFromBeginning ? (
+              <button
+                type="button"
+                data-testid="memorize-listen-start-from-beginning"
+                onClick={onStartFromBeginning}
+                className="text-center text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 underline-offset-2 hover:underline py-1 whitespace-nowrap"
+              >
+                Start from beginning
+              </button>
+            ) : null}
+          </div>
+          <div className="flex justify-end">
+            <button
+              type="button"
+              data-tour="memorize-listen-close"
+              onClick={onClose}
+              className="shrink-0 text-slate-600 dark:text-slate-200 text-xl font-bold min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-600"
+              aria-label="Close"
+            >
+              ×
+            </button>
+          </div>
         </div>
         <div className="flex flex-col gap-3 p-4">
           {showRepeatControls ? (

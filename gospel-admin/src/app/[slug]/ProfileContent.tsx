@@ -775,7 +775,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                   </>
                 )}
                 <ProfileHelpMenu />
-                <ProfileResourceReadAloud sections={sections} />
+                <ProfileResourceReadAloud sections={sections} profileSlug={profileInfo.slug} />
                 <HighlightsDropdown
                   profileSlug={profileInfo.slug}
                   onOpenHighlight={(h) => focusHighlightById(h.id)}

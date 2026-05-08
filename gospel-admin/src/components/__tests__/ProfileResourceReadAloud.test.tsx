@@ -15,6 +15,7 @@ describe('ProfileResourceReadAloud', () => {
 
   beforeEach(() => {
     document.body.innerHTML = ''
+    localStorage.clear()
     const synthState = { speaking: false, paused: false }
     const speak = jest.fn(() => {
       synthState.speaking = true
@@ -58,12 +59,12 @@ describe('ProfileResourceReadAloud', () => {
       configurable: true,
       value: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36',
     })
-    render(<ProfileResourceReadAloud sections={sections} />)
+    render(<ProfileResourceReadAloud sections={sections} profileSlug="p1" />)
     expect(screen.queryByRole('button', { name: /read aloud/i })).not.toBeInTheDocument()
   })
 
   it('opens read-aloud dialog when trigger is clicked', async () => {
-    render(<ProfileResourceReadAloud sections={sections} />)
+    render(<ProfileResourceReadAloud sections={sections} profileSlug="p1" />)
 
     fireEvent.click(screen.getByRole('button', { name: /read aloud/i }))
     expect(screen.getByRole('dialog', { name: /read aloud/i })).toBeInTheDocument()
@@ -81,7 +82,7 @@ describe('ProfileResourceReadAloud', () => {
       </section>
     `
     const speak = window.speechSynthesis.speak as jest.Mock
-    render(<ProfileResourceReadAloud sections={sections} />)
+    render(<ProfileResourceReadAloud sections={sections} profileSlug="p1" />)
 
     fireEvent.click(screen.getByRole('button', { name: /read aloud/i }))
     fireEvent.click(screen.getByTestId('memorize-listen-passage'))
@@ -100,7 +101,7 @@ describe('ProfileResourceReadAloud', () => {
     const speak = window.speechSynthesis.speak as jest.Mock
     const cancel = window.speechSynthesis.cancel as jest.Mock
 
-    render(<ProfileResourceReadAloud sections={sections} />)
+    render(<ProfileResourceReadAloud sections={sections} profileSlug="p1" />)
     fireEvent.click(screen.getByRole('button', { name: /read aloud/i }))
     fireEvent.click(screen.getByTestId('memorize-listen-passage'))
     expect(speak).toHaveBeenCalledTimes(1)
@@ -158,7 +159,7 @@ describe('ProfileResourceReadAloud', () => {
       },
     })
 
-    render(<ProfileResourceReadAloud sections={sections} />)
+    render(<ProfileResourceReadAloud sections={sections} profileSlug="p1" />)
     fireEvent.click(screen.getByRole('button', { name: /read aloud/i }))
     fireEvent.click(screen.getByTestId('memorize-listen-passage'))
 
