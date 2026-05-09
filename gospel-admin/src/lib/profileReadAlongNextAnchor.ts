@@ -1,4 +1,5 @@
 import { buildOrderedTocAnchorIds } from '@/lib/tocAnchorFromScroll'
+import type { ProfileListenTextOptions } from '@/lib/profileHighlightVisibleText'
 import { plainTextForProfileResourceListen } from '@/lib/profileResourceListenText'
 import type { GospelSection } from '@/lib/types'
 
@@ -10,7 +11,8 @@ import type { GospelSection } from '@/lib/types'
 export function findNextReadAlongScope(
   sections: GospelSection[],
   completedScope: HTMLElement | null,
-  afterAnchorId: string | null
+  afterAnchorId: string | null,
+  listenTextOptions?: ProfileListenTextOptions
 ): { anchorId: string; scope: HTMLElement; text: string } | null {
   if (typeof document === 'undefined') return null
   const ids = buildOrderedTocAnchorIds(sections)
@@ -26,7 +28,7 @@ export function findNextReadAlongScope(
     if (completedScope && el !== completedScope && completedScope.contains(el)) {
       continue
     }
-    const text = plainTextForProfileResourceListen(el)
+    const text = plainTextForProfileResourceListen(el, listenTextOptions)
     if (text) return { anchorId, scope: el, text }
   }
   return null

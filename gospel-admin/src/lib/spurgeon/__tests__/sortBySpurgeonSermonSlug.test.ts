@@ -1,6 +1,7 @@
 import {
   compareSpurgeonSermonRows,
   compareSpurgeonSermonSlugs,
+  isSpurgeonSermonProfileSlug,
   sortBySpurgeonSermonSlug,
   sortSpurgeonSermonsByDisplayTitleAZ,
   spurgeonCatalogNumberFromSlug,
@@ -15,6 +16,14 @@ describe('spurgeon sermon list sort', () => {
     expect(spurgeonCatalogNumberFromSlug('sg00001')).toBe(1)
     expect(spurgeonCatalogNumberFromSlug('SG01162')).toBe(1162)
     expect(spurgeonCatalogNumberFromSlug('other')).toBe(Number.MAX_SAFE_INTEGER)
+  })
+
+  it('isSpurgeonSermonProfileSlug matches sg + digits only', () => {
+    expect(isSpurgeonSermonProfileSlug('sg00001')).toBe(true)
+    expect(isSpurgeonSermonProfileSlug('SG01162')).toBe(true)
+    expect(isSpurgeonSermonProfileSlug(' default ')).toBe(false)
+    expect(isSpurgeonSermonProfileSlug('sg')).toBe(false)
+    expect(isSpurgeonSermonProfileSlug('sgabc')).toBe(false)
   })
 
   it('parses leading Sermon N from title', () => {

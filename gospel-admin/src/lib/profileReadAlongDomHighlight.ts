@@ -1,4 +1,7 @@
-import { preferLaterEquivalentListenTextBoundary } from '@/lib/profileHighlightVisibleText'
+import {
+  preferLaterEquivalentListenTextBoundary,
+  type ProfileListenTextOptions,
+} from '@/lib/profileHighlightVisibleText'
 import { locateListenRawTextOffset, readAlongListenBlockAncestor } from '@/lib/profileResourceListenText'
 import { walkerOffsetForReadAlongPlainOffset } from '@/lib/scrollReadAlongPlain'
 
@@ -47,8 +50,9 @@ export function updateReadAlongDomHighlight(opts: {
   plainCollapsedLen: number
   plainStart: number
   plainEndExclusive: number
+  listenTextOptions?: ProfileListenTextOptions
 }): void {
-  const { scope, plainCollapsedLen, plainStart, plainEndExclusive } = opts
+  const { scope, plainCollapsedLen, plainStart, plainEndExclusive, listenTextOptions } = opts
   const doc = scope.ownerDocument
   const win = doc.defaultView
   if (!win) return
@@ -60,14 +64,14 @@ export function updateReadAlongDomHighlight(opts: {
     return
   }
 
-  const wStart = walkerOffsetForReadAlongPlainOffset(scope, plainCollapsedLen, start)
-  const wEnd = walkerOffsetForReadAlongPlainOffset(scope, plainCollapsedLen, end)
+  const wStart = walkerOffsetForReadAlongPlainOffset(scope, plainCollapsedLen, start, listenTextOptions)
+  const wEnd = walkerOffsetForReadAlongPlainOffset(scope, plainCollapsedLen, end, listenTextOptions)
 
-  const startRaw = locateListenRawTextOffset(scope, wStart)
-  const endRaw = locateListenRawTextOffset(scope, wEnd)
+  const startRaw = locateListenRawTextOffset(scope, wStart, listenTextOptions)
+  const endRaw = locateListenRawTextOffset(scope, wEnd, listenTextOptions)
   if (!startRaw || !endRaw) return
 
-  const startP = preferLaterEquivalentListenTextBoundary(scope, startRaw)
+  const startP = preferLaterEquivalentListenTextBoundary(scope, startRaw, listenTextOptions)
 
   const range = doc.createRange()
   try {
@@ -122,8 +126,9 @@ export function updateReadAlongDomHighlightVisualLine(opts: {
   scope: HTMLElement
   plainCollapsedLen: number
   plainCaret: number
+  listenTextOptions?: ProfileListenTextOptions
 }): void {
-  const { scope, plainCollapsedLen, plainCaret } = opts
+  const { scope, plainCollapsedLen, plainCaret, listenTextOptions } = opts
   const doc = scope.ownerDocument
   const win = doc.defaultView
   if (!win) return
@@ -135,10 +140,10 @@ export function updateReadAlongDomHighlightVisualLine(opts: {
   }
 
   const caretPlain = Math.max(0, Math.min(plainCaret, L - 1))
-  const wCaret = walkerOffsetForReadAlongPlainOffset(scope, L, caretPlain)
-  let rawPos = locateListenRawTextOffset(scope, wCaret)
+  const wCaret = walkerOffsetForReadAlongPlainOffset(scope, L, caretPlain, listenTextOptions)
+  let rawPos = locateListenRawTextOffset(scope, wCaret, listenTextOptions)
   if (!rawPos) return
-  rawPos = preferLaterEquivalentListenTextBoundary(scope, rawPos)
+  rawPos = preferLaterEquivalentListenTextBoundary(scope, rawPos, listenTextOptions)
 
   const caretRange = doc.createRange()
   try {

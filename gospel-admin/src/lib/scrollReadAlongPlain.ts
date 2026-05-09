@@ -1,4 +1,7 @@
-import { preferLaterEquivalentListenTextBoundary } from '@/lib/profileHighlightVisibleText'
+import {
+  preferLaterEquivalentListenTextBoundary,
+  type ProfileListenTextOptions,
+} from '@/lib/profileHighlightVisibleText'
 import { locateListenRawTextOffset, visibleListenRawText } from '@/lib/profileResourceListenText'
 
 /**
@@ -11,9 +14,10 @@ import { locateListenRawTextOffset, visibleListenRawText } from '@/lib/profileRe
 export function walkerOffsetForReadAlongPlainOffset(
   scope: HTMLElement,
   plainCollapsedLen: number,
-  plainOffset: number
+  plainOffset: number,
+  listenTextOptions?: ProfileListenTextOptions
 ): number {
-  const raw = visibleListenRawText(scope)
+  const raw = visibleListenRawText(scope, listenTextOptions)
   const full = raw.replace(/\s+/g, ' ').trim()
   const L = full.length
   if (L === 0 || plainCollapsedLen <= 0) return 0
@@ -109,12 +113,18 @@ export function computeReadAlongVerticalScrollDeltaForComfortZone(
 function getCaretClientRectForReadAlongPlainOffset(
   scope: HTMLElement,
   plainCollapsedLen: number,
-  plainOffset: number
+  plainOffset: number,
+  listenTextOptions?: ProfileListenTextOptions
 ): DOMRect | null {
-  const walkerOff = walkerOffsetForReadAlongPlainOffset(scope, plainCollapsedLen, plainOffset)
-  let pos = locateListenRawTextOffset(scope, walkerOff)
+  const walkerOff = walkerOffsetForReadAlongPlainOffset(
+    scope,
+    plainCollapsedLen,
+    plainOffset,
+    listenTextOptions
+  )
+  let pos = locateListenRawTextOffset(scope, walkerOff, listenTextOptions)
   if (!pos) return null
-  pos = preferLaterEquivalentListenTextBoundary(scope, pos)
+  pos = preferLaterEquivalentListenTextBoundary(scope, pos, listenTextOptions)
 
   const doc = scope.ownerDocument
   const r = doc.createRange()
@@ -139,13 +149,19 @@ export function scrollReadAlongPlainOffsetIntoViewIfNeeded(
   scope: HTMLElement,
   plainCollapsedLen: number,
   plainOffset: number,
-  behavior: ScrollBehavior = 'auto'
+  behavior: ScrollBehavior = 'auto',
+  listenTextOptions?: ProfileListenTextOptions
 ): void {
   if (typeof window === 'undefined') return
   const win = scope.ownerDocument?.defaultView
   if (!win) return
 
-  const rect = getCaretClientRectForReadAlongPlainOffset(scope, plainCollapsedLen, plainOffset)
+  const rect = getCaretClientRectForReadAlongPlainOffset(
+    scope,
+    plainCollapsedLen,
+    plainOffset,
+    listenTextOptions
+  )
   if (!rect) return
 
   const vpH = win.innerHeight

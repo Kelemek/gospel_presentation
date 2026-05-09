@@ -1,7 +1,8 @@
 /**
  * Plain text for profile body read-aloud (Web Speech). Drops inline scripture / COMA /
  * Four Rules mounts (same exclusion idea as highlight offset streams), removes buttons
- * so verse-pin controls are not spoken, and skips **`h1`–`h6`** heading text so titles are not read.
+ * so verse-pin controls are not spoken, and optionally skips **`h1`–`h6`** heading text
+ * (Spurgeon sermon profiles — see {@link ProfileListenTextOptions.omitHeadingText}).
  *
  * Built from the same eligible Text-node walk used to map spoken character offsets back into
  * the DOM — avoids innerText vs proportional-walker drift (especially WebKit) that makes the
@@ -11,7 +12,10 @@ import {
   isWithinButton,
   isWithinGospelMount,
   isWithinHeading,
+  type ProfileListenTextOptions,
 } from '@/lib/profileHighlightVisibleText'
+
+export type { ProfileListenTextOptions }
 
 /** Approximate block containers where `innerText` inserts a break between siblings. */
 const LISTEN_BLOCK_TAGS = new Set([
@@ -106,7 +110,13 @@ function listenNeedsImplicitBreak(prevText: Text, curText: Text, scope: HTMLElem
   return listenHasBrOrHrBetween(prevText, curText)
 }
 
-export function visibleListenRawText(root: HTMLElement): string {
+function listenTextNodeIneligible(node: Text, root: HTMLElement, opts?: ProfileListenTextOptions): boolean {
+  if (isWithinGospelMount(node, root) || isWithinButton(node, root)) return true
+  if (opts?.omitHeadingText && isWithinHeading(node, root)) return true
+  return false
+}
+
+export function visibleListenRawText(root: HTMLElement, opts?: ProfileListenTextOptions): string {
   const doc = root.ownerDocument
   if (!doc) return ''
   let s = ''
@@ -118,11 +128,7 @@ export function visibleListenRawText(root: HTMLElement): string {
       node = walker.nextNode()
       continue
     }
-    if (
-      isWithinGospelMount(node, root) ||
-      isWithinButton(node, root) ||
-      isWithinHeading(node, root)
-    ) {
+    if (listenTextNodeIneligible(node, root, opts)) {
       node = walker.nextNode()
       continue
     }
@@ -136,8 +142,11 @@ export function visibleListenRawText(root: HTMLElement): string {
   return s
 }
 
-export function plainTextForProfileResourceListen(root: HTMLElement): string {
-  return visibleListenRawText(root).replace(/\s+/g, ' ').trim()
+export function plainTextForProfileResourceListen(
+  root: HTMLElement,
+  opts?: ProfileListenTextOptions
+): string {
+  return visibleListenRawText(root, opts).replace(/\s+/g, ' ').trim()
 }
 
 /**
@@ -150,7 +159,8 @@ export function plainTextForProfileResourceListen(root: HTMLElement): string {
  */
 export function locateListenRawTextOffset(
   root: HTMLElement,
-  rawTarget: number
+  rawTarget: number,
+  opts?: ProfileListenTextOptions
 ): { node: Text; offset: number } | null {
   if (rawTarget < 0) return null
 
@@ -165,11 +175,7 @@ export function locateListenRawTextOffset(
       node = walker.nextNode()
       continue
     }
-    if (
-      isWithinGospelMount(node, root) ||
-      isWithinButton(node, root) ||
-      isWithinHeading(node, root)
-    ) {
+    if (listenTextNodeIneligible(node, root, opts)) {
       node = walker.nextNode()
       continue
     }

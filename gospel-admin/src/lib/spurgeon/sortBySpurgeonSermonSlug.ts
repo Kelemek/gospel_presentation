@@ -37,6 +37,11 @@ export function spurgeonCatalogNumberFromSlug(slug: string): number {
   return Number.isFinite(n) ? n : Number.MAX_SAFE_INTEGER
 }
 
+/** True when `slug` is a CCEL sermon profile (`sg` + decimal digits). */
+export function isSpurgeonSermonProfileSlug(slug: string): boolean {
+  return /^sg\d+$/i.test(slug.trim())
+}
+
 /**
  * Leading “Sermon &lt;num&gt;” from display titles (e.g. `Sermon 297-8.` → 297).
  * Returns null if the pattern does not match.

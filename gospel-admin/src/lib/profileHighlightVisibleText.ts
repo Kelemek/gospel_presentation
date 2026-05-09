@@ -28,7 +28,13 @@ export function isWithinButton(node: Node, root: HTMLElement): boolean {
 
 const HEADING_TAGS = new Set(['H1', 'H2', 'H3', 'H4', 'H5', 'H6'])
 
-/** Section / article headings are omitted from profile read-aloud (body copy only). */
+/** Options for profile body Listen / read-along plain-text walks (must match {@link visibleListenRawText}). */
+export type ProfileListenTextOptions = {
+  /** When true, text under `h1`–`h6` is excluded (e.g. Spurgeon sermon profiles). */
+  omitHeadingText?: boolean
+}
+
+/** True when `node` is inside an `h1`–`h6` under `root` (listen stream may omit these when {@link ProfileListenTextOptions.omitHeadingText}). */
 export function isWithinHeading(node: Node, root: HTMLElement): boolean {
   let cur: Node | null = node
   while (cur && cur !== root) {
@@ -180,18 +186,20 @@ export function locateVisibleTextOffset(
   return null
 }
 
-function listenIneligibleText(node: Text, scope: HTMLElement): boolean {
-  return (
-    isWithinGospelMount(node, scope) ||
-    isWithinButton(node, scope) ||
-    isWithinHeading(node, scope)
-  )
+function listenIneligibleText(node: Text, scope: HTMLElement, opts?: ProfileListenTextOptions): boolean {
+  if (isWithinGospelMount(node, scope) || isWithinButton(node, scope)) return true
+  if (opts?.omitHeadingText && isWithinHeading(node, scope)) return true
+  return false
 }
 
-/** Same as {@link locateVisibleTextOffset} but skips `[data-gospel-mount]`, `<button>`, and `h1`–`h6` — matches {@link visibleListenRawText}. */
+/**
+ * Same as {@link locateVisibleTextOffset} but skips `[data-gospel-mount]` and `<button>`, and
+ * optionally `h1`–`h6` when {@link ProfileListenTextOptions.omitHeadingText} — matches {@link visibleListenRawText}.
+ */
 export function locateListenVisibleTextOffset(
   container: HTMLElement,
-  targetOffset: number
+  targetOffset: number,
+  opts?: ProfileListenTextOptions
 ): { node: Text; offset: number } | null {
   const doc = container.ownerDocument
   if (!doc) return null
@@ -202,7 +210,7 @@ export function locateListenVisibleTextOffset(
   const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT)
   let node: Node | null = walker.nextNode()
   while (node) {
-    if (!(node instanceof Text) || listenIneligibleText(node, container)) {
+    if (!(node instanceof Text) || listenIneligibleText(node, container, opts)) {
       node = walker.nextNode()
       continue
     }
@@ -237,7 +245,8 @@ export function locateListenVisibleTextOffset(
 export function visibleListenTextLengthBeforeBoundary(
   scope: HTMLElement,
   boundaryNode: Node,
-  boundaryOffset: number
+  boundaryOffset: number,
+  opts?: ProfileListenTextOptions
 ): number {
   const doc = scope.ownerDocument
   if (!doc) return 0
@@ -251,7 +260,7 @@ export function visibleListenTextLengthBeforeBoundary(
   let step: Node | null
   while ((step = walker.nextNode())) {
     if (!(step instanceof Text)) continue
-    if (listenIneligibleText(step, scope)) continue
+    if (listenIneligibleText(step, scope, opts)) continue
     const t = step
     const len = t.length
     for (let i = 0; i < len; i++) {
@@ -266,7 +275,11 @@ export function visibleListenTextLengthBeforeBoundary(
   return count
 }
 
-function nextEligibleListenTextNodeAfter(scope: HTMLElement, prev: Text): Text | null {
+function nextEligibleListenTextNodeAfter(
+  scope: HTMLElement,
+  prev: Text,
+  opts?: ProfileListenTextOptions
+): Text | null {
   const doc = scope.ownerDocument
   if (!doc) return null
 
@@ -274,7 +287,7 @@ function nextEligibleListenTextNodeAfter(scope: HTMLElement, prev: Text): Text |
   const walker = doc.createTreeWalker(scope, NodeFilter.SHOW_TEXT)
   let step: Node | null
   while ((step = walker.nextNode())) {
-    if (!(step instanceof Text) || listenIneligibleText(step, scope)) continue
+    if (!(step instanceof Text) || listenIneligibleText(step, scope, opts)) continue
     if (seenPrev) return step
     if (step === prev) seenPrev = true
   }
@@ -283,17 +296,18 @@ function nextEligibleListenTextNodeAfter(scope: HTMLElement, prev: Text): Text |
 
 export function preferLaterEquivalentListenTextBoundary(
   scope: HTMLElement,
-  point: { node: Text; offset: number }
+  point: { node: Text; offset: number },
+  opts?: ProfileListenTextOptions
 ): { node: Text; offset: number } {
   let cur = point
-  const vbGoal = visibleListenTextLengthBeforeBoundary(scope, cur.node, cur.offset)
+  const vbGoal = visibleListenTextLengthBeforeBoundary(scope, cur.node, cur.offset, opts)
 
   let guard = 0
   while (guard++ < 512) {
     if (cur.offset !== cur.node.length) break
-    const nx = nextEligibleListenTextNodeAfter(scope, cur.node)
+    const nx = nextEligibleListenTextNodeAfter(scope, cur.node, opts)
     if (!nx) break
-    if (visibleListenTextLengthBeforeBoundary(scope, nx, 0) !== vbGoal) break
+    if (visibleListenTextLengthBeforeBoundary(scope, nx, 0, opts) !== vbGoal) break
     cur = { node: nx, offset: 0 }
   }
 

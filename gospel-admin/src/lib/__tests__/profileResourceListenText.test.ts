@@ -37,20 +37,29 @@ describe('plainTextForProfileResourceListen', () => {
     expect(plainTextForProfileResourceListen(el)).toBe('A B')
   })
 
-  it('omits h1–h6 heading text', () => {
+  it('includes h1–h6 heading text by default', () => {
     document.body.innerHTML =
       '<div id="root"><h2>Section title</h2><p>Paragraph body.</p></div>'
     const el = document.getElementById('root')!
-    expect(plainTextForProfileResourceListen(el)).toBe('Paragraph body.')
-    expect(visibleListenRawText(el)).toBe('Paragraph body.')
+    expect(plainTextForProfileResourceListen(el)).toBe('Section title Paragraph body.')
+    expect(visibleListenRawText(el)).toBe('Section title\nParagraph body.')
   })
 
-  it('still reads body text after a skipped heading (implicit break between blocks)', () => {
+  it('with omitHeadingText, omits h1–h6 heading text', () => {
     document.body.innerHTML =
-      '<div id="root"><p>First</p><h3>Do not read</h3><p>Second</p></div>'
+      '<div id="root"><h2>Section title</h2><p>Paragraph body.</p></div>'
     const el = document.getElementById('root')!
-    expect(visibleListenRawText(el)).toBe('First\nSecond')
-    expect(plainTextForProfileResourceListen(el)).toBe('First Second')
+    const opts = { omitHeadingText: true } as const
+    expect(plainTextForProfileResourceListen(el, opts)).toBe('Paragraph body.')
+    expect(visibleListenRawText(el, opts)).toBe('Paragraph body.')
+  })
+
+  it('includes heading text between paragraphs by default (implicit breaks)', () => {
+    document.body.innerHTML =
+      '<div id="root"><p>First</p><h3>Subhead</h3><p>Second</p></div>'
+    const el = document.getElementById('root')!
+    expect(visibleListenRawText(el)).toBe('First\nSubhead\nSecond')
+    expect(plainTextForProfileResourceListen(el)).toBe('First Subhead Second')
   })
 })
 

@@ -11,6 +11,7 @@ import {
 } from '@/lib/memorizeListenSpeedStorage'
 import { isMemorizeAndroidWebHost, isMemorizeIosWebHost } from '@/lib/memorizationViewportPlatform'
 import { getCurrentTocAnchorId } from '@/lib/tocAnchorFromScroll'
+import type { ProfileListenTextOptions } from '@/lib/profileHighlightVisibleText'
 import { plainTextForProfileResourceListen } from '@/lib/profileResourceListenText'
 import {
   chunkIndexContainingPlainOffset,
@@ -47,6 +48,7 @@ import {
   writeProfileReadAlongUnderlineStyleToStorage,
   type ProfileReadAlongUnderlineStyle,
 } from '@/lib/profileReadAlongUnderlineStyleStorage'
+import { isSpurgeonSermonProfileSlug } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
 
 export interface UseProfileResourceReadAloudOptions {
   sections: GospelSection[]
@@ -95,6 +97,7 @@ export function useProfileResourceReadAloud({
   const readAlongUiRafRef = useRef(0)
 
   const profileSlugRef = useRef(profileSlug)
+  const listenTextOptionsRef = useRef<ProfileListenTextOptions>({})
   const readAlongAnchorIdRef = useRef<string | null>(null)
   const readAlongFingerprintRef = useRef<string | null>(null)
   const lastPersistedPlainOffsetRef = useRef(0)
@@ -113,6 +116,9 @@ export function useProfileResourceReadAloud({
 
   useLayoutEffect(() => {
     profileSlugRef.current = profileSlug
+    listenTextOptionsRef.current = {
+      omitHeadingText: isSpurgeonSermonProfileSlug(profileSlug ?? ''),
+    }
   }, [profileSlug])
 
   useLayoutEffect(() => {
@@ -194,7 +200,13 @@ export function useProfileResourceReadAloud({
           const behavior: ScrollBehavior = prefersReducedMotionReadAlong()
             ? 'auto'
             : (pending.scrollBehavior ?? 'smooth')
-          scrollReadAlongPlainOffsetIntoViewIfNeeded(scope, plainLen, pending.scroll, behavior)
+          scrollReadAlongPlainOffsetIntoViewIfNeeded(
+            scope,
+            plainLen,
+            pending.scroll,
+            behavior,
+            listenTextOptionsRef.current
+          )
         }
 
         if (pending.highlight !== undefined) {
@@ -210,12 +222,14 @@ export function useProfileResourceReadAloud({
                 plainCollapsedLen: plainLen,
                 plainStart: h.start,
                 plainEndExclusive: h.endExclusive,
+                listenTextOptions: listenTextOptionsRef.current,
               })
             } else if (h.kind === 'line') {
               updateReadAlongDomHighlightVisualLine({
                 scope,
                 plainCollapsedLen: plainLen,
                 plainCaret: h.plainCaret,
+                listenTextOptions: listenTextOptionsRef.current,
               })
             }
           }
@@ -260,12 +274,14 @@ export function useProfileResourceReadAloud({
             plainCollapsedLen: plainLen,
             plainStart: hl.start,
             plainEndExclusive: hl.endExclusive,
+            listenTextOptions: listenTextOptionsRef.current,
           })
         } else {
           updateReadAlongDomHighlightVisualLine({
             scope,
             plainCollapsedLen: plainLen,
             plainCaret: hl.plainCaret,
+            listenTextOptions: listenTextOptionsRef.current,
           })
         }
       })
@@ -329,7 +345,7 @@ export function useProfileResourceReadAloud({
       onNothingToRead?.('Could not find this section on the page.')
       return null
     }
-    const text = plainTextForProfileResourceListen(el)
+    const text = plainTextForProfileResourceListen(el, listenTextOptionsRef.current)
     if (!text) {
       onNothingToRead?.('There is no readable text in this section.')
       return null
@@ -357,7 +373,7 @@ export function useProfileResourceReadAloud({
 
         const next =
           anchorDone && typeof document !== 'undefined'
-            ? findNextReadAlongScope(sections, completedScope, anchorDone)
+            ? findNextReadAlongScope(sections, completedScope, anchorDone, listenTextOptionsRef.current)
             : null
 
         if (next && !androidHost) {
@@ -590,7 +606,7 @@ export function useProfileResourceReadAloud({
           if (last) {
             const el = document.getElementById(last.anchorId)
             if (el instanceof HTMLElement) {
-              const text = plainTextForProfileResourceListen(el)
+              const text = plainTextForProfileResourceListen(el, listenTextOptionsRef.current)
               const fp = readAlongTextFingerprint(text)
               const offsetOk = last.plainOffset >= 0 && last.plainOffset < text.length
               const fpOk = text.length > 0 && last.fingerprint === fp
@@ -670,7 +686,9 @@ export function useProfileResourceReadAloud({
     clearReadAlongSession()
 
     const first =
-      typeof document !== 'undefined' ? findNextReadAlongScope(sections, null, null) : null
+      typeof document !== 'undefined'
+        ? findNextReadAlongScope(sections, null, null, listenTextOptionsRef.current)
+        : null
     if (!first) {
       onNothingToRead?.('There is no readable text in this profile.')
       return
