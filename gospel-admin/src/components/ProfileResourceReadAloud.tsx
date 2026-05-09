@@ -20,7 +20,7 @@ interface ProfileResourceReadAloudProps {
 
 export default function ProfileResourceReadAloud({ sections, profileSlug }: ProfileResourceReadAloudProps) {
   const androidHost = useMemo(() => isMemorizeAndroidWebHost(), [])
-  const { showAlert } = useAlertModal()
+  const { showAlert, showConfirm } = useAlertModal()
   const onNothingToRead = useCallback(
     (message: string) => {
       showAlert(message)
@@ -44,6 +44,13 @@ export default function ProfileResourceReadAloud({ sections, profileSlug }: Prof
     readAlongUnderlineStyle,
     setReadAlongUnderlineStyle,
   } = useProfileResourceReadAloud({ sections, profileSlug, onNothingToRead })
+
+  const confirmRestartReadAloudFromBeginning = useCallback(async () => {
+    const ok = await showConfirm(
+      'Clear all saved listen progress for every section in this profile on this device, go to the first readable section, and start read-aloud from the beginning?'
+    )
+    if (ok) restartReadAloudFromBeginning()
+  }, [showConfirm, restartReadAloudFromBeginning])
 
   if (androidHost) {
     return null
@@ -97,7 +104,7 @@ export default function ProfileResourceReadAloud({ sections, profileSlug }: Prof
         onToggleReadAlongUnderline={toggleReadAlongUnderline}
         readAlongUnderlineStyle={readAlongUnderlineStyle}
         onReadAlongUnderlineStyle={setReadAlongUnderlineStyle}
-        onStartFromBeginning={restartReadAloudFromBeginning}
+        onStartFromBeginning={confirmRestartReadAloudFromBeginning}
       />
     </>
   )

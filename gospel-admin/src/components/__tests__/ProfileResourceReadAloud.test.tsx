@@ -1,6 +1,12 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import ProfileResourceReadAloud from '@/components/ProfileResourceReadAloud'
 import type { GospelSection } from '@/lib/types'
+
+function getAlertModalMocks() {
+  return (globalThis as unknown as { __alertModalMocks: { showConfirm: jest.Mock; showAlert: jest.Mock } })
+    .__alertModalMocks
+}
 
 describe('ProfileResourceReadAloud', () => {
   const originalUserAgent = typeof navigator !== 'undefined' ? navigator.userAgent : ''
@@ -44,6 +50,13 @@ describe('ProfileResourceReadAloud', () => {
         }),
       },
     })
+    // jsdom: `scrollIntoView` is missing or incomplete; read-aloud “Start from beginning” uses it.
+    Element.prototype.scrollIntoView = jest.fn() as unknown as typeof Element.prototype.scrollIntoView
+
+    const alertMocks = getAlertModalMocks()
+    alertMocks.showConfirm.mockReset()
+    alertMocks.showConfirm.mockResolvedValue(false)
+    alertMocks.showAlert.mockReset()
   })
 
   afterEach(() => {
@@ -168,5 +181,49 @@ describe('ProfileResourceReadAloud', () => {
     expect(cancel).toHaveBeenCalledTimes(1)
     expect((speak.mock.calls[0][0] as SpeechSynthesisUtterance).text).toBe('First sentence.')
     expect((speak.mock.calls[1][0] as SpeechSynthesisUtterance).text).toBe('Second sentence.')
+  })
+
+  it('asks for confirmation on Start from beginning and does not restart when cancelled', async () => {
+    const confirmMock = getAlertModalMocks().showConfirm
+    confirmMock.mockReset()
+    confirmMock.mockResolvedValue(false)
+
+    document.body.innerHTML += `
+      <section id="section-1" class="scroll-mt-20">
+        <div id="section-1-0" class="scroll-mt-20"><p>Alpha.</p></div>
+      </section>
+    `
+    const speak = window.speechSynthesis.speak as jest.Mock
+    const user = userEvent.setup({ delay: null })
+    render(<ProfileResourceReadAloud sections={sections} profileSlug="p1" />)
+    await user.click(screen.getByRole('button', { name: /listen/i }))
+    await user.click(screen.getByTestId('memorize-listen-start-from-beginning'))
+
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledTimes(1))
+    expect(String(confirmMock.mock.calls[0][0])).toContain('Clear all saved listen progress')
+    expect(speak).not.toHaveBeenCalled()
+  })
+
+  it('restarts from the first section after Start from beginning is confirmed', async () => {
+    const confirmMock = getAlertModalMocks().showConfirm
+    /** Isolate from beforeEach’s `mockResolvedValue(false)` so the first call is definitely `true`. */
+    confirmMock.mockReset()
+    confirmMock.mockResolvedValueOnce(true).mockResolvedValue(false)
+
+    document.body.innerHTML += `
+      <section id="section-1" class="scroll-mt-20">
+        <div id="section-1-0" class="scroll-mt-20"><p>First section text.</p></div>
+      </section>
+    `
+    const speak = window.speechSynthesis.speak as jest.Mock
+    const user = userEvent.setup({ delay: null })
+    render(<ProfileResourceReadAloud sections={sections} profileSlug="p1" />)
+    await user.click(screen.getByRole('button', { name: /listen/i }))
+    await user.click(screen.getByTestId('memorize-listen-start-from-beginning'))
+
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(speak).toHaveBeenCalled())
+    const utt = speak.mock.calls[0][0] as SpeechSynthesisUtterance
+    expect(utt.text).toContain('First section text')
   })
 })

@@ -101,7 +101,7 @@ export function AlertModalProvider({ children }: { children: React.ReactNode }) 
       {children}
       {state.isOpen && (
         <div
-          className={`fixed inset-0 z-100 flex items-center justify-center p-4 bg-black/50 ${theme === 'dark' ? 'dark' : ''}`}
+          className={`fixed inset-0 z-130 flex items-center justify-center p-4 bg-black/50 ${theme === 'dark' ? 'dark' : ''}`}
           role="dialog"
           aria-modal="true"
           aria-labelledby="alert-modal-title"

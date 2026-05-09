@@ -25,8 +25,8 @@ interface MemorizeListenControlsDialogPropsBase {
   /** When underline is on: word vs full wrapped-line highlight. */
   readAlongUnderlineStyle?: ProfileReadAlongUnderlineStyle
   onReadAlongUnderlineStyle?: (style: ProfileReadAlongUnderlineStyle) => void
-  /** Profile read-aloud only: clears saved resume position and restarts the section from the top. */
-  onStartFromBeginning?: () => void
+  /** Profile read-aloud only: clears saved resume position and restarts from the first section (parent may confirm first). */
+  onStartFromBeginning?: () => void | Promise<void>
   /**
    * `modal` — centered card + dimmed backdrop (memorize practice).
    * `floating` — narrow bar near the top, no backdrop; page stays scrollable and interactive (profile read-aloud).
