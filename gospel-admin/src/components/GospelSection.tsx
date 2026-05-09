@@ -483,10 +483,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
                 rows={3}
                 className="w-full px-3 py-2.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 focus:border-transparent resize-y bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 print:px-2 print:py-1 print:min-h-[60px] print:placeholder:text-transparent"
               />
-              <div className="flex items-center justify-between print:hidden">
-                <span className="text-xs text-slate-500 dark:text-slate-400">
-                  {currentAnswer.length}/{maxLength} characters
-                </span>
+              <div className="flex items-center justify-end print:hidden">
                 <button
                   type="button"
                   data-tour="profile-save-answer"
