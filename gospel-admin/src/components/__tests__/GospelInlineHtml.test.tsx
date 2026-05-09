@@ -65,6 +65,7 @@ describe('GospelInlineHtml', () => {
     )
 
     await waitFor(() => expect(screen.getByRole('button', { name: 'John 3:16' })).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'John 3:16' })).toHaveAttribute('data-tour', 'scripture-card')
     fireEvent.click(screen.getByRole('button', { name: 'John 3:16' }))
     expect(onScriptureClick).toHaveBeenCalledWith('John 3:16', 'section-a', 'section-a-0')
   })

@@ -1,17 +1,18 @@
 /**
- * Plain text for profile body read-aloud (Web Speech). Drops inline scripture / COMA /
- * Four Rules mounts (same exclusion idea as highlight offset streams), removes buttons
- * so verse-pin controls are not spoken, and optionally skips **`h1`–`h6`** heading text
- * (Spurgeon sermon profiles — see {@link ProfileListenTextOptions.omitHeadingText}).
+ * Plain text for profile body read-aloud (Web Speech). Omits COMA / Four Rules mount UI, most
+ * **`<button>`** text (verse-pin chrome), and optionally **`h1`–`h6`** on Spurgeon sermon profiles
+ * ({@link ProfileListenTextOptions.omitHeadingText}). **Scripture** is included: inline
+ * `data-gospel-mount="scripture"` labels and **`data-tour="scripture-card"`** verse cards speak the
+ * visible reference.
  *
  * Built from the same eligible Text-node walk used to map spoken character offsets back into
  * the DOM — avoids innerText vs proportional-walker drift (especially WebKit) that makes the
- * underline creep ahead of audio.
+ * underline creep ahead of audio. Block boundaries in raw text become a **single space** in the
+ * collapsed string (same length budget as speech per character for read-along); pauses across
+ * blocks are handled by **utterance gaps** in {@link splitListenRawIntoTtsChunksWithOffsets}.
  */
 import {
-  isWithinButton,
-  isWithinGospelMount,
-  isWithinHeading,
+  isListenPlainTextNodeExcluded,
   type ProfileListenTextOptions,
 } from '@/lib/profileHighlightVisibleText'
 
@@ -111,9 +112,7 @@ function listenNeedsImplicitBreak(prevText: Text, curText: Text, scope: HTMLElem
 }
 
 function listenTextNodeIneligible(node: Text, root: HTMLElement, opts?: ProfileListenTextOptions): boolean {
-  if (isWithinGospelMount(node, root) || isWithinButton(node, root)) return true
-  if (opts?.omitHeadingText && isWithinHeading(node, root)) return true
-  return false
+  return isListenPlainTextNodeExcluded(node, root, opts)
 }
 
 export function visibleListenRawText(root: HTMLElement, opts?: ProfileListenTextOptions): string {
@@ -142,11 +141,25 @@ export function visibleListenRawText(root: HTMLElement, opts?: ProfileListenText
   return s
 }
 
+/**
+ * Collapsed listen plain: implicit `\n` boundaries in {@link visibleListenRawText} become a
+ * **single space** (same as collapsing all whitespace) so read-along indices stay aligned with
+ * how Web Speech advances through utterance text.
+ */
+export function listenCollapsedPlainFromRaw(raw: string): string {
+  if (!raw) return ''
+  return raw
+    .split('\n')
+    .map((segment) => segment.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .join(' ')
+}
+
 export function plainTextForProfileResourceListen(
   root: HTMLElement,
   opts?: ProfileListenTextOptions
 ): string {
-  return visibleListenRawText(root, opts).replace(/\s+/g, ' ').trim()
+  return listenCollapsedPlainFromRaw(visibleListenRawText(root, opts))
 }
 
 /**

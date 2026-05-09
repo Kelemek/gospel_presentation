@@ -12,10 +12,14 @@ import {
 import { isMemorizeAndroidWebHost, isMemorizeIosWebHost } from '@/lib/memorizationViewportPlatform'
 import { getCurrentTocAnchorId } from '@/lib/tocAnchorFromScroll'
 import type { ProfileListenTextOptions } from '@/lib/profileHighlightVisibleText'
-import { plainTextForProfileResourceListen } from '@/lib/profileResourceListenText'
+import {
+  listenCollapsedPlainFromRaw,
+  plainTextForProfileResourceListen,
+  visibleListenRawText,
+} from '@/lib/profileResourceListenText'
 import {
   chunkIndexContainingPlainOffset,
-  splitTextForTtsChunksWithOffsets,
+  splitListenRawIntoTtsChunksWithOffsets,
 } from '@/lib/splitTextForTtsChunks'
 import {
   clearReadAlongDomHighlight,
@@ -40,6 +44,11 @@ import {
   scrollReadAlongPlainOffsetIntoViewIfNeeded,
 } from '@/lib/scrollReadAlongPlain'
 import {
+  buildBibleReferenceSpeakChunk,
+  displayCharIndexInChunkForSpeakIndex,
+  displayCharRangeInChunkForSpeakRange,
+} from '@/lib/bibleReferenceSpeechTransform'
+import {
   GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT,
   type GospelWebSpeechExclusiveOwnerDetail,
 } from '@/lib/exclusiveWebSpeechListen'
@@ -49,6 +58,18 @@ import {
   type ProfileReadAlongUnderlineStyle,
 } from '@/lib/profileReadAlongUnderlineStyleStorage'
 import { isSpurgeonSermonProfileSlug } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
+
+/** After chunks ending in `.` `!` `?`, brief delay before the next utterance so engines do not run sentences together. */
+const READ_ALONG_AFTER_SENTENCE_GAP_MS = 55
+/** After a listen **segment** (block boundary), brief delay before the next utterance — avoids extra punctuation in text (which would skew Web Speech `charIndex` vs audio). */
+const READ_ALONG_AFTER_SEGMENT_GAP_MS = 95
+
+function listenPlainAndChunksForScope(scope: HTMLElement, listenTextOptions: ProfileListenTextOptions) {
+  const raw = visibleListenRawText(scope, listenTextOptions)
+  const text = listenCollapsedPlainFromRaw(raw)
+  const chunks = splitListenRawIntoTtsChunksWithOffsets(raw)
+  return { text, chunks }
+}
 
 export interface UseProfileResourceReadAloudOptions {
   sections: GospelSection[]
@@ -78,7 +99,13 @@ export function useProfileResourceReadAloud({
   const speakChunkInternalRef = useRef<(chunkIndex: number) => void>(() => {})
 
   const ttsChunksRef = useRef<string[]>([])
+  /** Per-chunk text passed to {@link SpeechSynthesisUtterance} (may expand `3:16` → `3 verse 16`). */
+  const ttsChunksSpeakRef = useRef<string[]>([])
+  /** For each chunk, one display-chunk character index per spoken character (same length as speak chunk). */
+  const ttsChunkSpeakCharToDisplayCharRef = useRef<number[][]>([])
   const ttsChunkPlainStartsRef = useRef<number[]>([])
+  /** When true, wait ~95ms before this chunk utterance (listen segment / block boundary). */
+  const ttsPauseBeforeChunkRef = useRef<boolean[]>([])
   const ttsChunkIndexRef = useRef(0)
   const ttsActiveRef = useRef(false)
   /** Bumped on intentional cancel so stale `onend` handlers don't advance the queue. */
@@ -250,6 +277,7 @@ export function useProfileResourceReadAloud({
     readAlongScopeRef.current = null
     readAlongPlainLenRef.current = 0
     ttsChunkPlainStartsRef.current = []
+    ttsPauseBeforeChunkRef.current = []
     readAlongAnchorIdRef.current = null
     readAlongFingerprintRef.current = null
     lastPersistedPlainOffsetRef.current = 0
@@ -378,7 +406,7 @@ export function useProfileResourceReadAloud({
 
         if (next && !androidHost) {
           const fingerprint = readAlongTextFingerprint(next.text)
-          const chunkMeta = splitTextForTtsChunksWithOffsets(next.text)
+          const { chunks: chunkMeta } = listenPlainAndChunksForScope(next.scope, listenTextOptionsRef.current)
           if (chunkMeta.length > 0) {
             lastPersistedPlainOffsetRef.current = 0
             readAlongAnchorIdRef.current = next.anchorId
@@ -386,7 +414,12 @@ export function useProfileResourceReadAloud({
             readAlongScopeRef.current = next.scope
             readAlongPlainLenRef.current = next.text.length
             ttsChunkPlainStartsRef.current = chunkMeta.map((c) => c.plainStart)
-            ttsChunksRef.current = chunkMeta.map((c) => c.text)
+            ttsPauseBeforeChunkRef.current = chunkMeta.map((c) => Boolean(c.pauseBefore))
+            const displayChunks = chunkMeta.map((c) => c.text)
+            ttsChunksRef.current = displayChunks
+            const speakLayers = displayChunks.map((t) => buildBibleReferenceSpeakChunk(t))
+            ttsChunksSpeakRef.current = speakLayers.map((l) => l.speakText)
+            ttsChunkSpeakCharToDisplayCharRef.current = speakLayers.map((l) => l.speakCharToDisplayCharIndex)
             ttsActiveRef.current = true
             if (slug) {
               saveProfileReadAlongLastSession(slug, next.anchorId, 0, fingerprint)
@@ -408,11 +441,25 @@ export function useProfileResourceReadAloud({
       }
 
       const syn = window.speechSynthesis
-      const text = chunks[chunkIndex]
-      if (!text) {
+      const displayChunk = chunks[chunkIndex]
+      if (!displayChunk) {
         speakChunkInternalRef.current(chunkIndex + 1)
         return
       }
+
+      const speakChunkStored = ttsChunksSpeakRef.current[chunkIndex]
+      const speakMapStored = ttsChunkSpeakCharToDisplayCharRef.current[chunkIndex]
+      const speakChunk =
+        speakChunkStored &&
+        speakMapStored &&
+        speakMapStored.length === speakChunkStored.length &&
+        speakChunkStored.length > 0
+          ? speakChunkStored
+          : displayChunk
+      const speakMap: number[] =
+        speakMapStored && speakMapStored.length === speakChunk.length
+          ? speakMapStored
+          : Array.from({ length: speakChunk.length }, (_, i) => i)
 
       ttsChunkIndexRef.current = chunkIndex
       const birthGen = ttsCancelGenerationRef.current
@@ -420,7 +467,7 @@ export function useProfileResourceReadAloud({
       memorizeListenTtsUserPausedRef.current = false
       memorizeListenTtsPostResumeRef.current = false
 
-      const u = new SpeechSynthesisUtterance(text)
+      const u = new SpeechSynthesisUtterance(speakChunk)
       u.lang = 'en-US'
       const rate = listenPlaybackRateRef.current
       u.rate = toMemorizeWebSpeechUtteranceRate(rate, isMemorizeIosWebHost())
@@ -442,17 +489,23 @@ export function useProfileResourceReadAloud({
               ? {
                   kind: 'word',
                   start: chunkStart,
-                  endExclusive: chunkStart + text.length,
+                  endExclusive: chunkStart + displayChunk.length,
                 }
               : null,
           })
           return
         }
 
-        const fw = firstWordRangeInChunk(text)
+        const fw = firstWordRangeInChunk(speakChunk)
         if (fw) {
-          const plainWordStart = chunkStart + fw.relStart
-          const plainWordEnd = chunkStart + fw.relEndExclusive
+          const dr = displayCharRangeInChunkForSpeakRange(
+            fw.relStart,
+            fw.relEndExclusive,
+            speakMap,
+            displayChunk.length
+          )
+          const plainWordStart = chunkStart + dr.displayStart
+          const plainWordEnd = chunkStart + dr.displayEndExclusive
           recordReadAlongProgressPlainOffset(plainWordStart)
           const mid = Math.floor((plainWordStart + plainWordEnd - 1) / 2)
           const plainOffset = Math.min(Math.max(0, plainLen - 1), Math.max(chunkStart, mid))
@@ -478,8 +531,9 @@ export function useProfileResourceReadAloud({
         if (!scope || plainLen <= 0) return
         const chunkStart = ttsChunkPlainStartsRef.current[chunkIndex] ?? 0
         const ci = typeof ev.charIndex === 'number' ? ev.charIndex : 0
-        const inChunk = Math.max(0, Math.min(ci, text.length))
-        const target = chunkStart + inChunk
+        const inChunkSpeak = Math.max(0, Math.min(ci, speakChunk.length))
+        const displayInChunk = displayCharIndexInChunkForSpeakIndex(inChunkSpeak, speakMap, displayChunk.length)
+        const target = chunkStart + displayInChunk
         const clampedTarget = Math.min(Math.max(0, plainLen - 1), target)
 
         const lagMs = prefersReducedMotionReadAlong() ? 0 : getReadAlongBoundaryUiLagMs()
@@ -490,10 +544,19 @@ export function useProfileResourceReadAloud({
           if (typeof window !== 'undefined' && window.speechSynthesis.paused) return
           if (ttsChunkIndexRef.current !== chunkIndex) return
 
-          const wr = currentWordRangeInChunk(text, ev)
-          const progressPlain = wr
-            ? Math.min(Math.max(0, plainLen - 1), chunkStart + wr.relStart)
-            : clampedTarget
+          const wr = currentWordRangeInChunk(speakChunk, ev)
+          let progressPlain: number
+          if (wr) {
+            const drp = displayCharRangeInChunkForSpeakRange(
+              wr.relStart,
+              wr.relEndExclusive,
+              speakMap,
+              displayChunk.length
+            )
+            progressPlain = Math.min(Math.max(0, plainLen - 1), chunkStart + drp.displayStart)
+          } else {
+            progressPlain = clampedTarget
+          }
           recordReadAlongProgressPlainOffset(progressPlain)
 
           if (prefersReducedMotionReadAlong()) {
@@ -502,12 +565,17 @@ export function useProfileResourceReadAloud({
           }
 
           if (wr) {
-            const plainWordStart = chunkStart + wr.relStart
-            const plainWordEnd = chunkStart + wr.relEndExclusive
-            const scrollMid = Math.min(
-              Math.max(0, plainLen - 1),
-              chunkStart + Math.floor((wr.relStart + wr.relEndExclusive - 1) / 2)
+            const dr = displayCharRangeInChunkForSpeakRange(
+              wr.relStart,
+              wr.relEndExclusive,
+              speakMap,
+              displayChunk.length
             )
+            const plainWordStart = chunkStart + dr.displayStart
+            const plainWordEnd = chunkStart + dr.displayEndExclusive
+            const speakMid = Math.floor((wr.relStart + wr.relEndExclusive - 1) / 2)
+            const dispMid = displayCharIndexInChunkForSpeakIndex(speakMid, speakMap, displayChunk.length)
+            const scrollMid = Math.min(Math.max(0, plainLen - 1), chunkStart + dispMid)
             const lineMode = readAlongUnderlineStyleRef.current === 'line'
             scheduleReadAlongUi({
               scroll: scrollMid,
@@ -547,7 +615,24 @@ export function useProfileResourceReadAloud({
         if (birthGen !== ttsCancelGenerationRef.current) return
         memorizeListenTtsRateAtStartRef.current = null
         bumpListen()
-        speakChunkInternalRef.current(chunkIndex + 1)
+        const nextIndex = chunkIndex + 1
+        const runNext = () => {
+          if (birthGen !== ttsCancelGenerationRef.current) return
+          speakChunkInternalRef.current(nextIndex)
+        }
+        const trimmedEnd = displayChunk.trimEnd()
+        const hasMore = nextIndex < chunks.length
+        const afterFullStop = hasMore && /[.!?]['"]?$/.test(trimmedEnd)
+        const segmentPause = hasMore && ttsPauseBeforeChunkRef.current[nextIndex] === true
+        const gapMs = Math.max(
+          afterFullStop ? READ_ALONG_AFTER_SENTENCE_GAP_MS : 0,
+          segmentPause ? READ_ALONG_AFTER_SEGMENT_GAP_MS : 0
+        )
+        if (gapMs > 0 && typeof window !== 'undefined') {
+          window.setTimeout(runNext, gapMs)
+        } else {
+          runNext()
+        }
       }
       u.onerror = () => {
         if (birthGen !== ttsCancelGenerationRef.current) return
@@ -638,7 +723,7 @@ export function useProfileResourceReadAloud({
       if (typeof document !== 'undefined') clearReadAlongDomHighlight(document)
       ttsCancelGenerationRef.current += 1
 
-      const chunkMeta = splitTextForTtsChunksWithOffsets(resolved.text)
+      const chunkMeta = listenPlainAndChunksForScope(resolved.scope, listenTextOptionsRef.current).chunks
       if (chunkMeta.length === 0) return
 
       let startChunk = 0
@@ -661,7 +746,12 @@ export function useProfileResourceReadAloud({
       readAlongScopeRef.current = resolved.scope
       readAlongPlainLenRef.current = resolved.text.length
       ttsChunkPlainStartsRef.current = chunkMeta.map((c) => c.plainStart)
-      ttsChunksRef.current = chunkMeta.map((c) => c.text)
+      ttsPauseBeforeChunkRef.current = chunkMeta.map((c) => Boolean(c.pauseBefore))
+      const displayChunks = chunkMeta.map((c) => c.text)
+      ttsChunksRef.current = displayChunks
+      const speakLayers = displayChunks.map((t) => buildBibleReferenceSpeakChunk(t))
+      ttsChunksSpeakRef.current = speakLayers.map((l) => l.speakText)
+      ttsChunkSpeakCharToDisplayCharRef.current = speakLayers.map((l) => l.speakCharToDisplayCharIndex)
       ttsActiveRef.current = true
       speakChunkInternal(startChunk)
     },

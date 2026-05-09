@@ -26,6 +26,67 @@ export function isWithinButton(node: Node, root: HTMLElement): boolean {
   return false
 }
 
+/** Nearest ancestor `button` with `data-tour="scripture-card"` (main verse reference pill / card). */
+function isWithinScriptureCardMainButton(node: Node, root: HTMLElement): boolean {
+  let cur: Node | null = node
+  while (cur && cur !== root) {
+    if (
+      cur instanceof HTMLElement &&
+      cur.tagName === 'BUTTON' &&
+      cur.getAttribute('data-tour') === 'scripture-card'
+    ) {
+      return true
+    }
+    cur = cur.parentNode
+  }
+  return false
+}
+
+/** Unpin control beside a verse card or inline pill — omit from read-aloud. */
+function isWithinScriptureProgressUnpinButton(node: Node, root: HTMLElement): boolean {
+  let cur: Node | null = node
+  while (cur && cur !== root) {
+    if (
+      cur instanceof HTMLElement &&
+      cur.tagName === 'BUTTON' &&
+      cur.getAttribute('data-tour') === 'scripture-progress-unpin'
+    ) {
+      return true
+    }
+    cur = cur.parentNode
+  }
+  return false
+}
+
+/** Nearest inline scripture mount (`data-gospel-mount="scripture"`). */
+function listenScriptureMountAncestor(node: Node, root: HTMLElement): Element | null {
+  let cur: Node | null = node
+  while (cur && cur !== root) {
+    if (cur instanceof Element && cur.getAttribute('data-gospel-mount') === 'scripture') return cur
+    cur = cur.parentNode
+  }
+  return null
+}
+
+/**
+ * Whether a `Text` node is excluded from profile Listen / read-along plain text (must match
+ * {@link visibleListenRawText} in `profileResourceListenText.ts`).
+ *
+ * COMA / Four Rules mounts stay excluded. Inline **`data-gospel-mount="scripture"`** includes the
+ * visible reference (portaled label). Other `<button>` text is skipped except **`scripture-card`**.
+ */
+export function isListenPlainTextNodeExcluded(node: Text, root: HTMLElement, opts?: ProfileListenTextOptions): boolean {
+  const scrMount = listenScriptureMountAncestor(node, root)
+  if (scrMount) {
+    if (isWithinScriptureProgressUnpinButton(node, root)) return true
+    return false
+  }
+  if (isWithinGospelMount(node, root)) return true
+  if (isWithinButton(node, root) && !isWithinScriptureCardMainButton(node, root)) return true
+  if (opts?.omitHeadingText && isWithinHeading(node, root)) return true
+  return false
+}
+
 const HEADING_TAGS = new Set(['H1', 'H2', 'H3', 'H4', 'H5', 'H6'])
 
 /** Options for profile body Listen / read-along plain-text walks (must match {@link visibleListenRawText}). */
@@ -187,14 +248,12 @@ export function locateVisibleTextOffset(
 }
 
 function listenIneligibleText(node: Text, scope: HTMLElement, opts?: ProfileListenTextOptions): boolean {
-  if (isWithinGospelMount(node, scope) || isWithinButton(node, scope)) return true
-  if (opts?.omitHeadingText && isWithinHeading(node, scope)) return true
-  return false
+  return isListenPlainTextNodeExcluded(node, scope, opts)
 }
 
 /**
- * Same as {@link locateVisibleTextOffset} but skips `[data-gospel-mount]` and `<button>`, and
- * optionally `h1`–`h6` when {@link ProfileListenTextOptions.omitHeadingText} — matches {@link visibleListenRawText}.
+ * Same as {@link locateVisibleTextOffset} but uses the Listen / read-along eligibility rules
+ * ({@link isListenPlainTextNodeExcluded}) — matches {@link visibleListenRawText}.
  */
 export function locateListenVisibleTextOffset(
   container: HTMLElement,

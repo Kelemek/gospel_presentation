@@ -197,6 +197,7 @@ export default function GospelInlineHtml({
           <span className="relative inline-flex items-center" style={{ margin: '0 2px', verticalAlign: 'baseline' }}>
             <button
               type="button"
+              data-tour="scripture-card"
               className={rowPin ? VERSE_PIN_PILL_STYLES[rowPin.colorId].pill : PILL_LINK_CLASS}
               onClick={(e) => {
                 e.stopPropagation()
@@ -210,6 +211,7 @@ export default function GospelInlineHtml({
             {rowPin && onRemoveVersePin && (
               <button
                 type="button"
+                data-tour="scripture-progress-unpin"
                 onClick={(e) => {
                   e.stopPropagation()
                   onRemoveVersePin({ colorId: rowPin.colorId, bookmarkId: rowPin.bookmarkId })

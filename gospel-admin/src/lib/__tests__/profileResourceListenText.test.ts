@@ -4,6 +4,7 @@
 
 import { locateListenVisibleTextOffset } from '@/lib/profileHighlightVisibleText'
 import {
+  listenCollapsedPlainFromRaw,
   locateListenRawTextOffset,
   plainTextForProfileResourceListen,
   visibleListenRawText,
@@ -29,6 +30,42 @@ describe('plainTextForProfileResourceListen', () => {
     `
     const el = document.getElementById('root')!
     expect(plainTextForProfileResourceListen(el)).toBe('Line one line two.')
+  })
+
+  it('includes inline scripture mount reference (scripture card button)', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <p>Before <span data-gospel-mount="scripture" data-gospel-ref="Acts 1:1"><button type="button" data-tour="scripture-card">Acts 1:1</button></span> after.</p>
+      </div>
+    `
+    const el = document.getElementById('root')!
+    expect(plainTextForProfileResourceListen(el)).toBe('Before Acts 1:1 after.')
+  })
+
+  it('includes block verse card button label', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <p>Intro</p>
+        <div class="flex"><button type="button" data-tour="scripture-card">John 3:16</button></div>
+      </div>
+    `
+    const el = document.getElementById('root')!
+    expect(plainTextForProfileResourceListen(el)).toBe('Intro John 3:16')
+  })
+
+  it('omits unpin control text inside scripture mount', () => {
+    document.body.innerHTML = `
+      <div id="root">
+        <p>
+          <span data-gospel-mount="scripture" data-gospel-ref="Rom 8:28">
+            <button type="button" data-tour="scripture-card">Rom 8:28</button>
+            <button type="button" data-tour="scripture-progress-unpin" aria-label="Remove">×</button>
+          </span>
+        </p>
+      </div>
+    `
+    const el = document.getElementById('root')!
+    expect(plainTextForProfileResourceListen(el)).toBe('Rom 8:28')
   })
 
   it('normalizes whitespace', () => {
@@ -60,6 +97,12 @@ describe('plainTextForProfileResourceListen', () => {
     const el = document.getElementById('root')!
     expect(visibleListenRawText(el)).toBe('First\nSubhead\nSecond')
     expect(plainTextForProfileResourceListen(el)).toBe('First Subhead Second')
+  })
+})
+
+describe('listenCollapsedPlainFromRaw', () => {
+  it('joins block segments with a single space', () => {
+    expect(listenCollapsedPlainFromRaw('Intro\nJohn 3:16')).toBe('Intro John 3:16')
   })
 })
 

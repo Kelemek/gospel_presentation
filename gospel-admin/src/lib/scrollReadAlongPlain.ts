@@ -2,7 +2,7 @@ import {
   preferLaterEquivalentListenTextBoundary,
   type ProfileListenTextOptions,
 } from '@/lib/profileHighlightVisibleText'
-import { locateListenRawTextOffset, visibleListenRawText } from '@/lib/profileResourceListenText'
+import { listenCollapsedPlainFromRaw, locateListenRawTextOffset, visibleListenRawText } from '@/lib/profileResourceListenText'
 
 /**
  * Maps a **collapsed** offset (same string as {@link plainTextForProfileResourceListen}) into a
@@ -18,7 +18,7 @@ export function walkerOffsetForReadAlongPlainOffset(
   listenTextOptions?: ProfileListenTextOptions
 ): number {
   const raw = visibleListenRawText(scope, listenTextOptions)
-  const full = raw.replace(/\s+/g, ' ').trim()
+  const full = listenCollapsedPlainFromRaw(raw)
   const L = full.length
   if (L === 0 || plainCollapsedLen <= 0) return 0
 

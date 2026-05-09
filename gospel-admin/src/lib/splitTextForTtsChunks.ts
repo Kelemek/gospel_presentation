@@ -42,7 +42,12 @@ function splitTextForTtsChunkStrings(trimmed: string): string[] {
   return out.filter(Boolean)
 }
 
-export type TtsTextChunk = { text: string; plainStart: number }
+export type TtsTextChunk = {
+  text: string
+  plainStart: number
+  /** When true, wait briefly before this utterance (listen segment / block boundary). */
+  pauseBefore?: boolean
+}
 
 /** Chunk index to resume speaking from for a collapsed plain offset (read-along persistence). */
 export function chunkIndexContainingPlainOffset(chunks: TtsTextChunk[], plainOffset: number): number {
@@ -82,4 +87,32 @@ export function splitTextForTtsChunksWithOffsets(text: string): TtsTextChunk[] {
  */
 export function splitTextForTtsChunks(text: string): string[] {
   return splitTextForTtsChunksWithOffsets(text).map((c) => c.text)
+}
+
+/**
+ * Build profile listen TTS chunks from the raw listen string (`\\n` = implicit block boundary):
+ * runs {@link splitTextForTtsChunksWithOffsets} per segment, then **plainStart** in the same space as
+ * joining segments with a single space ({@link listenCollapsedPlainFromRaw}). Sets **pauseBefore**
+ * on the first chunk of each segment after the first so the caller can delay the next utterance
+ * without extra punctuation (keeps Web Speech `charIndex` aligned with audio).
+ */
+export function splitListenRawIntoTtsChunksWithOffsets(raw: string): TtsTextChunk[] {
+  const segments = raw.split('\n').map((s) => s.replace(/\s+/g, ' ').trim()).filter(Boolean)
+  const out: TtsTextChunk[] = []
+  let globalPlain = 0
+  for (let si = 0; si < segments.length; si++) {
+    const seg = segments[si]!
+    const parts = splitTextForTtsChunksWithOffsets(seg)
+    for (let pi = 0; pi < parts.length; pi++) {
+      const p = parts[pi]!
+      out.push({
+        text: p.text,
+        plainStart: globalPlain + p.plainStart,
+        pauseBefore: si > 0 && pi === 0,
+      })
+    }
+    globalPlain += seg.length
+    if (si < segments.length - 1) globalPlain += 1
+  }
+  return out
 }

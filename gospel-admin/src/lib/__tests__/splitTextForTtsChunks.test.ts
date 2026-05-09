@@ -1,5 +1,6 @@
 import {
   chunkIndexContainingPlainOffset,
+  splitListenRawIntoTtsChunksWithOffsets,
   splitTextForTtsChunks,
   splitTextForTtsChunksWithOffsets,
 } from '@/lib/splitTextForTtsChunks'
@@ -28,6 +29,25 @@ describe('splitTextForTtsChunksWithOffsets', () => {
     expect(meta.map((m) => m.text)).toEqual(['Hello world.', 'Second line!'])
     expect(meta[0]!.plainStart).toBe(0)
     expect(meta[1]!.plainStart).toBe(13)
+  })
+})
+
+describe('splitListenRawIntoTtsChunksWithOffsets', () => {
+  it('marks pauseBefore on first chunk of each segment after the first', () => {
+    const raw = 'First line.\nSecond line.'
+    const meta = splitListenRawIntoTtsChunksWithOffsets(raw)
+    expect(meta.map((m) => m.pauseBefore)).toEqual([false, true])
+    expect(meta[0]!.plainStart).toBe(0)
+    expect(meta[1]!.plainStart).toBe(12)
+  })
+
+  it('plainStart spans joined segments like a single space between blocks', () => {
+    const raw = 'hello\nworld'
+    const meta = splitListenRawIntoTtsChunksWithOffsets(raw)
+    expect(meta.map((m) => m.text)).toEqual(['hello', 'world'])
+    expect(meta[0]!.plainStart).toBe(0)
+    expect(meta[1]!.plainStart).toBe(6)
+    expect(meta[1]!.pauseBefore).toBe(true)
   })
 })
 
