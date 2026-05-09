@@ -1,13 +1,17 @@
 /**
  * Plain text for profile body read-aloud (Web Speech). Drops inline scripture / COMA /
- * Four Rules mounts (same exclusion idea as highlight offset streams) and removes buttons
- * so verse-pin controls are not spoken.
+ * Four Rules mounts (same exclusion idea as highlight offset streams), removes buttons
+ * so verse-pin controls are not spoken, and skips **`h1`–`h6`** heading text so titles are not read.
  *
  * Built from the same eligible Text-node walk used to map spoken character offsets back into
  * the DOM — avoids innerText vs proportional-walker drift (especially WebKit) that makes the
  * underline creep ahead of audio.
  */
-import { isWithinButton, isWithinGospelMount } from '@/lib/profileHighlightVisibleText'
+import {
+  isWithinButton,
+  isWithinGospelMount,
+  isWithinHeading,
+} from '@/lib/profileHighlightVisibleText'
 
 /** Approximate block containers where `innerText` inserts a break between siblings. */
 const LISTEN_BLOCK_TAGS = new Set([
@@ -114,7 +118,11 @@ export function visibleListenRawText(root: HTMLElement): string {
       node = walker.nextNode()
       continue
     }
-    if (isWithinGospelMount(node, root) || isWithinButton(node, root)) {
+    if (
+      isWithinGospelMount(node, root) ||
+      isWithinButton(node, root) ||
+      isWithinHeading(node, root)
+    ) {
       node = walker.nextNode()
       continue
     }
@@ -157,7 +165,11 @@ export function locateListenRawTextOffset(
       node = walker.nextNode()
       continue
     }
-    if (isWithinGospelMount(node, root) || isWithinButton(node, root)) {
+    if (
+      isWithinGospelMount(node, root) ||
+      isWithinButton(node, root) ||
+      isWithinHeading(node, root)
+    ) {
       node = walker.nextNode()
       continue
     }

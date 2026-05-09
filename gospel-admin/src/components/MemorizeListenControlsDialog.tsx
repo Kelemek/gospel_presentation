@@ -188,7 +188,7 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
                 type="button"
                 data-testid="memorize-listen-start-from-beginning"
                 onClick={onStartFromBeginning}
-                className="text-center text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 underline-offset-2 hover:underline py-1 whitespace-nowrap"
+                className="cursor-pointer text-center text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 underline-offset-2 hover:underline py-1 whitespace-nowrap"
               >
                 Start from beginning
               </button>
@@ -199,7 +199,7 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
               type="button"
               data-tour="memorize-listen-close"
               onClick={onClose}
-              className="shrink-0 text-slate-600 dark:text-slate-200 text-xl font-bold min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-600"
+              className="cursor-pointer shrink-0 text-slate-600 dark:text-slate-200 text-xl font-bold min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-600"
               aria-label="Close"
             >
               ×
@@ -289,7 +289,7 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
                     type="button"
                     data-testid="memorize-listen-read-along-style-word"
                     onClick={() => onReadAlongUnderlineStyle('word')}
-                    className={`px-2 sm:px-2.5 min-w-11 text-xs font-medium transition-colors ${
+                    className={`cursor-pointer px-2 sm:px-2.5 min-w-11 text-xs font-medium transition-colors ${
                       readAlongUnderlineStyle === 'word'
                         ? 'bg-amber-50 dark:bg-amber-900/25 text-amber-900 dark:text-amber-100'
                         : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
@@ -302,7 +302,7 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
                     type="button"
                     data-testid="memorize-listen-read-along-style-line"
                     onClick={() => onReadAlongUnderlineStyle('line')}
-                    className={`px-2 sm:px-2.5 min-w-11 text-xs font-medium transition-colors ${
+                    className={`cursor-pointer px-2 sm:px-2.5 min-w-11 text-xs font-medium transition-colors ${
                       readAlongUnderlineStyle === 'line'
                         ? 'bg-amber-50 dark:bg-amber-900/25 text-amber-900 dark:text-amber-100'
                         : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'

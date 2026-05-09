@@ -24,6 +24,7 @@ import {
 } from '@/lib/profileReadAlongDomHighlight'
 import { findNextReadAlongScope } from '@/lib/profileReadAlongNextAnchor'
 import {
+  clearAllProfileReadAlongProgressForSlug,
   clearProfileReadAlongProgress,
   loadProfileReadAlongLastSession,
   loadProfileReadAlongProgress,
@@ -563,11 +564,11 @@ export function useProfileResourceReadAloud({
   }, [speakChunkInternal])
 
   const startReadAloudSession = useCallback(
-    (fromBeginning: boolean) => {
+    (fromBeginning: boolean, forcedResolved?: { scope: HTMLElement; text: string }) => {
       if (androidHost) return
       if (typeof window === 'undefined' || !window.speechSynthesis) return
 
-      const resolvedScroll = resolveListenScopeAndText()
+      const resolvedScroll = forcedResolved ?? resolveListenScopeAndText()
       if (!resolvedScroll) return
 
       let resolved = resolvedScroll
@@ -659,11 +660,7 @@ export function useProfileResourceReadAloud({
     }
     const slug = profileSlugRef.current
     if (slug && typeof document !== 'undefined') {
-      const r = resolveListenScopeAndText()
-      if (r) {
-        clearProfileReadAlongProgress(slug, r.scope.id)
-        saveProfileReadAlongLastSession(slug, r.scope.id, 0, readAlongTextFingerprint(r.text))
-      }
+      clearAllProfileReadAlongProgressForSlug(slug, sections)
     }
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel()
@@ -671,12 +668,24 @@ export function useProfileResourceReadAloud({
     ttsCancelGenerationRef.current += 1
     cancelReadAlongUiScheduling()
     clearReadAlongSession()
-    startReadAloudSession(true)
+
+    const first =
+      typeof document !== 'undefined' ? findNextReadAlongScope(sections, null, null) : null
+    if (!first) {
+      onNothingToRead?.('There is no readable text in this profile.')
+      return
+    }
+    first.scope.scrollIntoView({
+      block: 'center',
+      behavior: prefersReducedMotionReadAlong() ? 'auto' : 'smooth',
+    })
+    startReadAloudSession(true, { scope: first.scope, text: first.text })
   }, [
     androidHost,
     cancelReadAlongUiScheduling,
     clearReadAlongSession,
-    resolveListenScopeAndText,
+    onNothingToRead,
+    sections,
     startReadAloudSession,
   ])
 

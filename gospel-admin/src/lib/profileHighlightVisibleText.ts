@@ -26,6 +26,18 @@ export function isWithinButton(node: Node, root: HTMLElement): boolean {
   return false
 }
 
+const HEADING_TAGS = new Set(['H1', 'H2', 'H3', 'H4', 'H5', 'H6'])
+
+/** Section / article headings are omitted from profile read-aloud (body copy only). */
+export function isWithinHeading(node: Node, root: HTMLElement): boolean {
+  let cur: Node | null = node
+  while (cur && cur !== root) {
+    if (cur instanceof Element && HEADING_TAGS.has(cur.tagName)) return true
+    cur = cur.parentNode
+  }
+  return false
+}
+
 export function visibleTextLengthBeforeBoundary(
   scope: HTMLElement,
   boundaryNode: Node,
@@ -169,10 +181,14 @@ export function locateVisibleTextOffset(
 }
 
 function listenIneligibleText(node: Text, scope: HTMLElement): boolean {
-  return isWithinGospelMount(node, scope) || isWithinButton(node, scope)
+  return (
+    isWithinGospelMount(node, scope) ||
+    isWithinButton(node, scope) ||
+    isWithinHeading(node, scope)
+  )
 }
 
-/** Same as {@link locateVisibleTextOffset} but skips `[data-gospel-mount]` **and** `<button>` text — matches {@link visibleListenRawText}. */
+/** Same as {@link locateVisibleTextOffset} but skips `[data-gospel-mount]`, `<button>`, and `h1`–`h6` — matches {@link visibleListenRawText}. */
 export function locateListenVisibleTextOffset(
   container: HTMLElement,
   targetOffset: number

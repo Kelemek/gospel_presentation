@@ -36,6 +36,22 @@ describe('plainTextForProfileResourceListen', () => {
     const el = document.getElementById('root')!
     expect(plainTextForProfileResourceListen(el)).toBe('A B')
   })
+
+  it('omits h1–h6 heading text', () => {
+    document.body.innerHTML =
+      '<div id="root"><h2>Section title</h2><p>Paragraph body.</p></div>'
+    const el = document.getElementById('root')!
+    expect(plainTextForProfileResourceListen(el)).toBe('Paragraph body.')
+    expect(visibleListenRawText(el)).toBe('Paragraph body.')
+  })
+
+  it('still reads body text after a skipped heading (implicit break between blocks)', () => {
+    document.body.innerHTML =
+      '<div id="root"><p>First</p><h3>Do not read</h3><p>Second</p></div>'
+    const el = document.getElementById('root')!
+    expect(visibleListenRawText(el)).toBe('First\nSecond')
+    expect(plainTextForProfileResourceListen(el)).toBe('First Second')
+  })
 })
 
 describe('locateListenRawTextOffset', () => {

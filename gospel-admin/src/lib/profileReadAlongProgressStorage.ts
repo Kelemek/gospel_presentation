@@ -1,5 +1,8 @@
 /** Resume read-aloud position per profile slug + TOC anchor (`section-*`). Device-only. */
 
+import { buildOrderedTocAnchorIds } from '@/lib/tocAnchorFromScroll'
+import type { GospelSection } from '@/lib/types'
+
 export const PROFILE_READ_ALONG_PROGRESS_KEY_PREFIX = 'gospel-profile-read-along:'
 
 /** Most recent read-aloud anchor for a slug (survives scroll-at-top vs subsection mismatch). */
@@ -141,4 +144,24 @@ export function clearProfileReadAlongProgress(profileSlug: string, anchorId: str
     // ignore
   }
   clearProfileReadAlongLastSessionIfAnchorMatches(profileSlug, anchorId)
+}
+
+/** Clears last-session pointer and every per-anchor progress key for this profile (Listen “Start from beginning”). */
+export function clearAllProfileReadAlongProgressForSlug(
+  profileSlug: string,
+  sections: GospelSection[]
+): void {
+  if (typeof window === 'undefined') return
+  try {
+    clearProfileReadAlongLastSession(profileSlug)
+  } catch {
+    /* ignore */
+  }
+  for (const anchorId of buildOrderedTocAnchorIds(sections)) {
+    try {
+      localStorage.removeItem(readAlongProgressStorageKey(profileSlug, anchorId))
+    } catch {
+      /* ignore */
+    }
+  }
 }

@@ -1,4 +1,5 @@
 import {
+  clearAllProfileReadAlongProgressForSlug,
   clearProfileReadAlongProgress,
   loadProfileReadAlongLastSession,
   loadProfileReadAlongProgress,
@@ -8,6 +9,7 @@ import {
   saveProfileReadAlongLastSession,
   saveProfileReadAlongProgress,
 } from '@/lib/profileReadAlongProgressStorage'
+import type { GospelSection } from '@/lib/types'
 
 describe('profileReadAlongProgressStorage', () => {
   beforeEach(() => {
@@ -68,5 +70,28 @@ describe('profileReadAlongProgressStorage', () => {
 
   it('last-session key is per slug only', () => {
     expect(readAlongLastSessionStorageKey('a')).not.toBe(readAlongLastSessionStorageKey('b'))
+  })
+
+  const minimalSections: GospelSection[] = [
+    {
+      section: '1',
+      title: 'One',
+      subsections: [
+        { title: 'A', content: 'x', questions: [] },
+        { title: 'B', content: 'y', questions: [] },
+      ],
+    },
+  ]
+
+  it('clearAllProfileReadAlongProgressForSlug removes last session and every anchor key', () => {
+    saveProfileReadAlongLastSession('slug', 'section-1-0', 3, 'fp0')
+    saveProfileReadAlongProgress('slug', 'section-1', 1, 'fpS')
+    saveProfileReadAlongProgress('slug', 'section-1-0', 2, 'fpA')
+    saveProfileReadAlongProgress('slug', 'section-1-1', 4, 'fpB')
+    clearAllProfileReadAlongProgressForSlug('slug', minimalSections)
+    expect(loadProfileReadAlongLastSession('slug')).toBeNull()
+    expect(loadProfileReadAlongProgress('slug', 'section-1')).toBeNull()
+    expect(loadProfileReadAlongProgress('slug', 'section-1-0')).toBeNull()
+    expect(loadProfileReadAlongProgress('slug', 'section-1-1')).toBeNull()
   })
 })
