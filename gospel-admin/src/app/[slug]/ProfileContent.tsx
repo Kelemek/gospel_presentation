@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef } from 'react'
+import { usePresentationScrollReadComplete } from '@/hooks/usePresentationScrollReadComplete'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import GospelSection from '@/components/GospelSection'
@@ -36,6 +37,12 @@ import { createClient } from '@/lib/supabase/client'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import { useTranslation } from '@/contexts/TranslationContext'
 import { GOSPEL_CLOSE_PROFILE_SLIDEOUT_MENU_EVENT } from '@/lib/bookmarksPanelCloseEvent'
+import {
+  GOSPEL_PRESENTATION_READ_STATUS_CHANGED_EVENT,
+  isPresentationReadComplete,
+  PRESENTATION_READ_COMPLETE_STORAGE_KEY,
+  removePresentationReadCompleteSlug,
+} from '@/lib/presentationReadCompleteStorage'
 import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
 import { findFirstScriptureCardAnchors } from '@/lib/findFirstScriptureCardAnchors'
 import {
@@ -717,6 +724,42 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     return () => window.removeEventListener(GOSPEL_CLOSE_PROFILE_SLIDEOUT_MENU_EVENT, onTourCloseMenu)
   }, [])
 
+  usePresentationScrollReadComplete(profileInfo?.slug)
+
+  const [presentationMarkedReadComplete, setPresentationMarkedReadComplete] = useState(false)
+  useLayoutEffect(() => {
+    if (!profileInfo?.slug) {
+      setPresentationMarkedReadComplete(false)
+      return
+    }
+    setPresentationMarkedReadComplete(isPresentationReadComplete(profileInfo.slug))
+  }, [profileInfo?.slug])
+
+  useEffect(() => {
+    if (!profileInfo?.slug) return
+    const slug = profileInfo.slug
+    const onStatus = (e: Event) => {
+      const ce = e as CustomEvent<{ slug: string; read: boolean }>
+      if (ce.detail?.slug === slug) setPresentationMarkedReadComplete(ce.detail.read)
+    }
+    const onStorage = (ev: StorageEvent) => {
+      if (ev.key === PRESENTATION_READ_COMPLETE_STORAGE_KEY) {
+        setPresentationMarkedReadComplete(isPresentationReadComplete(slug))
+      }
+    }
+    window.addEventListener(GOSPEL_PRESENTATION_READ_STATUS_CHANGED_EVENT, onStatus)
+    window.addEventListener('storage', onStorage)
+    return () => {
+      window.removeEventListener(GOSPEL_PRESENTATION_READ_STATUS_CHANGED_EVENT, onStatus)
+      window.removeEventListener('storage', onStorage)
+    }
+  }, [profileInfo?.slug])
+
+  const handleMarkPresentationUnread = useCallback(() => {
+    if (!profileInfo?.slug) return
+    removePresentationReadCompleteSlug(profileInfo.slug)
+  }, [profileInfo?.slug])
+
   // Early return if required props are missing - moved after all hooks
   if (!sections || !profileInfo) {
     return <div>Loading...</div>
@@ -930,6 +973,16 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                       Open scripture and choose a pin color beside Memorize — yellow tracks your last passage; other tints can repeat across passages. Saved on this device only.
                     </div>
                   )}
+                  {presentationMarkedReadComplete ? (
+                    <button
+                      type="button"
+                      onClick={handleMarkPresentationUnread}
+                      className="mt-3 w-full cursor-pointer rounded px-3 py-1 text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors hover:bg-slate-200 dark:hover:bg-slate-600"
+                      aria-label="Mark this resource as unread"
+                    >
+                      Mark this resource as unread
+                    </button>
+                  ) : null}
                 </div>
             </div>
 

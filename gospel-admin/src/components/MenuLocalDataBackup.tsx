@@ -99,7 +99,7 @@ export default function MenuLocalDataBackup(props: MenuLocalDataBackupProps = {}
       }
 
       const ok = await showConfirm(
-        'This will replace bookmarks, memorized verses, pinned passages, your saved answers, Listen resume positions, and display settings on this device with the data from this file.\n\nContinue?'
+        'This will replace bookmarks, memorized verses, pinned passages, your saved answers, Listen resume positions, which presentations you have read to the end, and display settings on this device with the data from this file.\n\nContinue?'
       )
       if (!ok) return
 
@@ -119,7 +119,7 @@ export default function MenuLocalDataBackup(props: MenuLocalDataBackupProps = {}
   return (
     <div className="mt-6 space-y-3 print-hide" data-tour="menu-local-data-backup">
       <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">
-        Bookmarks, highlights, memorized verses, pins, answers, Listen resume, and display options saved on this device only.
+        Bookmarks, highlights, memorized verses, pins, answers, Listen resume, read-to-end marks for presentations, and display options saved on this device only.
       </p>
       {Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android' ? (
         <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">

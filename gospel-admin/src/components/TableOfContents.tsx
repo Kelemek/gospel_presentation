@@ -4,6 +4,11 @@ import { GospelSection } from '@/lib/types'
 import type { PublicResourceItem } from '@/lib/supabase-data-service'
 import Link from 'next/link'
 import { useEffect, useState, useCallback } from 'react'
+import {
+  GOSPEL_PRESENTATION_READ_STATUS_CHANGED_EVENT,
+  loadPresentationReadCompleteSlugs,
+  PRESENTATION_READ_COMPLETE_STORAGE_KEY,
+} from '@/lib/presentationReadCompleteStorage'
 import { createClient } from '@/lib/supabase/client'
 import { useTranslation, BibleTranslation } from '@/contexts/TranslationContext'
 import { useTextSize } from '@/contexts/TextSizeContext'
@@ -59,6 +64,35 @@ export default function TableOfContents({
   const { textSize, setTextSize } = useTextSize()
   const [expandedCategoryIds, setExpandedCategoryIds] = useState<Set<string>>(new Set())
   const { translation, setTranslation, enabledTranslationOptions } = useTranslation()
+
+  const [readCompleteSlugs, setReadCompleteSlugs] = useState<Set<string>>(() => new Set())
+
+  const refreshReadCompleteSlugs = useCallback(() => {
+    setReadCompleteSlugs(new Set(loadPresentationReadCompleteSlugs()))
+  }, [])
+
+  useEffect(() => {
+    refreshReadCompleteSlugs()
+    const onStatus = (e: Event) => {
+      const ce = e as CustomEvent<{ slug: string; read: boolean }>
+      if (!ce.detail?.slug) return
+      setReadCompleteSlugs((prev) => {
+        const next = new Set(prev)
+        if (ce.detail.read) next.add(ce.detail.slug)
+        else next.delete(ce.detail.slug)
+        return next
+      })
+    }
+    const onStorage = (ev: StorageEvent) => {
+      if (ev.key === PRESENTATION_READ_COMPLETE_STORAGE_KEY) refreshReadCompleteSlugs()
+    }
+    window.addEventListener(GOSPEL_PRESENTATION_READ_STATUS_CHANGED_EVENT, onStatus)
+    window.addEventListener('storage', onStorage)
+    return () => {
+      window.removeEventListener(GOSPEL_PRESENTATION_READ_STATUS_CHANGED_EVENT, onStatus)
+      window.removeEventListener('storage', onStorage)
+    }
+  }, [refreshReadCompleteSlugs])
 
   const toggleCategory = useCallback((id: string) => {
     setExpandedCategoryIds((prev) => {
@@ -162,7 +196,11 @@ export default function TableOfContents({
                           key={item.slug}
                           href={`/${item.slug}`}
                           data-resource-template-slug={item.slug}
-                          className="block px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors"
+                          className={`block px-4 py-3 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors ${
+                            readCompleteSlugs.has(item.slug)
+                              ? 'font-extrabold text-slate-900 dark:text-slate-50'
+                              : 'font-normal text-slate-700 dark:text-slate-200'
+                          }`}
                         >
                           {item.title}
                         </Link>
@@ -223,7 +261,11 @@ export default function TableOfContents({
                               key={t.slug}
                               href={`/${t.slug}`}
                               data-resource-template-slug={t.slug}
-                              className="block py-2 pl-8 pr-4 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors"
+                              className={`block py-2 pl-8 pr-4 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors ${
+                                readCompleteSlugs.has(t.slug)
+                                  ? 'font-extrabold text-slate-900 dark:text-slate-50'
+                                  : 'font-normal text-slate-700 dark:text-slate-200'
+                              }`}
                             >
                               {t.title}
                             </Link>

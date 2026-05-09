@@ -126,6 +126,55 @@ describe('TableOfContents additional behaviors', () => {
     expect(screen.getByRole('link', { name: /Inner Template/i })).toHaveAttribute('href', '/inner')
   })
 
+  it('applies font-extrabold to category template link when slug is in read-complete storage', async () => {
+    const { PRESENTATION_READ_COMPLETE_STORAGE_KEY } = require('@/lib/presentationReadCompleteStorage')
+    localStorage.setItem(PRESENTATION_READ_COMPLETE_STORAGE_KEY, JSON.stringify({ v: 1, slugs: ['inner'] }))
+
+    const clientMod = require('@/lib/supabase/client')
+    jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({
+      auth: { getUser: async () => ({ data: { user: null } }) }
+    }))
+
+    const fetchSpy = jest.fn((input: RequestInfo | URL) => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.href
+            : (input as Request).url
+      if (String(url).includes('/api/profiles/public-templates')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            items: [
+              {
+                type: 'category',
+                id: 'cat-1',
+                name: 'My Category',
+                templates: [{ slug: 'inner', title: 'Inner Template' }]
+              }
+            ]
+          })
+        }) as any
+      }
+      return Promise.resolve({ ok: false }) as any
+    })
+    global.fetch = fetchSpy as typeof fetch
+
+    const TableOfContents = require('../TableOfContents').default
+    renderToc(<TableOfContents sections={[]} />)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /Resources/i }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /My Category/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /My Category/i }))
+    await waitFor(() => expect(screen.getByRole('link', { name: /Inner Template/i })).toBeInTheDocument())
+
+    const link = screen.getByRole('link', { name: /Inner Template/i })
+    expect(link.className).toMatch(/font-extrabold/)
+    localStorage.removeItem(PRESENTATION_READ_COMPLETE_STORAGE_KEY)
+  })
+
   it('renders Dashboard link when user is logged in', async () => {
     const clientMod = require('@/lib/supabase/client')
     jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({

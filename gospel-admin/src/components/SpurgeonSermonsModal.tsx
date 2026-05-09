@@ -4,6 +4,11 @@ import { useId, useState, useEffect, useLayoutEffect, useCallback, useRef } from
 import Link from 'next/link'
 
 import { spurgeonSermonTitleForModalDisplay } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
+import {
+  GOSPEL_PRESENTATION_READ_STATUS_CHANGED_EVENT,
+  loadPresentationReadCompleteSlugs,
+  PRESENTATION_READ_COMPLETE_STORAGE_KEY,
+} from '@/lib/presentationReadCompleteStorage'
 
 const SEARCH_PAGE_SIZE = 100
 
@@ -47,6 +52,35 @@ export default function SpurgeonSermonsModal({
   const [searchTotal, setSearchTotal] = useState(0)
   const [searchPage, setSearchPage] = useState(1)
   const searchListScrollRef = useRef<HTMLDivElement>(null)
+
+  const [readCompleteSlugs, setReadCompleteSlugs] = useState<Set<string>>(() => new Set())
+
+  const refreshReadCompleteSlugs = useCallback(() => {
+    setReadCompleteSlugs(new Set(loadPresentationReadCompleteSlugs()))
+  }, [])
+
+  useEffect(() => {
+    refreshReadCompleteSlugs()
+    const onStatus = (e: Event) => {
+      const ce = e as CustomEvent<{ slug: string; read: boolean }>
+      if (!ce.detail?.slug) return
+      setReadCompleteSlugs((prev) => {
+        const next = new Set(prev)
+        if (ce.detail.read) next.add(ce.detail.slug)
+        else next.delete(ce.detail.slug)
+        return next
+      })
+    }
+    const onStorage = (ev: StorageEvent) => {
+      if (ev.key === PRESENTATION_READ_COMPLETE_STORAGE_KEY) refreshReadCompleteSlugs()
+    }
+    window.addEventListener(GOSPEL_PRESENTATION_READ_STATUS_CHANGED_EVENT, onStatus)
+    window.addEventListener('storage', onStorage)
+    return () => {
+      window.removeEventListener(GOSPEL_PRESENTATION_READ_STATUS_CHANGED_EVENT, onStatus)
+      window.removeEventListener('storage', onStorage)
+    }
+  }, [refreshReadCompleteSlugs])
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -302,7 +336,11 @@ export default function SpurgeonSermonsModal({
                               onFollowSermonLink?.()
                               onClose()
                             }}
-                            className="block rounded-md px-2 py-2 text-sm text-blue-700 dark:text-blue-300 hover:bg-slate-100 dark:hover:bg-slate-700/80"
+                            className={`block rounded-md px-2 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700/80 ${
+                              readCompleteSlugs.has(row.slug)
+                                ? 'font-extrabold text-blue-900 dark:text-blue-200'
+                                : 'font-normal text-blue-700 dark:text-blue-300'
+                            }`}
                           >
                             {spurgeonSermonTitleForModalDisplay(row.title)}
                           </Link>
@@ -331,7 +369,11 @@ export default function SpurgeonSermonsModal({
                             onFollowSermonLink?.()
                             onClose()
                           }}
-                          className="block rounded-md px-2 py-2 text-sm text-blue-700 dark:text-blue-300 hover:bg-slate-100 dark:hover:bg-slate-700/80"
+                          className={`block rounded-md px-2 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700/80 ${
+                            readCompleteSlugs.has(row.slug)
+                              ? 'font-extrabold text-blue-900 dark:text-blue-200'
+                              : 'font-normal text-blue-700 dark:text-blue-300'
+                          }`}
                         >
                           {spurgeonSermonTitleForModalDisplay(row.title)}
                         </Link>

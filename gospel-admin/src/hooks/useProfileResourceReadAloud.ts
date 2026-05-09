@@ -58,6 +58,7 @@ import {
   type ProfileReadAlongUnderlineStyle,
 } from '@/lib/profileReadAlongUnderlineStyleStorage'
 import { isSpurgeonSermonProfileSlug } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
+import { addPresentationReadCompleteSlug } from '@/lib/presentationReadCompleteStorage'
 
 /** After chunks ending in `.` `!` `?`, brief delay before the next utterance so engines do not run sentences together. */
 const READ_ALONG_AFTER_SENTENCE_GAP_MS = 55
@@ -404,7 +405,12 @@ export function useProfileResourceReadAloud({
             ? findNextReadAlongScope(sections, completedScope, anchorDone, listenTextOptionsRef.current)
             : null
 
-        if (next && !androidHost) {
+        const nextListenableChunkCount =
+          next && typeof document !== 'undefined'
+            ? listenPlainAndChunksForScope(next.scope, listenTextOptionsRef.current).chunks.length
+            : 0
+
+        if (next && nextListenableChunkCount > 0) {
           const fingerprint = readAlongTextFingerprint(next.text)
           const { chunks: chunkMeta } = listenPlainAndChunksForScope(next.scope, listenTextOptionsRef.current)
           if (chunkMeta.length > 0) {
@@ -432,6 +438,10 @@ export function useProfileResourceReadAloud({
             speakChunkInternalRef.current(0)
             return
           }
+        }
+
+        if (slug && anchorDone && (next === null || nextListenableChunkCount === 0)) {
+          addPresentationReadCompleteSlug(slug)
         }
 
         ttsActiveRef.current = false

@@ -10,6 +10,7 @@ import {
 import { PROFILE_BOOKMARKS_STORAGE_KEY } from '@/lib/profileBookmarksStorage'
 import { PROFILE_HIGHLIGHTS_STORAGE_KEY } from '@/lib/profileHighlightsStorage'
 import { PROFILE_READ_ALONG_UNDERLINE_STYLE_STORAGE_KEY } from '@/lib/profileReadAlongUnderlineStyleStorage'
+import { PRESENTATION_READ_COMPLETE_STORAGE_KEY } from '@/lib/presentationReadCompleteStorage'
 import { VERSE_MEMORIZATION_STORAGE_KEY } from '@/lib/verseMemorizationStorage'
 
 function createMemoryStorage(initial: Record<string, string | null> = {}): Storage {
@@ -61,6 +62,7 @@ describe('gospelLocalUserDataBackup', () => {
       'gospel-profile-read-along:slug:section-1': '{"v":1,"plainOffset":0,"fingerprint":"x"}',
       'gospel-profile-read-along-last:slug': '{"v":1,"anchorId":"section-1","plainOffset":0,"fingerprint":"x"}',
       [PROFILE_READ_ALONG_UNDERLINE_STYLE_STORAGE_KEY]: 'line',
+      [PRESENTATION_READ_COMPLETE_STORAGE_KEY]: '{"v":1,"slugs":["done-slug"]}',
     })
     const map = collectGospelLocalUserDataForExport(s)
     expect(map[PROFILE_BOOKMARKS_STORAGE_KEY]).toBeDefined()
@@ -72,6 +74,7 @@ describe('gospelLocalUserDataBackup', () => {
     expect(map['gospel-profile-read-along:slug:section-1']).toBe('{"v":1,"plainOffset":0,"fingerprint":"x"}')
     expect(map['gospel-profile-read-along-last:slug']).toBe('{"v":1,"anchorId":"section-1","plainOffset":0,"fingerprint":"x"}')
     expect(map[PROFILE_READ_ALONG_UNDERLINE_STYLE_STORAGE_KEY]).toBe('line')
+    expect(map[PRESENTATION_READ_COMPLETE_STORAGE_KEY]).toBe('{"v":1,"slugs":["done-slug"]}')
   })
 
   it('collectGospelLocalUserDataForExport excludes auth, view preference, and profile cache keys', () => {
@@ -192,5 +195,23 @@ describe('gospelLocalUserDataBackup', () => {
     )
     applyGospelLocalUserDataImport(payload, target)
     expect(target.getItem('gospel-preferred-translation')).toBe('kjv')
+  })
+
+  it('applyGospelLocalUserDataImport restores presentation read-complete key', () => {
+    const target = createMemoryStorage()
+    const readPayload = '{"v":1,"slugs":["sermon-a"]}'
+    const payload = parseGospelLocalUserDataImport(
+      JSON.stringify({
+        kind: GOSPEL_LOCAL_USER_DATA_KIND,
+        schemaVersion: GOSPEL_LOCAL_USER_DATA_SCHEMA_VERSION,
+        exportedAt: '2026-01-01T00:00:00.000Z',
+        origin: '',
+        localStorage: {
+          [PRESENTATION_READ_COMPLETE_STORAGE_KEY]: readPayload,
+        },
+      })
+    )
+    applyGospelLocalUserDataImport(payload, target)
+    expect(target.getItem(PRESENTATION_READ_COMPLETE_STORAGE_KEY)).toBe(readPayload)
   })
 })
