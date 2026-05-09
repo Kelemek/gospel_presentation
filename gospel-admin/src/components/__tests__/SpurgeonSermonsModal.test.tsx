@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { MouseEvent, ReactNode } from 'react'
+import { PRESENTATION_READ_COMPLETE_STORAGE_KEY } from '@/lib/presentationReadCompleteStorage'
 import SpurgeonSermonsModal from '../SpurgeonSermonsModal'
 
 jest.mock('next/link', () => {
@@ -142,6 +143,40 @@ describe('SpurgeonSermonsModal', () => {
 
     expect(await screen.findByRole('link', { name: /^Grace Abounding$/i })).toHaveAttribute('href', '/sg00042')
     expect(screen.queryByRole('link', { name: /Sermon 42/i })).not.toBeInTheDocument()
+  })
+
+  it('loads By read tab from read-complete Spurgeon slugs', async () => {
+    const user = userEvent.setup()
+    localStorage.setItem(
+      PRESENTATION_READ_COMPLETE_STORAGE_KEY,
+      JSON.stringify({ v: 1, slugs: ['sg00001', 'default'] })
+    )
+
+    mockFetch.mockImplementation((input: string | URL | Request) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
+      if (url.includes('/api/spurgeon/by-slugs')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ items: [{ slug: 'sg00001', title: 'Sermon 1. Read One Title' }] }),
+        } as Response)
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ items: [], total: 0, page: 1, pageSize: 100 }),
+      } as Response)
+    })
+
+    render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: /^By read$/i }))
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringMatching(/\/api\/spurgeon\/by-slugs\?slugs=/),
+        expect.any(Object)
+      )
+    })
+    expect(await screen.findByRole('link', { name: /Read One Title/i })).toHaveAttribute('href', '/sg00001')
+    localStorage.removeItem(PRESENTATION_READ_COMPLETE_STORAGE_KEY)
   })
 
   it('calls onFollowSermonLink and onClose when following a sermon link from search', async () => {

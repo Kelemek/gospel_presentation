@@ -1,9 +1,12 @@
 'use client'
 
-import { useId, useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react'
+import { useId, useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from 'react'
 import Link from 'next/link'
 
-import { spurgeonSermonTitleForModalDisplay } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
+import {
+  isSpurgeonSermonProfileSlug,
+  spurgeonSermonTitleForModalDisplay,
+} from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
 import {
   GOSPEL_PRESENTATION_READ_STATUS_CHANGED_EVENT,
   loadPresentationReadCompleteSlugs,
@@ -24,7 +27,7 @@ interface SpurgeonSermonsModalProps {
   onFollowSermonLink?: () => void
 }
 
-type Tab = 'search' | 'scripture'
+type Tab = 'search' | 'scripture' | 'read'
 
 interface SermonRow {
   slug: string
@@ -53,7 +56,16 @@ export default function SpurgeonSermonsModal({
   const [searchPage, setSearchPage] = useState(1)
   const searchListScrollRef = useRef<HTMLDivElement>(null)
 
+  const [readTabItems, setReadTabItems] = useState<SermonRow[]>([])
+  const [readTabLoading, setReadTabLoading] = useState(false)
+  const [readTabError, setReadTabError] = useState('')
+
   const [readCompleteSlugs, setReadCompleteSlugs] = useState<Set<string>>(() => new Set())
+
+  const spurgeonReadSlugsKey = useMemo(
+    () => [...readCompleteSlugs].filter((s) => isSpurgeonSermonProfileSlug(s)).sort().join(','),
+    [readCompleteSlugs]
+  )
 
   const refreshReadCompleteSlugs = useCallback(() => {
     setReadCompleteSlugs(new Set(loadPresentationReadCompleteSlugs()))
@@ -181,6 +193,9 @@ export default function SpurgeonSermonsModal({
       setDebouncedScriptureRef('')
       setSearchItems([])
       setRefItems([])
+      setReadTabItems([])
+      setReadTabError('')
+      setReadTabLoading(false)
       setSearchError('')
       setRefError('')
     }
@@ -196,6 +211,52 @@ export default function SpurgeonSermonsModal({
     if (!isOpen || tab !== 'scripture') return
     void runScriptureLookupForRef(debouncedScriptureRef)
   }, [isOpen, tab, debouncedScriptureRef, runScriptureLookupForRef])
+
+  useEffect(() => {
+    if (!isOpen || tab !== 'read') return
+    const slugs = spurgeonReadSlugsKey ? spurgeonReadSlugsKey.split(',') : []
+    if (slugs.length === 0) {
+      setReadTabItems([])
+      setReadTabError('')
+      setReadTabLoading(false)
+      return
+    }
+    let cancelled = false
+    setReadTabLoading(true)
+    setReadTabError('')
+    const q = encodeURIComponent(slugs.join(','))
+    void fetch(`/api/spurgeon/by-slugs?slugs=${q}`, { cache: 'no-store' })
+      .then(async (res) => {
+        const data = (await res.json()) as { items?: unknown; error?: string }
+        if (cancelled) return
+        if (!res.ok) {
+          setReadTabItems([])
+          setReadTabError(typeof data.error === 'string' ? data.error : 'Could not load read sermons')
+          return
+        }
+        const items = Array.isArray(data.items) ? data.items : []
+        const rows: SermonRow[] = items
+          .filter((row): row is SermonRow => {
+            if (!row || typeof row !== 'object') return false
+            const r = row as Record<string, unknown>
+            return typeof r.slug === 'string' && typeof r.title === 'string'
+          })
+          .map((r) => ({ slug: r.slug, title: r.title }))
+        setReadTabItems(rows)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setReadTabItems([])
+          setReadTabError('Could not load read sermons')
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setReadTabLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, tab, spurgeonReadSlugsKey])
 
   if (!isOpen) return null
 
@@ -232,7 +293,7 @@ export default function SpurgeonSermonsModal({
           </button>
         </div>
 
-        <div className="shrink-0 flex border-b border-slate-200 dark:border-slate-600 px-2 pt-2 gap-1">
+        <div className="shrink-0 flex flex-wrap border-b border-slate-200 dark:border-slate-600 px-2 pt-2 gap-1">
           <button
             type="button"
             onClick={() => setTab('search')}
@@ -254,6 +315,17 @@ export default function SpurgeonSermonsModal({
             }`}
           >
             By scripture
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab('read')}
+            className={`cursor-pointer px-3 py-2 text-sm font-medium rounded-t-md border-b-2 -mb-px transition-colors ${
+              tab === 'read'
+                ? 'border-blue-600 text-blue-700 dark:text-blue-300 dark:border-blue-400'
+                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+            }`}
+          >
+            By read
           </button>
         </div>
 
@@ -305,6 +377,23 @@ export default function SpurgeonSermonsModal({
                   {refError}
                 </p>
               )}
+            </div>
+          )}
+
+          {tab === 'read' && (
+            <div
+              className="shrink-0 border-b border-slate-200 dark:border-slate-600 px-5 pt-4 pb-3"
+              data-tour="spurgeon-modal-by-read"
+            >
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                Spurgeon sermon profiles you have read to the end on this device (Listen through the last section or
+                scroll to the bottom).
+              </p>
+              {readTabError ? (
+                <p className="mt-2 text-sm text-red-600 dark:text-red-400" role="alert">
+                  {readTabError}
+                </p>
+              ) : null}
             </div>
           )}
 
@@ -374,6 +463,39 @@ export default function SpurgeonSermonsModal({
                               ? 'font-extrabold text-blue-900 dark:text-blue-200'
                               : 'font-normal text-blue-700 dark:text-blue-300'
                           }`}
+                        >
+                          {spurgeonSermonTitleForModalDisplay(row.title)}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+
+            {tab === 'read' && (
+              <div className="min-h-40">
+                {readTabLoading ? (
+                  <div className="flex h-40 items-center justify-center">
+                    <div className="h-8 w-8 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
+                  </div>
+                ) : readTabItems.length === 0 ? (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    {spurgeonReadSlugsKey
+                      ? 'No matching public sermons were found for your read list.'
+                      : 'No Spurgeon sermons in your read list yet. Open a sermon and use Listen through the last section or scroll to the bottom of the page.'}
+                  </p>
+                ) : (
+                  <ul className="space-y-1">
+                    {readTabItems.map((row) => (
+                      <li key={row.slug}>
+                        <Link
+                          href={`/${row.slug}`}
+                          onClick={() => {
+                            onFollowSermonLink?.()
+                            onClose()
+                          }}
+                          className="block rounded-md px-2 py-2 text-sm font-extrabold text-blue-900 dark:text-blue-200 hover:bg-slate-100 dark:hover:bg-slate-700/80"
                         >
                           {spurgeonSermonTitleForModalDisplay(row.title)}
                         </Link>
