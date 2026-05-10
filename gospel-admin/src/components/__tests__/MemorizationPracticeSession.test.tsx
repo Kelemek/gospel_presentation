@@ -16,6 +16,10 @@ jest.mock('@/lib/memorizationPracticeUtils', () => {
         return actual.pickHiddenWordIndices(wordCount, roundIndex, seedStr)
       }
     ),
+    pickHiddenCueTypableSlotIndices: jest.fn(
+      (typableCount: number, roundIndex: number, seedStr: string) =>
+        actual.pickHiddenCueTypableSlotIndices(typableCount, roundIndex, seedStr)
+    ),
     generateMemorizationSessionSeed: () =>
       memorizeUtilsTestOverrides.sessionSeed ?? actual.generateMemorizationSessionSeed(),
   }
@@ -32,7 +36,7 @@ jest.mock('@/lib/memorizationViewportPlatform', () => ({
 }))
 
 import { MEMORIZE_LISTEN_SPEED_STORAGE_KEY } from '@/lib/memorizeListenSpeedStorage'
-import { pickHiddenWordIndices } from '@/lib/memorizationPracticeUtils'
+import * as memorizationUtils from '@/lib/memorizationPracticeUtils'
 import { isMemorizeAndroidWebHost } from '@/lib/memorizationViewportPlatform'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -258,7 +262,7 @@ describe('MemorizationPracticeSession', () => {
     const actual = jest.requireActual<typeof import('@/lib/memorizationPracticeUtils')>(
       '@/lib/memorizationPracticeUtils'
     )
-    ;(pickHiddenWordIndices as jest.Mock).mockImplementationOnce(
+    ;(memorizationUtils.pickHiddenWordIndices as jest.Mock).mockImplementationOnce(
       (wordCount: number, roundIndex: number, seedStr: string) => {
         if (roundIndex === 1) return new Set([0, 1])
         return actual.pickHiddenWordIndices(wordCount, roundIndex, seedStr)
@@ -296,6 +300,18 @@ describe('MemorizationPracticeSession', () => {
     expect(screen.getByRole('button', { name: /Repeat this round/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Next round/i })).toBeInTheDocument()
     expect(screen.queryByTestId('memorize-hint-button')).not.toBeInTheDocument()
+  })
+
+  it('Initials mode reveals a hidden cue when the first letter is typed', async () => {
+    const user = userEvent.setup()
+    ;(memorizationUtils.pickHiddenCueTypableSlotIndices as jest.Mock).mockReturnValueOnce(new Set([0]))
+    render(<MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />)
+    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    await user.click(screen.getByTestId('memorize-practice-mode-initials'))
+    const cues = screen.getByTestId('memorize-first-letter-cues')
+    expect(cues.textContent?.trim().charAt(0)).toBe('·')
+    await user.keyboard('f')
+    expect(cues.textContent?.trim().charAt(0)).toBe('F')
   })
 
   it('calls onPersistInProgress with betweenRounds when an intermediate round completes', async () => {
@@ -336,6 +352,9 @@ describe('MemorizationPracticeSession', () => {
     expect(screen.queryByTestId('memorize-intro-text')).not.toBeInTheDocument()
     expect(screen.getByTestId('memorize-round-advance-footer')).toBeInTheDocument()
     expect(screen.queryByTestId('memorize-listen-passage')).not.toBeInTheDocument()
+    // Blanks must stay blank while awaiting Repeat/Next — `revealed` tracks filled blanks, not `hiddenIndices`.
+    const words = screen.getByTestId('memorize-practice-words')
+    expect(words.querySelector('.text-transparent')).toBeTruthy()
   })
 
   it('resumes reorder betweenRounds with verse chunks in correct order visible', () => {
@@ -423,6 +442,41 @@ describe('MemorizationPracticeSession', () => {
     expect(onPersistInProgress).toHaveBeenLastCalledWith(
       expect.objectContaining({
         practiceMode: 'word',
+        phase: { kind: 'inRound', roundIndex: 1 },
+      })
+    )
+  })
+
+  it('Initials mode shows cue strip and practice input', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
+    )
+    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    await user.click(screen.getByTestId('memorize-practice-mode-initials'))
+    expect(screen.getByTestId('memorize-practice-input')).toBeInTheDocument()
+    const cues = screen.getByTestId('memorize-first-letter-cues')
+    expect(cues).toBeInTheDocument()
+    expect(cues.textContent).toMatch(/F/)
+    expect(screen.getByText(/initials:/i)).toBeInTheDocument()
+  })
+
+  it('persists practiceMode firstLetters when starting Initials mode', async () => {
+    const user = userEvent.setup()
+    const onPersistInProgress = jest.fn()
+    render(
+      <MemorizationPracticeSession
+        verse={baseVerse}
+        onClose={jest.fn()}
+        onComplete={jest.fn()}
+        onPersistInProgress={onPersistInProgress}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    await user.click(screen.getByTestId('memorize-practice-mode-initials'))
+    expect(onPersistInProgress).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        practiceMode: 'firstLetters',
         phase: { kind: 'inRound', roundIndex: 1 },
       })
     )

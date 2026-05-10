@@ -1708,7 +1708,7 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
       popover: {
         title: 'Choose practice mode',
         description:
-          'Pick how you want to work through the <strong>same five rounds</strong>: all three paths end at round 5—in <strong>Type</strong> and <strong>Word</strong> mode more words are hidden each round; in <strong>Reorder</strong> mode more phrase chunks are shuffled. Use <strong>Next</strong> to walk each option, then the tour continues in <strong>Type mode</strong> for Listen and typing.',
+          'Pick how you want to work through the <strong>same five rounds</strong>: all paths end at round 5—in <strong>Type</strong>, <strong>Initials</strong>, and <strong>Word</strong> mode more words are hidden each round (Initials hides every blank and shows an initials hint line); in <strong>Reorder</strong> mode more phrase chunks are shuffled. Use <strong>Next</strong> to walk each option, then the tour continues in <strong>Type mode</strong> for Listen and typing.',
         ...pop({ side: 'right', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           window.setTimeout(() => {

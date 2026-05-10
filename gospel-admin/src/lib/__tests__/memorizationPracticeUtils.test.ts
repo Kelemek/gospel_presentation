@@ -3,6 +3,8 @@ import {
   buildMemorizationChoiceLabels,
   buildMemorizationReorderChunks,
   buildMemorizationTokens,
+  cueGlyphForTypableToken,
+  firstLetterGlyphOfWord,
   firstLetterOfWord,
   formatMemorizationTokensPlain,
   generateMemorizationSessionSeed,
@@ -10,6 +12,7 @@ import {
   getWordsForMemorization,
   hiddenFractionForRound,
   parseReferenceMemorizationTokens,
+  pickHiddenCueTypableSlotIndices,
   pickHiddenWordIndices,
   pickReorderMovableIndices,
   referenceTextsForMemorizationReorder,
@@ -60,6 +63,39 @@ describe('memorizationPracticeUtils', () => {
   it('firstLetterOfWord skips punctuation', () => {
     expect(firstLetterOfWord('God,')).toBe('g')
     expect(firstLetterOfWord('(Son)')).toBe('s')
+  })
+
+  it('firstLetterGlyphOfWord preserves letter case', () => {
+    expect(firstLetterGlyphOfWord('God,')).toBe('G')
+    expect(firstLetterGlyphOfWord('(Son)')).toBe('S')
+    expect(firstLetterGlyphOfWord('(son)')).toBe('s')
+  })
+
+  it('cueGlyphForTypableToken returns first letter (preserves case), digit, or middle dot fallback', () => {
+    expect(cueGlyphForTypableToken({ kind: 'word', text: 'God,' })).toBe('G')
+    expect(cueGlyphForTypableToken({ kind: 'word', text: '(son)' })).toBe('s')
+    expect(cueGlyphForTypableToken({ kind: 'digit', text: '3' })).toBe('3')
+    expect(cueGlyphForTypableToken({ kind: 'word', text: '123' })).toBe('·')
+  })
+
+  it('pickHiddenCueTypableSlotIndices is deterministic for same seed', () => {
+    const a = pickHiddenCueTypableSlotIndices(12, 3, 'session-seed')
+    const b = pickHiddenCueTypableSlotIndices(12, 3, 'session-seed')
+    expect([...a].sort((x, y) => x - y)).toEqual([...b].sort((x, y) => x - y))
+  })
+
+  it('pickHiddenCueTypableSlotIndices hides none at round 1 and all at full round', () => {
+    expect(pickHiddenCueTypableSlotIndices(8, 1, 'id').size).toBe(0)
+    expect(pickHiddenCueTypableSlotIndices(8, MEMORIZATION_FULL_HIDE_ROUND, 'id').size).toBe(8)
+  })
+
+  it('pickHiddenCueTypableSlotIndices round 2 differs from round 3 for same seed', () => {
+    const r2 = pickHiddenCueTypableSlotIndices(20, 2, 'same')
+    const r3 = pickHiddenCueTypableSlotIndices(20, 3, 'same')
+    expect(r2.size).toBe(5)
+    expect(r3.size).toBe(10)
+    const same = r2.size === r3.size && [...r2].every((i) => r3.has(i))
+    expect(same).toBe(false)
   })
 
   it('parseReferenceMemorizationTokens splits digits and keeps colon/dash as punct', () => {

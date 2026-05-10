@@ -22,7 +22,7 @@ export type MemorizationInProgressPhase =
   | { kind: 'inRound'; roundIndex: number }
 
 /** How blanks are filled during an in-flight multi-round session. Omitted in storage means legacy type-only. */
-export type MemorizationPracticeMode = 'type' | 'word' | 'reorder'
+export type MemorizationPracticeMode = 'type' | 'word' | 'reorder' | 'firstLetters'
 
 export interface MemorizationInProgress {
   sessionSeed: string
@@ -82,7 +82,10 @@ function normalizeInProgress(raw: unknown): MemorizationInProgress | undefined {
   }
   const practiceModeRaw = o.practiceMode
   const practiceMode: MemorizationPracticeMode | undefined =
-    practiceModeRaw === 'type' || practiceModeRaw === 'word' || practiceModeRaw === 'reorder'
+    practiceModeRaw === 'type' ||
+    practiceModeRaw === 'word' ||
+    practiceModeRaw === 'reorder' ||
+    practiceModeRaw === 'firstLetters'
       ? practiceModeRaw
       : undefined
   const p = phase as Record<string, unknown>

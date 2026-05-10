@@ -136,6 +136,21 @@ describe('verseMemorizationStorage', () => {
     expect(raw).toContain('"practiceMode":"reorder"')
   })
 
+  it('saveMemorizationInProgress persists practiceMode firstLetters', () => {
+    addMemorizedVerse('Ps 23:1', 'The Lord is my shepherd', 'esv')
+    const id = loadMemorizedVerses()[0].id
+    saveMemorizationInProgress(id, {
+      sessionSeed: 'seed-fl',
+      wrongAttempts: 0,
+      correctKeystrokes: 1,
+      phase: { kind: 'inRound', roundIndex: 2 },
+      practiceMode: 'firstLetters',
+    })
+    expect(loadMemorizedVerses()[0].inProgressPractice?.practiceMode).toBe('firstLetters')
+    const raw = window.localStorage.getItem(VERSE_MEMORIZATION_STORAGE_KEY)
+    expect(raw).toContain('"practiceMode":"firstLetters"')
+  })
+
   it('updatePracticeStats clears inProgressPractice when a session completes', () => {
     addMemorizedVerse('Ps 119:1', 'Blessed are they', 'esv')
     const id = loadMemorizedVerses()[0].id

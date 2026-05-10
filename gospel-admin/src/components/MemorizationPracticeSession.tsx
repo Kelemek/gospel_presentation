@@ -45,18 +45,19 @@ import {
   buildMemorizationChoiceLabels,
   buildMemorizationReorderChunks,
   buildMemorizationTokens,
+  cueGlyphForTypableToken,
   firstLetterOfWord,
   formatMemorizationTokensPlain,
   generateMemorizationSessionSeed,
   getTypableTokenIndices,
   hiddenFractionForRound,
+  pickHiddenCueTypableSlotIndices,
   pickHiddenWordIndices,
   pickReorderMovableIndices,
   reorderReferenceColonAfterSlotIndex,
   reorderMovableCountForRound,
   seedRandom,
   stringToSeed,
-  type MemorizationToken,
 } from '@/lib/memorizationPracticeUtils'
 
 export interface MemorizationPracticeSessionResult {
@@ -99,10 +100,40 @@ const ANDROID_SCROLL_CLAMP_MS = 600
 const MEMORIZE_LISTEN_CONTROLS_DIALOG_ID = 'memorize-listen-controls-dialog'
 const MEMORIZE_LISTEN_CONTROLS_TITLE_ID = 'memorize-listen-controls-title'
 
-function expectedKeystrokeForToken(token: MemorizationToken): string {
-  if (token.kind === 'digit') return token.text
-  if (token.kind === 'word') return firstLetterOfWord(token.text)
-  return ''
+function isKeyboardPracticeMode(mode: MemorizationPracticeMode | null): boolean {
+  return mode === 'type' || mode === 'firstLetters'
+}
+
+/** Hidden token indices for type / word / firstLetters (firstLetters = all typable hidden every round). */
+function hiddenTypingTokenIndices(
+  mode: MemorizationPracticeMode | null | undefined,
+  roundIndex: number,
+  seed: string,
+  typableIndices: number[]
+): Set<number> {
+  if (mode === 'firstLetters') return new Set(typableIndices)
+  const localHidden = pickHiddenWordIndices(typableIndices.length, roundIndex, seed)
+  return new Set([...localHidden].map((li) => typableIndices[li]!))
+}
+
+function scrollActiveFirstLetterCueIntoView(
+  root: HTMLDivElement | null,
+  currentTargetIndex: number | null,
+  typableIndices: number[]
+) {
+  if (!root) return
+  const slot = currentTargetIndex !== null ? typableIndices.indexOf(currentTargetIndex) : -1
+  const target =
+    slot >= 0 ? root.querySelector<HTMLElement>(`[data-memorize-cue-slot="${slot}"]`) : null
+  if (target) {
+    try {
+      target.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'auto' })
+    } catch {
+      /* jsdom / test env may not fully implement scrollIntoView */
+    }
+  } else {
+    root.scrollTop = 0
+  }
 }
 
 export default function MemorizationPracticeSession({
@@ -144,6 +175,8 @@ export default function MemorizationPracticeSession({
   const [hasTypedInRound, setHasTypedInRound] = useState(false)
   const [hiddenIndices, setHiddenIndices] = useState<Set<number>>(new Set())
   const [revealed, setRevealed] = useState<Set<number>>(new Set())
+  /** firstLetters: typable-slot indices whose cue glyph was hidden but revealed by typing the correct first letter/digit. */
+  const [firstLetterCueRevealedSlots, setFirstLetterCueRevealedSlots] = useState(() => new Set<number>())
   /** Reorder mode: `slotChunkIds[slot]` = chunk id shown at that slot (parallel to `reorderChunks`). */
   const [reorderSlotChunkIds, setReorderSlotChunkIds] = useState<number[]>([])
   const [reorderRoundMovableIndices, setReorderRoundMovableIndices] = useState<Set<number>>(
@@ -382,6 +415,8 @@ export default function MemorizationPracticeSession({
   /** If keydown already handled a letter, skip the matching input event (avoids double counts). */
   const suppressInputFromKeydownRef = useRef(false)
   const practiceScrollRef = useRef<HTMLDivElement>(null)
+  /** Initials mode: scrollport for cue row (shows ~3 lines; active blank centered vertically). */
+  const firstLetterCuesViewportRef = useRef<HTMLDivElement>(null)
   const practiceInputDomId = useId()
   const modePickerTitleId = useId()
   /** Word mode: verse wrapper `div`. Type mode: focus target `label`. Only one mounts per mode. */
@@ -418,6 +453,7 @@ export default function MemorizationPracticeSession({
       setHasTypedInRound(false)
       setHiddenIndices(new Set())
       setRevealed(new Set())
+      setFirstLetterCueRevealedSlots(new Set())
       setWrongAttemptsTotal(0)
       setCorrectKeystrokesTotal(0)
       setPracticeMode(null)
@@ -518,6 +554,62 @@ export default function MemorizationPracticeSession({
   const currentTargetToken =
     currentTargetIndex !== null ? (tokens[currentTargetIndex] ?? null) : null
 
+  const firstLetterCueHiddenSlots = useMemo(() => {
+    if (practiceMode !== 'firstLetters' || phase !== 'practicing') return new Set<number>()
+    const seed = sessionSeedRef.current || verse.id
+    return pickHiddenCueTypableSlotIndices(typableIndices.length, roundIndex, seed)
+  }, [practiceMode, phase, typableIndices.length, roundIndex, verse.id])
+
+  const firstLetterCueHiddenSlotsRef = useRef(firstLetterCueHiddenSlots)
+  firstLetterCueHiddenSlotsRef.current = firstLetterCueHiddenSlots
+
+  useLayoutEffect(() => {
+    if (practiceMode !== 'firstLetters' || phase !== 'practicing' || awaitingRoundAdvance) return
+    scrollActiveFirstLetterCueIntoView(
+      firstLetterCuesViewportRef.current,
+      currentTargetIndex,
+      typableIndices
+    )
+  }, [
+    practiceMode,
+    phase,
+    awaitingRoundAdvance,
+    currentTargetIndex,
+    typableIndices,
+    roundIndex,
+    firstLetterCueHiddenSlots,
+    firstLetterCueRevealedSlots,
+    tokens,
+  ])
+
+  useEffect(() => {
+    if (typeof ResizeObserver === 'undefined') return
+    if (practiceMode !== 'firstLetters' || phase !== 'practicing' || awaitingRoundAdvance) return
+    const root = firstLetterCuesViewportRef.current
+    if (!root) return
+    let raf = 0
+    const schedule = () => {
+      if (raf) window.cancelAnimationFrame(raf)
+      raf = window.requestAnimationFrame(() => {
+        raf = 0
+        if (!root.isConnected) return
+        scrollActiveFirstLetterCueIntoView(root, currentTargetIndex, typableIndices)
+      })
+    }
+    const ro = new ResizeObserver(schedule)
+    ro.observe(root)
+    return () => {
+      ro.disconnect()
+      if (raf) window.cancelAnimationFrame(raf)
+    }
+  }, [
+    practiceMode,
+    phase,
+    awaitingRoundAdvance,
+    currentTargetIndex,
+    typableIndices,
+  ])
+
   useEffect(() => {
     if (!memorizeAndroidHost || phase !== 'practicing') return
     const scrollEl = practiceScrollRef.current
@@ -550,19 +642,20 @@ export default function MemorizationPracticeSession({
         setReorderRoundMovableIndices(new Set(movableArr))
         setHiddenIndices(new Set())
         setRevealed(new Set())
+        setFirstLetterCueRevealedSlots(new Set())
         setConsecutiveWrong(0)
         setAwaitingRoundAdvance(false)
         setRoundAffirmation('')
         setPhase('practicing')
         return
       }
-      const localHidden = pickHiddenWordIndices(typableIndices.length, r, seed)
-      const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
+      const hidden = hiddenTypingTokenIndices(practiceModeRef.current, r, seed, typableIndices)
       if (memorizeAndroidHost) androidScrollClampUntilRef.current = Date.now() + ANDROID_SCROLL_CLAMP_MS
       setRoundIndex(r)
       setHasTypedInRound(false)
       setHiddenIndices(hidden)
       setRevealed(new Set())
+      setFirstLetterCueRevealedSlots(new Set())
       setConsecutiveWrong(0)
       setAwaitingRoundAdvance(false)
       setRoundAffirmation('')
@@ -588,7 +681,7 @@ export default function MemorizationPracticeSession({
     if (ip.phase.kind === 'betweenRounds') {
       const r = ip.phase.completedRoundIndex
       roundAdvanceHandledRef.current = r
-      const seed = sessionSeedRef.current
+      const seed = sessionSeedRef.current || verse.id
       const modeRaw = ip.practiceMode ?? 'type'
       if (modeRaw === 'reorder') {
         const chunkList = buildMemorizationReorderChunks(verse.text, verse.reference)
@@ -601,6 +694,7 @@ export default function MemorizationPracticeSession({
           setHasTypedInRound(false)
           setHiddenIndices(new Set())
           setRevealed(new Set())
+          setFirstLetterCueRevealedSlots(new Set())
           setReorderSlotChunkIds(identitySlots)
           setReorderRoundMovableIndices(new Set())
           setConsecutiveWrong(0)
@@ -610,15 +704,15 @@ export default function MemorizationPracticeSession({
           setPracticeMode('reorder')
         })
       } else {
-        const localHidden = pickHiddenWordIndices(typableIndices.length, r, seed)
-        const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
+        const hidden = hiddenTypingTokenIndices(modeRaw, r, seed, typableIndices)
         startTransition(() => {
           setWrongAttemptsTotal(ip.wrongAttempts)
           setCorrectKeystrokesTotal(ip.correctKeystrokes)
           setRoundIndex(r)
           setHasTypedInRound(false)
           setHiddenIndices(hidden)
-          setRevealed(new Set(hidden))
+          setRevealed(new Set())
+          setFirstLetterCueRevealedSlots(new Set())
           setConsecutiveWrong(0)
           setAwaitingRoundAdvance(true)
           setRoundAffirmation(pickRandomRoundAffirmation())
@@ -647,6 +741,7 @@ export default function MemorizationPracticeSession({
           setReorderRoundMovableIndices(new Set(movableArr))
           setHiddenIndices(new Set())
           setRevealed(new Set())
+          setFirstLetterCueRevealedSlots(new Set())
           setConsecutiveWrong(0)
           setAwaitingRoundAdvance(false)
           setRoundAffirmation('')
@@ -654,8 +749,12 @@ export default function MemorizationPracticeSession({
           setPracticeMode('reorder')
         })
       } else {
-        const localHidden = pickHiddenWordIndices(typableIndices.length, r, sessionSeedRef.current)
-        const hidden = new Set([...localHidden].map((li) => typableIndices[li]!))
+        const hidden = hiddenTypingTokenIndices(
+          modeRaw,
+          r,
+          sessionSeedRef.current || verse.id,
+          typableIndices
+        )
         if (memorizeAndroidHost) androidScrollClampUntilRef.current = Date.now() + ANDROID_SCROLL_CLAMP_MS
         startTransition(() => {
           setWrongAttemptsTotal(ip.wrongAttempts)
@@ -664,6 +763,7 @@ export default function MemorizationPracticeSession({
           setHasTypedInRound(false)
           setHiddenIndices(hidden)
           setRevealed(new Set())
+          setFirstLetterCueRevealedSlots(new Set())
           setConsecutiveWrong(0)
           setAwaitingRoundAdvance(false)
           setRoundAffirmation('')
@@ -676,7 +776,7 @@ export default function MemorizationPracticeSession({
       if (isMemorizeAndroidWebHost() && practiceScrollRef.current) {
         practiceScrollRef.current.scrollTop = 0
       }
-      if ((ip.practiceMode ?? 'type') === 'type') {
+      if (isKeyboardPracticeMode(ip.practiceMode ?? 'type')) {
         practiceInputRef.current?.focus({ preventScroll: true })
       }
     })
@@ -753,7 +853,7 @@ export default function MemorizationPracticeSession({
    */
   const keepPracticeInputOnPointerCapture = useCallback((e: PointerEvent | TouchEvent) => {
     if (awaitingRoundAdvanceRef.current) return
-    if (practiceModeRef.current !== 'type') return
+    if (!isKeyboardPracticeMode(practiceModeRef.current)) return
     const t = e.target
     if (t instanceof Element && t.closest('[data-testid="memorize-hint-button"]')) {
       return
@@ -776,7 +876,7 @@ export default function MemorizationPracticeSession({
    * - Mouse/pen: pointerdown capture keeps focus when tapping the verse.
    */
   useLayoutEffect(() => {
-    if (phase !== 'practicing' || practiceMode !== 'type') return
+    if (phase !== 'practicing' || !isKeyboardPracticeMode(practiceMode)) return
     const el = practiceWordsTypeRef.current
     if (!el) return
     const onTouchStartCaptureVerse = (e: TouchEvent) => {
@@ -800,7 +900,7 @@ export default function MemorizationPracticeSession({
   }, [phase, practiceMode, keepPracticeInputOnPointerCapture])
 
   useLayoutEffect(() => {
-    if (phase !== 'practicing' || awaitingRoundAdvance || practiceMode !== 'type') return
+    if (phase !== 'practicing' || awaitingRoundAdvance || !isKeyboardPracticeMode(practiceMode)) return
     const el = hintButtonRef.current
     if (!el) return
     el.addEventListener('touchstart', keepPracticeInputOnPointerCapture, { capture: true, passive: false })
@@ -816,7 +916,7 @@ export default function MemorizationPracticeSession({
     requestAnimationFrame(() => {
       if (awaitingRoundAdvanceRef.current) return
       if (phase !== 'practicing') return
-      if (practiceModeRef.current !== 'type') return
+      if (!isKeyboardPracticeMode(practiceModeRef.current)) return
       practiceInputRef.current?.focus({ preventScroll: true })
     })
   }, [phase])
@@ -839,7 +939,7 @@ export default function MemorizationPracticeSession({
       if (practiceScrollRef.current) {
         practiceScrollRef.current.scrollTop = 0
       }
-      if (mode === 'type') {
+      if (isKeyboardPracticeMode(mode)) {
         practiceInputRef.current?.focus({ preventScroll: true })
       }
       onPersistInProgress?.({
@@ -864,7 +964,7 @@ export default function MemorizationPracticeSession({
       if (practiceScrollRef.current) {
         practiceScrollRef.current.scrollTop = 0
       }
-      if (practiceModeRef.current === 'type') {
+      if (isKeyboardPracticeMode(practiceModeRef.current)) {
         practiceInputRef.current?.focus({ preventScroll: true })
       }
     },
@@ -923,6 +1023,7 @@ export default function MemorizationPracticeSession({
       setHasTypedInRound(false)
       setHiddenIndices(new Set())
       setRevealed(new Set())
+      setFirstLetterCueRevealedSlots(new Set())
       setReorderSlotChunkIds([])
       setReorderRoundMovableIndices(new Set())
       setWrongAttemptsTotal(0)
@@ -1332,21 +1433,66 @@ export default function MemorizationPracticeSession({
       const token = tokens[currentTargetIndex]
       if (!token || token.kind === 'punct') return
 
+      const maybeRevealCueAfterCorrectTypable = (tokenIndex: number) => {
+        if (practiceModeRef.current !== 'firstLetters') return
+        const slot = typableIndices.indexOf(tokenIndex)
+        if (slot < 0) return
+        const cueHidden = firstLetterCueHiddenSlotsRef.current
+        if (!cueHidden.has(slot)) return
+        setFirstLetterCueRevealedSlots((prev) => {
+          if (prev.has(slot)) return prev
+          const next = new Set(prev)
+          next.add(slot)
+          return next
+        })
+      }
+
       setHasTypedInRound(true)
 
-      let correct = false
       if (token.kind === 'digit') {
         if (!/^[0-9]$/.test(key)) return
-        correct = key === token.text
-      } else {
-        if (!/^[a-zA-Z]$/.test(key)) return
-        const expected = expectedKeystrokeForToken(token)
-        if (!expected) return
-        correct = key.toLowerCase() === expected
+        const correct = key === token.text
+        if (correct) {
+          const idx = currentTargetIndex
+          maybeRevealCueAfterCorrectTypable(idx)
+          setRevealed((prev) => {
+            const next = new Set(prev)
+            next.add(idx)
+            return next
+          })
+          setConsecutiveWrong(0)
+          setCorrectKeystrokesTotal((c) => c + 1)
+        } else {
+          setWrongAttemptsTotal((w) => w + 1)
+          setConsecutiveWrong((c) => {
+            const n = c + 1
+            if (n >= MAX_WRONG_BEFORE_REVEAL) {
+              const idx = currentTargetIndex
+              setRevealed((prev) => {
+                const next = new Set(prev)
+                next.add(idx)
+                return next
+              })
+              setCorrectKeystrokesTotal((ck) => ck + 1)
+              return 0
+            }
+            return n
+          })
+          setFlashError(true)
+          window.setTimeout(() => setFlashError(false), 120)
+        }
+        return
       }
+
+      // Word token: first alphabetic letter only (see `firstLetterOfWord` in utils).
+      if (!/^[a-zA-Z]$/.test(key)) return
+      const expected = firstLetterOfWord(token.text)
+      if (!expected) return
+      const correct = key.toLowerCase() === expected
 
       if (correct) {
         const idx = currentTargetIndex
+        maybeRevealCueAfterCorrectTypable(idx)
         setRevealed((prev) => {
           const next = new Set(prev)
           next.add(idx)
@@ -1355,10 +1501,6 @@ export default function MemorizationPracticeSession({
         setConsecutiveWrong(0)
         setCorrectKeystrokesTotal((c) => c + 1)
       } else {
-        const isWrongKind =
-          (token.kind === 'digit' && /^[0-9]$/.test(key)) ||
-          (token.kind === 'word' && /^[a-zA-Z]$/.test(key))
-        if (!isWrongKind) return
         setWrongAttemptsTotal((w) => w + 1)
         setConsecutiveWrong((c) => {
           const n = c + 1
@@ -1378,7 +1520,7 @@ export default function MemorizationPracticeSession({
         window.setTimeout(() => setFlashError(false), 120)
       }
     },
-    [phase, currentTargetIndex, tokens, hintActive]
+    [phase, currentTargetIndex, tokens, hintActive, typableIndices]
   )
 
   const handlePracticeInputKeyDown = useCallback(
@@ -1439,7 +1581,7 @@ export default function MemorizationPracticeSession({
       awaitingRoundAdvance ||
       currentTargetIndex === null ||
       hintActive ||
-      practiceMode !== 'type'
+      !isKeyboardPracticeMode(practiceMode)
     ) {
       if (phase !== 'practicing' || awaitingRoundAdvance) {
         practiceInputRef.current?.blur()
@@ -1493,9 +1635,9 @@ export default function MemorizationPracticeSession({
     practiceMode,
   ])
 
-  /** When the keyboard resizes the visual viewport, re-nudge so the current blank stays above it (type mode). */
+  /** When the keyboard resizes the visual viewport, re-nudge so the current blank stays above it (keyboard modes). */
   useEffect(() => {
-    if (practiceMode !== 'type') return
+    if (!isKeyboardPracticeMode(practiceMode)) return
     if (phase !== 'practicing' || awaitingRoundAdvance || currentTargetIndex === null) return
     if (!hasTypedInRound) return
     const delayMs = isMemorizeAndroidWebHost() ? 120 : 80
@@ -1650,7 +1792,10 @@ export default function MemorizationPracticeSession({
             )}
             {phase === 'practicing' &&
               !awaitingRoundAdvance &&
-              (practiceMode === 'type' || practiceMode === 'word' || practiceMode === 'reorder') && (
+              (practiceMode === 'type' ||
+                practiceMode === 'firstLetters' ||
+                practiceMode === 'word' ||
+                practiceMode === 'reorder') && (
               <button
                 ref={hintButtonRef}
                 type="button"
@@ -1725,7 +1870,7 @@ export default function MemorizationPracticeSession({
         </div>
 
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          {phase === 'practicing' && practiceMode === 'type' && memorizeAndroidHost && (
+          {phase === 'practicing' && isKeyboardPracticeMode(practiceMode) && memorizeAndroidHost && (
             <input
               id={practiceInputDomId}
               ref={assignPracticeInputRef}
@@ -1737,7 +1882,7 @@ export default function MemorizationPracticeSession({
               spellCheck={false}
               enterKeyHint="done"
               disabled={awaitingRoundAdvance}
-              aria-label="Type the first letter of each blank word, or each digit for number blanks"
+              aria-label="Type the first letter of each blank word, or each digit for number blanks. In Initials mode, dots in the initials row fill in when you type correctly."
               data-testid="memorize-practice-input"
               tabIndex={awaitingRoundAdvance ? -1 : 0}
               className="pointer-events-none fixed top-[25vh] left-1/2 z-110 h-10 w-32 max-w-[min(12rem,45vw)] -translate-x-1/2 border-0 bg-transparent p-0 opacity-[0.02] text-transparent caret-transparent"
@@ -1814,14 +1959,14 @@ export default function MemorizationPracticeSession({
           ) : (
             <div
               ref={practiceScrollRef}
-              className="relative px-4 py-4 flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y"
+              className="relative isolate bg-white dark:bg-slate-800 px-4 pt-0 pb-4 flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y"
               style={
                 keyboardInsetPx > 0
                   ? { paddingBottom: `calc(${keyboardInsetPx}px + 0.5rem)` }
                   : undefined
               }
             >
-          {phase === 'practicing' && practiceMode === 'type' && !memorizeAndroidHost && (
+          {phase === 'practicing' && isKeyboardPracticeMode(practiceMode) && !memorizeAndroidHost && (
             <input
               id={practiceInputDomId}
               ref={assignPracticeInputRef}
@@ -1833,7 +1978,7 @@ export default function MemorizationPracticeSession({
               spellCheck={false}
               enterKeyHint="done"
               disabled={awaitingRoundAdvance}
-              aria-label="Type the first letter of each blank word, or each digit for number blanks"
+              aria-label="Type the first letter of each blank word, or each digit for number blanks. In Initials mode, dots in the initials row fill in when you type correctly."
               data-testid="memorize-practice-input"
               tabIndex={awaitingRoundAdvance ? -1 : 0}
               className="absolute left-0 top-0 z-0 h-px w-full max-w-full border-0 bg-transparent p-0 opacity-[0.02] text-transparent caret-transparent"
@@ -1843,26 +1988,89 @@ export default function MemorizationPracticeSession({
           )}
           {phase === 'practicing' && (
             <div>
-              <div className="mb-2">
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  {awaitingRoundAdvance ? (
-                    <>
-                      Round {roundIndex} complete — repeat or continue to round {roundIndex + 1}.
-                    </>
-                  ) : practiceMode === 'reorder' ? (
-                    <>
-                      Round {roundIndex} of {MEMORIZATION_FULL_HIDE_ROUND} — reorder about{' '}
-                      {reorderMovableCountForRound(roundIndex, reorderChunks.length)} of {reorderChunks.length} parts.
-                    </>
-                  ) : (
-                    <>
-                      Round {roundIndex} of {MEMORIZATION_FULL_HIDE_ROUND} — about{' '}
-                      {Math.round(hiddenFractionForRound(roundIndex) * 100)}% hidden
-                    </>
-                  )}
-                </p>
+              <div
+                className={
+                  practiceMode === 'firstLetters' && !awaitingRoundAdvance
+                    ? 'sticky top-0 z-20 -mx-4 mb-2 border-b border-slate-200 bg-white px-4 pt-4 pb-2 shadow-[0_6px_12px_-8px_rgba(15,23,42,0.35)] dark:border-slate-600 dark:bg-slate-800 dark:shadow-[0_8px_16px_-10px_rgba(0,0,0,0.65)]'
+                    : 'pt-4 mb-2'
+                }
+              >
+                <div className={practiceMode === 'firstLetters' && !awaitingRoundAdvance ? 'mb-2' : ''}>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    {awaitingRoundAdvance ? (
+                      <>
+                        Round {roundIndex} complete — repeat or continue to round {roundIndex + 1}.
+                      </>
+                    ) : practiceMode === 'reorder' ? (
+                      <>
+                        Round {roundIndex} of {MEMORIZATION_FULL_HIDE_ROUND} — reorder about{' '}
+                        {reorderMovableCountForRound(roundIndex, reorderChunks.length)} of {reorderChunks.length} parts.
+                      </>
+                    ) : practiceMode === 'firstLetters' ? (
+                      <>
+                        Round {roundIndex} of {MEMORIZATION_FULL_HIDE_ROUND} — initials:{' '}
+                        {firstLetterCueHiddenSlots.size} of {typableIndices.length} hidden.
+                      </>
+                    ) : (
+                      <>
+                        Round {roundIndex} of {MEMORIZATION_FULL_HIDE_ROUND} — about{' '}
+                        {Math.round(hiddenFractionForRound(roundIndex) * 100)}% hidden
+                      </>
+                    )}
+                  </p>
+                </div>
+                {practiceMode === 'firstLetters' && !awaitingRoundAdvance && (
+                  <>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
+                      Cues below line up with blanks in order (first letter of each word or each reference digit); dots
+                      hide cues until you type the right key.{' '}
+                      {currentTargetIndex !== null &&
+                        (currentTargetToken?.kind === 'digit'
+                          ? 'Type digits only; colons and dashes are not typed.'
+                          : 'Type first letters. Hold Hint to peek (one more blank each second).')}
+                      {currentTargetIndex !== null && ' '}
+                      Tap the verse if the keyboard closes.
+                    </p>
+                    <div
+                      ref={firstLetterCuesViewportRef}
+                      className="min-h-0 max-h-[calc(3*1.625*1em)] overflow-y-auto overflow-x-hidden overscroll-y-contain touch-pan-y rounded-sm px-2 font-mono text-base sm:text-lg font-bold leading-relaxed tracking-wide text-slate-900 dark:text-slate-100 [-webkit-overflow-scrolling:touch]"
+                      aria-label="Initials cues (three lines visible; scrolls with the active blank)"
+                    >
+                      <p
+                        className="mb-0 break-all sm:wrap-break-word"
+                        aria-label="Initials row: one hint character per blank in order; a dot hides a hint until you type that blank's first letter or digit correctly"
+                        data-testid="memorize-first-letter-cues"
+                      >
+                        {typableIndices.map((tokenIndex, slot) => {
+                          const t = tokens[tokenIndex]
+                          if (!t) return null
+                          const hiddenSlot =
+                            firstLetterCueHiddenSlots.has(slot) && !firstLetterCueRevealedSlots.has(slot)
+                          const glyph = cueGlyphForTypableToken(t)
+                          const isActiveCue =
+                            currentTargetIndex !== null && tokenIndex === currentTargetIndex
+                          return (
+                            <span key={`cue-${tokenIndex}-${slot}`} data-memorize-cue-slot={slot}>
+                              {slot > 0 ? ' ' : ''}
+                              <span
+                                className={
+                                  isActiveCue
+                                    ? 'rounded px-0.5 ring-2 ring-blue-400/90 bg-blue-100 text-blue-950 dark:bg-blue-900/55 dark:text-blue-50 dark:ring-blue-500/80'
+                                    : undefined
+                                }
+                              >
+                                {hiddenSlot ? '·' : glyph}
+                              </span>
+                            </span>
+                          )
+                        })}
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
-              {!awaitingRoundAdvance && (
+              <div className="relative z-0 min-w-0">
+              {!awaitingRoundAdvance && practiceMode !== 'firstLetters' && (
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
                   {practiceMode === 'reorder' ? (
                     <>
@@ -2049,6 +2257,7 @@ export default function MemorizationPracticeSession({
                   })}
                 </label>
               )}
+              </div>
             </div>
           )}
 
@@ -2166,7 +2375,9 @@ export default function MemorizationPracticeSession({
             Choose practice mode
           </h2>
           <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-            <strong>Type mode:</strong> keyboard — first letters and reference digits.{' '}
+            <strong>Type mode:</strong> keyboard — first letter of each blank word and each reference digit.{' '}
+            <strong>Initials mode:</strong> same typing as Type; all blanks every round; higher rounds replace more
+            initials with dots on the cue row—typing correctly reveals your hidden dots there too.{' '}
             <strong>Word mode:</strong> tap choices in the bottom bar (no keyboard).{' '}
             <strong>Reorder mode:</strong> drag chunks into reading order.
           </p>
@@ -2179,6 +2390,15 @@ export default function MemorizationPracticeSession({
               className="w-full px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700"
             >
               Type mode
+            </button>
+            <button
+              type="button"
+              data-tour="memorize-practice-mode-initials"
+              data-testid="memorize-practice-mode-initials"
+              onClick={() => beginPracticeWithMode('firstLetters')}
+              className="w-full px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700"
+            >
+              Initials mode
             </button>
             <button
               type="button"

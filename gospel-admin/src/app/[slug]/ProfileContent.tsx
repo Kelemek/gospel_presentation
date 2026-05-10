@@ -777,13 +777,13 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       <div className="flex min-h-screen flex-col">
         {/* Header with hamburger menu and optional edit button */}
         <div data-profile-sticky-header className="sticky top-[env(safe-area-inset-top,0px)] z-40 bg-white/70 dark:bg-slate-800/90 backdrop-blur-sm shadow-md print-hide">
-          <div className="w-full px-5 py-3">
-            <div className="flex justify-between items-center gap-3">
+          <div className="w-full min-w-0 px-5 py-3">
+            <div className="flex min-w-0 justify-between items-center gap-3">
               <button
                 type="button"
                 data-tour="profile-menu-button"
                 onClick={toggleMenu}
-                className="flex items-center gap-3 px-4 py-2 rounded-md transition-colors cursor-pointer bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white"
+                className="flex shrink-0 items-center gap-3 px-4 py-2 rounded-md transition-colors cursor-pointer bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white"
               >
                 <div className="flex flex-col gap-1">
                   <div className={`w-5 h-0.5 bg-slate-800 dark:bg-white transition-transform ${isMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`}></div>
@@ -793,8 +793,8 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                 <span className="font-medium">Menu</span>
               </button>
               
-              {/* Right side content */}
-              <div className="flex items-center gap-3">
+              {/* Right side content — min-w-0 + overflow so Listen/help/icons stay reachable on narrow viewports */}
+              <div className="flex min-w-0 flex-1 justify-end items-center gap-2 sm:gap-3 overflow-x-auto">
                 {/* Profile Info and Edit Button - only show when previewing from editor */}
                 {canEdit && fromEditor && (
                   <>

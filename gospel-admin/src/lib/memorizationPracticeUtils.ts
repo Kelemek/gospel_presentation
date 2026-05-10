@@ -298,10 +298,52 @@ export function pickHiddenWordIndices(
   return new Set(indices.slice(0, hideCount))
 }
 
-/** First alphabetic character for typing match (handles leading punctuation). */
+/** First alphabetic character for typing match (handles leading punctuation; lowercase for case-insensitive compare). */
 export function firstLetterOfWord(word: string): string {
   const m = word.match(/[A-Za-zÀ-ÿ]/u)
   return m ? m[0].toLowerCase() : ''
+}
+
+/** First alphabetic character as it appears in the word (for initials cue display). */
+export function firstLetterGlyphOfWord(word: string): string {
+  const m = word.match(/[A-Za-zÀ-ÿ]/u)
+  return m ? m[0] : ''
+}
+
+/** Single-character hint for initials practice mode (word → first letter preserving case; digit → digit). */
+export function cueGlyphForTypableToken(token: MemorizationToken): string {
+  if (token.kind === 'digit') return token.text
+  if (token.kind === 'word') {
+    const letter = firstLetterGlyphOfWord(token.text)
+    return letter || '·'
+  }
+  return ''
+}
+
+/**
+ * 0-based typable-slot indices (0..typableCount-1) whose cue glyphs are **hidden** this round.
+ * Round 1: none; rounds 2–4: ~25% / ~50% / ~75%; round 5: all. Seeded shuffle is stable per seed+round.
+ */
+export function pickHiddenCueTypableSlotIndices(
+  typableCount: number,
+  roundIndex: number,
+  seedStr: string
+): Set<number> {
+  if (typableCount <= 0 || roundIndex <= 0) return new Set()
+  if (roundIndex >= MEMORIZATION_FULL_HIDE_ROUND) {
+    return new Set(Array.from({ length: typableCount }, (_, i) => i))
+  }
+  const step = (roundIndex - 1) / (MEMORIZATION_FULL_HIDE_ROUND - 1)
+  const hideCount = Math.round(typableCount * step)
+  if (hideCount <= 0) return new Set()
+
+  const rng = seedRandom(stringToSeed(`${seedStr}-mem-firstletter-cue-r${roundIndex}`))
+  const indices = Array.from({ length: typableCount }, (_, i) => i)
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1))
+    ;[indices[i], indices[j]] = [indices[j]!, indices[i]!]
+  }
+  return new Set(indices.slice(0, Math.min(typableCount, hideCount)))
 }
 
 /**
