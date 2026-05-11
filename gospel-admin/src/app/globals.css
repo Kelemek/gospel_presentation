@@ -2,22 +2,6 @@
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Memorize: intro “starting round” <select> chevron. Defined in CSS (not TS `url(\`data:...\`)`)
-   so the Tailwind candidate extractor does not emit invalid `url(var(--ch))` in dev. */
-.memorize-intro-start-round-select {
-  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2220%22%20height%3D%2220%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22%2F%3E%3C%2Fsvg%3E");
-  background-size: 1.25rem 1.25rem;
-  background-position: right 0.5rem center;
-  background-repeat: no-repeat;
-}
-
-/* Dark: slate-300 chevron (readable on slate-800, aligned with `dark:text-slate-100` controls) */
-html.dark .memorize-intro-start-round-select,
-body.dark .memorize-intro-start-round-select,
-.dark .memorize-intro-start-round-select {
-  background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2220%22%20height%3D%2220%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23cbd5e1%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22%2F%3E%3C%2Fsvg%3E");
-}
-
 /* Main site text size (non-admin); ApplyTextSize sets html class */
 html.text-size-normal {
   font-size: 100%;

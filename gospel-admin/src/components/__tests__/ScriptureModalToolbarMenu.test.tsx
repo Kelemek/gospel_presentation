@@ -39,4 +39,29 @@ describe('ScriptureModalToolbarMenu', () => {
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
     expect(onSelect).not.toHaveBeenCalled()
   })
+
+  it('with portaledListbox, opens listbox in a portal and still calls onSelect', async () => {
+    const user = userEvent.setup()
+    const onSelect = jest.fn().mockResolvedValue(undefined)
+    render(
+      <div style={{ overflow: 'hidden', height: 80, width: 200 }}>
+        <ScriptureModalToolbarMenu
+          ariaLabel="Pick fruit"
+          listboxAriaLabel="Fruits"
+          value="a"
+          portaledListbox
+          options={[
+            { value: 'a', label: 'Apple' },
+            { value: 'b', label: 'Banana' },
+          ]}
+          onSelect={onSelect}
+        />
+      </div>
+    )
+    await user.click(screen.getByRole('button', { name: /Pick fruit/i }))
+    const listbox = await screen.findByRole('listbox', { name: 'Fruits' })
+    expect(listbox.parentElement).toBe(document.body)
+    await user.click(screen.getByRole('option', { name: 'Banana' }))
+    expect(onSelect).toHaveBeenCalledWith('b')
+  })
 })

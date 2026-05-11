@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useId, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 
 const triggerButtonClass =
   'inline-flex items-center gap-1 rounded-md border-2 h-9 min-h-[36px] px-2 box-border transition-colors shrink-0 ' +
@@ -32,6 +33,11 @@ export interface ScriptureModalToolbarMenuProps {
   listboxAriaLabel: string
   /** Extra classes on the trigger (e.g. min width). */
   triggerClassName?: string
+  /**
+   * When true, the listbox is rendered in a `document.body` portal with `position: fixed` so it is not
+   * clipped by `overflow: hidden` ancestors (e.g. memorize practice dialog).
+   */
+  portaledListbox?: boolean
 }
 
 export default function ScriptureModalToolbarMenu({
@@ -43,25 +49,64 @@ export default function ScriptureModalToolbarMenu({
   ariaLabel,
   listboxAriaLabel,
   triggerClassName = 'w-[6.5rem]',
+  portaledListbox = false,
 }: ScriptureModalToolbarMenuProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const listboxPortalRef = useRef<HTMLDivElement>(null)
   const listboxId = useId()
   const [open, setOpen] = useState(false)
+  const [portalPlacement, setPortalPlacement] = useState<{
+    top: number
+    left: number
+    minWidth: number
+  } | null>(null)
 
   const selected = options.find((o) => o.value === value) ?? options[0]
   const canOpen = !disabled && options.length > 1
 
+  useLayoutEffect(() => {
+    if (!open || !portaledListbox || !canOpen) {
+      setPortalPlacement(null)
+      return
+    }
+    const measure = () => {
+      const el = triggerRef.current
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      setPortalPlacement((prev) => {
+        const next = { top: r.bottom + 4, left: r.left, minWidth: r.width }
+        if (
+          prev &&
+          prev.top === next.top &&
+          prev.left === next.left &&
+          prev.minWidth === next.minWidth
+        ) {
+          return prev
+        }
+        return next
+      })
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    const interval = window.setInterval(measure, 120)
+    return () => {
+      window.removeEventListener('resize', measure)
+      window.clearInterval(interval)
+    }
+  }, [open, portaledListbox, canOpen])
+
   useEffect(() => {
     if (!open) return
     const fn = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
+      const t = e.target as Node
+      if (wrapRef.current?.contains(t)) return
+      if (portaledListbox && listboxPortalRef.current?.contains(t)) return
+      setOpen(false)
     }
     document.addEventListener('mousedown', fn)
     return () => document.removeEventListener('mousedown', fn)
-  }, [open])
+  }, [open, portaledListbox])
 
   useEffect(() => {
     if (!open) return
@@ -82,6 +127,43 @@ export default function ScriptureModalToolbarMenu({
       triggerRef.current?.focus()
     })()
   }
+
+  const listboxClassName = portaledListbox
+    ? 'fixed z-[105] flex min-w-0 flex-col gap-0.5 rounded-md border-2 border-slate-400 p-1 shadow-lg dark:border-slate-500 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-200 max-h-[min(50vh,22rem)] overflow-y-auto overscroll-y-contain'
+    : 'absolute left-0 top-full z-100 mt-1 flex min-w-full flex-col gap-0.5 rounded-md border-2 border-slate-400 p-1 shadow-lg dark:border-slate-500 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
+
+  const listboxNode =
+    open && canOpen && (!portaledListbox || portalPlacement !== null) ? (
+      <div
+        ref={portaledListbox ? listboxPortalRef : undefined}
+        id={listboxId}
+        role="listbox"
+        aria-label={listboxAriaLabel}
+        className={listboxClassName}
+        style={
+          portaledListbox && portalPlacement
+            ? {
+                top: portalPlacement.top,
+                left: portalPlacement.left,
+                minWidth: portalPlacement.minWidth,
+              }
+            : undefined
+        }
+      >
+        {options.map((opt) => (
+          <button
+            key={opt.value === '' ? '__none__' : opt.value}
+            type="button"
+            role="option"
+            aria-selected={opt.value === value}
+            className={`${optionButtonClass} cursor-pointer`}
+            onClick={() => choose(opt.value)}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    ) : null
 
   return (
     <div ref={wrapRef} className="relative shrink-0 self-center">
@@ -119,27 +201,11 @@ export default function ScriptureModalToolbarMenu({
         )}
       </button>
 
-      {open && canOpen && (
-        <div
-          id={listboxId}
-          role="listbox"
-          aria-label={listboxAriaLabel}
-          className="absolute left-0 top-full z-100 mt-1 flex min-w-full flex-col gap-0.5 rounded-md border-2 border-slate-400 p-1 shadow-lg dark:border-slate-500 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-200"
-        >
-          {options.map((opt) => (
-            <button
-              key={opt.value === '' ? '__none__' : opt.value}
-              type="button"
-              role="option"
-              aria-selected={opt.value === value}
-              className={`${optionButtonClass} cursor-pointer`}
-              onClick={() => choose(opt.value)}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {portaledListbox && listboxNode && typeof document !== 'undefined'
+        ? createPortal(listboxNode, document.body)
+        : !portaledListbox
+          ? listboxNode
+          : null}
     </div>
   )
 }

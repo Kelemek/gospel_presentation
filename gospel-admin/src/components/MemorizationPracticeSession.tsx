@@ -30,6 +30,7 @@ import {
 import { getMemorizationListenUtteranceText } from '@/lib/memorizationListenUtteranceText'
 import { MemorizationReorderPanel } from '@/components/MemorizationReorderPanel'
 import { MemorizeListenControlsDialog } from '@/components/MemorizeListenControlsDialog'
+import ScriptureModalToolbarMenu from '@/components/ScriptureModalToolbarMenu'
 import {
   applyMemorizeListenPlaybackRateToMediaElement,
   MEMORIZE_LISTEN_REPEAT_GAP_MS,
@@ -99,6 +100,11 @@ const ANDROID_SCROLL_CLAMP_MS = 600
 
 const MEMORIZE_LISTEN_CONTROLS_DIALOG_ID = 'memorize-listen-controls-dialog'
 const MEMORIZE_LISTEN_CONTROLS_TITLE_ID = 'memorize-listen-controls-title'
+
+const MEMORIZE_INTRO_START_ROUND_OPTIONS = Array.from({ length: MEMORIZATION_FULL_HIDE_ROUND }, (_, i) => ({
+  value: String(i + 1),
+  label: `Round ${i + 1}`,
+}))
 
 function isKeyboardPracticeMode(mode: MemorizationPracticeMode | null): boolean {
   return mode === 'type' || mode === 'firstLetters'
@@ -1938,20 +1944,18 @@ export default function MemorizationPracticeSession({
                   >
                     Start practice
                   </button>
-                  <div className="w-38 shrink-0 min-w-0 sm:w-auto sm:max-w-48 sm:shrink-0">
-                    <select
-                      data-testid="memorize-intro-start-round"
-                      aria-label="Starting round (1 to 5)"
-                      value={startRoundChoice}
-                      onChange={(e) => setStartRoundChoice(Number(e.target.value))}
-                      className="memorize-intro-start-round-select box-border h-12.5 w-full min-w-0 rounded-lg border border-slate-300 bg-white pl-3 pr-10 text-sm font-medium text-slate-800 shadow-sm transition-colors hover:border-slate-400 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-slate-500 appearance-none"
-                    >
-                      {Array.from({ length: MEMORIZATION_FULL_HIDE_ROUND }, (_, i) => i + 1).map((n) => (
-                        <option key={n} value={n}>
-                          Round {n}
-                        </option>
-                      ))}
-                    </select>
+                  <div className="w-38 shrink-0 min-w-0 sm:w-auto sm:max-w-48 sm:shrink-0 self-stretch flex items-stretch">
+                    <ScriptureModalToolbarMenu
+                      value={String(startRoundChoice)}
+                      options={MEMORIZE_INTRO_START_ROUND_OPTIONS}
+                      onSelect={(v) => {
+                        setStartRoundChoice(Number(v))
+                      }}
+                      ariaLabel="Starting round (1 to 5)"
+                      listboxAriaLabel="Choose starting round"
+                      triggerClassName="h-12.5 min-h-[50px] w-full min-w-0"
+                      portaledListbox
+                    />
                   </div>
                 </div>
               </div>

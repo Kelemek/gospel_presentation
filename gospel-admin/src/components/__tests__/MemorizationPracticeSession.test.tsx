@@ -219,7 +219,8 @@ describe('MemorizationPracticeSession', () => {
         onPersistInProgress={onPersistInProgress}
       />
     )
-    await user.selectOptions(screen.getByTestId('memorize-intro-start-round'), '2')
+    await user.click(screen.getByRole('button', { name: /starting round \(1 to 5\)/i }))
+    await user.click(screen.getByRole('option', { name: 'Round 2' }))
     await chooseTypeModeAfterStart(user)
     expect(screen.getByText(/Round 2 of 5/i)).toBeInTheDocument()
     expect(onPersistInProgress).toHaveBeenLastCalledWith(
