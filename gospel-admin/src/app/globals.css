@@ -162,6 +162,11 @@ mark[data-resource-highlight-id] span:not([data-gospel-mount]):not(:has([data-go
     margin: 0 !important;
   }
 
+  /* Screen uses min-h-screen for footer stickiness; on paper it reserves ~one viewport of blank below the print header. */
+  .min-h-screen {
+    min-height: 0 !important;
+  }
+
   /* Header - more compact */
   .print-header {
     display: block !important;
@@ -184,11 +189,13 @@ mark[data-resource-highlight-id] span:not([data-gospel-mount]):not(:has([data-go
     color: #666;
   }
 
-  /* Section styling - highly condensed */
+  /* Section styling - highly condensed. Long pages (e.g. Spurgeon sermons) must split across pages — avoid
+     page-break-inside: avoid here or the whole section jumps to page 2 under the print-only title. */
   .print-section {
     margin-bottom: 0.75rem;
     padding-bottom: 0.25rem;
-    page-break-inside: avoid;
+    page-break-inside: auto;
+    break-inside: auto;
     border-bottom: 1px solid #ddd;
   }
 

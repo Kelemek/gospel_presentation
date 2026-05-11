@@ -111,6 +111,7 @@ On profile pages, readers bookmark passages with tinted pins for visual wayfindi
 ## Print
 - Print Version (Table of Contents) produces a condensed, letter-sized layout; non-essential UI is hidden.
 - **Output is always dark text on white**, regardless of app theme (light/dark). This avoids unreadable white-on-black when printing from the Android app in dark mode.
+- **Long single sections** (e.g. **Spurgeon sermon** profiles): `@media print` in `globals.css` avoids `page-break-inside: avoid` on `.print-section` and clears `min-h-screen` on paper so the **“The Gospel Presentation”** print title is not followed by a blank first page while the sermon body starts on page 2.
 - **Tutorial**: On profile pages, **Help** → **Tutorials** → **Print version** runs a short driver.js tour (opens **Menu**, then highlights **Print Version**).
 
 ## Text size (presentation site)
