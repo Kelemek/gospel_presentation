@@ -17,6 +17,64 @@ const optionButtonClass =
   'hover:bg-slate-200 dark:hover:bg-slate-600 aria-selected:bg-slate-300/80 dark:aria-selected:bg-slate-600/80 ' +
   'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-500'
 
+const VIEWPORT_PAD_PX = 8
+const LISTBOX_GAP_PX = 4
+
+export type PortalListboxPlacement = {
+  top: number
+  left: number
+  minWidth: number
+  maxHeight?: number
+}
+
+/**
+ * Viewport placement for fixed portaled listbox: opens below the trigger when there is room;
+ * otherwise grows **upward** from the trigger (instead of a very short, hard-to-use panel below).
+ * Exported for unit tests.
+ */
+export function computePortalListboxPlacement(
+  trigger: DOMRectReadOnly,
+  listbox: HTMLElement,
+  gap: number = LISTBOX_GAP_PX,
+  pad: number = VIEWPORT_PAD_PX
+): PortalListboxPlacement {
+  const innerH = window.innerHeight
+  const remPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+  const cap = Math.min(innerH * 0.5, 22 * remPx)
+  const contentH = listbox.scrollHeight
+  const left = trigger.left
+  const minWidth = trigger.width
+
+  const spaceBelow = innerH - trigger.bottom - gap - pad
+  const intendedH = Math.min(contentH, cap)
+  const wouldExtendPastBottom = intendedH > spaceBelow + 0.5
+
+  if (!wouldExtendPastBottom) {
+    return {
+      top: trigger.bottom + gap,
+      left,
+      minWidth,
+      maxHeight: contentH > cap + 0.5 ? cap : undefined,
+    }
+  }
+
+  const spaceAbove = trigger.top - gap - pad
+  const maxPanel = Math.min(cap, Math.max(0, spaceAbove))
+  let panelH = Math.min(contentH, maxPanel)
+  let top = trigger.top - gap - panelH
+  if (top < pad) {
+    top = pad
+    panelH = Math.min(contentH, Math.max(0, trigger.top - gap - top))
+  }
+
+  return {
+    top,
+    left,
+    minWidth,
+    maxHeight: contentH > panelH + 0.5 ? panelH : undefined,
+  }
+}
+
 export interface ScriptureModalToolbarMenuOption {
   value: string
   label: string
@@ -56,11 +114,7 @@ export default function ScriptureModalToolbarMenu({
   const listboxPortalRef = useRef<HTMLDivElement>(null)
   const listboxId = useId()
   const [open, setOpen] = useState(false)
-  const [portalPlacement, setPortalPlacement] = useState<{
-    top: number
-    left: number
-    minWidth: number
-  } | null>(null)
+  const [portalPlacement, setPortalPlacement] = useState<PortalListboxPlacement | null>(null)
 
   const selected = options.find((o) => o.value === value) ?? options[0]
   const canOpen = !disabled && options.length > 1
@@ -70,27 +124,45 @@ export default function ScriptureModalToolbarMenu({
       setPortalPlacement(null)
       return
     }
+    let raf = 0
     const measure = () => {
       const el = triggerRef.current
       if (!el) return
       const r = el.getBoundingClientRect()
-      setPortalPlacement((prev) => {
-        const next = { top: r.bottom + 4, left: r.left, minWidth: r.width }
-        if (
-          prev &&
-          prev.top === next.top &&
-          prev.left === next.left &&
-          prev.minWidth === next.minWidth
-        ) {
-          return prev
-        }
-        return next
-      })
+      const lb = listboxPortalRef.current
+      if (lb) {
+        window.cancelAnimationFrame(raf)
+        raf = 0
+        setPortalPlacement((prev) => {
+          const next = computePortalListboxPlacement(r, lb)
+          if (
+            prev &&
+            prev.top === next.top &&
+            prev.left === next.left &&
+            prev.minWidth === next.minWidth &&
+            prev.maxHeight === next.maxHeight
+          ) {
+            return prev
+          }
+          return next
+        })
+      } else {
+        setPortalPlacement((prev) => {
+          const next = { top: r.bottom + LISTBOX_GAP_PX, left: r.left, minWidth: r.width }
+          if (prev && prev.top === next.top && prev.left === next.left && prev.minWidth === next.minWidth) {
+            return prev
+          }
+          return next
+        })
+        window.cancelAnimationFrame(raf)
+        raf = window.requestAnimationFrame(measure)
+      }
     }
     measure()
     window.addEventListener('resize', measure)
     const interval = window.setInterval(measure, 120)
     return () => {
+      window.cancelAnimationFrame(raf)
       window.removeEventListener('resize', measure)
       window.clearInterval(interval)
     }
@@ -146,6 +218,9 @@ export default function ScriptureModalToolbarMenu({
                 top: portalPlacement.top,
                 left: portalPlacement.left,
                 minWidth: portalPlacement.minWidth,
+                ...(portalPlacement.maxHeight !== undefined
+                  ? { maxHeight: portalPlacement.maxHeight }
+                  : {}),
               }
             : undefined
         }

@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import ScriptureModalToolbarMenu from '../ScriptureModalToolbarMenu'
+import ScriptureModalToolbarMenu, {
+  computePortalListboxPlacement,
+} from '../ScriptureModalToolbarMenu'
 
 describe('ScriptureModalToolbarMenu', () => {
   it('opens listbox and calls onSelect when an option is chosen', async () => {
@@ -63,5 +65,47 @@ describe('ScriptureModalToolbarMenu', () => {
     expect(listbox.parentElement).toBe(document.body)
     await user.click(screen.getByRole('option', { name: 'Banana' }))
     expect(onSelect).toHaveBeenCalledWith('b')
+  })
+})
+
+describe('computePortalListboxPlacement', () => {
+  const listEl = (scrollHeight: number) =>
+    ({ scrollHeight } as unknown as HTMLElement)
+
+  beforeEach(() => {
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      writable: true,
+      value: 600,
+    })
+    jest.spyOn(window, 'getComputedStyle').mockReturnValue({ fontSize: '16px' } as CSSStyleDeclaration)
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('positions above the trigger when there is not enough room below', () => {
+    const trigger = new DOMRect(10, 556, 100, 44)
+    const p = computePortalListboxPlacement(trigger, listEl(200))
+    expect(p.top).toBeLessThan(trigger.top)
+    expect(p.maxHeight).toBeUndefined()
+    const bottom = p.top + 200
+    expect(bottom).toBeLessThanOrEqual(trigger.top - 4)
+  })
+
+  it('opens above (not a short below panel) when the list would extend past the viewport bottom', () => {
+    const trigger = new DOMRect(10, 500, 100, 44)
+    const p = computePortalListboxPlacement(trigger, listEl(400))
+    expect(p.top).toBeLessThan(trigger.top)
+    expect(p.maxHeight).toBe(300)
+    expect(p.top + 300).toBeLessThanOrEqual(trigger.top - 4 + 0.5)
+  })
+
+  it('opens below when the full list fits under the trigger', () => {
+    const trigger = new DOMRect(10, 100, 100, 44)
+    const p = computePortalListboxPlacement(trigger, listEl(120))
+    expect(p.top).toBe(trigger.bottom + 4)
+    expect(p.maxHeight).toBeUndefined()
   })
 })
