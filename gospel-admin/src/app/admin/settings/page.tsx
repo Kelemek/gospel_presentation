@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { logger } from "@/lib/logger";
 import type { ResourceOrderItem } from "@/lib/types";
 import { parseResourceOrder, isResourceOrderItemSpurgeonLibrary } from "@/lib/types";
+import { isSpurgeonSermonProfileSlug } from "@/lib/spurgeon/sortBySpurgeonSermonSlug";
 import { restoreNewProfileFromBackupFile } from "@/lib/createProfileFromBackup";
 import { useAlertModal } from "@/contexts/AlertModalContext";
 
@@ -362,7 +363,9 @@ export default function AdminSettingsPage() {
     if (item.type === "template") slugsInOrder.add(item.slug);
     else if (item.type === "category") item.templateSlugs.forEach((s) => slugsInOrder.add(s));
   });
-  const availableTemplates = publicTemplates.filter((t) => !slugsInOrder.has(t.slug));
+  const availableTemplates = publicTemplates.filter(
+    (t) => !slugsInOrder.has(t.slug) && !isSpurgeonSermonProfileSlug(t.slug)
+  );
 
   const addCategory = () => {
     setOrderItems((prev) => [
