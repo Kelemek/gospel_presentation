@@ -59,8 +59,8 @@ test('create section, add scripture, toggle favorite and save content (success)'
   const { ContentEditPage } = await import('../page')
   render(<ContentEditPage slug="s1" />)
 
-  // Wait for section content to render
-  await waitFor(() => expect(screen.getByText('S1')).toBeInTheDocument())
+  // Wait for section content to render (section title is an input value)
+  await waitFor(() => expect(screen.getByDisplayValue('S1')).toBeInTheDocument())
 
   // Click + Add Subsection -> should enable Save Changes in header actions
   const addSubBtn = screen.getByText('+ Add Subsection')

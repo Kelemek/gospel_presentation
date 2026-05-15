@@ -32,7 +32,14 @@ jest.doMock('@/lib/supabase/client', () => ({
 const origFetch = global.fetch
 beforeAll(() => {
   global.fetch = jest.fn((input: RequestInfo) => {
-    if (typeof input === 'string' && input.includes('/api/profiles')) {
+    const url = typeof input === 'string' ? input : (input as Request).url
+    if (url.includes('/api/profiles/templates')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ profiles: [], total: 0, totalPages: 1 }),
+      } as any)
+    }
+    if (url.includes('/api/profiles')) {
       return Promise.resolve({ ok: true, json: async () => ({ profiles: [] }) } as any)
     }
     return Promise.resolve({ ok: true, json: async () => ({}) } as any)
@@ -47,5 +54,7 @@ test('admin page mounts and shows profile management heading', async () => {
   render(<AdminPage />)
 
   // Wait for the heading that indicates the management UI is rendered
-  await waitFor(() => expect(screen.getByText(/Resource Management|My Resources/i)).toBeInTheDocument())
+  await waitFor(() => {
+    expect(screen.getByRole('heading', { name: 'Resource templates' })).toBeInTheDocument()
+  })
 })

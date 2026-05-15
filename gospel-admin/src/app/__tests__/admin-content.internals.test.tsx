@@ -22,8 +22,29 @@ jest.mock('@/lib/supabase/client', () => ({
 
 beforeAll(() => {
   global.fetch = jest.fn((input: RequestInfo) => {
-    if (typeof input === 'string' && input.endsWith('/api/profiles')) {
-      return Promise.resolve({ ok: true, json: async () => ({ profiles: [{ id: 'p1', title: 'P1', slug: 'p1', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), visitCount: 0 }] }) } as any)
+    const url = typeof input === 'string' ? input : (input as Request).url
+    if (url.includes('/api/profiles/templates')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ profiles: [], total: 0, totalPages: 1 }),
+      } as any)
+    }
+    if (url.includes('/api/profiles') && !url.includes('/api/profiles/templates')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          profiles: [
+            {
+              id: 'p1',
+              title: 'P1',
+              slug: 'p1',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              visitCount: 0,
+            },
+          ],
+        }),
+      } as any)
     }
     return Promise.resolve({ ok: true, json: async () => ({}) } as any)
   }) as any
@@ -40,5 +61,6 @@ test('AdminPageContent renders management heading for admin user', async () => {
   render(<AdminPageContent />)
 
   await waitFor(() => expect(screen.getByTestId('admin-header')).toBeInTheDocument())
-  expect(screen.getByText(/Resource Management/i)).toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Resource templates' })).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Assigned resources' })).not.toBeInTheDocument()
 })

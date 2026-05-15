@@ -94,7 +94,7 @@ describe('AdminPage - Counselee Simplified View', () => {
     expect(screen.queryByRole('button', { name: /Download Backup/i })).not.toBeInTheDocument()
   })
 
-  test('admin view shows all fields including URL, owner, counselees, and details', async () => {
+  test('admin dashboard shows templates and Settings in header (no assigned-resources list)', async () => {
     const clientMod = require('@/lib/supabase/client')
     jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({
       auth: { 
@@ -128,10 +128,16 @@ describe('AdminPage - Counselee Simplified View', () => {
     }
 
     global.fetch = jest.fn((url: string) => {
+      if (url.includes('/api/profiles/templates')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ profiles: [], total: 0, totalPages: 1 }),
+        })
+      }
       if (url === '/api/profiles') {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ profiles: [testProfile] })
+          json: async () => ({ profiles: [testProfile] }),
         })
       }
       return Promise.resolve({ ok: true, json: async () => ({}) })
@@ -141,21 +147,19 @@ describe('AdminPage - Counselee Simplified View', () => {
       getItem: jest.fn((k: string) => (k === 'gospel-admin-auth' ? JSON.stringify({ isAuthenticated: true }) : null)),
       setItem: jest.fn(),
       removeItem: jest.fn(),
-      clear: jest.fn()
+      clear: jest.fn(),
     }
 
     const { AdminPageContent } = await import('../page')
     render(<AdminPageContent />)
 
-    // Should show title and description
-    expect(await screen.findByText('Admin Gospel Profile')).toBeInTheDocument()
-    expect(screen.getByText(/Admin test profile/i)).toBeInTheDocument()
-
-    // Should show "Resource Management" heading for admins (different from counselees)
-    expect(screen.getByText(/Resource Management/i)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Resource templates' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/admin/settings')
+    expect(screen.queryByText(/Create from backup/i)).not.toBeInTheDocument()
+    expect(screen.queryByText('Admin Gospel Profile')).not.toBeInTheDocument()
   })
 
-  test('counselor view shows all fields including URL, owner, counselees, and details', async () => {
+  test('counselor dashboard shows templates only (no backup on dashboard; no assigned-resources list)', async () => {
     const clientMod = require('@/lib/supabase/client')
     jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({
       auth: { 
@@ -189,10 +193,16 @@ describe('AdminPage - Counselee Simplified View', () => {
     }
 
     global.fetch = jest.fn((url: string) => {
+      if (url.includes('/api/profiles/templates')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ profiles: [], total: 0, totalPages: 1 }),
+        })
+      }
       if (url === '/api/profiles') {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ profiles: [testProfile] })
+          json: async () => ({ profiles: [testProfile] }),
         })
       }
       return Promise.resolve({ ok: true, json: async () => ({}) })
@@ -202,17 +212,15 @@ describe('AdminPage - Counselee Simplified View', () => {
       getItem: jest.fn((k: string) => (k === 'gospel-admin-auth' ? JSON.stringify({ isAuthenticated: true }) : null)),
       setItem: jest.fn(),
       removeItem: jest.fn(),
-      clear: jest.fn()
+      clear: jest.fn(),
     }
 
     const { AdminPageContent } = await import('../page')
     render(<AdminPageContent />)
 
-    // Should show title and description
-    expect(await screen.findByText('Counselor Gospel Profile')).toBeInTheDocument()
-    expect(screen.getByText(/Counselor test profile/i)).toBeInTheDocument()
-
-    // Should show "Resource Management" heading for counselors (same as admin)
-    expect(screen.getByText(/Resource Management/i)).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Resource templates' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/admin/settings')
+    expect(screen.queryByText(/Create from backup/i)).not.toBeInTheDocument()
+    expect(screen.queryByText('Counselor Gospel Profile')).not.toBeInTheDocument()
   })
 })

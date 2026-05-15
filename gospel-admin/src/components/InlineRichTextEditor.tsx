@@ -1,7 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import RichTextEditor from './RichTextEditor'
+import { useEffect, useState } from 'react'
 
 interface InlineRichTextEditorProps {
   value: string
@@ -9,6 +8,8 @@ interface InlineRichTextEditorProps {
   className?: string
   placeholder?: string
   as?: 'h1' | 'h2' | 'h3' | 'h4' | 'p' | 'div'
+  /** Bordered white field + focus ring, aligned with RichTextEditor body chrome */
+  variant?: 'minimal' | 'field'
 }
 
 // Strip all <p> tags from HTML so content is inline-safe and never produces nested <p> when rendered inside a <p> or <div>. Exported for use when displaying stored HTML (e.g. on edit page).
@@ -19,92 +20,79 @@ export function stripParagraphTags(html: string): string {
   return stripped.replace(/\s+/g, ' ').trim()
 }
 
-// Get display text from HTML (strip all HTML tags for title display)
-function getDisplayText(html: string): string {
+/** Plain text for a single-line title input (decodes entities, strips tags). */
+export function htmlToPlainText(html: string): string {
   if (!html) return ''
-  // Strip paragraph tags first
-  const stripped = stripParagraphTags(html)
-  // Return the stripped version (may still contain formatting tags like <strong>, <em>)
-  return stripped
+  if (typeof document === 'undefined') {
+    return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
+  }
+  const d = document.createElement('div')
+  d.innerHTML = html
+  return (d.textContent || '').replace(/\s+/g, ' ').trim()
 }
+
+/** Store plain title as minimal HTML-safe text (no wrapper tags). */
+function plainTextToInlineHtml(text: string): string {
+  if (!text) return ''
+  if (typeof document === 'undefined') {
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  }
+  const span = document.createElement('span')
+  span.textContent = text
+  return span.innerHTML
+}
+
+const FIELD_SHELL_CLASS =
+  'w-full flex min-h-12 items-center border border-slate-200 rounded-lg p-3 bg-white focus-within:ring-2 focus-within:ring-blue-400'
 
 export default function InlineRichTextEditor({
   value,
   onChange,
   className = '',
   placeholder = 'Click to edit...',
-  as = 'p'
+  variant = 'minimal',
 }: InlineRichTextEditorProps) {
-  const [isEditing, setIsEditing] = useState(false)
-  const [editValue, setEditValue] = useState(value)
+  const [draft, setDraft] = useState(() => htmlToPlainText(value))
 
-  const Component = as
+  useEffect(() => {
+    setDraft(htmlToPlainText(value))
+  }, [value])
 
-  const handleSave = () => {
-    // Strip paragraph tags before saving
-    const cleanedValue = stripParagraphTags(editValue)
-    onChange(cleanedValue)
-    setIsEditing(false)
+  const commitIfChanged = () => {
+    const next = stripParagraphTags(plainTextToInlineHtml(draft))
+    const prev = stripParagraphTags(value)
+    if (next !== prev) {
+      onChange(next)
+    }
   }
 
-  const handleCancel = () => {
-    setEditValue(value)
-    setIsEditing(false)
-  }
+  const minimalInputClass =
+    `${className} w-full min-w-0 rounded-md border border-transparent bg-transparent px-1 py-0.5 -mx-1 text-inherit shadow-none outline-none transition-colors placeholder:text-slate-400 placeholder:italic hover:border-slate-200 focus:border-blue-400 focus:ring-1 focus:ring-blue-400/30 dark:hover:border-slate-600 dark:focus:border-blue-500 dark:focus:ring-blue-500/30`
 
-  const handleEdit = () => {
-    setEditValue(value)
-    setIsEditing(true)
-  }
+  const fieldInputClass =
+    `${className} min-w-0 flex-1 border-0 bg-transparent p-0 text-slate-800 shadow-none outline-none ring-0 focus:ring-0 placeholder:text-slate-400 placeholder:italic`
 
-  if (isEditing) {
-    return (
-      <div className="space-y-2">
-        <RichTextEditor
-          value={editValue}
-          onChange={setEditValue}
-          placeholder={placeholder}
-          multiline
-          as="div"
-          className="w-full text-sm"
-        />
-        <div className="flex gap-2">
-          <button
-            onClick={handleSave}
-            disabled={!editValue.trim()}
-            className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 px-3 py-1 rounded text-xs transition-colors disabled:opacity-50"
-            type="button"
-          >
-            Save
-          </button>
-          <button
-            onClick={handleCancel}
-            className="bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 px-3 py-1 rounded text-xs transition-colors"
-            type="button"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  const displayText = getDisplayText(value)
-
-  return (
-    <div className="group flex items-start gap-2">
-      <Component
-        className={`${className} ${!displayText ? 'text-slate-400 italic' : ''} flex-1`}
-        dangerouslySetInnerHTML={{ __html: displayText || placeholder }}
-      />
-      <button
-        onClick={handleEdit}
-        className="text-slate-600 hover:text-slate-800 text-xs px-2 py-1 rounded hover:bg-slate-100 transition-colors"
-        title="Edit"
-        type="button"
-      >
-        ✏️
-      </button>
-    </div>
+  const input = (
+    <input
+      type="text"
+      className={variant === 'field' ? fieldInputClass : minimalInputClass}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commitIfChanged}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          ;(e.target as HTMLInputElement).blur()
+        }
+      }}
+      placeholder={placeholder}
+      aria-label={placeholder}
+    />
   )
+
+  if (variant === 'field') {
+    return <div className={FIELD_SHELL_CLASS}>{input}</div>
+  }
+
+  return input
 }

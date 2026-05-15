@@ -3,7 +3,7 @@
 import { useState, useEffect, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { GospelProfile, GospelSection } from '@/lib/types'
+import { GospelProfile, GospelSection, Subsection } from '@/lib/types'
 import AdminHeader from '@/components/AdminHeader'
 import ScriptureHoverModal from '@/components/ScriptureHoverModal'
 import InlineRichTextEditor, { stripParagraphTags } from '@/components/InlineRichTextEditor'
@@ -263,6 +263,32 @@ export function ContentEditPage({ slug }: ContentEditPageProps) {
     setProfile({
       ...profile,
       gospelData: newGospelData
+    })
+    setHasChanges(true)
+  }
+
+  const splitSubsectionAtCursor = (
+    sectionIndex: number,
+    subsectionIndex: number,
+    parts: { beforeHtml: string; afterHtml: string }
+  ) => {
+    if (!profile) return
+    const newGospelData = profile.gospelData.map((sec, si) => {
+      if (si !== sectionIndex) return sec
+      const newSubs = [...sec.subsections]
+      const prev = newSubs[subsectionIndex]
+      newSubs[subsectionIndex] = { ...prev, content: parts.beforeHtml }
+      const newSub: Subsection = {
+        title: '',
+        content: parts.afterHtml,
+        scriptureReferences: [],
+      }
+      newSubs.splice(subsectionIndex + 1, 0, newSub)
+      return { ...sec, subsections: newSubs }
+    })
+    setProfile({
+      ...profile,
+      gospelData: newGospelData,
     })
     setHasChanges(true)
   }
@@ -1226,6 +1252,7 @@ export function ContentEditPage({ slug }: ContentEditPageProps) {
                     className="text-2xl font-bold text-slate-800 w-full"
                     placeholder="Section title..."
                     as="h2"
+                    variant="field"
                   />
                 </div>
                 <div className="flex flex-wrap gap-2 shrink-0 items-center">
@@ -1313,6 +1340,7 @@ export function ContentEditPage({ slug }: ContentEditPageProps) {
                         className="text-xl font-bold text-slate-800 w-full"
                         placeholder="Subsection title..."
                         as="h3"
+                        variant="field"
                       />
                     </div>
                     <div className="flex gap-2 shrink-0">
@@ -1340,6 +1368,8 @@ export function ContentEditPage({ slug }: ContentEditPageProps) {
                       placeholder="Click to edit content..."
                       multiline
                       as="p"
+                      onSplitContent={(p) => splitSubsectionAtCursor(sectionIndex, subsectionIndex, p)}
+                      onSplitFailed={(msg) => void showAlert(msg)}
                     />
                   </div>
 
@@ -1651,6 +1681,7 @@ export function ContentEditPage({ slug }: ContentEditPageProps) {
                             className="font-medium text-slate-800 w-full"
                             placeholder="Nested subsection title..."
                             as="h4"
+                            variant="field"
                           />
                         </div>
                         <div className="flex gap-1 shrink-0">

@@ -135,6 +135,25 @@ describe('ccelSermonHtml', () => {
     expect(subsections).toHaveLength(1)
   })
 
+  it('repairSpurgeonSubsectionsMislumpedRomanOne merges legacy false Roman I. Without further preface subsection', () => {
+    const legacy = [
+      { title: '(No. 2636)', content: '<p>Intro paragraph before the transitional line.</p>', questions: [] },
+      {
+        title: 'I. Without further preface, I remark, first…',
+        content:
+          '<p>I. Without further preface, I remark, first, that THE WORDS OF JESUS MUST STAND.</p><p>More under the first notional head.</p>',
+        questions: [],
+      },
+      { title: 'II. Now, secondly', content: '<p>II. Now, secondly, THIS DECLARATION APPLIES.</p>', questions: [] },
+    ]
+    const { subsections, changed } = repairSpurgeonSubsectionsMislumpedRomanOne(legacy)
+    expect(changed).toBe(true)
+    expect(subsections).toHaveLength(2)
+    expect(subsections[0].content).toContain('Intro paragraph')
+    expect(subsections[0].content).toContain('I. Without further preface')
+    expect(subsections[1].title).toMatch(/^II\./i)
+  })
+
   it('repairGospelPresentationDataRomanOneMerges is a no-op on already-split div1 output', () => {
     const inner = `
       <p class="Body">(No. 1) Short intro line.</p>
@@ -190,6 +209,26 @@ describe('ccelSermonHtml', () => {
     expect(subsections[2].content).toContain('Closing under II')
   })
 
+  it('Sermon 2636 shape: I. Without further preface stays in first subsection until II and III', () => {
+    const inner = `
+      <p id="x-p1">(No. 2636)</p>
+      <p id="x-p2">LAST Lord's-Day morning I preached upon the perpetuity of the Law of God…</p>
+      <p id="x-p9">I. Without further preface, I remark, first, that THE WORDS OF JESUS MUST STAND, COME WHAT MAY.</p>
+      <p id="x-p10">The major change of Heaven and earth passing away includes all lesser changes…</p>
+      <p id="x-p19">II. Now, secondly, THIS DECLARATION APPLIES TO ALL CHRIST'S WORDS</p>
+      <p id="x-p20">This declaration applies, then, to the Doctrinal teaching of Christ.</p>
+      <p id="x-p29">III. Thirdly, and lastly, I want to show you that THIS TRUTH HAS A BEARING UPON US ALL.</p>
+      <p id="x-p30">First, I am sure that it has a relation to the preacher.</p>
+    `
+    const { subsections } = div1XmlToGospelSubsections(inner)
+    expect(subsections).toHaveLength(3)
+    expect(subsections[0].content).toContain('I. Without further preface')
+    expect(subsections[0].content).toContain('The major change of Heaven')
+    expect(subsections[0].title).toMatch(/\(No\. 2636\)/)
+    expect(subsections[1].title).toMatch(/^II\./i)
+    expect(subsections[2].title).toMatch(/^III\./i)
+  })
+
   it('isMajorOutlineSegmentStart vs isNumberedSubpointStart', () => {
     expect(isMajorOutlineSegmentStart('I. First of all, we begin.')).toBe(true)
     expect(isMajorOutlineSegmentStart('I. So, first, JESUS CHRIST came by water.')).toBe(true)
@@ -199,6 +238,11 @@ describe('ccelSermonHtml', () => {
         'I. In discussing this text I shall first remind you of the ONE GLORIOUS PERSON concerning whom this verse is written.'
       )
     ).toBe(true)
+    expect(
+      isMajorOutlineSegmentStart(
+        'I. Without further preface, I remark, first, that THE WORDS OF JESUS MUST STAND, COME WHAT MAY.'
+      )
+    ).toBe(false)
     expect(isMajorOutlineSegmentStart('I. will never leave you.')).toBe(false)
     expect(isMajorOutlineSegmentStart('II. The second point.')).toBe(true)
     expect(isMajorOutlineSegmentStart('FIRST. We observe that God is good.')).toBe(true)

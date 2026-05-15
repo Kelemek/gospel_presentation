@@ -29,8 +29,11 @@ test('shows no templates when API returns empty list', async () => {
   // Mock fetch to return empty profiles list
   // @ts-expect-error mocking incompatible types
   global.fetch = jest.fn((url: any, opts: any) => {
-    if (typeof url === 'string' && url.includes('/api/profiles')) {
-      return Promise.resolve({ ok: true, json: async () => ({ profiles: [] }) })
+    if (typeof url === 'string' && url.includes('/api/profiles/templates')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ profiles: [], total: 0, page: 1, pageSize: 30, totalPages: 1 }),
+      })
     }
     return Promise.resolve({ ok: true, json: async () => ({}) })
   })
@@ -53,8 +56,24 @@ test('renders templates list and shows never visited marker for zero visits', as
 
   // @ts-expect-error mocking incompatible types
   global.fetch = jest.fn((url: any, opts: any) => {
-    if (typeof url === 'string' && url.includes('/api/profiles')) {
-      return Promise.resolve({ ok: true, json: async () => ({ profiles: [sampleTemplate] }) })
+      if (typeof url === 'string' && url.includes('/api/profiles/templates')) {
+        const u = String(url)
+        if (u.includes('no-match-for-this')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({ profiles: [], total: 0, page: 1, pageSize: 30, totalPages: 1 }),
+          })
+        }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          profiles: [sampleTemplate],
+          total: 1,
+          page: 1,
+          pageSize: 30,
+          totalPages: 1,
+        }),
+      })
     }
     return Promise.resolve({ ok: true, json: async () => ({}) })
   })

@@ -9,8 +9,7 @@ jest.mock('@/lib/auth', () => ({
   logout: jest.fn()
 }))
 
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { render, screen, waitFor } from '@testing-library/react'
 import AdminDashboard from '../admin/page'
 import * as auth from '@/lib/auth'
 const mockAuth = auth as jest.Mocked<typeof auth>
@@ -66,14 +65,18 @@ beforeEach(() => {
   jest.spyOn(auth, 'isAuthenticated').mockReturnValue(true)
   global.fetch = jest.fn().mockImplementation((input, init) => {
     const urlStr = typeof input === 'string' ? input : input.url
-    // Handle GET /api/profiles
-    if (urlStr && urlStr.includes('/api/profiles') && (!init || init.method === 'GET')) {
+    if (urlStr && urlStr.includes('/api/profiles/templates') && (!init || init.method === 'GET')) {
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve(mockProfiles)
+        json: () => Promise.resolve({ profiles: [], total: 0, totalPages: 1 }),
       })
     }
-    // Handle POST /api/profiles (profile creation)
+    if (urlStr && /\/api\/profiles(?:\?|$)/.test(urlStr) && (!init || init.method === 'GET')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockProfiles),
+      })
+    }
     if (urlStr && urlStr.endsWith('/api/profiles') && init && init.method === 'POST') {
       const body = JSON.parse(init.body as string)
       const newProfile = {
@@ -84,154 +87,46 @@ beforeEach(() => {
         isDefault: false,
         visitCount: 0,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
       }
-      // Add to mockProfiles for subsequent GETs
       mockProfiles.profiles.push(newProfile)
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ profile: newProfile })
+        json: () => Promise.resolve({ profile: newProfile }),
       })
     }
-    // Handle DELETE /api/profiles/:slug (profile deletion)
     if (urlStr && urlStr.match(/\/api\/profiles\/.+/) && init && init.method === 'DELETE') {
       const slug = urlStr.split('/').pop()
-      mockProfiles.profiles = mockProfiles.profiles.filter(p => p.slug !== slug)
+      mockProfiles.profiles = mockProfiles.profiles.filter((p) => p.slug !== slug)
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ success: true })
+        json: () => Promise.resolve({ success: true }),
       })
     }
-    // Default fallback
     return Promise.resolve({
       ok: true,
-      json: () => Promise.resolve({})
+      json: () => Promise.resolve({}),
     })
   })
 })
 
-describe('AdminDashboard - Visit Tracking', () => {
-  it('should render all profiles with correct title, URL, and visit count', async () => {
+describe('AdminDashboard', () => {
+  it('shows templates card; backup import is not on /admin; does not list assigned profiles', async () => {
     render(<AdminDashboard />)
     await waitFor(() => {
-      // Verify all profiles are rendered
-      expect(screen.getByText((content) => content.includes('Profile With Visits'))).toBeInTheDocument()
-      expect(screen.getByText((content) => content.includes('Legacy Visits Profile'))).toBeInTheDocument()
-      expect(screen.getByText((content) => content.includes('Never Visited Profile'))).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Resource templates' })).toBeInTheDocument()
     })
-    
-    // Verify the Details toggle buttons exist for managing profiles
-    const detailsButtons = screen.getAllByText(/Details/)
-    expect(detailsButtons.length).toBeGreaterThan(0)
+    expect(screen.queryByText(/Create from backup/i)).not.toBeInTheDocument()
+    expect(screen.queryByText('Profile With Visits')).not.toBeInTheDocument()
   })
 
-  it('should display visit count and last visited date for each profile', async () => {
+  it('shows Settings link in header to /admin/settings for admins', async () => {
     render(<AdminDashboard />)
     await waitFor(() => {
-      // Verify all profiles render
-      expect(screen.getByText((content) => content.includes('Profile With Visits'))).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Resource templates' })).toBeInTheDocument()
     })
-    
-    // Expand a profile to see detailed visit information
-    const detailsButtons = screen.getAllByText(/Details/)
-    await userEvent.click(detailsButtons[0])
-    
-    // Verify the expanded details area appears (check for visited profile content)
-    await waitFor(() => {
-      // The URL should be visible in the expanded view
-      expect(screen.getByText((content, element) => {
-        return Boolean(element && typeof (element.className) === 'string' && element.className.includes('break-all') && content.includes('profile-with-visits'))
-      })).toBeInTheDocument()
-    })
-  })
-
-  it('should render action buttons for each profile', async () => {
-    render(<AdminDashboard />)
-    await waitFor(() => {
-      // Details buttons are visible without expansion
-      const detailsButtons = screen.getAllByText(/Details/)
-      expect(detailsButtons.length).toBeGreaterThan(0)
-    })
-    
-    // Click the first Details button to expand
-    const firstDetailsButton = screen.getAllByText(/Details/)[0]
-    await userEvent.click(firstDetailsButton)
-    
-    await waitFor(() => {
-      // Edit button is unique to the expanded profile row
-      expect(screen.getByText('Edit')).toBeInTheDocument()
-    })
-  })
-
-  it('should display "Never visited" label for profiles with zero visits', async () => {
-    render(<AdminDashboard />)
-    await waitFor(() => {
-      expect(screen.getByText('Never Visited Profile')).toBeInTheDocument()
-    })
-    
-    // Click the Details button to expand and see the visit information
-    const detailsButtons = screen.getAllByText(/Details/)
-    await userEvent.click(detailsButtons[1]) // Click second Details button for never-visited-profile
-    
-    await waitFor(() => {
-      expect(screen.getAllByText('Never visited').length).toBeGreaterThan(0)
-    })
-  })
-
-  it('should display the Default badge for the default profile', async () => {
-    render(<AdminDashboard />)
-    await waitFor(() => {
-      // Be tolerant: there may be multiple elements or slightly different
-      // rendering in jsdom; assert that at least one element contains
-      // the Default badge text.
-      expect(screen.getAllByText('Default').length).toBeGreaterThan(0)
-    })
-  })
-
-  it('should show loading state initially', () => {
-    (global.fetch as jest.Mock).mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({
-      ok: true,
-      json: () => Promise.resolve(mockProfiles)
-    }), 100)))
-    render(<AdminDashboard />)
-    expect(screen.getByText('Loading dashboard...')).toBeInTheDocument()
-  })
-
-  it('should display profile links correctly', async () => {
-    render(<AdminDashboard />)
-    await waitFor(() => {
-      expect(screen.getByText('Profile With Visits')).toBeInTheDocument()
-    })
-    
-    // Details buttons should be visible
-    const detailsButtons = screen.getAllByText(/Details/)
-    expect(detailsButtons.length).toBeGreaterThan(0)
-    
-    // Click the first Details button to expand and see the links
-    await userEvent.click(detailsButtons[0])
-    
-    await waitFor(() => {
-      // Edit button is unique to the expanded profile row
-      expect(screen.getByText('Edit')).toBeInTheDocument()
-    })
-  })
-
-  it('should show site URL for profiles', async () => {
-    render(<AdminDashboard />)
-    await waitFor(() => {
-      expect(screen.getByText('Profile With Visits')).toBeInTheDocument()
-    })
-    
-    // Click the first Details button to expand
-    const detailsButtons = screen.getAllByText(/Details/)
-    await userEvent.click(detailsButtons[0])
-    
-    // Now the URL should be visible
-    await waitFor(() => {
-      expect(screen.getByText((content, element) => {
-        return Boolean(element && typeof (element.className) === 'string' && element.className.includes('break-all') && content.includes('profile-with-visits'))
-      })).toBeInTheDocument()
-    })
+    const settingsLink = screen.getByRole('link', { name: 'Settings' })
+    expect(settingsLink).toHaveAttribute('href', '/admin/settings')
   })
 
   it('should handle authentication redirect', () => {

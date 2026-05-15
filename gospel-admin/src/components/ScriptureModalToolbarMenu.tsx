@@ -121,7 +121,9 @@ export default function ScriptureModalToolbarMenu({
 
   useLayoutEffect(() => {
     if (!open || !portaledListbox || !canOpen) {
-      setPortalPlacement(null)
+      queueMicrotask(() => {
+        setPortalPlacement(null)
+      })
       return
     }
     let raf = 0

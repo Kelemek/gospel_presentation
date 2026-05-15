@@ -75,8 +75,8 @@ describe('Admin Content Page - Nested Drag/Drop', () => {
     await waitFor(() => expect(screen.getByText('Nested')).toBeInTheDocument())
 
     // Wait for nested subsection title N1 and N2 to render
-    await waitFor(() => expect(screen.getByText('N1')).toBeInTheDocument())
-    await waitFor(() => expect(screen.getByText('N2')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('N1')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('N2')).toBeInTheDocument())
 
   // The scripture text 'Ref A1' should exist; choose the first match if duplicated
   const refAList = await screen.findAllByText(/Ref A1/)
@@ -117,7 +117,7 @@ describe('Admin Content Page - Nested Drag/Drop', () => {
     render(<ContentEditPage slug="nested-profile" />)
 
     await waitFor(() => expect(screen.getByText('Nested')).toBeInTheDocument())
-    await waitFor(() => expect(screen.getByText('N1')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('N1')).toBeInTheDocument())
 
     // Find favorite buttons and reorder via drag/drop
     const favButtonsBefore = screen.getAllByTitle('Click to favorite')

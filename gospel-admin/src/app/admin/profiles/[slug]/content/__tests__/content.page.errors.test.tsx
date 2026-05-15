@@ -52,7 +52,7 @@ test('save failure shows alert', async () => {
   render(<ContentEditPage slug="s1" />)
 
   // Wait for section content to render
-  await waitFor(() => expect(screen.getByText('S1')).toBeInTheDocument())
+  await waitFor(() => expect(screen.getByDisplayValue('S1')).toBeInTheDocument())
 
   // Add a subsection to enable save
   const addSubBtn = screen.getByText('+ Add Subsection')
@@ -101,7 +101,7 @@ test('delete last subsection triggers confirm and alert', async () => {
   render(<ContentEditPage slug="s1" />)
 
   // Wait for section content to render
-  await waitFor(() => expect(screen.getByText('S1')).toBeInTheDocument())
+  await waitFor(() => expect(screen.getByDisplayValue('S1')).toBeInTheDocument())
 
   // The page initially has one subsection; click its Delete button
   const deleteBtns = screen.getAllByRole('button', { name: /Delete subsection|Delete/i })

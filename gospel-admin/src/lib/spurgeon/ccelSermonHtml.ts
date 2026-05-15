@@ -181,12 +181,23 @@ function navTitleFromParagraphHtml(pHtml: string, index: number): string {
   return `${plain.slice(0, MAX_NAV_TITLE_LEN - 1)}…`
 }
 
+/** Met Tab e.g. sermon 2636 — transitional line, not a Roman division head. */
+const SPURGEON_FALSE_ROMAN_ONE_WITHOUT_PREFACE_RE = /^I\.\s+Without further preface\b/i
+
+function isFalseRomanOneWithoutFurtherPrefacePlain(plain: string): boolean {
+  const t = plain.replace(/^\s+/, '').trimStart()
+  return SPURGEON_FALSE_ROMAN_ONE_WITHOUT_PREFACE_RE.test(t)
+}
+
 /** Roman II–XIV, disambiguated Roman I., or FIRST./SECOND. — top-level subsection boundaries only. */
 export function isMajorOutlineSegmentStart(plain: string): boolean {
   const t = plain.replace(/^\s+/, '').trimStart()
   if (!t) return false
 
   if (/^(II|III|IV|V|VI|VII|VIII|IX|X|XI|XII|XIII|XIV)\.\s+/i.test(t)) return true
+
+  // Sermon 2636 style: "I. Without further preface, I remark, first, …" — not Roman I.
+  if (isFalseRomanOneWithoutFurtherPrefacePlain(t)) return false
 
   // Roman I. must stay strict so pronoun sentences like "I. will never leave you." do not split.
   // Word-boundary openers (So, Thus, …) cover homiletical "I. So, first, …" without matching "I. Solutions…".
@@ -374,10 +385,55 @@ function subsectionToFlatInnerParagraphs(sub: Subsection): string[] {
   return out
 }
 
+function mergeAdjacentSubsections(a: Subsection, b: Subsection): Subsection {
+  const nestedA = a.nestedSubsections ?? []
+  const nestedB = b.nestedSubsections ?? []
+  const nestedSubsections = nestedA.length > 0 || nestedB.length > 0 ? [...nestedA, ...nestedB] : undefined
+  const questions = [...(a.questions ?? []), ...(b.questions ?? [])]
+  const scriptureA = a.scriptureReferences ?? []
+  const scriptureB = b.scriptureReferences ?? []
+  const scriptureReferences = scriptureA.length > 0 || scriptureB.length > 0 ? [...scriptureA, ...scriptureB] : undefined
+  return {
+    ...a,
+    content: `${a.content.trim()}\n${b.content.trim()}`,
+    nestedSubsections,
+    questions,
+    scriptureReferences,
+  }
+}
+
+/**
+ * Legacy imports sometimes split **I. Without further preface, …** into its own subsection
+ * (e.g. older outline rules). Merge that block into the previous subsection so **II.** / **III.**
+ * remain the first visible Roman divisions in the TOC.
+ */
+function mergeSpurgeonSubsectionsFalseRomanOneWithoutFurtherPreface(subsections: Subsection[]): {
+  subsections: Subsection[]
+  changed: boolean
+} {
+  let changed = false
+  const out = subsections.slice()
+  for (let i = 0; i < out.length - 1; ) {
+    const b = out[i + 1]!
+    const firstInner = extractPInnerBodiesFromMergedHtml(b.content)[0]
+    const plain = firstInner != null ? stripTagsToPlain(firstInner) : ''
+    if (plain && isFalseRomanOneWithoutFurtherPrefacePlain(plain)) {
+      out.splice(i, 2, mergeAdjacentSubsections(out[i]!, b))
+      changed = true
+      continue
+    }
+    i++
+  }
+  return { subsections: out, changed }
+}
+
 /**
  * Split stored subsections when a major outline start (Roman **I.** with a homiletical opener,
  * **II.**, **FIRST.**, etc.) was merged into the previous block. Re-runs {@link subsectionFromMajorGroup}
  * on the head/tail so numbered **1.** / **2.** blocks stay under the correct Roman head.
+ *
+ * First merges a **false** Roman **I.** block (`I. Without further preface, …`) that was split
+ * into its own subsection (see {@link mergeSpurgeonSubsectionsFalseRomanOneWithoutFurtherPreface}).
  *
  * Only handles bodies shaped like importer output (`<p>…</p>` per ThML paragraph). No-op on
  * data that does not need repair.
@@ -387,7 +443,9 @@ export function repairSpurgeonSubsectionsMislumpedRomanOne(subsections: Subsecti
   changed: boolean
 } {
   let changed = false
-  let working = subsections.slice()
+  const merged = mergeSpurgeonSubsectionsFalseRomanOneWithoutFurtherPreface(subsections)
+  let working = merged.subsections
+  if (merged.changed) changed = true
 
   for (let iter = 0; iter < 200; iter++) {
     const next: Subsection[] = []
@@ -598,8 +656,12 @@ export function parseCcelVolumeSermons(xml: string, options?: { limit?: number }
     const innerMatch = block.match(/<div1\b[^>]*>([\s\S]*)<\/div1>\s*$/i)
     const divInner = innerMatch ? innerMatch[1] : block.replace(/^<div1\b[^>]*>/i, '').replace(/<\/div1>\s*$/i, '')
 
-    const { subsections, allPassages, sermonNo: bodySermonNo } = div1XmlToGospelSubsections(divInner)
-    if (subsections.length === 0) continue
+    const { subsections: parsedSubsections, allPassages, sermonNo: bodySermonNo } =
+      div1XmlToGospelSubsections(divInner)
+    if (parsedSubsections.length === 0) continue
+
+    const repaired = repairSpurgeonSubsectionsMislumpedRomanOne(parsedSubsections)
+    const subsections = repaired.subsections
 
     const sermonNo = bodySermonNo ?? extractSermonCatalogNumberFromDiv1Title(sermonTitle)
     if (sermonNo == null) continue

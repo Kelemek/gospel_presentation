@@ -12,8 +12,28 @@ jest.mock('@/lib/supabase/client', () => ({
 
 beforeAll(() => {
   global.fetch = jest.fn((input: RequestInfo) => {
-    if (typeof input === 'string' && input.endsWith('/api/profiles')) {
-      return Promise.resolve({ ok: true, json: async () => ({ profiles: [{ id: 't1', title: 'T1', slug: 't1', isTemplate: true, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), visitCount: 0 }] }) } as any)
+    const url = typeof input === 'string' ? input : input instanceof Request ? input.url : ''
+    if (url.includes('/api/profiles/templates')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          profiles: [
+            {
+              id: 't1',
+              title: 'T1',
+              slug: 't1',
+              isTemplate: true,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              visitCount: 0,
+            },
+          ],
+          total: 1,
+          page: 1,
+          pageSize: 30,
+          totalPages: 1,
+        }),
+      } as any)
     }
     return Promise.resolve({ ok: true, json: async () => ({}) } as any)
   }) as any
@@ -32,5 +52,5 @@ test('TemplatesPageContent renders and lists templates', async () => {
   await waitFor(() => expect(screen.getByRole('heading', { name: /Resource Template/i })).toBeInTheDocument())
   // The template title is rendered as a heading; target the heading specifically to avoid
   // matching the URL text which also contains the template slug.
-  expect(screen.getByRole('heading', { name: /T1/i })).toBeInTheDocument()
+  await waitFor(() => expect(screen.getByRole('heading', { name: /T1/i })).toBeInTheDocument())
 })

@@ -7,6 +7,17 @@ jest.mock('@/lib/auth', () => ({
   isAuthenticated: () => true,
 }))
 
+function paginatedTemplatesResponse(profiles: unknown[]) {
+  const total = profiles.length
+  return {
+    profiles,
+    total,
+    page: 1,
+    pageSize: 30,
+    totalPages: Math.max(1, Math.ceil(total / 30) || 1),
+  }
+}
+
 describe('TemplatesPageContent - additional branches', () => {
   afterEach(() => {
     jest.restoreAllMocks()
@@ -22,8 +33,8 @@ describe('TemplatesPageContent - additional branches', () => {
     }]
 
     ;(global.fetch as jest.Mock).mockImplementation((url: string) => {
-      if (/\/api\/profiles(?:\?.*)?$/.test(url)) {
-        return Promise.resolve({ ok: true, json: async () => ({ profiles }) })
+      if (typeof url === 'string' && url.includes('/api/profiles/templates')) {
+        return Promise.resolve({ ok: true, json: async () => paginatedTemplatesResponse(profiles) })
       }
       return Promise.resolve({ ok: true, json: async () => ({}) })
     })
@@ -56,8 +67,8 @@ describe('TemplatesPageContent - additional branches', () => {
     }]
 
     ;(global.fetch as jest.Mock).mockImplementation((url: string) => {
-      if (/\/api\/profiles(?:\?.*)?$/.test(url)) {
-        return Promise.resolve({ ok: true, json: async () => ({ profiles }) })
+      if (typeof url === 'string' && url.includes('/api/profiles/templates')) {
+        return Promise.resolve({ ok: true, json: async () => paginatedTemplatesResponse(profiles) })
       }
       return Promise.resolve({ ok: true, json: async () => ({ slug: 't-copy', title: 'Copy Me' }) })
     })
@@ -99,14 +110,17 @@ describe('TemplatesPageContent - additional branches', () => {
       ownerDisplayName: '', description: '', isDefault: false
     }]
 
+    let templateRows = [...profiles]
+
     // initial list and DELETE
     ;(global.fetch as jest.Mock).mockImplementation((url: string, opts?: any) => {
-      if (url.match(/\/api\/profiles(?:\?.*)?$/)) {
-        return Promise.resolve({ ok: true, json: async () => ({ profiles }) })
+      if (typeof url === 'string' && url.includes('/api/profiles/templates')) {
+        return Promise.resolve({ ok: true, json: async () => paginatedTemplatesResponse(templateRows) })
       }
 
       // DELETE
       if (opts && opts.method === 'DELETE') {
+        templateRows = []
         return Promise.resolve({ ok: true })
       }
 
@@ -149,8 +163,8 @@ describe('TemplatesPageContent - additional branches', () => {
     }]
 
     ;(global.fetch as jest.Mock).mockImplementation((url: string) => {
-      if (/\/api\/profiles(?:\?.*)?$/.test(url)) {
-        return Promise.resolve({ ok: true, json: async () => ({ profiles }) })
+      if (typeof url === 'string' && url.includes('/api/profiles/templates')) {
+        return Promise.resolve({ ok: true, json: async () => paginatedTemplatesResponse(profiles) })
       }
       return Promise.resolve({ ok: true, json: async () => ({}) })
     })

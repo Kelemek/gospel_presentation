@@ -9,6 +9,7 @@ import Superscript from '@tiptap/extension-superscript'
 import Subscript from '@tiptap/extension-subscript'
 import { useEffect } from 'react'
 import { Extension } from '@tiptap/core'
+import { getTipTapSplitHtmlAtSelection } from '@/lib/splitTipTapDocAtSelection'
 
 // Extension to add custom HTML attributes to ordered lists
 const OrderedListExtended = Extension.create({
@@ -42,6 +43,9 @@ interface RichTextEditorProps {
   placeholder?: string
   multiline?: boolean
   as?: 'h1' | 'h2' | 'h3' | 'h4' | 'p' | 'div'
+  /** When set with `multiline`, shows a Split toolbar control for subsection-style splits. */
+  onSplitContent?: (parts: { beforeHtml: string; afterHtml: string }) => void
+  onSplitFailed?: (message: string) => void
 }
 
 export default function RichTextEditor({
@@ -51,7 +55,9 @@ export default function RichTextEditor({
   placeholder = 'Click to edit...',
   multiline = false,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  as: _as = 'p'
+  as: _as = 'p',
+  onSplitContent,
+  onSplitFailed,
 }: RichTextEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -243,8 +249,33 @@ export default function RichTextEditor({
             <div className="w-px h-6 bg-slate-300 mx-1" />
           </>
         )}
-        
+
+        {multiline && onSplitContent && (
+          <>
+            <div className="w-px h-6 bg-slate-300 mx-1" />
+            <button
+              type="button"
+              onClick={() => {
+                editor.chain().focus().run()
+                const parts = getTipTapSplitHtmlAtSelection(editor)
+                if (!parts) {
+                  onSplitFailed?.(
+                    'Place the cursor inside the body text (not at the very start or end), with content on both sides, then click Split.'
+                  )
+                  return
+                }
+                onSplitContent(parts)
+              }}
+              className="px-2 py-1 text-sm rounded hover:bg-slate-200 transition-colors bg-white cursor-pointer text-slate-800"
+              title="Split at cursor: text after the cursor becomes a new subsection below this one"
+            >
+              Split
+            </button>
+          </>
+        )}
+
         <button
+          type="button"
           onClick={() => editor.chain().focus().setHardBreak().run()}
           className="px-2 py-1 text-sm rounded hover:bg-slate-200 transition-colors bg-white cursor-pointer"
           title="Line Break (Shift+Enter)"
@@ -253,6 +284,7 @@ export default function RichTextEditor({
         </button>
         
         <button
+          type="button"
           onClick={() => editor.chain().focus().clearNodes().unsetAllMarks().run()}
           className="px-2 py-1 text-sm rounded hover:bg-slate-200 transition-colors bg-white ml-auto"
           title="Clear Formatting"
@@ -262,7 +294,7 @@ export default function RichTextEditor({
       </div>
 
       {/* Editor */}
-      <div className="border border-slate-200 rounded-b-lg p-3 bg-white min-h-[3rem] focus-within:ring-2 focus-within:ring-blue-400">
+      <div className="border border-slate-200 rounded-b-lg p-3 bg-white min-h-12 focus-within:ring-2 focus-within:ring-blue-400">
         <EditorContent editor={editor} />
       </div>
     </div>

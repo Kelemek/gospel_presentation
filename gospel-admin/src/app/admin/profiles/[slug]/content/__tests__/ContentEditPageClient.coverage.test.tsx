@@ -149,7 +149,7 @@ describe('ContentEditPageClient coverage', () => {
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
     expect(screen.getByText(/Loading profile content/i)).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByText('Section One')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Section One')).toBeInTheDocument())
     expect(screen.getByTestId('admin-actions')).toBeInTheDocument()
   })
 
@@ -206,7 +206,7 @@ describe('ContentEditPageClient coverage', () => {
     }) as any
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
-    await waitFor(() => expect(screen.getByText('Section One')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Section One')).toBeInTheDocument())
     const addSub = screen.getByText('+ Add Subsection')
     await userEvent.click(addSub)
     const adminActions = await screen.findByTestId('admin-actions')
@@ -225,7 +225,7 @@ describe('ContentEditPageClient coverage', () => {
     }) as any
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
-    await waitFor(() => expect(screen.getByText('Section One')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Section One')).toBeInTheDocument())
     const addSub = screen.getByText('+ Add Subsection')
     await userEvent.click(addSub)
     const adminActions = await screen.findByTestId('admin-actions')
@@ -237,10 +237,10 @@ describe('ContentEditPageClient coverage', () => {
   it('create new section adds section and enables save', async () => {
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
-    await waitFor(() => expect(screen.getByText('Section One')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Section One')).toBeInTheDocument())
     const addSectionBtn = screen.getByRole('button', { name: /Add section below/i })
     await userEvent.click(addSectionBtn)
-    await waitFor(() => expect(screen.getByText('New Section 2')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('New Section 2')).toBeInTheDocument())
     const adminActions = screen.getByTestId('admin-actions')
     const saveBtn = within(adminActions).getByRole('button', { name: /Save Changes|Save/i })
     expect(saveBtn).toBeEnabled()
@@ -249,16 +249,16 @@ describe('ContentEditPageClient coverage', () => {
   it('create new subsection adds subsection', async () => {
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
-    await waitFor(() => expect(screen.getByText('Section One')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Section One')).toBeInTheDocument())
     const addSubBtn = screen.getByText('+ Add Subsection')
     await userEvent.click(addSubBtn)
-    await waitFor(() => expect(screen.getByText('New Subsection')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('New Subsection')).toBeInTheDocument())
   })
 
   it('toggle COMA template editor shows and hides editor', async () => {
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
-    await waitFor(() => expect(screen.getByText('Section One')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Section One')).toBeInTheDocument())
     const editComaBtn = screen.getByRole('button', { name: /Edit COMA Template|Edit COMA/i })
     await userEvent.click(editComaBtn)
     await waitFor(() => expect(screen.getByText(/COMA Instructions/i)).toBeInTheDocument())
@@ -277,14 +277,14 @@ describe('ContentEditPageClient coverage', () => {
     }) as any
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
-    await waitFor(() => expect(screen.getByText('Section One')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Section One')).toBeInTheDocument())
     expect(screen.getByTestId('admin-actions')).toBeInTheDocument()
   })
 
   it('add scripture resolves abbreviation and shows in list', async () => {
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
-    await waitFor(() => expect(screen.getByText('Section One')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Section One')).toBeInTheDocument())
     const addScriptureBtn = screen.getAllByText(/\+ Add Scripture|\+ Add/)[0]
     await userEvent.click(addScriptureBtn)
     const input = await screen.findByPlaceholderText(/e\.g\., John 3:16/i)
@@ -297,10 +297,10 @@ describe('ContentEditPageClient coverage', () => {
   it('add nested sub-subsection', async () => {
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
-    await waitFor(() => expect(screen.getByText('Section One')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Section One')).toBeInTheDocument())
     const addNestedBtn = screen.getByText('+ Add Sub-subsection')
     await userEvent.click(addNestedBtn)
-    await waitFor(() => expect(screen.getByText('New Sub-subsection')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('New Sub-subsection')).toBeInTheDocument())
   })
 
   it('apply COMA template populates questions', async () => {
@@ -331,7 +331,7 @@ describe('ContentEditPageClient coverage', () => {
     const { showAlert, showConfirm } = (global as any).__alertModalMocks
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
-    await waitFor(() => expect(screen.getByText('Sub One')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Sub One')).toBeInTheDocument())
     const deleteBtn = screen.getByTitle('Delete subsection')
     await userEvent.click(deleteBtn)
     await waitFor(() => expect(showConfirm).toHaveBeenCalled())
@@ -341,7 +341,7 @@ describe('ContentEditPageClient coverage', () => {
   it('toggle scripture favorite after adding scripture', async () => {
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
-    await waitFor(() => expect(screen.getByText('Section One')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Section One')).toBeInTheDocument())
     const addScriptureBtn = screen.getAllByText(/\+ Add Scripture|\+ Add/)[0]
     await userEvent.click(addScriptureBtn)
     const input = await screen.findByPlaceholderText(/e\.g\., John 3:16/i)
@@ -398,7 +398,7 @@ describe('ContentEditPageClient coverage', () => {
   it('edit section optional link URL and description', async () => {
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
-    await waitFor(() => expect(screen.getByText('Section One')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Section One')).toBeInTheDocument())
     const linkUrlInput = screen.getByPlaceholderText(/https:\/\/example\.com/)
     await userEvent.type(linkUrlInput, 'https://example.com/foo')
     expect(linkUrlInput).toHaveValue('https://example.com/foo')
@@ -456,7 +456,7 @@ describe('ContentEditPageClient coverage', () => {
   it('edit question and save', async () => {
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
-    await waitFor(() => expect(screen.getByText('Section One')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Section One')).toBeInTheDocument())
     const applyBtn = screen.getByTitle('Apply COMA questions template')
     await userEvent.click(applyBtn)
     await waitFor(() => expect(screen.getByText(/q1/)).toBeInTheDocument())
@@ -471,7 +471,7 @@ describe('ContentEditPageClient coverage', () => {
     ;(global as any).__alertModalMocks.showConfirm.mockImplementationOnce(() => Promise.resolve(true))
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
-    await waitFor(() => expect(screen.getByText('Section One')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Section One')).toBeInTheDocument())
     const deleteSectionBtn = screen.getByTitle('Delete section')
     await userEvent.click(deleteSectionBtn)
     await waitFor(() => expect(screen.queryByText('Section One')).not.toBeInTheDocument())
@@ -523,7 +523,7 @@ describe('ContentEditPageClient coverage', () => {
   it('remove question after applying COMA', async () => {
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
-    await waitFor(() => expect(screen.getByText('Section One')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Section One')).toBeInTheDocument())
     const applyBtn = screen.getByTitle('Apply COMA questions template')
     await userEvent.click(applyBtn)
     await waitFor(() => expect(screen.getByText(/q1/)).toBeInTheDocument())
@@ -536,10 +536,10 @@ describe('ContentEditPageClient coverage', () => {
     const { showAlert } = (global as any).__alertModalMocks
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
-    await waitFor(() => expect(screen.getByText('Section One')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Section One')).toBeInTheDocument())
     const addSectionBtn = screen.getByRole('button', { name: /Add section below/i })
     await userEvent.click(addSectionBtn)
-    await waitFor(() => expect(screen.getByText('New Section 2')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('New Section 2')).toBeInTheDocument())
     const actions = screen.getByTestId('admin-actions')
     const saveBtn = within(actions).getByRole('button', { name: /Save Changes/i })
     await userEvent.click(saveBtn)
@@ -551,32 +551,36 @@ describe('ContentEditPageClient coverage', () => {
     global.fetch = jest.fn(fetchWithProfile(twoSectionProfile)) as any
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
-    await waitFor(() => expect(screen.getByText('Section Two')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Section Two')).toBeInTheDocument())
     const downs = screen.getAllByRole('button', { name: /Move section down/i })
     await userEvent.click(downs[0])
-    const headings = screen.getAllByRole('heading', { level: 2 })
-    expect(headings[0]).toHaveTextContent('Section Two')
-    expect(headings[1]).toHaveTextContent('Section One')
+    const sectionTitleInputs = screen.getAllByRole('textbox', {
+      name: /^Section title\.\.\.$/,
+    })
+    expect(sectionTitleInputs[0]).toHaveValue('Section Two')
+    expect(sectionTitleInputs[1]).toHaveValue('Section One')
   })
 
   it('add section below inserts a section after the first', async () => {
     global.fetch = jest.fn(fetchWithProfile(twoSectionProfile)) as any
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
-    await waitFor(() => expect(screen.getByText('Section Two')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Section Two')).toBeInTheDocument())
     const belowBtns = screen.getAllByRole('button', { name: /Add section below/i })
     await userEvent.click(belowBtns[0])
-    await waitFor(() => expect(screen.getByText('New Section 3')).toBeInTheDocument())
-    const headings = screen.getAllByRole('heading', { level: 2 })
-    expect(headings).toHaveLength(3)
-    expect(headings[1]).toHaveTextContent('New Section 3')
+    await waitFor(() => expect(screen.getByDisplayValue('New Section 3')).toBeInTheDocument())
+    const sectionTitleInputs = screen.getAllByRole('textbox', {
+      name: /^Section title\.\.\.$/,
+    })
+    expect(sectionTitleInputs).toHaveLength(3)
+    expect(sectionTitleInputs[1]).toHaveValue('New Section 3')
   })
 
   it('move section up and down are disabled at list ends', async () => {
     global.fetch = jest.fn(fetchWithProfile(twoSectionProfile)) as any
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
-    await waitFor(() => expect(screen.getByText('Section Two')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Section Two')).toBeInTheDocument())
     const ups = screen.getAllByRole('button', { name: /Move section up/i })
     const downs = screen.getAllByRole('button', { name: /Move section down/i })
     expect(ups[0]).toBeDisabled()
@@ -589,24 +593,24 @@ describe('ContentEditPageClient coverage', () => {
     ;(global as any).__alertModalMocks.showConfirm.mockImplementationOnce(() => Promise.resolve(true))
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
-    await waitFor(() => expect(screen.getByText('Sub One')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Sub One')).toBeInTheDocument())
     const addSubBtn = screen.getByText('+ Add Subsection')
     await userEvent.click(addSubBtn)
-    await waitFor(() => expect(screen.getByText('New Subsection')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('New Subsection')).toBeInTheDocument())
     const deleteButtons = screen.getAllByTitle('Delete subsection')
     await userEvent.click(deleteButtons[1])
     await waitFor(() => expect(screen.queryByText('New Subsection')).not.toBeInTheDocument())
-    expect(screen.getByText('Sub One')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Sub One')).toBeInTheDocument()
   })
 
   it('delete nested sub-subsection removes it', async () => {
     ;(global as any).__alertModalMocks.showConfirm.mockImplementationOnce(() => Promise.resolve(true))
     const { ContentEditPage } = await import('../page')
     render(<ContentEditPage slug="cov" />)
-    await waitFor(() => expect(screen.getByText('Sub One')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('Sub One')).toBeInTheDocument())
     const addNestedBtn = screen.getByText('+ Add Sub-subsection')
     await userEvent.click(addNestedBtn)
-    await waitFor(() => expect(screen.getByText('New Sub-subsection')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByDisplayValue('New Sub-subsection')).toBeInTheDocument())
     const deleteNestedBtn = screen.getByTitle('Delete sub-subsection')
     await userEvent.click(deleteNestedBtn)
     await waitFor(() => expect(screen.queryByText('New Sub-subsection')).not.toBeInTheDocument())

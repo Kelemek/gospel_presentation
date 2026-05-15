@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { logger } from "@/lib/logger";
 import type { ResourceOrderItem } from "@/lib/types";
 import { parseResourceOrder, isResourceOrderItemSpurgeonLibrary } from "@/lib/types";
+import { restoreNewProfileFromBackupFile } from "@/lib/createProfileFromBackup";
+import { useAlertModal } from "@/contexts/AlertModalContext";
 
 // ============================================================================
 // Types & Interfaces
@@ -29,11 +32,15 @@ interface PublicTemplate {
 // ============================================================================
 
 export default function AdminSettingsPage() {
+  const router = useRouter();
+  const { showAlert } = useAlertModal();
   const [, setSettings] = useState<AdminSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isRestoringBackup, setIsRestoringBackup] = useState(false);
+  const [userRole, setUserRole] = useState<"admin" | "counselor" | "counselee" | null>(null);
 
   // Form state
   const [codeLength, setCodeLength] = useState<number>(6);
@@ -68,6 +75,21 @@ export default function AdminSettingsPage() {
 
     try {
       const supabase = createClient();
+
+      const { data: authData } = await supabase.auth.getUser();
+      let resolvedRole: "admin" | "counselor" | "counselee" | null = null;
+      if (authData?.user) {
+        const { data: userProfile } = await supabase
+          .from("user_profiles")
+          .select("role")
+          .eq("id", authData.user.id)
+          .single();
+        resolvedRole = ((userProfile as { role?: string } | null)?.role || "counselor") as
+          | "admin"
+          | "counselor"
+          | "counselee";
+      }
+      setUserRole(resolvedRole);
 
       // Load core settings first (no public_template_order so page works before migration)
       const { data, error: fetchError } = await supabase
@@ -181,6 +203,25 @@ export default function AdminSettingsPage() {
       setError(message);
     } finally {
       setIsSavingOrder(false);
+    }
+  };
+
+  const handleCreateFromBackup = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setIsRestoringBackup(true);
+    setError(null);
+    try {
+      const result = await restoreNewProfileFromBackupFile(file);
+      showAlert(result.message);
+      router.push(`/admin/profiles/${result.newSlug}/content`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to restore backup";
+      setError(`Restore failed: ${msg}`);
+      showAlert(`Restore failed: ${msg}`);
+    } finally {
+      setIsRestoringBackup(false);
+      event.target.value = "";
     }
   };
 
@@ -430,6 +471,48 @@ export default function AdminSettingsPage() {
 
         {/* Alerts */}
         <div className="space-y-6">
+          {/* Restore from backup: new profile from JSON export */}
+          <div className="bg-white rounded-xl shadow-md border border-slate-100 overflow-hidden">
+            <div className="border-b border-slate-200 px-6 sm:px-8 py-6">
+              <h2 className="text-2xl font-bold text-slate-900">Create from backup</h2>
+              <p className="text-slate-600 text-sm mt-2">
+                Choose a JSON profile export (from the admin backup download or the content editor export). A new resource is created and you are taken to its content editor when the import succeeds.
+              </p>
+            </div>
+            <div className="px-6 sm:px-8 py-6">
+              <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50">
+                {isRestoringBackup ? "Restoring…" : "Choose backup file"}
+                <input
+                  type="file"
+                  accept=".json"
+                  className="hidden"
+                  disabled={isRestoringBackup}
+                  onChange={handleCreateFromBackup}
+                />
+              </label>
+            </div>
+          </div>
+
+          {userRole === "admin" && (
+            <div className="bg-white rounded-xl shadow-md border border-slate-100 overflow-hidden">
+              <div className="border-b border-slate-200 px-6 sm:px-8 py-6">
+                <h2 className="text-2xl font-bold text-slate-900">Manage users</h2>
+                <p className="text-slate-600 text-sm mt-2">
+                  Open the user directory to invite people, assign roles, and control who can sign in to the admin area.
+                </p>
+              </div>
+              <div className="px-6 sm:px-8 py-6">
+                <Link
+                  href="/admin/users"
+                  className="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:shadow-md"
+                >
+                  <span className="sm:hidden">Users</span>
+                  <span className="hidden sm:inline">Manage Users</span>
+                </Link>
+              </div>
+            </div>
+          )}
+
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-800 px-6 py-4 rounded-lg shadow-sm" role="alert">
               <p className="font-semibold">Error</p>
@@ -642,7 +725,7 @@ export default function AdminSettingsPage() {
                               value={item.title}
                               onChange={(e) => updateSpurgeonLibraryTitle(index, e.target.value)}
                               onClick={(e) => e.stopPropagation()}
-                              className="flex-1 min-w-[8rem] px-2 py-1 border border-slate-300 rounded text-slate-900 text-sm"
+                              className="flex-1 min-w-32 px-2 py-1 border border-slate-300 rounded text-slate-900 text-sm"
                               aria-label="Label shown in Resources menu"
                             />
                             <button
