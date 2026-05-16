@@ -1,4 +1,4 @@
-/** All translation codes the app recognizes (DB, ESV API, API.Bible). */
+/** All translation codes the app recognizes (ESV API + API.Bible). */
 export const BIBLE_TRANSLATION_CODES = [
   'esv',
   'kjv',

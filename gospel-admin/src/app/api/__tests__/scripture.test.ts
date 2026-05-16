@@ -348,7 +348,7 @@ describe('/api/scripture', () => {
   it('returns 404 for scripture not found', async () => {
     process.env.ESV_API_TOKEN = 'test-token'
     const { fetchScripture } = require('@/lib/bible-api')
-    fetchScripture.mockRejectedValueOnce(new Error('Scripture text not found. Make sure the translation has been imported'))
+    fetchScripture.mockRejectedValueOnce(new Error('Scripture text not found'))
 
     const req = new NextRequest('http://localhost:3000/api/scripture?reference=Invalid+1:1')
     const res = await GET(req as any)

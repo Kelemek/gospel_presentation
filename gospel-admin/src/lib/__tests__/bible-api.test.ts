@@ -1,13 +1,6 @@
 import { fetchScripture } from '@/lib/bible-api'
 
-const mockFrom = jest.fn()
-const mockCreateAdminClient = jest.fn(() => ({ from: mockFrom }))
-
-jest.mock('@/lib/supabase/server', () => ({
-  createAdminClient: () => mockCreateAdminClient(),
-}))
-
-describe('fetchScripture API.Bible cutover', () => {
+describe('fetchScripture', () => {
   const originalEnv = process.env
   const originalFetch = global.fetch
 
@@ -24,21 +17,6 @@ describe('fetchScripture API.Bible cutover', () => {
       API_BIBLE_BIBLE_ID_NLT: 'd6e14a625393b4da-01',
       API_BIBLE_BIBLE_ID_CSB: 'a556c5305ee15c3f-01',
     }
-
-    const builder: any = {
-      select: jest.fn(() => builder),
-      eq: jest.fn(() => builder),
-      order: jest.fn(() => builder),
-      gte: jest.fn(() => builder),
-      lte: jest.fn(() => builder),
-      then: (resolve: (v: unknown) => void) =>
-        resolve({
-          data: [{ verse: 1, text: 'In the beginning God created the heaven and the earth.' }],
-          error: null,
-        }),
-    }
-
-    mockFrom.mockReturnValue(builder)
   })
 
   afterEach(() => {
@@ -46,22 +24,17 @@ describe('fetchScripture API.Bible cutover', () => {
     global.fetch = originalFetch
   })
 
-  it('falls back to local DB for KJV when API.Bible fails', async () => {
+  it('throws API.Bible error for KJV when remote returns 500', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,
       status: 500,
       json: async () => ({}),
     } as Response)
 
-    const result = await fetchScripture('Genesis 1:1', 'kjv')
-
-    expect(result.translation).toBe('kjv')
-    expect(result.reference).toBe('Genesis 1:1')
-    expect(result.text).toContain('[1]')
-    expect(mockFrom).toHaveBeenCalledWith('bible_verses')
+    await expect(fetchScripture('Genesis 1:1', 'kjv')).rejects.toThrow('API.Bible error: 500')
   })
 
-  it('does not fall back for NIV when API.Bible fails', async () => {
+  it('throws API.Bible error for NIV when remote returns 500', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,
       status: 500,
@@ -69,6 +42,5 @@ describe('fetchScripture API.Bible cutover', () => {
     } as Response)
 
     await expect(fetchScripture('John 3:16', 'niv')).rejects.toThrow('API.Bible error: 500')
-    expect(mockFrom).not.toHaveBeenCalled()
   })
 })

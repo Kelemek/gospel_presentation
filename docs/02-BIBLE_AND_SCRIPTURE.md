@@ -7,81 +7,39 @@ Complete guide to Bible translations, caching, and scripture retrieval.
 | Translation | Source | Notes |
 |-------------|--------|-------|
 | **ESV** | ESV API | Cached in `scripture_cache`, 500-verse LRU cap |
-| **NIV** | [API.Bible](https://rest.api.bible) | Cached like ESV; requires Bible ID + API key |
-| **NLT** | API.Bible | Same as NIV |
-| **CSB** | API.Bible | Same as NIV |
-| **KJV** | Local Database | 31,102 verses, no API limit |
-| **NASB** | Local Database | 31,103 verses, no API limit |
-| **LSB** | Local Database | Legacy Standard Bible, LSBible.org |
+| **KJV** | [API.Bible](https://rest.api.bible) | Cached in `scripture_cache`; requires `API_BIBLE_BIBLE_ID_KJV` |
+| **NASB** | API.Bible | Same pattern as KJV |
+| **LSB** | API.Bible | Same pattern as KJV |
+| **NIV** | API.Bible | Same pattern as KJV |
+| **NLT** | API.Bible | Same pattern as KJV |
+| **CSB** | API.Bible | Same pattern as KJV |
 
 ## Presentation menu (readers)
 
 On gospel **profile** pages (`[slug]`), the slide-out **Menu** includes a **Bible Translation** control (`TableOfContents`, `data-tour="toc-bible-translation"`)—a button that opens a list of versions, same pattern as **Text size**. The listed versions match **admin-enabled** translations; the visitor’s choice is stored for that browser and drives scripture modals and quoted text on presentation routes. **Help → Tutorials → Bible translation** runs a short driver.js tour (`runBibleTranslationFeatureTour` in `profileHelpTours.ts`) that prefetches `/api/translations/enabled` and **lists every enabled translation by name** in the popover (same order and labels as the menu list). **Help → Tutorials → Scripture reader** tours **ScriptureModal** from the first blue scripture card (including optional **Pin** `scripture-modal-pin-color`), closes the reader after a sample pin is set, spotlights the per-color 📌 control on the highlighted card (`data-tour="scripture-progress-unpin"` on `GospelSection`, explained only—no automatic unpin), then the bottom-of-menu **Pinned passages** / **Clear pinned passages** block (`runScriptureModalFeatureTour`; `ProfileContent` `data-tour="toc-verse-pins"` / `toc-reset-progress`). On **narrow viewports** (≤767px), driver.js uses **bottom**/center popover placement, larger **stage**/**popover** spacing, and **scrollIntoView** + refresh so the spotlighted card stays visible. On devices with **non-zero safe-area insets** (`viewport-fit=cover`), tutorial popovers avoid unconditional CSS margins; a **conditional translate** nudges the popover only when it would overlap the notch or home indicator (`applyProfileHelpTourPopoverSafeAreaNudge` in `profileHelpTours.ts`).
 
-## Local Database Translations (KJV, NASB, LSB)
+## Optional `bible_verses` table (import scripts only)
 
-KJV, NASB, and LSB are stored in the local Supabase `bible_verses` table:
-- **31,102 KJV verses** - imported from scrollmapper/bible_databases (MIT licensed)
-- **31,103 NASB verses** - imported from DBL USX files (Lockman Foundation licensed)
-- **LSB verses** - Legacy Standard Bible (LSBible.org)
-- **0 API calls needed** - completely offline capable
-- **Fast lookups** - <5ms per reference
-- **No rate limits** - unlimited access
-- **Verse range support** - handles both hyphens (-) and en-dashes (–)
+The app **does not** read `bible_verses` for `/api/scripture` text. KJV, NASB, and LSB (and all other non-ESV codes) are fetched from **API.Bible** in [`gospel-admin/src/lib/bible-api.ts`](../gospel-admin/src/lib/bible-api.ts).
 
-### Table Structure
-```sql
-bible_verses {
-  id: bigint (primary key)
-  translation: 'esv' | 'kjv' | 'nasb' | 'lsb'
-  book: string (normalized book name)
-  chapter: integer
-  verse: integer
-  text: string
-}
-```
+The repo still includes Supabase scripts that can bulk-load verses into `bible_verses` (e.g. `gospel-admin/scripts/import-kjv-bible.js`, `import-nasb-bible.js`, `import-lsb-bible.js`) for **data ownership, audits, or other tooling**—not as a runtime fallback when API.Bible fails. To remove the table from hosted Postgres after you no longer need that storage, run [gospel-admin/sql/migrations/20260515_drop_bible_verses_table.sql](../gospel-admin/sql/migrations/20260515_drop_bible_verses_table.sql) (see comments in the file; export data first if you care about it).
 
-### Setup
-```bash
-# Create bible_verses table
-cd gospel-admin
-node scripts/create-bible-table.js
+## Server scripture cache (ESV + API.Bible)
 
-# Import KJV
-node scripts/import-kjv-bible.js
-
-# Import NASB (requires DBL USX files)
-node scripts/import-nasb-bible.js
-```
-
-### Book Name Normalization
-
-**KJV Format** - Uses Roman numerals and "Revelation of John":
-- Input: `1 Samuel`, `2 Samuel`, `Revelation`
-- Database: `I Samuel`, `II Samuel`, `Revelation of John`
-
-**NASB Format** - Uses Arabic numerals:
-- Input: `1 Samuel`, `2 Samuel`, `Revelation`
-- Database: `1 Samuel`, `2 Samuel`, `Revelation`
-
-The `normalizeBookName()` function handles automatic conversion for both formats.
-
-## Remote API caching (ESV, NIV, NLT, CSB)
-
-ESV and API.Bible translations store responses in the `scripture_cache` table to:
+ESV and every API.Bible-backed translation store responses in the `scripture_cache` table to:
 - Reduce API calls and costs
-- Stay within provider limits (ESV free tier: max **500 verses** in cache at once, enforced via `enforce_esv_cache_limit`; NIV/NLT/CSB each use `enforce_translation_cache_limit` with the same 500-verse cap per translation code)
+- Stay within provider limits (ESV free tier: max **500 verses** in cache at once, enforced via `enforce_esv_cache_limit`; each API.Bible translation code uses `enforce_translation_cache_limit` with the same **500-verse cap per translation**)
 - Speed up repeated requests
 
 **TTL**: `ESV_CACHE_TTL_DAYS` (default 30). API.Bible rows use `API_BIBLE_CACHE_TTL_DAYS` (default **14**, per provider refresh guidance).
 
 **Setup (Supabase)**: Run [gospel-admin/sql/enable_api_bible_translations.sql](../gospel-admin/sql/enable_api_bible_translations.sql) to add `translation_settings` rows, widen `user_profiles.valid_translation`, and create `enforce_translation_cache_limit`. Enable each translation in Admin when ready.
 
-**Admin UI**: On **Admin → Usage Reports** (`/admin/reports`), the **Server scripture cache** section shows per-translation reference counts and verse totals vs. the 500-verse limit for **ESV** and each **API.Bible** translation (NIV, NLT, CSB), backed by `GET /api/admin/scripture-cache-stats`. The Translations dropdown links to that page for usage and cache details.
+**Admin UI**: On **Admin → Usage Reports** (`/admin/reports`), the **Server scripture cache** section shows per-translation reference counts and verse totals vs. the 500-verse limit for **ESV** and each enabled **API.Bible** translation, backed by `GET /api/admin/scripture-cache-stats`. The Translations dropdown links to that page for usage and cache details.
 
 **Env (`gospel-admin/.env.local`)**:
 - `API_BIBLE_KEY` — API.Bible token (sent as HTTP header `api-key`)
-- `API_BIBLE_BIBLE_ID_NIV`, `API_BIBLE_BIBLE_ID_NLT`, `API_BIBLE_BIBLE_ID_CSB` — each Bible’s **`id`** from the list below (not `dblId`)
+- `API_BIBLE_BIBLE_ID_KJV`, `API_BIBLE_BIBLE_ID_NASB`, `API_BIBLE_BIBLE_ID_LSB`, `API_BIBLE_BIBLE_ID_NIV`, `API_BIBLE_BIBLE_ID_NLT`, `API_BIBLE_BIBLE_ID_CSB` — each Bible’s **`id`** from the list below (not `dblId`)
 - Optional: `API_BIBLE_BASE_URL` (default `https://rest.api.bible`)
 
 **Finding Bible IDs** ([API.Bible Getting Started](https://api.bible/getting-started)): your key only returns Bibles you are licensed to use. List them with:
@@ -92,7 +50,7 @@ curl --request GET \
   --header 'api-key: YOUR_API_BIBLE_KEY'
 ```
 
-In the JSON response, each item in `data` includes `id` (use this in URLs as `bibles/{id}/passages/...`), plus `name` and `abbreviation` / `abbreviationLocal` so you can pick the right NIV, NLT, and CSB editions. If NIV/NLT/CSB do not appear, add those translations to your API.Bible account/plan first, then call the endpoint again.
+In the JSON response, each item in `data` includes `id` (use this in URLs as `bibles/{id}/passages/...`), plus `name` and `abbreviation` / `abbreviationLocal` so you can pick the right edition. If a translation does not appear, add it to your API.Bible account/plan first, then call the endpoint again.
 
 Passage requests use USFM-style IDs (e.g. `JHN.3.16`); mapping lives in `gospel-admin/src/lib/api-bible-passage-id.ts`.
 
@@ -124,9 +82,9 @@ On **profile** pages, the scripture modal uses **`GET /api/scripture/spurgeon-li
 ```
 
 ### How It Works
-1. **KJV / NASB / LSB** — Load from `bible_verses` (no `scripture_cache`).
-2. **ESV / NIV / NLT / CSB** — If cache row exists and is newer than the TTL for that provider → return cached text. Cache lookups and upserts use a **canonical key**: the USFM passage id from `referenceToApiBiblePassageId` when the reference parses (e.g. `Psalms 23:4a` and `Psalm 23:4` → `PSA.23.4`); otherwise a normalized string fallback. **HTTP responses are not browser-cached** (`Cache-Control: no-store`); only `scripture_cache` dedupes.
-3. On cache miss → call ESV API or API.Bible → upsert `scripture_cache` → run the matching LRU RPC (`enforce_esv_cache_limit` or `enforce_translation_cache_limit`).
+1. For any supported translation, **`GET /api/scripture`** checks `scripture_cache` for a row matching the **canonical cache key** and translation, with `cached_at` newer than that translation’s TTL.
+2. **Cache hit** → return stored text (HTTP `Cache-Control: no-store`; only `scripture_cache` dedupes). Keys use `referenceToApiBiblePassageId` when the reference parses (e.g. `Psalms 23:4a` and `Psalm 23:4` → `PSA.23.4`); otherwise a normalized string fallback.
+3. **Cache miss** → call **ESV API** or **API.Bible** (`fetchScripture` in `bible-api.ts`) → upsert `scripture_cache` → run **`enforce_esv_cache_limit`** or **`enforce_translation_cache_limit`**.
 
 **Headings vs. verse text**: ESV requests use `include-headings=false`. API.Bible passage requests use **`include-titles=false`** so section titles are not requested in the response (see API reference: `include-titles` controls “Include section titles in content”). `formatApiBiblePassageText` only normalizes whitespace and verse-number shapes for display; it does not remove scripture.
 
@@ -139,18 +97,13 @@ The parser handles both ASCII hyphens (-) and Unicode en-dashes (–) for proper
 
 ## Adding Translations
 
-**API.Bible (already wired for NIV, NLT, CSB)** — Add env vars and Bible IDs, run the SQL migration, enable rows in `translation_settings`.
+**API.Bible (KJV, NASB, LSB, NIV, NLT, CSB)** — Add env vars and Bible IDs, run the SQL migration, enable rows in `translation_settings`. Implementation: `fetchFromApiBible` in `gospel-admin/src/lib/bible-api.ts`.
 
-**New local translation (e.g. bulk import)**:
-1. Acquire licensed data in USX or similar
-2. Import into `bible_verses` (see KJV/NASB scripts)
-3. Extend `BibleTranslation` in `gospel-admin/src/lib/bible-translations.ts`, `fetchScripture` in `bible-api.ts`, and translation settings / `user_profiles` constraint via SQL
-4. Add book normalization in `normalizeBookName()` if needed
+**Bulk verse storage (`bible_verses`)** — Optional; use the import scripts if you want a local copy in Supabase. The running app does not fall back to this table when API.Bible errors.
 
 ## Performance
 
-- **Local database (KJV/NASB)**: <5ms per lookup
-- **Cached ESV / API.Bible**: <10ms per lookup
+- **Cached ESV / API.Bible**: typically &lt;10ms per lookup
 - **Fresh ESV or API.Bible call**: ~500–2000ms
 
 ## Attribution & Licensing

@@ -8,6 +8,7 @@ Use this checklist to ensure all components are properly deployed and configured
 - [ ] Backup existing database before migration
 - [ ] Run migration: `20251223_create_verification_codes.sql`
 - [ ] Run migration: `20260514_admin_only_staff_remove_profile_assignment.sql` (admin-only staff; clears legacy `profile_access` grants; adjust roles/policies per file comments)
+- [ ] Optional: run migration `20260515_drop_bible_verses_table.sql` only if you are removing the unused bulk-verse table (app scripture uses API.Bible + `scripture_cache`; backup verse data first if needed)
 - [ ] Verify `verification_codes` table exists
 - [ ] Verify `admin_settings` has new columns:
   - `verification_code_length`

@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
   const cacheReference = canonicalScriptureCacheReference(normalizedReference)
 
   try {
-    // Every valid translation uses scripture_cache + remote fetch (ESV API or API.Bible; KJV/NASB/LSB may DB-fallback inside fetchScripture).
+    // Every valid translation uses scripture_cache + remote fetch (ESV API or API.Bible).
     const supabase = createAdminClient()
     const ttlDays = cacheTtlDaysForTranslation(translation)
     const cutoffDate = new Date()
@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
       if (/API\.Bible key not configured|API\.Bible Bible ID not configured/i.test(msg)) {
         return NextResponse.json({ error: msg }, { status: 500 })
       }
-      if (/Scripture text not found|Make sure the translation has been imported/i.test(msg)) {
+      if (/Scripture text not found/i.test(msg)) {
         return NextResponse.json({ error: msg }, { status: 404 })
       }
       if (/Invalid scripture reference format:/i.test(msg)) {

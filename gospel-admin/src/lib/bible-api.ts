@@ -1,12 +1,10 @@
 // Bible API service for fetching scripture from multiple translations
-// Supports ESV (api.esv.org), API.Bible (KJV/NASB/LSB/NIV/NLT/CSB), and temporary DB fallback for KJV/NASB/LSB
+// Supports ESV (api.esv.org) and API.Bible (KJV/NASB/LSB/NIV/NLT/CSB)
 
 import type { ApiBibleTranslation, BibleTranslation } from '@/lib/bible-translations'
 import { formatApiBiblePassageText } from '@/lib/api-bible-format'
 import { referenceToApiBiblePassageId } from '@/lib/api-bible-passage-id'
-import { parseReference } from '@/lib/parse-scripture-reference'
 import { logger } from '@/lib/logger'
-import { createAdminClient } from '@/lib/supabase/server'
 
 export type { BibleTranslation } from '@/lib/bible-translations'
 
@@ -121,103 +119,6 @@ async function fetchFromApiBible(
 }
 
 /**
- * Normalize book names to match database format
- * KJV uses Roman numerals: "I Samuel", "II Samuel", "Revelation of John"
- * NASB uses Arabic numerals: "1 Samuel", "2 Samuel", "Revelation"
- * Common input: "1 Samuel", "2 Samuel", "Revelation", etc.
- */
-function normalizeBookName(book: string, translation: BibleTranslation): string {
-  const key = book.toLowerCase()
-
-  if (translation === 'kjv') {
-    const kjvNormalizations: Record<string, string> = {
-      '1 samuel': 'I Samuel',
-      '2 samuel': 'II Samuel',
-      '1 kings': 'I Kings',
-      '2 kings': 'II Kings',
-      '1 chronicles': 'I Chronicles',
-      '2 chronicles': 'II Chronicles',
-      '1 corinthians': 'I Corinthians',
-      '2 corinthians': 'II Corinthians',
-      '1 thessalonians': 'I Thessalonians',
-      '2 thessalonians': 'II Thessalonians',
-      '1 timothy': 'I Timothy',
-      '2 timothy': 'II Timothy',
-      '1 peter': 'I Peter',
-      '2 peter': 'II Peter',
-      '1 john': 'I John',
-      '2 john': 'II John',
-      '3 john': 'III John',
-      revelation: 'Revelation of John',
-      'song of songs': 'Song of Solomon',
-      'song of sol': 'Song of Solomon',
-    }
-    return kjvNormalizations[key] || book
-  }
-
-  const commonNormalizations: Record<string, string> = {
-    'song of songs': 'Song of Solomon',
-    'song of sol': 'Song of Solomon',
-  }
-
-  return commonNormalizations[key] || book
-}
-
-/**
- * Fetch scripture text from local database.
- * Used as temporary fallback for KJV/NASB/LSB rollout.
- */
-async function fetchFromDatabase(reference: string, translation: BibleTranslation): Promise<ScriptureResult> {
-  const supabase = createAdminClient()
-
-  const parsed = parseReference(reference)
-  if (!parsed) {
-    throw new Error(`Invalid scripture reference format: ${reference}`)
-  }
-
-  const { book, chapter, verseStart, verseEnd } = parsed
-
-  const normalizedBook = normalizeBookName(book, translation)
-
-  let query = supabase
-    .from('bible_verses')
-    .select('verse, text')
-    .eq('translation', translation)
-    .eq('book', normalizedBook)
-    .eq('chapter', chapter)
-    .order('verse', { ascending: true })
-
-  if (verseStart !== null) {
-    query = query.gte('verse', verseStart)
-    if (verseEnd !== null) {
-      query = query.lte('verse', verseEnd)
-    } else {
-      query = query.eq('verse', verseStart)
-    }
-  }
-
-  const { data, error } = await query
-
-  if (error) {
-    throw new Error(`Database error: ${error.message}`)
-  }
-
-  if (!data || data.length === 0) {
-    throw new Error(
-      `Scripture text not found in database for ${translation.toUpperCase()}. Make sure the translation has been imported.`
-    )
-  }
-
-  const formattedText = data.map((v: { verse: number; text: string }) => `[${v.verse}] ${v.text}`).join(' ')
-
-  return {
-    reference: reference.trim(),
-    text: formattedText,
-    translation,
-  }
-}
-
-/**
  * Fetch scripture text from the specified translation
  */
 export async function fetchScripture(
@@ -234,17 +135,6 @@ export async function fetchScripture(
     case 'nlt':
     case 'csb':
       logger.debug(`Fetching ${reference} (${translation}) from API.Bible`)
-      try {
-        return await fetchFromApiBible(reference, translation)
-      } catch (error) {
-        if (translation === 'kjv' || translation === 'nasb' || translation === 'lsb') {
-          logger.warn(
-            `API.Bible failed for ${reference} (${translation}); falling back to local DB`,
-            error
-          )
-          return await fetchFromDatabase(reference, translation)
-        }
-        throw error
-      }
+      return fetchFromApiBible(reference, translation)
   }
 }

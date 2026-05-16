@@ -13,7 +13,7 @@ Complete migration from Netlify + Simple Auth to Supabase PostgreSQL with multi-
 - **profile_access** - Legacy table (may still exist in older databases; cleared by `gospel-admin/sql/migrations/20260514_admin_only_staff_remove_profile_assignment.sql` when moving to admin-only staff)
 - **user_answers** - Stored user responses
 - **coma_templates** - COMA method templates
-- **bible_verses** - KJV and other translations
+- **bible_verses** - Optional bulk verse storage (import scripts only; not used by `/api/scripture`). Drop when unused: `gospel-admin/sql/migrations/20260515_drop_bible_verses_table.sql`
 - **scripture_cache** - ESV API response cache
 
 ### Row-Level Security (RLS)
