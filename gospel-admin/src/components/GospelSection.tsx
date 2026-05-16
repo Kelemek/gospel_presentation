@@ -22,6 +22,28 @@ type VersePinRemoveHandler = (pin: Pick<VersePinAnchoredEntry, 'bookmarkId' | 'c
 
 const ANSWERS_STORAGE_KEY_PREFIX = 'gospel-answers-'
 
+/** iOS Safari can leave the page visually "zoomed" after a text control loses focus. */
+function nudgeIosVisualViewport() {
+  if (typeof window === 'undefined') return
+  requestAnimationFrame(() => {
+    const x = window.scrollX
+    const y = window.scrollY
+    window.scrollTo(x, y + 1)
+    window.scrollTo(x, y)
+  })
+}
+
+function nudgeIosViewportAfterLeavingTextControl() {
+  if (typeof document === 'undefined') return
+  const active = document.activeElement
+  if (active instanceof HTMLElement) {
+    active.blur()
+  }
+  // Some WebKit builds settle visual viewport after the next task.
+  nudgeIosVisualViewport()
+  setTimeout(() => nudgeIosVisualViewport(), 0)
+}
+
 
 const VERSE_PIN_CARD_CLASSES: Record<VersePinColorId, string> = {
   red:
@@ -342,6 +364,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
 
     setSavedStatus(prev => ({ ...prev, [questionId]: true }))
     setTimeout(() => setSavedStatus(prev => ({ ...prev, [questionId]: false })), 3000)
+    nudgeIosViewportAfterLeavingTextControl()
   }
 
   if (!questions || questions.length === 0) return null
@@ -434,17 +457,18 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
               <textarea
                 value={currentAnswer}
                 onChange={(e) => handleAnswerChange(question.id, e.target.value)}
+                onBlur={() => nudgeIosVisualViewport()}
                 placeholder="Type your answer here..."
                 maxLength={maxLength}
                 rows={3}
-                className="w-full px-3 py-2.5 text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 focus:border-transparent resize-y bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 print:px-2 print:py-1 print:min-h-[60px] print:placeholder:text-transparent"
+                className="w-full px-3 py-2.5 text-base sm:text-sm print:text-sm border border-slate-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 focus:border-transparent resize-y bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 print:px-2 print:py-1 print:min-h-[60px] print:placeholder:text-transparent"
               />
               <div className="flex items-center justify-end print:hidden">
                 <button
                   type="button"
                   data-tour="profile-save-answer"
                   onClick={() => handleSaveAnswer(question.id, question.maxLength)}
-                  className={`cursor-pointer px-3 py-1.5 text-sm rounded-lg font-medium transition-all ${
+                  className={`cursor-pointer px-3 py-1.5 text-base sm:text-sm print:text-sm rounded-lg font-medium transition-all ${
                     isSaved
                       ? 'bg-green-600 text-white'
                       : 'bg-slate-500 hover:bg-slate-600 text-white'

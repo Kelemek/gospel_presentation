@@ -7,6 +7,7 @@ Guide to core features and their implementation.
 Users can answer reflection questions added to profiles by editors:
 - Questions added per subsection
 - Answers persist in the browser only (`localStorage`, key prefix `gospel-answers-{slug}` in `GospelSection.tsx`)
+- Answer `<textarea>` and **Save Answer** use **at least 16px text on small viewports** (`text-base sm:text-sm`) so **iOS Safari** is less likely to auto-zoom on focus. After a successful save we **blur the active control** and apply a **one-pixel scroll nudge** so WebKit can restore the visual viewport; the textarea’s **`onBlur`** runs the same nudge when leaving the field without saving
 - Older databases may still have a `saved_answers` column on `profiles`; the app does not write answers back to the database
 
 **Storage**: browser `localStorage` (per profile slug); not synced to Supabase
