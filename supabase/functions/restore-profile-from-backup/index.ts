@@ -12,7 +12,6 @@ const CHUNKED_MANIFEST = "supabase_storage_chunked_v1";
 interface RestoreRequest {
   backup_path: string;
   profile_slug_or_id: string;
-  restore_profile_access?: boolean;
 }
 
 type PointerChunked = {
@@ -27,7 +26,6 @@ type PointerLegacy = {
 type MonolithicBackup = {
   tables?: {
     profiles?: Array<Record<string, unknown>>;
-    profile_access?: Array<Record<string, unknown>>;
   };
 };
 
@@ -81,11 +79,6 @@ function normalizeTableShards(entry: unknown): string[] | null {
   return null;
 }
 
-function optionalAccessShardPaths(raw: unknown): string[] {
-  if (raw === undefined) return [];
-  return normalizeTableShards(raw) ?? [];
-}
-
 function isChunkedManifest(x: unknown): x is ChunkedManifest {
   if (!x || typeof x !== "object") return false;
   if ((x as ChunkedManifest).backup_format !== CHUNKED_MANIFEST) return false;
@@ -116,42 +109,7 @@ async function findProfileAcrossShards(
   return null;
 }
 
-async function collectProfileAccessAcrossShards(
-  supabase: ReturnType<typeof createClient>,
-  paths: string[],
-  profileId: string
-): Promise<Array<Record<string, unknown>>> {
-  const out: Array<Record<string, unknown>> = [];
-  for (const p of paths) {
-    if (p.endsWith("/_slug_index.json")) continue;
-    const rows = await loadTableShard(supabase, p);
-    for (const row of rows) {
-      if (String(row.profile_id ?? "") === profileId) out.push(row);
-    }
-  }
-  return out;
-}
-
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/** One-file-per-row layout: `profile_access/pid-<profileId>/id-*.json.gz` — list folder instead of scanning all shards. */
-async function collectProfileAccessFromPidFolder(
-  supabase: ReturnType<typeof createClient>,
-  runPrefix: string,
-  profileId: string
-): Promise<Array<Record<string, unknown>>> {
-  const folderPath = `${runPrefix}/tables/profile_access/pid-${profileId}`;
-  const { data: files, error } = await supabase.storage.from(BUCKET).list(folderPath, { limit: 1000 });
-  if (error || !files?.length) return [];
-  const out: Array<Record<string, unknown>> = [];
-  for (const f of files) {
-    if (!f.name.endsWith(".json.gz")) continue;
-    const fullPath = `${folderPath}/${f.name}`;
-    const rows = await loadTableShard(supabase, fullPath);
-    for (const row of rows) out.push(row);
-  }
-  return out;
-}
 
 function isChunkedPointer(x: unknown): x is PointerChunked {
   return !!x && typeof x === "object" && (x as PointerChunked).format === "chunked_v1" &&
@@ -171,11 +129,6 @@ function isMonolithicPayload(x: unknown): x is MonolithicBackup {
   if (!tables || typeof tables !== "object" || Array.isArray(tables)) return false;
   return true;
 }
-
-type ProfileAccessSource =
-  | { kind: "shard_paths"; paths: string[] }
-  | { kind: "inline"; rows: Array<Record<string, unknown>> }
-  | { kind: "none" };
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -200,7 +153,6 @@ serve(async (req: Request) => {
     const body = (await req.json()) as RestoreRequest;
     const backupPath = body.backup_path?.trim();
     const profileKey = body.profile_slug_or_id?.trim();
-    const restoreAccess = body.restore_profile_access === true;
 
     if (!backupPath || !profileKey) {
       return new Response(JSON.stringify({ error: "backup_path and profile_slug_or_id are required" }), {
@@ -210,8 +162,6 @@ serve(async (req: Request) => {
     }
 
     let matchedFromBackup: Record<string, unknown> | null = null;
-    let accessSource: ProfileAccessSource = { kind: "none" };
-    let resolvedChunkedManifest: ChunkedManifest | null = null;
 
     const { text: initialText, usedPath } = await downloadText(supabase, backupPath);
     let rootParsed: unknown = JSON.parse(initialText);
@@ -225,7 +175,6 @@ serve(async (req: Request) => {
     }
 
     if (isChunkedManifest(rootParsed)) {
-      resolvedChunkedManifest = rootParsed;
       const profilesShards = normalizeTableShards(rootParsed.tables["profiles"]);
       if (profilesShards === null || profilesShards.length === 0) {
         const msg =
@@ -277,12 +226,6 @@ serve(async (req: Request) => {
       if (!matchedFromBackup) {
         matchedFromBackup = await findProfileAcrossShards(supabase, profilesShards, profileKey);
       }
-      if (restoreAccess) {
-        accessSource = {
-          kind: "shard_paths",
-          paths: optionalAccessShardPaths(rootParsed.tables["profile_access"]),
-        };
-      }
     } else if (isMonolithicPayload(rootParsed)) {
       const profiles = rootParsed.tables?.profiles ?? [];
       matchedFromBackup =
@@ -291,9 +234,6 @@ serve(async (req: Request) => {
           const slug = String(p.slug ?? "");
           return id === profileKey || slug === profileKey;
         }) ?? null;
-      if (restoreAccess) {
-        accessSource = { kind: "inline", rows: rootParsed.tables?.profile_access ?? [] };
-      }
     } else {
       return new Response(
         JSON.stringify({
@@ -318,46 +258,11 @@ serve(async (req: Request) => {
       .single();
     if (upErr) throw new Error(`Failed to restore profile row: ${upErr.message}`);
 
-    let restoredAccessCount = 0;
-    let accessWarning: string | null = null;
-    if (restoreAccess && accessSource.kind !== "none") {
-      const profileId = String((matchedFromBackup as { id?: string }).id ?? "");
-      let accessRows: Array<Record<string, unknown>> = [];
-      if (accessSource.kind === "shard_paths") {
-        const m = resolvedChunkedManifest;
-        const runPrefix = m && typeof m.run_prefix === "string" ? m.run_prefix : "";
-        const usePidFolder = m?.metadata?.row_layout === "one_file_per_row" && runPrefix.length > 0;
-        // Multipart layout uses flat profile_access shards; only older per-row backups used pid/*/ folders.
-        const fromFolder = usePidFolder
-          ? await collectProfileAccessFromPidFolder(supabase, runPrefix, profileId)
-          : [];
-        accessRows =
-          fromFolder.length > 0
-            ? fromFolder
-            : await collectProfileAccessAcrossShards(supabase, accessSource.paths, profileId);
-      } else {
-        accessRows = accessSource.rows.filter((row) => String(row.profile_id ?? "") === profileId);
-      }
-      if (accessRows.length > 0) {
-        const { error: accessErr } = await supabase.from("profile_access").upsert(accessRows as never, {
-          onConflict: "id",
-        });
-        if (accessErr) {
-          accessWarning = `Failed to restore profile_access rows: ${accessErr.message}`;
-        } else {
-          restoredAccessCount = accessRows.length;
-        }
-      }
-    }
-
     return new Response(
       JSON.stringify({
         success: true,
         backup_path: backupPath,
         restored_profile: restoredProfile,
-        restore_profile_access: restoreAccess,
-        restored_profile_access_count: restoredAccessCount,
-        warning: accessWarning,
       }),
       {
         status: 200,

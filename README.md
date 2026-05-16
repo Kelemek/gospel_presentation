@@ -393,10 +393,8 @@ Comprehensive guides available in `/docs`:
 - Verify RLS policies are active
 - Check browser console for errors
 
-### Counselee Can't Access Profile
-- Verify email was added to `profile_access` table
-- Ensure counselee has signed up with matching email
-- Check RLS policies in Supabase
+### Public profiles not loading
+- Confirm the profile slug exists and `profiles` / visibility rules allow anonymous read for your deployment.
 
 ## 🤝 Contributing
 

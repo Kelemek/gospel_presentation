@@ -12,7 +12,7 @@ Presentation URLs (`/[slug]`, `/default`) are designed to work **without signing
 
 ## Database note
 
-The hosted database may still define a Postgres `user_role` enum that includes legacy values (`counselor`, `counselee`). The application code no longer branches on those roles for permissions; only **`admin`** unlocks staff UI and privileged APIs. A forward migration under `gospel-admin/sql/migrations/` clears `profile_access` and may backfill roles—run that migration in Supabase when deploying this model.
+The hosted database may still define a Postgres `user_role` enum that includes legacy values (`counselor`, `counselee`). The application code no longer branches on those roles for permissions; only **`admin`** unlocks staff UI and privileged APIs. Run `gospel-admin/sql/migrations/20260514_admin_only_staff_remove_profile_assignment.sql` when moving to admin-only staff (clears assignment rows and adjusts RLS). To remove the legacy `profile_access` table entirely, run `gospel-admin/sql/migrations/20260516_drop_profile_access_table.sql` after deploying code that no longer references it.
 
 ## Related documentation
 

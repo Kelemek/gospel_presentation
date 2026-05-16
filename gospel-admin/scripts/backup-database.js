@@ -53,32 +53,18 @@ async function createBackup() {
     if (userProfilesError) throw userProfilesError;
     console.log(`   ✅ Found ${userProfiles.length} user profiles`);
     
-    // Backup profile_access table (counselee access grants)
-    console.log('📊 Fetching profile_access...');
-    const { data: profileAccess, error: profileAccessError } = await supabase
-      .from('profile_access')
-      .select('*');
-    
-    if (profileAccessError) {
-      // Table might not exist yet - that's OK
-      console.log(`   ⚠️  profile_access table not found (may not be migrated yet)`);
-    } else {
-      console.log(`   ✅ Found ${profileAccess?.length || 0} access records`);
-    }
-    
     // Create backup object
     const backup = {
       backup_date: new Date().toISOString(),
       backup_type: 'manual',
-      version: '1.1', // Updated to include profile_access
+      version: '1.2',
       tables: {
         profiles: profiles,
         user_profiles: userProfiles,
-        profile_access: profileAccess || []
       },
       metadata: {
-        total_records: profiles.length + userProfiles.length + (profileAccess?.length || 0),
-        tables_count: 3
+        total_records: profiles.length + userProfiles.length,
+        tables_count: 2
       }
     };
     

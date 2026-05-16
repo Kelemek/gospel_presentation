@@ -814,7 +814,6 @@ serve(async (req: Request) => {
         tablesToBackup = [
           "admin_settings",
           "coma_templates",
-          "profile_access",
           "profiles",
           "translation_settings",
           "user_profiles",

@@ -94,35 +94,6 @@ export interface Database {
           created_at?: string
         }
       }
-      profile_access: {
-        Row: {
-          id: string
-          profile_id: string
-          user_email: string
-          user_id: string | null
-          access_role: 'counselee' | 'counselor'
-          granted_by: string
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          profile_id: string
-          user_email: string
-          user_id?: string | null
-          access_role: 'counselee' | 'counselor'
-          granted_by: string
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          profile_id?: string
-          user_email?: string
-          user_id?: string | null
-          access_role?: 'counselee' | 'counselor'
-          granted_by?: string
-          created_at?: string
-        }
-      }
       user_profiles: {
         Row: {
           id: string

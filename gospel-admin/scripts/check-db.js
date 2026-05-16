@@ -8,17 +8,6 @@ const supabase = createClient(
 async function checkDatabase() {
   console.log('Checking database state...\n');
   
-  // Check profile_access table
-  const { error: accessError } = await supabase
-    .from('profile_access')
-    .select('*')
-    .limit(1);
-  
-  console.log('profile_access table exists:', !accessError);
-  if (accessError) {
-    console.log('  Error:', accessError.code, accessError.message);
-  }
-  
   // Check profiles table
   const { data: profilesData, error: profilesError } = await supabase
     .from('profiles')

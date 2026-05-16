@@ -54,7 +54,6 @@ describe('/api/users/[id] DELETE', () => {
     const adminMock = {
       auth: {
         admin: {
-          getUserById: jest.fn().mockResolvedValue({ data: { user: { email: 'u@e.com' } } }),
           deleteUser: jest.fn().mockResolvedValue({ error: null }),
           inviteUserByEmail: jest.fn(),
         },
