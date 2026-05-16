@@ -857,7 +857,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
               {/* Right side content — min-w-0 + overflow so Listen/help/icons stay reachable on narrow viewports */}
               <div
                 data-profile-header-toolbar-icons
-                className="flex min-w-0 flex-1 justify-end items-center gap-[7px] sm:gap-[11px] overflow-x-auto"
+                className="flex min-w-0 flex-1 justify-end items-center gap-1.5 sm:gap-2.5 overflow-x-auto"
               >
                 {/* Profile Info and Edit Button - only show when previewing from editor */}
                 {canEdit && fromEditor && (
