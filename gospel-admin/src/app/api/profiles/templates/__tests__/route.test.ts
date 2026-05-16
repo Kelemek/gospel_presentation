@@ -22,7 +22,7 @@ const templateRow = {
   created_by: null as string | null,
 }
 
-function setupSupabaseMocks(role: 'admin' | 'counselor' | 'user' | null, opts?: { withSearch?: boolean; totalCount?: number }) {
+function setupSupabaseMocks(role: 'admin' | 'user' | 'counselor' | null, opts?: { withSearch?: boolean; totalCount?: number }) {
   const totalCount = opts?.totalCount ?? 1250
   const range = jest.fn().mockResolvedValue({
     data: [templateRow],
@@ -64,13 +64,6 @@ function setupSupabaseMocks(role: 'admin' | 'counselor' | 'user' | null, opts?: 
     if (table === 'profiles') {
       return { select: profileSelect }
     }
-    if (table === 'profile_access') {
-      return {
-        select: jest.fn(() => ({
-          in: jest.fn().mockResolvedValue({ data: [], error: null }),
-        })),
-      }
-    }
     throw new Error(`unexpected table: ${table}`)
   })
 
@@ -109,9 +102,15 @@ describe('GET /api/profiles/templates', () => {
     expect(res.status).toBe(401)
   })
 
-  it('returns 403 when role is not admin or counselor', async () => {
+  it('returns 403 when role is not admin', async () => {
     setupSupabaseMocks('user')
     const res = await GET(new NextRequest('http://localhost/api/profiles/templates?page=1&pageSize=30'))
+    expect(res.status).toBe(403)
+  })
+
+  it('returns 403 for legacy counselor DB role', async () => {
+    setupSupabaseMocks('counselor')
+    const res = await GET(new NextRequest('http://localhost/api/profiles/templates?page=2&pageSize=10'))
     expect(res.status).toBe(403)
   })
 
@@ -128,15 +127,6 @@ describe('GET /api/profiles/templates', () => {
     expect(body.profiles).toHaveLength(1)
     expect(body.profiles[0].slug).toBe('s1')
     expect(body.profiles[0].isTemplate).toBe(true)
-  })
-
-  it('allows counselor role', async () => {
-    setupSupabaseMocks('counselor')
-    const res = await GET(new NextRequest('http://localhost/api/profiles/templates?page=2&pageSize=10'))
-    const body = await res.json()
-    expect(res.status).toBe(200)
-    expect(body.page).toBe(2)
-    expect(body.pageSize).toBe(10)
   })
 
   it('clamps pageSize to max 100', async () => {

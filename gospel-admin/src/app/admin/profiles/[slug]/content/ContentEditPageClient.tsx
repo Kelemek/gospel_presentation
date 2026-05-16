@@ -1096,7 +1096,6 @@ export function ContentEditPage({ slug }: ContentEditPageProps) {
         <AdminHeader
           title={profile ? profile.title : "Content Editor"}
           description={profile?.description || "Edit gospel presentation content and scripture references"}
-          showProfileSwitcher={false}
           actions={
             <>
               <Link

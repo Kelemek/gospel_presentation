@@ -29,9 +29,7 @@ import GospelSection from '../GospelSection'
 
 describe('GospelSection (extra tests)', () => {
   beforeEach(() => {
-    // use fake timers for tests that advance the saved-confirmation timeout
     jest.useFakeTimers()
-    global.fetch = jest.fn() as unknown as typeof fetch
   })
 
   afterEach(() => {
@@ -166,7 +164,7 @@ describe('GospelSection (extra tests)', () => {
     expect(onRemoveVersePin).toHaveBeenCalledWith({ colorId: 'yellow' })
   })
 
-  it('loads saved answers, expands detail, saves successfully and clears saved state after timeout', async () => {
+  it('loads saved answers, expands detail, saves to localStorage and clears saved state after timeout', async () => {
     const user = userEvent.setup({ delay: null })
 
     const question = {
@@ -175,9 +173,7 @@ describe('GospelSection (extra tests)', () => {
       maxLength: 50,
     }
 
-    // mock fetch to return ok
-    // @ts-expect-error mocking incompatible types
-    global.fetch.mockResolvedValue({ ok: true, json: async () => ({}) })
+    const setItem = jest.spyOn(Storage.prototype, 'setItem')
 
     render(
       <GospelSection
@@ -185,7 +181,6 @@ describe('GospelSection (extra tests)', () => {
         onScriptureClick={() => {}}
         profileSlug={'profile-x'}
         savedAnswers={[]}
-        isLoggedIn
       />
     )
 
@@ -198,25 +193,22 @@ describe('GospelSection (extra tests)', () => {
     const textarea = await screen.findByPlaceholderText(/Type your answer here/i)
     expect(textarea).toBeInTheDocument()
 
-    // type answer then click save
     await user.clear(textarea)
     await user.type(textarea, 'my answer')
 
     const saveBtn = await screen.findByRole('button', { name: /Save Answer/i })
     await user.click(saveBtn)
 
-    await waitFor(() => expect(global.fetch).toHaveBeenCalled())
+    await waitFor(() => expect(setItem).toHaveBeenCalled())
 
-    // saved state should be visible (button text becomes ✓ Saved)
     await screen.findByText(/✓ Saved/)
 
-    // advance the timer to clear the saved status
     act(() => {
       jest.advanceTimersByTime(3000)
     })
 
-    // after timers run, ensure no errors and fetch was called
-    expect(global.fetch).toHaveBeenCalled()
+    expect(setItem).toHaveBeenCalled()
+    setItem.mockRestore()
   })
 
   it('renders Four Rules of Communication as button and opens Four Rules modal on click', async () => {
@@ -245,25 +237,23 @@ describe('GospelSection (extra tests)', () => {
     expect(openModal).toBeDefined()
   })
 
-  it('shows alert when save fails', async () => {
+  it('shows alert when answer exceeds max length on save', async () => {
     const user = userEvent.setup({ delay: null })
-    const question = { id: 'q1', question: 'Q: Simple', maxLength: 10 }
+    const question = { id: 'q1', question: 'Q: Simple', maxLength: 3 }
 
     const { showAlert } = (global as any).__alertModalMocks
-    // @ts-expect-error mocking incompatible types
-    global.fetch.mockResolvedValue({ ok: false, json: async () => ({ error: 'boom' }) })
 
     render(
       <GospelSection
         section={{ section: 's3', title: 'S3', subsections: [{ title: 'sub', content: 'c', questions: [question] }] }}
         onScriptureClick={() => {}}
         profileSlug={'profile-y'}
-        isLoggedIn
       />
     )
 
     const textarea = await screen.findByPlaceholderText(/Type your answer here/i)
-    await user.type(textarea, 'x')
+    // `maxLength` on the textarea blocks typing past the limit; set state via change like a programmatic override.
+    fireEvent.change(textarea, { target: { value: 'toolong' } })
     const saveBtn = await screen.findByRole('button', { name: /Save Answer/i })
     await user.click(saveBtn)
 

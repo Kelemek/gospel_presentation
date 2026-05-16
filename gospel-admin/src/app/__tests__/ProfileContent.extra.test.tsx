@@ -6,7 +6,7 @@ jest.mock('@/lib/supabase/client', () => ({
   __esModule: true,
   createClient: () => ({
     auth: { getUser: async () => ({ data: { user: { id: 'u1', email: 'user@example.com' } } }) },
-    from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: { role: 'counselor' } }) }) }) }),
+    from: () => ({ select: () => ({ eq: () => ({ single: async () => ({ data: { role: 'admin' } }) }) }) }),
   }),
 }))
 

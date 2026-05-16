@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     // Get request body
     const body = await request.json()
-    const { email, role, username } = body
+    const { email, username } = body
 
     if (!email) {
       return NextResponse.json(
@@ -49,12 +49,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (!role || !['admin', 'counselor', 'counselee'].includes(role)) {
-      return NextResponse.json(
-        { error: 'Invalid role. Must be "admin", "counselor", or "counselee"' },
-        { status: 400 }
-      )
-    }
+    const role = 'admin' as const
 
     // Create the user using Supabase Admin API
     // Note: We need to use the admin client to create users

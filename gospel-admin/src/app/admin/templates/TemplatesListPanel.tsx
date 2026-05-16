@@ -9,7 +9,7 @@ import { useAlertModal } from '@/contexts/AlertModalContext'
 import { logger } from '@/lib/logger'
 import { shareResourceUrl } from '@/lib/shareResourceUrl'
 
-export type TemplatesListPanelRole = 'admin' | 'counselor'
+export type TemplatesListPanelRole = 'admin'
 
 export interface TemplatesListPanelProps {
   /** When false, list fetch is skipped (parent still loading auth). */
@@ -420,14 +420,9 @@ export function TemplatesListPanel({
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-col gap-1">
-                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                            <h3 className="text-base sm:text-lg font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
-                              {template.title}
-                            </h3>
-                            <span className="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded-full font-medium w-fit">
-                              Template
-                            </span>
-                          </div>
+                          <h3 className="text-base sm:text-lg font-semibold text-slate-900 group-hover:text-blue-600 transition-colors">
+                            {template.title}
+                          </h3>
 
                           {template.description && (
                             <p className="text-xs sm:text-sm text-slate-600">{template.description}</p>
@@ -455,15 +450,7 @@ export function TemplatesListPanel({
                     <div className="mt-4 pt-4 border-t border-slate-100 space-y-4">
                       <div className="space-y-2 text-xs sm:text-sm">
                         <div className="flex flex-wrap gap-1.5 pb-2 items-center">
-                          <span className="bg-slate-100 text-slate-700 text-xs px-2 py-1 rounded-full font-medium">
-                            Template
-                          </span>
-                          {template.isPublic && (
-                            <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
-                              Public
-                            </span>
-                          )}
-                          <label className="flex items-center gap-2 cursor-pointer ml-2">
+                          <label className="flex items-center gap-2 cursor-pointer">
                             <input
                               type="checkbox"
                               checked={!!template.isPublic}

@@ -16,7 +16,7 @@ jest.mock('@/lib/supabase-data-service', () => ({
     if (slug === 'missing') return null
     return { slug, title: 'Test', gospelData: [] }
   }),
-  updateProfile: jest.fn(async (slug: string, updates: any) => {
+  updateProfile: jest.fn(async (slug: string, updates: Record<string, unknown>) => {
     if (slug === 'missing') throw new Error('not found')
     return { slug, ...updates }
   }),
@@ -25,9 +25,6 @@ jest.mock('@/lib/supabase-data-service', () => ({
     if (slug === 'default') throw new Error('Cannot delete the default profile')
     return true
   }),
-  getProfileAccessList: jest.fn(async () => [{ user_email: 'a@b.com' }]),
-  grantProfileAccess: jest.fn(async () => true),
-  revokeProfileAccess: jest.fn(async () => true),
 }))
 
 jest.mock('@/lib/supabase/server', () => ({
@@ -40,62 +37,35 @@ jest.mock('@/lib/supabase/server', () => ({
 import { GET as faviconGET } from '@/app/favicon.ico/route'
 import { GET as scriptureGET } from '@/app/api/scripture/route'
 import { GET as profileGET, PUT as profilePUT, DELETE as profileDELETE } from '@/app/api/profiles/[slug]/route'
-import { GET as accessGET, POST as accessPOST, DELETE as accessDELETE } from '@/app/api/profiles/[slug]/access/route'
-import { POST as saveAnswerPOST } from '@/app/api/profiles/[slug]/save-answer/route'
 
 describe('coverage proxy imports (mapper-aligned)', () => {
   it('favicon GET redirects', async () => {
-    const res = await faviconGET({ url: 'https://test.local' } as any)
+    const res = await faviconGET({ url: 'https://test.local' } as Request)
     expect(res.status).toBe(301)
   })
 
   it('scripture GET input validation (no reference)', async () => {
-    const req: any = { url: 'https://test.local' }
-    const res = await scriptureGET(req as any)
+    const req = { url: 'https://test.local' } as Request
+    const res = await scriptureGET(req as never)
     expect(res.status).toBe(400)
   })
 
   it('profile route GET/PUT/DELETE flows', async () => {
-    const reqGet: any = { headers: { get: (k: string) => 'false' } }
-    const r1 = await profileGET(reqGet, { params: Promise.resolve({ slug: 'test' }) } as any)
+    const reqGet = { headers: { get: () => 'false' } }
+    const r1 = await profileGET(reqGet as never, { params: Promise.resolve({ slug: 'test' }) } as never)
     expect(r1.status).toBe(200)
 
-    const reqPut: any = { json: async () => ({ title: 'New' }) }
-    const r2 = await profilePUT(reqPut, { params: Promise.resolve({ slug: 'test' }) } as any)
+    const reqPut = { json: async () => ({ title: 'New' }) }
+    const r2 = await profilePUT(reqPut as never, { params: Promise.resolve({ slug: 'test' }) } as never)
     expect(r2.status).toBe(200)
 
-    const r3 = await profileDELETE({} as any, { params: Promise.resolve({ slug: 'test' }) } as any)
+    const r3 = await profileDELETE({} as never, { params: Promise.resolve({ slug: 'test' }) } as never)
     expect(r3.status).toBe(200)
   })
 
   it('profile GET admin branch returns full profile', async () => {
-    const reqGetAdmin: any = { headers: { get: (k: string) => 'true' } }
-    const r = await profileGET(reqGetAdmin, { params: Promise.resolve({ slug: 'test' }) } as any)
+    const reqGetAdmin = { headers: { get: () => 'true' } }
+    const r = await profileGET(reqGetAdmin as never, { params: Promise.resolve({ slug: 'test' }) } as never)
     expect(r.status).toBe(200)
-  })
-
-  it('access route GET/POST/DELETE flows', async () => {
-    const g = await accessGET({} as any, { params: Promise.resolve({ slug: 'test' }) } as any)
-    expect(g.status).toBe(200)
-
-    const pReq: any = { json: async () => ({ email: 'NEW@EXAMPLE.COM' }) }
-    const p = await accessPOST(pReq, { params: Promise.resolve({ slug: 'test' }) } as any)
-    expect(p.status).toBe(200)
-
-    const dReq: any = { json: async () => ({ email: 'a@b.com' }) }
-    const d = await accessDELETE(dReq, { params: Promise.resolve({ slug: 'test' }) } as any)
-    expect(d.status).toBe(200)
-  })
-
-  it('save-answer POST success path', async () => {
-    const { NextRequest } = await import('next/server')
-    const req = new NextRequest('http://localhost/api', {
-      method: 'POST',
-      body: JSON.stringify({ questionId: 'q1', answer: 'My answer' }),
-    })
-    const res = await saveAnswerPOST(req, { params: Promise.resolve({ slug: 'test' }) })
-    const data = await res.json()
-    expect(res.status).toBe(200)
-    expect(data.success).toBe(true)
   })
 })

@@ -15,30 +15,19 @@ describe('admin page helpers', () => {
   })
 
   describe('createProfilePayload', () => {
-    test('trims fields and sets defaults for admin role', () => {
+    test('trims fields and sets defaults', () => {
       const form = {
         title: '  Title  ',
         description: ' desc ',
         cloneFromSlug: '',
         isTemplate: true,
-        counseleeEmails: [' alice@example.com ', '']
       }
 
-      const payload = createProfilePayload(form as any, 'admin')
+      const payload = createProfilePayload(form)
       expect(payload.title).toBe('Title')
       expect(payload.description).toBe('desc')
-      // empty cloneFromSlug becomes default
       expect(payload.cloneFromSlug).toBe('default')
-      // admin may set isTemplate
       expect(payload.isTemplate).toBe(true)
-      // counseleeEmails filters out empty entries but preserves original values
-      expect(payload.counseleeEmails).toEqual([' alice@example.com '])
-    })
-
-    test('non-admin cannot set isTemplate', () => {
-      const form = { title: 't', isTemplate: true, counseleeEmails: [] }
-      const payload = createProfilePayload(form as any, 'counselor')
-      expect(payload.isTemplate).toBe(false)
     })
   })
 

@@ -7,7 +7,7 @@ jest.mock("@/lib/supabase/client", () => ({
 import { render, screen, waitFor } from "@testing-library/react";
 import AdminSettingsPage from "../page";
 
-function makeSupabaseClient(role: "admin" | "counselor") {
+function makeSupabaseClient(role: "admin" | "counselee") {
   return {
     auth: {
       getUser: async () => ({ data: { user: { id: "test-user" } } }),
@@ -75,8 +75,8 @@ describe("AdminSettingsPage", () => {
     });
   });
 
-  it("does not show Manage Users link for counselors", async () => {
-    mockCreateClient.mockImplementation(() => makeSupabaseClient("counselor"));
+  it("does not show Manage Users link for non-admins", async () => {
+    mockCreateClient.mockImplementation(() => makeSupabaseClient("counselee"));
 
     render(<AdminSettingsPage />);
 

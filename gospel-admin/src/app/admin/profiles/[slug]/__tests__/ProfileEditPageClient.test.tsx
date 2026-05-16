@@ -1,5 +1,5 @@
 /**
- * Tests for ProfileEditPageClient - profile edit form, counselee access, backup/restore.
+ * Tests for ProfileEditPageClient - profile edit form and backup/restore.
  * Mocks: supabase auth, fetch (API), AlertModalContext (jest.setup), next/navigation (jest.setup).
  */
 jest.mock('@/components/AdminHeader', () => ({
@@ -52,26 +52,6 @@ function defaultFetch(url: string | Request, opts?: RequestInit) {
   const u = typeof url === 'string' ? url : (url as Request).url ?? ''
   const method = opts?.method || 'GET'
 
-  if (u.includes('/api/users') && method === 'GET') {
-    return Promise.resolve({
-      ok: true,
-      json: async () => ({ users: [{ email: 'c@x.com', role: 'user', username: 'counselee' }] }),
-    })
-  }
-  if (u.includes('/api/profiles/test-slug/access')) {
-    if (method === 'GET') {
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({
-          access: [
-            { id: 'a1', user_email: 'existing@x.com', user_id: 'u1', created_at: '2025-01-01T00:00:00Z', username: 'Existing' },
-          ],
-        }),
-      })
-    }
-    if (method === 'POST') return Promise.resolve({ ok: true, json: async () => ({}) })
-    if (method === 'DELETE') return Promise.resolve({ ok: true, json: async () => ({}) })
-  }
   if (u.includes('/api/profiles/test-slug')) {
     if (method === 'GET') {
       return Promise.resolve({
@@ -200,117 +180,6 @@ describe('ProfileEditPageClient', () => {
       await waitFor(() => expect(screen.getByDisplayValue('Test Profile')).toBeInTheDocument())
       await userEvent.click(screen.getByRole('button', { name: /Save Changes|Save/i }))
       await waitFor(() => expect(screen.getByText('Failed to save profile')).toBeInTheDocument())
-    })
-  })
-
-  describe('counselee access', () => {
-    it('shows add counselee section and existing access', async () => {
-      render(<ProfileEditPage slug="test-slug" />)
-      await waitFor(() => expect(screen.getByText(/Counselee Access/i)).toBeInTheDocument())
-      await waitFor(() => expect(screen.getByText('existing@x.com')).toBeInTheDocument())
-    })
-
-    it('add counselee button is disabled when username is empty', async () => {
-      render(<ProfileEditPage slug="test-slug" />)
-      await waitFor(() => expect(screen.getByPlaceholderText(/Or type email/i)).toBeInTheDocument())
-      await userEvent.type(screen.getByPlaceholderText(/Or type email/i), 'new@x.com')
-      expect(screen.getByRole('button', { name: /^Add$/i })).toBeDisabled()
-    })
-
-    it('add counselee with email and username calls API and clears form', async () => {
-      render(<ProfileEditPage slug="test-slug" />)
-      await waitFor(() => expect(screen.getByPlaceholderText(/Or type email/i)).toBeInTheDocument())
-      await userEvent.type(screen.getByPlaceholderText(/Or type email/i), 'new@x.com')
-      await userEvent.type(screen.getByPlaceholderText(/Username/i), 'newuser')
-      await userEvent.click(screen.getByRole('button', { name: /^Add$/i }))
-      await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith(
-          expect.stringContaining('/api/profiles/test-slug/access'),
-          expect.objectContaining({ method: 'POST', body: expect.stringContaining('new@x.com') })
-        )
-      })
-    })
-
-    it('selecting existing user from dropdown fills email and username', async () => {
-      render(<ProfileEditPage slug="test-slug" />)
-      await waitFor(() => expect(screen.getByText(/counselee.*user/i)).toBeInTheDocument())
-      const select = document.querySelector('select')
-      expect(select).toBeInTheDocument()
-      await userEvent.selectOptions(select!, 'c@x.com')
-      expect(screen.getByDisplayValue('c@x.com')).toBeInTheDocument()
-      expect(screen.getByDisplayValue('counselee')).toBeInTheDocument()
-    })
-
-    it('remove counselee when user cancels confirm does not call DELETE', async () => {
-      ;(global as any).__alertModalMocks.showConfirm.mockImplementationOnce(() => Promise.resolve(false))
-      render(<ProfileEditPage slug="test-slug" />)
-      await waitFor(() => expect(screen.getByText('existing@x.com')).toBeInTheDocument())
-      const removeBtn = screen.getByRole('button', { name: /Remove/i })
-      await userEvent.click(removeBtn)
-      await waitFor(() => expect((global as any).__alertModalMocks.showConfirm).toHaveBeenCalled())
-      const deleteCalls = (global.fetch as jest.Mock).mock.calls.filter(
-        (c: any) => c[0]?.includes?.('access') && c[1]?.method === 'DELETE'
-      )
-      expect(deleteCalls.length).toBe(0)
-    })
-
-    it('remove counselee when user confirms calls DELETE and updates', async () => {
-      ;(global as any).__alertModalMocks.showConfirm.mockImplementationOnce(() => Promise.resolve(true))
-      render(<ProfileEditPage slug="test-slug" />)
-      await waitFor(() => expect(screen.getByText('existing@x.com')).toBeInTheDocument())
-      await userEvent.click(screen.getByRole('button', { name: /Remove/i }))
-      await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith(
-          expect.stringContaining('/api/profiles/test-slug/access'),
-          expect.objectContaining({ method: 'DELETE', body: expect.stringContaining('existing@x.com') })
-        )
-      })
-    })
-
-    it('remove counselee when DELETE fails sets accessError', async () => {
-      ;(global as any).__alertModalMocks.showConfirm.mockImplementationOnce(() => Promise.resolve(true))
-      global.fetch = jest.fn((url: any, opts?: any) => {
-        const u = typeof url === 'string' ? url : url?.url ?? ''
-        if (u.includes('/api/profiles/test-slug/access') && opts?.method === 'DELETE') {
-          return Promise.resolve({ ok: false, json: async () => ({ error: 'Cannot remove' }) })
-        }
-        return defaultFetch(url, opts)
-      }) as any
-      render(<ProfileEditPage slug="test-slug" />)
-      await waitFor(() => expect(screen.getByText('existing@x.com')).toBeInTheDocument())
-      await userEvent.click(screen.getByRole('button', { name: /Remove/i }))
-      await waitFor(() => expect(screen.getByText('Cannot remove')).toBeInTheDocument())
-    })
-
-    it('add counselee when POST fails sets accessError', async () => {
-      global.fetch = jest.fn((url: any, opts?: any) => {
-        const u = typeof url === 'string' ? url : url?.url ?? ''
-        if (u.includes('/api/profiles/test-slug/access') && opts?.method === 'POST') {
-          return Promise.resolve({ ok: false, json: async () => ({ error: 'Already has access' }) })
-        }
-        return defaultFetch(url, opts)
-      }) as any
-      render(<ProfileEditPage slug="test-slug" />)
-      await waitFor(() => expect(screen.getByPlaceholderText(/Or type email/i)).toBeInTheDocument())
-      await userEvent.type(screen.getByPlaceholderText(/Or type email/i), 'new@x.com')
-      await userEvent.type(screen.getByPlaceholderText(/Username/i), 'newuser')
-      await userEvent.click(screen.getByRole('button', { name: /^Add$/i }))
-      await waitFor(() => expect(screen.getByText('Already has access')).toBeInTheDocument())
-    })
-
-    it('remove counselee when fetch throws sets accessError', async () => {
-      ;(global as any).__alertModalMocks.showConfirm.mockImplementationOnce(() => Promise.resolve(true))
-      global.fetch = jest.fn((url: any, opts?: any) => {
-        const u = typeof url === 'string' ? url : url?.url ?? ''
-        if (u.includes('/api/profiles/test-slug/access') && opts?.method === 'DELETE') {
-          return Promise.reject(new Error('Network error'))
-        }
-        return defaultFetch(url, opts)
-      }) as any
-      render(<ProfileEditPage slug="test-slug" />)
-      await waitFor(() => expect(screen.getByText('existing@x.com')).toBeInTheDocument())
-      await userEvent.click(screen.getByRole('button', { name: /Remove/i }))
-      await waitFor(() => expect(screen.getByText('Failed to remove counselee')).toBeInTheDocument())
     })
   })
 

@@ -41,7 +41,7 @@ export default function AdminSettingsPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isRestoringBackup, setIsRestoringBackup] = useState(false);
-  const [userRole, setUserRole] = useState<"admin" | "counselor" | "counselee" | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   // Form state
   const [codeLength, setCodeLength] = useState<number>(6);
@@ -78,17 +78,14 @@ export default function AdminSettingsPage() {
       const supabase = createClient();
 
       const { data: authData } = await supabase.auth.getUser();
-      let resolvedRole: "admin" | "counselor" | "counselee" | null = null;
+      let resolvedRole: string | null = null;
       if (authData?.user) {
         const { data: userProfile } = await supabase
           .from("user_profiles")
           .select("role")
           .eq("id", authData.user.id)
           .single();
-        resolvedRole = ((userProfile as { role?: string } | null)?.role || "counselor") as
-          | "admin"
-          | "counselor"
-          | "counselee";
+        resolvedRole = (userProfile as { role?: string } | null)?.role ?? null;
       }
       setUserRole(resolvedRole);
 

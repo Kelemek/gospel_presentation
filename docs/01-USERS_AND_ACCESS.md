@@ -1,57 +1,21 @@
-# Users & Access Control
+# Users & access
 
-Comprehensive guide to user management, roles, and access control systems.
+## Staff (admins)
 
-## User Roles
+The authenticated **admin** area (`/admin`, `/admin/settings`, `/admin/users`, profile editors, template tools) is for **admin** accounts only. Admins manage users, gospel profiles, templates, and app settings.
 
-- **Admin**: Full control - manage users, profiles, and settings
-- **Counselor**: Create and manage profiles, invite counselees, view reports
-- **Counselee**: View-only access to assigned profiles, answer questions
+New accounts created through **Manage users** are always **`admin`** staff accounts.
 
-## Access Management
+## Public gospel profiles
 
-### Counselee Assignment
-Users are invited to specific profiles by counselors/admins. When added:
-1. New user account created via magic link invitation
-2. Automatic welcome email sent
-3. User can only access assigned profiles
-4. Access controlled via RLS policies on `profile_access` table
+Presentation URLs (`/[slug]`, `/default`) are designed to work **without signing in**. Visibility of profile content is not tied to the old per-user assignment model.
 
-### User Metadata
-```javascript
-{
-  role: 'counselee' | 'counselor' | 'admin',
-  invited_for_profile: '[profile-id]',
-  profile_title: 'Gospel Presentation',
-  profile_slug: 'john-3-16'
-}
-```
+## Database note
 
-## Counselor Interface
+The hosted database may still define a Postgres `user_role` enum that includes legacy values (`counselor`, `counselee`). The application code no longer branches on those roles for permissions; only **`admin`** unlocks staff UI and privileged APIs. A forward migration under `gospel-admin/sql/migrations/` clears `profile_access` and may backfill roles—run that migration in Supabase when deploying this model.
 
-### User Dropdown
-Counselors see all users in the "Select existing user..." dropdown when:
-- Creating new profiles
-- Adding counselees to existing profiles
-- User profiles table has RLS policies allowing counselor access
+## Related documentation
 
-### User Invitation
-When adding a counselee:
-1. Search for existing user or type email
-2. System checks if user exists
-3. If new: creates account and sends welcome email
-4. If existing: adds to profile access
-5. Magic link sent for setup/sign in
-
-## Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| Can't see users in dropdown | Verify counselor RLS policies are configured |
-| Counselee can't access profile | Check `profile_access` table, verify RLS policies |
-| Wrong user invited | Verify email address before confirmation |
-
-## Related Documentation
-- [SECURITY.md](SECURITY.md) - Security and RLS policies
-- [WELCOME_EMAIL.md](WELCOME_EMAIL.md) - Email invitation system
-- Full implementation: [COUNSELEE_SYSTEM.md](COUNSELEE_SYSTEM.md), [COUNSELOR_USER_DROPDOWN.md](COUNSELOR_USER_DROPDOWN.md)
+- [04-AUTHENTICATION.md](04-AUTHENTICATION.md) — login, magic links, verification codes
+- [03-FEATURES.md](03-FEATURES.md) — product behavior map
+- [SECURITY.md](SECURITY.md) — security and RLS (historical scripts live under `gospel-admin/sql/`)

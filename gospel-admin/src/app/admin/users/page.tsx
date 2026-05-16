@@ -11,7 +11,7 @@ interface UserProfile {
   id: string
   email: string
   username?: string
-  role: 'admin' | 'counselor' | 'counselee'
+  role: string | null
   created_at: string
   last_sign_in?: string
 }
@@ -20,36 +20,34 @@ export default function UsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'counselor' | null>(null)
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null)
   const [showNewUserModal, setShowNewUserModal] = useState(false)
   const [newUserEmail, setNewUserEmail] = useState('')
   const [newUserName, setNewUserName] = useState('')
-  const [newUserRole, setNewUserRole] = useState<'admin' | 'counselor' | 'counselee'>('counselor')
   const [isCreatingUser, setIsCreatingUser] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'counselor' | 'counselee'>('all')
-  const [editingCounselee, setEditingCounselee] = useState<string | null>(null)
+  const [editingUserId, setEditingUserId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
   const { showAlert, showConfirm } = useAlertModal()
 
   useEffect(() => {
-    loadUsers()
-    checkCurrentUserRole()
+    void loadUsers()
+    void checkCurrentUserRole()
   }, [])
 
   const checkCurrentUserRole = async () => {
     try {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
-      
+
       if (user) {
         const { data } = await supabase
           .from('user_profiles')
           .select('role')
           .eq('id', user.id)
           .single()
-        
-        setCurrentUserRole((data as any)?.role || null)
+
+        setCurrentUserRole((data as { role?: string } | null)?.role ?? null)
       }
     } catch (err) {
       logger.error('Failed to check user role:', err)
@@ -60,68 +58,69 @@ export default function UsersPage() {
     try {
       setIsLoading(true)
       setError(null)
-      
+
       const supabase = createClient()
-      
-      // Get all user profiles (admin only view)
+
       const { data: profiles, error: profilesError } = await supabase
         .from('user_profiles')
         .select('*')
         .order('display_name', { ascending: true })
-      
+
       if (profilesError) throw profilesError
-      
-      // Get auth users data
+
       const { data: { user: currentUser } } = await supabase.auth.getUser()
-      
+
       if (!currentUser) {
         setError('Not authenticated')
         return
       }
-      
-      // Map profiles with user data
-      // Note: display_name in user_profiles contains the email
-      const mappedUsers: UserProfile[] = profiles.map((profile: any) => ({
-        id: profile.id,
-        email: profile.display_name || 'Unknown',
-        username: profile.username,
-        role: profile.role,
-        created_at: profile.created_at,
-        last_sign_in: profile.updated_at
-      }))
-      
+
+      const mappedUsers: UserProfile[] = (profiles || []).map((profile: Record<string, unknown>) => {
+        const raw = profile.role
+        const role =
+          raw != null && String(raw).trim() !== '' ? String(raw).trim() : null
+        return {
+          id: profile.id as string,
+          email: (profile.display_name as string) || 'Unknown',
+          username: profile.username as string | undefined,
+          role,
+          created_at: profile.created_at as string,
+          last_sign_in: profile.updated_at as string | undefined,
+        }
+      })
+
       setUsers(mappedUsers)
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Failed to load users:', err)
-      setError(err.message)
+      setError(err instanceof Error ? err.message : 'Failed to load users')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleRoleChange = async (userId: string, newRole: 'admin' | 'counselor' | 'counselee') => {
+  const handlePromoteToAdmin = async (userId: string) => {
     try {
       const supabase = createClient()
-      
+
       const { error } = await supabase
         .from('user_profiles')
         // @ts-expect-error - Supabase type inference issue
-        .update({ role: newRole })
+        .update({ role: 'admin' })
         .eq('id', userId)
-      
+
       if (error) throw error
-      
-      logger.info(`Updated user ${userId} role to ${newRole}`)
-      await loadUsers() // Reload users
-    } catch (err: any) {
+
+      logger.info(`Updated user ${userId} role to admin`)
+      await loadUsers()
+    } catch (err: unknown) {
       logger.error('Failed to update user role:', err)
-      showAlert(`Failed to update role: ${err.message}`)
+      showAlert(`Failed to update role: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!newUserEmail) {
       showAlert('Please enter an email address')
       return
@@ -133,7 +132,7 @@ export default function UsersPage() {
     }
 
     setIsCreatingUser(true)
-    
+
     try {
       const response = await fetch('/api/users/create', {
         method: 'POST',
@@ -142,7 +141,6 @@ export default function UsersPage() {
         },
         body: JSON.stringify({
           email: newUserEmail,
-          role: newUserRole,
           username: newUserName.trim(),
         }),
       })
@@ -154,37 +152,30 @@ export default function UsersPage() {
       }
 
       logger.info('Created new user:', newUserEmail)
-      
-      // Reset form
+
       setNewUserEmail('')
       setNewUserName('')
-      setNewUserRole('counselor')
       setShowNewUserModal(false)
-      
-      // Reload users
+
       await loadUsers()
-      
+
       showAlert(`User ${newUserEmail} created successfully! They will receive a login link via email.`)
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Failed to create user:', err)
-      showAlert(`Failed to create user: ${err.message}`)
+      showAlert(`Failed to create user: ${err instanceof Error ? err.message : String(err)}`)
     } finally {
       setIsCreatingUser(false)
     }
   }
 
-  // Filter users based on search query and role filter
-  const filteredUsers = users.filter(user => {
-    // Role filter
-    if (roleFilter !== 'all' && user.role !== roleFilter) return false
-    
-    // Search query filter
+  const filteredUsers = users.filter((user) => {
     if (!searchQuery.trim()) return true
-    
+
     const query = searchQuery.toLowerCase()
     return (
       user.email.toLowerCase().includes(query) ||
-      user.role.toLowerCase().includes(query)
+      (user.username && user.username.toLowerCase().includes(query)) ||
+      (user.role && user.role.toLowerCase().includes(query))
     )
   })
 
@@ -204,39 +195,37 @@ export default function UsersPage() {
       }
 
       logger.info('Deleted user:', userEmail)
-      
-      // Reload users
+
       await loadUsers()
-      
+
       showAlert(`User ${userEmail} deleted successfully!`)
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Failed to delete user:', err)
-      showAlert(`Failed to delete user: ${err.message}`)
+      showAlert(`Failed to delete user: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
-  const handleUpdateCounseeleeName = async (userId: string, newName: string) => {
+  const handleUpdateUsername = async (userId: string, newName: string) => {
     try {
       const supabase = createClient()
-      
+
       const { error } = await supabase
         .from('user_profiles')
         // @ts-expect-error - Supabase type inference issue
         .update({ username: newName || null })
         .eq('id', userId)
-      
+
       if (error) throw error
-      
+
       logger.info(`Updated name for user ${userId}`)
-      setEditingCounselee(null)
+      setEditingUserId(null)
       await loadUsers()
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error('Failed to update name:', err)
-      showAlert(`Failed to update name: ${err.message}`)
+      showAlert(`Failed to update name: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
 
-  // Only admins can access this page
   if (isLoading && currentUserRole === null) {
     return (
       <div className="min-h-screen bg-linear-to-br from-slate-50 to-slate-100 p-4 sm:p-8">
@@ -271,7 +260,6 @@ export default function UsersPage() {
     <AdminErrorBoundary>
       <div className="min-h-screen bg-linear-to-br from-slate-50 to-blue-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          {/* Header */}
           <div className="mb-6 sm:mb-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
               <div>
@@ -279,7 +267,7 @@ export default function UsersPage() {
                   User Management
                 </h1>
                 <p className="text-slate-600">
-                  Manage user accounts and permissions
+                  Manage staff accounts (admin role)
                 </p>
               </div>
               <div className="flex gap-3">
@@ -290,6 +278,7 @@ export default function UsersPage() {
                   ← Back
                 </Link>
                 <button
+                  type="button"
                   onClick={() => setShowNewUserModal(true)}
                   className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 rounded-lg transition-all duration-200 font-medium shadow-sm hover:shadow-md cursor-pointer"
                 >
@@ -299,14 +288,13 @@ export default function UsersPage() {
             </div>
           </div>
 
-          {/* Search and Filter */}
-          <div className="mb-6 flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
+          <div className="mb-6">
+            <div className="relative max-w-xl">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search users by email or role..."
+                placeholder="Search by email or username..."
                 className="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-sm text-slate-900 placeholder-slate-400"
               />
               <svg
@@ -319,6 +307,7 @@ export default function UsersPage() {
               </svg>
               {searchQuery && (
                 <button
+                  type="button"
                   onClick={() => setSearchQuery('')}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
@@ -328,19 +317,8 @@ export default function UsersPage() {
                 </button>
               )}
             </div>
-            <select
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value as 'all' | 'admin' | 'counselor' | 'counselee')}
-              className="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 text-sm text-slate-900 bg-white cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1.25rem] bg-position-[right_0.75rem_center] bg-no-repeat pr-10 min-w-[140px]"
-            >
-              <option value="all">All Roles</option>
-              <option value="admin">Admin</option>
-              <option value="counselor">Counselor</option>
-              <option value="counselee">Counselee</option>
-            </select>
           </div>
 
-          {/* Error message */}
           {error && (
             <div className="mb-6 bg-red-50 border border-red-200 text-red-800 px-6 py-4 rounded-lg shadow-sm">
               <p className="font-semibold">Error</p>
@@ -348,7 +326,6 @@ export default function UsersPage() {
             </div>
           )}
 
-          {/* Loading state */}
           {isLoading ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-600 mx-auto"></div>
@@ -362,19 +339,10 @@ export default function UsersPage() {
                 </div>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {filteredUsers.map(user => (
+                  {filteredUsers.map((user) => (
                     <div key={user.id} className="group rounded-md border border-slate-200 p-4 flex flex-col gap-2 hover:shadow-sm hover:border-slate-300 transition">
-                      {/* Top row: email + role */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="text-sm font-semibold text-slate-900 break-all leading-tight">{user.email}</div>
-                        <span className={`text-[10px] uppercase tracking-wide px-2 py-1 rounded-full border ${
-                          user.role === 'admin' ? 'bg-purple-100 text-purple-700 border-purple-300' :
-                          user.role === 'counselor' ? 'bg-blue-100 text-blue-700 border-blue-300' :
-                          'bg-green-100 text-green-700 border-green-300'
-                        }`}>{user.role}</span>
-                      </div>
-                      {/* Name editing */}
-                      {editingCounselee === user.id ? (
+                      <div className="text-sm font-semibold text-slate-900 break-all leading-tight">{user.email}</div>
+                      {editingUserId === user.id ? (
                         <div className="flex gap-2 items-start">
                           <input
                             type="text"
@@ -382,47 +350,63 @@ export default function UsersPage() {
                             onChange={(e) => setEditingName(e.target.value)}
                             className="flex-1 px-2 py-1 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-200"
                             autoFocus
-                            placeholder="Name"
+                            placeholder="Username"
                           />
                           <button
-                            onClick={() => handleUpdateCounseeleeName(user.id, editingName)}
+                            type="button"
+                            onClick={() => handleUpdateUsername(user.id, editingName)}
                             className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                          >Save</button>
+                          >
+                            Save
+                          </button>
                           <button
-                            onClick={() => setEditingCounselee(null)}
+                            type="button"
+                            onClick={() => setEditingUserId(null)}
                             className="text-slate-600 hover:text-slate-800 text-xs font-medium"
-                          >Cancel</button>
+                          >
+                            Cancel
+                          </button>
                         </div>
                       ) : (
                         <div className="flex items-center justify-between">
-                          <span className="text-sm text-slate-700 truncate max-w-[70%]" title={user.username || user.email}>{user.username || user.email}</span>
+                          <span className="text-sm text-slate-700 truncate max-w-[70%]" title={user.username || user.email}>
+                            {user.username || user.email}
+                          </span>
                           <button
-                            onClick={() => { setEditingCounselee(user.id); setEditingName(user.username || '') }}
+                            type="button"
+                            onClick={() => {
+                              setEditingUserId(user.id)
+                              setEditingName(user.username || '')
+                            }}
                             className="opacity-0 group-hover:opacity-100 text-amber-500 hover:text-amber-700 text-xs ml-2"
-                          >✎</button>
+                          >
+                            ✎
+                          </button>
                         </div>
                       )}
-                      {/* Meta + role select row */}
-                      <div className="flex items-center gap-3 flex-wrap">
-                        <select
-                          value={user.role}
-                          onChange={(e) => handleRoleChange(user.id, e.target.value as 'admin' | 'counselor' | 'counselee')}
-                          className="px-2 py-1 text-xs border border-slate-200 hover:border-slate-300 focus:border-slate-400 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-200 bg-white text-slate-900 shadow-sm transition cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1rem] bg-position-[right_0.5rem_center] bg-no-repeat pr-6"
-                        >
-                          <option value="admin">Admin</option>
-                          <option value="counselor">Counselor</option>
-                          <option value="counselee">Counselee</option>
-                        </select>
+                      <div className="flex items-center gap-3 flex-wrap justify-between">
                         <div className="text-[11px] text-slate-500 flex items-center">
-                          <span className="hidden lg:inline mr-1">Created:</span>{new Date(user.created_at).toLocaleDateString()}
+                          <span className="hidden lg:inline mr-1">Created:</span>
+                          {new Date(user.created_at).toLocaleDateString()}
                         </div>
+                        {user.role !== 'admin' && (
+                          <button
+                            type="button"
+                            onClick={() => handlePromoteToAdmin(user.id)}
+                            className="text-xs font-medium px-2 py-1 rounded-md border border-slate-200 hover:border-slate-300 bg-white text-slate-700"
+                          >
+                            Make admin
+                          </button>
+                        )}
                       </div>
-                      {/* Actions */}
                       <div className="flex justify-end">
                         <button
+                          type="button"
                           onClick={() => handleDeleteUser(user.id, user.email)}
                           className="text-red-700 hover:text-red-800 text-xs font-medium bg-red-50 hover:bg-red-100 px-3 py-1 rounded-md border border-red-200 hover:border-red-300 transition shadow-sm hover:shadow-md"
-                        >Delete</button>
+                        >
+                          Delete
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -431,24 +415,21 @@ export default function UsersPage() {
             </div>
           )}
 
-          {/* Info box */}
           <div className="mt-8 bg-blue-50 border border-blue-200 text-blue-900 px-6 py-4 rounded-lg shadow-sm">
-            <p className="font-semibold mb-2">User Roles</p>
-            <ul className="text-sm space-y-1">
-              <li><strong>Admin:</strong> Full access to all profiles and settings</li>
-              <li><strong>Counselor:</strong> Can create, edit, and delete their own profiles, and grant counselee access</li>
-              <li><strong>Counselee:</strong> View-only access to profiles they&apos;ve been granted access to</li>
-            </ul>
+            <p className="font-semibold mb-2">Staff access</p>
+            <p className="text-sm">
+              New accounts are created as <strong>admin</strong> (full access to templates, profiles, and settings). Use{' '}
+              <strong>Make admin</strong> if an older account still shows a non-admin role after a database migration.
+            </p>
           </div>
 
-          {/* New User Modal */}
           {showNewUserModal && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
               <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
                 <h2 className="text-2xl font-bold text-slate-900 mb-4">
                   Create New User
                 </h2>
-                
+
                 <form onSubmit={handleCreateUser}>
                   <div className="space-y-4">
                     <div>
@@ -470,7 +451,7 @@ export default function UsersPage() {
 
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Name *
+                        Username *
                       </label>
                       <input
                         type="text"
@@ -482,20 +463,7 @@ export default function UsersPage() {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Role
-                      </label>
-                      <select
-                        value={newUserRole}
-                        onChange={(e) => setNewUserRole(e.target.value as 'admin' | 'counselor' | 'counselee')}
-                        className="w-full px-3 py-2 border border-slate-200 hover:border-slate-300 focus:border-slate-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-200 bg-white text-slate-900 shadow-sm transition-all cursor-pointer appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-size-[1.25rem] bg-position-[right_0.5rem_center] bg-no-repeat pr-10"
-                      >
-                        <option value="counselor">Counselor</option>
-                        <option value="counselee">Counselee</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                    </div>
+                    <p className="text-sm text-slate-600">New users are created with the <strong>admin</strong> role.</p>
                   </div>
 
                   <div className="flex gap-3 mt-6">
@@ -512,7 +480,6 @@ export default function UsersPage() {
                         setShowNewUserModal(false)
                         setNewUserEmail('')
                         setNewUserName('')
-                        setNewUserRole('counselor')
                       }}
                       className="px-4 py-2 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium"
                     >

@@ -100,7 +100,6 @@ interface GospelSectionProps {
   onRemoveVersePin?: VersePinRemoveHandler
   profileSlug: string
   savedAnswers?: SavedAnswer[]
-  isLoggedIn?: boolean
   highlightsByScopeId?: Record<string, Array<{ id: string; startOffset: number; endOffset: number }>>
   activeHighlightId?: string | null
   onHighlightMarkClick?: (highlightId: string) => void
@@ -124,7 +123,6 @@ interface SubsectionProps {
   onRemoveVersePin?: VersePinRemoveHandler
   profileSlug: string
   savedAnswers?: SavedAnswer[]
-  isLoggedIn?: boolean
   highlightsByScopeId?: Record<string, Array<{ id: string; startOffset: number; endOffset: number }>>
   activeHighlightId?: string | null
   onHighlightMarkClick?: (highlightId: string) => void
@@ -139,7 +137,6 @@ interface NestedSubsectionProps {
   onRemoveVersePin?: VersePinRemoveHandler
   profileSlug: string
   savedAnswers?: SavedAnswer[]
-  isLoggedIn?: boolean
   highlightsByScopeId?: Record<string, Array<{ id: string; startOffset: number; endOffset: number }>>
   activeHighlightId?: string | null
   onHighlightMarkClick?: (highlightId: string) => void
@@ -213,10 +210,9 @@ interface QuestionsProps {
   profileSlug: string
   savedAnswers?: Array<{ questionId: string; answer: string; answeredAt: Date }>
   onScriptureClick?: ScriptureClickHandler
-  isLoggedIn?: boolean
 }
 
-function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick, isLoggedIn = false }: QuestionsProps) {
+function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick }: QuestionsProps) {
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [savedStatus, setSavedStatus] = useState<Record<string, boolean>>({})
   const [isInitialized, setIsInitialized] = useState(false)
@@ -227,7 +223,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
 
   const storageKey = `${ANSWERS_STORAGE_KEY_PREFIX}${profileSlug}`
 
-  // Load: localStorage first, then merge with DB if logged in (DB overrides)
+  // Load from localStorage; if unavailable, optional legacy fallback from profile payload (read-only).
   useEffect(() => {
     if (!isInitialized && questions.length >= 0) {
       const loadedAnswers: Record<string, string> = {}
@@ -235,32 +231,11 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
       try {
         const stored = localStorage.getItem(storageKey)
         const fromStorage: SavedAnswer[] = stored ? JSON.parse(stored) : []
-
-        if (isLoggedIn && savedAnswers.length > 0) {
-          // Prefer DB when logged in
-          questions.forEach(q => {
-            const fromDb = savedAnswers.find(sa => sa.questionId === q.id)
-            const fromLocal = fromStorage.find(sa => sa.questionId === q.id)
-            loadedAnswers[q.id] = (fromDb?.answer ?? fromLocal?.answer ?? '') as string
-          })
-          // Update localStorage with merged result
-          const merged: SavedAnswer[] = [...fromStorage]
-          savedAnswers.forEach(sa => {
-            const idx = merged.findIndex(m => m.questionId === sa.questionId)
-            const entry: SavedAnswer = { questionId: sa.questionId, answer: sa.answer, answeredAt: sa.answeredAt }
-            if (idx >= 0) merged[idx] = entry
-            else merged.push(entry)
-          })
-          localStorage.setItem(storageKey, JSON.stringify(merged))
-        } else {
-          // Anonymous or no DB data: use localStorage only
-          questions.forEach(q => {
-            const saved = fromStorage.find(sa => sa.questionId === q.id)
-            if (saved) loadedAnswers[q.id] = saved.answer
-          })
-        }
+        questions.forEach(q => {
+          const saved = fromStorage.find(sa => sa.questionId === q.id)
+          if (saved) loadedAnswers[q.id] = saved.answer
+        })
       } catch {
-        // Fallback to savedAnswers from props if localStorage parse fails
         questions.forEach(q => {
           const saved = savedAnswers.find(sa => sa.questionId === q.id)
           if (saved) loadedAnswers[q.id] = saved.answer
@@ -270,7 +245,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
       setAnswers(loadedAnswers)
       setIsInitialized(true)
     }
-  }, [isInitialized, questions, savedAnswers, isLoggedIn, storageKey])
+  }, [isInitialized, questions, savedAnswers, storageKey])
 
   const toggleQuestion = (questionId: string) => {
     setExpandedQuestions(prev => ({
@@ -340,7 +315,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
     }))
   }
 
-  const handleSaveAnswer = async (questionId: string, maxLength?: number) => {
+  const handleSaveAnswer = (questionId: string, maxLength?: number) => {
     const answer = answers[questionId] || ''
     const limit = maxLength || PROFILE_VALIDATION.ANSWER_MAX_LENGTH
 
@@ -352,7 +327,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
 
     const trimmed = answer.trim()
 
-    // Always write to localStorage immediately (omit empty answers so merge/load matches server clear)
+    // Write to localStorage (omit empty answers)
     try {
       const stored = localStorage.getItem(storageKey)
       const fromStorage: SavedAnswer[] = stored ? JSON.parse(stored) : []
@@ -367,25 +342,6 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
 
     setSavedStatus(prev => ({ ...prev, [questionId]: true }))
     setTimeout(() => setSavedStatus(prev => ({ ...prev, [questionId]: false })), 3000)
-
-    // If logged in, sync to DB
-    if (!isLoggedIn) return
-
-    try {
-      const response = await fetch(`/api/profiles/${profileSlug}/save-answer`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionId, answer: trimmed })
-      })
-
-      if (!response.ok) {
-        const err = await response.json()
-        throw new Error(err.error || 'Failed to save answer')
-      }
-    } catch (error) {
-      console.error('Error syncing answer to DB:', error)
-      showAlert('Answer saved locally but could not sync. It will sync when you next log in.')
-    }
   }
 
   if (!questions || questions.length === 0) return null
@@ -515,7 +471,6 @@ function NestedSubsectionComponent({
   onRemoveVersePin,
   profileSlug,
   savedAnswers,
-  isLoggedIn,
   highlightsByScopeId,
   activeHighlightId,
   onHighlightMarkClick,
@@ -579,7 +534,6 @@ function NestedSubsectionComponent({
             profileSlug={profileSlug}
             savedAnswers={savedAnswers}
             onScriptureClick={onScriptureClick}
-            isLoggedIn={isLoggedIn}
           />
         )}
       </div>
@@ -596,7 +550,6 @@ function SubsectionComponent({
   onRemoveVersePin,
   profileSlug,
   savedAnswers,
-  isLoggedIn,
   highlightsByScopeId,
   activeHighlightId,
   onHighlightMarkClick,
@@ -666,7 +619,6 @@ function SubsectionComponent({
           profileSlug={profileSlug}
           savedAnswers={savedAnswers}
           onScriptureClick={onScriptureClick}
-          isLoggedIn={isLoggedIn}
         />
       )}
       
@@ -683,7 +635,6 @@ function SubsectionComponent({
               onRemoveVersePin={onRemoveVersePin}
               profileSlug={profileSlug}
               savedAnswers={savedAnswers}
-              isLoggedIn={isLoggedIn}
               highlightsByScopeId={highlightsByScopeId}
               activeHighlightId={activeHighlightId}
               onHighlightMarkClick={onHighlightMarkClick}
@@ -703,7 +654,6 @@ export default function GospelSection({
   onRemoveVersePin,
   profileSlug,
   savedAnswers,
-  isLoggedIn,
   highlightsByScopeId,
   activeHighlightId,
   onHighlightMarkClick,
@@ -759,7 +709,6 @@ export default function GospelSection({
             onRemoveVersePin={onRemoveVersePin}
             profileSlug={profileSlug}
             savedAnswers={savedAnswers}
-            isLoggedIn={isLoggedIn}
             highlightsByScopeId={highlightsByScopeId}
             activeHighlightId={activeHighlightId}
             onHighlightMarkClick={onHighlightMarkClick}

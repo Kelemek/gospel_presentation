@@ -46,7 +46,6 @@ const config: Config = {
     '!src/app/api/admin/translation-settings/**',
     '!src/app/api/auth/send-code/**',
     '!src/app/api/auth/verify-code/**',
-    '!src/components/ProfileCard.tsx',
     '!src/components/TemplateCard.tsx',
     '!src/components/ClarityProvider.tsx',
     '!src/lib/verse-counter.ts',

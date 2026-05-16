@@ -6,11 +6,10 @@ Guide to core features and their implementation.
 
 Users can answer reflection questions added to profiles by editors:
 - Questions added per subsection
-- Answers stored in database (logged in) or sessionStorage (anonymous)
-- Users can track answers across sessions
-- Counselors can view aggregated responses
+- Answers persist in the browser only (`localStorage`, key prefix `gospel-answers-{slug}` in `GospelSection.tsx`)
+- Older databases may still have a `saved_answers` column on `profiles`; the app does not write answers back to the database
 
-**Storage**: `user_answers` table (RLS protected)
+**Storage**: browser `localStorage` (per profile slug); not synced to Supabase
 
 ## COMA Method
 
@@ -22,7 +21,7 @@ The COMA template provides a structured framework for reflection:
 - Displayed in modal during profile usage
 - Customizable by admins
 
-**Status**: RLS policies fixed - now visible to all users including counselees
+**Status**: RLS policies allow appropriate read access for presentation use.
 
 ### Four Rules of Communication
 
@@ -81,9 +80,9 @@ On profile pages, readers bookmark passages with tinted pins for visual wayfindi
 ### Templates & Cloning
 - Create reusable profile templates
 - Clone templates to start new profiles
-- Share templates across counselors
+- Share templates across the ministry team
 - Template access controlled via RLS
-- **Admin template directory**: the paginated template list (**`GET /api/profiles/templates`**, [`gospel-admin/src/app/api/profiles/templates/route.ts`](gospel-admin/src/app/api/profiles/templates/route.ts)) with **`page` / `pageSize` (up to 100)**, **`total` / `totalPages`**, debounced **`q`** search (title, slug, description, owner display name or username), and Previous/Next lives on the **main admin dashboard** (`/admin`) in the **Resource templates** card via [`TemplatesListPanel`](gospel-admin/src/app/admin/templates/TemplatesListPanel.tsx). Counselors and admins use the same UI; counselees do not see that card. The **assigned-resources list** is not shown on `/admin` for admins/counselors (so the dashboard does not call **`GET /api/profiles`** on every visit). **Admins** and **counselors** see **Settings** in the dashboard header (link to **`/admin/settings`**, [`gospel-admin/src/app/admin/page.tsx`](gospel-admin/src/app/admin/page.tsx)). The settings page covers **Manage users** (admins only, link to **`/admin/users`**), verification-code login, public Resources menu order, **Create from backup** (JSON import for a new profile), and related options. **Counselees** still see **My Resources** on `/admin` (that card uses **`GET /api/profiles`**). **`/admin/templates`** remains a standalone page (Back to `/admin`) for bookmarks and deep links, reusing the same panel.
+- **Admin template directory**: the paginated template list (**`GET /api/profiles/templates`**, [`gospel-admin/src/app/api/profiles/templates/route.ts`](gospel-admin/src/app/api/profiles/templates/route.ts)) with **`page` / `pageSize` (up to 100)**, **`total` / `totalPages`**, debounced **`q`** search (title, slug, description, owner display name or username), and Previous/Next lives on the **main admin dashboard** (`/admin`) in the **Resource templates** card via [`TemplatesListPanel`](gospel-admin/src/app/admin/templates/TemplatesListPanel.tsx). Only **signed-in admins** can load this API and panel. The dashboard does not call **`GET /api/profiles`** on every visit for a heavy assigned-resources list. **Admins** see **Settings** in the dashboard header (link to **`/admin/settings`**, [`gospel-admin/src/app/admin/page.tsx`](gospel-admin/src/app/admin/page.tsx)). The settings page covers **Manage users** (admins only, link to **`/admin/users`**), verification-code login, public Resources menu order, **Create from backup** (JSON import for a new profile), and related options. **`/admin/templates`** remains a standalone page (Back to `/admin`) for bookmarks and deep links, reusing the same panel.
 
 ### Resources dropdown (public templates)
 - The main page sidebar shows a Resources menu with public templates. Template titles use **extra-bold weight and darker slate** when that profile slug is in the read-to-end set (see **Read-to-end marks** above).
@@ -95,15 +94,13 @@ On profile pages, readers bookmark passages with tinted pins for visual wayfindi
 
 ### Backup & Restore
 - Export profiles to JSON
-- **Create from backup (new profile)**: On **`/admin/settings`**, admins and counselors use the **Create from backup** section to pick a JSON export; a new profile is created and the app navigates to **`/admin/profiles/[slug]/content`** for that profile (logic in [`gospel-admin/src/lib/createProfileFromBackup.ts`](gospel-admin/src/lib/createProfileFromBackup.ts)).
+- **Create from backup (new profile)**: On **`/admin/settings`**, admins use the **Create from backup** section to pick a JSON export; a new profile is created and the app navigates to **`/admin/profiles/[slug]/content`** for that profile (logic in [`gospel-admin/src/lib/createProfileFromBackup.ts`](gospel-admin/src/lib/createProfileFromBackup.ts)).
 - Automated backups run in Supabase Storage (`db-backups`) via `backup-to-storage`: **full** backups (body `{}`) write under `daily/<date>/<run_id>/`; **differential** backups (`{"mode":"differential"}`) write under `differential/<date>/<run_id>/` and include rows with `updated_at` ≥ the last successful **full** backup’s completion time (`backup_runs.backup_kind`, `incremental_base_completed_at`). Same **multipart gz shards** (`part-NNNN.json.gz`, shard bounds via `BACKUP_TABLE_SHARD_MAX_ROWS` / `BACKUP_SHARD_APPROX_UTF8_BYTES`) and **`BACKUP_SLICE_MS`** chained invocations (checkpoint `checkpoints/<run_id>.json`, resume body `{"resume_run_id":"…"}`, **`EdgeRuntime.waitUntil`**). **`latest/latest-backup.json`** is updated **only for full** runs (safe default for **`restore-profile-from-backup`**); **`latest/latest-differential-backup.json`** tracks the latest differential manifest. Separate retention: `BACKUP_KEEP_DAILY` vs `BACKUP_KEEP_DIFFERENTIAL_DAYS`. Cron examples: `sql/migrations/20260512_backup_cron_differential.sql`. Storage **`upload` retries**; optional `profiles/_slug_index.json`; PostgREST **`BACKUP_FETCH_RANGE_ROWS`**; `backup_runs` **`partial`** status; **`get_backup_tables()`** excludes cache/logs/`backup_runs`/etc. (`sql/migrations/20260509_get_backup_tables_fix_log_exclusions.sql`); pruning prefers **`storage.objects`** else Storage **`list`** fallback; admins get email on backup **failure** only (via `send-email`). **`restore-profile-from-backup`** reads one manifest path — use a **full** backup manifest so unchanged profiles may still appear in shards; differential-only manifests omit unchanged rows. No in-repo full-database restore CLI from monolithic JSON.
 - Disaster recovery
 - Data portability
 
 ### Descriptions & Metadata
-- Profile descriptions support user assignments format: "For: username1, username2"
-- Counselee access tracked in descriptions
-- Helps with quick user identification
+- Profile descriptions are free text for editors (titles, notes, audience).
 
 ### Content editor (admin)
 - Admins edit presentation structure at **`/admin/profiles/[slug]/content`** ([`ContentEditPageClient.tsx`](gospel-admin/src/app/admin/profiles/[slug]/content/ContentEditPageClient.tsx)).

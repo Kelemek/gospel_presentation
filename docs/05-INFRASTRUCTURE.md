@@ -10,19 +10,18 @@ Complete migration from Netlify + Simple Auth to Supabase PostgreSQL with multi-
 - **auth.users** - Authentication users (Supabase managed)
 - **user_profiles** - User metadata (role, username, etc.)
 - **profiles** - Gospel presentation resources
-- **profile_access** - Counselee access assignments
+- **profile_access** - Legacy table (may still exist in older databases; cleared by `gospel-admin/sql/migrations/20260514_admin_only_staff_remove_profile_assignment.sql` when moving to admin-only staff)
 - **user_answers** - Stored user responses
 - **coma_templates** - COMA method templates
 - **bible_verses** - KJV and other translations
 - **scripture_cache** - ESV API response cache
 
 ### Row-Level Security (RLS)
-All tables protected with RLS policies:
-- Public users see only public profiles
-- Counselees see only assigned profiles
-- Counselors manage own profiles
-- Admins have full access
-- Email templates visible to admins only
+Tables use RLS appropriate to their sensitivity (see Supabase **Policies** and `gospel-admin/sql/` migrations). In general:
+
+- Gospel **presentation** pages can be public for many profiles (see `allow_public_all_profiles` and related migrations).
+- **Admin** operations in the app are enforced in API routes and UI by checking `user_profiles.role === 'admin'`.
+- Historical scripts may still mention legacy roles; the live app expects **admin-only** staff for privileged routes.
 
 **Setup**: See [SUPABASE_MIGRATION.md](SUPABASE_MIGRATION.md)
 

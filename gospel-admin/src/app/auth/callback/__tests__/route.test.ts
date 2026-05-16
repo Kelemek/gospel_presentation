@@ -45,33 +45,17 @@ describe('auth callback route', () => {
   expect(res).toEqual({ redirectedTo: 'https://example.com/login?error=exchange%20failed' })
   })
 
-  it('redirects counselee with single access to admin dashboard', async () => {
-    // Simulate supabase client behavior for counselee with single profile access
+  it('redirects to admin dashboard after successful code exchange', async () => {
     jest.doMock('@/lib/supabase/server', () => ({
       createClient: async () => ({
         auth: {
           exchangeCodeForSession: async () => ({ error: null }),
-          getUser: async () => ({ data: { user: { id: 'u1', email: 'u1@example.com' } } }),
         },
-        from: (table: string) => ({
-          select: (cols: string) => ({
-            eq: (col: string, val: any) => {
-              if (table === 'user_profiles') {
-                return { single: async () => ({ data: { role: 'counselee' } }) }
-              }
-              if (table === 'profile_access') {
-                return Promise.resolve({ data: [{ profiles: { slug: 'myslug' } }] })
-              }
-              return Promise.resolve({ data: null })
-            }
-          })
-        })
-      })
+      }),
     }))
 
-   
-  const handler = require('@/app/auth/callback/route')
-  const res = await handler.GET({ url: 'https://example.com/auth/callback?code=abc' })
-  expect(res).toEqual({ redirectedTo: 'https://example.com/admin' })
+    const handler = require('@/app/auth/callback/route')
+    const res = await handler.GET({ url: 'https://example.com/auth/callback?code=abc' })
+    expect(res).toEqual({ redirectedTo: 'https://example.com/admin' })
   })
 })

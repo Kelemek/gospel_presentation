@@ -121,15 +121,11 @@ export async function POST(request: NextRequest) {
     let redirectUrl = "/";
     
     if (userProfile && typeof userProfile === 'object' && 'role' in userProfile) {
-      const role = (userProfile as { role: string }).role;
-      switch (role) {
-        case "admin":
-        case "counselor":
-          redirectUrl = "/admin/dashboard";
-          break;
-        case "counselee":
-          redirectUrl = "/profile";
-          break;
+      const role = (userProfile as { role: string }).role
+      if (role === 'admin') {
+        redirectUrl = '/admin/dashboard'
+      } else {
+        redirectUrl = '/admin'
       }
     }
 

@@ -67,7 +67,7 @@ describe('supabase-data-service (unit)', () => {
     expect(res).toEqual(gospel)
   })
 
-  test('getProfiles maps rows and joins users + access', async () => {
+  test('getProfiles maps rows and joins owner display names', async () => {
     const now = new Date().toISOString()
     const profilesRows = [
       {
@@ -79,18 +79,15 @@ describe('supabase-data-service (unit)', () => {
     ]
 
     const users = [{ id: 'u1', display_name: 'Alice' }]
-    const accessData = [{ profile_id: 'p1', user_email: 'x@example.com' }]
 
     jest.doMock('../supabase/server', () => ({
       createClient: () => makeFakeClient({
         profiles: { select: profilesRows, selectOrdered: profilesRows },
         user_profiles: { selectIn: users },
-        profile_access: { selectIn: accessData }
       }),
       createAdminClient: () => makeFakeClient({
         profiles: { select: profilesRows, selectOrdered: profilesRows },
         user_profiles: { selectIn: users },
-        profile_access: { selectIn: accessData }
       })
     }))
 
@@ -101,8 +98,7 @@ describe('supabase-data-service (unit)', () => {
     expect(res.length).toBe(1)
     const p = res[0]
     expect(p.id).toBe('p1')
-  expect(p.ownerDisplayName).toBe('Alice')
-  expect((p as any).counseleeEmails).toContain('x@example.com')
+    expect(p.ownerDisplayName).toBe('Alice')
     expect(p.createdAt).toBeInstanceOf(Date)
   })
 
@@ -145,33 +141,6 @@ describe('supabase-data-service (unit)', () => {
     expect(rpcSpy).toHaveBeenCalledWith('increment_visit_count', { profile_slug: 'slug-x' })
   })
 
-  test('grantProfileAccess upserts access and attempts to invite new users', async () => {
-    // behaviors for main client: upsert succeeds
-    const fakeMain = makeFakeClient({ profile_access: { upsertError: null } })
-
-    // behaviors for admin client: no existing users, invite returns a created user
-    const adminClient = {
-      auth: { admin: {
-        listUsers: async () => ({ users: [] }),
-        inviteUserByEmail: async (email: string) => ({ data: { user: { id: 'new-id' } }, error: null })
-      } },
-      from: () => ({ select: async () => ({ data: { title: 'T', slug: 's' } }), }),
-      // upsert on user_profiles
-       
-      authAdmin: true,
-    }
-
-  jest.doMock('../supabase/server', () => ({ createClient: () => fakeMain }))
-  // Mock the dynamic admin import path used inside inviteCounseleeUsers.
-  // Export both createAdminClient and createClient to avoid clobbering the server mock used elsewhere.
-  jest.doMock('@/lib/supabase/server', () => ({ createAdminClient: () => adminClient, createClient: () => fakeMain }))
-
-    const svc = await import('../supabase-data-service')
-
-    await expect(svc.grantProfileAccess('p123', ['  A@B.COM  ', 'invalid'], 'granter')).resolves.toBeUndefined()
-    // upsert was part of fakeMain - ensure no error thrown
-  })
-
   test('createProfile succeeds when authenticated and source exists', async () => {
     const now = new Date().toISOString()
     const created = {
@@ -202,9 +171,6 @@ describe('supabase-data-service (unit)', () => {
               insert: () => ({ select: () => ({ single: async () => ({ data: created, error: null }) }) })
             }
           }
-          if (table === 'profile_access') {
-            return { upsert: async () => ({ error: null }) }
-          }
           return {}
         },
         rpc: async () => ({})
@@ -228,9 +194,6 @@ describe('supabase-data-service (unit)', () => {
               }),
               insert: () => ({ select: () => ({ single: async () => ({ data: created, error: null }) }) })
             }
-          }
-          if (table === 'profile_access') {
-            return { upsert: async () => ({ error: null }) }
           }
           return {}
         },
@@ -275,7 +238,7 @@ describe('supabase-data-service (unit)', () => {
           }
           if (table === 'user_profiles') {
             return {
-              select: () => ({ eq: () => ({ single: async () => ({ data: { role: 'counselor' }, error: null }) }) })
+              select: () => ({ eq: () => ({ single: async () => ({ data: { role: 'admin' }, error: null }) }) })
             }
           }
           return { update: () => ({ data: null, error: null }) }
@@ -288,7 +251,7 @@ describe('supabase-data-service (unit)', () => {
             return {
               select: (cols: string) => ({
                 eq: (col: string, val: any) => ({
-                  single: async () => ({ data: { role: 'counselor' }, error: null })
+                  single: async () => ({ data: { role: 'admin' }, error: null })
                 })
               })
             }
@@ -332,40 +295,6 @@ describe('supabase-data-service (unit)', () => {
     }))
     const svc = await import('../supabase-data-service')
     await expect(svc.deleteProfile('some-slug')).resolves.toBeUndefined()
-  })
-
-  test('revokeProfileAccess resolves on success', async () => {
-    jest.doMock('../supabase/server', () => ({
-      createClient: () => ({
-        from: (table: string) => ({
-          // Support chained .delete().eq(...).eq(...) used by revokeProfileAccess
-          delete: () => ({ eq: (_col: string, _val: any) => ({ eq: (_c: string, _v: any) => ({ error: null }) }) })
-        })
-      }),
-      createAdminClient: () => ({
-        from: (table: string) => ({
-          delete: () => ({ eq: (_col: string, _val: any) => ({ eq: (_c: string, _v: any) => ({ error: null }) }) })
-        })
-      })
-    }))
-    const svc = await import('../supabase-data-service')
-    await expect(svc.revokeProfileAccess('p', 'a@b.com')).resolves.toBeUndefined()
-  })
-
-  test('getProfileAccessList returns rows', async () => {
-    const rows = [{ id: 'r1', user_email: 'a@b.com' }]
-    jest.doMock('../supabase/server', () => ({
-      createClient: () => ({
-        from: (table: string) => ({
-          select: () => ({
-            eq: (_col: string, _val: any) => ({ order: (_col2: string, _opts?: any) => ({ data: rows, error: null }) })
-          })
-        })
-      })
-    }))
-    const svc = await import('../supabase-data-service')
-    const res = await svc.getProfileAccessList('p')
-    expect(res).toEqual(rows)
   })
 
   test('loadGospelData returns empty on error', async () => {
@@ -438,256 +367,4 @@ describe('supabase-data-service (unit)', () => {
     await expect(svc.incrementProfileVisitCount('s')).resolves.toBeUndefined()
   })
 
-  test('grantProfileAccess returns early when emails invalid', async () => {
-    // If emails are invalid the upsert should not be called; provide an upsert that would throw if invoked
-    jest.doMock('../supabase/server', () => ({
-      createClient: () => ({
-        from: () => ({ upsert: async () => { throw new Error('should not be called') } })
-      })
-    }))
-    const svc = await import('../supabase-data-service')
-    await expect(svc.grantProfileAccess('p', ['   ', 'not-an-email'], 'g')).resolves.toBeUndefined()
-  })
-
-  test('grantProfileAccess invites new users and upserts user_profiles via admin client', async () => {
-    // main client: upsert succeeds
-    const fakeMain = makeFakeClient({ profile_access: { upsertError: null } })
-
-    // admin client: no existing users, inviteUserByEmail returns created user
-    const adminClient = {
-      auth: { admin: {
-        listUsers: async () => ({ users: [] }),
-        inviteUserByEmail: async (email: string) => ({ data: { user: { id: `invite-${email}` } }, error: null })
-      } },
-      from: (table: string) => ({ select: () => ({ eq: (_col: string, _val: any) => ({ single: async () => ({ data: { title: 'T', slug: 's' }, error: null }) }) }) }),
-      fromAdmin: () => ({ upsert: async () => ({ error: null }) })
-    }
-
-    // Mock server createClient and admin factory
-    jest.doMock('../supabase/server', () => ({ createClient: () => fakeMain }))
-    jest.doMock('@/lib/supabase/server', () => ({ createAdminClient: () => adminClient, createClient: () => fakeMain }))
-
-    const svc = await import('../supabase-data-service')
-    await expect(svc.grantProfileAccess('pid', ['new@x.com'], 'granter')).resolves.toBeUndefined()
-  })
-
-  test('grantProfileAccess tolerates admin.listUsers throwing (invite best-effort)', async () => {
-    const fakeMain = makeFakeClient({ profile_access: { upsertError: null } })
-
-    // admin client that throws when listing users
-    const adminClient = {
-      auth: { admin: {
-        listUsers: async () => { throw new Error('admin list failed') },
-        inviteUserByEmail: async (email: string) => ({ data: { user: { id: `invite-${email}` } }, error: null })
-      } },
-      from: (table: string) => ({ select: () => ({ eq: (_col: string, _val: any) => ({ single: async () => ({ data: { title: 'T', slug: 's' }, error: null }) }) }) }),
-      fromAdmin: () => ({ upsert: async () => ({ error: null }) })
-    }
-
-    jest.doMock('../supabase/server', () => ({ createClient: () => fakeMain }))
-    jest.doMock('@/lib/supabase/server', () => ({ createAdminClient: () => adminClient, createClient: () => fakeMain }))
-
-    const svc = await import('../supabase-data-service')
-    // Should resolve even though admin.listUsers threw (invite is best-effort)
-    await expect(svc.grantProfileAccess('pid', ['new@x.com'], 'granter')).resolves.toBeUndefined()
-  })
-
-  test('grantProfileAccess tolerates inviteUserByEmail returning an error', async () => {
-    const fakeMain = makeFakeClient({ profile_access: { upsertError: null } })
-
-    // admin client where inviteUserByEmail returns an error for the email
-    const adminClient = {
-      auth: { admin: {
-        listUsers: async () => ({ users: [] }),
-        inviteUserByEmail: async (_email: string) => ({ data: null, error: { message: 'invite failed' } })
-      } },
-      from: (table: string) => ({ select: () => ({ eq: (_col: string, _val: any) => ({ single: async () => ({ data: { title: 'T', slug: 's' }, error: null }) }) }) }),
-      fromAdmin: () => ({ upsert: async () => ({ error: null }) })
-    }
-
-    jest.doMock('../supabase/server', () => ({ createClient: () => fakeMain }))
-    jest.doMock('@/lib/supabase/server', () => ({ createAdminClient: () => adminClient, createClient: () => fakeMain }))
-
-    const svc = await import('../supabase-data-service')
-    // inviteUserByEmail returns an error — should not cause grantProfileAccess to throw
-    await expect(svc.grantProfileAccess('pid', ['bad@x.com'], 'granter')).resolves.toBeUndefined()
-  })
-
-  test('grantProfileAccess skips invites when all emails already have accounts', async () => {
-    const fakeMain = makeFakeClient({ profile_access: { upsertError: null } })
-
-    // admin client: listUsers reports that the email already exists
-    const adminClient = {
-      auth: { admin: {
-        listUsers: async () => ({ users: [{ email: 'existing@x.com' }] }),
-        // If inviteUserByEmail is called it will throw to fail the test
-        inviteUserByEmail: async () => { throw new Error('invite should not be called') }
-      } },
-      from: (table: string) => ({ select: () => ({ eq: (_col: string, _val: any) => ({ single: async () => ({ data: { title: 'T', slug: 's' }, error: null }) }) }) })
-    }
-
-    jest.doMock('../supabase/server', () => ({ createClient: () => fakeMain }))
-    jest.doMock('@/lib/supabase/server', () => ({ createAdminClient: () => adminClient, createClient: () => fakeMain }))
-
-    const svc = await import('../supabase-data-service')
-    // Should resolve and not attempt invites (no throw)
-    await expect(svc.grantProfileAccess('pid', ['existing@x.com'], 'granter')).resolves.toBeUndefined()
-  })
-
-  test('grantProfileAccess tolerates inviteUserByEmail throwing an exception', async () => {
-    const fakeMain = makeFakeClient({ profile_access: { upsertError: null } })
-
-    // admin client where inviteUserByEmail throws an exception (not a returned error)
-    const adminClient = {
-      auth: { admin: {
-        listUsers: async () => ({ users: [] }),
-        inviteUserByEmail: async (_email: string) => { throw new Error('invite threw') }
-      } },
-      from: (table: string) => ({ select: () => ({ eq: (_col: string, _val: any) => ({ single: async () => ({ data: { title: 'T', slug: 's' }, error: null }) }) }) }),
-      fromAdmin: () => ({ upsert: async () => ({ error: null }) })
-    }
-
-    jest.doMock('../supabase/server', () => ({ createClient: () => fakeMain }))
-    jest.doMock('@/lib/supabase/server', () => ({ createAdminClient: () => adminClient, createClient: () => fakeMain }))
-
-    const svc = await import('../supabase-data-service')
-    // inviteUserByEmail throwing should be caught and not cause the outer call to throw
-    await expect(svc.grantProfileAccess('pid', ['willthrow@x.com'], 'granter')).resolves.toBeUndefined()
-  })
-
-  test('grantProfileAccess tolerates user_profiles.upsert error (logs warning, does not throw)', async () => {
-    const fakeMain = makeFakeClient({ profile_access: { upsertError: null } })
-
-    // admin client where invite succeeds but user_profiles.upsert returns an error
-    let upsertCalled = false
-    const adminClient = {
-      auth: { admin: {
-        listUsers: async () => ({ users: [] }),
-        inviteUserByEmail: async (email: string) => ({ data: { user: { id: `invite-${email}` } }, error: null })
-      } },
-      from: (table: string) => {
-        if (table === 'user_profiles') {
-          return { upsert: async () => { upsertCalled = true; return { error: { message: 'upsert failed' } } } }
-        }
-        return { select: () => ({ eq: (_col: string, _val: any) => ({ single: async () => ({ data: { title: 'T', slug: 's' }, error: null }) }) }) }
-      }
-    }
-
-    jest.doMock('../supabase/server', () => ({ createClient: () => fakeMain }))
-    jest.doMock('@/lib/supabase/server', () => ({ createAdminClient: () => adminClient, createClient: () => fakeMain }))
-
-    const svc = await import('../supabase-data-service')
-    await expect(svc.grantProfileAccess('pid', ['new@x.com'], 'granter')).resolves.toBeUndefined()
-    expect(upsertCalled).toBe(true)
-  })
-
-  test('grantProfileAccess throws when upsert returns error', async () => {
-    // Mock createClient so that calling upsert will throw an error synchronously
-    jest.doMock('../supabase/server', () => ({
-      createClient: () => ({
-        from: (table: string) => ({
-          upsert: async () => { throw new Error('DB') }
-        })
-      })
-    }))
-
-    const svc = await import('../supabase-data-service')
-    await expect(svc.grantProfileAccess('p', ['a@b.com'], 'g')).rejects.toThrow()
-  })
-
-  test('revokeProfileAccess throws on DB error', async () => {
-    // Make the inner eq throw so the service sees an exception path
-    jest.doMock('../supabase/server', () => ({
-      createClient: () => ({
-        from: (table: string) => ({
-          delete: () => ({
-            eq: (_col: string, _val: any) => ({
-              eq: (_c: string, _v: any) => { throw new Error('DB') }
-            })
-          })
-        })
-      })
-    }))
-
-    const svc = await import('../supabase-data-service')
-    await expect(svc.revokeProfileAccess('p', 'a@b.com')).rejects.toThrow()
-  })
-
-  test('grantProfileAccess sends email notification to existing users', async () => {
-    // Mock fetch for the Edge Function
-    global.fetch = jest.fn()
-    ;(global.fetch as jest.Mock).mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      text: async () => JSON.stringify({ success: true }),
-      json: async () => ({ success: true }),
-    })
-
-    const fakeMain = {
-      auth: { getUser: async () => ({ data: { user: { id: 'user-id' } } }) },
-      from: (table: string) => {
-        if (table === 'profile_access') {
-          return { 
-            upsert: async () => ({ error: null }),
-            select: async () => ({ data: [], error: null })
-          }
-        }
-        if (table === 'profiles') {
-          return {
-            select: () => ({
-              eq: (_col: string, _val: any) => ({
-                single: async () => ({
-                  data: { title: 'Gospel Presentation', description: 'Learn about salvation', slug: 'gospel' },
-                  error: null
-                })
-              })
-            })
-          }
-        }
-        return {}
-      }
-    }
-
-    const adminClient = {
-      auth: {
-        admin: {
-          listUsers: async () => ({
-            data: {
-              users: [{ email: 'existing@example.com' }]
-            }
-          })
-        }
-      }
-    }
-
-    jest.doMock('../supabase/server', () => ({ createClient: () => fakeMain }))
-    jest.doMock('@/lib/supabase/server', () => ({ createAdminClient: () => adminClient, createClient: () => fakeMain }))
-
-    process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://abc123.supabase.co'
-    process.env.SUPABASE_SERVICE_KEY = 'test-key'
-
-    const svc = await import('../supabase-data-service')
-
-    await expect(
-      svc.grantProfileAccess('profile-id', ['existing@example.com', 'new@example.com'], 'granter-id')
-    ).resolves.toBeUndefined()
-
-    // Verify email was sent to the Edge Function with existing user email
-    expect(global.fetch).toHaveBeenCalledWith(
-      'https://abc123.supabase.co/functions/v1/send-email',
-      expect.objectContaining({
-        method: 'POST',
-        headers: expect.objectContaining({
-          'Authorization': 'Bearer test-key',
-        }),
-        body: expect.stringContaining('existing@example.com'),
-      })
-    )
-  })
-
-})
-describe('supabase-data-service', () => {
-	it('dummy', () => {
-		expect(true).toBe(true)
-	})
 })

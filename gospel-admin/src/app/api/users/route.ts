@@ -22,8 +22,8 @@ export async function GET() {
     
     const userRole = (userProfile as any)?.role
     
-    // Only admins and counselors can list users
-    if (userRole !== 'admin' && userRole !== 'counselor') {
+    // Only admins can list users
+    if (userRole !== 'admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
     
@@ -46,14 +46,19 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to fetch user profiles' }, { status: 500 })
     }
     
-    // Merge auth data with profile data
+    // Merge auth data with profile data.
+    // Never infer `admin` when `user_profiles.role` is missing — that would mis-label users and
+    // invert least-privilege expectations for orphaned auth rows or racey signups.
     const users = authData.users
       .filter((u: any) => u.email)
       .map((u: any) => {
-        const profile = profiles?.find((p: any) => p.id === u.id) as any
+        const profile = profiles?.find((p: any) => p.id === u.id) as { role?: string | null; username?: string | null } | undefined
+        const rawRole = profile?.role
+        const role =
+          rawRole != null && String(rawRole).trim() !== '' ? String(rawRole).trim() : null
         return {
           email: u.email || '',
-          role: profile?.role || 'counselee',
+          role,
           username: profile?.username || u.email?.split('@')[0] || 'user'
         }
       })

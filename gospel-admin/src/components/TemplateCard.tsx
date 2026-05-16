@@ -11,7 +11,7 @@ interface TemplateCardProps {
   onDownloadBackup: (template: any) => void
   onRestoreBackup: (template: any, event: React.ChangeEvent<HTMLInputElement>) => void
   onTogglePublic?: (template: any, isPublic: boolean) => void
-  userRole?: 'admin' | 'counselor' | null
+  userRole?: 'admin' | null
   canManage?: boolean
   isExpanded?: boolean
   onToggleExpand?: () => void
@@ -19,7 +19,7 @@ interface TemplateCardProps {
 
 /**
  * Card view component for displaying a template with all details from list view.
- * Only shown to admins. Uses collapsible details similar to ProfileCard.
+ * Only shown to admins. Uses a collapsible details section similar to other admin cards.
  */
 export default function TemplateCard({
   template,
@@ -80,18 +80,6 @@ export default function TemplateCard({
       {/* Expandable Details Section */}
       {showDetails && (
         <div className="px-4 py-3 border-t border-slate-100 space-y-2 text-xs bg-slate-50">
-          {/* Badges */}
-          <div className="flex flex-wrap gap-1.5 pb-2 border-b border-slate-100">
-            <span className="bg-slate-200 text-slate-700 text-xs px-2 py-1 rounded-full font-medium">
-              Template
-            </span>
-            {template.isPublic && (
-              <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full font-medium">
-                Public
-              </span>
-            )}
-          </div>
-
           {/* Public toggle - admins only */}
           {userRole === 'admin' && onTogglePublic && (
             <label className="flex items-center gap-2 cursor-pointer">

@@ -22,28 +22,7 @@ export async function GET(request: Request) {
         console.error('Error exchanging code for session:', exchangeError)
         return NextResponse.redirect(new URL(`/login?error=${encodeURIComponent(exchangeError.message)}`, requestUrl.origin))
       }
-      
-      // Get user data to check their role and metadata
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (user) {
-        // Check the user_profiles table for their actual role
-        const { data: userProfile } = await supabase
-          .from('user_profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single()
-        
-        const role = (userProfile as any)?.role
-        
-        // If counselee, check how many profiles they have access to
-        if (role === 'counselee') {
-          // Counselees always go to the dashboard
-          return NextResponse.redirect(new URL('/admin', requestUrl.origin))
-        }
-      }
-      
-      // Default: redirect to admin dashboard (for admin/counselor users or counselees without assigned profile)
+
       return NextResponse.redirect(new URL('/admin', requestUrl.origin))
     } catch (err) {
       console.error('Exception in auth callback:', err)

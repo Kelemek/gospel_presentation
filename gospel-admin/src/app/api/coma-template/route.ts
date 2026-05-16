@@ -12,7 +12,7 @@ type ComaTemplate = {
 }
 
 type UserProfile = {
-  role: 'admin' | 'counselor' | 'counselee'
+  role: string
 }
 
 export async function GET() {

@@ -77,57 +77,6 @@ describe('/api/profiles', () => {
       expect(body.profiles[0].ownerUsername).toBe('owner1')
     })
 
-    it('fetches counselee usernames via admin listUsers and user_profiles', async () => {
-      const { createClient: mockCreateClient, createAdminClient: mockCreateAdminClient } = require('@/lib/supabase/server')
-      mockCreateClient.mockResolvedValue({
-        from: jest.fn(() => ({
-          select: jest.fn(() => ({
-            in: jest.fn(() => Promise.resolve({
-              data: [{ id: 'c1', username: 'counselee1' }],
-              error: null
-            }))
-          }))
-        })),
-        auth: { getUser: jest.fn().mockResolvedValue({ data: { user: null } }) }
-      })
-      mockCreateAdminClient.mockReturnValue({
-        auth: { admin: { listUsers: jest.fn().mockResolvedValue({ data: { users: [{ id: 'c1', email: 'c@x.com' }] }, error: null }) } },
-        from: jest.fn(() => ({
-          select: jest.fn(() => ({
-            in: jest.fn(() => Promise.resolve({
-              data: [{ id: 'c1', username: 'counselee1' }],
-              error: null
-            }))
-          }))
-        }))
-      })
-      mockDataService.getProfiles.mockResolvedValue([
-        { id: 'p2', slug: 's2', title: 'T2', description: '', isDefault: false, isTemplate: false, visitCount: 0, lastVisited: null, createdAt: new Date(), updatedAt: new Date(), createdBy: null, ownerDisplayName: '', counseleeEmails: ['c@x.com'] } as any
-      ])
-
-      const res = await GET()
-      const body = await res.json()
-
-      expect(res.status).toBe(200)
-      expect(body.profiles[0].usernames).toContain('counselee1')
-    })
-
-    it('handles authError in counselee path and still returns profiles', async () => {
-      const { createAdminClient: mockCreateAdminClient } = require('@/lib/supabase/server')
-      mockCreateAdminClient.mockReturnValue({
-        auth: { admin: { listUsers: jest.fn().mockResolvedValue({ data: null, error: { message: 'Auth error' } }) } }
-      })
-      mockDataService.getProfiles.mockResolvedValue([
-        { id: 'p2', slug: 's2', title: 'T2', description: '', isDefault: false, isTemplate: false, visitCount: 0, lastVisited: null, createdAt: new Date(), updatedAt: new Date(), createdBy: null, ownerDisplayName: '', counseleeEmails: ['c@x.com'] } as any
-      ])
-
-      const res = await GET()
-      const body = await res.json()
-
-      expect(res.status).toBe(200)
-      expect(body.profiles).toHaveLength(1)
-    })
-
     it('handles errors from data service', async () => {
       mockDataService.getProfiles.mockRejectedValue(new Error('DB'))
 

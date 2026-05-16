@@ -9,6 +9,7 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+/** Postgres `user_role` enum may still include legacy labels; the app treats only `admin` as staff. */
 export type UserRole = 'admin' | 'counselor' | 'counselee'
 
 export interface Database {

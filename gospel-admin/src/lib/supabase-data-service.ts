@@ -57,21 +57,6 @@ async function getProfilesWithClient(supabase: any): Promise<GospelProfile[]> {
     }
   }
 
-  const profileIds = data?.map((p: any) => p.id).filter(Boolean) || []
-  const accessMap = new Map()
-  if (profileIds.length > 0) {
-    const { data: accessData } = await supabase
-      .from('profile_access')
-      .select('profile_id, user_email, user_id')
-      .in('profile_id', profileIds)
-    if (accessData) {
-      accessData.forEach((access: any) => {
-        if (!accessMap.has(access.profile_id)) accessMap.set(access.profile_id, [])
-        accessMap.get(access.profile_id).push(access.user_email)
-      })
-    }
-  }
-
   logger.debug(`[supabase-data-service] Loaded ${(data || []).length} profiles`)
 
   return (data || []).map((row: any) => ({
@@ -95,8 +80,7 @@ async function getProfilesWithClient(supabase: any): Promise<GospelProfile[]> {
     updatedAt: new Date(row.updated_at),
     lastVisited: row.last_visited ? new Date(row.last_visited) : undefined,
     createdBy: row.created_by,
-    ownerDisplayName: row.created_by ? userMap.get(row.created_by) || null : null,
-    counseleeEmails: accessMap.get(row.id) || []
+    ownerDisplayName: row.created_by ? userMap.get(row.created_by) || null : null
   }))
 }
 
@@ -126,25 +110,9 @@ export async function getProfiles(): Promise<GospelProfile[]> {
         logger.debug('[supabase-data-service] Admin user - bypassing RLS for all profiles')
         return getProfilesWithClient(adminClient)
       }
-
-      if (role === 'counselor') {
-        logger.debug('[supabase-data-service] Counselor user - bypassing RLS, filtering to own + default + templates')
-        const allProfiles = await getProfilesWithClient(adminClient)
-        logger.debug(`[supabase-data-service] Total profiles: ${allProfiles.length}, user.id: ${user.id}`)
-        const filtered = allProfiles.filter(
-          (p) =>
-            p.isDefault ||
-            p.isTemplate ||
-            p.createdBy === user.id
-        )
-        logger.debug(`[supabase-data-service] Filtered profiles for counselor: ${filtered.length}`, 
-          filtered.map(p => ({ slug: p.slug, isDefault: p.isDefault, isTemplate: p.isTemplate, createdBy: p.createdBy }))
-        )
-        return filtered
-      }
     }
 
-    logger.debug('[supabase-data-service] Using normal client (no user or non-admin/counselor role)')
+    logger.debug('[supabase-data-service] Using normal client (no user or non-admin role)')
     return getProfilesWithClient(supabase)
   } catch (error) {
     logger.error('[supabase-data-service] Error loading profiles:', error)
@@ -251,7 +219,7 @@ export async function getProfileMeta(slug: string): Promise<{ title: string; des
         .eq('id', user.id)
         .single()
       const role = (userProfile as any)?.role
-      if (role === 'admin' || role === 'counselor') {
+      if (role === 'admin') {
         supabase = adminClient
       } else {
         supabase = userClient
@@ -295,7 +263,7 @@ export async function getProfileUpdatedAt(slug: string): Promise<Date | null> {
 
 /**
  * Gets a profile by slug (respects RLS)
- * Uses admin client for: default profile, and when user is admin/counselor (enables template cloning)
+ * Uses admin client for: default profile, and when user is admin (enables template cloning)
  */
 export async function getProfileBySlug(slug: string): Promise<GospelProfile | null> {
   try {
@@ -313,7 +281,7 @@ export async function getProfileBySlug(slug: string): Promise<GospelProfile | nu
         .eq('id', user.id)
         .single()
       const role = (userProfile as any)?.role
-      if (role === 'admin' || role === 'counselor') {
+      if (role === 'admin') {
         supabase = adminClient
       } else {
         supabase = userClient
@@ -413,11 +381,6 @@ export async function createProfile(request: CreateProfileRequest): Promise<Gosp
     
     logger.debug(`[supabase-data-service] Created profile: ${profileSlug}`)
     
-    // If counselee emails were provided, grant them access
-    if (request.counseleeEmails && request.counseleeEmails.length > 0) {
-      await grantProfileAccess(data.id, request.counseleeEmails, user.id)
-    }
-    
     return {
       id: data.id,
       slug: data.slug,
@@ -432,8 +395,7 @@ export async function createProfile(request: CreateProfileRequest): Promise<Gosp
       createdAt: new Date(data.created_at),
       updatedAt: new Date(data.updated_at),
       lastVisited: undefined,
-      createdBy: data.created_by,
-      accessList: []
+      createdBy: data.created_by
     }
   } catch (error) {
     logger.error('[supabase-data-service] Error creating profile:', error)
@@ -443,7 +405,7 @@ export async function createProfile(request: CreateProfileRequest): Promise<Gosp
 
 /**
  * Updates a profile (RLS ensures users can only update their own)
- * Counselors use admin client when updating profiles they own (avoids session/RLS issues)
+ * Admins use admin client (bypass RLS). Other authenticated users rely on RLS.
  */
 export async function updateProfile(
   slug: string,
@@ -452,7 +414,6 @@ export async function updateProfile(
     description: string
     gospelData: GospelPresentationData
     lastViewedScripture: any
-    savedAnswers: any[]
     isPublic: boolean
   }>
 ): Promise<GospelProfile> {
@@ -469,17 +430,7 @@ export async function updateProfile(
         .eq('id', user.id)
         .single()
       const role = (userProfile as any)?.role
-      if (role === 'counselor') {
-        const { data: profile } = await adminClient
-          .from('profiles')
-          .select('created_by')
-          .eq('slug', slug)
-          .single()
-        if (profile?.created_by === user.id) {
-          logger.debug('[supabase-data-service] Counselor updating own profile - bypassing RLS')
-          clientToUse = adminClient
-        }
-      } else if (role === 'admin') {
+      if (role === 'admin') {
         logger.debug('[supabase-data-service] Admin updating profile - bypassing RLS')
         clientToUse = adminClient
       }
@@ -492,9 +443,6 @@ export async function updateProfile(
     if (updates.lastViewedScripture !== undefined) {
       // Use null to clear the field, otherwise use the value
       updateData.last_viewed_scripture = updates.lastViewedScripture === null ? null : updates.lastViewedScripture
-    }
-    if (updates.savedAnswers !== undefined) {
-      updateData.saved_answers = updates.savedAnswers
     }
     if (updates.isPublic !== undefined) {
       updateData.is_public = updates.isPublic
@@ -575,304 +523,3 @@ export async function incrementProfileVisitCount(slug: string): Promise<void> {
     logger.warn(`[supabase-data-service] Error incrementing visit count for ${slug}:`, error)
   }
 }
-
-/**
- * Grants access to a profile for counselee users
- * Creates auth accounts if they don't exist
- */
-export async function grantProfileAccess(
-  profileId: string,
-  emails: string[],
-  grantedBy: string
-): Promise<void> {
-  try {
-    const supabase = await createClient()
-    
-    // Validate emails
-    const validEmails = emails.filter(email => {
-      const trimmed = email.trim().toLowerCase()
-      return trimmed && trimmed.includes('@')
-    })
-    
-    if (validEmails.length === 0) {
-      logger.warn('[supabase-data-service] No valid emails provided for access grant')
-      return
-    }
-    
-    // Insert access records
-    const accessRecords = validEmails.map(email => ({
-      profile_id: profileId,
-      user_email: email.trim().toLowerCase(),
-      access_role: 'counselee' as const,
-      granted_by: grantedBy
-    }))
-    
-    const { error } = await supabase
-      .from('profile_access')
-      .upsert(accessRecords, { 
-        onConflict: 'profile_id,user_email',
-        ignoreDuplicates: false 
-      })
-    
-    if (error) throw error
-    
-    logger.debug(`[supabase-data-service] Granted access to ${validEmails.length} users for profile ${profileId}`)
-    
-    // Get profile details for notifications (best-effort, don't block on errors)
-    let profileTitle = ''
-    let profileDescription = ''
-    let profileSlug = ''
-    
-    try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('title, description, slug')
-        .eq('id', profileId)
-        .single()
-      
-      if (profile) {
-        profileTitle = profile.title
-        profileDescription = profile.description || ''
-        profileSlug = profile.slug
-      }
-    } catch (profileError) {
-      logger.warn('[supabase-data-service] Failed to fetch profile details for notification:', profileError)
-      // Continue anyway - notifications are best-effort
-    }
-    
-    // Check which emails are existing users
-    let existingUserEmails: string[] = []
-    try {
-      const { createAdminClient } = await import('@/lib/supabase/server')
-      const adminClient = createAdminClient()
-      const { data: existingUsers } = await adminClient.auth.admin.listUsers()
-      const existingEmails = new Set(existingUsers?.users?.map(u => u.email?.toLowerCase()) || [])
-      
-      existingUserEmails = validEmails.filter(email => existingEmails.has(email.toLowerCase()))
-    } catch (adminError) {
-      logger.warn('[supabase-data-service] Failed to check existing users for notification:', adminError)
-      // Continue anyway - notifications are best-effort
-    }
-    
-    // Send assignment notification emails to existing users
-    if (existingUserEmails.length > 0 && profileSlug) {
-      try {
-        await notifyAssignmentEmails(
-          existingUserEmails,
-          profileTitle,
-          profileDescription,
-          profileSlug
-        )
-      } catch (notifyError) {
-        logger.warn('[supabase-data-service] Failed to send assignment notifications:', notifyError)
-        // Continue anyway - notifications are best-effort
-      }
-    }
-    
-    // Invite users who don't have accounts yet
-    await inviteCounseleeUsers(validEmails, profileId)
-  } catch (error) {
-    logger.error('[supabase-data-service] Error granting profile access:', error)
-    throw error
-  }
-}
-
-/**
- * Revokes access to a profile
- */
-export async function revokeProfileAccess(
-  profileId: string,
-  email: string
-): Promise<void> {
-  try {
-    const supabase = await createClient()
-    
-    const { error } = await supabase
-      .from('profile_access')
-      .delete()
-      .eq('profile_id', profileId)
-      .eq('user_email', email.trim().toLowerCase())
-    
-    if (error) throw error
-    
-    logger.debug(`[supabase-data-service] Revoked access for ${email} to profile ${profileId}`)
-  } catch (error) {
-    logger.error('[supabase-data-service] Error revoking profile access:', error)
-    throw error
-  }
-}
-
-/**
- * Gets the access list for a profile
- */
-export async function getProfileAccessList(profileId: string): Promise<any[]> {
-  try {
-    const supabase = await createClient()
-    
-    const { data, error } = await supabase
-      .from('profile_access')
-      .select('*')
-      .eq('profile_id', profileId)
-      .order('created_at', { ascending: true })
-    
-    if (error) throw error
-    
-    return data || []
-  } catch (error) {
-    logger.error('[supabase-data-service] Error getting profile access list:', error)
-    return []
-  }
-}
-
-/**
- * Sends assignment notification emails to existing users
- * Notifies them that they've been assigned a new profile/resource
- */
-async function notifyAssignmentEmails(
-  emails: string[],
-  profileTitle: string,
-  profileDescription: string,
-  profileSlug: string
-): Promise<void> {
-  try {
-    const validEmails = emails.filter(email => {
-      const trimmed = email.trim().toLowerCase()
-      return trimmed && trimmed.includes('@')
-    })
-
-    if (validEmails.length === 0) {
-      logger.debug('[supabase-data-service] No valid emails for assignment notification')
-      return
-    }
-
-    // Get the Supabase URL and service role key
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_KEY
-    
-    if (!supabaseUrl || !serviceRoleKey) {
-      logger.warn('[supabase-data-service] Missing Supabase configuration for sending emails')
-      return
-    }
-
-    // Get the app base URL for the link
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
-    const profileLink = `${appUrl}/${profileSlug}`
-
-    // Create HTML email body
-    const htmlBody = `
-      <h2>You've been assigned: ${profileTitle}</h2>
-      <p>${profileDescription}</p>
-      <p>
-        <a href="${profileLink}" style="background-color: #1f2937; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
-          View Assignment
-        </a>
-      </p>
-      <p>Log in to your Gospel Presentation account to access this resource.</p>
-    `
-
-    // Call the Supabase Edge Function directly
-    const edgeFunctionUrl = `${supabaseUrl}/functions/v1/send-email`
-    
-    const response = await fetch(edgeFunctionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${serviceRoleKey}`,
-      },
-      body: JSON.stringify({
-        to: validEmails,
-        subject: `New Assignment: ${profileTitle}`,
-        body: htmlBody,
-        isHtml: true,
-      }),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      logger.warn(`[supabase-data-service] Failed to send assignment emails: ${errorText}`)
-      // Don't throw - assignment creation should succeed even if email fails
-    } else {
-      logger.info(`[supabase-data-service] Sent assignment notification to ${validEmails.length} users for: ${profileTitle}`)
-    }
-  } catch (error) {
-    logger.warn('[supabase-data-service] Error sending assignment notifications:', error)
-    // Don't throw - assignment creation should succeed even if email fails
-  }
-}
-
-/**
- * Invites counselee users who don't have accounts yet
- * This will send them an email invitation to sign up
- */
-async function inviteCounseleeUsers(emails: string[], profileId: string): Promise<void> {
-  try {
-    // Use admin client for auth.admin operations
-    const { createAdminClient } = await import('@/lib/supabase/server')
-    const supabase = createAdminClient()
-    
-    // Check which emails don't have accounts
-    const { data: existingUsers } = await supabase.auth.admin.listUsers()
-    const existingEmails = new Set(existingUsers?.users?.map(u => u.email?.toLowerCase()) || [])
-    
-    const newEmails = emails.filter(email => !existingEmails.has(email.toLowerCase()))
-    
-    if (newEmails.length === 0) {
-      logger.debug('[supabase-data-service] All users already have accounts')
-      return
-    }
-    
-    // Get the profile details for the welcome email
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('title, slug')
-      .eq('id', profileId)
-      .single()
-    
-    // Create accounts and send welcome emails
-    for (const email of newEmails) {
-      try {
-        // Use inviteUserByEmail which sends a magic link and creates the account
-        // Note: The redirect URL should be configured in Supabase Dashboard under Authentication > URL Configuration
-        const { data, error } = await supabase.auth.admin.inviteUserByEmail(email.toLowerCase(), {
-          data: {
-            role: 'counselee',
-            invited_for_profile: profileId,
-            profile_title: profile?.title,
-            profile_slug: profile?.slug
-          }
-          // redirectTo is optional - will use Supabase's configured Site URL + /auth/callback
-        })
-        
-        if (error) {
-          logger.warn(`[supabase-data-service] Failed to invite user ${email}:`, error.message)
-        } else {
-          logger.info(`[supabase-data-service] Sent welcome email to ${email} for profile: ${profile?.title}`)
-          
-          // Ensure the user_profiles table has the correct role set to 'counselee'
-          if (data?.user?.id) {
-            const { error: profileError } = await supabase
-              .from('user_profiles')
-              .upsert({
-                id: data.user.id,
-                role: 'counselee',
-                display_name: email
-              }, {
-                onConflict: 'id'
-              })
-            
-            if (profileError) {
-              logger.warn(`[supabase-data-service] Failed to set counselee role for ${email}:`, profileError.message)
-            }
-          }
-        }
-      } catch (err) {
-        logger.warn(`[supabase-data-service] Error inviting user ${email}:`, err)
-      }
-    }
-  } catch (error) {
-    logger.warn('[supabase-data-service] Error inviting counselee users:', error)
-    // Don't throw - access was granted, user creation is best-effort
-  }
-}
-

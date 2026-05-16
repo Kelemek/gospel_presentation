@@ -35,7 +35,6 @@ module.exports = {
     'src/lib/supabase/server.ts',
     'src/app/api/scripture/route.ts',
     'src/app/api/profiles/[slug]/route.ts',
-    'src/app/api/profiles/[slug]/access/route.ts',
     'src/app/favicon.ico/route.ts',
   ],
   coverageProvider: 'v8',

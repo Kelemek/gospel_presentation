@@ -45,7 +45,7 @@ function LoginForm() {
 
       if (!exists) {
         logger.warn('Login attempt for non-existent user:', email)
-        setError('This email is not authorized to access the system. Please contact your counselor for access.')
+        setError('This email is not authorized to access the system. Please contact your administrator for access.')
         return
       }
 
@@ -191,7 +191,7 @@ function LoginForm() {
         </div>
 
         <div className="text-center text-sm text-slate-600">
-          <p>Need access? Contact your counselor.</p>
+          <p>Need access? Contact your administrator.</p>
         </div>
       </div>
     </div>

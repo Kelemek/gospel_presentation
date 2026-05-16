@@ -174,9 +174,9 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
           .from('user_profiles')
           .select('role')
           .eq('id', user.id)
-          .single<{ role: 'admin' | 'counselor' | 'counselee' }>()
+          .single<{ role: string }>()
         
-        if (userProfile && (userProfile.role === 'admin' || userProfile.role === 'counselor')) {
+        if (userProfile?.role === 'admin') {
           setCanEdit(true)
         }
       }
@@ -945,7 +945,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                     onRemoveVersePin={handleRemoveVersePin}
                     profileSlug={profileInfo.slug}
                     savedAnswers={profileInfo.savedAnswers}
-                    isLoggedIn={!!userEmail}
                     highlightsByScopeId={highlightsByScopeId}
                     activeHighlightId={activeHighlightId}
                     onHighlightMarkClick={requestRemoveHighlightFromBody}

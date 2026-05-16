@@ -29,17 +29,11 @@ Complete authentication and email communication system.
 - Users can't stay logged in after session expires
 - Backend validates all requests
 
-## Welcome Email System
+## Welcome email & invitations
 
-### Counselee Invitation
-When a counselee is added to a profile:
-1. System checks if user exists
-2. If new: creates account via magic link
-3. Sends personalized welcome email
-4. Email includes profile information
-5. Link redirects to assigned profile
+Staff accounts receive magic links or verification-code emails per your Supabase and Edge Function configuration. After a successful magic-link exchange, the app redirects to **`/admin`**. User creation from **Manage users** always provisions **`admin`** profiles.
 
-### Email Configuration
+### Email configuration
 
 **Environment**:
 ```bash
@@ -61,17 +55,6 @@ NEXT_PUBLIC_SITE_URL=https://your-production-domain.com
 <h2>Welcome to Gospel Presentation</h2>
 <p>You've been invited to access {{ .Data.profile_title }}</p>
 <a href="{{ .ConfirmationURL }}">Access Your Profile</a>
-```
-
-### Metadata in Emails
-```javascript
-{
-  role: 'counselee',
-  invited_for_profile: 'profile-id',
-  profile_title: 'Gospel Presentation',
-  counselor_name: 'Pastor John', // Optional
-  custom_message: 'Message here'  // Optional
-}
 ```
 
 ## Magic Link Troubleshooting

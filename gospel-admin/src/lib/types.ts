@@ -49,16 +49,6 @@ export interface SavedAnswer {
 
 // Profile System Types
 
-export interface ProfileAccess {
-  id: string
-  profileId: string
-  userEmail: string
-  userId?: string | null         // Populated after user accepts invite
-  accessRole: 'counselee' | 'counselor'
-  grantedBy: string              // User ID who granted access
-  createdAt: Date
-}
-
 export interface GospelProfile {
   id: string
   slug: string                    // URL path: UUID-based for security
@@ -80,10 +70,9 @@ export interface GospelProfile {
     subsectionId: string          // For navigation purposes
     viewedAt: Date
   }
-  savedAnswers?: SavedAnswer[]    // Answers saved by anonymous users viewing this profile
+  savedAnswers?: SavedAnswer[]    // Legacy `profiles.saved_answers` JSON (read-only fallback); answers persist in localStorage only
   createdBy?: string | null       // User ID who created this profile
   ownerDisplayName?: string | null // Display name of the owner
-  accessList?: ProfileAccess[]    // List of users with access to this profile
 }
 
 /** GospelSection pill highlight: string = match any pill with that reference; object = match that reference only in the given section/subsection anchors */
@@ -123,7 +112,6 @@ export interface CreateProfileRequest {
   description?: string
   cloneFromSlug?: string          // Which profile to clone from
   isTemplate?: boolean            // Whether this is a template profile
-  counseleeEmails?: string[]      // Email addresses to grant counselee access
 }
 
 export interface ProfileAnalytics {

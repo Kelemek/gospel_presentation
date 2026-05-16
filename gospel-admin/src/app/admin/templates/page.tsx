@@ -5,16 +5,15 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import AdminErrorBoundary from '@/components/AdminErrorBoundary'
 import { createClient } from '@/lib/supabase/client'
-import { TemplatesListPanel, type TemplatesListPanelRole } from '@/app/admin/templates/TemplatesListPanel'
+import { TemplatesListPanel } from '@/app/admin/templates/TemplatesListPanel'
 
 function TemplatesPageContent() {
   const router = useRouter()
-  const [userRole, setUserRole] = useState<TemplatesListPanelRole | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [authReady, setAuthReady] = useState(false)
 
   useEffect(() => {
-    checkAuth()
+    void checkAuth()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -35,8 +34,10 @@ function TemplatesPageContent() {
       .eq('id', user.id)
       .single()
 
-    if (userProfile && !profileError) {
-      setUserRole((userProfile as { role: string }).role as TemplatesListPanelRole)
+    const role = (userProfile as { role?: string } | null)?.role
+    if (profileError || role !== 'admin') {
+      router.replace('/')
+      return
     }
 
     setIsLoading(false)
@@ -69,9 +70,7 @@ function TemplatesPageContent() {
               <div className="flex-1 min-w-0">
                 <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Resource Template</h1>
                 <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                  {userRole === 'admin'
-                    ? 'Manage resource templates that can be used to create new resources'
-                    : 'View available resource templates'}
+                  Manage resource templates that can be used to create new resources
                 </p>
               </div>
               <div className="flex gap-2">
@@ -86,8 +85,7 @@ function TemplatesPageContent() {
                   onClick={handleLogout}
                   className="px-2 sm:px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 rounded-lg text-xs sm:text-sm font-medium transition-all hover:shadow-md whitespace-nowrap shrink-0 shadow-sm"
                 >
-                  <span className="hidden sm:inline">Logout</span>
-                  <span className="sm:hidden">Logout</span>
+                  Logout
                 </button>
               </div>
             </div>
@@ -96,9 +94,7 @@ function TemplatesPageContent() {
 
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 mb-6 border border-slate-100">
-            {userRole && (
-              <TemplatesListPanel authReady={authReady} userRole={userRole} embedded={false} />
-            )}
+            <TemplatesListPanel authReady={authReady} userRole="admin" embedded={false} />
           </div>
         </div>
       </div>

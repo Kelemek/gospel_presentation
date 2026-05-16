@@ -27,7 +27,7 @@ export default function ComaModal({ isOpen, onClose }: ComaModalProps) {
         
         // If instructions are empty or just whitespace, provide a default message
         if (!rawInstructions || rawInstructions.trim() === '') {
-          setInstructions('<p>COMA instructions are not currently available. Please contact your counselor.</p>')
+          setInstructions('<p>COMA instructions are not currently available. Please contact your administrator.</p>')
         } else {
           // Convert plain text to HTML if it doesn't contain HTML tags
           const hasHtmlTags = /<[^>]+>/.test(rawInstructions)
@@ -44,11 +44,11 @@ export default function ComaModal({ isOpen, onClose }: ComaModalProps) {
         }
       } else {
         console.error('Failed to fetch COMA template, status:', response.status)
-        setInstructions('<p>Unable to load COMA instructions. Please contact your counselor.</p>')
+        setInstructions('<p>Unable to load COMA instructions. Please contact your administrator.</p>')
       }
     } catch (error) {
       console.error('Failed to load COMA instructions:', error)
-      setInstructions('<p>Unable to load COMA instructions. Please contact your counselor.</p>')
+      setInstructions('<p>Unable to load COMA instructions. Please contact your administrator.</p>')
     } finally {
       setLoading(false)
     }

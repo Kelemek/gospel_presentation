@@ -314,9 +314,9 @@ User visits `/login-code` (separate from magic link `/login`)
 
 #### Step 6: Redirect
 
-User redirected based on role:
-- **Admin/Counselor:** `/admin/dashboard`
-- **Counselee:** `/profile`
+User redirected after successful verification:
+- **`admin`:** `/admin/dashboard`
+- **Any other role:** `/admin` (non-admins should not rely on staff tools; prefer promoting accounts to `admin` in Supabase when they are ministry staff)
 
 ---
 
@@ -330,10 +330,12 @@ Request a verification code to be sent via email.
 ```json
 {
   "email": "user@example.com",
-  "actionType": "user_login",  // Optional: "admin_login", "counselor_login"
-  "actionData": {}             // Optional: metadata
+  "actionType": "user_login",
+  "actionData": {}
 }
 ```
+
+`actionType` is optional; typical values include `user_login` and `admin_login` (and other strings your Edge Function recognizes).
 
 **Response (Success):**
 ```json

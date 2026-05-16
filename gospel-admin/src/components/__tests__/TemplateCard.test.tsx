@@ -29,7 +29,7 @@ describe('TemplateCard', () => {
     expect(screen.getByText('A test template')).toBeInTheDocument()
   })
 
-  it('shows Public badge when template is public', () => {
+  it('shows checked Public checkbox when template is public', () => {
     render(
       <TemplateCard
         template={{ ...defaultTemplate, isPublic: true }}
@@ -38,12 +38,13 @@ describe('TemplateCard', () => {
         onDelete={jest.fn()}
         onDownloadBackup={jest.fn()}
         onRestoreBackup={jest.fn()}
+        onTogglePublic={jest.fn()}
         userRole="admin"
         isExpanded={true}
         onToggleExpand={jest.fn()}
       />
     )
-    expect(screen.getByText('Public')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox', { name: /Public \(show in Resources/i })).toBeChecked()
   })
 
   it('calls onTogglePublic when Public checkbox is toggled', () => {
@@ -79,7 +80,6 @@ describe('TemplateCard', () => {
         onDownloadBackup={jest.fn()}
         onRestoreBackup={jest.fn()}
         onTogglePublic={jest.fn()}
-        userRole="counselor"
         isExpanded={true}
         onToggleExpand={jest.fn()}
       />

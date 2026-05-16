@@ -12,10 +12,9 @@ describe('supabase-data-service additional branches', () => {
     jest.clearAllMocks()
   })
 
-  it('getProfiles maps users, access and dates correctly', async () => {
+  it('getProfiles maps users and dates correctly', async () => {
     const profiles = [{ id: 'p1', slug: 'a', title: 'A', created_by: 'u1', is_default: false, is_template: false, visit_count: 2, gospel_data: [], created_at: Date.now(), updated_at: Date.now() }]
     const users = [{ id: 'u1', display_name: 'User One' }]
-    const accessData = [{ profile_id: 'p1', user_email: 'x@x.com' }]
 
     const mockClient = {
       auth: { getUser: async () => ({ data: { user: null } }) },
@@ -30,11 +29,6 @@ describe('supabase-data-service additional branches', () => {
             select: () => ({ in: () => ({ data: users, error: null }) })
           }
         }
-        if (table === 'profile_access') {
-          return {
-            select: () => ({ in: () => ({ data: accessData, error: null }) })
-          }
-        }
         return { select: () => ({ data: null, error: null }) }
       }
     }
@@ -44,10 +38,7 @@ describe('supabase-data-service additional branches', () => {
 
     const res = await getProfiles()
     expect(Array.isArray(res)).toBe(true)
-  expect(res[0].ownerDisplayName).toBe('User One')
-  // counseleeEmails is added by mapping logic; cast to any in the test to avoid
-  // tight coupling with the GospelProfile type used in the implementation.
-  expect((res[0] as any).counseleeEmails).toContain('x@x.com')
+    expect(res[0].ownerDisplayName).toBe('User One')
   })
 
   it('updateProfile returns mapped profile', async () => {
