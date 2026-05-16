@@ -15,17 +15,17 @@ import { useAlertModal } from "@/contexts/AlertModalContext";
 // Types & Interfaces
 // ============================================================================
 
-interface AdminSettings {
-  id: number;
-  verification_code_length: number;
-  verification_code_expiry_minutes: number;
-  enable_verification_code_login: boolean;
-  public_template_order?: unknown;
-}
-
 interface PublicTemplate {
   slug: string;
   title: string;
+}
+
+function GripIcon() {
+  return (
+    <svg className="w-4 h-4 text-slate-400 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
+      <path d="M7 2a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM7 10a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM7 18a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM13 2a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM13 10a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM13 18a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+    </svg>
+  );
 }
 
 // ============================================================================
@@ -35,7 +35,6 @@ interface PublicTemplate {
 export default function AdminSettingsPage() {
   const router = useRouter();
   const { showAlert } = useAlertModal();
-  const [, setSettings] = useState<AdminSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,10 +88,10 @@ export default function AdminSettingsPage() {
       }
       setUserRole(resolvedRole);
 
-      // Load core settings first (no public_template_order so page works before migration)
+      // Verification code settings (resources order is loaded in a separate query below)
       const { data, error: fetchError } = await supabase
         .from("admin_settings")
-        .select("verification_code_length, verification_code_expiry_minutes, enable_verification_code_login")
+        .select("verification_code_length, verification_code_expiry_minutes")
         .eq("id", 1)
         .single();
 
@@ -101,9 +100,9 @@ export default function AdminSettingsPage() {
       }
 
       if (data) {
-        setSettings(data as any);
-        setCodeLength((data as any).verification_code_length || 6);
-        setExpiryMinutes((data as any).verification_code_expiry_minutes || 15);
+        const row = data as { verification_code_length?: number; verification_code_expiry_minutes?: number };
+        setCodeLength(row.verification_code_length || 6);
+        setExpiryMinutes(row.verification_code_expiry_minutes || 15);
       }
 
       // Load public templates for Resources dropdown order
@@ -113,10 +112,12 @@ export default function AdminSettingsPage() {
         .eq("is_template", true)
         .eq("is_public", true);
 
-      const templates: PublicTemplate[] = (templatesData || []).map((r: any) => ({
-        slug: r.slug,
-        title: r.title || r.slug,
-      })).sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
+      const templates: PublicTemplate[] = (templatesData || [])
+        .map((r: { slug: string; title: string | null }) => ({
+          slug: r.slug,
+          title: r.title || r.slug,
+        }))
+        .sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
 
       setPublicTemplates(templates);
 
@@ -216,7 +217,6 @@ export default function AdminSettingsPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Failed to restore backup";
       setError(`Restore failed: ${msg}`);
-      showAlert(`Restore failed: ${msg}`);
     } finally {
       setIsRestoringBackup(false);
       event.target.value = "";
@@ -421,13 +421,6 @@ export default function AdminSettingsPage() {
 
   const templateBySlug = new Map(publicTemplates.map((t) => [t.slug, t]));
 
-  // Grip icon (six dots) for drag handle
-  const GripIcon = () => (
-    <svg className="w-4 h-4 text-slate-400 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
-      <path d="M7 2a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM7 10a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM7 18a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM13 2a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM13 10a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM13 18a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-    </svg>
-  );
-
   // ============================================================================
   // Render
   // ============================================================================
@@ -471,28 +464,6 @@ export default function AdminSettingsPage() {
 
         {/* Alerts */}
         <div className="space-y-6">
-          {/* Restore from backup: new profile from JSON export */}
-          <div className="bg-white rounded-xl shadow-md border border-slate-100 overflow-hidden">
-            <div className="border-b border-slate-200 px-6 sm:px-8 py-6">
-              <h2 className="text-2xl font-bold text-slate-900">Create from backup</h2>
-              <p className="text-slate-600 text-sm mt-2">
-                Choose a JSON profile export (from the admin backup download or the content editor export). A new resource is created and you are taken to its content editor when the import succeeds.
-              </p>
-            </div>
-            <div className="px-6 sm:px-8 py-6">
-              <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50">
-                {isRestoringBackup ? "Restoring…" : "Choose backup file"}
-                <input
-                  type="file"
-                  accept=".json"
-                  className="hidden"
-                  disabled={isRestoringBackup}
-                  onChange={handleCreateFromBackup}
-                />
-              </label>
-            </div>
-          </div>
-
           {userRole === "admin" && (
             <div className="bg-white rounded-xl shadow-md border border-slate-100 overflow-hidden">
               <div className="border-b border-slate-200 px-6 sm:px-8 py-6">
@@ -857,6 +828,28 @@ export default function AdminSettingsPage() {
                 </button>
               </div>
             )}
+          </div>
+
+          {/* Restore from backup: new profile from JSON export */}
+          <div className="bg-white rounded-xl shadow-md border border-slate-100 overflow-hidden">
+            <div className="border-b border-slate-200 px-6 sm:px-8 py-6">
+              <h2 className="text-2xl font-bold text-slate-900">Create from backup</h2>
+              <p className="text-slate-600 text-sm mt-2">
+                Choose a JSON profile export (from the admin backup download or the content editor export). A new resource is created and you are taken to its content editor when the import succeeds.
+              </p>
+            </div>
+            <div className="px-6 sm:px-8 py-6">
+              <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition-all hover:border-slate-300 hover:bg-slate-50 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50">
+                {isRestoringBackup ? "Restoring…" : "Choose backup file"}
+                <input
+                  type="file"
+                  accept=".json"
+                  className="hidden"
+                  disabled={isRestoringBackup}
+                  onChange={handleCreateFromBackup}
+                />
+              </label>
+            </div>
           </div>
         </div>
       </div>

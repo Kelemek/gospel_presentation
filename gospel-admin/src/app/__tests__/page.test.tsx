@@ -1,16 +1,8 @@
-import GospelPresentation from '../page'
+import GospelPresentation from "../page";
 
-describe('src/app/page', () => {
-  test('exports a default component function', () => {
-    expect(typeof GospelPresentation).toBe('function')
-  })
-})
-// Test removed: This file depended on old app routing and was removed per maintainer request.
-// Kept as a placeholder so historical test intent is preserved. If you want this behavior
-// re-tested, consider re-implementing integration tests that target the current `/default`
-// Include a placeholder test so Jest treats this as a valid test file
-// (prevents "Your test suite must contain at least one test" failures).
-test('placeholder - gospel page tests removed (see README)', () => {
-	// intentionally empty
+describe("src/app/page", () => {
+  test("default export is the root redirect client component", () => {
+    expect(typeof GospelPresentation).toBe("function");
+    expect(GospelPresentation.name).toBe("GospelPresentation");
+  });
 });
-// route or exporting the inner presentation component for direct testing.
