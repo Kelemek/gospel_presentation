@@ -1,18 +1,21 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import ProfileHelpMenu from '../ProfileHelpMenu'
+import ProfileHelpMenu, { buildProfileTutorialMenuItems } from '../ProfileHelpMenu'
 
 jest.mock('@/lib/profileHelpTours', () => ({
   runAddCustomMemorizationFeatureTour: jest.fn(),
   runBibleTranslationFeatureTour: jest.fn(),
   runBookmarksFeatureTour: jest.fn(),
   runFullProfileHelpTutorial: jest.fn(),
+  runHighlightsFeatureTour: jest.fn(),
   runMarriageSeminarResourcesTour: jest.fn(),
   runMemorizeFeatureTour: jest.fn(),
   runPrintFeatureTour: jest.fn(),
+  runProfileListenFeatureTour: jest.fn(),
   runResourcesFeatureTour: jest.fn(),
   runScriptureHoverPreviewFeatureTour: jest.fn(),
   runScriptureModalFeatureTour: jest.fn(),
+  runShareResourceFeatureTour: jest.fn(),
   runTableOfContentsFeatureTour: jest.fn(),
   runTextSizeFeatureTour: jest.fn(),
   runThemeFeatureTour: jest.fn(),
@@ -23,16 +26,70 @@ import {
   runBibleTranslationFeatureTour,
   runBookmarksFeatureTour,
   runFullProfileHelpTutorial,
+  runHighlightsFeatureTour,
   runMarriageSeminarResourcesTour,
   runMemorizeFeatureTour,
   runPrintFeatureTour,
+  runProfileListenFeatureTour,
   runResourcesFeatureTour,
   runScriptureHoverPreviewFeatureTour,
   runScriptureModalFeatureTour,
+  runShareResourceFeatureTour,
   runTableOfContentsFeatureTour,
   runTextSizeFeatureTour,
   runThemeFeatureTour,
 } from '@/lib/profileHelpTours'
+
+describe('buildProfileTutorialMenuItems', () => {
+  const originalUserAgent = typeof navigator !== 'undefined' ? navigator.userAgent : ''
+
+  afterEach(() => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: originalUserAgent,
+    })
+  })
+
+  it('includes Listen only when not an Android Web user agent', () => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    })
+    const idsDesktop = buildProfileTutorialMenuItems().map((i) => i.id)
+    expect(idsDesktop).toContain('listen')
+    expect(idsDesktop).toContain('highlights')
+    expect(idsDesktop).toContain('share')
+
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14; Pixel) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36',
+    })
+    const idsAndroid = buildProfileTutorialMenuItems().map((i) => i.id)
+    expect(idsAndroid).not.toContain('listen')
+    expect(idsAndroid).toContain('highlights')
+    expect(idsAndroid).toContain('share')
+  })
+
+  it('orders header tutorials after theme and before resources', () => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    })
+    const labels = buildProfileTutorialMenuItems().map((i) => i.label)
+    const themeIdx = labels.findIndex((l) => /light and dark mode/i.test(l))
+    const listenIdx = labels.findIndex((l) => /listen \(read aloud\)/i.test(l))
+    const highlightsIdx = labels.findIndex((l) => /^highlights$/i.test(l))
+    const shareIdx = labels.findIndex((l) => /share this resource/i.test(l))
+    const resourcesIdx = labels.findIndex((l) => /resources menu/i.test(l))
+    expect(themeIdx).toBeGreaterThan(-1)
+    expect(listenIdx).toBeGreaterThan(themeIdx)
+    expect(highlightsIdx).toBeGreaterThan(listenIdx)
+    expect(shareIdx).toBeGreaterThan(highlightsIdx)
+    expect(resourcesIdx).toBeGreaterThan(shareIdx)
+  })
+})
 
 describe('ProfileHelpMenu', () => {
   beforeEach(() => {
@@ -58,6 +115,8 @@ describe('ProfileHelpMenu', () => {
     expect(screen.getByRole('menuitem', { name: /^quick verse preview/i })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /marriage seminar resources/i })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /light and dark mode/i })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /Highlights Save quotes/i })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /share this resource/i })).toBeInTheDocument()
   })
 
   it('lists light and dark mode after bookmarks and before resources', async () => {
@@ -229,5 +288,47 @@ describe('ProfileHelpMenu', () => {
     await waitFor(() => {
       expect(runMarriageSeminarResourcesTour).toHaveBeenCalledTimes(1)
     })
+  })
+
+  it('starts highlights tutorial when chosen', async () => {
+    const user = userEvent.setup()
+    render(<ProfileHelpMenu />)
+
+    await user.click(screen.getByRole('button', { name: /help and tutorials/i }))
+    await user.click(screen.getByRole('menuitem', { name: /Highlights Save quotes/i }))
+
+    await waitFor(() => {
+      expect(runHighlightsFeatureTour).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('starts share tutorial when chosen', async () => {
+    const user = userEvent.setup()
+    render(<ProfileHelpMenu />)
+
+    await user.click(screen.getByRole('button', { name: /help and tutorials/i }))
+    await user.click(screen.getByRole('menuitem', { name: /share this resource/i }))
+
+    await waitFor(() => {
+      expect(runShareResourceFeatureTour).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('starts listen tutorial when chosen on non-Android UA', async () => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    })
+    const user = userEvent.setup()
+    const { unmount } = render(<ProfileHelpMenu />)
+
+    await user.click(screen.getByRole('button', { name: /help and tutorials/i }))
+    await user.click(screen.getByRole('menuitem', { name: /listen \(read aloud\)/i }))
+
+    await waitFor(() => {
+      expect(runProfileListenFeatureTour).toHaveBeenCalledTimes(1)
+    })
+    unmount()
   })
 })

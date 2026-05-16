@@ -18,6 +18,7 @@ import {
   scrollToTocAnchor,
 } from '@/lib/scrollToTocAnchor'
 import { loadMemorizedVerses } from '@/lib/verseMemorizationStorage'
+import { isProfileResourceListenControlAvailable } from '@/lib/memorizationViewportPlatform'
 
 const BOOKMARKS_TRIGGER = '[data-tour="bookmarks-trigger"]'
 const BOOKMARKS_PANEL = '[data-tour="bookmarks-panel"]'
@@ -26,6 +27,11 @@ const BOOKMARKS_ROW = '[data-tour="bookmarks-row"]'
 const BOOKMARKS_REMOVE = '[data-tour="bookmarks-remove"]'
 const ALERT_MODAL_CONFIRM = '[data-tour="alert-modal-confirm"]'
 const THEME_TOGGLE = '[data-tour="theme-toggle"]'
+const PROFILE_RESOURCE_READ_ALOUD = '[data-tour="profile-resource-read-aloud"]'
+const PROFILE_RESOURCE_LISTEN_DIALOG = '#profile-resource-listen-controls-dialog'
+const PROFILE_HIGHLIGHTS_TRIGGER = '[data-tour="highlights-trigger"]'
+const PROFILE_HIGHLIGHTS_PANEL = '[data-tour="highlights-panel"]'
+const PROFILE_SHARE_RESOURCE = '[data-tour="profile-share-resource"]'
 
 const PROFILE_MENU_BUTTON = '[data-tour="profile-menu-button"]'
 const PROFILE_SLIDEOUT_MENU = '[data-tour="profile-slideout-menu"]'
@@ -252,6 +258,18 @@ function closeBookmarksPanelIfOpen(): void {
   if (trigger?.getAttribute('aria-expanded') === 'true') {
     trigger.click()
   }
+}
+
+function openHighlightsPanelIfClosed(): void {
+  if (typeof document === 'undefined') return
+  if (document.querySelector(PROFILE_HIGHLIGHTS_PANEL)) return
+  document.querySelector<HTMLElement>(PROFILE_HIGHLIGHTS_TRIGGER)?.click()
+}
+
+function closeProfileResourceListenDialogIfOpen(): void {
+  if (typeof document === 'undefined') return
+  if (!document.querySelector(PROFILE_RESOURCE_LISTEN_DIALOG)) return
+  document.querySelector<HTMLElement>(MEMORIZE_LISTEN_CLOSE)?.click()
 }
 
 function closeProfileSlideoutMenuIfOpen(): void {
@@ -1190,6 +1208,140 @@ export function runThemeFeatureTour(options?: ProfileFeatureTourOptions): void {
           title: 'Switch anytime',
           description:
             'You should see the opposite mode now. Tap this control whenever you want to change it. <strong>Done</strong> restores whatever you had before this tour (a saved light/dark choice, or your device’s automatic setting if you had not picked one yet).',
+          side: 'bottom',
+          align: 'end',
+        },
+      },
+    ]),
+  })
+
+  d.drive()
+}
+
+/** Header **Listen**: read-aloud for the presentation body. No-op when the control is not rendered (Android Web). */
+export function runProfileListenFeatureTour(options?: ProfileFeatureTourOptions): void {
+  const finish = (): void => {
+    closeProfileResourceListenDialogIfOpen()
+    clearDriverBodyClasses()
+    options?.onComplete?.()
+  }
+  const abort = (): void => {
+    closeProfileResourceListenDialogIfOpen()
+    clearDriverBodyClasses()
+    options?.onAborted?.()
+  }
+
+  if (!isProfileResourceListenControlAvailable()) {
+    finish()
+    return
+  }
+  if (!document.querySelector(PROFILE_RESOURCE_READ_ALOUD)) {
+    finish()
+    return
+  }
+
+  const d = createProfileHelpDriver({
+    ...baseProfileHelpDriverConfig({
+      ...options,
+      onAborted: abort,
+      onComplete: finish,
+    }),
+    showProgress: true,
+    steps: prependSegmentIntroIfAny(options, [
+      {
+        element: PROFILE_RESOURCE_READ_ALOUD,
+        popover: {
+          title: 'Listen',
+          description:
+            'Tap <strong>Listen</strong> to open read-aloud for this presentation: choose where to start in the passage list, use <strong>Play</strong> / <strong>Pause</strong>, adjust speed, and optionally use <strong>read-along</strong> (underline on the page while it speaks). After you turn read-along on, pick <strong>Word</strong> to emphasize each word as it is read, or <strong>Line</strong> to highlight a whole line at a time. Use <strong>Next</strong> to open the panel for a closer look.',
+          side: 'bottom',
+          align: 'end',
+          onNextClick: (_e, _s, { driver: drv }) => {
+            document.querySelector<HTMLElement>(PROFILE_RESOURCE_READ_ALOUD)?.click()
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, prefersReducedMotion() ? 120 : 280)
+          },
+        },
+      },
+      {
+        element: PROFILE_RESOURCE_LISTEN_DIALOG,
+        popover: {
+          title: 'Read-aloud controls',
+          description:
+            'Use the list to jump sections, <strong>Play</strong> to hear the current passage, and the speed control to slow down or speed up. The <strong>underline</strong> button turns read-along highlighting on or off; when it is on, tap <strong>Word</strong> or <strong>Line</strong> next to it to choose whether the highlight tracks a single word or spans the full line. When you are done, tap <strong>Close</strong> or finish this tour.',
+          side: 'bottom',
+          align: 'center',
+        },
+      },
+    ]),
+  })
+
+  d.drive()
+}
+
+/** Header **Highlights**: saved quotes from section content. */
+export function runHighlightsFeatureTour(options?: ProfileFeatureTourOptions): void {
+  const d = createProfileHelpDriver({
+    ...baseProfileHelpDriverConfig({
+      ...options,
+      onAborted: () => {
+        closeBookmarksPanelIfOpen()
+        options?.onAborted?.()
+      },
+      onComplete: () => {
+        closeBookmarksPanelIfOpen()
+        options?.onComplete?.()
+      },
+    }),
+    showProgress: true,
+    steps: prependSegmentIntroIfAny(options, [
+      {
+        element: PROFILE_HIGHLIGHTS_TRIGGER,
+        popover: {
+          title: 'Highlights',
+          description:
+            'Tap the marker icon to see passages you have highlighted in gospel content. Select text in a section to save a highlight. Use <strong>Next</strong> to open the list.',
+          side: 'bottom',
+          align: 'end',
+          onNextClick: (_e, _s, { driver: drv }) => {
+            openHighlightsPanelIfClosed()
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, prefersReducedMotion() ? 120 : 280)
+          },
+        },
+      },
+      {
+        element: PROFILE_HIGHLIGHTS_PANEL,
+        popover: {
+          title: 'Your highlights',
+          description:
+            'Open a row to jump to that quote, search to filter, or remove highlights you no longer need. Tap outside the panel or close when you are finished.',
+          side: 'bottom',
+          align: 'end',
+        },
+      },
+    ]),
+  })
+
+  d.drive()
+}
+
+/** Header **Share this resource**: link or system share sheet. */
+export function runShareResourceFeatureTour(options?: ProfileFeatureTourOptions): void {
+  const d = createProfileHelpDriver({
+    ...baseProfileHelpDriverConfig(options),
+    showProgress: true,
+    steps: prependSegmentIntroIfAny(options, [
+      {
+        element: PROFILE_SHARE_RESOURCE,
+        popover: {
+          title: 'Share this resource',
+          description:
+            'Tap <strong>Share</strong> to copy a link to this presentation or use your device’s share sheet when available—handy for sending the same page to someone you are counseling or studying with.',
           side: 'bottom',
           align: 'end',
         },
@@ -3352,26 +3504,12 @@ export function runFullWalkthroughThankYouFinale(): void {
   d.drive()
 }
 
-const FULL_WALKTHROUGH_SEGMENTS: Array<{
+type FullProfileWalkthroughSegment = {
   run: (opts?: ProfileFeatureTourOptions) => void
   intro: { title: string; description: string }
-}> = [
-  {
-    run: runBookmarksFeatureTour,
-    intro: {
-      title: 'Using bookmarks',
-      description:
-        'What bookmarks are, how scroll position matters, then add a practice bookmark, see it in the list, and remove it.',
-    },
-  },
-  {
-    run: runThemeFeatureTour,
-    intro: {
-      title: 'Light and dark mode',
-      description:
-        'Switch between light and dark appearance; this segment briefly flips the theme once, then restores your previous setting.',
-    },
-  },
+}
+
+const FULL_WALKTHROUGH_SEGMENTS_FROM_RESOURCES: FullProfileWalkthroughSegment[] = [
   {
     run: runResourcesFeatureTour,
     intro: {
@@ -3451,22 +3589,81 @@ const FULL_WALKTHROUGH_SEGMENTS: Array<{
   },
 ]
 
+function getFullWalkthroughHeaderClusterSegments(): FullProfileWalkthroughSegment[] {
+  const mid: FullProfileWalkthroughSegment[] = []
+  if (isProfileResourceListenControlAvailable()) {
+    mid.push({
+      run: runProfileListenFeatureTour,
+      intro: {
+        title: 'Listen (read aloud)',
+        description:
+          'Use the header speaker control to hear this presentation read aloud: pick a section, play or pause, adjust speed, optional read-along underline, and Word vs Line highlight width.',
+      },
+    })
+  }
+  mid.push(
+    {
+      run: runHighlightsFeatureTour,
+      intro: {
+        title: 'Highlights',
+        description:
+          'Save quotes from section content and return to them from the highlights list; search and remove entries as needed.',
+      },
+    },
+    {
+      run: runShareResourceFeatureTour,
+      intro: {
+        title: 'Share this resource',
+        description:
+          'Copy a link to this presentation or use your device’s share sheet when available.',
+      },
+    }
+  )
+  return mid
+}
+
+function getFullWalkthroughSegments(): FullProfileWalkthroughSegment[] {
+  return [
+    {
+      run: runBookmarksFeatureTour,
+      intro: {
+        title: 'Using bookmarks',
+        description:
+          'What bookmarks are, how scroll position matters, then add a practice bookmark, see it in the list, and remove it.',
+      },
+    },
+    {
+      run: runThemeFeatureTour,
+      intro: {
+        title: 'Light and dark mode',
+        description:
+          'Switch between light and dark appearance; this segment briefly flips the theme once, then restores your previous setting.',
+      },
+    },
+    ...getFullWalkthroughHeaderClusterSegments(),
+    ...FULL_WALKTHROUGH_SEGMENTS_FROM_RESOURCES,
+  ]
+}
+
 function getFullWalkthroughIndexAfterScriptureReader(): number {
-  const i = FULL_WALKTHROUGH_SEGMENTS.findIndex((s) => s.run === runScriptureModalFeatureTour)
-  return i >= 0 ? i + 1 : FULL_WALKTHROUGH_SEGMENTS.length
+  const segments = getFullWalkthroughSegments()
+  const i = segments.findIndex((s) => s.run === runScriptureModalFeatureTour)
+  return i >= 0 ? i + 1 : segments.length
 }
 
 function getFullWalkthroughIndexAfterMemorize(): number {
-  const i = FULL_WALKTHROUGH_SEGMENTS.findIndex((s) => s.run === runMemorizeFeatureTour)
-  return i >= 0 ? i + 1 : FULL_WALKTHROUGH_SEGMENTS.length
+  const segments = getFullWalkthroughSegments()
+  const i = segments.findIndex((s) => s.run === runMemorizeFeatureTour)
+  return i >= 0 ? i + 1 : segments.length
 }
 
 /** Resume the chained full walkthrough from a segment index (used after scripture reader navigates to `/default`). */
 function runFullProfileHelpTutorialFromSegment(startIndex: number): void {
+  const segments = getFullWalkthroughSegments()
   const runAt = (index: number): void => {
-    if (index >= FULL_WALKTHROUGH_SEGMENTS.length) return
-    const isLast = index === FULL_WALKTHROUGH_SEGMENTS.length - 1
-    const { run, intro } = FULL_WALKTHROUGH_SEGMENTS[index]
+    if (index >= segments.length) return
+    const isLast = index === segments.length - 1
+    const { run, intro } = segments[index]
     run({
       captive: true,
       segmentIntro: intro,

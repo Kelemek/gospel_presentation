@@ -1,7 +1,7 @@
 'use client'
 
 import type { CSSProperties } from 'react'
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { bookmarksPanelStyleFromTrigger } from '@/components/BookmarksDropdown'
 import {
@@ -9,16 +9,20 @@ import {
   runBibleTranslationFeatureTour,
   runBookmarksFeatureTour,
   runFullProfileHelpTutorial,
+  runHighlightsFeatureTour,
   runMarriageSeminarResourcesTour,
   runMemorizeFeatureTour,
   runPrintFeatureTour,
+  runProfileListenFeatureTour,
   runResourcesFeatureTour,
   runScriptureModalFeatureTour,
   runScriptureHoverPreviewFeatureTour,
+  runShareResourceFeatureTour,
   runTableOfContentsFeatureTour,
   runTextSizeFeatureTour,
   runThemeFeatureTour,
 } from '@/lib/profileHelpTours'
+import { isProfileResourceListenControlAvailable } from '@/lib/memorizationViewportPlatform'
 
 const TRIGGER_CLASS =
   'p-2 rounded-md flex items-center justify-center min-h-[36px] min-w-[36px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white transition-colors cursor-pointer'
@@ -37,6 +41,9 @@ export type ProfileTutorialId =
   | 'scriptureHoverPreview'
   | 'marriageSeminar'
   | 'theme'
+  | 'listen'
+  | 'highlights'
+  | 'share'
 
 type TutorialItem = {
   id: ProfileTutorialId
@@ -45,89 +52,118 @@ type TutorialItem = {
   run: () => void
 }
 
-const TUTORIALS: TutorialItem[] = [
-  {
-    id: 'full',
-    label: 'Full walkthrough',
-    description:
-      'All tutorials in order—bookmarks, theme, menu, scripture, verse memorization, add custom memorization, then marriage seminar',
-    run: runFullProfileHelpTutorial,
-  },
-  {
-    id: 'bookmarks',
-    label: 'Using bookmarks',
-    description: 'Save your place and return later',
-    run: runBookmarksFeatureTour,
-  },
-  {
-    id: 'theme',
-    label: 'Light and dark mode',
-    description: 'Switch between light and dark appearance',
-    run: runThemeFeatureTour,
-  },
-  {
-    id: 'resources',
-    label: 'Resources menu',
-    description: 'Categories and shared presentations',
-    run: runResourcesFeatureTour,
-  },
-  {
-    id: 'tableOfContents',
-    label: 'Table of contents',
-    description: 'Jump to sections in this presentation',
-    run: runTableOfContentsFeatureTour,
-  },
-  {
-    id: 'textSize',
-    label: 'Text size',
-    description: 'Make reading larger or smaller on presentation pages',
-    run: runTextSizeFeatureTour,
-  },
-  {
-    id: 'print',
-    label: 'Print version',
-    description: 'Paper or PDF with a print-friendly layout',
-    run: runPrintFeatureTour,
-  },
-  {
-    id: 'bibleTranslation',
-    label: 'Bible translation',
-    description: 'Tap Bible Translation in the menu, then pick a version from the list',
-    run: runBibleTranslationFeatureTour,
-  },
-  {
-    id: 'scriptureModal',
-    label: 'Scripture reader',
-    description: 'Cards, compare, chapter context, colored local pins, and Menu clear-all',
-    run: runScriptureModalFeatureTour,
-  },
-  {
-    id: 'memorize',
-    label: 'Verse memorization',
-    description: 'Save a verse in the reader, open Memorize in the menu, then remove it',
-    run: runMemorizeFeatureTour,
-  },
-  {
-    id: 'addCustomMemorization',
-    label: 'Add custom memorization',
-    description: 'Pick any book, chapter, and verse from the menu to add to your memorization list',
-    run: runAddCustomMemorizationFeatureTour,
-  },
-  {
-    id: 'scriptureHoverPreview',
-    label: 'Quick verse preview',
-    description: 'Hover on desktop, press-and-hold on mobile; short demo in the popover',
-    run: runScriptureHoverPreviewFeatureTour,
-  },
-  {
-    id: 'marriageSeminar',
-    label: 'Marriage seminar resources',
-    description: 'Open the marriage lesson, video link, scripture, and homework',
-    run: runMarriageSeminarResourcesTour,
-  },
-]
+export function buildProfileTutorialMenuItems(): TutorialItem[] {
+  const afterTheme: TutorialItem[] = []
+  if (isProfileResourceListenControlAvailable()) {
+    afterTheme.push({
+      id: 'listen',
+      label: 'Listen (read aloud)',
+      description:
+        'Hear this presentation read aloud from the header; section list, play/pause, speed, read-along underline, and Word or Line highlight width',
+      run: runProfileListenFeatureTour,
+    })
+  }
+  afterTheme.push(
+    {
+      id: 'highlights',
+      label: 'Highlights',
+      description: 'Save quotes from the text and reopen them from the highlights list',
+      run: runHighlightsFeatureTour,
+    },
+    {
+      id: 'share',
+      label: 'Share this resource',
+      description: 'Copy a link or use your device share sheet for this presentation',
+      run: runShareResourceFeatureTour,
+    }
+  )
+
+  return [
+    {
+      id: 'full',
+      label: 'Full walkthrough',
+      description:
+        'All tutorials in order—bookmarks, theme, header tools (Listen when available, marker icon for saved quotes, Share), menu topics, scripture, memorization, and more',
+      run: runFullProfileHelpTutorial,
+    },
+    {
+      id: 'bookmarks',
+      label: 'Using bookmarks',
+      description: 'Save your place and return later',
+      run: runBookmarksFeatureTour,
+    },
+    {
+      id: 'theme',
+      label: 'Light and dark mode',
+      description: 'Switch between light and dark appearance',
+      run: runThemeFeatureTour,
+    },
+    ...afterTheme,
+    {
+      id: 'resources',
+      label: 'Resources menu',
+      description: 'Categories and shared presentations',
+      run: runResourcesFeatureTour,
+    },
+    {
+      id: 'tableOfContents',
+      label: 'Table of contents',
+      description: 'Jump to sections in this presentation',
+      run: runTableOfContentsFeatureTour,
+    },
+    {
+      id: 'textSize',
+      label: 'Text size',
+      description: 'Make reading larger or smaller on presentation pages',
+      run: runTextSizeFeatureTour,
+    },
+    {
+      id: 'print',
+      label: 'Print version',
+      description: 'Paper or PDF with a print-friendly layout',
+      run: runPrintFeatureTour,
+    },
+    {
+      id: 'bibleTranslation',
+      label: 'Bible translation',
+      description: 'Tap Bible Translation in the menu, then pick a version from the list',
+      run: runBibleTranslationFeatureTour,
+    },
+    {
+      id: 'scriptureModal',
+      label: 'Scripture reader',
+      description: 'Cards, compare, chapter context, colored local pins, and Menu clear-all',
+      run: runScriptureModalFeatureTour,
+    },
+    {
+      id: 'memorize',
+      label: 'Verse memorization',
+      description: 'Save a verse in the reader, open Memorize in the menu, then remove it',
+      run: runMemorizeFeatureTour,
+    },
+    {
+      id: 'addCustomMemorization',
+      label: 'Add custom memorization',
+      description: 'Pick any book, chapter, and verse from the menu to add to your memorization list',
+      run: runAddCustomMemorizationFeatureTour,
+    },
+    {
+      id: 'scriptureHoverPreview',
+      label: 'Quick verse preview',
+      description: 'Hover on desktop, press-and-hold on mobile; short demo in the popover',
+      run: runScriptureHoverPreviewFeatureTour,
+    },
+    {
+      id: 'marriageSeminar',
+      label: 'Marriage seminar resources',
+      description: 'Open the marriage lesson, video link, scripture, and homework',
+      run: runMarriageSeminarResourcesTour,
+    },
+  ]
+}
 
 export default function ProfileHelpMenu() {
+  const tutorials = useMemo(() => buildProfileTutorialMenuItems(), [])
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -224,7 +260,7 @@ export default function ProfileHelpMenu() {
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
                 <ul className="space-y-1">
-                  {TUTORIALS.map((item) => (
+                  {tutorials.map((item) => (
                     <li key={item.id}>
                       <button
                         type="button"

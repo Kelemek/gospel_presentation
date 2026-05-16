@@ -7,6 +7,14 @@ export function isMemorizeAndroidWebHost(): boolean {
   return /Android/i.test(navigator.userAgent)
 }
 
+/**
+ * When false, `ProfileResourceReadAloud` does not render the header **Listen** control (Android Web hosts).
+ * Help menu and full walkthrough use this so Listen tutorials only appear when the button exists.
+ */
+export function isProfileResourceListenControlAvailable(): boolean {
+  return !isMemorizeAndroidWebHost()
+}
+
 /** Safari / WKWebView — used to align scroll nudges with Android (instant) and avoid smooth + IME fighting. */
 export function isMemorizeIosWebHost(): boolean {
   if (typeof navigator === 'undefined') return false

@@ -11,5 +11,8 @@ describe('profileHelpTours public entry', () => {
     expect(fromPublic.applyProfileHelpTourPopoverSafeAreaNudge).toBe(
       fromIndex.applyProfileHelpTourPopoverSafeAreaNudge
     )
+    expect(fromPublic.runProfileListenFeatureTour).toBe(fromIndex.runProfileListenFeatureTour)
+    expect(fromPublic.runHighlightsFeatureTour).toBe(fromIndex.runHighlightsFeatureTour)
+    expect(fromPublic.runShareResourceFeatureTour).toBe(fromIndex.runShareResourceFeatureTour)
   })
 })

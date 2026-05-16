@@ -895,6 +895,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                 />
                 <button
                   type="button"
+                  data-tour="profile-share-resource"
                   onClick={handleShareResource}
                   disabled={isSharingResource}
                   aria-label={isSharingResource ? 'Sharing…' : 'Share this resource'}
