@@ -6,11 +6,17 @@ import Link from 'next/link'
 import AdminErrorBoundary from '@/components/AdminErrorBoundary'
 import { createClient } from '@/lib/supabase/client'
 import { TemplatesListPanel } from '@/app/admin/templates/TemplatesListPanel'
+import {
+  CreateResourceTemplateModal,
+  type ResourceTemplateModalMode,
+} from '@/app/admin/CreateResourceTemplateModal'
 
 function TemplatesPageContent() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [authReady, setAuthReady] = useState(false)
+  const [resourceTemplateModal, setResourceTemplateModal] = useState<ResourceTemplateModalMode | null>(null)
+  const [templatesListRefreshKey, setTemplatesListRefreshKey] = useState(0)
 
   useEffect(() => {
     void checkAuth()
@@ -94,7 +100,20 @@ function TemplatesPageContent() {
 
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 mb-6 border border-slate-100">
-            <TemplatesListPanel authReady={authReady} userRole="admin" embedded={false} />
+            <TemplatesListPanel
+              authReady={authReady}
+              userRole="admin"
+              embedded={false}
+              listRefreshKey={templatesListRefreshKey}
+              onCloneTemplate={({ slug, title }) =>
+                setResourceTemplateModal({ kind: 'clone', sourceSlug: slug, sourceTitle: title })
+              }
+            />
+            <CreateResourceTemplateModal
+              mode={resourceTemplateModal}
+              onClose={() => setResourceTemplateModal(null)}
+              onCreated={() => setTemplatesListRefreshKey((k) => k + 1)}
+            />
           </div>
         </div>
       </div>

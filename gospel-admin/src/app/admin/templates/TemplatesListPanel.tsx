@@ -9,6 +9,9 @@ import { useAlertModal } from '@/contexts/AlertModalContext'
 import { logger } from '@/lib/logger'
 import { shareResourceUrl } from '@/lib/shareResourceUrl'
 
+const templateBlueActionClass =
+  'bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-blue-200 hover:border-blue-300'
+
 export type TemplatesListPanelRole = 'admin'
 
 export interface TemplatesListPanelProps {
@@ -17,12 +20,18 @@ export interface TemplatesListPanelProps {
   userRole: TemplatesListPanelRole
   /** True when rendered on /admin dashboard (tweaks empty-state copy). */
   embedded?: boolean
+  /** Bump to refetch the template list without leaving the page (e.g. after creating a template). */
+  listRefreshKey?: number
+  /** Opens the create/clone modal to duplicate a template (admin dashboard / templates page). */
+  onCloneTemplate?: (source: { slug: string; title: string }) => void
 }
 
 export function TemplatesListPanel({
   authReady,
   userRole,
   embedded = false,
+  listRefreshKey = 0,
+  onCloneTemplate,
 }: TemplatesListPanelProps) {
   const [templates, setTemplates] = useState<any[]>([])
   const [error, setError] = useState('')
@@ -87,7 +96,7 @@ export function TemplatesListPanel({
   useEffect(() => {
     if (!authReady) return
     void fetchTemplatesPage()
-  }, [authReady, fetchTemplatesPage])
+  }, [authReady, fetchTemplatesPage, listRefreshKey])
 
   const handleCopyProfileUrl = async (profile: any) => {
     const url = `${siteUrl}/${profile.slug}`
@@ -244,7 +253,7 @@ export function TemplatesListPanel({
   }
 
   const emptyAdminHint = embedded
-    ? 'Open a template below to edit content or settings. Create new profiles from a JSON backup on Admin → Settings.'
+    ? 'Open a template below to edit content or settings. Use + Add above to create a new blank template, or create from a JSON backup on Admin → Settings.'
     : 'Create template profiles from the main profiles page'
 
   return (
@@ -393,6 +402,7 @@ export function TemplatesListPanel({
                   }
                   setExpandedRows(newSet)
                 }}
+                onCloneTemplate={onCloneTemplate}
               />
             ))}
           </div>
@@ -518,17 +528,32 @@ export function TemplatesListPanel({
 
                           <Link
                             href={`/admin/profiles/${template.slug}`}
-                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-blue-200 hover:border-blue-300"
+                            className={templateBlueActionClass}
                           >
                             Settings
                           </Link>
 
                           <Link
                             href={`/admin/profiles/${template.slug}/content`}
-                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 px-2 sm:px-3 py-1 rounded-lg text-xs sm:text-sm transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-blue-200 hover:border-blue-300"
+                            className={templateBlueActionClass}
                           >
                             Edit
                           </Link>
+
+                          {userRole === 'admin' && onCloneTemplate && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onCloneTemplate({
+                                  slug: template.slug,
+                                  title: typeof template.title === 'string' ? template.title : '',
+                                })
+                              }
+                              className={templateBlueActionClass}
+                            >
+                              Clone
+                            </button>
+                          )}
 
                           {userRole === 'admin' && !template.isDefault && (
                             <button

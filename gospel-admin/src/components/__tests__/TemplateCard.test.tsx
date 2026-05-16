@@ -70,6 +70,43 @@ describe('TemplateCard', () => {
     expect(onTogglePublic).toHaveBeenCalledWith(defaultTemplate, true)
   })
 
+  it('shows Clone and calls onCloneTemplate when expanded as admin', () => {
+    const onCloneTemplate = jest.fn()
+    render(
+      <TemplateCard
+        template={defaultTemplate}
+        siteUrl="https://example.com"
+        onCopyUrl={jest.fn()}
+        onDelete={jest.fn()}
+        onDownloadBackup={jest.fn()}
+        onRestoreBackup={jest.fn()}
+        userRole="admin"
+        isExpanded={true}
+        onToggleExpand={jest.fn()}
+        onCloneTemplate={onCloneTemplate}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Clone' }))
+    expect(onCloneTemplate).toHaveBeenCalledWith({ slug: 'template-one', title: 'Template One' })
+  })
+
+  it('does not show Clone without onCloneTemplate', () => {
+    render(
+      <TemplateCard
+        template={defaultTemplate}
+        siteUrl="https://example.com"
+        onCopyUrl={jest.fn()}
+        onDelete={jest.fn()}
+        onDownloadBackup={jest.fn()}
+        onRestoreBackup={jest.fn()}
+        userRole="admin"
+        isExpanded={true}
+        onToggleExpand={jest.fn()}
+      />
+    )
+    expect(screen.queryByRole('button', { name: 'Clone' })).not.toBeInTheDocument()
+  })
+
   it('does not show Public checkbox when userRole is not admin', () => {
     render(
       <TemplateCard

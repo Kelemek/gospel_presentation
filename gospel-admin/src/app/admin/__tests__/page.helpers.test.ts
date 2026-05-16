@@ -1,4 +1,4 @@
-import { generateSlug, createProfilePayload, isUniqueConstraintError } from '../page'
+import { generateSlug, createProfilePayload, isProfileSlugTakenError, isUniqueConstraintError } from '../profileCreateHelpers'
 
 describe('admin page helpers', () => {
   describe('generateSlug', () => {
@@ -28,6 +28,62 @@ describe('admin page helpers', () => {
       expect(payload.description).toBe('desc')
       expect(payload.cloneFromSlug).toBe('default')
       expect(payload.isTemplate).toBe(true)
+    })
+
+    test('includes slug when provided', () => {
+      const payload = createProfilePayload({
+        slug: '  MySlug  ',
+        title: 'T',
+        cloneFromSlug: 'default',
+        isTemplate: true,
+      })
+      expect(payload).toMatchObject({
+        slug: 'myslug',
+        title: 'T',
+        cloneFromSlug: 'default',
+        isTemplate: true,
+      })
+    })
+
+    test('omits slug when empty', () => {
+      const payload = createProfilePayload({
+        slug: '   ',
+        title: 'T',
+        isTemplate: false,
+      })
+      expect('slug' in payload).toBe(false)
+    })
+
+    test('blank presentation omits cloneFromSlug', () => {
+      const payload = createProfilePayload({
+        title: '  T  ',
+        isTemplate: true,
+        blankGospelData: true,
+      })
+      expect(payload).toMatchObject({
+        title: 'T',
+        isTemplate: true,
+        blankGospelData: true,
+      })
+      expect('cloneFromSlug' in payload).toBe(false)
+    })
+  })
+
+  describe('isProfileSlugTakenError', () => {
+    test('detects createProfile duplicate message', () => {
+      expect(isProfileSlugTakenError("Profile with slug 'foo' already exists")).toBe(true)
+    })
+
+    test('detects Postgres-style unique errors via isUniqueConstraintError', () => {
+      expect(isProfileSlugTakenError('duplicate key value violates unique constraint')).toBe(true)
+    })
+
+    test('detects API JSON shape', () => {
+      expect(isProfileSlugTakenError({ error: "Profile with slug 'x' already exists" })).toBe(true)
+    })
+
+    test('returns false for unrelated errors', () => {
+      expect(isProfileSlugTakenError('Source profile not found')).toBe(false)
     })
   })
 

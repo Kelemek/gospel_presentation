@@ -336,7 +336,7 @@ describe('supabase-data-service (unit)', () => {
       })
     }))
     const svc = await import('../supabase-data-service')
-    await expect(svc.createProfile({ slug: 'x', title: 'T' } as any)).rejects.toThrow(/Source profile 'default' not found|not found/)
+    await expect(svc.createProfile({ slug: 'xyz', title: 'T' } as any)).rejects.toThrow(/Source profile 'default' not found|not found/)
   })
 
   test('updateProfile throws on DB error', async () => {

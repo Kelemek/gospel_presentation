@@ -102,9 +102,13 @@ export async function POST(request: Request) {
   } catch (error: unknown) {
     logger.error('[API] POST /api/profiles error:', error)
     const message = error instanceof Error ? error.message : 'Failed to create profile'
-    return NextResponse.json(
-      { error: message },
-      { status: 500 }
-    )
+    const httpStatus =
+      error &&
+      typeof error === 'object' &&
+      'httpStatus' in error &&
+      typeof (error as { httpStatus?: unknown }).httpStatus === 'number'
+        ? (error as { httpStatus: number }).httpStatus
+        : 500
+    return NextResponse.json({ error: message }, { status: httpStatus })
   }
 }

@@ -288,7 +288,7 @@ describe('data-service', () => {
   })
 
   it('deleteProfile returns success', async () => {
-  const slug = 'unique-slug-delete'
+  const slug = 'uniqueslugdel'
   await createProfile({ name: 'Test', slug })
   await expect(deleteProfile(slug)).resolves.not.toThrow()
   })

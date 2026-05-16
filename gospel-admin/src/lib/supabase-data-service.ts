@@ -6,6 +6,7 @@ import { createClient, createAdminClient } from './supabase/server'
 import type { GospelProfile, CreateProfileRequest, GospelPresentationData } from './types'
 import { parseResourceOrder } from './types'
 import { logger } from './logger'
+import { validateProfileSlug } from './profile-service'
 
 /**
  * Loads gospel presentation data
@@ -346,22 +347,42 @@ export async function createProfile(request: CreateProfileRequest): Promise<Gosp
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('User not authenticated')
     
-    // Generate secure slug if not provided
-    const profileSlug = request.slug || crypto.randomUUID().split('-')[0]
-    
+    const rawProvidedSlug = typeof request.slug === 'string' ? request.slug.trim() : ''
+    const profileSlug = rawProvidedSlug
+      ? rawProvidedSlug.toLowerCase()
+      : crypto.randomUUID().split('-')[0]
+
+    if (rawProvidedSlug) {
+      const slugValidation = validateProfileSlug(profileSlug)
+      if (!slugValidation.isValid) {
+        const err = new Error(slugValidation.error || 'Invalid slug') as Error & { httpStatus?: number }
+        err.httpStatus = 400
+        throw err
+      }
+    }
+
     // Check if slug already exists
     const existing = await getProfileBySlug(profileSlug)
     if (existing) {
-      throw new Error(`Profile with slug '${profileSlug}' already exists`)
+      const err = new Error(`Profile with slug '${profileSlug}' already exists`) as Error & {
+        httpStatus?: number
+      }
+      err.httpStatus = 400
+      throw err
     }
     
-    // Clone gospel data from source profile
-    const sourceSlug = request.cloneFromSlug || 'default'
-    const sourceProfile = await getProfileBySlug(sourceSlug)
-    if (!sourceProfile) {
-      throw new Error(`Source profile '${sourceSlug}' not found`)
+    let gospelDataToInsert: GospelPresentationData
+    if (request.blankGospelData) {
+      gospelDataToInsert = []
+    } else {
+      const sourceSlug = request.cloneFromSlug || 'default'
+      const sourceProfile = await getProfileBySlug(sourceSlug)
+      if (!sourceProfile) {
+        throw new Error(`Source profile '${sourceSlug}' not found`)
+      }
+      gospelDataToInsert = sourceProfile.gospelData
     }
-    
+
     // Create new profile
     const { data, error } = await supabase
       .from('profiles')
@@ -369,7 +390,7 @@ export async function createProfile(request: CreateProfileRequest): Promise<Gosp
         slug: profileSlug,
         title: request.title,
         description: request.description,
-        gospel_data: sourceProfile.gospelData,
+        gospel_data: gospelDataToInsert,
         is_default: false,
         is_template: request.isTemplate || false,
         created_by: user.id // Automatically owned by current user

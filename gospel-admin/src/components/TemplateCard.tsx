@@ -15,6 +15,7 @@ interface TemplateCardProps {
   canManage?: boolean
   isExpanded?: boolean
   onToggleExpand?: () => void
+  onCloneTemplate?: (source: { slug: string; title: string }) => void
 }
 
 /**
@@ -34,7 +35,8 @@ export default function TemplateCard({
   userRole,
   canManage = true,
   isExpanded = false,
-  onToggleExpand
+  onToggleExpand,
+  onCloneTemplate,
 }: TemplateCardProps) {
   const [internalShowDetails, setInternalShowDetails] = useState(false)
   const showDetails = onToggleExpand !== undefined ? isExpanded : internalShowDetails
@@ -155,17 +157,31 @@ export default function TemplateCard({
             {/* Primary Actions */}
             <div className="flex gap-2">
               <Link
-                href={`/admin/profiles/${template.slug}/content`}
-                className="flex-1 block text-center px-2 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 rounded text-xs font-medium transition-colors border border-blue-200 hover:border-blue-300"
-              >
-                Edit
-              </Link>
-              <Link
                 href={`/admin/profiles/${template.slug}`}
                 className="flex-1 block text-center px-2 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 rounded text-xs font-medium transition-colors border border-blue-200 hover:border-blue-300"
               >
                 Settings
               </Link>
+              <Link
+                href={`/admin/profiles/${template.slug}/content`}
+                className="flex-1 block text-center px-2 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 rounded text-xs font-medium transition-colors border border-blue-200 hover:border-blue-300"
+              >
+                Edit
+              </Link>
+              {userRole === 'admin' && onCloneTemplate && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    onCloneTemplate({
+                      slug: template.slug,
+                      title: typeof template.title === 'string' ? template.title : '',
+                    })
+                  }
+                  className="flex-1 px-2 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 rounded text-xs font-medium transition-colors border border-blue-200 hover:border-blue-300 cursor-pointer"
+                >
+                  Clone
+                </button>
+              )}
             </div>
 
             {/* URL and Delete Actions */}

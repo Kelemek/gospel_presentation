@@ -10,53 +10,23 @@ import TranslationSettings from '@/components/TranslationSettings'
 import { createClient } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
 import { useSessionMonitor } from '@/hooks/useSessionMonitor'
+import { CreateResourceTemplateModal, type ResourceTemplateModalMode } from '@/app/admin/CreateResourceTemplateModal'
+import {
+  createProfilePayload,
+  generateSlug,
+  isProfileSlugTakenError,
+  isUniqueConstraintError,
+} from '@/app/admin/profileCreateHelpers'
 
-// Small pure helpers exported for testing. Kept additive and isolated from
-// React hooks so they can be unit tested without rendering the client UI.
-export function generateSlug(title: string) {
-  return (title || '').toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
-    .replace(/\s+/g, '')
-    .substring(0, 15) || 'profile'
-}
-
-export function createProfilePayload(form: {
-  title: string
-  description?: string
-  cloneFromSlug?: string
-  isTemplate?: boolean
-}) {
-  return {
-    title: (form.title || '').trim(),
-    description: (form.description || '').trim() || undefined,
-    cloneFromSlug: form.cloneFromSlug || 'default',
-    isTemplate: !!form.isTemplate,
-  }
-}
-
-export function isUniqueConstraintError(errOrMessage: unknown) {
-  const text = typeof errOrMessage === 'string'
-    ? errOrMessage
-    : (errOrMessage && typeof errOrMessage === 'object' && errOrMessage !== null
-      && ('error' in errOrMessage || 'message' in errOrMessage)
-      ? String((errOrMessage as { error?: string; message?: string }).error
-        || (errOrMessage as { message?: string }).message)
-      : '') || ''
-
-  return (
-    typeof text === 'string' && (
-      text.includes('duplicate key') ||
-      text.includes('unique constraint') ||
-      text.includes('profiles_slug_key')
-    )
-  )
-}
+export { createProfilePayload, generateSlug, isProfileSlugTakenError, isUniqueConstraintError }
 
 function AdminPageContent() {
   const router = useRouter()
   const [user, setUser] = useState<{ id: string } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [resourceTemplateModal, setResourceTemplateModal] = useState<ResourceTemplateModalMode | null>(null)
+  const [templatesListRefreshKey, setTemplatesListRefreshKey] = useState(0)
 
   useSessionMonitor({
     checkInterval: 60000,
@@ -208,14 +178,35 @@ function AdminPageContent() {
 
         <div className="px-3 sm:px-4 lg:px-6">
           <div className="bg-white rounded-xl shadow-md p-4 sm:p-6 mb-6 border border-slate-100">
-            <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6">
-              <div className="flex-1 min-w-0">
+            <div className="flex flex-row flex-wrap items-center justify-between gap-3 mb-4 sm:mb-6">
+              <div className="min-w-0 flex-1">
                 <h2 className="text-lg sm:text-xl font-semibold bg-linear-to-br from-slate-700 to-slate-800 bg-clip-text text-transparent">
                   Resource templates
                 </h2>
               </div>
+              <button
+                type="button"
+                onClick={() => setResourceTemplateModal({ kind: 'blank' })}
+                className="shrink-0 px-3 sm:px-4 py-2 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-700 border border-slate-200 hover:border-slate-300 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer text-sm inline-flex items-center justify-center"
+                aria-label="Add new resource template"
+              >
+                + Add
+              </button>
             </div>
-            <TemplatesListPanel authReady={Boolean(user)} userRole="admin" embedded />
+            <TemplatesListPanel
+              authReady={Boolean(user)}
+              userRole="admin"
+              embedded
+              listRefreshKey={templatesListRefreshKey}
+              onCloneTemplate={({ slug, title }) =>
+                setResourceTemplateModal({ kind: 'clone', sourceSlug: slug, sourceTitle: title })
+              }
+            />
+            <CreateResourceTemplateModal
+              mode={resourceTemplateModal}
+              onClose={() => setResourceTemplateModal(null)}
+              onCreated={() => setTemplatesListRefreshKey((k) => k + 1)}
+            />
           </div>
         </div>
       </div>

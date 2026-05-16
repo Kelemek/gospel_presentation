@@ -110,7 +110,9 @@ export interface CreateProfileRequest {
   slug?: string                   // Optional - will be auto-generated if not provided
   title: string
   description?: string
-  cloneFromSlug?: string          // Which profile to clone from
+  cloneFromSlug?: string          // Which profile to clone from (ignored when blankGospelData is true)
+  /** When true, new profile gets empty presentation sections ([]); no clone source is loaded. */
+  blankGospelData?: boolean
   isTemplate?: boolean            // Whether this is a template profile
 }
 
