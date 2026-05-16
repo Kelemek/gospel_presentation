@@ -838,7 +838,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                 title={isMenuOpen ? 'Close menu' : 'Open menu'}
                 className={`flex shrink-0 items-center rounded-md transition-colors cursor-pointer bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white ${
                   showMenuLabel
-                    ? 'gap-2 px-2 py-2 min-h-[40px] min-w-0'
+                    ? 'gap-2 px-2.5 py-2 min-h-[40px] min-w-0'
                     : 'justify-center gap-0 p-2 min-h-[36px] min-w-[36px]'
                 }`}
               >
@@ -857,7 +857,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
               {/* Right side content — min-w-0 + overflow so Listen/help/icons stay reachable on narrow viewports */}
               <div
                 data-profile-header-toolbar-icons
-                className="flex min-w-0 flex-1 justify-end items-center gap-2 sm:gap-3 overflow-x-auto"
+                className="flex min-w-0 flex-1 justify-end items-center gap-[7px] sm:gap-[11px] overflow-x-auto"
               >
                 {/* Profile Info and Edit Button - only show when previewing from editor */}
                 {canEdit && fromEditor && (
