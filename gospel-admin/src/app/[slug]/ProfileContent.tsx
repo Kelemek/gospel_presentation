@@ -34,9 +34,10 @@ import {
 } from '@/lib/versePinStorage'
 import { logger } from '@/lib/logger'
 import {
-  PROFILE_MENU_LABEL_MIN_VIEWPORT_PX,
+  profileMenuLabelMinViewportPx,
   showProfileMenuLabelForViewport,
 } from '@/lib/profileHeaderMenuLabel'
+import { isMemorizeAndroidWebHost } from '@/lib/memorizationViewportPlatform'
 import { shareResourceUrl } from '@/lib/shareResourceUrl'
 import { createClient } from '@/lib/supabase/client'
 import { useAlertModal } from '@/contexts/AlertModalContext'
@@ -132,6 +133,8 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const { showConfirm, showAlert } = useAlertModal()
   const { enabledTranslations, isLoading: translationsLoading } = useTranslation()
   const footerAttributionEnabledCodes = translationsLoading ? null : enabledTranslations
+  /** Matches `ProfileResourceReadAloud` (Listen hidden on Android Web hosts). */
+  const profileHeaderAndroidHost = useMemo(() => isMemorizeAndroidWebHost(), [])
 
   // Set hydrated flag immediately on client to avoid hydration mismatch
   useLayoutEffect(() => {
@@ -140,18 +143,20 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
 
   useLayoutEffect(() => {
     if (typeof window === 'undefined') return
+    const minPx = profileMenuLabelMinViewportPx(profileHeaderAndroidHost)
     if (typeof window.matchMedia !== 'function') {
-      const sync = () => setShowMenuLabel(showProfileMenuLabelForViewport(window.innerWidth))
+      const sync = () =>
+        setShowMenuLabel(showProfileMenuLabelForViewport(window.innerWidth, profileHeaderAndroidHost))
       sync()
       window.addEventListener('resize', sync)
       return () => window.removeEventListener('resize', sync)
     }
-    const mq = window.matchMedia(`(min-width: ${PROFILE_MENU_LABEL_MIN_VIEWPORT_PX}px)`)
+    const mq = window.matchMedia(`(min-width: ${minPx}px)`)
     const sync = () => setShowMenuLabel(mq.matches)
     sync()
     mq.addEventListener('change', sync)
     return () => mq.removeEventListener('change', sync)
-  }, [])
+  }, [profileHeaderAndroidHost])
 
   // Check authentication and role
   useEffect(() => {
