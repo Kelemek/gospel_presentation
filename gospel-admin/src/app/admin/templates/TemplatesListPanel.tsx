@@ -6,6 +6,8 @@ import ViewToggle from '@/components/ViewToggle'
 import TemplateCard from '@/components/TemplateCard'
 import { useViewPreference } from '@/hooks/useViewPreference'
 import { useAlertModal } from '@/contexts/AlertModalContext'
+import { logger } from '@/lib/logger'
+import { shareResourceUrl } from '@/lib/shareResourceUrl'
 
 export type TemplatesListPanelRole = 'admin' | 'counselor'
 
@@ -90,10 +92,17 @@ export function TemplatesListPanel({
   const handleCopyProfileUrl = async (profile: any) => {
     const url = `${siteUrl}/${profile.slug}`
     try {
-      await navigator.clipboard.writeText(url)
-      showAlert(`URL copied to clipboard: ${url}`)
+      const result = await shareResourceUrl({
+        url,
+        title: profile.title || profile.slug,
+        dialogTitle: 'Share template link',
+        text: `Open this presentation: ${profile.title || profile.slug}`,
+      })
+      if (result === 'copied') {
+        showAlert(`URL copied to clipboard: ${url}`)
+      }
     } catch (err) {
-      console.error('Failed to copy URL:', err)
+      logger.error('Failed to copy URL:', err)
       showAlert('Failed to copy URL')
     }
   }

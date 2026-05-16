@@ -11,6 +11,7 @@ import ViewToggle from '@/components/ViewToggle'
 import ProfileCard from '@/components/ProfileCard'
 import { createClient } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
+import { shareResourceUrl } from '@/lib/shareResourceUrl'
 import { useSessionMonitor } from '@/hooks/useSessionMonitor'
 import { useViewPreference } from '@/hooks/useViewPreference'
 import { useAlertModal } from '@/contexts/AlertModalContext'
@@ -198,15 +199,16 @@ function AdminPageContent() {
 
   const handleCopyProfileUrl = async (profile: any) => {
     const profileUrl = `${siteUrl}/${profile.slug}`
-    
     try {
-      if (navigator.clipboard) {
-        await navigator.clipboard.writeText(profileUrl)
+      const result = await shareResourceUrl({
+        url: profileUrl,
+        title: profile.title || profile.slug,
+        dialogTitle: 'Share profile link',
+        text: `Open this presentation: ${profile.title || profile.slug}`,
+      })
+      if (result === 'copied') {
         setShowCopyToast(true)
         setTimeout(() => setShowCopyToast(false), 2000)
-      } else {
-        // Fallback for browsers that don't support clipboard API
-        showAlert(`Profile URL:\n\n${profileUrl}\n\nPlease copy this link manually.`)
       }
     } catch {
       showAlert(`Profile URL:\n\n${profileUrl}\n\nPlease copy this link manually.`)

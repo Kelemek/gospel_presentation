@@ -154,10 +154,8 @@ describe('ProfileContent Component - Responsive Layout', () => {
       />
     )
 
-    // Should show mobile hamburger button
-  // Mobile menu is labeled 'Menu' in the UI
-  expect(screen.getByRole('button', { name: /menu/i })).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: /menu/i })).toBeInTheDocument()
+    // Hamburger control (accessible name includes "menu")
+    expect(screen.getByRole('button', { name: /menu/i })).toBeInTheDocument()
   })
 
   it('should handle hamburger menu toggle', async () => {

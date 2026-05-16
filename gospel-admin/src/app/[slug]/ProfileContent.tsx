@@ -33,6 +33,11 @@ import {
   versePinsListFromState,
 } from '@/lib/versePinStorage'
 import { logger } from '@/lib/logger'
+import {
+  PROFILE_MENU_LABEL_MIN_VIEWPORT_PX,
+  showProfileMenuLabelForViewport,
+} from '@/lib/profileHeaderMenuLabel'
+import { shareResourceUrl } from '@/lib/shareResourceUrl'
 import { createClient } from '@/lib/supabase/client'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import { useTranslation } from '@/contexts/TranslationContext'
@@ -109,11 +114,13 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const [favoriteReferences, setFavoriteReferences] = useState<string[]>([])
   const [currentReferenceIndex, setCurrentReferenceIndex] = useState(0)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isSharingResource, setIsSharingResource] = useState(false)
   const [isSpurgeonLibraryOpen, setIsSpurgeonLibraryOpen] = useState(false)
   /** When opening Spurgeon from the scripture modal “Study”, pre-fill and search by this reference. */
   const [spurgeonStudyReference, setSpurgeonStudyReference] = useState<string | null>(null)
   /** Skip desktop `onMouseLeave` close while the restore JSON file picker is open (keeps `<input type="file">` mounted). */
   const deferCloseMenuForFilePickerRef = useRef(false)
+  const [showMenuLabel, setShowMenuLabel] = useState(true)
   const [memorizationPracticeVerse, setMemorizationPracticeVerse] = useState<MemorizedVerse | null>(null)
   const [canEdit, setCanEdit] = useState(false)
   const [fromEditor, setFromEditor] = useState(false)
@@ -122,13 +129,28 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const [profileHighlights, setProfileHighlights] = useState<ProfileHighlight[]>([])
   const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null)
   const activeHighlightTimerRef = useRef<number | null>(null)
-  const { showConfirm } = useAlertModal()
+  const { showConfirm, showAlert } = useAlertModal()
   const { enabledTranslations, isLoading: translationsLoading } = useTranslation()
   const footerAttributionEnabledCodes = translationsLoading ? null : enabledTranslations
 
   // Set hydrated flag immediately on client to avoid hydration mismatch
   useLayoutEffect(() => {
     setIsHydrated(true)
+  }, [])
+
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return
+    if (typeof window.matchMedia !== 'function') {
+      const sync = () => setShowMenuLabel(showProfileMenuLabelForViewport(window.innerWidth))
+      sync()
+      window.addEventListener('resize', sync)
+      return () => window.removeEventListener('resize', sync)
+    }
+    const mq = window.matchMedia(`(min-width: ${PROFILE_MENU_LABEL_MIN_VIEWPORT_PX}px)`)
+    const sync = () => setShowMenuLabel(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
   }, [])
 
   // Check authentication and role
@@ -716,6 +738,29 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     closeMenu()
   }
 
+  const handleShareResource = async () => {
+    if (typeof window === 'undefined' || !profileInfo?.slug) return
+    const slug = profileInfo.slug.replace(/^\/+|\/+$/g, '')
+    const url = `${window.location.origin}/${slug}`
+    setIsSharingResource(true)
+    try {
+      const result = await shareResourceUrl({
+        url,
+        title: profileInfo.title || slug,
+        dialogTitle: 'Share presentation',
+        text: `Open this gospel presentation: ${profileInfo.title || slug}`,
+      })
+      if (result === 'copied') {
+        showAlert(`Link copied to clipboard:\n\n${url}`)
+      }
+    } catch (e) {
+      logger.error('Share resource failed', e)
+      showAlert('Could not share this link. Please try again.')
+    } finally {
+      setIsSharingResource(false)
+    }
+  }
+
   useEffect(() => {
     const onTourCloseMenu = (): void => {
       setIsMenuOpen(false)
@@ -783,18 +828,32 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                 type="button"
                 data-tour="profile-menu-button"
                 onClick={toggleMenu}
-                className="flex shrink-0 items-center gap-3 px-4 py-2 rounded-md transition-colors cursor-pointer bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white"
+                aria-expanded={isMenuOpen}
+                aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+                title={isMenuOpen ? 'Close menu' : 'Open menu'}
+                className={`flex shrink-0 items-center rounded-md transition-colors cursor-pointer bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white ${
+                  showMenuLabel
+                    ? 'gap-2 px-2 py-2 min-h-[40px] min-w-0'
+                    : 'justify-center gap-0 p-2 min-h-[36px] min-w-[36px]'
+                }`}
               >
-                <div className="flex flex-col gap-1">
-                  <div className={`w-5 h-0.5 bg-slate-800 dark:bg-white transition-transform ${isMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`}></div>
-                  <div className={`w-5 h-0.5 bg-slate-800 dark:bg-white transition-opacity ${isMenuOpen ? 'opacity-0' : ''}`}></div>
-                  <div className={`w-5 h-0.5 bg-slate-800 dark:bg-white transition-transform ${isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`}></div>
-                </div>
-                <span className="font-medium">Menu</span>
+                <span className="flex flex-col gap-1" aria-hidden>
+                  <span className={`block w-5 h-0.5 bg-slate-800 dark:bg-white transition-transform ${isMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
+                  <span className={`block w-5 h-0.5 bg-slate-800 dark:bg-white transition-opacity ${isMenuOpen ? 'opacity-0' : ''}`} />
+                  <span className={`block w-5 h-0.5 bg-slate-800 dark:bg-white transition-transform ${isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`} />
+                </span>
+                {showMenuLabel ? (
+                  <span className="font-medium" aria-hidden>
+                    Menu
+                  </span>
+                ) : null}
               </button>
               
               {/* Right side content — min-w-0 + overflow so Listen/help/icons stay reachable on narrow viewports */}
-              <div className="flex min-w-0 flex-1 justify-end items-center gap-2 sm:gap-3 overflow-x-auto">
+              <div
+                data-profile-header-toolbar-icons
+                className="flex min-w-0 flex-1 justify-end items-center gap-2 sm:gap-3 overflow-x-auto"
+              >
                 {/* Profile Info and Edit Button - only show when previewing from editor */}
                 {canEdit && fromEditor && (
                   <>
@@ -829,6 +888,29 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                   profileTitle={profileInfo.title}
                   profileSlug={profileInfo.slug}
                 />
+                <button
+                  type="button"
+                  onClick={handleShareResource}
+                  disabled={isSharingResource}
+                  aria-label={isSharingResource ? 'Sharing…' : 'Share this resource'}
+                  title="Share this resource"
+                  className="shrink-0 p-2 rounded-md flex items-center justify-center min-h-[36px] min-w-[36px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15m0-3-3-3m0 0-3 3m3-3V15"
+                    />
+                  </svg>
+                </button>
                 <ThemeToggle />
               </div>
             </div>

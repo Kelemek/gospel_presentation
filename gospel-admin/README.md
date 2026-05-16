@@ -74,3 +74,5 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 ## Capacitor (iOS / Android app)
 
 Presentation backup **Save my data** on **Android** uses **`@capacitor/filesystem`** and **`@capacitor/share`** (see `gospelLocalUserDataBackup.ts`). The shared file is named **`.txt`** so Android’s share sheet treats it as **`text/plain`** and typically shows more save targets (e.g. **Files**); the payload is still JSON. After pulling these dependencies, run `npx cap sync` and ship a **new Play Store build** for Android users to get that path. **iOS** still uses the in-WebView **Web Share API** for the same button; you can defer an App Store update until convenient—the server JS only loads the new plugins on Android.
+
+**Share this resource** (sticky profile header, **to the right of Bookmarks**) and admin **Copy URL** use **`@capacitor/share`** on native when available (share a presentation URL), then the **Web Share API** in supporting browsers, then **clipboard** copy. Uses the existing **`@capacitor/share`** dependency—no new native plugins.

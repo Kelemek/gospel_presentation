@@ -1212,7 +1212,7 @@ export function runTextSizeFeatureTour(options?: ProfileFeatureTourOptions): voi
         popover: {
           title: 'Menu',
           description:
-            'Tap <strong>Menu</strong> (top-left) to open the table of contents, where you will find <strong>Text size</strong> and other controls. Use <strong>Next</strong> to open it for this tour.',
+            'Tap the <strong>menu icon</strong> (top-left) to open the table of contents, where you will find <strong>Text size</strong> and other controls. Use <strong>Next</strong> to open it for this tour.',
           side: 'bottom',
           align: 'start',
           onNextClick: (_e, _s, { driver: drv }) => {
@@ -1279,7 +1279,7 @@ export function runPrintFeatureTour(options?: ProfileFeatureTourOptions): void {
         popover: {
           title: 'Menu',
           description:
-            'Tap <strong>Menu</strong> (top-left) to open the table of contents, where you will find <strong>Print Version</strong> along with Resources, text size, and Bible translation. Use <strong>Next</strong> to open it for this tour.',
+            'Tap the <strong>menu icon</strong> (top-left) to open the table of contents, where you will find <strong>Print Version</strong> along with Resources, text size, and Bible translation. Use <strong>Next</strong> to open it for this tour.',
           side: 'bottom',
           align: 'start',
           onNextClick: (_e, _s, { driver: drv }) => {
@@ -1370,7 +1370,7 @@ async function runBibleTranslationFeatureTourAsync(options?: ProfileFeatureTourO
         popover: {
           title: 'Menu',
           description:
-            'Tap <strong>Menu</strong> (top-left) to open the table of contents, where you will find <strong>Bible Translation</strong> (under <strong>Print Version</strong>) and other controls. Use <strong>Next</strong> to open the menu for this tour.',
+            'Tap the <strong>menu icon</strong> (top-left) to open the table of contents, where you will find <strong>Bible Translation</strong> (under <strong>Print Version</strong>) and other controls. Use <strong>Next</strong> to open the menu for this tour.',
           side: 'bottom',
           align: 'start',
           onNextClick: (_e, _s, { driver: drv }) => {
@@ -2031,7 +2031,7 @@ export function runAddCustomMemorizationFeatureTour(options?: ProfileFeatureTour
       popover: {
         title: 'Menu',
         description:
-          'Tap <strong>Menu</strong> (top-left) to open the slide-out. <strong>Memorize</strong> sits just below <strong>Bible Translation</strong>. Use <strong>Next</strong> to open the menu for this tour.',
+          'Tap the <strong>menu icon</strong> (top-left) to open the slide-out. <strong>Memorize</strong> sits just below <strong>Bible Translation</strong>. Use <strong>Next</strong> to open the menu for this tour.',
         side: 'bottom',
         align: 'start',
         onNextClick: (_e, _s, { driver: drv }) => {
@@ -2252,7 +2252,7 @@ export function runTableOfContentsFeatureTour(options?: ProfileFeatureTourOption
         popover: {
           title: 'Menu',
           description:
-            'Tap <strong>Menu</strong> (top-left) to open the slide-out. At the top you will find <strong>Resources</strong>, <strong>Text size</strong>, <strong>Print</strong>, and <strong>Bible translation</strong>, with <strong>Memorize</strong> just below <strong>Bible translation</strong>. Below that is the <strong>table of contents</strong>—links that match each section of this presentation. Use <strong>Next</strong> to open the menu for this tour.',
+            'Tap the <strong>menu icon</strong> (top-left) to open the slide-out. At the top you will find <strong>Resources</strong>, <strong>Text size</strong>, <strong>Print</strong>, and <strong>Bible translation</strong>, with <strong>Memorize</strong> just below <strong>Bible translation</strong>. Below that is the <strong>table of contents</strong>—links that match each section of this presentation. Use <strong>Next</strong> to open the menu for this tour.',
           side: 'bottom',
           align: 'start',
           onNextClick: (_e, _s, { driver: drv }) => {
@@ -2653,7 +2653,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
       popover: {
         title: 'Pinned passage',
         description:
-          'The prior step saves a colored <strong>pin</strong> on this passage. Pinned cards stay <strong>tinted and bold</strong> so you can spot them quickly—tints like red and blue can repeat on different passages when you bookmark more of them; <strong>yellow</strong> tracks your latest passage unless another tint bookmarks that verse. The next step spotlights the mini <strong>pin</strong> on the card (one tap removes that bookmark). Then we open <strong>Menu</strong> for the pin list and clear-all control.',
+          'The prior step saves a colored <strong>pin</strong> on this passage. Pinned cards stay <strong>tinted and bold</strong> so you can spot them quickly—tints like red and blue can repeat on different passages when you bookmark more of them; <strong>yellow</strong> tracks your latest passage unless another tint bookmarks that verse. The next step spotlights the mini <strong>pin</strong> on the card (one tap removes that bookmark). Then we open the <strong>menu</strong> for the pin list and clear-all control.',
         ...pop({ side: 'top', align: 'start' }),
       },
     },
@@ -2675,7 +2675,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
       popover: {
         title: 'Pins in the menu',
         description:
-          'Pinned passages are listed at the <strong>bottom</strong> of the slide-out menu (under profile details). Use <strong>Next</strong> to open <strong>Menu</strong> and scroll there.',
+          'Pinned passages are listed at the <strong>bottom</strong> of the slide-out menu (under profile details). Use <strong>Next</strong> to open the <strong>menu</strong> and scroll there.',
         ...pop({ side: 'bottom', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           openProfileMenuIfClosed()
@@ -2798,7 +2798,7 @@ async function runResourcesFeatureTourAsync(options?: ProfileFeatureTourOptions)
       popover: {
         title: 'Menu',
         description:
-          'Tap <strong>Menu</strong> (top-left) whenever you need the table of contents—<strong>Resources</strong>, text size, Bible translation, print, and links to each section. Use <strong>Next</strong> to open it for this tour.',
+          'Tap the <strong>menu icon</strong> (top-left) whenever you need the table of contents—<strong>Resources</strong>, text size, Bible translation, print, and links to each section. Use <strong>Next</strong> to open it for this tour.',
         side: 'bottom',
         align: 'start',
         onNextClick: (_e, _s, { driver: drv }) => {
@@ -3174,7 +3174,7 @@ async function runMarriageSeminarResourcesTourAsync(options?: ProfileFeatureTour
       popover: {
         title: 'Menu',
         description:
-          'Use <strong>Menu</strong> to reach shared seminar profiles under <strong>Resources</strong>. Use <strong>Next</strong> to open it for this tour.',
+          'Use the <strong>menu icon</strong> to reach shared seminar profiles under <strong>Resources</strong>. Use <strong>Next</strong> to open it for this tour.',
         side: 'bottom',
         align: 'start',
         onNextClick: (_e, _s, { driver: drv }) => {

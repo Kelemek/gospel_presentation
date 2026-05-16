@@ -65,7 +65,7 @@ test('slide-out menu shows Dashboard link when Supabase reports a logged-in admi
 
   render(<ProfileContent sections={sections as any} profileInfo={profileInfo as any} profile={null} />)
 
-  await user.click(screen.getByRole('button', { name: 'Menu' }))
+  await user.click(screen.getByRole('button', { name: /open menu/i }))
   const dashboard = await screen.findByRole('link', { name: /^Dashboard$/i })
   expect(dashboard).toHaveAttribute('href', '/admin')
 

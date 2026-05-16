@@ -76,6 +76,7 @@ describe('TemplatesPageContent - additional branches', () => {
     const writeMock = jest.fn().mockResolvedValue(undefined)
     // @ts-expect-error - add clipboard mock
     global.navigator.clipboard = { writeText: writeMock }
+    delete (global.navigator as { share?: unknown }).share
 
     const { showAlert } = (global as any).__alertModalMocks
 
