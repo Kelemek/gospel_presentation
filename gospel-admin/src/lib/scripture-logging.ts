@@ -25,9 +25,8 @@ interface ScriptureAccessLogData {
 export async function logScriptureAccess(data: ScriptureAccessLogData): Promise<void> {
   try {
     const supabase = createAdminClient()
-    
-    // @ts-expect-error - Supabase types don't include all table fields yet
-    const { error } = await supabase.from('scripture_access_logs').insert({
+
+    const { error } = await (supabase.from('scripture_access_logs') as any).insert({
       scripture_reference: data.reference,
       translation: data.translation,
       session_id: data.sessionId

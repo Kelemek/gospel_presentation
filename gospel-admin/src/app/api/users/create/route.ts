@@ -72,9 +72,8 @@ export async function POST(request: NextRequest) {
 
     // Create user profile with specified role
     // The trigger should create it automatically, but let's make sure it has the right role
-    const { error: profileError } = await adminClient
-      .from('user_profiles')
-      // @ts-expect-error - Supabase type inference issue
+    const { error: profileError } = await (adminClient
+      .from('user_profiles') as any)
       .upsert({
         id: newUser.user.id,
         role: role,
