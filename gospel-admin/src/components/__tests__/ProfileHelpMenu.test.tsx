@@ -71,23 +71,46 @@ describe('buildProfileTutorialMenuItems', () => {
     expect(idsAndroid).toContain('share')
   })
 
-  it('orders header tutorials after theme and before resources', () => {
+  it('orders tutorials: full, theme, then header icons R-to-L (share, bookmarks, highlights, listen when shown), then resources', () => {
     Object.defineProperty(navigator, 'userAgent', {
       configurable: true,
       value:
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     })
     const labels = buildProfileTutorialMenuItems().map((i) => i.label)
+    const fullIdx = labels.findIndex((l) => /^full walkthrough$/i.test(l))
     const themeIdx = labels.findIndex((l) => /light and dark mode/i.test(l))
-    const listenIdx = labels.findIndex((l) => /listen \(read aloud\)/i.test(l))
-    const highlightsIdx = labels.findIndex((l) => /^highlights$/i.test(l))
     const shareIdx = labels.findIndex((l) => /share this resource/i.test(l))
+    const bookmarksIdx = labels.findIndex((l) => /using bookmarks/i.test(l))
+    const highlightsIdx = labels.findIndex((l) => /^highlights$/i.test(l))
+    const listenIdx = labels.findIndex((l) => /listen \(read aloud\)/i.test(l))
     const resourcesIdx = labels.findIndex((l) => /resources menu/i.test(l))
-    expect(themeIdx).toBeGreaterThan(-1)
-    expect(listenIdx).toBeGreaterThan(themeIdx)
-    expect(highlightsIdx).toBeGreaterThan(listenIdx)
-    expect(shareIdx).toBeGreaterThan(highlightsIdx)
-    expect(resourcesIdx).toBeGreaterThan(shareIdx)
+    expect(fullIdx).toBe(0)
+    expect(themeIdx).toBe(1)
+    expect(shareIdx).toBe(2)
+    expect(bookmarksIdx).toBe(3)
+    expect(highlightsIdx).toBe(4)
+    expect(listenIdx).toBe(5)
+    expect(resourcesIdx).toBe(6)
+  })
+
+  it('on Android Web omits Listen but keeps theme → share → bookmarks → highlights before resources', () => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14; Pixel) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36',
+    })
+    const labels = buildProfileTutorialMenuItems().map((i) => i.label)
+    expect(labels.some((l) => /listen \(read aloud\)/i.test(l))).toBe(false)
+    const themeIdx = labels.findIndex((l) => /light and dark mode/i.test(l))
+    const shareIdx = labels.findIndex((l) => /share this resource/i.test(l))
+    const bookmarksIdx = labels.findIndex((l) => /using bookmarks/i.test(l))
+    const highlightsIdx = labels.findIndex((l) => /^highlights$/i.test(l))
+    const resourcesIdx = labels.findIndex((l) => /resources menu/i.test(l))
+    expect(themeIdx).toBe(1)
+    expect(shareIdx).toBe(2)
+    expect(bookmarksIdx).toBe(3)
+    expect(highlightsIdx).toBe(4)
+    expect(resourcesIdx).toBe(5)
   })
 })
 
@@ -119,18 +142,17 @@ describe('ProfileHelpMenu', () => {
     expect(screen.getByRole('menuitem', { name: /share this resource/i })).toBeInTheDocument()
   })
 
-  it('lists light and dark mode after bookmarks and before resources', async () => {
-    const user = userEvent.setup()
-    render(<ProfileHelpMenu />)
-
-    await user.click(screen.getByRole('button', { name: /help and tutorials/i }))
-    const labels = screen.getAllByRole('menuitem').map((el) => el.textContent ?? '')
-    const bookmarksIdx = labels.findIndex((t) => /using bookmarks/i.test(t))
-    const themeIdx = labels.findIndex((t) => /light and dark mode/i.test(t))
-    const resourcesIdx = labels.findIndex((t) => /resources menu/i.test(t))
-    expect(bookmarksIdx).toBeGreaterThan(-1)
-    expect(themeIdx).toBeGreaterThan(bookmarksIdx)
-    expect(resourcesIdx).toBeGreaterThan(themeIdx)
+  it('lists theme then share, bookmarks, highlights before resources', () => {
+    const ids = buildProfileTutorialMenuItems().map((i) => i.id)
+    const themeIdx = ids.indexOf('theme')
+    const shareIdx = ids.indexOf('share')
+    const bookmarksIdx = ids.indexOf('bookmarks')
+    const highlightsIdx = ids.indexOf('highlights')
+    const resourcesIdx = ids.indexOf('resources')
+    expect(themeIdx).toBeLessThan(shareIdx)
+    expect(shareIdx).toBeLessThan(bookmarksIdx)
+    expect(bookmarksIdx).toBeLessThan(highlightsIdx)
+    expect(highlightsIdx).toBeLessThan(resourcesIdx)
   })
 
   it('starts full walkthrough when chosen', async () => {

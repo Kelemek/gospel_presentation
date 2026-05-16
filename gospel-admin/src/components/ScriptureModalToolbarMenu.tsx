@@ -86,6 +86,8 @@ export interface ScriptureModalToolbarMenuProps {
   onSelect: (value: string) => void | Promise<void>
   disabled?: boolean
   dataTour?: string
+  /** Optional stable selector for tour automation (listbox may portal to `body`). */
+  listboxDataTour?: string
   /** Primary accessible name for the trigger (e.g. tour / screen readers). */
   ariaLabel: string
   listboxAriaLabel: string
@@ -104,6 +106,7 @@ export default function ScriptureModalToolbarMenu({
   onSelect,
   disabled = false,
   dataTour,
+  listboxDataTour,
   ariaLabel,
   listboxAriaLabel,
   triggerClassName = 'w-[6.5rem]',
@@ -212,6 +215,7 @@ export default function ScriptureModalToolbarMenu({
         ref={portaledListbox ? listboxPortalRef : undefined}
         id={listboxId}
         role="listbox"
+        data-tour={listboxDataTour}
         aria-label={listboxAriaLabel}
         className={listboxClassName}
         style={

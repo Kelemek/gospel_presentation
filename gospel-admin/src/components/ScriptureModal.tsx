@@ -641,6 +641,7 @@ export default function ScriptureModal({
               {/* Compare menu — custom listbox to match pin control styling (no native select). */}
               <ScriptureModalToolbarMenu
                 dataTour="scripture-modal-compare"
+                listboxDataTour="scripture-modal-compare-listbox"
                 ariaLabel="Compare with another translation"
                 listboxAriaLabel="Compare with a translation"
                 value={compareTranslation ?? ''}

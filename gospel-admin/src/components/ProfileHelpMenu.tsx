@@ -53,38 +53,12 @@ type TutorialItem = {
 }
 
 export function buildProfileTutorialMenuItems(): TutorialItem[] {
-  const afterTheme: TutorialItem[] = []
-  if (isProfileResourceListenControlAvailable()) {
-    afterTheme.push({
-      id: 'listen',
-      label: 'Listen (read aloud)',
-      description:
-        'Hear this presentation read aloud from the header; section list, play/pause, speed, read-along underline, and Word or Line highlight width',
-      run: runProfileListenFeatureTour,
-    })
-  }
-  afterTheme.push(
-    {
-      id: 'highlights',
-      label: 'Highlights',
-      description: 'Save quotes from the text and reopen them from the highlights list',
-      run: runHighlightsFeatureTour,
-    },
+  const headerAfterTheme: TutorialItem[] = [
     {
       id: 'share',
       label: 'Share this resource',
       description: 'Copy a link or use your device share sheet for this presentation',
       run: runShareResourceFeatureTour,
-    }
-  )
-
-  return [
-    {
-      id: 'full',
-      label: 'Full walkthrough',
-      description:
-        'All tutorials in order—bookmarks, theme, header tools (Listen when available, marker icon for saved quotes, Share), menu topics, scripture, memorization, and more',
-      run: runFullProfileHelpTutorial,
     },
     {
       id: 'bookmarks',
@@ -93,12 +67,37 @@ export function buildProfileTutorialMenuItems(): TutorialItem[] {
       run: runBookmarksFeatureTour,
     },
     {
+      id: 'highlights',
+      label: 'Highlights',
+      description: 'Save quotes from the text and reopen them from the highlights list',
+      run: runHighlightsFeatureTour,
+    },
+  ]
+  if (isProfileResourceListenControlAvailable()) {
+    headerAfterTheme.push({
+      id: 'listen',
+      label: 'Listen (read aloud)',
+      description:
+        'Hear this presentation read aloud from the header; section list, play/pause, speed, read-along underline, and Word or Line highlight width',
+      run: runProfileListenFeatureTour,
+    })
+  }
+
+  return [
+    {
+      id: 'full',
+      label: 'Full walkthrough',
+      description:
+        'All tutorials in order—after Full: theme, then header icons right-to-left (Share, bookmarks, Highlights, Listen when available), then slide-out menu topics, scripture, memorization, and more',
+      run: runFullProfileHelpTutorial,
+    },
+    {
       id: 'theme',
       label: 'Light and dark mode',
       description: 'Switch between light and dark appearance',
       run: runThemeFeatureTour,
     },
-    ...afterTheme,
+    ...headerAfterTheme,
     {
       id: 'resources',
       label: 'Resources menu',

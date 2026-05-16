@@ -106,8 +106,9 @@ export default function PresentationFirstVisitWelcome() {
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
               This site walks through <strong>The Gospel in its Context</strong> with scripture, questions, and
               tools in the header. New here? Start the <strong>full walkthrough</strong> for a guided tour of
-              bookmarks, theme, menu, scripture, and more—or close and open <strong>Help</strong> (
-              <span className="whitespace-nowrap">?</span> next to bookmarks) anytime and choose{' '}
+              theme, header controls (Share, bookmarks, Highlights, Listen when available), slide-out menu topics,
+              scripture, and more—or close and open <strong>Help</strong> (
+              <span className="whitespace-nowrap">?</span> in the header) anytime and choose{' '}
               <strong>Full walkthrough</strong> from the list.
             </p>
           </div>

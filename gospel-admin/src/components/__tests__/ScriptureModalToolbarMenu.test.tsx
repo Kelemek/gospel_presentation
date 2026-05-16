@@ -25,6 +25,28 @@ describe('ScriptureModalToolbarMenu', () => {
     expect(onSelect).toHaveBeenCalledWith('b')
   })
 
+  it('sets data-tour on listbox when listboxDataTour is passed', async () => {
+    const user = userEvent.setup()
+    render(
+      <ScriptureModalToolbarMenu
+        ariaLabel="Compare"
+        listboxAriaLabel="Compare with a translation"
+        listboxDataTour="scripture-modal-compare-listbox"
+        value=""
+        options={[
+          { value: '', label: 'Compare' },
+          { value: 'KJV', label: 'KJV' },
+        ]}
+        onSelect={jest.fn()}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /Compare/i }))
+    expect(screen.getByRole('listbox', { name: 'Compare with a translation' })).toHaveAttribute(
+      'data-tour',
+      'scripture-modal-compare-listbox'
+    )
+  })
+
   it('does not open when only one option', async () => {
     const user = userEvent.setup()
     const onSelect = jest.fn()

@@ -53,6 +53,7 @@ const ADD_MEMORIZE_ADD = '[data-tour="add-memorize-add"]'
 const MEMORIZE_PRACTICE_DIALOG = '[data-tour="memorize-practice-dialog"]'
 const MEMORIZE_START_PRACTICE = '[data-tour="memorize-start-practice"]'
 const MEMORIZE_PRACTICE_MODE_TYPE = '[data-tour="memorize-practice-mode-type"]'
+const MEMORIZE_PRACTICE_MODE_INITIALS = '[data-tour="memorize-practice-mode-initials"]'
 const MEMORIZE_PRACTICE_MODE_WORD = '[data-tour="memorize-practice-mode-word"]'
 const MEMORIZE_PRACTICE_MODE_REORDER = '[data-tour="memorize-practice-mode-reorder"]'
 const MEMORIZE_PRACTICE_MODE_PICKER = '[data-tour="memorize-practice-mode-picker"]'
@@ -702,30 +703,74 @@ async function reopenMemorizeMenuAndPanelForTour(): Promise<void> {
   await sleep(120)
 }
 
-function dispatchSelectChangeNative(sel: HTMLSelectElement): void {
-  sel.dispatchEvent(new Event('input', { bubbles: true }))
-  sel.dispatchEvent(new Event('change', { bubbles: true }))
+const SCRIPTURE_MODAL_COMPARE_LISTBOX =
+  '[data-tour="scripture-modal-compare-listbox"], [role="listbox"][aria-label="Compare with a translation"]'
+
+function resolveCompareToolbarListbox(trigger: HTMLElement): HTMLElement | null {
+  const wrap = trigger.parentElement
+  if (wrap) {
+    const local = wrap.querySelector<HTMLElement>('[role="listbox"]')
+    if (local) return local
+  }
+  return document.querySelector<HTMLElement>(SCRIPTURE_MODAL_COMPARE_LISTBOX)
 }
 
-function selectFirstCompareTranslationOption(): boolean {
-  const sel = document.querySelector<HTMLSelectElement>(SCRIPTURE_MODAL_COMPARE)
-  if (!sel || sel.options.length < 2) return false
-  for (let i = 0; i < sel.options.length; i++) {
-    const opt = sel.options[i]
-    if (opt?.value) {
-      sel.selectedIndex = i
-      dispatchSelectChangeNative(sel)
+/** Whether the Compare toolbar control's listbox is actually mounted with options — not `aria-expanded` (driver.js overwrites it on the spotlight). */
+function compareToolbarDropdownIsOpen(trigger: HTMLElement): boolean {
+  const listbox = resolveCompareToolbarListbox(trigger)
+  return !!listbox?.querySelector('button[role="option"]')
+}
+
+/**
+ * Opens the Compare menu unless its listbox is already showing (real DOM, not `aria-expanded`).
+ * While a step spotlights this button, driver.js sets `aria-expanded="true"` and **`aria-haspopup="dialog"`**,
+ * overwriting React's `listbox` — so we must not gate on `aria-haspopup === "listbox"`.
+ */
+async function ensureCompareToolbarDropdownOpen(trigger: HTMLButtonElement): Promise<boolean> {
+  if (trigger.disabled) return false
+  for (let i = 0; i < 4; i++) {
+    if (compareToolbarDropdownIsOpen(trigger)) return true
+    trigger.click()
+    await sleep(i === 0 ? 80 : 100)
+  }
+  return compareToolbarDropdownIsOpen(trigger)
+}
+
+async function selectFirstCompareTranslationOptionAsync(): Promise<boolean> {
+  const trigger = document.querySelector<HTMLButtonElement>(SCRIPTURE_MODAL_COMPARE)
+  if (!trigger || trigger.disabled) {
+    return false
+  }
+  await ensureCompareToolbarDropdownOpen(trigger)
+  for (let attempt = 0; attempt < 40; attempt++) {
+    await sleep(attempt === 0 ? 0 : 50)
+    const listbox = resolveCompareToolbarListbox(trigger)
+    if (!listbox) continue
+    for (const opt of listbox.querySelectorAll<HTMLButtonElement>('button[role="option"]')) {
+      const label = opt.textContent?.trim() ?? ''
+      if (label === '' || label === 'Compare') continue
+      opt.click()
       return true
     }
   }
   return false
 }
 
-function clearCompareTranslationSelect(): void {
-  const sel = document.querySelector<HTMLSelectElement>(SCRIPTURE_MODAL_COMPARE)
-  if (!sel) return
-  sel.selectedIndex = 0
-  dispatchSelectChangeNative(sel)
+async function clearCompareTranslationSelectAsync(): Promise<void> {
+  const trigger = document.querySelector<HTMLButtonElement>(SCRIPTURE_MODAL_COMPARE)
+  if (!trigger || trigger.disabled) {
+    return
+  }
+  await ensureCompareToolbarDropdownOpen(trigger)
+  for (let attempt = 0; attempt < 40; attempt++) {
+    await sleep(attempt === 0 ? 0 : 50)
+    const listbox = resolveCompareToolbarListbox(trigger)
+    const first = listbox?.querySelector<HTMLButtonElement>('button[role="option"]')
+    if (first) {
+      first.click()
+      return
+    }
+  }
 }
 
 function modalVerseBodyHasText(): boolean {
@@ -1579,7 +1624,7 @@ async function runBibleTranslationFeatureTourAsync(options?: ProfileFeatureTourO
 /**
  * Verse memorization tour: opens a scripture **card**, saves with **Memorize** in the reader, opens **Menu** → **Memorize**,
  * highlights **+ Add** (picker without the reader), explains the list, opens practice from the **verse row** for a short preview (intro + round 1),
- * walks **Listen** and the read-aloud modal (play/pause, repeat, speed, close) when the control is shown, then continues with guided typing and closes, then removes the tour verse with the **trash** control (with confirm).
+ * walks **Choose practice mode** with separate spotlights for **Type**, **Initials**, **Word**, and **Reorder**, then continues in **Type mode** for **Listen** and the read-aloud modal (play/pause, repeat, speed, close) when the control is shown, then continues with guided typing and closes, then removes the tour verse with the **trash** control (with confirm).
  *
  * When not on `/default`, stores resume state and navigates there first (`ProfilePageClient` calls `tryStartMemorizeTourAfterNavigation`).
  */
@@ -1860,7 +1905,7 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
       popover: {
         title: 'Choose practice mode',
         description:
-          'Pick how you want to work through the <strong>same five rounds</strong>: all paths end at round 5—in <strong>Type</strong>, <strong>Initials</strong>, and <strong>Word</strong> mode more words are hidden each round (Initials hides every blank and shows an initials hint line); in <strong>Reorder</strong> mode more phrase chunks are shuffled. Use <strong>Next</strong> to walk each option, then the tour continues in <strong>Type mode</strong> for Listen and typing.',
+          'Pick how you want to work through the <strong>same five rounds</strong>: all paths end at round 5—in <strong>Type</strong>, <strong>Initials</strong>, and <strong>Word</strong> mode more words are hidden each round (Initials hides every blank and shows an initials hint line); in <strong>Reorder</strong> mode more phrase chunks are shuffled. Use <strong>Next</strong> to walk <strong>Type</strong> → <strong>Initials</strong> → <strong>Word</strong> → <strong>Reorder</strong>, then the tour continues in <strong>Type mode</strong> for Listen and typing.',
         ...pop({ side: 'right', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           window.setTimeout(() => {
@@ -1878,7 +1923,26 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
       popover: {
         title: 'Type mode',
         description:
-          '<strong>Type mode</strong> uses the keyboard: type the <strong>first letter</strong> of each blank word and each <strong>digit</strong> in the reference (punctuation stays on screen). Use <strong>Next</strong> to see <strong>Word mode</strong>.',
+          '<strong>Type mode</strong> uses the keyboard: type the <strong>first letter</strong> of each blank word and each <strong>digit</strong> in the reference (punctuation stays on screen). Use <strong>Next</strong> to see <strong>Initials mode</strong>.',
+        ...pop({ side: 'right', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          window.setTimeout(() => {
+            drv.refresh()
+            drv.moveNext()
+          }, prefersReducedMotion() ? 60 : 120)
+        },
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(MEMORIZE_PRACTICE_MODE_INITIALS) ??
+        document.querySelector(MEMORIZE_PRACTICE_MODE_PICKER) ??
+        document.querySelector(MEMORIZE_PRACTICE_DIALOG) ??
+        document.body,
+      popover: {
+        title: 'Initials mode',
+        description:
+          '<strong>Initials mode</strong> still uses the keyboard like Type, but every blank is hidden and a separate <strong>initials hint</strong> line shows the first letter of each word (and digits for the reference) so you can work from cues. Use <strong>Next</strong> to see <strong>Word mode</strong>.',
         ...pop({ side: 'right', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           window.setTimeout(() => {
@@ -2596,23 +2660,24 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
       popover: {
         title: 'Compare translations',
         description:
-          'Open <strong>Compare</strong> and pick a second version to read the same passage side by side (when your church has more than one translation enabled). Use <strong>Next</strong> to turn it on for this tour.',
+          'Open <strong>Compare</strong> and pick a second version to read the same passage beside your main translation (only translations your church enables appear; the list never repeats the one you are already reading). Tap <strong>Next</strong> to open <strong>Compare</strong> and choose a second translation for this tour.',
         ...pop({ side: 'bottom', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
-          const applied = selectFirstCompareTranslationOption()
-          if (!applied) {
+          void (async () => {
+            const applied = await selectFirstCompareTranslationOptionAsync()
+            if (!applied) {
+              window.setTimeout(() => {
+                drv.refresh()
+                drv.moveNext()
+              }, 120)
+              return
+            }
+            await waitUntil(() => compareColumnsVisible() && modalVerseBodyHasText(), 18000)
             window.setTimeout(() => {
               drv.refresh()
               drv.moveNext()
-            }, 120)
-            return
-          }
-          void waitUntil(() => compareColumnsVisible() && modalVerseBodyHasText(), 18000).then(() => {
-            window.setTimeout(() => {
-              drv.refresh()
-              drv.moveNext()
-            }, 250)
-          })
+            }, 200)
+          })()
         },
       },
     },
@@ -2621,6 +2686,11 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         document.querySelector(SCRIPTURE_MODAL_COMPARE_COLUMNS) ??
         document.querySelector(SCRIPTURE_MODAL_VERSE_BODY) ??
         document.querySelector(SCRIPTURE_MODAL_TOOLBAR)!,
+      onHighlighted: (_el, _step, { driver: drv }) => {
+        window.requestAnimationFrame(() => {
+          drv.refresh()
+        })
+      },
       popover: {
         title: narrow ? 'Top and bottom' : 'Two columns',
         description: narrow
@@ -2634,15 +2704,16 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
       popover: {
         title: 'Turn off compare',
         description:
-          'Choose <strong>Compare</strong> again and pick the blank first row (or use <strong>Next</strong>) to return to a single column.',
+          'Open <strong>Compare</strong> again and pick the first row (<strong>Compare</strong>) to return to a single column—or tap <strong>Next</strong> and the tour will do it for you.',
         ...pop({ side: 'bottom', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
-          clearCompareTranslationSelect()
-          void waitUntil(() => !compareColumnsVisible() && modalVerseBodyHasText(), 12000).then(() => {
-            window.setTimeout(() => {
-              drv.refresh()
-              drv.moveNext()
-            }, 200)
+          void clearCompareTranslationSelectAsync().then(() => {
+            void waitUntil(() => !compareColumnsVisible() && modalVerseBodyHasText(), 12000).then(() => {
+              window.setTimeout(() => {
+                drv.refresh()
+                drv.moveNext()
+              }, 200)
+            })
           })
         },
       },
@@ -2765,7 +2836,11 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
         onNextClick: (_e, _s, { driver: drv }) => {
           const root = document.querySelector(SCRIPTURE_MODAL_PIN_COLOR)
           const trigger = root?.querySelector<HTMLButtonElement>('[data-tour="scripture-modal-pin-trigger"]')
-          if (trigger && !trigger.disabled && trigger.getAttribute('aria-expanded') !== 'true') {
+          if (
+            trigger &&
+            !trigger.disabled &&
+            !root?.querySelector<HTMLButtonElement>('[role="option"][data-pin-slot]')
+          ) {
             trigger.click()
           }
           void waitUntil(
@@ -3589,8 +3664,34 @@ const FULL_WALKTHROUGH_SEGMENTS_FROM_RESOURCES: FullProfileWalkthroughSegment[] 
   },
 ]
 
-function getFullWalkthroughHeaderClusterSegments(): FullProfileWalkthroughSegment[] {
-  const mid: FullProfileWalkthroughSegment[] = []
+/** Header toolbar tutorials after theme, right-to-left chip order: Share → bookmarks → Highlights → Listen (when shown). */
+function getFullWalkthroughHeaderToolbarAfterThemeSegments(): FullProfileWalkthroughSegment[] {
+  const mid: FullProfileWalkthroughSegment[] = [
+    {
+      run: runShareResourceFeatureTour,
+      intro: {
+        title: 'Share this resource',
+        description:
+          'Copy a link to this presentation or use your device’s share sheet when available.',
+      },
+    },
+    {
+      run: runBookmarksFeatureTour,
+      intro: {
+        title: 'Using bookmarks',
+        description:
+          'What bookmarks are, how scroll position matters, then add a practice bookmark, see it in the list, and remove it.',
+      },
+    },
+    {
+      run: runHighlightsFeatureTour,
+      intro: {
+        title: 'Highlights',
+        description:
+          'Save quotes from section content and return to them from the highlights list; search and remove entries as needed.',
+      },
+    },
+  ]
   if (isProfileResourceListenControlAvailable()) {
     mid.push({
       run: runProfileListenFeatureTour,
@@ -3601,37 +3702,11 @@ function getFullWalkthroughHeaderClusterSegments(): FullProfileWalkthroughSegmen
       },
     })
   }
-  mid.push(
-    {
-      run: runHighlightsFeatureTour,
-      intro: {
-        title: 'Highlights',
-        description:
-          'Save quotes from section content and return to them from the highlights list; search and remove entries as needed.',
-      },
-    },
-    {
-      run: runShareResourceFeatureTour,
-      intro: {
-        title: 'Share this resource',
-        description:
-          'Copy a link to this presentation or use your device’s share sheet when available.',
-      },
-    }
-  )
   return mid
 }
 
 function getFullWalkthroughSegments(): FullProfileWalkthroughSegment[] {
   return [
-    {
-      run: runBookmarksFeatureTour,
-      intro: {
-        title: 'Using bookmarks',
-        description:
-          'What bookmarks are, how scroll position matters, then add a practice bookmark, see it in the list, and remove it.',
-      },
-    },
     {
       run: runThemeFeatureTour,
       intro: {
@@ -3640,7 +3715,7 @@ function getFullWalkthroughSegments(): FullProfileWalkthroughSegment[] {
           'Switch between light and dark appearance; this segment briefly flips the theme once, then restores your previous setting.',
       },
     },
-    ...getFullWalkthroughHeaderClusterSegments(),
+    ...getFullWalkthroughHeaderToolbarAfterThemeSegments(),
     ...FULL_WALKTHROUGH_SEGMENTS_FROM_RESOURCES,
   ]
 }
