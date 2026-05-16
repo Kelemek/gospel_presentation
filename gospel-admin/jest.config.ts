@@ -25,7 +25,6 @@ const config: Config = {
     '!src/**/__tests__/**',
     '!src/**/*.test.{ts,tsx}',
     '!src/lib/supabase/database.types.ts',
-    '!src/lib/auth-server.ts',
     '!src/app/login/page.magic-link.tsx',
     '!src/app/login-code/**',
     '!src/app/login/magic-link/**',
@@ -34,7 +33,6 @@ const config: Config = {
     '!src/app/[slug]/page.tsx',
     '!src/app/admin/templates/page.tsx',
     '!src/components/RichTextEditor.tsx',
-    '!src/components/InlineEditableText.tsx',
     // Large admin UI / auth flows with minimal unit tests
     '!src/app/admin/page.tsx',
     '!src/app/admin/profiles/[slug]/page.tsx',
@@ -48,7 +46,6 @@ const config: Config = {
     '!src/app/api/admin/translation-settings/**',
     '!src/app/api/auth/send-code/**',
     '!src/app/api/auth/verify-code/**',
-    '!src/components/AdminLogin.tsx',
     '!src/components/ProfileCard.tsx',
     '!src/components/TemplateCard.tsx',
     '!src/components/ClarityProvider.tsx',

@@ -1,0 +1,29 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignoreFiles": [
+    "android/**",
+    "scripts/**",
+    "jest.coverage.cjs",
+    "jest.coverage.setup.cjs"
+  ],
+  "ignoreDependencies": [
+    "@capacitor/ios",
+    "clarity-js"
+  ],
+  "ignoreExportsUsedInFile": {
+    "interface": true,
+    "type": true
+  },
+  "ignoreIssues": {
+    "src/app/admin/profiles/**/content/ContentEditPageClient.tsx": ["exports", "types", "duplicates"],
+    "src/app/admin/profiles/**/ProfileEditPageClient.tsx": ["exports", "types", "duplicates"],
+    "src/components/ErrorBoundary.tsx": ["duplicates"],
+    "src/lib/logger.ts": ["duplicates"]
+  },
+  "rules": {
+    "exports": "off",
+    "types": "off",
+    "nsExports": "off",
+    "nsTypes": "off"
+  }
+}

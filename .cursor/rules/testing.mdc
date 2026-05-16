@@ -23,3 +23,4 @@ alwaysApply: true
 - `npm test` — run all tests
 - `npm test -- <pattern>` — run tests matching the pattern (e.g. `CapacitorKeepLinksInApp`, `usePageTheme`)
 - `npm run test:ci` — run tests in CI mode with coverage
+- `npm run knip` — optional unused-file / dependency hygiene check (see `gospel-admin/knip.json`; not part of default CI)
