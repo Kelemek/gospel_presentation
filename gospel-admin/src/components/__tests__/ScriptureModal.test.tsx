@@ -376,7 +376,7 @@ describe('ScriptureModal Component', () => {
   })
 
   it.each(['larger', 'largest'] as const)(
-    'on narrow viewports with text size %s, shortens Chapter label and narrows Compare/Translation triggers',
+    'on narrow viewports with text size %s, Compare and Translation use compact fixed widths',
     async (storedSize) => {
       const prevMm = window.matchMedia
       localStorage.setItem('gospel-profile-text-size', storedSize)
@@ -409,7 +409,7 @@ describe('ScriptureModal Component', () => {
     }
   )
 
-  it('keeps full Chapter Context label on narrow viewports when text size is normal', async () => {
+  it('on narrow viewports shows Chapter (not Chapter Context) on the button when text size is normal', async () => {
     const prevMm = window.matchMedia
     localStorage.removeItem('gospel-profile-text-size')
     Object.defineProperty(window, 'matchMedia', {
@@ -426,7 +426,7 @@ describe('ScriptureModal Component', () => {
     renderWithTextSize(<ScriptureModal {...defaultProps} />)
     try {
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: /chapter context/i })).toHaveTextContent('Chapter Context')
+        expect(screen.getByRole('button', { name: /chapter context/i })).toHaveTextContent('Chapter')
       )
       const compareBtn = screen.getByRole('button', { name: /compare with another translation/i })
       expect(compareBtn.className).toMatch(/w-\[6\.5rem\]/)
@@ -435,6 +435,28 @@ describe('ScriptureModal Component', () => {
     }
   })
 
+  it('shows full Chapter Context label when viewport is not narrow', async () => {
+    const prevMm = window.matchMedia
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      configurable: true,
+      value: jest.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+      })),
+    })
+
+    renderWithTextSize(<ScriptureModal {...defaultProps} />)
+    try {
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /chapter context/i })).toHaveTextContent('Chapter Context')
+      )
+    } finally {
+      window.matchMedia = prevMm
+    }
+  })
   it('calls onOpenSpurgeonStudy when Study is shown and clicked', async () => {
     const user = userEvent.setup()
     const openStudy = jest.fn()

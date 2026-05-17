@@ -89,7 +89,8 @@ export default function ScriptureModal({
   const compactScriptureToolbarForMobileLargeText =
     narrowSmViewport && (textSize === 'larger' || textSize === 'largest')
 
-  const chapterContextButtonLabelShort = compactScriptureToolbarForMobileLargeText
+  /** On narrow phones the Chapter control always reads “Chapter”; full name stays in aria-label / title. */
+  const chapterContextButtonLabelShort = narrowSmViewport
 
   const scriptureCompareMenuTriggerClassName = compactScriptureToolbarForMobileLargeText
     ? 'w-[128px] max-w-[128px] shrink-0 !px-1.5'

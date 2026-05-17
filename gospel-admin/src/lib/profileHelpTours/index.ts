@@ -2723,7 +2723,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
       popover: {
         title: 'Chapter context',
         description:
-          'Tap <strong>Chapter Context</strong> to load the whole chapter. Your verses stay highlighted in the longer text so you can see what comes before and after. Use <strong>Next</strong> to load it now.',
+          'Tap <strong>Chapter</strong> (or <strong>Chapter Context</strong> on wider screens) to load the whole chapter. Your verses stay highlighted in the longer text so you can see what comes before and after. Use <strong>Next</strong> to load it now.',
         ...pop({ side: 'bottom', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           document.querySelector<HTMLElement>(SCRIPTURE_MODAL_CHAPTER_CONTEXT_BTN)?.click()
