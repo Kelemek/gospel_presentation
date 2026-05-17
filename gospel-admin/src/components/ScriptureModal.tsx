@@ -34,7 +34,7 @@ interface ScriptureModalProps {
     onDraftColorChange: (value: VersePinColorId) => void
     colorsAvailableInDropdown: readonly VerseBookmarkColorId[]
   }
-  /** Opens Spurgeon library modal with “by scripture” search for this reference (profile pages). */
+  /** Opens Spurgeon library modal with “by scripture” search for this reference (profile pages). Study stays visible but disabled when the index has no matches. */
   onOpenSpurgeonStudy?: (reference: string) => void
 }
 
@@ -89,9 +89,6 @@ export default function ScriptureModal({
   const compactScriptureToolbarForMobileLargeText =
     narrowSmViewport && (textSize === 'larger' || textSize === 'largest')
 
-  /** On narrow phones the Chapter control always reads “Chapter”; full name stays in aria-label / title. */
-  const chapterContextButtonLabelShort = narrowSmViewport
-
   const scriptureCompareMenuTriggerClassName = compactScriptureToolbarForMobileLargeText
     ? 'w-[128px] max-w-[128px] shrink-0 !px-1.5'
     : undefined
@@ -102,6 +99,9 @@ export default function ScriptureModal({
 
   /** Slightly smaller labels so Verse / Chapter / Memorize / Study stay on one row on narrow phones. */
   const scriptureToolbarControlTextClass = 'text-xs font-medium leading-none'
+
+  /** Verse ↔ chapter toggle: fixed width so label does not shift (Chapter / Verse / Loading…). */
+  const verseChapterToggleWidthClass = 'w-[88px] min-w-[88px] max-w-[88px] shrink-0'
 
   const compareMenuOptions = useMemo(
     () => [
@@ -672,7 +672,7 @@ export default function ScriptureModal({
             </div>
           </div>
           
-          {/* Context Toggle Buttons - Always Visible. Small: row1 = Compare + Translation + pin, row2 = Verse + Chapter Context + Memorize (+ Study) */}
+          {/* Toolbar: row1 = Compare + Translation + pin; row2 = verse/chapter toggle + Memorize (+ Study) */}
           <div className="flex flex-wrap gap-1 justify-center items-center">
             <div className="w-full sm:w-auto flex flex-wrap gap-1 justify-center sm:justify-start items-center">
               {/* Compare menu — custom listbox to match pin control styling (no native select). */}
@@ -724,37 +724,34 @@ export default function ScriptureModal({
               <button
                 ref={verseTabButtonRef}
                 type="button"
-                data-tour="scripture-modal-verse-tab"
-                onClick={() => setShowingContext(false)}
-                className={`cursor-pointer px-2 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 ${
-                  !showingContext 
-                    ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border-blue-400 dark:border-blue-600' 
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 border-slate-400 dark:border-slate-500'
+                data-tour="scripture-modal-verse-chapter-toggle"
+                onClick={() => {
+                  if (showingContext) {
+                    setShowingContext(false)
+                  } else {
+                    void fetchChapterContext()
+                  }
+                }}
+                disabled={!showingContext && contextLoading}
+                title={
+                  showingContext
+                    ? 'Return to this passage (verse view)'
+                    : contextLoading
+                      ? undefined
+                      : 'View the whole chapter with your verses highlighted'
+                }
+                aria-label={
+                  contextLoading
+                    ? 'Loading chapter context'
+                    : showingContext
+                      ? 'Verse'
+                      : 'Chapter context'
+                }
+                className={`${verseChapterToggleWidthClass} px-2 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border-blue-400 dark:border-blue-600 ${
+                  !showingContext && contextLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                 }`}
               >
-                Verse
-              </button>
-
-              <button
-                type="button"
-                data-tour="scripture-modal-chapter-context"
-                onClick={fetchChapterContext}
-                disabled={contextLoading}
-                title={
-                  chapterContextButtonLabelShort && !contextLoading ? 'Chapter Context' : undefined
-                }
-                aria-label={contextLoading ? 'Loading chapter context' : 'Chapter context'}
-                className={`px-2 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 ${
-                  showingContext 
-                    ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border-blue-400 dark:border-blue-600' 
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 border-slate-400 dark:border-slate-500'
-                } ${contextLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-              >
-                {contextLoading
-                  ? 'Loading...'
-                  : chapterContextButtonLabelShort
-                    ? 'Chapter'
-                    : 'Chapter Context'}
+                {contextLoading && !showingContext ? 'Loading...' : showingContext ? 'Verse' : 'Chapter'}
               </button>
 
               <button
@@ -772,20 +769,51 @@ export default function ScriptureModal({
               >
                 Memorize
               </button>
-              {onOpenSpurgeonStudy &&
-                reference.trim() &&
-                spurgeonStudyMatch === 'yes' && (
-                  <button
-                    type="button"
-                    data-tour="scripture-modal-spurgeon-study"
-                    onClick={() => onOpenSpurgeonStudy(reference.trim())}
-                    title="Search public Spurgeon sermons that reference this passage"
-                    aria-label="Study: Spurgeon sermons for this passage"
-                    className={`px-1.5 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 shrink-0 cursor-pointer text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500`}
-                  >
-                    Study
-                  </button>
-                )}
+              {onOpenSpurgeonStudy && (
+                <button
+                  type="button"
+                  data-tour="scripture-modal-spurgeon-study"
+                  disabled={
+                    !reference.trim() ||
+                    spurgeonStudyMatch === 'loading' ||
+                    spurgeonStudyMatch === 'unset' ||
+                    spurgeonStudyMatch === 'no'
+                  }
+                  onClick={() => {
+                    const ref = reference.trim()
+                    if (!ref || spurgeonStudyMatch !== 'yes') return
+                    onOpenSpurgeonStudy(ref)
+                  }}
+                  title={
+                    !reference.trim()
+                      ? 'Open a passage to search Spurgeon sermons'
+                      : spurgeonStudyMatch === 'loading' || spurgeonStudyMatch === 'unset'
+                        ? 'Checking indexed Spurgeon sermons…'
+                        : spurgeonStudyMatch === 'no'
+                          ? 'No public Spurgeon sermons indexed for this passage'
+                          : 'Search public Spurgeon sermons that reference this passage'
+                  }
+                  aria-label={
+                    !reference.trim()
+                      ? 'Study: no passage selected'
+                      : spurgeonStudyMatch === 'loading' || spurgeonStudyMatch === 'unset'
+                        ? 'Study: checking Spurgeon sermon index'
+                        : spurgeonStudyMatch === 'no'
+                          ? 'Study: no Spurgeon sermons indexed for this passage'
+                          : 'Study: Spurgeon sermons for this passage'
+                  }
+                  className={`px-1.5 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 shrink-0 ${
+                    !reference.trim() ||
+                    spurgeonStudyMatch === 'loading' ||
+                    spurgeonStudyMatch === 'unset' ||
+                    spurgeonStudyMatch === 'no'
+                      ? 'text-slate-400 dark:text-slate-500 border-slate-300 dark:border-slate-600 cursor-not-allowed bg-slate-50 dark:bg-slate-700/50'
+                      : 'cursor-pointer text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500'
+                  }`}
+                >
+                  Study
+                </button>
+              )}
             </div>
           </div>
         </div>

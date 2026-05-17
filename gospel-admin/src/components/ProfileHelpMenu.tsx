@@ -131,7 +131,7 @@ export function buildProfileTutorialMenuItems(): TutorialItem[] {
     {
       id: 'scriptureModal',
       label: 'Scripture reader',
-      description: 'Cards, compare, chapter context, colored local pins, and Menu clear-all',
+      description: 'Cards, compare, verse/chapter toggle, colored local pins, and Menu clear-all',
       run: runScriptureModalFeatureTour,
     },
     {

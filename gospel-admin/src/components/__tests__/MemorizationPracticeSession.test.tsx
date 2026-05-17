@@ -600,7 +600,7 @@ describe('MemorizationPracticeSession', () => {
     expect(screen.queryByTestId('memorize-practice-spurgeon-study')).not.toBeInTheDocument()
   })
 
-  it('does not show Spurgeon Study when spurgeon-links returns no items', async () => {
+  it('disables Spurgeon Study when spurgeon-links returns no items', async () => {
     Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
       configurable: true,
       writable: true,
@@ -618,9 +618,9 @@ describe('MemorizationPracticeSession', () => {
         onOpenSpurgeonStudy={jest.fn()}
       />
     )
-    await waitFor(() => {
-      expect(screen.queryByTestId('memorize-practice-spurgeon-study')).not.toBeInTheDocument()
-    })
+    const study = await screen.findByTestId('memorize-practice-spurgeon-study')
+    expect(study).toBeDisabled()
+    expect(study).toHaveTextContent('Study')
     fetchSpy.mockRestore()
     delete (HTMLElement.prototype as unknown as { scrollIntoView?: unknown }).scrollIntoView
   })

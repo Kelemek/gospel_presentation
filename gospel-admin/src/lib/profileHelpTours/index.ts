@@ -74,11 +74,10 @@ const SCRIPTURE_MODAL_TOOLBAR = '[data-tour="scripture-modal-toolbar"]'
 const SCRIPTURE_MODAL_VERSE_BODY = '[data-tour="scripture-modal-verse-body"]'
 const SCRIPTURE_MODAL_COMPARE = '[data-tour="scripture-modal-compare"]'
 const SCRIPTURE_MODAL_COMPARE_COLUMNS = '[data-tour="scripture-modal-compare-columns"]'
-const SCRIPTURE_MODAL_CHAPTER_CONTEXT_BTN = '[data-tour="scripture-modal-chapter-context"]'
+const SCRIPTURE_MODAL_VERSE_CHAPTER_TOGGLE = '[data-tour="scripture-modal-verse-chapter-toggle"]'
 const SCRIPTURE_MODAL_CHAPTER_BODY = '[data-tour="scripture-modal-chapter-body"]'
 /** Scrollable passage area — must be the driver.js spotlight during chapter context so wheel/touch scroll works (overlay only restores pointer-events on the active element and its subtree). */
 const SCRIPTURE_MODAL_SCROLL_AREA = '[data-tour="scripture-modal-scroll-area"]'
-const SCRIPTURE_MODAL_VERSE_TAB = '[data-tour="scripture-modal-verse-tab"]'
 const SCRIPTURE_MODAL_PREV = '[data-tour="scripture-modal-prev"]'
 const SCRIPTURE_MODAL_NEXT = '[data-tour="scripture-modal-next"]'
 const SCRIPTURE_MODAL_CLOSE = '[data-tour="scripture-modal-close"]'
@@ -2586,8 +2585,8 @@ export function runScriptureHoverPreviewFeatureTour(options?: ProfileFeatureTour
 }
 
 /**
- * Scripture modal tour: opens the first scripture **card** on the page, then walks compare, chapter context,
- * Verse tab (back to single passage), next/prev arrows, optional **Pin** color (saved on close), close, pinned card,
+ * Scripture modal tour: opens the first scripture **card** on the page, then walks compare, verse/chapter toggle
+ * (chapter view then back to the passage), next/prev arrows, optional **Pin** color (saved on close), close, pinned card,
  * per-color unpin on the card (explained only—no tap), **Menu** pinned-passage summary, and **Clear pinned passages**.
  *
  * When the reader is not already on the public **default** presentation (`/default`), this stores resume state and
@@ -2651,7 +2650,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
       popover: {
         title: 'The passage',
         description:
-          'The verse or range appears here in the translation you chose in the menu (or the site default). Use the toolbar above to compare, change chapter view, or move to another passage.',
+          'The verse or range appears here in the translation you chose in the menu (or the site default). Use the toolbar above to compare, switch between verse-only and full-chapter views, or move to another passage.',
         ...pop({ side: 'top', align: 'start' }),
       },
     },
@@ -2719,14 +2718,14 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
       },
     },
     {
-      element: SCRIPTURE_MODAL_CHAPTER_CONTEXT_BTN,
+      element: SCRIPTURE_MODAL_VERSE_CHAPTER_TOGGLE,
       popover: {
         title: 'Chapter context',
         description:
-          'Tap <strong>Chapter</strong> (or <strong>Chapter Context</strong> on wider screens) to load the whole chapter. Your verses stay highlighted in the longer text so you can see what comes before and after. Use <strong>Next</strong> to load it now.',
+          'Tap <strong>Chapter</strong> on this control to load the whole chapter. Your verses stay highlighted in the longer text so you can see what comes before and after. Use <strong>Next</strong> to load it now.',
         ...pop({ side: 'bottom', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
-          document.querySelector<HTMLElement>(SCRIPTURE_MODAL_CHAPTER_CONTEXT_BTN)?.click()
+          document.querySelector<HTMLElement>(SCRIPTURE_MODAL_VERSE_CHAPTER_TOGGLE)?.click()
           void waitUntil(() => !!document.querySelector(SCRIPTURE_MODAL_CHAPTER_BODY), 15000).then(() => {
             window.setTimeout(() => {
               drv.refresh()
@@ -2754,14 +2753,14 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
       },
     },
     {
-      element: SCRIPTURE_MODAL_VERSE_TAB,
+      element: SCRIPTURE_MODAL_VERSE_CHAPTER_TOGGLE,
       popover: {
         title: 'Back to single verse',
         description:
-          'Tap <strong>Verse</strong> to leave chapter view and return to just the passage you opened—compact and easy to read. Use <strong>Next</strong> to switch back for this tour.',
+          'The same control now shows <strong>Verse</strong>. Tap it to leave chapter view and return to just the passage you opened—compact and easy to read. Use <strong>Next</strong> to switch back for this tour.',
         ...pop({ side: 'bottom', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
-          document.querySelector<HTMLElement>(SCRIPTURE_MODAL_VERSE_TAB)?.click()
+          document.querySelector<HTMLElement>(SCRIPTURE_MODAL_VERSE_CHAPTER_TOGGLE)?.click()
           void waitUntil(() => modalSingleVerseViewReady(), 12000).then(() => {
             window.setTimeout(() => {
               drv.refresh()
@@ -3273,7 +3272,7 @@ function runMarriageSeminarResourcesTourPostNavigationOnly(options?: ProfileFeat
       popover: {
         title: 'Scripture in this lesson',
         description:
-          'On this lesson the <strong>first</strong> blue card often matches the video link above; the <strong>next</strong> cards are scripture. They work like everywhere else on the site: tap to open the reader, compare translations, view chapter context, and move to the next or previous passage in order.',
+          'On this lesson the <strong>first</strong> blue card often matches the video link above; the <strong>next</strong> cards are scripture. They work like everywhere else on the site: tap to open the reader, compare translations, use the <strong>Chapter</strong>/<strong>Verse</strong> toggle for full-chapter context when helpful, and move to the next or previous passage in order.',
         side: 'top',
         align: 'start',
       },

@@ -365,14 +365,16 @@ describe('ScriptureModal Component', () => {
     expect(screen.queryByRole('button', { name: /Study: Spurgeon sermons for this passage/i })).not.toBeInTheDocument()
   })
 
-  it('does not show Study when onOpenSpurgeonStudy is set but spurgeon-links returns no sermons', async () => {
+  it('disables Study when onOpenSpurgeonStudy is set but spurgeon-links returns no sermons', async () => {
     const openStudy = jest.fn()
     renderWithTextSize(<ScriptureModal {...defaultProps} onOpenSpurgeonStudy={openStudy} />)
     await waitFor(() => expect(screen.getByRole('heading', { name: 'John 3:16' })).toBeInTheDocument())
     await waitFor(() =>
       expect(mockFetch.mock.calls.some((c) => String(c[0]).includes('spurgeon-links'))).toBe(true)
     )
-    expect(screen.queryByRole('button', { name: /Study: Spurgeon sermons for this passage/i })).not.toBeInTheDocument()
+    const study = screen.getByRole('button', { name: /Study: no Spurgeon sermons indexed for this passage/i })
+    expect(study).toBeDisabled()
+    expect(study).toHaveTextContent('Study')
   })
 
   it.each(['larger', 'largest'] as const)(
@@ -409,7 +411,7 @@ describe('ScriptureModal Component', () => {
     }
   )
 
-  it('on narrow viewports shows Chapter (not Chapter Context) on the button when text size is normal', async () => {
+  it('on narrow viewports shows Chapter on the verse/chapter toggle when text size is normal', async () => {
     const prevMm = window.matchMedia
     localStorage.removeItem('gospel-profile-text-size')
     Object.defineProperty(window, 'matchMedia', {
@@ -435,7 +437,7 @@ describe('ScriptureModal Component', () => {
     }
   })
 
-  it('shows full Chapter Context label when viewport is not narrow', async () => {
+  it('verse/chapter toggle shows Chapter on wide viewports with fixed width', async () => {
     const prevMm = window.matchMedia
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
@@ -451,12 +453,15 @@ describe('ScriptureModal Component', () => {
     renderWithTextSize(<ScriptureModal {...defaultProps} />)
     try {
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: /chapter context/i })).toHaveTextContent('Chapter Context')
+        expect(screen.getByRole('button', { name: /chapter context/i })).toHaveTextContent('Chapter')
       )
+      const toggle = screen.getByRole('button', { name: /chapter context/i })
+      expect(toggle.className).toMatch(/w-\[88px\]/)
     } finally {
       window.matchMedia = prevMm
     }
   })
+
   it('calls onOpenSpurgeonStudy when Study is shown and clicked', async () => {
     const user = userEvent.setup()
     const openStudy = jest.fn()

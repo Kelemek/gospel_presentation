@@ -76,8 +76,8 @@ interface MemorizationPracticeSessionProps {
   /** Clear saved in-progress for this verse (e.g. Start over). */
   onClearInProgress?: () => void
   /**
-   * When set, shows **Study** when indexed public Spurgeon sermons cite this passage
-   * (`GET /api/scripture/spurgeon-links`), same rule as `ScriptureModal` Study.
+   * When set, shows a **Study** control (enabled when indexed public Spurgeon sermons cite this passage
+   * per `GET /api/scripture/spurgeon-links`; otherwise greyed out), same pattern as `ScriptureModal` Study.
    */
   onOpenSpurgeonStudy?: (reference: string) => void
 }
@@ -1765,25 +1765,53 @@ export default function MemorizationPracticeSession({
                 Listen
               </button>
             )}
-            {onOpenSpurgeonStudy &&
-              verse.reference.trim() &&
-              spurgeonStudyMatch === 'yes' && (
-                <button
-                  type="button"
-                  data-tour="memorize-practice-spurgeon-study"
-                  data-testid="memorize-practice-spurgeon-study"
-                  onClick={() => {
-                    const ref = verse.reference.trim()
-                    handleClose()
-                    onOpenSpurgeonStudy(ref)
-                  }}
-                  title="Search public Spurgeon sermons that reference this passage"
-                  aria-label="Study: Spurgeon sermons for this passage"
-                  className="px-3 py-1.5 text-sm font-medium rounded-lg transition-colors border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700"
-                >
-                  Study
-                </button>
-              )}
+            {onOpenSpurgeonStudy && (
+              <button
+                type="button"
+                data-tour="memorize-practice-spurgeon-study"
+                data-testid="memorize-practice-spurgeon-study"
+                disabled={
+                  !verse.reference.trim() ||
+                  spurgeonStudyMatch === 'loading' ||
+                  spurgeonStudyMatch === 'unset' ||
+                  spurgeonStudyMatch === 'no'
+                }
+                onClick={() => {
+                  const ref = verse.reference.trim()
+                  if (!ref || spurgeonStudyMatch !== 'yes') return
+                  handleClose()
+                  onOpenSpurgeonStudy(ref)
+                }}
+                title={
+                  !verse.reference.trim()
+                    ? 'Open a passage to search Spurgeon sermons'
+                    : spurgeonStudyMatch === 'loading' || spurgeonStudyMatch === 'unset'
+                      ? 'Checking indexed Spurgeon sermons…'
+                      : spurgeonStudyMatch === 'no'
+                        ? 'No public Spurgeon sermons indexed for this passage'
+                        : 'Search public Spurgeon sermons that reference this passage'
+                }
+                aria-label={
+                  !verse.reference.trim()
+                    ? 'Study: no passage selected'
+                    : spurgeonStudyMatch === 'loading' || spurgeonStudyMatch === 'unset'
+                      ? 'Study: checking Spurgeon sermon index'
+                      : spurgeonStudyMatch === 'no'
+                        ? 'Study: no Spurgeon sermons indexed for this passage'
+                        : 'Study: Spurgeon sermons for this passage'
+                }
+                className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors border ${
+                  !verse.reference.trim() ||
+                  spurgeonStudyMatch === 'loading' ||
+                  spurgeonStudyMatch === 'unset' ||
+                  spurgeonStudyMatch === 'no'
+                    ? 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                    : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-700'
+                }`}
+              >
+                Study
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {showStartOver && (
