@@ -75,18 +75,32 @@ export default function ScriptureModal({
   const [spurgeonStudyMatch, setSpurgeonStudyMatch] = useState<'unset' | 'loading' | 'yes' | 'no'>('unset')
 
   /** Tailwind `sm` is 640px — match for toolbar wrapping on phones. */
-  const [narrowForChapterLabel, setNarrowForChapterLabel] = useState(false)
+  const [narrowSmViewport, setNarrowSmViewport] = useState(false)
   useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
     const mq = window.matchMedia('(max-width: 639px)')
-    const sync = () => setNarrowForChapterLabel(mq.matches)
+    const sync = () => setNarrowSmViewport(mq.matches)
     sync()
     mq.addEventListener('change', sync)
     return () => mq.removeEventListener('change', sync)
   }, [])
 
-  const chapterContextButtonLabelShort =
-    narrowForChapterLabel && (textSize === 'larger' || textSize === 'largest')
+  /** Larger profile text bumps root rem; fixed px widths keep row1 (Compare / Translation / Pin) on one line. */
+  const compactScriptureToolbarForMobileLargeText =
+    narrowSmViewport && (textSize === 'larger' || textSize === 'largest')
+
+  const chapterContextButtonLabelShort = compactScriptureToolbarForMobileLargeText
+
+  const scriptureCompareMenuTriggerClassName = compactScriptureToolbarForMobileLargeText
+    ? 'w-[128px] max-w-[128px] shrink-0 !px-1.5'
+    : undefined
+
+  const scriptureTranslationMenuTriggerClassName = compactScriptureToolbarForMobileLargeText
+    ? 'w-[84px] max-w-[84px] shrink-0 !px-1.5'
+    : undefined
+
+  /** Slightly smaller labels so Verse / Chapter / Memorize / Study stay on one row on narrow phones. */
+  const scriptureToolbarControlTextClass = 'text-xs font-medium leading-none'
 
   const compareMenuOptions = useMemo(
     () => [
@@ -658,14 +672,16 @@ export default function ScriptureModal({
           </div>
           
           {/* Context Toggle Buttons - Always Visible. Small: row1 = Compare + Translation + pin, row2 = Verse + Chapter Context + Memorize (+ Study) */}
-          <div className="flex flex-wrap gap-1.5 justify-center items-center">
-            <div className="w-full sm:w-auto flex flex-wrap gap-1.5 justify-center sm:justify-start items-center">
+          <div className="flex flex-wrap gap-1 justify-center items-center">
+            <div className="w-full sm:w-auto flex flex-wrap gap-1 justify-center sm:justify-start items-center">
               {/* Compare menu — custom listbox to match pin control styling (no native select). */}
               <ScriptureModalToolbarMenu
                 dataTour="scripture-modal-compare"
                 listboxDataTour="scripture-modal-compare-listbox"
                 ariaLabel="Compare with another translation"
                 listboxAriaLabel="Compare with a translation"
+                triggerClassName={scriptureCompareMenuTriggerClassName}
+                triggerLabelClassName={scriptureToolbarControlTextClass}
                 value={compareTranslation ?? ''}
                 options={compareMenuOptions}
                 onSelect={(val) => {
@@ -682,6 +698,8 @@ export default function ScriptureModal({
                 dataTour="scripture-modal-translation"
                 ariaLabel="Select Bible translation"
                 listboxAriaLabel="Bible translation"
+                triggerClassName={scriptureTranslationMenuTriggerClassName}
+                triggerLabelClassName={scriptureToolbarControlTextClass}
                 value={translation}
                 options={translationMenuOptions}
                 onSelect={async (val) => {
@@ -701,13 +719,13 @@ export default function ScriptureModal({
               )}
             </div>
 
-            <div className="w-full sm:w-auto flex flex-wrap gap-1.5 justify-center sm:justify-start items-center">
+            <div className="w-full sm:w-auto flex flex-wrap gap-1 justify-center sm:justify-start items-center">
               <button
                 ref={verseTabButtonRef}
                 type="button"
                 data-tour="scripture-modal-verse-tab"
                 onClick={() => setShowingContext(false)}
-                className={`cursor-pointer px-3 h-9 min-h-[36px] box-border inline-flex items-center justify-center text-sm font-medium leading-none rounded-md transition-colors border-2 ${
+                className={`cursor-pointer px-2 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 ${
                   !showingContext 
                     ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border-blue-400 dark:border-blue-600' 
                     : 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 border-slate-400 dark:border-slate-500'
@@ -725,7 +743,7 @@ export default function ScriptureModal({
                   chapterContextButtonLabelShort && !contextLoading ? 'Chapter Context' : undefined
                 }
                 aria-label={contextLoading ? 'Loading chapter context' : 'Chapter context'}
-                className={`px-3 h-9 min-h-[36px] box-border inline-flex items-center justify-center text-sm font-medium leading-none rounded-md transition-colors border-2 ${
+                className={`px-2 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 ${
                   showingContext 
                     ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border-blue-400 dark:border-blue-600' 
                     : 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 border-slate-400 dark:border-slate-500'
@@ -745,7 +763,7 @@ export default function ScriptureModal({
                 disabled={loading || !!error || !(scriptureText ?? '').trim() || isMemoized}
                 title={isMemoized ? 'Already in memorization list' : 'Save this verse to memorize later'}
                 aria-label={isMemoized ? 'Verse already in memorization list' : 'Memorize this verse'}
-                className={`px-2 h-9 min-h-[36px] box-border inline-flex items-center justify-center text-xs sm:text-sm font-medium leading-none rounded-md transition-colors border-2 shrink-0 ${
+                className={`px-1.5 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 shrink-0 ${
                   isMemoized || loading || !!error || !(scriptureText ?? '').trim()
                     ? 'text-slate-400 dark:text-slate-500 border-slate-300 dark:border-slate-600 cursor-not-allowed bg-slate-50 dark:bg-slate-700/50'
                     : 'cursor-pointer text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500'
@@ -762,7 +780,7 @@ export default function ScriptureModal({
                     onClick={() => onOpenSpurgeonStudy(reference.trim())}
                     title="Search public Spurgeon sermons that reference this passage"
                     aria-label="Study: Spurgeon sermons for this passage"
-                    className="px-2 h-9 min-h-[36px] box-border inline-flex items-center justify-center text-xs sm:text-sm font-medium leading-none rounded-md transition-colors border-2 shrink-0 cursor-pointer text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500"
+                    className={`px-1.5 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 shrink-0 cursor-pointer text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500`}
                   >
                     Study
                   </button>

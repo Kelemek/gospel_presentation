@@ -93,6 +93,8 @@ export interface ScriptureModalToolbarMenuProps {
   listboxAriaLabel: string
   /** Extra classes on the trigger (e.g. min width). */
   triggerClassName?: string
+  /** Classes for the visible label inside the trigger (default `text-sm font-medium`). */
+  triggerLabelClassName?: string
   /**
    * When true, the listbox is rendered in a `document.body` portal with `position: fixed` so it is not
    * clipped by `overflow: hidden` ancestors (e.g. memorize practice dialog).
@@ -110,6 +112,7 @@ export default function ScriptureModalToolbarMenu({
   ariaLabel,
   listboxAriaLabel,
   triggerClassName = 'w-[6.5rem]',
+  triggerLabelClassName = 'text-sm font-medium',
   portaledListbox = false,
 }: ScriptureModalToolbarMenuProps) {
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -261,7 +264,9 @@ export default function ScriptureModalToolbarMenu({
         className={`${triggerButtonInteractiveClass} ${triggerClassName} justify-between`}
         onClick={() => !disabled && canOpen && setOpen((o) => !o)}
       >
-        <span className="truncate text-left text-sm font-medium leading-none text-slate-800 dark:text-slate-200">
+        <span
+          className={`truncate text-left leading-none text-slate-800 dark:text-slate-200 ${triggerLabelClassName}`}
+        >
           {selected?.label ?? ''}
         </span>
         {canOpen && (

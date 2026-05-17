@@ -376,7 +376,7 @@ describe('ScriptureModal Component', () => {
   })
 
   it.each(['larger', 'largest'] as const)(
-    'shows Chapter (not Chapter Context) on narrow viewports when text size is %s',
+    'on narrow viewports with text size %s, shortens Chapter label and narrows Compare/Translation triggers',
     async (storedSize) => {
       const prevMm = window.matchMedia
       localStorage.setItem('gospel-profile-text-size', storedSize)
@@ -396,6 +396,12 @@ describe('ScriptureModal Component', () => {
         await waitFor(() =>
           expect(screen.getByRole('button', { name: /chapter context/i })).toHaveTextContent('Chapter')
         )
+        const compareBtn = screen.getByRole('button', { name: /compare with another translation/i })
+        const translationBtn = screen.getByRole('button', { name: /select bible translation/i })
+        expect(compareBtn.className).toMatch(/w-\[128px\]/)
+        expect(translationBtn.className).toMatch(/w-\[84px\]/)
+        expect(compareBtn.querySelector('span')?.className).toMatch(/text-xs/)
+        expect(compareBtn).toHaveTextContent('Compare')
       } finally {
         window.matchMedia = prevMm
         localStorage.removeItem('gospel-profile-text-size')
@@ -422,6 +428,8 @@ describe('ScriptureModal Component', () => {
       await waitFor(() =>
         expect(screen.getByRole('button', { name: /chapter context/i })).toHaveTextContent('Chapter Context')
       )
+      const compareBtn = screen.getByRole('button', { name: /compare with another translation/i })
+      expect(compareBtn.className).toMatch(/w-\[6\.5rem\]/)
     } finally {
       window.matchMedia = prevMm
     }
