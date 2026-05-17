@@ -1,9 +1,14 @@
 /**
  * Navigation + scripture modal smoke tests (pins are localStorage-only).
  */
-import React from 'react'
+import React, { type ReactElement } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { TextSizeProvider } from '@/contexts/TextSizeContext'
+
+function renderWithTextSize(ui: ReactElement) {
+  return render(<TextSizeProvider>{ui}</TextSizeProvider>)
+}
 
 jest.mock('@/components/ThemeToggle', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/BookmarksDropdown', () => ({ __esModule: true, default: () => null }))
@@ -68,7 +73,7 @@ describe('ProfileContent navigation & pins', () => {
     const user = userEvent.setup()
     const profile = { id: 'p', isDefault: false }
 
-    render(<ProfileContent sections={sectionsPayload as any} profileInfo={profileInfo as any} profile={profile as any} />)
+    renderWithTextSize(<ProfileContent sections={sectionsPayload as any} profileInfo={profileInfo as any} profile={profile as any} />)
 
     const john = await screen.findByRole('button', { name: /^John 3:16$/i })
     await user.click(john)
@@ -100,7 +105,7 @@ describe('ProfileContent navigation & pins', () => {
       })
     )
 
-    render(<ProfileContent sections={sectionsPayload as any} profileInfo={profileInfo as any} profile={profile as any} />)
+    renderWithTextSize(<ProfileContent sections={sectionsPayload as any} profileInfo={profileInfo as any} profile={profile as any} />)
 
     const unpinBtn = await screen.findByRole('button', { name: /remove red pin/i })
     await user.click(unpinBtn)

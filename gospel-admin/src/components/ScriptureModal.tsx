@@ -2,6 +2,7 @@
 
 import { useId, useState, useEffect, useRef, useMemo, type TouchEvent } from 'react'
 import { useTranslation, type BibleTranslation } from '@/contexts/TranslationContext'
+import { useTextSize } from '@/contexts/TextSizeContext'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import { splitScriptureReferenceForHeader } from '@/lib/splitScriptureReferenceForHeader'
 import { formatScriptureApiError } from '@/lib/format-scripture-api-error'
@@ -13,6 +14,9 @@ import {
 import type { VerseBookmarkColorId, VersePinColorId } from '@/lib/versePinStorage'
 import ScriptureModalPinPick from '@/components/ScriptureModalPinPick'
 import ScriptureModalToolbarMenu from '@/components/ScriptureModalToolbarMenu'
+import type { ScriptureModalPresentationLocation } from '@/lib/presentationLocationFromAnchors'
+
+export type { ScriptureModalPresentationLocation } from '@/lib/presentationLocationFromAnchors'
 
 interface ScriptureModalProps {
   reference: string
@@ -22,6 +26,8 @@ interface ScriptureModalProps {
   onNext?: () => void
   hasPrevious?: boolean
   hasNext?: boolean
+  /** When set (e.g. profile presentation), show where this verse sits in the resource. */
+  presentationLocation?: ScriptureModalPresentationLocation
   /** When set (e.g. profile presentation), show pin-color icon picker beside Memorize. */
   versePinControl?: {
     draftColor: VersePinColorId
@@ -40,10 +46,12 @@ export default function ScriptureModal({
   onNext, 
   hasPrevious = false, 
   hasNext = false,
+  presentationLocation,
   versePinControl,
   onOpenSpurgeonStudy,
 }: ScriptureModalProps) {
   const { translation, setTranslation, enabledTranslations } = useTranslation()
+  const { textSize } = useTextSize()
   const { showAlert } = useAlertModal()
   const [scriptureText, setScriptureText] = useState<string>('')
   const [isMemoized, setIsMemoized] = useState(false)
@@ -65,6 +73,20 @@ export default function ScriptureModal({
 
   /** Whether indexed public Spurgeon sermons cite this passage (`/api/scripture/spurgeon-links`). */
   const [spurgeonStudyMatch, setSpurgeonStudyMatch] = useState<'unset' | 'loading' | 'yes' | 'no'>('unset')
+
+  /** Tailwind `sm` is 640px — match for toolbar wrapping on phones. */
+  const [narrowForChapterLabel, setNarrowForChapterLabel] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    const mq = window.matchMedia('(max-width: 639px)')
+    const sync = () => setNarrowForChapterLabel(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
+  const chapterContextButtonLabelShort =
+    narrowForChapterLabel && (textSize === 'larger' || textSize === 'largest')
 
   const compareMenuOptions = useMemo(
     () => [
@@ -699,13 +721,21 @@ export default function ScriptureModal({
                 data-tour="scripture-modal-chapter-context"
                 onClick={fetchChapterContext}
                 disabled={contextLoading}
+                title={
+                  chapterContextButtonLabelShort && !contextLoading ? 'Chapter Context' : undefined
+                }
+                aria-label={contextLoading ? 'Loading chapter context' : 'Chapter context'}
                 className={`px-3 h-9 min-h-[36px] box-border inline-flex items-center justify-center text-sm font-medium leading-none rounded-md transition-colors border-2 ${
                   showingContext 
                     ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border-blue-400 dark:border-blue-600' 
                     : 'text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-600 border-slate-400 dark:border-slate-500'
                 } ${contextLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
               >
-                {contextLoading ? 'Loading...' : 'Chapter Context'}
+                {contextLoading
+                  ? 'Loading...'
+                  : chapterContextButtonLabelShort
+                    ? 'Chapter'
+                    : 'Chapter Context'}
               </button>
 
               <button
@@ -740,6 +770,29 @@ export default function ScriptureModal({
             </div>
           </div>
         </div>
+
+        {presentationLocation && (
+          <div
+            className="px-4 py-2 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-600 shrink-0 min-w-0"
+            data-tour="scripture-modal-context"
+            data-testid="scripture-modal-presentation-location"
+            aria-label="Where you are in this presentation"
+          >
+            <p className="text-sm md:text-base font-semibold text-slate-800 dark:text-slate-100 truncate min-w-0">
+              {presentationLocation.sectionTitle}
+            </p>
+            {presentationLocation.subsectionTitle.trim() ? (
+              <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 truncate min-w-0 pl-3 mt-0.5 border-l-2 border-slate-300 dark:border-slate-500">
+                {presentationLocation.subsectionTitle}
+              </p>
+            ) : null}
+            {presentationLocation.nestedSubsectionTitle?.trim() ? (
+              <p className="text-xs md:text-sm text-slate-600 dark:text-slate-300 truncate min-w-0 pl-6 mt-0.5 border-l-2 border-slate-300 dark:border-slate-500">
+                {presentationLocation.nestedSubsectionTitle}
+              </p>
+            ) : null}
+          </div>
+        )}
 
         {/* Scrollable Content Area — data-tour scroll-area when single column so driver.js can spotlight this pane (pointer-events); compare mode uses compare-columns */}
         <div 

@@ -1,6 +1,11 @@
-import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import React, { type ReactElement } from 'react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { TextSizeProvider } from '@/contexts/TextSizeContext'
+
+function renderWithTextSize(ui: ReactElement) {
+  return render(<TextSizeProvider>{ui}</TextSizeProvider>)
+}
 
 jest.mock('@/lib/supabase/client', () => ({
   __esModule: true,
@@ -29,6 +34,12 @@ beforeEach(() => {
     const url = typeof input === 'string' ? input : String(input)
     if (url.includes('/visit')) {
       return Promise.resolve({ ok: true, json: async () => ({}) }) as unknown as Response
+    }
+    if (url.includes('/api/scripture/spurgeon-links')) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ items: [] }),
+      }) as unknown as Response
     }
     if (url.includes('/api/scripture')) {
       return Promise.resolve({
@@ -68,7 +79,7 @@ describe('ProfileContent extra interactions', () => {
     const profileInfo = { title: 'P', slug: 'p1', favoriteScriptures: [] }
     const profile = { id: 'p1', slug: 'p1', isDefault: false }
 
-    render(<ProfileContent sections={sections as any} profileInfo={profileInfo as any} profile={profile as any} />)
+    renderWithTextSize(<ProfileContent sections={sections as any} profileInfo={profileInfo as any} profile={profile as any} />)
 
     const btn = await screen.findByRole('button', { name: /^John 3:16$/i })
     await user.click(btn)
@@ -76,6 +87,85 @@ describe('ProfileContent extra interactions', () => {
     await waitFor(() =>
       expect(screen.getByRole('heading', { name: /john 3:16/i })).toBeInTheDocument()
     )
+    const loc = screen.getByTestId('scripture-modal-presentation-location')
+    expect(loc).toHaveTextContent('Intro')
+    expect(loc).toHaveTextContent('Sub')
+  })
+
+  test('opening scripture on a nested subsection shows parent then nested title in the modal strip', async () => {
+    const { ProfileContent } = await import('../[slug]/ProfileContent')
+    const user = userEvent.setup()
+
+    const sections = [
+      {
+        section: '1',
+        title: 'Intro',
+        subsections: [
+          {
+            title: 'Sub',
+            content: 'c',
+            scriptureReferences: [],
+            nestedSubsections: [
+              {
+                title: 'Deep',
+                content: 'd',
+                scriptureReferences: [{ reference: 'Romans 1:1', favorite: false }],
+              },
+            ],
+          },
+        ],
+      },
+    ]
+
+    const profileInfo = { title: 'P', slug: 'p1', favoriteScriptures: [] }
+    const profile = { id: 'p1', slug: 'p1', isDefault: false }
+
+    renderWithTextSize(<ProfileContent sections={sections as any} profileInfo={profileInfo as any} profile={profile as any} />)
+
+    await user.click(await screen.findByRole('button', { name: /^Romans 1:1$/i }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /romans 1:1/i })).toBeInTheDocument()
+    )
+    const loc = screen.getByTestId('scripture-modal-presentation-location')
+    expect(loc).toHaveTextContent('Intro')
+    expect(loc).toHaveTextContent('Sub')
+    expect(loc).toHaveTextContent('Deep')
+    expect(within(loc).getByText('Deep')).toHaveClass('pl-6')
+  })
+
+  test('inline-only scripture in subsection body still shows modal where-you-are strip', async () => {
+    const { ProfileContent } = await import('../[slug]/ProfileContent')
+    const user = userEvent.setup()
+
+    const sections = [
+      {
+        section: '9',
+        title: 'Main Sermon',
+        subsections: [
+          {
+            title: 'Exposition',
+            content: '<p>Read John 3:16 for yourself.</p>',
+            scriptureReferences: [],
+            nestedSubsections: [],
+          },
+        ],
+      },
+    ]
+
+    const profileInfo = { title: 'Spurgeon 123', slug: 'sg0123', favoriteScriptures: [] }
+    const profile = { id: 'x', slug: 'sg0123', isDefault: false }
+
+    renderWithTextSize(<ProfileContent sections={sections as any} profileInfo={profileInfo as any} profile={profile as any} />)
+
+    await user.click(await screen.findByRole('button', { name: /^John 3:16$/i }))
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /john 3:16/i })).toBeInTheDocument()
+    )
+    const loc = screen.getByTestId('scripture-modal-presentation-location')
+    expect(loc).toHaveTextContent('Main Sermon')
+    expect(loc).toHaveTextContent('Exposition')
   })
 
   test('closing the modal persists a verse pin chosen from the icon picker (localStorage)', async () => {
@@ -100,7 +190,7 @@ describe('ProfileContent extra interactions', () => {
     const profileInfo = { title: 'P', slug: 'p1', favoriteScriptures: [] }
     const profile = { id: 'p1', slug: 'p1', isDefault: false }
 
-    render(<ProfileContent sections={sections as any} profileInfo={profileInfo as any} profile={profile as any} />)
+    renderWithTextSize(<ProfileContent sections={sections as any} profileInfo={profileInfo as any} profile={profile as any} />)
 
     await user.click(await screen.findByRole('button', { name: /^John 3:16$/i }))
 
@@ -140,7 +230,7 @@ describe('ProfileContent extra interactions', () => {
     const profileInfo = { title: 'P', slug: 'p1', favoriteScriptures: [] }
     const profile = { id: 'p1', slug: 'p1', isDefault: false }
 
-    render(<ProfileContent sections={sections as any} profileInfo={profileInfo as any} profile={profile as any} />)
+    renderWithTextSize(<ProfileContent sections={sections as any} profileInfo={profileInfo as any} profile={profile as any} />)
 
     await user.click(await screen.findByRole('button', { name: /^John 3:16$/i }))
     await screen.findByRole('button', { name: /^Pin color:/i })

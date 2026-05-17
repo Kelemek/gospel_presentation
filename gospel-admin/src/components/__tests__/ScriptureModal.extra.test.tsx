@@ -1,6 +1,12 @@
+import type { ReactElement } from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { TextSizeProvider } from '@/contexts/TextSizeContext'
 import ScriptureModal from '../ScriptureModal'
+
+function renderWithTextSize(ui: ReactElement) {
+  return render(<TextSizeProvider>{ui}</TextSizeProvider>)
+}
 
 const mockFetch = global.fetch as jest.MockedFunction<typeof fetch>
 
@@ -43,14 +49,14 @@ describe('ScriptureModal additional behaviors', () => {
       return Promise.resolve(defaultFetchSuccess)
     })
 
-    const { container } = render(<ScriptureModal {...defaultProps} />)
+    const { container } = renderWithTextSize(<ScriptureModal {...defaultProps} />)
 
     // Wait for component to mount and show controls
     await waitFor(() =>
       expect(screen.getByRole('heading', { name: /Genesis 1:1-2/ })).toBeInTheDocument()
     )
 
-    const chapterButton = screen.getByText(/Chapter Context/)
+    const chapterButton = screen.getByRole('button', { name: /chapter context/i })
     await user.click(chapterButton)
 
     // Wait for chapter-content to render
@@ -69,7 +75,7 @@ describe('ScriptureModal additional behaviors', () => {
     const onDraft = jest.fn()
     mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ text: 'Scripture body' }) } as unknown as Response)
 
-    render(
+    renderWithTextSize(
       <ScriptureModal
         {...defaultProps}
         versePinControl={{
@@ -94,7 +100,7 @@ describe('ScriptureModal additional behaviors', () => {
     const onNext = jest.fn()
     const onPrevious = jest.fn()
 
-    const { container } = render(
+    const { container } = renderWithTextSize(
       <ScriptureModal
         {...defaultProps}
         hasNext={true}
@@ -154,7 +160,7 @@ describe('ScriptureModal additional behaviors', () => {
       return Promise.resolve(defaultFetchSuccess)
     })
 
-    const { container } = render(
+    const { container } = renderWithTextSize(
       <ScriptureModal reference="Psalm 23:4" isOpen={true} onClose={jest.fn()} />
     )
 
@@ -162,7 +168,7 @@ describe('ScriptureModal additional behaviors', () => {
       expect(screen.getByRole('heading', { name: /Psalm 23:4/ })).toBeInTheDocument()
     )
 
-    await user.click(screen.getByText(/Chapter Context/))
+    await user.click(screen.getByRole('button', { name: /chapter context/i }))
 
     await waitFor(() => expect(container.querySelector('#chapter-content')).toBeInTheDocument())
 

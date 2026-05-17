@@ -1,6 +1,12 @@
+import type { ReactElement } from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { TextSizeProvider } from '@/contexts/TextSizeContext'
 import ScriptureModal from '../ScriptureModal'
+
+function renderWithTextSize(ui: ReactElement) {
+  return render(<TextSizeProvider>{ui}</TextSizeProvider>)
+}
 
 // Mock fetch for scripture API calls
 const mockFetch = global.fetch as jest.MockedFunction<typeof fetch>
@@ -35,7 +41,7 @@ describe('ScriptureModal Component', () => {
   })
 
   it('should render modal when open', () => {
-    render(<ScriptureModal {...defaultProps} />)
+    renderWithTextSize(<ScriptureModal {...defaultProps} />)
 
     // Wait for async fetch effect to settle to avoid act() warnings
     return waitFor(() => {
@@ -44,8 +50,47 @@ describe('ScriptureModal Component', () => {
     })
   })
 
+  it('shows presentation location strip when presentationLocation is set', async () => {
+    renderWithTextSize(
+      <ScriptureModal
+        {...defaultProps}
+        presentationLocation={{
+          sectionTitle: 'Fall',
+          subsectionTitle: 'Sin entered',
+        }}
+      />
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId('scripture-modal-presentation-location')).toBeInTheDocument()
+    )
+    const region = screen.getByLabelText('Where you are in this presentation')
+    expect(region).toHaveTextContent('Fall')
+    expect(region).toHaveTextContent('Sin entered')
+  })
+
+  it('shows nested subsection on its own indented line when nestedSubsectionTitle is set', async () => {
+    renderWithTextSize(
+      <ScriptureModal
+        {...defaultProps}
+        presentationLocation={{
+          sectionTitle: 'Sect',
+          subsectionTitle: 'Sub',
+          nestedSubsectionTitle: 'Deep',
+        }}
+      />
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId('scripture-modal-presentation-location')).toBeInTheDocument()
+    )
+    const region = screen.getByLabelText('Where you are in this presentation')
+    expect(region).toHaveTextContent('Sub')
+    expect(region).toHaveTextContent('Deep')
+    const nestedLine = screen.getByText('Deep')
+    expect(nestedLine).toHaveClass('pl-6')
+  })
+
   it('should not render modal when closed', () => {
-    render(<ScriptureModal {...defaultProps} isOpen={false} />)
+    renderWithTextSize(<ScriptureModal {...defaultProps} isOpen={false} />)
     
     expect(screen.queryByRole('heading', { name: 'John 3:16' })).not.toBeInTheDocument()
   })
@@ -54,7 +99,7 @@ describe('ScriptureModal Component', () => {
     const user = userEvent.setup()
     const mockOnClose = jest.fn()
     
-    render(<ScriptureModal {...defaultProps} onClose={mockOnClose} />)
+    renderWithTextSize(<ScriptureModal {...defaultProps} onClose={mockOnClose} />)
 
     // Wait for fetch to resolve and effects to settle
     await waitFor(() => expect(screen.getByLabelText('Close modal')).toBeInTheDocument())
@@ -69,7 +114,7 @@ describe('ScriptureModal Component', () => {
     const mockOnPrevious = jest.fn()
     const mockOnNext = jest.fn()
     
-    render(
+    renderWithTextSize(
       <ScriptureModal 
         {...defaultProps} 
         onPrevious={mockOnPrevious}
@@ -91,7 +136,7 @@ describe('ScriptureModal Component', () => {
     const mockOnPrevious = jest.fn()
     const mockOnNext = jest.fn()
     
-    render(
+    renderWithTextSize(
       <ScriptureModal 
         {...defaultProps} 
         onPrevious={mockOnPrevious}
@@ -110,7 +155,7 @@ describe('ScriptureModal Component', () => {
   })
 
   it('should disable navigation buttons appropriately', () => {
-    render(
+    renderWithTextSize(
       <ScriptureModal 
         {...defaultProps} 
         onPrevious={jest.fn()}
@@ -144,7 +189,7 @@ describe('ScriptureModal Component', () => {
       return Promise.reject(new Error(`Unexpected fetch: ${url}`))
     })
 
-    render(<ScriptureModal {...defaultProps} />)
+    renderWithTextSize(<ScriptureModal {...defaultProps} />)
 
     await waitFor(() => {
       expect(
@@ -164,7 +209,7 @@ describe('ScriptureModal Component', () => {
       return Promise.reject(new Error(`Unexpected fetch: ${url}`))
     })
 
-    render(<ScriptureModal {...defaultProps} />)
+    renderWithTextSize(<ScriptureModal {...defaultProps} />)
     
     await waitFor(() => {
       expect(screen.getByText(/Failed to load scripture/)).toBeInTheDocument()
@@ -185,7 +230,7 @@ describe('ScriptureModal Component', () => {
       return Promise.reject(new Error(`Unexpected fetch: ${url}`))
     })
 
-    render(<ScriptureModal {...defaultProps} />)
+    renderWithTextSize(<ScriptureModal {...defaultProps} />)
 
     expect(screen.getByText(/Loading scripture/)).toBeInTheDocument()
     pendingCtl.resolve?.({
@@ -205,7 +250,7 @@ describe('ScriptureModal Component', () => {
       }
       return Promise.reject(new Error(`Unexpected fetch: ${url}`))
     })
-    render(<ScriptureModal {...defaultProps} />)
+    renderWithTextSize(<ScriptureModal {...defaultProps} />)
     await waitFor(() => {
       expect(screen.getByText(/Verse not found/)).toBeInTheDocument()
     })
@@ -229,11 +274,11 @@ describe('ScriptureModal Component', () => {
       return Promise.reject(new Error(`Unexpected fetch: ${url}`))
     })
     const user = userEvent.setup()
-    render(<ScriptureModal {...defaultProps} reference="Genesis 1:1" />)
+    renderWithTextSize(<ScriptureModal {...defaultProps} reference="Genesis 1:1" />)
     await waitFor(() =>
       expect(screen.getByRole('heading', { name: /Genesis 1:1/ })).toBeInTheDocument()
     )
-    await user.click(screen.getByText(/Chapter Context/))
+    await user.click(screen.getByRole('button', { name: /chapter context/i }))
     await waitFor(() => expect(screen.getByText(/Chapter not found/)).toBeInTheDocument())
   })
 
@@ -252,11 +297,11 @@ describe('ScriptureModal Component', () => {
       return Promise.reject(new Error(`Unexpected fetch: ${url}`))
     })
     const user = userEvent.setup()
-    render(<ScriptureModal {...defaultProps} reference="Genesis 1:2" />)
+    renderWithTextSize(<ScriptureModal {...defaultProps} reference="Genesis 1:2" />)
     await waitFor(() =>
       expect(screen.getByRole('heading', { name: /Genesis 1:2/ })).toBeInTheDocument()
     )
-    await user.click(screen.getByText(/Chapter Context/))
+    await user.click(screen.getByRole('button', { name: /chapter context/i }))
     await waitFor(() => expect(screen.getByText(/Failed to load chapter context/)).toBeInTheDocument())
   })
 
@@ -278,7 +323,7 @@ describe('ScriptureModal Component', () => {
       return Promise.reject(new Error(`Unexpected fetch: ${url}`))
     })
     const user = userEvent.setup()
-    render(<ScriptureModal {...defaultProps} />)
+    renderWithTextSize(<ScriptureModal {...defaultProps} />)
     await waitFor(() =>
       expect(screen.getByRole('heading', { name: /John 3:16/ })).toBeInTheDocument()
     )
@@ -305,7 +350,7 @@ describe('ScriptureModal Component', () => {
       return Promise.reject(new Error(`Unexpected fetch: ${url}`))
     })
     const user = userEvent.setup()
-    render(<ScriptureModal {...defaultProps} />)
+    renderWithTextSize(<ScriptureModal {...defaultProps} />)
     await waitFor(() =>
       expect(screen.getByRole('heading', { name: /John 3:16/ })).toBeInTheDocument()
     )
@@ -315,19 +360,71 @@ describe('ScriptureModal Component', () => {
   })
 
   it('does not show Study without onOpenSpurgeonStudy', async () => {
-    render(<ScriptureModal {...defaultProps} />)
+    renderWithTextSize(<ScriptureModal {...defaultProps} />)
     await waitFor(() => expect(screen.getByRole('heading', { name: 'John 3:16' })).toBeInTheDocument())
     expect(screen.queryByRole('button', { name: /Study: Spurgeon sermons for this passage/i })).not.toBeInTheDocument()
   })
 
   it('does not show Study when onOpenSpurgeonStudy is set but spurgeon-links returns no sermons', async () => {
     const openStudy = jest.fn()
-    render(<ScriptureModal {...defaultProps} onOpenSpurgeonStudy={openStudy} />)
+    renderWithTextSize(<ScriptureModal {...defaultProps} onOpenSpurgeonStudy={openStudy} />)
     await waitFor(() => expect(screen.getByRole('heading', { name: 'John 3:16' })).toBeInTheDocument())
     await waitFor(() =>
       expect(mockFetch.mock.calls.some((c) => String(c[0]).includes('spurgeon-links'))).toBe(true)
     )
     expect(screen.queryByRole('button', { name: /Study: Spurgeon sermons for this passage/i })).not.toBeInTheDocument()
+  })
+
+  it.each(['larger', 'largest'] as const)(
+    'shows Chapter (not Chapter Context) on narrow viewports when text size is %s',
+    async (storedSize) => {
+      const prevMm = window.matchMedia
+      localStorage.setItem('gospel-profile-text-size', storedSize)
+      Object.defineProperty(window, 'matchMedia', {
+        writable: true,
+        configurable: true,
+        value: jest.fn().mockImplementation((query: string) => ({
+          matches: query === '(max-width: 639px)',
+          media: query,
+          addEventListener: jest.fn(),
+          removeEventListener: jest.fn(),
+        })),
+      })
+
+      renderWithTextSize(<ScriptureModal {...defaultProps} />)
+      try {
+        await waitFor(() =>
+          expect(screen.getByRole('button', { name: /chapter context/i })).toHaveTextContent('Chapter')
+        )
+      } finally {
+        window.matchMedia = prevMm
+        localStorage.removeItem('gospel-profile-text-size')
+      }
+    }
+  )
+
+  it('keeps full Chapter Context label on narrow viewports when text size is normal', async () => {
+    const prevMm = window.matchMedia
+    localStorage.removeItem('gospel-profile-text-size')
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      configurable: true,
+      value: jest.fn().mockImplementation((query: string) => ({
+        matches: query === '(max-width: 639px)',
+        media: query,
+        addEventListener: jest.fn(),
+        removeEventListener: jest.fn(),
+      })),
+    })
+
+    renderWithTextSize(<ScriptureModal {...defaultProps} />)
+    try {
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /chapter context/i })).toHaveTextContent('Chapter Context')
+      )
+    } finally {
+      window.matchMedia = prevMm
+    }
   })
 
   it('calls onOpenSpurgeonStudy when Study is shown and clicked', async () => {
@@ -349,7 +446,7 @@ describe('ScriptureModal Component', () => {
         json: () => Promise.resolve({ text: 'Sample scripture text' }),
       } as Response)
     })
-    render(<ScriptureModal {...defaultProps} onOpenSpurgeonStudy={openStudy} />)
+    renderWithTextSize(<ScriptureModal {...defaultProps} onOpenSpurgeonStudy={openStudy} />)
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /Study: Spurgeon sermons for this passage/i })).toBeInTheDocument()
     )

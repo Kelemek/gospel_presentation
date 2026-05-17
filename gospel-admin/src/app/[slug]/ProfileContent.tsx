@@ -51,6 +51,8 @@ import {
 } from '@/lib/presentationReadCompleteStorage'
 import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
 import { findFirstScriptureCardAnchors } from '@/lib/findFirstScriptureCardAnchors'
+import { presentationLocationFromProfileAnchors } from '@/lib/presentationLocationFromAnchors'
+import { stripHtmlTags } from '@/lib/stripHtmlTags'
 import {
   plainTextForProfileHighlightUi,
   visibleTextLengthBeforeBoundary,
@@ -88,6 +90,12 @@ interface ScriptureRefNav {
   reference: string
   sectionId: string
   subsectionId: string
+  /** Plain text, TOC-aligned (stripHtmlTags). */
+  sectionTitle: string
+  /** Parent subsection title (plain); nested cards use the same parent title here. */
+  subsectionTitle: string
+  /** Set only for scripture cards under `nestedSubsections`. */
+  nestedSubsectionTitle?: string
 }
 
 function closestElement(node: Node | null, selector: string): HTMLElement | null {
@@ -479,17 +487,25 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
             const sid = `section-${section.section}`
             return section.subsections.flatMap((subsection, subIndex) => {
               const subId = `${sid}-${subIndex}`
+              const sectionTitle = stripHtmlTags(section.title ?? '').trim()
+              const parentSubTitle = stripHtmlTags(subsection.title ?? '').trim()
               const main: ScriptureRefNav[] = (subsection.scriptureReferences || []).map((ref) => ({
                 reference: ref.reference,
                 sectionId: sid,
                 subsectionId: subId,
+                sectionTitle,
+                subsectionTitle: parentSubTitle,
               }))
               const nested: ScriptureRefNav[] = (subsection.nestedSubsections || []).flatMap((nested, n) => {
                 const nestedId = `${sid}-${subIndex}-${n}`
+                const nestedTitle = stripHtmlTags(nested.title ?? '').trim()
                 return (nested.scriptureReferences || []).map((ref) => ({
                   reference: ref.reference,
                   sectionId: sid,
                   subsectionId: nestedId,
+                  sectionTitle,
+                  subsectionTitle: parentSubTitle,
+                  nestedSubsectionTitle: nestedTitle,
                 }))
               })
               return [...main, ...nested]
@@ -689,6 +705,49 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
         : [],
     [versePinMap, modalPassageAnchorsForPins]
   )
+
+  /** “Where you are” in the profile when the scripture modal is open (pinned anchors + nav index). */
+  const scriptureModalPresentationLocation = useMemo(() => {
+    if (!selectedScripture.isOpen) return undefined
+    const refStr = selectedScripture.reference.trim()
+    if (!refStr) return undefined
+    const snap = modalOpenAnchorsRef.current
+    if (!snap || snap.reference !== refStr) return undefined
+    if (
+      snap.sectionId === 'modal-view' ||
+      snap.subsectionId === 'modal-view' ||
+      !snap.sectionId?.trim() ||
+      !snap.subsectionId?.trim()
+    ) {
+      return undefined
+    }
+    const entry = allScriptureRefs.find(
+      (r) =>
+        r.reference === refStr &&
+        r.sectionId === snap.sectionId &&
+        r.subsectionId === snap.subsectionId
+    )
+    if (entry) {
+      return {
+        sectionTitle: entry.sectionTitle,
+        subsectionTitle: entry.subsectionTitle,
+        ...(entry.nestedSubsectionTitle
+          ? { nestedSubsectionTitle: entry.nestedSubsectionTitle }
+          : {}),
+      }
+    }
+
+    return (
+      presentationLocationFromProfileAnchors(sections, snap.sectionId, snap.subsectionId) ??
+      undefined
+    )
+  }, [
+    selectedScripture.isOpen,
+    selectedScripture.reference,
+    allScriptureRefs,
+    currentReferenceIndex,
+    sections,
+  ])
 
   const closeModal = () => {
     const refTxt = selectedScripture.reference.trim()
@@ -1104,7 +1163,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       </footer>
 
       {/* Scripture Modal */}
-      <ScriptureModal 
+      <ScriptureModal
         reference={selectedScripture.reference}
         isOpen={selectedScripture.isOpen}
         onClose={closeModal}
@@ -1112,6 +1171,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
         onNext={hasNext ? navigateToNext : undefined}
         hasPrevious={hasPrevious}
         hasNext={hasNext}
+        presentationLocation={scriptureModalPresentationLocation}
         versePinControl={{
           draftColor: modalPinDraftColor,
           onDraftColorChange: setModalPinDraftColor,
