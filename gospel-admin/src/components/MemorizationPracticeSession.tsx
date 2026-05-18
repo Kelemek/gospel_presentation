@@ -519,6 +519,23 @@ export default function MemorizationPracticeSession({
     }
   }, [])
 
+  /**
+   * Round-5 completion mounts inside the same `overflow-y-auto` column used for the verse. If the reader had
+   * scrolled down (or iOS nudged scroll for the keyboard), `scrollTop` can stay large while `scrollHeight`
+   * shrinks to the short “done” block — WebKit/Capacitor then shows a blank viewport until something relayouts
+   * (e.g. app resume). Reset scroll synchronously before paint; `overflow-y-hidden` on the done phase avoids
+   * a stray scroll position sticking around.
+   */
+  useLayoutEffect(() => {
+    if (phase !== 'done') return
+    const el = practiceScrollRef.current
+    if (!el) return
+    el.scrollTop = 0
+    window.requestAnimationFrame(() => {
+      el.scrollTop = 0
+    })
+  }, [phase])
+
   /** Raw pointer state; use hintActive for gameplay so we do not sync hintHeld in an effect when phase changes. */
   const hintActive = hintHeld && phase === 'practicing'
 
@@ -1991,7 +2008,11 @@ export default function MemorizationPracticeSession({
           ) : (
             <div
               ref={practiceScrollRef}
-              className="relative isolate bg-white dark:bg-slate-800 px-4 pt-0 pb-4 flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y"
+              className={`relative isolate bg-white dark:bg-slate-800 px-4 pt-0 pb-4 flex-1 min-h-0 overscroll-y-contain touch-pan-y ${
+                phase === 'done'
+                  ? 'overflow-y-hidden flex flex-col justify-center'
+                  : 'overflow-y-auto'
+              }`}
               style={
                 keyboardInsetPx > 0
                   ? { paddingBottom: `calc(${keyboardInsetPx}px + 0.5rem)` }
