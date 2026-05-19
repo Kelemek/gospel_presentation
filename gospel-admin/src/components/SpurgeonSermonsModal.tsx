@@ -1,6 +1,15 @@
 'use client'
 
-import { useId, useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo } from 'react'
+import {
+  useId,
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+  useRef,
+  useMemo,
+  startTransition,
+} from 'react'
 import Link from 'next/link'
 
 import {
@@ -48,6 +57,7 @@ export default function SpurgeonSermonsModal({
   const [debouncedScriptureRef, setDebouncedScriptureRef] = useState('')
   const [searchItems, setSearchItems] = useState<SermonRow[]>([])
   const [refItems, setRefItems] = useState<SermonRow[]>([])
+  const [morneveRefItems, setMorneveRefItems] = useState<SermonRow[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
   const [refLoading, setRefLoading] = useState(false)
   const [searchError, setSearchError] = useState('')
@@ -60,7 +70,9 @@ export default function SpurgeonSermonsModal({
   const [readTabLoading, setReadTabLoading] = useState(false)
   const [readTabError, setReadTabError] = useState('')
 
-  const [readCompleteSlugs, setReadCompleteSlugs] = useState<Set<string>>(() => new Set())
+  const [readCompleteSlugs, setReadCompleteSlugs] = useState<Set<string>>(() =>
+    new Set(loadPresentationReadCompleteSlugs())
+  )
 
   const spurgeonReadSlugsKey = useMemo(
     () => [...readCompleteSlugs].filter((s) => isSpurgeonSermonProfileSlug(s)).sort().join(','),
@@ -72,7 +84,6 @@ export default function SpurgeonSermonsModal({
   }, [])
 
   useEffect(() => {
-    refreshReadCompleteSlugs()
     const onStatus = (e: Event) => {
       const ce = e as CustomEvent<{ slug: string; read: boolean }>
       if (!ce.detail?.slug) return
@@ -141,7 +152,10 @@ export default function SpurgeonSermonsModal({
 
   useEffect(() => {
     if (!isOpen || tab !== 'search') return
-    void loadSearch()
+    const t = window.setTimeout(() => {
+      void loadSearch()
+    }, 0)
+    return () => window.clearTimeout(t)
   }, [isOpen, tab, loadSearch])
 
   useEffect(() => {
@@ -158,26 +172,47 @@ export default function SpurgeonSermonsModal({
     const trimmed = ref.trim()
     if (!trimmed) {
       setRefItems([])
+      setMorneveRefItems([])
       setRefError('')
       return
     }
     setRefLoading(true)
     setRefError('')
     try {
-      const res = await fetch(
-        `/api/spurgeon/by-reference?reference=${encodeURIComponent(trimmed)}`,
-        { cache: 'no-store' }
-      )
-      const data = await res.json()
-      if (!res.ok) {
-        setRefError(typeof data.error === 'string' ? data.error : 'Lookup failed')
+      const q = encodeURIComponent(trimmed)
+      const [sermonRes, morneveRes] = await Promise.all([
+        fetch(`/api/spurgeon/by-reference?reference=${q}`, { cache: 'no-store' }),
+        fetch(`/api/morneve/by-reference?reference=${q}`, { cache: 'no-store' }),
+      ])
+      const sermonData = await sermonRes.json()
+      const morneveData = await morneveRes.json()
+      if (!sermonRes.ok && !morneveRes.ok) {
+        setRefError(
+          typeof sermonData.error === 'string'
+            ? sermonData.error
+            : typeof morneveData.error === 'string'
+              ? morneveData.error
+              : 'Lookup failed'
+        )
         setRefItems([])
+        setMorneveRefItems([])
         return
       }
-      setRefItems(Array.isArray(data.items) ? data.items : [])
+      if (!sermonRes.ok) {
+        setRefItems([])
+      } else {
+        setRefItems(Array.isArray(sermonData.items) ? sermonData.items : [])
+      }
+      if (!morneveRes.ok) {
+        setMorneveRefItems([])
+      } else {
+        setMorneveRefItems(Array.isArray(morneveData.items) ? morneveData.items : [])
+      }
+      setRefError('')
     } catch {
       setRefError('Lookup failed')
       setRefItems([])
+      setMorneveRefItems([])
     } finally {
       setRefLoading(false)
     }
@@ -185,45 +220,57 @@ export default function SpurgeonSermonsModal({
 
   useEffect(() => {
     if (!isOpen) {
-      setTab('search')
-      setQ('')
-      setDebouncedQ('')
-      setSearchPage(1)
-      setScriptureRef('')
-      setDebouncedScriptureRef('')
-      setSearchItems([])
-      setRefItems([])
-      setReadTabItems([])
-      setReadTabError('')
-      setReadTabLoading(false)
-      setSearchError('')
-      setRefError('')
+      startTransition(() => {
+        setTab('search')
+        setQ('')
+        setDebouncedQ('')
+        setSearchPage(1)
+        setScriptureRef('')
+        setDebouncedScriptureRef('')
+        setSearchItems([])
+        setRefItems([])
+        setMorneveRefItems([])
+        setReadTabItems([])
+        setReadTabError('')
+        setReadTabLoading(false)
+        setSearchError('')
+        setRefError('')
+      })
     }
   }, [isOpen])
 
   useLayoutEffect(() => {
     if (!isOpen || !initialByReference?.trim()) return
-    setTab('scripture')
-    setScriptureRef(initialByReference.trim())
+    startTransition(() => {
+      setTab('scripture')
+      setScriptureRef(initialByReference.trim())
+    })
   }, [isOpen, initialByReference])
 
   useEffect(() => {
     if (!isOpen || tab !== 'scripture') return
-    void runScriptureLookupForRef(debouncedScriptureRef)
+    const t = window.setTimeout(() => {
+      void runScriptureLookupForRef(debouncedScriptureRef)
+    }, 0)
+    return () => window.clearTimeout(t)
   }, [isOpen, tab, debouncedScriptureRef, runScriptureLookupForRef])
 
   useEffect(() => {
     if (!isOpen || tab !== 'read') return
     const slugs = spurgeonReadSlugsKey ? spurgeonReadSlugsKey.split(',') : []
     if (slugs.length === 0) {
-      setReadTabItems([])
-      setReadTabError('')
-      setReadTabLoading(false)
+      startTransition(() => {
+        setReadTabItems([])
+        setReadTabError('')
+        setReadTabLoading(false)
+      })
       return
     }
     let cancelled = false
-    setReadTabLoading(true)
-    setReadTabError('')
+    startTransition(() => {
+      setReadTabLoading(true)
+      setReadTabError('')
+    })
     const q = encodeURIComponent(slugs.join(','))
     void fetch(`/api/spurgeon/by-slugs?slugs=${q}`, { cache: 'no-store' })
       .then(async (res) => {
@@ -266,12 +313,12 @@ export default function SpurgeonSermonsModal({
 
   return (
     <div
-      className="fixed inset-0 z-60 flex items-start justify-center overflow-x-hidden bg-black/50 dark:bg-black/70 pt-[max(2.5rem,env(safe-area-inset-top,0px))] sm:pt-[max(3.5rem,env(safe-area-inset-top,0px))] pb-[max(2rem,max(48px,env(safe-area-inset-bottom,0px)))] pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(1rem,env(safe-area-inset-right,0px))]"
+      className="fixed inset-0 z-60 flex items-start justify-center overflow-x-hidden bg-black/50 dark:bg-black/70 pt-[max(2.5rem,env(safe-area-inset-top,0))] sm:pt-[max(3.5rem,env(safe-area-inset-top,0))] pb-[max(2rem,max(48px,env(safe-area-inset-bottom,0)))] pl-[max(1rem,env(safe-area-inset-left,0))] pr-[max(1rem,env(safe-area-inset-right,0))]"
       onClick={onClose}
       role="presentation"
     >
       <div
-        className="min-w-0 bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full max-h-[calc(100dvh-max(2.5rem,env(safe-area-inset-top,0px))-max(2rem,max(48px,env(safe-area-inset-bottom,0px))))] sm:max-h-[calc(100dvh-max(3.5rem,env(safe-area-inset-top,0px))-max(2rem,max(48px,env(safe-area-inset-bottom,0px))))] overflow-hidden flex flex-col"
+        className="min-w-0 bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full max-h-[calc(100dvh-max(2.5rem,env(safe-area-inset-top,0))-max(2rem,max(48px,env(safe-area-inset-bottom,0))))] sm:max-h-[calc(100dvh-max(3.5rem,env(safe-area-inset-top,0))-max(2rem,max(48px,env(safe-area-inset-bottom,0))))] overflow-hidden flex flex-col"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -442,33 +489,69 @@ export default function SpurgeonSermonsModal({
             )}
 
             {tab === 'scripture' && (
-              <div className="min-h-40">
-                {!refLoading && refItems.length === 0 && scriptureRef.trim() && !refError && (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    No indexed sermons for that reference.
-                  </p>
-                )}
+              <div className="min-h-40 space-y-4">
+                {!refLoading &&
+                  refItems.length === 0 &&
+                  morneveRefItems.length === 0 &&
+                  scriptureRef.trim() &&
+                  !refError && (
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      No indexed sermons or Morning &amp; Evening devotions for that reference.
+                    </p>
+                  )}
                 {refItems.length > 0 && (
-                  <ul className="space-y-1">
-                    {refItems.map((row) => (
-                      <li key={row.slug}>
-                        <Link
-                          href={`/${row.slug}`}
-                          onClick={() => {
-                            onFollowSermonLink?.()
-                            onClose()
-                          }}
-                          className={`block rounded-md px-2 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700/80 ${
-                            readCompleteSlugs.has(row.slug)
-                              ? 'font-extrabold text-blue-900 dark:text-blue-200'
-                              : 'font-normal text-blue-700 dark:text-blue-300'
-                          }`}
-                        >
-                          {spurgeonSermonTitleForModalDisplay(row.title)}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
+                      Sermons
+                    </h3>
+                    <ul className="space-y-1">
+                      {refItems.map((row) => (
+                        <li key={row.slug}>
+                          <Link
+                            href={`/${row.slug}`}
+                            onClick={() => {
+                              onFollowSermonLink?.()
+                              onClose()
+                            }}
+                            className={`block rounded-md px-2 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700/80 ${
+                              readCompleteSlugs.has(row.slug)
+                                ? 'font-extrabold text-blue-900 dark:text-blue-200'
+                                : 'font-normal text-blue-700 dark:text-blue-300'
+                            }`}
+                          >
+                            {spurgeonSermonTitleForModalDisplay(row.title)}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {morneveRefItems.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
+                      Morning &amp; Evening
+                    </h3>
+                    <ul className="space-y-1">
+                      {morneveRefItems.map((row) => (
+                        <li key={row.slug}>
+                          <Link
+                            href={`/${row.slug}`}
+                            onClick={() => {
+                              onFollowSermonLink?.()
+                              onClose()
+                            }}
+                            className={`block rounded-md px-2 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700/80 ${
+                              readCompleteSlugs.has(row.slug)
+                                ? 'font-extrabold text-blue-900 dark:text-blue-200'
+                                : 'font-normal text-blue-700 dark:text-blue-300'
+                            }`}
+                          >
+                            {row.title}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
               </div>
             )}

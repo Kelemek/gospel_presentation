@@ -5,6 +5,7 @@
 import { createClient, createAdminClient } from './supabase/server'
 import type { GospelProfile, CreateProfileRequest, GospelPresentationData } from './types'
 import { parseResourceOrder } from './types'
+import { morneveLibraryMenuTitle } from './spurgeon/morneveSlug'
 import { logger } from './logger'
 import { validateProfileSlug } from './profile-service'
 
@@ -125,6 +126,7 @@ export type PublicResourceItem =
   | { type: 'template'; slug: string; title: string }
   | { type: 'category'; id: string; name: string; templates: { slug: string; title: string }[] }
   | { type: 'spurgeonLibrary'; title: string }
+  | { type: 'morningEveningLibrary'; title: string }
 
 /**
  * Gets public resources structure for the Resources dropdown (categories + templates with titles).
@@ -173,6 +175,11 @@ export async function getPublicResourcesStructure(): Promise<PublicResourceItem[
         items.push({
           type: 'spurgeonLibrary',
           title: item.title?.trim() || 'Spurgeon sermons',
+        })
+      } else if (item.type === 'morningEveningLibrary') {
+        items.push({
+          type: 'morningEveningLibrary',
+          title: morneveLibraryMenuTitle(item.title),
         })
       } else {
         const templates: { slug: string; title: string }[] = []

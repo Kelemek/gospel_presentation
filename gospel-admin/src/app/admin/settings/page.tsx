@@ -1,12 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { logger } from "@/lib/logger";
 import type { ResourceOrderItem } from "@/lib/types";
-import { parseResourceOrder, isResourceOrderItemSpurgeonLibrary } from "@/lib/types";
+import {
+  parseResourceOrder,
+  isResourceOrderItemMorningEveningLibrary,
+  isResourceOrderItemSpurgeonLibrary,
+} from "@/lib/types";
+import { isMorneveProfileSlug } from "@/lib/spurgeon/morneveSlug";
 import { isSpurgeonSermonProfileSlug } from "@/lib/spurgeon/sortBySpurgeonSermonSlug";
 import { restoreNewProfileFromBackupFile } from "@/lib/createProfileFromBackup";
 import { useAlertModal } from "@/contexts/AlertModalContext";
@@ -65,11 +70,7 @@ export default function AdminSettingsPage() {
   // Load Settings
   // ============================================================================
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
@@ -139,7 +140,14 @@ export default function AdminSettingsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      void loadSettings();
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [loadSettings]);
 
   // ============================================================================
   // Save Settings
@@ -233,16 +241,35 @@ export default function AdminSettingsPage() {
   };
 
   const hasSpurgeonLibraryRow = orderItems.some((i) => isResourceOrderItemSpurgeonLibrary(i));
+  const hasMorningEveningLibraryRow = orderItems.some((i) =>
+    isResourceOrderItemMorningEveningLibrary(i)
+  );
 
   const addSpurgeonLibraryRow = () => {
     if (hasSpurgeonLibraryRow) return;
     setOrderItems((prev) => [...prev, { type: "spurgeonLibrary", title: "Spurgeon sermons" }]);
   };
 
+  const addMorningEveningLibraryRow = () => {
+    if (hasMorningEveningLibraryRow) return;
+    setOrderItems((prev) => [
+      ...prev,
+      { type: "morningEveningLibrary", title: "Spurgeon's Morning and Evening" },
+    ]);
+  };
+
   const updateSpurgeonLibraryTitle = (index: number, title: string) => {
     setOrderItems((prev) =>
       prev.map((item, i) =>
         i === index && isResourceOrderItemSpurgeonLibrary(item) ? { ...item, title } : item
+      )
+    );
+  };
+
+  const updateMorningEveningLibraryTitle = (index: number, title: string) => {
+    setOrderItems((prev) =>
+      prev.map((item, i) =>
+        i === index && isResourceOrderItemMorningEveningLibrary(item) ? { ...item, title } : item
       )
     );
   };
@@ -361,7 +388,10 @@ export default function AdminSettingsPage() {
     else if (item.type === "category") item.templateSlugs.forEach((s) => slugsInOrder.add(s));
   });
   const availableTemplates = publicTemplates.filter(
-    (t) => !slugsInOrder.has(t.slug) && !isSpurgeonSermonProfileSlug(t.slug)
+    (t) =>
+      !slugsInOrder.has(t.slug) &&
+      !isSpurgeonSermonProfileSlug(t.slug) &&
+      !isMorneveProfileSlug(t.slug)
   );
 
   const addCategory = () => {
@@ -589,7 +619,7 @@ export default function AdminSettingsPage() {
             <div className="border-b border-slate-200 px-6 sm:px-8 py-6">
               <h2 className="text-2xl font-bold text-slate-900">Resources dropdown order</h2>
               <p className="text-slate-600 text-sm mt-2">
-                Categories, the Spurgeon sermon library row, and templates in the Resources menu. Drag to reorder. Add categories and drag templates into them.
+                Categories, Spurgeon sermons and Morning & Evening library rows, and templates in the Resources menu. Drag to reorder.
               </p>
             </div>
             <div className="px-6 sm:px-8 py-6 space-y-4">
@@ -621,6 +651,19 @@ export default function AdminSettingsPage() {
                       className="px-3 py-1.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Add Spurgeon library
+                    </button>
+                    <button
+                      type="button"
+                      onClick={addMorningEveningLibraryRow}
+                      disabled={hasMorningEveningLibraryRow}
+                      title={
+                        hasMorningEveningLibraryRow
+                          ? "Morning & Evening row is already in the list"
+                          : "Add a Resources row that opens the devotions calendar"
+                      }
+                      className="px-3 py-1.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Add Morning &amp; Evening
                     </button>
                     {availableTemplates.length > 0 && (
                       <select
@@ -704,6 +747,40 @@ export default function AdminSettingsPage() {
                               onClick={() => removeTopLevelTemplate(index)}
                               className="text-slate-400 hover:text-red-600 text-xs px-1 ml-auto"
                               aria-label="Remove Spurgeon library row"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ) : isResourceOrderItemMorningEveningLibrary(item) ? (
+                          <div
+                            key={`morneve-${index}`}
+                            draggable
+                            onDragStart={() => handleDragStartTopLevel(index)}
+                            onDragEnd={handleDragEnd}
+                            onDragOver={(e) => handleDragOverTopLevel(e, index)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDropTopLevel(e, index)}
+                            className={`flex flex-wrap items-center gap-2 px-4 py-3 text-sm text-slate-700 border-b border-slate-100 last:border-b-0 transition-colors cursor-grab active:cursor-grabbing ${dropTarget?.kind === "top-level" && dropTarget.index === index ? "bg-blue-100 ring-1 ring-blue-300" : "hover:bg-slate-50"}`}
+                          >
+                            <span className="shrink-0" aria-hidden>
+                              <GripIcon />
+                            </span>
+                            <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-amber-700">
+                              Morning &amp; Evening
+                            </span>
+                            <input
+                              type="text"
+                              value={item.title}
+                              onChange={(e) => updateMorningEveningLibraryTitle(index, e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex-1 min-w-32 px-2 py-1 border border-slate-300 rounded text-slate-900 text-sm"
+                              aria-label="Label shown in Resources menu"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeTopLevelTemplate(index)}
+                              className="text-slate-400 hover:text-red-600 text-xs px-1 ml-auto"
+                              aria-label="Remove Morning and Evening library row"
                             >
                               Remove
                             </button>

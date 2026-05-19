@@ -296,9 +296,15 @@ export default function MemorizationPracticeSession({
       .then(async (res) => {
         const data: unknown = await res.json().catch(() => ({}))
         if (cancelled) return
-        const items = (data as { items?: unknown }).items
-        const list = Array.isArray(items) ? items : []
-        setSpurgeonStudyMatch(list.length > 0 ? 'yes' : 'no')
+        const payload = data as { items?: unknown; sermonCount?: number; morneveCount?: number }
+        const sermonCount =
+          typeof payload.sermonCount === 'number'
+            ? payload.sermonCount
+            : Array.isArray(payload.items)
+              ? payload.items.length
+              : 0
+        const morneveCount = typeof payload.morneveCount === 'number' ? payload.morneveCount : 0
+        setSpurgeonStudyMatch(sermonCount + morneveCount > 0 ? 'yes' : 'no')
       })
       .catch(() => {
         if (!cancelled) setSpurgeonStudyMatch('no')

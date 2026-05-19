@@ -156,10 +156,17 @@ export interface ResourceOrderItemSpurgeonLibrary {
   title: string
 }
 
+/** Opens the Morning & Evening devotions picker modal (not a profile slug). */
+export interface ResourceOrderItemMorningEveningLibrary {
+  type: 'morningEveningLibrary'
+  title: string
+}
+
 export type ResourceOrderItem =
   | ResourceOrderItemTemplate
   | ResourceOrderItemCategory
   | ResourceOrderItemSpurgeonLibrary
+  | ResourceOrderItemMorningEveningLibrary
 
 export function isResourceOrderItemCategory(
   item: ResourceOrderItem
@@ -177,6 +184,12 @@ export function isResourceOrderItemSpurgeonLibrary(
   item: ResourceOrderItem
 ): item is ResourceOrderItemSpurgeonLibrary {
   return item.type === 'spurgeonLibrary'
+}
+
+export function isResourceOrderItemMorningEveningLibrary(
+  item: ResourceOrderItem
+): item is ResourceOrderItemMorningEveningLibrary {
+  return item.type === 'morningEveningLibrary'
 }
 
 /** Parse public_template_order JSON from DB into ResourceOrderItem[] (new format only). */
@@ -204,6 +217,13 @@ export function parseResourceOrder(raw: unknown): ResourceOrderItem[] {
         const title =
           typeof rawTitle === 'string' && rawTitle.trim() ? rawTitle.trim() : 'Spurgeon sermons'
         out.push({ type: 'spurgeonLibrary', title })
+      } else if ((el as any).type === 'morningEveningLibrary') {
+        const rawTitle = (el as any).title
+        const title =
+          typeof rawTitle === 'string' && rawTitle.trim()
+            ? rawTitle.trim()
+            : "Spurgeon's Morning and Evening"
+        out.push({ type: 'morningEveningLibrary', title })
       }
     }
   }

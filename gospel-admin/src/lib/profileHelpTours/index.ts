@@ -839,7 +839,9 @@ async function fetchPublicResourceItemsForTour(): Promise<PublicResourceItem[]> 
 }
 
 function resourcesListOverviewCopy(items: PublicResourceItem[]): string {
-  const hasFolderLike = items.some((i) => i.type === 'category' || i.type === 'spurgeonLibrary')
+  const hasFolderLike = items.some(
+    (i) => i.type === 'category' || i.type === 'spurgeonLibrary' || i.type === 'morningEveningLibrary'
+  )
   if (items.length === 0) {
     return 'Nothing is listed yet. When your church adds shared profiles or categories in admin, they will appear here.'
   }
@@ -3119,6 +3121,24 @@ async function runResourcesFeatureTourAsync(options?: ProfileFeatureTourOptions)
           title: safeTitle,
           description:
             '<p>This row opens the <strong>Spurgeon sermon library</strong>: search by keyword or by Bible reference, then open a sermon as a read-only presentation.</p><p class="mt-2">Tap it when you want to browse Charles Spurgeon’s sermons that your church has published.</p>',
+          side: 'right',
+          align: 'start',
+        },
+      })
+      continue
+    }
+
+    if (g.kind === 'morningEveningLibrary') {
+      const safeTitle = escapeForPopoverText(g.title.trim() || "Spurgeon's Morning and Evening")
+      steps.push({
+        element: () =>
+          document.querySelector(
+            `${RESOURCES_LIST_PANEL} [data-resource-morneve-library]`
+          ) ?? document.querySelector(RESOURCES_LIST_PANEL)!,
+        popover: {
+          title: safeTitle,
+          description:
+            '<p>This row opens <strong>Morning and Evening</strong>: jump to today’s devotional or pick any day on the calendar.</p><p class="mt-2">Tap it when you want Spurgeon’s daily readings for a specific date.</p>',
           side: 'right',
           align: 'start',
         },

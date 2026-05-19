@@ -362,7 +362,9 @@ describe('ScriptureModal Component', () => {
   it('does not show Study without onOpenSpurgeonStudy', async () => {
     renderWithTextSize(<ScriptureModal {...defaultProps} />)
     await waitFor(() => expect(screen.getByRole('heading', { name: 'John 3:16' })).toBeInTheDocument())
-    expect(screen.queryByRole('button', { name: /Study: Spurgeon sermons for this passage/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Study: Spurgeon sermons and Morning & Evening for this passage/i })
+    ).not.toBeInTheDocument()
   })
 
   it('disables Study when onOpenSpurgeonStudy is set but spurgeon-links returns no sermons', async () => {
@@ -372,7 +374,9 @@ describe('ScriptureModal Component', () => {
     await waitFor(() =>
       expect(mockFetch.mock.calls.some((c) => String(c[0]).includes('spurgeon-links'))).toBe(true)
     )
-    const study = screen.getByRole('button', { name: /Study: no Spurgeon sermons indexed for this passage/i })
+    const study = screen.getByRole('button', {
+      name: /Study: no Spurgeon sermons or devotions indexed for this passage/i,
+    })
     expect(study).toBeDisabled()
     expect(study).toHaveTextContent('Study')
   })
@@ -472,7 +476,9 @@ describe('ScriptureModal Component', () => {
           ok: true,
           json: () =>
             Promise.resolve({
-              items: [{ slug: 'sg00001', title: 'A Sermon' }],
+              items: [{ slug: 'sg00001', title: 'A Sermon', kind: 'sermon' }],
+              sermonCount: 1,
+              morneveCount: 0,
             }),
         } as Response)
       }
@@ -483,9 +489,17 @@ describe('ScriptureModal Component', () => {
     })
     renderWithTextSize(<ScriptureModal {...defaultProps} onOpenSpurgeonStudy={openStudy} />)
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /Study: Spurgeon sermons for this passage/i })).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', {
+          name: /Study: Spurgeon sermons and Morning & Evening for this passage/i,
+        })
+      ).toBeInTheDocument()
     )
-    await user.click(screen.getByRole('button', { name: /Study: Spurgeon sermons for this passage/i }))
+    await user.click(
+      screen.getByRole('button', {
+        name: /Study: Spurgeon sermons and Morning & Evening for this passage/i,
+      })
+    )
     expect(openStudy).toHaveBeenCalledWith('John 3:16')
   })
 })

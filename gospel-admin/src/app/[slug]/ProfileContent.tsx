@@ -1,6 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef } from 'react'
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
+} from 'react'
 import { usePresentationScrollReadComplete } from '@/hooks/usePresentationScrollReadComplete'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
@@ -9,6 +16,7 @@ import ScriptureModal from '@/components/ScriptureModal'
 import MemorizationPracticeSession from '@/components/MemorizationPracticeSession'
 import TableOfContents from '@/components/TableOfContents'
 import SpurgeonSermonsModal from '@/components/SpurgeonSermonsModal'
+import MorneveDevotionsModal from '@/components/MorneveDevotionsModal'
 import SidebarAuthNav from '@/components/SidebarAuthNav'
 import MenuLocalDataBackup from '@/components/MenuLocalDataBackup'
 import ThemeToggle from '@/components/ThemeToggle'
@@ -120,22 +128,23 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     isOpen: boolean
   }>({ reference: '', isOpen: false })
   
-  const [favoriteReferences, setFavoriteReferences] = useState<string[]>([])
   const [currentReferenceIndex, setCurrentReferenceIndex] = useState(0)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isSharingResource, setIsSharingResource] = useState(false)
   const [isSpurgeonLibraryOpen, setIsSpurgeonLibraryOpen] = useState(false)
+  const [isMorneveLibraryOpen, setIsMorneveLibraryOpen] = useState(false)
   /** When opening Spurgeon from the scripture modal “Study”, pre-fill and search by this reference. */
   const [spurgeonStudyReference, setSpurgeonStudyReference] = useState<string | null>(null)
   /** Skip desktop `onMouseLeave` close while the restore JSON file picker is open (keeps `<input type="file">` mounted). */
   const deferCloseMenuForFilePickerRef = useRef(false)
-  const [showMenuLabel, setShowMenuLabel] = useState(true)
   const [memorizationPracticeVerse, setMemorizationPracticeVerse] = useState<MemorizedVerse | null>(null)
   const [canEdit, setCanEdit] = useState(false)
-  const [fromEditor, setFromEditor] = useState(false)
-  const [userEmail, setUserEmail] = useState<string | null>(null)
-  const [isHydrated, setIsHydrated] = useState(false)
-  const [profileHighlights, setProfileHighlights] = useState<ProfileHighlight[]>([])
+  const [fromEditor] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return new URLSearchParams(window.location.search).get('preview') === 'true'
+  })
+  const [highlightRevision, setHighlightRevision] = useState(0)
+  const [versePinRevision, setVersePinRevision] = useState(0)
   const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null)
   const activeHighlightTimerRef = useRef<number | null>(null)
   const { showConfirm, showAlert } = useAlertModal()
@@ -144,27 +153,33 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   /** Matches `ProfileResourceReadAloud` (Listen hidden on Android Web hosts). */
   const profileHeaderAndroidHost = useMemo(() => isMemorizeAndroidWebHost(), [])
 
-  // Set hydrated flag immediately on client to avoid hydration mismatch
-  useLayoutEffect(() => {
-    setIsHydrated(true)
-  }, [])
+  const isHydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  )
 
-  useLayoutEffect(() => {
-    if (typeof window === 'undefined') return
-    const minPx = profileMenuLabelMinViewportPx(profileHeaderAndroidHost)
-    if (typeof window.matchMedia !== 'function') {
-      const sync = () =>
-        setShowMenuLabel(showProfileMenuLabelForViewport(window.innerWidth, profileHeaderAndroidHost))
-      sync()
-      window.addEventListener('resize', sync)
-      return () => window.removeEventListener('resize', sync)
-    }
-    const mq = window.matchMedia(`(min-width: ${minPx}px)`)
-    const sync = () => setShowMenuLabel(mq.matches)
-    sync()
-    mq.addEventListener('change', sync)
-    return () => mq.removeEventListener('change', sync)
-  }, [profileHeaderAndroidHost])
+  const showMenuLabel = useSyncExternalStore(
+    (onStoreChange) => {
+      if (typeof window === 'undefined') return () => {}
+      const minPx = profileMenuLabelMinViewportPx(profileHeaderAndroidHost)
+      if (typeof window.matchMedia !== 'function') {
+        window.addEventListener('resize', onStoreChange)
+        return () => window.removeEventListener('resize', onStoreChange)
+      }
+      const mq = window.matchMedia(`(min-width: ${minPx}px)`)
+      mq.addEventListener('change', onStoreChange)
+      return () => mq.removeEventListener('change', onStoreChange)
+    },
+    () =>
+      typeof window !== 'undefined'
+        ? typeof window.matchMedia === 'function'
+          ? window.matchMedia(`(min-width: ${profileMenuLabelMinViewportPx(profileHeaderAndroidHost)}px)`)
+              .matches
+          : showProfileMenuLabelForViewport(window.innerWidth, profileHeaderAndroidHost)
+        : true,
+    () => true
+  )
 
   // Check authentication and role
   useEffect(() => {
@@ -175,8 +190,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       const { data: { user } } = await supabase.auth.getUser()
       
       if (user) {
-        setUserEmail(user.email || null)
-        
         // Check user role
         const { data: userProfile } = await supabase
           .from('user_profiles')
@@ -190,20 +203,30 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       }
     }
     checkAuth()
-    
-    // Check if coming from editor via URL parameter
-    const params = new URLSearchParams(window.location.search)
-    setFromEditor(params.get('preview') === 'true')
   }, [isHydrated])
 
   const sectionCount = sections?.length ?? 0
-  const refreshHighlights = useCallback(() => {
-    if (!profileInfo?.slug) {
-      setProfileHighlights([])
-      return
-    }
-    setProfileHighlights(highlightsForSlug(profileInfo.slug))
-  }, [profileInfo?.slug])
+  const profileSlug = profileInfo?.slug ?? ''
+
+  const bumpHighlights = useCallback(() => {
+    setHighlightRevision((v) => v + 1)
+  }, [])
+
+  const profileHighlights = useMemo((): ProfileHighlight[] => {
+    void highlightRevision
+    if (!profileSlug) return []
+    return highlightsForSlug(profileSlug)
+  }, [profileSlug, highlightRevision])
+
+  const bumpVersePins = useCallback(() => {
+    setVersePinRevision((v) => v + 1)
+  }, [])
+
+  const versePinMap = useMemo((): VersePinsStoredState => {
+    void versePinRevision
+    if (!profileSlug) return createEmptyVersePinsState()
+    return loadVersePins(profileSlug)
+  }, [profileSlug, versePinRevision])
 
   const highlightsByScopeId = useMemo(() => {
     const out: Record<string, Array<{ id: string; startOffset: number; endOffset: number }>> = {}
@@ -282,7 +305,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       })
       if (!added) return
 
-      refreshHighlights()
+      bumpHighlights()
       setActiveHighlightId(added.id)
       if (activeHighlightTimerRef.current != null) window.clearTimeout(activeHighlightTimerRef.current)
       activeHighlightTimerRef.current = window.setTimeout(() => setActiveHighlightId(null), 1800)
@@ -295,30 +318,19 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       document.removeEventListener('mouseup', handleSelectionEnd)
       document.removeEventListener('touchend', handleSelectionEnd)
     }
-  }, [isHydrated, profileInfo?.slug, profileInfo?.title, refreshHighlights])
+  }, [isHydrated, profileInfo?.slug, profileInfo?.title, bumpHighlights])
 
-  // Scripture verse pins (localStorage only — yellow slot + tinted bookmarks per profile slug)
-  const [versePinMap, setVersePinMap] = useState<VersePinsStoredState>(createEmptyVersePinsState)
-  const [modalPinDraftColor, setModalPinDraftColor] = useState<VersePinColorId>('yellow')
-
-  /** Picker draft when anchors/reference last synced — detect user edits vs synced default */
-  const modalPinBaselineRef = useRef<VersePinColorId>('yellow')
+  const [modalPinUserOverride, setModalPinUserOverride] = useState<{
+    key: string
+    color: VersePinColorId
+  } | null>(null)
 
   /** Anchors for navigation + pin commit (matches the passage row in the modal). */
-  const modalOpenAnchorsRef = useRef<{
+  const [modalOpenAnchors, setModalOpenAnchors] = useState<{
     reference: string
     sectionId: string
     subsectionId: string
   } | null>(null)
-
-  useLayoutEffect(() => {
-    if (!profileInfo?.slug) return
-    setVersePinMap(loadVersePins(profileInfo.slug))
-  }, [profileInfo?.slug])
-
-  useLayoutEffect(() => {
-    refreshHighlights()
-  }, [refreshHighlights])
 
   useEffect(() => {
     return () => {
@@ -335,7 +347,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       let sectionId = explicit?.sectionId?.trim() ?? ''
       let subsectionId = explicit?.subsectionId?.trim() ?? ''
       if (!sectionId || !subsectionId) {
-        const pinned = modalOpenAnchorsRef.current
+        const pinned = modalOpenAnchors
         if (pinned?.reference === reference) {
           sectionId = pinned.sectionId
           subsectionId = pinned.subsectionId
@@ -348,37 +360,38 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
         }
       }
       if (sectionId && subsectionId) {
-        modalOpenAnchorsRef.current = { reference, sectionId, subsectionId }
+        setModalOpenAnchors({ reference, sectionId, subsectionId })
       } else {
-        modalOpenAnchorsRef.current = {
+        setModalOpenAnchors({
           reference,
           sectionId: 'modal-view',
           subsectionId: 'modal-view',
-        }
+        })
       }
     },
-    [sections]
+    [sections, modalOpenAnchors]
   )
 
   const handleRemoveVersePin = useCallback(
     (pin: Pick<VersePinAnchoredEntry, 'bookmarkId' | 'colorId'>) => {
       const s = profileInfo?.slug
       if (!s) return
-      const next =
-        pin.bookmarkId != null && pin.bookmarkId !== ''
-          ? removeVersePin(s, { kind: 'bookmark', bookmarkId: pin.bookmarkId })
-          : removeVersePin(s, { kind: 'yellow' })
-      setVersePinMap(next)
+      if (pin.bookmarkId != null && pin.bookmarkId !== '') {
+        removeVersePin(s, { kind: 'bookmark', bookmarkId: pin.bookmarkId })
+      } else {
+        removeVersePin(s, { kind: 'yellow' })
+      }
+      bumpVersePins()
     },
-    [profileInfo?.slug]
+    [profileInfo?.slug, bumpVersePins]
   )
 
   const handleClearAllVersePins = useCallback(() => {
     const s = profileInfo?.slug
     if (!s) return
     clearAllVersePins(s)
-    setVersePinMap(loadVersePins(s))
-  }, [profileInfo?.slug])
+    bumpVersePins()
+  }, [profileInfo?.slug, bumpVersePins])
 
   const focusHighlightById = useCallback((highlightId: string) => {
     setActiveHighlightId(highlightId)
@@ -391,52 +404,36 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       const ok = await showConfirm('Remove this highlight?')
       if (!ok) return
       removeHighlight(highlightId)
-      refreshHighlights()
+      bumpHighlights()
       setActiveHighlightId((cur) => (cur === highlightId ? null : cur))
     },
-    [showConfirm, refreshHighlights]
+    [showConfirm, bumpHighlights]
   )
 
-  // Collect favorite references from gospel data
-  const collectFavoriteReferences = (data: GospelSectionType[]) => {
+  const favoriteReferences = useMemo(() => {
+    if (!sections) return []
     const favorites: string[] = []
-    
-    data.forEach(section => {
-      section.subsections.forEach(subsection => {
-        // Check main subsection scripture references
+    sections.forEach((section) => {
+      section.subsections.forEach((subsection) => {
         if (subsection.scriptureReferences) {
-          subsection.scriptureReferences.forEach(ref => {
-            if (ref.favorite) {
-              favorites.push(ref.reference)
-            }
+          subsection.scriptureReferences.forEach((ref) => {
+            if (ref.favorite) favorites.push(ref.reference)
           })
         }
-        
-        // Check nested subsections
         if (subsection.nestedSubsections) {
-          subsection.nestedSubsections.forEach(nested => {
+          subsection.nestedSubsections.forEach((nested) => {
             if (nested.scriptureReferences) {
-              nested.scriptureReferences.forEach(ref => {
-                if (ref.favorite) {
-                  favorites.push(ref.reference)
-                }
+              nested.scriptureReferences.forEach((ref) => {
+                if (ref.favorite) favorites.push(ref.reference)
               })
             }
           })
         }
       })
     })
-    
-    setFavoriteReferences(favorites)
     logger.debug('📖 Found', favorites.length, 'favorite scripture references:', favorites)
-  }
-
-  // Load favorite references when sections change
-  useEffect(() => {
-    if (sections && profileInfo) {
-      collectFavoriteReferences(sections)
-    }
-  }, [sections, profileInfo])
+    return favorites
+  }, [sections])
 
   // Track visit count when profile is viewed
   useEffect(() => {
@@ -459,25 +456,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       trackVisit()
     }
   }, [profileInfo])
-
-  // Add keyboard navigation
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (selectedScripture.isOpen) {
-        if (event.key === 'ArrowLeft') {
-          event.preventDefault()
-          navigateToPrevious()
-        } else if (event.key === 'ArrowRight') {
-          event.preventDefault()
-          navigateToNext()
-        }
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedScripture.isOpen, favoriteReferences, currentReferenceIndex])
 
   // All scripture *cards* in profile order, with DOM anchors (duplicate references = separate entries).
   const allScriptureRefs: ScriptureRefNav[] = useMemo(
@@ -540,13 +518,13 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
         : undefined
 
     if (sectionId && subsectionId) {
-      modalOpenAnchorsRef.current = { reference, sectionId, subsectionId }
+      setModalOpenAnchors({ reference, sectionId, subsectionId })
     } else {
-      modalOpenAnchorsRef.current = {
+      setModalOpenAnchors({
         reference,
         sectionId: 'modal-view',
         subsectionId: 'modal-view',
-      }
+      })
     }
 
     if (favoriteReferences.length > 0) {
@@ -653,13 +631,25 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const hasPrevious = navListLength > 1
   const hasNext = navListLength > 1
 
+  useEffect(() => {
+    if (!selectedScripture.isOpen) return
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault()
+        navigateToPrevious()
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault()
+        navigateToNext()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [selectedScripture.isOpen, navigateToPrevious, navigateToNext])
+
   const modalPassageAnchorsForPins: VersePinSlotEntry | null = useMemo(() => {
-    // When the same reference string appears on multiple cards, prev/next updates
-    // `modalOpenAnchorsRef` + `currentReferenceIndex`; reference alone may not change.
-    void currentReferenceIndex
     if (!selectedScripture.isOpen || !selectedScripture.reference.trim()) return null
     const refStr = selectedScripture.reference
-    const snap = modalOpenAnchorsRef.current
+    const snap = modalOpenAnchors
     if (
       snap?.reference === refStr &&
       snap.sectionId?.trim() !== '' &&
@@ -682,21 +672,22 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       }
     }
     return { reference: refStr, sectionId: '', subsectionId: '' }
-  }, [
-    selectedScripture.isOpen,
-    selectedScripture.reference,
-    sections,
-    currentReferenceIndex,
-  ])
+  }, [selectedScripture.isOpen, selectedScripture.reference, sections, modalOpenAnchors])
 
-  useEffect(() => {
-    if (!selectedScripture.isOpen || !modalPassageAnchorsForPins?.reference) return
-    const existing = versePinColorForPassage(versePinMap, modalPassageAnchorsForPins)
-    /** Yellow = last verse viewed for unpinned passages; otherwise whichever color pins this passage. */
-    const synced: VersePinColorId = existing ?? 'yellow'
-    modalPinBaselineRef.current = synced
-    setModalPinDraftColor(synced)
-  }, [selectedScripture.isOpen, selectedScripture.reference, modalPassageAnchorsForPins, versePinMap])
+  const modalPinSyncedKey =
+    selectedScripture.isOpen && modalPassageAnchorsForPins?.reference
+      ? `${modalPassageAnchorsForPins.reference}|${modalPassageAnchorsForPins.sectionId}|${modalPassageAnchorsForPins.subsectionId}`
+      : null
+
+  const defaultModalPinColor = useMemo((): VersePinColorId => {
+    if (!modalPassageAnchorsForPins?.reference) return 'yellow'
+    return versePinColorForPassage(versePinMap, modalPassageAnchorsForPins) ?? 'yellow'
+  }, [modalPassageAnchorsForPins, versePinMap])
+
+  const modalPinDraftColor: VersePinColorId =
+    modalPinSyncedKey && modalPinUserOverride?.key === modalPinSyncedKey
+      ? modalPinUserOverride.color
+      : defaultModalPinColor
 
   const modalPinDropdownColors = useMemo(
     () =>
@@ -711,7 +702,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     if (!selectedScripture.isOpen) return undefined
     const refStr = selectedScripture.reference.trim()
     if (!refStr) return undefined
-    const snap = modalOpenAnchorsRef.current
+    const snap = modalOpenAnchors
     if (!snap || snap.reference !== refStr) return undefined
     if (
       snap.sectionId === 'modal-view' ||
@@ -741,18 +732,12 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       presentationLocationFromProfileAnchors(sections, snap.sectionId, snap.subsectionId) ??
       undefined
     )
-  }, [
-    selectedScripture.isOpen,
-    selectedScripture.reference,
-    allScriptureRefs,
-    currentReferenceIndex,
-    sections,
-  ])
+  }, [selectedScripture.isOpen, selectedScripture.reference, allScriptureRefs, sections, modalOpenAnchors])
 
   const closeModal = () => {
     const refTxt = selectedScripture.reference.trim()
     if (refTxt && profileInfo?.slug) {
-      const snap = modalOpenAnchorsRef.current
+      const snap = modalOpenAnchors
       let sectionId =
         snap?.reference === refTxt ? (snap.sectionId?.trim() ?? '') : ''
       let subsectionId =
@@ -769,23 +754,20 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
         sectionId: sectionId || 'modal-view',
         subsectionId: subsectionId || 'modal-view',
       }
-      const draft = modalPinDraftColor
-      const baseline = modalPinBaselineRef.current
-      const unchanged = draft === baseline
+      const unchanged = modalPinDraftColor === defaultModalPinColor
 
       if (unchanged) {
         if (shouldAdvanceYellowLastViewed(versePinMap, entry)) {
-          const nextMap = assignYellowLastViewed(profileInfo.slug, entry)
-          setVersePinMap(nextMap)
+          assignYellowLastViewed(profileInfo.slug, entry)
+          bumpVersePins()
         }
       } else {
-        const nextMap = assignVersePin(profileInfo.slug, draft, entry)
-        setVersePinMap(nextMap)
+        assignVersePin(profileInfo.slug, modalPinDraftColor, entry)
+        bumpVersePins()
       }
     }
-    modalPinBaselineRef.current = 'yellow'
-    setModalPinDraftColor('yellow')
-    modalOpenAnchorsRef.current = null
+    setModalPinUserOverride(null)
+    setModalOpenAnchors(null)
     setSelectedScripture({ reference: '', isOpen: false })
   }
 
@@ -835,34 +817,27 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
 
   usePresentationScrollReadComplete(profileInfo?.slug)
 
-  const [presentationMarkedReadComplete, setPresentationMarkedReadComplete] = useState(false)
-  useLayoutEffect(() => {
-    if (!profileInfo?.slug) {
-      setPresentationMarkedReadComplete(false)
-      return
-    }
-    setPresentationMarkedReadComplete(isPresentationReadComplete(profileInfo.slug))
-  }, [profileInfo?.slug])
-
-  useEffect(() => {
-    if (!profileInfo?.slug) return
-    const slug = profileInfo.slug
-    const onStatus = (e: Event) => {
-      const ce = e as CustomEvent<{ slug: string; read: boolean }>
-      if (ce.detail?.slug === slug) setPresentationMarkedReadComplete(ce.detail.read)
-    }
-    const onStorage = (ev: StorageEvent) => {
-      if (ev.key === PRESENTATION_READ_COMPLETE_STORAGE_KEY) {
-        setPresentationMarkedReadComplete(isPresentationReadComplete(slug))
+  const presentationMarkedReadComplete = useSyncExternalStore(
+    (onStoreChange) => {
+      const slug = profileInfo?.slug
+      if (!slug || typeof window === 'undefined') return () => {}
+      const onStatus = (e: Event) => {
+        const ce = e as CustomEvent<{ slug: string; read: boolean }>
+        if (ce.detail?.slug === slug) onStoreChange()
       }
-    }
-    window.addEventListener(GOSPEL_PRESENTATION_READ_STATUS_CHANGED_EVENT, onStatus)
-    window.addEventListener('storage', onStorage)
-    return () => {
-      window.removeEventListener(GOSPEL_PRESENTATION_READ_STATUS_CHANGED_EVENT, onStatus)
-      window.removeEventListener('storage', onStorage)
-    }
-  }, [profileInfo?.slug])
+      const onStorage = (ev: StorageEvent) => {
+        if (ev.key === PRESENTATION_READ_COMPLETE_STORAGE_KEY) onStoreChange()
+      }
+      window.addEventListener(GOSPEL_PRESENTATION_READ_STATUS_CHANGED_EVENT, onStatus)
+      window.addEventListener('storage', onStorage)
+      return () => {
+        window.removeEventListener(GOSPEL_PRESENTATION_READ_STATUS_CHANGED_EVENT, onStatus)
+        window.removeEventListener('storage', onStorage)
+      }
+    },
+    () => (profileInfo?.slug ? isPresentationReadComplete(profileInfo.slug) : false),
+    () => false
+  )
 
   const handleMarkPresentationUnread = useCallback(() => {
     if (!profileInfo?.slug) return
@@ -945,7 +920,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                 <HighlightsDropdown
                   profileSlug={profileInfo.slug}
                   onOpenHighlight={(h) => focusHighlightById(h.id)}
-                  onHighlightsChanged={refreshHighlights}
+                  onHighlightsChanged={bumpHighlights}
                 />
                 <BookmarksDropdown
                   sections={sections}
@@ -1065,6 +1040,9 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                   setSpurgeonStudyReference(null)
                   setIsSpurgeonLibraryOpen(true)
                 }}
+                onOpenMorneveLibrary={() => {
+                  setIsMorneveLibraryOpen(true)
+                }}
               />
               
               {/* Profile Info in Sidebar */}
@@ -1174,7 +1152,11 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
         presentationLocation={scriptureModalPresentationLocation}
         versePinControl={{
           draftColor: modalPinDraftColor,
-          onDraftColorChange: setModalPinDraftColor,
+          onDraftColorChange: (color) => {
+            if (modalPinSyncedKey) {
+              setModalPinUserOverride({ key: modalPinSyncedKey, color })
+            }
+          },
           colorsAvailableInDropdown: modalPinDropdownColors,
         }}
         onOpenSpurgeonStudy={(ref) => {
@@ -1194,6 +1176,15 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
           setIsSpurgeonLibraryOpen(false)
           setSpurgeonStudyReference(null)
         }}
+      />
+
+      <MorneveDevotionsModal
+        isOpen={isMorneveLibraryOpen}
+        onFollowDayLink={() => {
+          closeModal()
+          setMemorizationPracticeVerse(null)
+        }}
+        onClose={() => setIsMorneveLibraryOpen(false)}
       />
 
       {typeof document !== 'undefined' &&

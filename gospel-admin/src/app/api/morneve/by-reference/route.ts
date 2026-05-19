@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
-import { sortSpurgeonSermonsByDisplayTitleAZ } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
+import { sortMorneveRowsByCalendar } from '@/lib/spurgeon/morneveSlug'
 import {
   profileIdsFromPassageIndexLookup,
   publicProfilesByIdsAndSlugPrefix,
 } from '@/lib/spurgeon/spurgeonPassageIndexLookup'
 
 /**
- * GET /api/spurgeon/by-reference?reference=John+3:16
- * Returns public Spurgeon sermon profiles indexed on that passage key (A–Z by display title).
+ * GET /api/morneve/by-reference?reference=John+3:16
+ * Public Morning & Evening day profiles indexed on that passage (calendar order).
  */
 export async function GET(request: NextRequest) {
   try {
@@ -20,12 +20,8 @@ export async function GET(request: NextRequest) {
 
     const admin = createAdminClient()
     const ids = await profileIdsFromPassageIndexLookup(admin, ref)
-    if (ids.length === 0) {
-      return NextResponse.json({ items: [] })
-    }
-
-    const profiles = await publicProfilesByIdsAndSlugPrefix(admin, ids, 'sg')
-    const sorted = sortSpurgeonSermonsByDisplayTitleAZ(profiles)
+    const profiles = await publicProfilesByIdsAndSlugPrefix(admin, ids, 'me')
+    const sorted = sortMorneveRowsByCalendar(profiles)
     const items = sorted.map((p) => ({
       slug: p.slug,
       title: p.title || p.slug,
@@ -33,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ items })
   } catch (e) {
-    logger.error('[API] GET /api/spurgeon/by-reference', e)
+    logger.error('[API] GET /api/morneve/by-reference', e)
     return NextResponse.json({ error: 'Lookup failed' }, { status: 500 })
   }
 }

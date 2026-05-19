@@ -72,6 +72,9 @@ const THML_BOOK_ABBREV_TO_BOOK_ALIAS: Record<string, string> = {
   mic: 'micah',
   zech: 'zechariah',
   mal: 'malachi',
+  ec: 'ecclesiastes',
+  eccl: 'ecclesiastes',
+  ecc: 'ecclesiastes',
   gal: 'galatians',
   eph: 'ephesians',
   php: 'philippians',
@@ -137,14 +140,17 @@ function stripScripInnerToPlain(inner: string): string {
 }
 
 /**
- * Expand each `scripRef` to canonical inline reference text (`passage="…"` wins over inner markup).
+ * Expand each `scripRef` to canonical inline reference text.
+ * When CCEL provides visible text inside the tag (e.g. `Ecclesiastes 10:7`), prefer that over
+ * abbreviated `passage="Ec 10:7"` attributes.
  */
 export function expandScripRefsToInlinePlain(innerXml: string): string {
   return innerXml.replace(SCRIPREF_BLOCK_RE, (_full, attrs, inner) => {
+    const plain = stripScripInnerToPlain(String(inner))
+    if (plain) return normalizedPassageDisplayForInline(plain)
     const pm = /\bpassage="([^"]+)"/i.exec(String(attrs))
     if (pm?.[1]) return normalizedPassageDisplayForInline(pm[1])
-    const plain = stripScripInnerToPlain(String(inner))
-    return plain ? normalizedPassageDisplayForInline(plain) : plain
+    return plain
   })
 }
 

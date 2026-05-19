@@ -32,6 +32,31 @@ jest.mock('next/link', () => {
 
 const mockFetch = global.fetch as jest.MockedFunction<typeof fetch>
 
+function mockByReferenceFetch(
+  items: { slug: string; title: string }[],
+  morneveItems: { slug: string; title: string }[] = []
+) {
+  return (input: string | URL | Request) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
+    if (url.includes('/api/morneve/by-reference')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ items: morneveItems }),
+      } as Response)
+    }
+    if (url.includes('/api/spurgeon/by-reference')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ items }),
+      } as Response)
+    }
+    return Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve({ items: [], total: 0, page: 1, pageSize: 100 }),
+    } as Response)
+  }
+}
+
 describe('SpurgeonSermonsModal', () => {
   beforeEach(() => {
     mockFetch.mockReset()
@@ -60,19 +85,9 @@ describe('SpurgeonSermonsModal', () => {
 
   it('switches to by scripture tab and runs lookup after debounced typing', async () => {
     const user = userEvent.setup()
-    mockFetch.mockImplementation((input: string | URL | Request) => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
-      if (url.includes('by-reference')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ items: [{ slug: 'sg00001', title: 'Test Sermon' }] }),
-        } as Response)
-      }
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ items: [], total: 0, page: 1, pageSize: 100 }),
-      } as Response)
-    })
+    mockFetch.mockImplementation(
+      mockByReferenceFetch([{ slug: 'sg00001', title: 'Test Sermon' }])
+    )
 
     render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} />)
 
@@ -93,19 +108,9 @@ describe('SpurgeonSermonsModal', () => {
   })
 
   it('opens By scripture with initialByReference and runs lookup', async () => {
-    mockFetch.mockImplementation((input: string | URL | Request) => {
-      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
-      if (url.includes('by-reference')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ items: [{ slug: 'sg00002', title: 'From Initial Ref' }] }),
-        } as Response)
-      }
-      return Promise.resolve({
-        ok: true,
-        json: () => Promise.resolve({ items: [], total: 0, page: 1, pageSize: 100 }),
-      } as Response)
-    })
+    mockFetch.mockImplementation(
+      mockByReferenceFetch([{ slug: 'sg00002', title: 'From Initial Ref' }])
+    )
 
     render(
       <SpurgeonSermonsModal

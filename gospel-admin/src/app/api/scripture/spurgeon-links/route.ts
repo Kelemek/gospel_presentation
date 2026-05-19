@@ -2,17 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { canonicalScriptureCacheReference } from '@/lib/api-bible-passage-id'
 import { logger } from '@/lib/logger'
+import { sortMorneveRowsByCalendar } from '@/lib/spurgeon/morneveSlug'
 import { sortSpurgeonSermonsByDisplayTitleAZ } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
 import {
-  spurgeonPassageIndexBroadOrFilter,
-  spurgeonPassageKeySpansOverlap,
-} from '@/lib/spurgeon/spurgeonPassageKeyMatch'
+  profileIdsFromPassageIndexLookup,
+  publicProfilesByIdsAndSlugPrefix,
+} from '@/lib/spurgeon/spurgeonPassageIndexLookup'
 
 const MAX_ITEMS = 8
 
 /**
  * GET /api/scripture/spurgeon-links?reference=...
- * Same backing data as by-reference; capped list for scripture modal "Study" links (A–Z by display title, max 8).
+ * Indexed public Spurgeon sermons and Morning & Evening days for scripture modal Study (max 8 combined).
  */
 export async function GET(request: NextRequest) {
   try {
@@ -23,67 +24,38 @@ export async function GET(request: NextRequest) {
 
     const passageKey = canonicalScriptureCacheReference(ref)
     if (!passageKey) {
-      return NextResponse.json({ items: [] })
+      return NextResponse.json({ items: [], sermonCount: 0, morneveCount: 0 })
     }
 
     const admin = createAdminClient()
-    let indexRows: { profile_id: string; passage_key?: string }[] | null = null
-    const { data: exactRows, error: idxErr } = await admin
-      .from('spurgeon_passage_index')
-      .select('profile_id')
-      .eq('passage_key', passageKey)
-
-    if (idxErr) {
-      logger.error('[API] scripture spurgeon-links index', { idxErr })
-      return NextResponse.json({ error: 'Lookup failed' }, { status: 500 })
-    }
-
-    indexRows = exactRows || []
-
-    if (indexRows.length === 0) {
-      const orFilter = spurgeonPassageIndexBroadOrFilter(passageKey)
-      if (orFilter) {
-        const { data: broadRows, error: broadErr } = await admin
-          .from('spurgeon_passage_index')
-          .select('profile_id, passage_key')
-          .or(orFilter)
-
-        if (broadErr) {
-          logger.error('[API] scripture spurgeon-links index broad', { broadErr })
-          return NextResponse.json({ error: 'Lookup failed' }, { status: 500 })
-        }
-
-        indexRows = (broadRows || []).filter((r: { passage_key: string }) =>
-          spurgeonPassageKeySpansOverlap(passageKey, r.passage_key)
-        )
-      }
-    }
-
-    const ids = [...new Set((indexRows || []).map((r: { profile_id: string }) => r.profile_id))]
+    const ids = await profileIdsFromPassageIndexLookup(admin, ref)
     if (ids.length === 0) {
-      return NextResponse.json({ items: [] })
+      return NextResponse.json({ items: [], sermonCount: 0, morneveCount: 0 })
     }
 
-    const { data: profiles, error: profErr } = await admin
-      .from('profiles')
-      .select('slug,title')
-      .in('id', ids)
-      .eq('is_public', true)
-      .eq('is_template', true)
-      .like('slug', 'sg%')
+    const [sermonProfiles, morneveProfiles] = await Promise.all([
+      publicProfilesByIdsAndSlugPrefix(admin, ids, 'sg'),
+      publicProfilesByIdsAndSlugPrefix(admin, ids, 'me'),
+    ])
 
-    if (profErr) {
-      logger.error('[API] scripture spurgeon-links profiles', { profErr })
-      return NextResponse.json({ error: 'Lookup failed' }, { status: 500 })
+    const sermonSorted = sortSpurgeonSermonsByDisplayTitleAZ(sermonProfiles)
+    const morneveSorted = sortMorneveRowsByCalendar(morneveProfiles)
+
+    const items: { slug: string; title: string; kind: 'sermon' | 'morneve' }[] = []
+    for (const p of sermonSorted) {
+      if (items.length >= MAX_ITEMS) break
+      items.push({ slug: p.slug, title: p.title || p.slug, kind: 'sermon' })
+    }
+    for (const p of morneveSorted) {
+      if (items.length >= MAX_ITEMS) break
+      items.push({ slug: p.slug, title: p.title || p.slug, kind: 'morneve' })
     }
 
-    const sorted = sortSpurgeonSermonsByDisplayTitleAZ((profiles || []) as { slug: string; title: string }[])
-    const items = sorted.slice(0, MAX_ITEMS).map((p) => ({
-      slug: p.slug,
-      title: p.title || p.slug,
-    }))
-
-    return NextResponse.json({ items })
+    return NextResponse.json({
+      items,
+      sermonCount: sermonSorted.length,
+      morneveCount: morneveSorted.length,
+    })
   } catch (e) {
     logger.error('[API] GET /api/scripture/spurgeon-links', e)
     return NextResponse.json({ error: 'Lookup failed' }, { status: 500 })

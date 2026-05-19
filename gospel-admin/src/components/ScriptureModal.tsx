@@ -1,6 +1,14 @@
 'use client'
 
-import { useId, useState, useEffect, useRef, useMemo, type TouchEvent } from 'react'
+import {
+  useId,
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useSyncExternalStore,
+  type TouchEvent,
+} from 'react'
 import { useTranslation, type BibleTranslation } from '@/contexts/TranslationContext'
 import { useTextSize } from '@/contexts/TextSizeContext'
 import { useAlertModal } from '@/contexts/AlertModalContext'
@@ -17,6 +25,8 @@ import ScriptureModalToolbarMenu from '@/components/ScriptureModalToolbarMenu'
 import type { ScriptureModalPresentationLocation } from '@/lib/presentationLocationFromAnchors'
 
 export type { ScriptureModalPresentationLocation } from '@/lib/presentationLocationFromAnchors'
+
+type SpurgeonStudyMatch = 'unset' | 'loading' | 'yes' | 'no'
 
 interface ScriptureModalProps {
   reference: string
@@ -53,37 +63,130 @@ export default function ScriptureModal({
   const { translation, setTranslation, enabledTranslations } = useTranslation()
   const { textSize } = useTextSize()
   const { showAlert } = useAlertModal()
-  const [scriptureText, setScriptureText] = useState<string>('')
-  const [isMemoized, setIsMemoized] = useState(false)
-  const [chapterText, setChapterText] = useState<string>('')
-  const [showingContext, setShowingContext] = useState(false)
-  const [loading, setLoading] = useState(false)
+  const [chapterView, setChapterView] = useState<{ sessionKey: string; text: string } | null>(null)
   const [contextLoading, setContextLoading] = useState(false)
-  const [error, setError] = useState<string>('')
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const verseTabButtonRef = useRef<HTMLButtonElement>(null)
   const scriptureModalTitleId = useId()
 
   // Compare translation (second column)
   const [compareTranslation, setCompareTranslation] = useState<string | null>(null)
-  const [compareText, setCompareText] = useState<string>('')
-  const [compareChapterText, setCompareChapterText] = useState<string>('')
-  const [compareLoading, setCompareLoading] = useState(false)
-  const [compareError, setCompareError] = useState<string>('')
 
-  /** Whether indexed public Spurgeon sermons cite this passage (`/api/scripture/spurgeon-links`). */
-  const [spurgeonStudyMatch, setSpurgeonStudyMatch] = useState<'unset' | 'loading' | 'yes' | 'no'>('unset')
+  const [scriptureResolved, setScriptureResolved] = useState<{
+    key: string
+    text: string
+    error: string
+  } | null>(null)
+
+  const [compareVerseResolved, setCompareVerseResolved] = useState<{
+    key: string
+    text: string
+    error: string
+  } | null>(null)
+
+  const [compareChapterResolved, setCompareChapterResolved] = useState<{
+    key: string
+    text: string
+  } | null>(null)
+
+  /** Latest spurgeon-links result for a specific reference (set only in fetch callbacks). */
+  const [spurgeonStudyResolved, setSpurgeonStudyResolved] = useState<{
+    ref: string
+    match: 'yes' | 'no'
+  } | null>(null)
+
+  const spurgeonStudyLookupRef = useMemo(() => {
+    if (!isOpen || !onOpenSpurgeonStudy || !reference.trim()) return null
+    return reference.trim()
+  }, [isOpen, onOpenSpurgeonStudy, reference])
+
+  const spurgeonStudyMatch = useMemo((): SpurgeonStudyMatch => {
+    if (!spurgeonStudyLookupRef) return 'unset'
+    if (!spurgeonStudyResolved || spurgeonStudyResolved.ref !== spurgeonStudyLookupRef) {
+      return 'loading'
+    }
+    return spurgeonStudyResolved.match
+  }, [spurgeonStudyLookupRef, spurgeonStudyResolved])
 
   /** Tailwind `sm` is 640px — match for toolbar wrapping on phones. */
-  const [narrowSmViewport, setNarrowSmViewport] = useState(false)
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
-    const mq = window.matchMedia('(max-width: 639px)')
-    const sync = () => setNarrowSmViewport(mq.matches)
-    sync()
-    mq.addEventListener('change', sync)
-    return () => mq.removeEventListener('change', sync)
-  }, [])
+  const narrowSmViewport = useSyncExternalStore(
+    (onStoreChange) => {
+      if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+        return () => {}
+      }
+      const mq = window.matchMedia('(max-width: 639px)')
+      mq.addEventListener('change', onStoreChange)
+      return () => mq.removeEventListener('change', onStoreChange)
+    },
+    () =>
+      typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+        ? window.matchMedia('(max-width: 639px)').matches
+        : false,
+    () => false
+  )
+
+  const verseViewSessionKey = useMemo(() => {
+    if (!isOpen || !reference.trim()) return null
+    return `${reference.trim()}|${translation}`
+  }, [isOpen, reference, translation])
+
+  const scriptureFetchKey = verseViewSessionKey
+
+  const activeCompareTranslation = useMemo(() => {
+    if (!compareTranslation || compareTranslation === translation) return null
+    return compareTranslation
+  }, [compareTranslation, translation])
+
+  const compareVerseFetchKey = useMemo(() => {
+    if (!scriptureFetchKey || !activeCompareTranslation) return null
+    return `${scriptureFetchKey}|${activeCompareTranslation}`
+  }, [scriptureFetchKey, activeCompareTranslation])
+
+  const compareChapterFetchKey = useMemo(() => {
+    if (!compareVerseFetchKey || !chapterView || chapterView.sessionKey !== verseViewSessionKey) {
+      return null
+    }
+    return `${compareVerseFetchKey}|chapter`
+  }, [compareVerseFetchKey, chapterView, verseViewSessionKey])
+
+  const isMemoized = useSyncExternalStore(
+    (onStoreChange) => {
+      window.addEventListener(GOSPEL_MEMORIZATION_CHANGED_EVENT, onStoreChange)
+      return () => window.removeEventListener(GOSPEL_MEMORIZATION_CHANGED_EVENT, onStoreChange)
+    },
+    () => isMemoizedForReference(reference, translation),
+    () => false
+  )
+
+  const loading =
+    scriptureFetchKey !== null &&
+    (scriptureResolved === null || scriptureResolved.key !== scriptureFetchKey)
+
+  const scriptureText =
+    scriptureResolved?.key === scriptureFetchKey ? scriptureResolved.text : ''
+
+  const error = scriptureResolved?.key === scriptureFetchKey ? scriptureResolved.error : ''
+
+  const showingContext =
+    verseViewSessionKey !== null &&
+    chapterView !== null &&
+    chapterView.sessionKey === verseViewSessionKey &&
+    chapterView.text.length > 0
+
+  const chapterText = showingContext ? chapterView.text : ''
+
+  const compareLoading =
+    compareVerseFetchKey !== null &&
+    (compareVerseResolved === null || compareVerseResolved.key !== compareVerseFetchKey)
+
+  const compareText =
+    compareVerseResolved?.key === compareVerseFetchKey ? compareVerseResolved.text : ''
+
+  const compareError =
+    compareVerseResolved?.key === compareVerseFetchKey ? compareVerseResolved.error : ''
+
+  const compareChapterText =
+    compareChapterResolved?.key === compareChapterFetchKey ? compareChapterResolved.text : ''
 
   /** Larger profile text bumps root rem; fixed px widths keep row1 (Compare / Translation / Pin) on one line. */
   const compactScriptureToolbarForMobileLargeText =
@@ -151,9 +254,10 @@ export default function ScriptureModal({
   }
 
   const fetchChapterContext = async () => {
+    if (!verseViewSessionKey) return
     const chapterRef = getChapterReference(reference)
+    const sessionKey = verseViewSessionKey
     setContextLoading(true)
-    setError('')
 
     try {
       const response = await fetch(
@@ -164,34 +268,20 @@ export default function ScriptureModal({
 
       const errMsg = formatScriptureApiError(data)
       if (errMsg) {
-        setError(errMsg)
+        setScriptureResolved({ key: sessionKey, text: '', error: errMsg })
       } else {
-        setChapterText(data.text)
-        setShowingContext(true)
+        setChapterView({ sessionKey, text: typeof data.text === 'string' ? data.text : '' })
       }
     } catch {
-      setError('Failed to load chapter context')
+      setScriptureResolved({
+        key: sessionKey,
+        text: '',
+        error: 'Failed to load chapter context',
+      })
     } finally {
       setContextLoading(false)
     }
   }
-
-  useEffect(() => {
-    setIsMemoized(isMemoizedForReference(reference, translation))
-  }, [reference, translation])
-
-  useEffect(() => {
-    const onChanged = () => setIsMemoized(isMemoizedForReference(reference, translation))
-    window.addEventListener(GOSPEL_MEMORIZATION_CHANGED_EVENT, onChanged)
-    return () => window.removeEventListener(GOSPEL_MEMORIZATION_CHANGED_EVENT, onChanged)
-  }, [reference, translation])
-
-  /** When the scripture modal opens, always start on the Verse view (not Chapter Context). */
-  useEffect(() => {
-    if (!isOpen) return
-    setShowingContext(false)
-    setChapterText('')
-  }, [isOpen])
 
   /** Verse content first: scroll to top and move focus to Verse (not toolbar controls like Study). */
   useEffect(() => {
@@ -205,29 +295,32 @@ export default function ScriptureModal({
   }, [isOpen, reference])
 
   useEffect(() => {
-    if (!isOpen || !onOpenSpurgeonStudy || !reference.trim()) {
-      setSpurgeonStudyMatch('unset')
-      return
-    }
+    if (!spurgeonStudyLookupRef) return
+    const ref = spurgeonStudyLookupRef
     let cancelled = false
-    setSpurgeonStudyMatch('loading')
-    void fetch(`/api/scripture/spurgeon-links?reference=${encodeURIComponent(reference.trim())}`, {
+    void fetch(`/api/scripture/spurgeon-links?reference=${encodeURIComponent(ref)}`, {
       cache: 'no-store',
     })
       .then(async (res) => {
         const data: unknown = await res.json().catch(() => ({}))
         if (cancelled) return
-        const items = (data as { items?: unknown }).items
+        const payload = data as { items?: unknown; sermonCount?: number; morneveCount?: number }
+        const items = payload.items
         const list = Array.isArray(items) ? items : []
-        setSpurgeonStudyMatch(list.length > 0 ? 'yes' : 'no')
+        const sermonCount = typeof payload.sermonCount === 'number' ? payload.sermonCount : list.length
+        const morneveCount = typeof payload.morneveCount === 'number' ? payload.morneveCount : 0
+        setSpurgeonStudyResolved({
+          ref,
+          match: sermonCount + morneveCount > 0 ? 'yes' : 'no',
+        })
       })
       .catch(() => {
-        if (!cancelled) setSpurgeonStudyMatch('no')
+        if (!cancelled) setSpurgeonStudyResolved({ ref, match: 'no' })
       })
     return () => {
       cancelled = true
     }
-  }, [isOpen, reference, onOpenSpurgeonStudy])
+  }, [spurgeonStudyLookupRef])
 
   // Prevent body scrolling when modal is open
   useEffect(() => {
@@ -297,129 +390,106 @@ export default function ScriptureModal({
     }
   }, [showingContext, chapterText, reference])
 
-  // Clear chapter context when translation changes
   useEffect(() => {
-    if (translation) {
-      setChapterText('')
-      setShowingContext(false)
-    }
-  }, [translation])
+    if (!scriptureFetchKey) return
 
-  // Clear compare when main translation matches compare
-  useEffect(() => {
-    if (compareTranslation && compareTranslation === translation) {
-      setCompareTranslation(null)
-      setCompareText('')
-      setCompareChapterText('')
-    }
-  }, [translation, compareTranslation])
+    const key = scriptureFetchKey
+    const abortController = new AbortController()
 
-  // Fetch compare content when compareTranslation is set
+    void fetch(
+      `/api/scripture?reference=${encodeURIComponent(reference)}&translation=${translation}`,
+      { signal: abortController.signal, cache: 'no-store' }
+    )
+      .then((response) => response.json())
+      .then((data) => {
+        const errMsg = formatScriptureApiError(data)
+        if (errMsg) {
+          setScriptureResolved({ key, text: '', error: errMsg })
+        } else {
+          setScriptureResolved({
+            key,
+            text: typeof data.text === 'string' ? data.text : '',
+            error: '',
+          })
+        }
+      })
+      .catch((err: { name?: string }) => {
+        if (err.name !== 'AbortError') {
+          setScriptureResolved({ key, text: '', error: 'Failed to load scripture text' })
+        }
+      })
+
+    return () => abortController.abort()
+  }, [scriptureFetchKey, reference, translation])
+
   useEffect(() => {
-    if (!isOpen || !reference || !compareTranslation) {
-      setCompareText('')
-      setCompareChapterText('')
-      setCompareError('')
-      return
-    }
+    if (!compareVerseFetchKey) return
+
+    const key = compareVerseFetchKey
+    const compareTrans = activeCompareTranslation
+    if (!compareTrans) return
 
     const abortController = new AbortController()
 
-    // Fetch verse for compare
-    setCompareLoading(true)
-    setCompareError('')
-    fetch(`/api/scripture?reference=${encodeURIComponent(reference)}&translation=${compareTranslation}`, {
-      signal: abortController.signal,
-      cache: 'no-store',
-    })
-      .then(response => response.json())
-      .then(data => {
+    void fetch(
+      `/api/scripture?reference=${encodeURIComponent(reference)}&translation=${compareTrans}`,
+      { signal: abortController.signal, cache: 'no-store' }
+    )
+      .then((response) => response.json())
+      .then((data) => {
         const errMsg = formatScriptureApiError(data)
         if (errMsg) {
-          setCompareError(errMsg)
+          setCompareVerseResolved({ key, text: '', error: errMsg })
         } else {
-          setCompareText(data.text)
+          setCompareVerseResolved({
+            key,
+            text: typeof data.text === 'string' ? data.text : '',
+            error: '',
+          })
         }
       })
-      .catch((err) => {
+      .catch((err: { name?: string }) => {
         if (err.name !== 'AbortError') {
-          setCompareError('Failed to load compare text')
+          setCompareVerseResolved({ key, text: '', error: 'Failed to load compare text' })
         }
       })
-      .finally(() => setCompareLoading(false))
 
     return () => abortController.abort()
-  }, [isOpen, reference, compareTranslation])
+  }, [compareVerseFetchKey, reference, activeCompareTranslation])
 
-  // Fetch compare chapter context when showingContext and compareTranslation
   useEffect(() => {
-    if (!isOpen || !reference || !compareTranslation || !showingContext) {
-      setCompareChapterText('')
-      return
-    }
+    if (!compareChapterFetchKey) return
+
+    const key = compareChapterFetchKey
+    const compareTrans = activeCompareTranslation
+    if (!compareTrans) return
 
     const abortController = new AbortController()
     const chapterRef = getChapterReference(reference)
 
-    fetch(`/api/scripture?reference=${encodeURIComponent(chapterRef)}&translation=${compareTranslation}`, {
-      signal: abortController.signal,
-      cache: 'no-store',
-    })
-      .then(response => response.json())
-      .then(data => {
+    void fetch(
+      `/api/scripture?reference=${encodeURIComponent(chapterRef)}&translation=${compareTrans}`,
+      { signal: abortController.signal, cache: 'no-store' }
+    )
+      .then((response) => response.json())
+      .then((data) => {
         if (!formatScriptureApiError(data)) {
-          setCompareChapterText(data.text)
+          setCompareChapterResolved({
+            key,
+            text: typeof data.text === 'string' ? data.text : '',
+          })
         }
       })
       .catch(() => {})
 
     return () => abortController.abort()
-  }, [isOpen, reference, compareTranslation, showingContext])
-
-  // Fetch scripture when modal opens, reference changes, or translation changes
-  useEffect(() => {
-    if (isOpen && reference) {
-      const abortController = new AbortController()
-      setLoading(true)
-      setError('')
-      setChapterText('')
-      setShowingContext(false)
-
-      fetch(`/api/scripture?reference=${encodeURIComponent(reference)}&translation=${translation}`, {
-        signal: abortController.signal,
-        cache: 'no-store',
-      })
-        .then(response => response.json())
-        .then(data => {
-          const errMsg = formatScriptureApiError(data)
-          if (errMsg) {
-            setError(errMsg)
-          } else {
-            setScriptureText(typeof data.text === 'string' ? data.text : '')
-          }
-        })
-        .catch((err) => {
-          // Don't set error if the request was aborted
-          if (err.name !== 'AbortError') {
-            setError('Failed to load scripture text')
-          }
-        })
-        .finally(() => {
-          setLoading(false)
-        })
-
-      return () => {
-        abortController.abort()
-      }
-    }
-  }, [isOpen, reference, translation])
+  }, [compareChapterFetchKey, reference, activeCompareTranslation])
 
   const handleMemorize = () => {
     const text = scriptureText ?? ''
     if (!text.trim() || loading || error) return
     const ok = addMemorizedVerse(reference, text, translation)
     if (ok) {
-      setIsMemoized(true)
       showAlert(
         'Added to memorization list.\n\nYou can find this verse under Memorize in the menu.'
       )
@@ -428,12 +498,17 @@ export default function ScriptureModal({
     }
   }
 
+  const handleClose = () => {
+    setChapterView(null)
+    onClose()
+  }
+
   if (!isOpen) return null
 
   const { book: headerBook, referenceSuffix: headerSuffix } =
     splitScriptureReferenceForHeader(reference)
 
-  const isComparing = !!compareTranslation
+  const isComparing = !!activeCompareTranslation
 
   const renderAttribution = (trans: string) => {
     if (trans === 'esv') {
@@ -663,7 +738,7 @@ export default function ScriptureModal({
               <button
                 type="button"
                 data-tour="scripture-modal-close"
-                onClick={onClose}
+                onClick={handleClose}
                 className="cursor-pointer text-slate-600 dark:text-slate-200 text-xl font-bold h-9 min-h-[36px] min-w-[36px] box-border rounded-md inline-flex items-center justify-center leading-none bg-white dark:bg-slate-600 shadow-sm ring-1 ring-slate-300/80 dark:ring-slate-500/60 hover:bg-slate-50 dark:hover:bg-slate-500 hover:ring-slate-400 dark:hover:ring-slate-400 active:bg-slate-100 dark:active:bg-slate-400"
                 aria-label="Close modal"
               >
@@ -687,11 +762,6 @@ export default function ScriptureModal({
                 options={compareMenuOptions}
                 onSelect={(val) => {
                   setCompareTranslation(val === '' ? null : val)
-                  if (val === '') {
-                    setCompareText('')
-                    setCompareChapterText('')
-                    setCompareError('')
-                  }
                 }}
               />
 
@@ -705,8 +775,10 @@ export default function ScriptureModal({
                 options={translationMenuOptions}
                 onSelect={async (val) => {
                   await setTranslation(val as BibleTranslation)
-                  setChapterText('')
-                  setShowingContext(false)
+                  setChapterView(null)
+                  if (compareTranslation === val) {
+                    setCompareTranslation(null)
+                  }
                 }}
               />
               {versePinControl && (
@@ -727,7 +799,7 @@ export default function ScriptureModal({
                 data-tour="scripture-modal-verse-chapter-toggle"
                 onClick={() => {
                   if (showingContext) {
-                    setShowingContext(false)
+                    setChapterView(null)
                   } else {
                     void fetchChapterContext()
                   }
@@ -786,21 +858,21 @@ export default function ScriptureModal({
                   }}
                   title={
                     !reference.trim()
-                      ? 'Open a passage to search Spurgeon sermons'
+                      ? 'Open a passage to search Spurgeon and devotions'
                       : spurgeonStudyMatch === 'loading' || spurgeonStudyMatch === 'unset'
-                        ? 'Checking indexed Spurgeon sermons…'
+                        ? 'Checking indexed Spurgeon sermons and devotions…'
                         : spurgeonStudyMatch === 'no'
-                          ? 'No public Spurgeon sermons indexed for this passage'
-                          : 'Search public Spurgeon sermons that reference this passage'
+                          ? 'No indexed Spurgeon sermons or Morning & Evening devotions for this passage'
+                          : 'Search Spurgeon sermons and Morning & Evening devotions for this passage'
                   }
                   aria-label={
                     !reference.trim()
                       ? 'Study: no passage selected'
                       : spurgeonStudyMatch === 'loading' || spurgeonStudyMatch === 'unset'
-                        ? 'Study: checking Spurgeon sermon index'
+                        ? 'Study: checking Spurgeon and devotion index'
                         : spurgeonStudyMatch === 'no'
-                          ? 'Study: no Spurgeon sermons indexed for this passage'
-                          : 'Study: Spurgeon sermons for this passage'
+                          ? 'Study: no Spurgeon sermons or devotions indexed for this passage'
+                          : 'Study: Spurgeon sermons and Morning & Evening for this passage'
                   }
                   className={`px-1.5 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 shrink-0 ${
                     !reference.trim() ||

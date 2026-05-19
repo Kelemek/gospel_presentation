@@ -22,6 +22,13 @@ describe('ccelSermonHtml', () => {
   it('normalizedPassageDisplayForInline expands typical ThML book abbreviations', () => {
     expect(normalizedPassageDisplayForInline('Rom 8:28')).toBe('Romans 8:28')
     expect(normalizedPassageDisplayForInline('john 12:37')).toBe('John 12:37')
+    expect(normalizedPassageDisplayForInline('Ec 10:7')).toBe('Ecclesiastes 10:7')
+  })
+
+  it('expandScripRefsToInlinePlain prefers inner text over abbreviated passage attribute', () => {
+    const s =
+      '<scripRef passage="Ec 10:7" parsed="|Eccl|10|7|0|0">Ecclesiastes 10:7</scripRef>'
+    expect(unwrapScripRefTags(s)).toBe('Ecclesiastes 10:7')
   })
 
   it('extractPassageAttributes collects passage attributes', () => {

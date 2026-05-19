@@ -1,9 +1,11 @@
 import type { PublicResourceItem } from '@/lib/supabase-data-service'
+import { morneveLibraryMenuTitle } from '@/lib/spurgeon/morneveSlug'
 
 export type ResourceRenderGroup =
   | { kind: 'templates'; items: Extract<PublicResourceItem, { type: 'template' }>[] }
   | { kind: 'category'; item: Extract<PublicResourceItem, { type: 'category' }> }
   | { kind: 'spurgeonLibrary'; title: string }
+  | { kind: 'morningEveningLibrary'; title: string }
 
 function flushTemplates(
   run: Extract<PublicResourceItem, { type: 'template' }>[],
@@ -30,6 +32,8 @@ export function groupPublicResourceItems(items: PublicResourceItem[]): ResourceR
       run = []
       if (item.type === 'category') {
         groups.push({ kind: 'category', item })
+      } else if (item.type === 'morningEveningLibrary') {
+        groups.push({ kind: 'morningEveningLibrary', title: morneveLibraryMenuTitle(item.title) })
       } else {
         groups.push({ kind: 'spurgeonLibrary', title: item.title })
       }

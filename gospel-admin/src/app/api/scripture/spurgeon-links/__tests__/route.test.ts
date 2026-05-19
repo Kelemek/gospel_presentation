@@ -35,10 +35,12 @@ describe('GET /api/scripture/spurgeon-links', () => {
           select: jest.fn().mockReturnThis(),
           in: jest.fn().mockReturnThis(),
           eq: jest.fn().mockReturnThis(),
-          like: jest.fn().mockResolvedValue({
-            data: [{ slug: 'sg00001', title: 'Sermon' }],
-            error: null,
-          }),
+          like: jest.fn((_col: string, pattern: string) =>
+            Promise.resolve({
+              data: pattern === 'sg%' ? [{ slug: 'sg00001', title: 'Sermon' }] : [],
+              error: null,
+            })
+          ),
         }
       }
       return {}
@@ -50,7 +52,9 @@ describe('GET /api/scripture/spurgeon-links', () => {
     )
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body.items).toEqual([{ slug: 'sg00001', title: 'Sermon' }])
+    expect(body.items).toEqual([{ slug: 'sg00001', title: 'Sermon', kind: 'sermon' }])
+    expect(body.sermonCount).toBe(1)
+    expect(body.morneveCount).toBe(0)
   })
 
   it('falls back to same-chapter range index rows when exact verse key misses', async () => {
@@ -71,10 +75,12 @@ describe('GET /api/scripture/spurgeon-links', () => {
           select: jest.fn().mockReturnThis(),
           in: jest.fn().mockReturnThis(),
           eq: jest.fn().mockReturnThis(),
-          like: jest.fn().mockResolvedValue({
-            data: [{ slug: 'sg00001', title: 'Sermon' }],
-            error: null,
-          }),
+          like: jest.fn((_col: string, pattern: string) =>
+            Promise.resolve({
+              data: pattern === 'sg%' ? [{ slug: 'sg00001', title: 'Sermon' }] : [],
+              error: null,
+            })
+          ),
         }
       }
       return {}
@@ -86,7 +92,9 @@ describe('GET /api/scripture/spurgeon-links', () => {
     )
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body.items).toEqual([{ slug: 'sg00001', title: 'Sermon' }])
+    expect(body.items).toEqual([{ slug: 'sg00001', title: 'Sermon', kind: 'sermon' }])
+    expect(body.sermonCount).toBe(1)
+    expect(body.morneveCount).toBe(0)
   })
 
   it('falls back when modal range overlaps a single verse in the index', async () => {
@@ -107,10 +115,12 @@ describe('GET /api/scripture/spurgeon-links', () => {
           select: jest.fn().mockReturnThis(),
           in: jest.fn().mockReturnThis(),
           eq: jest.fn().mockReturnThis(),
-          like: jest.fn().mockResolvedValue({
-            data: [{ slug: 'sg00001', title: 'Sermon' }],
-            error: null,
-          }),
+          like: jest.fn((_col: string, pattern: string) =>
+            Promise.resolve({
+              data: pattern === 'sg%' ? [{ slug: 'sg00001', title: 'Sermon' }] : [],
+              error: null,
+            })
+          ),
         }
       }
       return {}
@@ -122,6 +132,8 @@ describe('GET /api/scripture/spurgeon-links', () => {
     )
     expect(res.status).toBe(200)
     const body = await res.json()
-    expect(body.items).toEqual([{ slug: 'sg00001', title: 'Sermon' }])
+    expect(body.items).toEqual([{ slug: 'sg00001', title: 'Sermon', kind: 'sermon' }])
+    expect(body.sermonCount).toBe(1)
+    expect(body.morneveCount).toBe(0)
   })
 })

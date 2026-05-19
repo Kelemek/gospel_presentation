@@ -29,6 +29,8 @@ interface TableOfContentsProps {
   onMemorizationPracticeStart?: (verse: MemorizedVerse) => void
   /** Opens the Spurgeon sermon library modal (Resources row type spurgeonLibrary). */
   onOpenSpurgeonLibrary?: () => void
+  /** Opens the Morning & Evening devotions picker (Resources row type morningEveningLibrary). */
+  onOpenMorneveLibrary?: () => void
 }
 
 // Helper to check if a title is blank (used to filter out empty TOC entries)
@@ -54,6 +56,7 @@ export default function TableOfContents({
   onNavigate,
   onMemorizationPracticeStart,
   onOpenSpurgeonLibrary,
+  onOpenMorneveLibrary,
 }: TableOfContentsProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [resourceItems, setResourceItems] = useState<PublicResourceItem[]>([])
@@ -65,14 +68,15 @@ export default function TableOfContents({
   const [expandedCategoryIds, setExpandedCategoryIds] = useState<Set<string>>(new Set())
   const { translation, setTranslation, enabledTranslationOptions } = useTranslation()
 
-  const [readCompleteSlugs, setReadCompleteSlugs] = useState<Set<string>>(() => new Set())
+  const [readCompleteSlugs, setReadCompleteSlugs] = useState<Set<string>>(() =>
+    new Set(loadPresentationReadCompleteSlugs())
+  )
 
   const refreshReadCompleteSlugs = useCallback(() => {
     setReadCompleteSlugs(new Set(loadPresentationReadCompleteSlugs()))
   }, [])
 
   useEffect(() => {
-    refreshReadCompleteSlugs()
     const onStatus = (e: Event) => {
       const ce = e as CustomEvent<{ slug: string; read: boolean }>
       if (!ce.detail?.slug) return
@@ -228,6 +232,33 @@ export default function TableOfContents({
                             strokeLinejoin="round"
                             strokeWidth={2}
                             d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+                          />
+                        </svg>
+                        <span className="min-w-0">{group.title}</span>
+                      </button>
+                    </div>
+                  ) : group.kind === 'morningEveningLibrary' ? (
+                    <div
+                      key={`resource-morneve-${groupIndex}`}
+                      className="border-b border-slate-100 dark:border-slate-600 last:border-b-0"
+                    >
+                      <button
+                        type="button"
+                        data-resource-morneve-library
+                        data-tour="resource-morneve-library"
+                        disabled={!onOpenMorneveLibrary}
+                        onClick={() => {
+                          onOpenMorneveLibrary?.()
+                          onNavigate?.()
+                        }}
+                        className="flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
                           />
                         </svg>
                         <span className="min-w-0">{group.title}</span>
