@@ -73,3 +73,40 @@ export function scrollToTocAnchor(
   options?.onDone?.()
   return true
 }
+
+const DEFAULT_SCROLL_WHEN_READY_MAX_FRAMES = 90
+
+/**
+ * Retry {@link scrollToTocAnchor} until the anchor exists (large profiles paint many subsections
+ * after hydration). Returns a cancel function for effect cleanup.
+ */
+export function scrollToTocAnchorWhenReady(
+  anchorId: string,
+  options?: {
+    behavior?: ScrollBehavior
+    maxFrames?: number
+    onDone?: () => void
+    onGiveUp?: () => void
+  }
+): () => void {
+  if (typeof window === 'undefined') return () => {}
+
+  const maxFrames = options?.maxFrames ?? DEFAULT_SCROLL_WHEN_READY_MAX_FRAMES
+  let frame = 0
+  let rafId = 0
+
+  const tick = () => {
+    if (scrollToTocAnchor(anchorId, { behavior: options?.behavior ?? 'auto', onDone: options?.onDone })) {
+      return
+    }
+    frame += 1
+    if (frame >= maxFrames) {
+      options?.onGiveUp?.()
+      return
+    }
+    rafId = window.requestAnimationFrame(tick)
+  }
+
+  rafId = window.requestAnimationFrame(tick)
+  return () => window.cancelAnimationFrame(rafId)
+}

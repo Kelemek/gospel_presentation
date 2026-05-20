@@ -11,6 +11,7 @@ import {
 import { usePresentationScrollReadComplete } from '@/hooks/usePresentationScrollReadComplete'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import GospelSection from '@/components/GospelSection'
 import ScriptureModal from '@/components/ScriptureModal'
 import MemorizationPracticeSession from '@/components/MemorizationPracticeSession'
@@ -60,8 +61,9 @@ import {
   PRESENTATION_READ_COMPLETE_STORAGE_KEY,
   removePresentationReadCompleteSlug,
 } from '@/lib/presentationReadCompleteStorage'
-import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
+import { scrollToTocAnchor, scrollToTocAnchorWhenReady } from '@/lib/scrollToTocAnchor'
 import { findFirstScriptureCardAnchors } from '@/lib/findFirstScriptureCardAnchors'
+import { findFirstStudyPassageAnchor } from '@/lib/findFirstStudyPassageAnchor'
 import { presentationLocationFromProfileAnchors } from '@/lib/presentationLocationFromAnchors'
 import { stripHtmlTags } from '@/lib/stripHtmlTags'
 import {
@@ -157,6 +159,9 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const footerAttributionEnabledCodes = translationsLoading ? null : enabledTranslations
   /** Matches `ProfileResourceReadAloud` (Listen hidden on Android Web hosts). */
   const profileHeaderAndroidHost = useMemo(() => isMemorizeAndroidWebHost(), [])
+
+  const searchParams = useSearchParams()
+  const studyRefParam = searchParams.get('studyRef')?.trim() ?? ''
 
   const isHydrated = useSyncExternalStore(
     () => () => {},
@@ -259,6 +264,16 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       window.removeEventListener('hashchange', scrollIfHash)
     }
   }, [isHydrated, sectionCount, profileInfo?.slug])
+
+  // Study library By scripture: scroll to first subsection matching ?studyRef=
+  useEffect(() => {
+    if (!isHydrated || sectionCount === 0 || !profileSlug || !studyRefParam || !sections) return
+
+    const anchor = findFirstStudyPassageAnchor(sections, studyRefParam)
+    if (!anchor) return
+
+    return scrollToTocAnchorWhenReady(anchor.subsectionId, { behavior: 'auto' })
+  }, [isHydrated, sectionCount, profileSlug, studyRefParam, sections])
 
   useEffect(() => {
     if (!isHydrated || !profileInfo?.slug) return

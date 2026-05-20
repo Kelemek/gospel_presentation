@@ -67,6 +67,8 @@ export default function SpurgeonSermonsModal({
   const showCalvin = libraryFocus === 'all' || libraryFocus === 'calvin'
   const showReadTab = showSpurgeon
   const [tab, setTab] = useState<Tab>('search')
+  /** When read tab is hidden (e.g. Calvin-only library), treat stale `read` selection as search. */
+  const activeTab: Tab = tab === 'read' && !showReadTab ? 'search' : tab
   const [q, setQ] = useState('')
   const [debouncedQ, setDebouncedQ] = useState('')
   const [scriptureRef, setScriptureRef] = useState('')
@@ -207,12 +209,12 @@ export default function SpurgeonSermonsModal({
   }, [debouncedQ, searchPage, showSpurgeon, showCalvin])
 
   useEffect(() => {
-    if (!isOpen || tab !== 'search') return
+    if (!isOpen || activeTab !== 'search') return
     const t = window.setTimeout(() => {
       void loadSearch()
     }, 0)
     return () => window.clearTimeout(t)
-  }, [isOpen, tab, loadSearch])
+  }, [isOpen, activeTab, loadSearch])
 
   useEffect(() => {
     const el = searchListScrollRef.current
@@ -222,7 +224,7 @@ export default function SpurgeonSermonsModal({
     } else {
       el.scrollTop = 0
     }
-  }, [searchPage, debouncedQ, tab])
+  }, [searchPage, debouncedQ, activeTab])
 
   const runScriptureLookupForRef = useCallback(async (ref: string) => {
     const trimmed = ref.trim()
@@ -334,15 +336,15 @@ export default function SpurgeonSermonsModal({
   }, [isOpen, initialByReference])
 
   useEffect(() => {
-    if (!isOpen || tab !== 'scripture') return
+    if (!isOpen || activeTab !== 'scripture') return
     const t = window.setTimeout(() => {
       void runScriptureLookupForRef(debouncedScriptureRef)
     }, 0)
     return () => window.clearTimeout(t)
-  }, [isOpen, tab, debouncedScriptureRef, runScriptureLookupForRef])
+  }, [isOpen, activeTab, debouncedScriptureRef, runScriptureLookupForRef])
 
   useEffect(() => {
-    if (!isOpen || tab !== 'read' || !showReadTab) return
+    if (!isOpen || activeTab !== 'read') return
     const slugs = spurgeonReadSlugsKey ? spurgeonReadSlugsKey.split(',') : []
     if (slugs.length === 0) {
       startTransition(() => {
@@ -389,13 +391,7 @@ export default function SpurgeonSermonsModal({
     return () => {
       cancelled = true
     }
-  }, [isOpen, tab, spurgeonReadSlugsKey, showReadTab])
-
-  useEffect(() => {
-    if (tab === 'read' && !showReadTab) {
-      setTab('search')
-    }
-  }, [tab, showReadTab])
+  }, [isOpen, activeTab, spurgeonReadSlugsKey])
 
   if (!isOpen) return null
 
@@ -445,6 +441,15 @@ export default function SpurgeonSermonsModal({
     onClose()
   }
 
+  const studyRefForProfileLinks = debouncedScriptureRef || scriptureRef.trim()
+
+  const profileHref = (slug: string) => {
+    if (activeTab === 'scripture' && studyRefForProfileLinks) {
+      return `/${slug}?studyRef=${encodeURIComponent(studyRefForProfileLinks)}`
+    }
+    return `/${slug}`
+  }
+
   return (
     <div
       className="fixed inset-0 z-60 flex items-start justify-center overflow-x-hidden bg-black/50 dark:bg-black/70 pt-[max(2.5rem,env(safe-area-inset-top,0))] sm:pt-[max(3.5rem,env(safe-area-inset-top,0))] pb-[max(2rem,max(48px,env(safe-area-inset-bottom,0)))] pl-[max(1rem,env(safe-area-inset-left,0))] pr-[max(1rem,env(safe-area-inset-right,0))]"
@@ -479,7 +484,7 @@ export default function SpurgeonSermonsModal({
             type="button"
             onClick={() => setTab('search')}
             className={`cursor-pointer px-3 py-2 text-sm font-medium rounded-t-md border-b-2 -mb-px transition-colors ${
-              tab === 'search'
+              activeTab === 'search'
                 ? 'border-blue-600 text-blue-700 dark:text-blue-300 dark:border-blue-400'
                 : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
@@ -490,7 +495,7 @@ export default function SpurgeonSermonsModal({
             type="button"
             onClick={() => setTab('scripture')}
             className={`cursor-pointer px-3 py-2 text-sm font-medium rounded-t-md border-b-2 -mb-px transition-colors ${
-              tab === 'scripture'
+              activeTab === 'scripture'
                 ? 'border-blue-600 text-blue-700 dark:text-blue-300 dark:border-blue-400'
                 : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}
@@ -502,7 +507,7 @@ export default function SpurgeonSermonsModal({
               type="button"
               onClick={() => setTab('read')}
               className={`cursor-pointer px-3 py-2 text-sm font-medium rounded-t-md border-b-2 -mb-px transition-colors ${
-                tab === 'read'
+                activeTab === 'read'
                   ? 'border-blue-600 text-blue-700 dark:text-blue-300 dark:border-blue-400'
                   : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
@@ -513,7 +518,7 @@ export default function SpurgeonSermonsModal({
         </div>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {tab === 'search' && (
+          {activeTab === 'search' && (
             <div className="shrink-0 space-y-2 border-b border-slate-200 dark:border-slate-600 px-5 pt-4 pb-3">
               <label className="block text-sm text-slate-600 dark:text-slate-300">
                 <span className="sr-only">Search by title or keyword</span>
@@ -535,7 +540,7 @@ export default function SpurgeonSermonsModal({
             </div>
           )}
 
-          {tab === 'scripture' && (
+          {activeTab === 'scripture' && (
             <div className="shrink-0 space-y-2 border-b border-slate-200 dark:border-slate-600 px-5 pt-4 pb-3">
               <div className="flex flex-col gap-1">
                 <label className="block text-sm text-slate-600 dark:text-slate-300">
@@ -563,7 +568,7 @@ export default function SpurgeonSermonsModal({
             </div>
           )}
 
-          {tab === 'read' && (
+          {activeTab === 'read' && (
             <div
               className="shrink-0 border-b border-slate-200 dark:border-slate-600 px-5 pt-4 pb-3"
               data-tour="spurgeon-modal-by-read"
@@ -584,7 +589,7 @@ export default function SpurgeonSermonsModal({
             ref={searchListScrollRef}
             className="flex-1 min-h-0 overflow-y-auto px-5 py-3 space-y-4"
           >
-            {tab === 'search' && (
+            {activeTab === 'search' && (
               <>
                 {/* Stable min-height so loading ↔ results does not shift the dialog vertically */}
                 <div className="min-h-56">
@@ -653,7 +658,7 @@ export default function SpurgeonSermonsModal({
               </>
             )}
 
-            {tab === 'scripture' && (
+            {activeTab === 'scripture' && (
               <div className="min-h-40 space-y-4">
                 {!refLoading &&
                   (showSpurgeon ? refItems.length === 0 && morneveRefItems.length === 0 : true) &&
@@ -671,7 +676,8 @@ export default function SpurgeonSermonsModal({
                       {refItems.map((row) => (
                         <li key={row.slug}>
                           <Link
-                            href={`/${row.slug}`}
+                            href={profileHref(row.slug)}
+                            scroll={false}
                             onClick={followResourceLink}
                             className={`block rounded-md px-2 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700/80 ${
                               readCompleteSlugs.has(row.slug)
@@ -695,7 +701,8 @@ export default function SpurgeonSermonsModal({
                       {morneveRefItems.map((row) => (
                         <li key={row.slug}>
                           <Link
-                            href={`/${row.slug}`}
+                            href={profileHref(row.slug)}
+                            scroll={false}
                             onClick={followResourceLink}
                             className={`block rounded-md px-2 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700/80 ${
                               readCompleteSlugs.has(row.slug)
@@ -719,7 +726,8 @@ export default function SpurgeonSermonsModal({
                       {calvinRefItems.map((row) => (
                         <li key={row.slug}>
                           <Link
-                            href={`/${row.slug}`}
+                            href={profileHref(row.slug)}
+                            scroll={false}
                             onClick={followResourceLink}
                             className={`block rounded-md px-2 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700/80 ${
                               readCompleteSlugs.has(row.slug)
@@ -737,7 +745,7 @@ export default function SpurgeonSermonsModal({
               </div>
             )}
 
-            {tab === 'read' && (
+            {activeTab === 'read' && (
               <div className="min-h-40">
                 {readTabLoading ? (
                   <div className="flex h-40 items-center justify-center">
@@ -771,7 +779,7 @@ export default function SpurgeonSermonsModal({
             )}
           </div>
 
-          {tab === 'search' && !searchLoading && hasSearchResults && (
+          {activeTab === 'search' && !searchLoading && hasSearchResults && (
             <nav
               className="shrink-0 border-t border-slate-200 dark:border-slate-600 px-5 py-3 flex flex-wrap items-center justify-between gap-2 bg-slate-50/90 dark:bg-slate-900/80"
               aria-label="Study search pagination"

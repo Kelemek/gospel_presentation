@@ -1,4 +1,8 @@
-import { getSafeAreaInsetsPx, scrollToTocAnchor } from '../scrollToTocAnchor'
+import {
+  getSafeAreaInsetsPx,
+  scrollToTocAnchor,
+  scrollToTocAnchorWhenReady,
+} from '../scrollToTocAnchor'
 
 describe('scrollToTocAnchor', () => {
   beforeEach(() => {
@@ -39,6 +43,47 @@ describe('scrollToTocAnchor', () => {
       top: 400 + 100 - 64,
       behavior: 'auto',
     })
+  })
+})
+
+describe('scrollToTocAnchorWhenReady', () => {
+  beforeEach(() => {
+    document.body.innerHTML = ''
+    window.scrollTo = jest.fn()
+  })
+
+  it('retries until the anchor element exists', () => {
+    const rafSpy = jest.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1)
+    const cancelSpy = jest.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {})
+
+    const cancel = scrollToTocAnchorWhenReady('section-2-0', { behavior: 'auto', maxFrames: 5 })
+    expect(window.scrollTo).not.toHaveBeenCalled()
+
+    const target = document.createElement('div')
+    target.id = 'section-2-0'
+    document.body.appendChild(target)
+    jest.spyOn(target, 'getBoundingClientRect').mockReturnValue({
+      top: 200,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      width: 0,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+    Object.defineProperty(window, 'scrollY', { value: 0, writable: true })
+
+    const firstRaf = rafSpy.mock.calls[0]?.[0] as FrameRequestCallback
+    firstRaf(0)
+    expect(window.scrollTo).toHaveBeenCalled()
+
+    cancel()
+    expect(cancelSpy).toHaveBeenCalledWith(1)
+
+    rafSpy.mockRestore()
+    cancelSpy.mockRestore()
   })
 })
 

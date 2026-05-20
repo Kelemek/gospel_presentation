@@ -104,6 +104,34 @@ describe('SpurgeonSermonsModal', () => {
     )
   })
 
+  it('Search tab profile links omit studyRef even when scripture input has text', async () => {
+    const user = userEvent.setup()
+    mockFetch.mockImplementation((input: string | URL | Request) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
+      if (url.includes('/api/spurgeon/sermons')) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              items: [{ slug: 'sg00099', title: 'Search Hit' }],
+              total: 1,
+              page: 1,
+              pageSize: 100,
+            }),
+        } as Response)
+      }
+      return Promise.resolve(emptyPagedResponse())
+    })
+
+    render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: /By scripture/i }))
+    await user.type(screen.getByLabelText(/Scripture reference/i), 'John 3:16')
+    await user.click(screen.getByRole('button', { name: /^Search$/i }))
+
+    expect(await screen.findByRole('link', { name: /Search Hit/i })).toHaveAttribute('href', '/sg00099')
+  })
+
   it('switches to by scripture tab and runs lookup after debounced typing', async () => {
     const user = userEvent.setup()
     mockFetch.mockImplementation(
@@ -124,7 +152,10 @@ describe('SpurgeonSermonsModal', () => {
       },
       { timeout: 5000 }
     )
-    expect(await screen.findByRole('link', { name: /Test Sermon/i })).toHaveAttribute('href', '/sg00001')
+    expect(await screen.findByRole('link', { name: /Test Sermon/i })).toHaveAttribute(
+      'href',
+      '/sg00001?studyRef=John%203%3A16'
+    )
     expect(screen.queryByRole('button', { name: /Find sermons/i })).not.toBeInTheDocument()
   })
 
@@ -150,7 +181,10 @@ describe('SpurgeonSermonsModal', () => {
       },
       { timeout: 5000 }
     )
-    expect(await screen.findByRole('link', { name: /From Initial Ref/i })).toHaveAttribute('href', '/sg00002')
+    expect(await screen.findByRole('link', { name: /From Initial Ref/i })).toHaveAttribute(
+      'href',
+      '/sg00002?studyRef=Romans%208%3A28'
+    )
   })
 
   it('shows Calvin commentaries section on By scripture when calvin by-reference returns hits', async () => {
@@ -165,7 +199,10 @@ describe('SpurgeonSermonsModal', () => {
     await user.type(screen.getByLabelText(/Scripture reference/i), 'Romans 8:28')
 
     expect(await screen.findByRole('heading', { name: /Calvin commentaries/i })).toBeInTheDocument()
-    expect(await screen.findByRole('link', { name: /Calvin on Romans/i })).toHaveAttribute('href', '/cvrom')
+    expect(await screen.findByRole('link', { name: /Calvin on Romans/i })).toHaveAttribute(
+      'href',
+      '/cvrom?studyRef=Romans%208%3A28'
+    )
   })
 
   it('with libraryFocus calvin only fetches Calvin books on search, not sermons', async () => {
