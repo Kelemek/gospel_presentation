@@ -15,7 +15,10 @@ import GospelSection from '@/components/GospelSection'
 import ScriptureModal from '@/components/ScriptureModal'
 import MemorizationPracticeSession from '@/components/MemorizationPracticeSession'
 import TableOfContents from '@/components/TableOfContents'
-import SpurgeonSermonsModal from '@/components/SpurgeonSermonsModal'
+import SpurgeonSermonsModal, {
+  STUDY_MODAL_DEFAULT_TITLE,
+  type StudyLibraryFocus,
+} from '@/components/SpurgeonSermonsModal'
 import MorneveDevotionsModal from '@/components/MorneveDevotionsModal'
 import SidebarAuthNav from '@/components/SidebarAuthNav'
 import MenuLocalDataBackup from '@/components/MenuLocalDataBackup'
@@ -133,8 +136,10 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const [isSharingResource, setIsSharingResource] = useState(false)
   const [isSpurgeonLibraryOpen, setIsSpurgeonLibraryOpen] = useState(false)
   const [isMorneveLibraryOpen, setIsMorneveLibraryOpen] = useState(false)
-  /** When opening Spurgeon from the scripture modal “Study”, pre-fill and search by this reference. */
+  /** When opening study library from the scripture modal “Study”, pre-fill By scripture with this reference. */
   const [spurgeonStudyReference, setSpurgeonStudyReference] = useState<string | null>(null)
+  const [studyModalTitle, setStudyModalTitle] = useState(STUDY_MODAL_DEFAULT_TITLE)
+  const [studyLibraryFocus, setStudyLibraryFocus] = useState<StudyLibraryFocus>('all')
   /** Skip desktop `onMouseLeave` close while the restore JSON file picker is open (keeps `<input type="file">` mounted). */
   const deferCloseMenuForFilePickerRef = useRef(false)
   const [memorizationPracticeVerse, setMemorizationPracticeVerse] = useState<MemorizedVerse | null>(null)
@@ -839,10 +844,11 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     () => false
   )
 
+  const presentationSlug = profileInfo?.slug
   const handleMarkPresentationUnread = useCallback(() => {
-    if (!profileInfo?.slug) return
-    removePresentationReadCompleteSlug(profileInfo.slug)
-  }, [profileInfo?.slug])
+    if (!presentationSlug) return
+    removePresentationReadCompleteSlug(presentationSlug)
+  }, [presentationSlug])
 
   // Early return if required props are missing - moved after all hooks
   if (!sections || !profileInfo) {
@@ -1036,12 +1042,20 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                 currentProfileSlug={profileInfo.slug}
                 onNavigate={closeMenu}
                 onMemorizationPracticeStart={handleMemorizationPracticeStart}
-                onOpenSpurgeonLibrary={() => {
+                onOpenSpurgeonLibrary={(menuTitle) => {
                   setSpurgeonStudyReference(null)
+                  setStudyModalTitle(menuTitle ?? STUDY_MODAL_DEFAULT_TITLE)
+                  setStudyLibraryFocus('spurgeon')
                   setIsSpurgeonLibraryOpen(true)
                 }}
                 onOpenMorneveLibrary={() => {
                   setIsMorneveLibraryOpen(true)
+                }}
+                onOpenCalvinLibrary={(menuTitle) => {
+                  setSpurgeonStudyReference(null)
+                  setStudyModalTitle(menuTitle ?? STUDY_MODAL_DEFAULT_TITLE)
+                  setStudyLibraryFocus('calvin')
+                  setIsSpurgeonLibraryOpen(true)
                 }}
               />
               
@@ -1160,6 +1174,8 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
           colorsAvailableInDropdown: modalPinDropdownColors,
         }}
         onOpenSpurgeonStudy={(ref) => {
+          setStudyModalTitle(STUDY_MODAL_DEFAULT_TITLE)
+          setStudyLibraryFocus('all')
           setSpurgeonStudyReference(ref)
           setIsSpurgeonLibraryOpen(true)
         }}
@@ -1167,6 +1183,8 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
 
       <SpurgeonSermonsModal
         isOpen={isSpurgeonLibraryOpen}
+        modalTitle={studyModalTitle}
+        libraryFocus={studyLibraryFocus}
         initialByReference={spurgeonStudyReference}
         onFollowSermonLink={() => {
           closeModal()
@@ -1175,6 +1193,8 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
         onClose={() => {
           setIsSpurgeonLibraryOpen(false)
           setSpurgeonStudyReference(null)
+          setStudyModalTitle(STUDY_MODAL_DEFAULT_TITLE)
+          setStudyLibraryFocus('all')
         }}
       />
 
@@ -1210,6 +1230,8 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
               })
             }}
             onOpenSpurgeonStudy={(ref) => {
+              setStudyModalTitle(STUDY_MODAL_DEFAULT_TITLE)
+              setStudyLibraryFocus('all')
               setSpurgeonStudyReference(ref)
               setIsSpurgeonLibraryOpen(true)
             }}

@@ -44,7 +44,7 @@ interface ScriptureModalProps {
     onDraftColorChange: (value: VersePinColorId) => void
     colorsAvailableInDropdown: readonly VerseBookmarkColorId[]
   }
-  /** Opens Spurgeon library modal with “by scripture” search for this reference (profile pages). Study stays visible but disabled when the index has no matches. */
+  /** Opens unified study library modal with “by scripture” search for this reference (profile pages). */
   onOpenSpurgeonStudy?: (reference: string) => void
 }
 
@@ -304,18 +304,27 @@ export default function ScriptureModal({
       .then(async (res) => {
         const data: unknown = await res.json().catch(() => ({}))
         if (cancelled) return
-        const payload = data as { items?: unknown; sermonCount?: number; morneveCount?: number }
+        const payload = data as {
+          items?: unknown
+          sermonCount?: number
+          morneveCount?: number
+          calvinCount?: number
+        }
         const items = payload.items
         const list = Array.isArray(items) ? items : []
         const sermonCount = typeof payload.sermonCount === 'number' ? payload.sermonCount : list.length
         const morneveCount = typeof payload.morneveCount === 'number' ? payload.morneveCount : 0
+        const calvinCount = typeof payload.calvinCount === 'number' ? payload.calvinCount : 0
+        const anyStudy = sermonCount + morneveCount + calvinCount > 0
         setSpurgeonStudyResolved({
           ref,
-          match: sermonCount + morneveCount > 0 ? 'yes' : 'no',
+          match: anyStudy ? 'yes' : 'no',
         })
       })
       .catch(() => {
-        if (!cancelled) setSpurgeonStudyResolved({ ref, match: 'no' })
+        if (!cancelled) {
+          setSpurgeonStudyResolved({ ref, match: 'no' })
+        }
       })
     return () => {
       cancelled = true
@@ -858,21 +867,21 @@ export default function ScriptureModal({
                   }}
                   title={
                     !reference.trim()
-                      ? 'Open a passage to search Spurgeon and devotions'
+                      ? 'Open a passage to search study resources'
                       : spurgeonStudyMatch === 'loading' || spurgeonStudyMatch === 'unset'
-                        ? 'Checking indexed Spurgeon sermons and devotions…'
+                        ? 'Checking indexed Spurgeon, devotions, and Calvin commentaries…'
                         : spurgeonStudyMatch === 'no'
-                          ? 'No indexed Spurgeon sermons or Morning & Evening devotions for this passage'
-                          : 'Search Spurgeon sermons and Morning & Evening devotions for this passage'
+                          ? 'No indexed Spurgeon, Morning & Evening, or Calvin commentary for this passage'
+                          : 'Search Spurgeon, Morning & Evening, and Calvin commentaries for this passage'
                   }
                   aria-label={
                     !reference.trim()
                       ? 'Study: no passage selected'
                       : spurgeonStudyMatch === 'loading' || spurgeonStudyMatch === 'unset'
-                        ? 'Study: checking Spurgeon and devotion index'
+                        ? 'Study: checking indexed resources'
                         : spurgeonStudyMatch === 'no'
-                          ? 'Study: no Spurgeon sermons or devotions indexed for this passage'
-                          : 'Study: Spurgeon sermons and Morning & Evening for this passage'
+                          ? 'Study: no indexed resources for this passage'
+                          : 'Study: indexed Spurgeon, devotions, and Calvin commentaries for this passage'
                   }
                   className={`px-1.5 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 shrink-0 ${
                     !reference.trim() ||

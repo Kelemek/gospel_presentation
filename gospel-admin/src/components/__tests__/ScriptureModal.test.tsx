@@ -363,7 +363,7 @@ describe('ScriptureModal Component', () => {
     renderWithTextSize(<ScriptureModal {...defaultProps} />)
     await waitFor(() => expect(screen.getByRole('heading', { name: 'John 3:16' })).toBeInTheDocument())
     expect(
-      screen.queryByRole('button', { name: /Study: Spurgeon sermons and Morning & Evening for this passage/i })
+      screen.queryByRole('button', { name: /Study: indexed resources for this passage/i })
     ).not.toBeInTheDocument()
   })
 
@@ -375,7 +375,7 @@ describe('ScriptureModal Component', () => {
       expect(mockFetch.mock.calls.some((c) => String(c[0]).includes('spurgeon-links'))).toBe(true)
     )
     const study = screen.getByRole('button', {
-      name: /Study: no Spurgeon sermons or devotions indexed for this passage/i,
+      name: /Study: no indexed resources for this passage/i,
     })
     expect(study).toBeDisabled()
     expect(study).toHaveTextContent('Study')
@@ -491,13 +491,13 @@ describe('ScriptureModal Component', () => {
     await waitFor(() =>
       expect(
         screen.getByRole('button', {
-          name: /Study: Spurgeon sermons and Morning & Evening for this passage/i,
+          name: /Study: indexed Spurgeon, devotions, and Calvin commentaries for this passage/i,
         })
       ).toBeInTheDocument()
     )
     await user.click(
       screen.getByRole('button', {
-        name: /Study: Spurgeon sermons and Morning & Evening for this passage/i,
+        name: /Study: indexed Spurgeon, devotions, and Calvin commentaries for this passage/i,
       })
     )
     expect(openStudy).toHaveBeenCalledWith('John 3:16')

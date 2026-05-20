@@ -254,9 +254,8 @@ export default function MemorizationPracticeSession({
   const [listenUiTick, setListenUiTick] = useState(0)
   const bumpListen = useCallback(() => setListenUiTick((n) => n + 1), [])
 
-  /** Indexed Spurgeon sermons for this verse (`/api/scripture/spurgeon-links`); mirrors ScriptureModal. */
+  /** Indexed study resources for this verse (`/api/scripture/spurgeon-links`); mirrors ScriptureModal. */
   const [spurgeonStudyMatch, setSpurgeonStudyMatch] = useState<'unset' | 'loading' | 'yes' | 'no'>('unset')
-
   const [listenPanelOpen, setListenPanelOpen] = useState(false)
   const [listenPlaybackRate, setListenPlaybackRate] = useState<MemorizeListenSpeed>(1)
   /** Latest rate for timeouts / stale `beginTtsUtterance` closures (e.g. repeat gap after speed change in-dialog). */
@@ -296,7 +295,12 @@ export default function MemorizationPracticeSession({
       .then(async (res) => {
         const data: unknown = await res.json().catch(() => ({}))
         if (cancelled) return
-        const payload = data as { items?: unknown; sermonCount?: number; morneveCount?: number }
+        const payload = data as {
+          items?: unknown
+          sermonCount?: number
+          morneveCount?: number
+          calvinCount?: number
+        }
         const sermonCount =
           typeof payload.sermonCount === 'number'
             ? payload.sermonCount
@@ -304,7 +308,8 @@ export default function MemorizationPracticeSession({
               ? payload.items.length
               : 0
         const morneveCount = typeof payload.morneveCount === 'number' ? payload.morneveCount : 0
-        setSpurgeonStudyMatch(sermonCount + morneveCount > 0 ? 'yes' : 'no')
+        const calvinCount = typeof payload.calvinCount === 'number' ? payload.calvinCount : 0
+        setSpurgeonStudyMatch(sermonCount + morneveCount + calvinCount > 0 ? 'yes' : 'no')
       })
       .catch(() => {
         if (!cancelled) setSpurgeonStudyMatch('no')
@@ -1807,21 +1812,21 @@ export default function MemorizationPracticeSession({
                 }}
                 title={
                   !verse.reference.trim()
-                    ? 'Open a passage to search Spurgeon sermons'
+                    ? 'Open a passage to search study resources'
                     : spurgeonStudyMatch === 'loading' || spurgeonStudyMatch === 'unset'
-                      ? 'Checking indexed Spurgeon sermons…'
+                      ? 'Checking indexed study resources…'
                       : spurgeonStudyMatch === 'no'
-                        ? 'No public Spurgeon sermons indexed for this passage'
-                        : 'Search public Spurgeon sermons that reference this passage'
+                        ? 'No indexed study resources for this passage'
+                        : 'Search Spurgeon, devotions, and Calvin commentaries for this passage'
                 }
                 aria-label={
                   !verse.reference.trim()
                     ? 'Study: no passage selected'
                     : spurgeonStudyMatch === 'loading' || spurgeonStudyMatch === 'unset'
-                      ? 'Study: checking Spurgeon sermon index'
+                      ? 'Study: checking indexed resources'
                       : spurgeonStudyMatch === 'no'
-                        ? 'Study: no Spurgeon sermons indexed for this passage'
-                        : 'Study: Spurgeon sermons for this passage'
+                        ? 'Study: no indexed resources for this passage'
+                        : 'Study: indexed resources for this passage'
                 }
                 className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors border ${
                   !verse.reference.trim() ||

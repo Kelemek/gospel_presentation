@@ -6,6 +6,7 @@ export type ResourceRenderGroup =
   | { kind: 'category'; item: Extract<PublicResourceItem, { type: 'category' }> }
   | { kind: 'spurgeonLibrary'; title: string }
   | { kind: 'morningEveningLibrary'; title: string }
+  | { kind: 'calvinLibrary'; title: string }
 
 function flushTemplates(
   run: Extract<PublicResourceItem, { type: 'template' }>[],
@@ -34,6 +35,8 @@ export function groupPublicResourceItems(items: PublicResourceItem[]): ResourceR
         groups.push({ kind: 'category', item })
       } else if (item.type === 'morningEveningLibrary') {
         groups.push({ kind: 'morningEveningLibrary', title: morneveLibraryMenuTitle(item.title) })
+      } else if (item.type === 'calvinLibrary') {
+        groups.push({ kind: 'calvinLibrary', title: item.title })
       } else {
         groups.push({ kind: 'spurgeonLibrary', title: item.title })
       }

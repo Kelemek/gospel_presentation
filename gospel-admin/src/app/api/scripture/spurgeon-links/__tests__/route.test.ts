@@ -55,6 +55,7 @@ describe('GET /api/scripture/spurgeon-links', () => {
     expect(body.items).toEqual([{ slug: 'sg00001', title: 'Sermon', kind: 'sermon' }])
     expect(body.sermonCount).toBe(1)
     expect(body.morneveCount).toBe(0)
+    expect(body.calvinCount).toBe(0)
   })
 
   it('falls back to same-chapter range index rows when exact verse key misses', async () => {
@@ -95,6 +96,7 @@ describe('GET /api/scripture/spurgeon-links', () => {
     expect(body.items).toEqual([{ slug: 'sg00001', title: 'Sermon', kind: 'sermon' }])
     expect(body.sermonCount).toBe(1)
     expect(body.morneveCount).toBe(0)
+    expect(body.calvinCount).toBe(0)
   })
 
   it('falls back when modal range overlaps a single verse in the index', async () => {
@@ -135,5 +137,6 @@ describe('GET /api/scripture/spurgeon-links', () => {
     expect(body.items).toEqual([{ slug: 'sg00001', title: 'Sermon', kind: 'sermon' }])
     expect(body.sermonCount).toBe(1)
     expect(body.morneveCount).toBe(0)
+    expect(body.calvinCount).toBe(0)
   })
 })

@@ -71,7 +71,7 @@ export async function profileIdsFromPassageIndexLookup(
 export async function publicProfilesByIdsAndSlugPrefix(
   admin: SupabaseClient,
   profileIds: string[],
-  slugPrefix: 'sg' | 'me'
+  slugPrefix: 'sg' | 'me' | 'cv'
 ): Promise<{ slug: string; title: string }[]> {
   if (profileIds.length === 0) return []
 

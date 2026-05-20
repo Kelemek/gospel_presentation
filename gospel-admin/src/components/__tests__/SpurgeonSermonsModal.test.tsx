@@ -34,7 +34,8 @@ const mockFetch = global.fetch as jest.MockedFunction<typeof fetch>
 
 function mockByReferenceFetch(
   items: { slug: string; title: string }[],
-  morneveItems: { slug: string; title: string }[] = []
+  morneveItems: { slug: string; title: string }[] = [],
+  calvinItems: { slug: string; title: string }[] = []
 ) {
   return (input: string | URL | Request) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
@@ -42,6 +43,12 @@ function mockByReferenceFetch(
       return Promise.resolve({
         ok: true,
         json: () => Promise.resolve({ items: morneveItems }),
+      } as Response)
+    }
+    if (url.includes('/api/calvin/by-reference')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ items: calvinItems }),
       } as Response)
     }
     if (url.includes('/api/spurgeon/by-reference')) {
@@ -57,13 +64,23 @@ function mockByReferenceFetch(
   }
 }
 
+function emptyPagedResponse(): Response {
+  return {
+    ok: true,
+    json: () => Promise.resolve({ items: [], total: 0, page: 1, pageSize: 100 }),
+  } as Response
+}
+
 describe('SpurgeonSermonsModal', () => {
   beforeEach(() => {
     mockFetch.mockReset()
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ items: [], total: 0, page: 1, pageSize: 100 }),
-    } as Response)
+    mockFetch.mockImplementation((input: string | URL | Request) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
+      if (url.includes('/api/calvin/') || url.includes('/api/spurgeon/sermons')) {
+        return Promise.resolve(emptyPagedResponse())
+      }
+      return Promise.resolve(emptyPagedResponse())
+    })
   })
 
   it('renders nothing when closed', () => {
@@ -80,7 +97,11 @@ describe('SpurgeonSermonsModal', () => {
         expect.any(Object)
       )
     })
-    expect(screen.getByRole('heading', { name: /Spurgeon sermons/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Study resources/i })).toBeInTheDocument()
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/api\/calvin\/books\?/),
+      expect.any(Object)
+    )
   })
 
   it('switches to by scripture tab and runs lookup after debounced typing', async () => {
@@ -132,17 +153,148 @@ describe('SpurgeonSermonsModal', () => {
     expect(await screen.findByRole('link', { name: /From Initial Ref/i })).toHaveAttribute('href', '/sg00002')
   })
 
+  it('shows Calvin commentaries section on By scripture when calvin by-reference returns hits', async () => {
+    const user = userEvent.setup()
+    mockFetch.mockImplementation(
+      mockByReferenceFetch([], [], [{ slug: 'cvrom', title: 'Calvin on Romans' }])
+    )
+
+    render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: /By scripture/i }))
+    await user.type(screen.getByLabelText(/Scripture reference/i), 'Romans 8:28')
+
+    expect(await screen.findByRole('heading', { name: /Calvin commentaries/i })).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: /Calvin on Romans/i })).toHaveAttribute('href', '/cvrom')
+  })
+
+  it('with libraryFocus calvin only fetches Calvin books on search, not sermons', async () => {
+    render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} libraryFocus="calvin" />)
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringMatching(/\/api\/calvin\/books\?/),
+        expect.any(Object)
+      )
+    })
+    expect(
+      mockFetch.mock.calls.some((c) => String(c[0]).includes('/api/spurgeon/sermons'))
+    ).toBe(false)
+    expect(screen.queryByRole('heading', { name: /^Spurgeon Sermons$/i })).not.toBeInTheDocument()
+  })
+
+  it('shows per-collection pagination ranges when sermon and Calvin page counts differ', async () => {
+    const user = userEvent.setup()
+
+    mockFetch.mockImplementation((input: string | URL | Request) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
+      const page = Number(new URL(url, 'http://localhost').searchParams.get('page') || '1')
+
+      if (url.includes('/api/calvin/books')) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              items: [{ slug: 'cvrom', title: 'Calvin on Romans' }],
+              total: 150,
+              page,
+              pageSize: 100,
+            }),
+        } as Response)
+      }
+      if (url.includes('/api/spurgeon/sermons')) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              items: page === 1 ? [{ slug: 'sg00001', title: 'Sermon 1. Grace' }] : [],
+              total: 50,
+              page,
+              pageSize: 100,
+            }),
+        } as Response)
+      }
+      return Promise.resolve(emptyPagedResponse())
+    })
+
+    render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} libraryFocus="all" />)
+
+    const footer = await screen.findByLabelText(/Study search pagination/i)
+    expect(footer).toHaveTextContent('Sermons 1–50 of 50')
+    expect(footer).toHaveTextContent('Calvin 1–100 of 150')
+    expect(footer).toHaveTextContent('Page 1 of 2')
+
+    await user.click(screen.getByRole('button', { name: /^Next$/i }))
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Study search pagination/i)).toHaveTextContent('Calvin 101–150 of 150')
+    })
+    const page2Footer = screen.getByLabelText(/Study search pagination/i)
+    expect(page2Footer).not.toHaveTextContent('Sermons')
+    expect(page2Footer).toHaveTextContent('Page 2 of 2')
+  })
+
+  it('shows Calvin books in keyword search alongside sermons', async () => {
+    mockFetch.mockImplementation((input: string | URL | Request) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
+      if (url.includes('/api/calvin/books')) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              items: [{ slug: 'cvgen', title: 'Calvin on Genesis' }],
+              total: 1,
+              page: 1,
+              pageSize: 100,
+            }),
+        } as Response)
+      }
+      if (url.includes('/api/spurgeon/sermons')) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              items: [{ slug: 'sg00001', title: 'Sermon 1. Grace' }],
+              total: 1,
+              page: 1,
+              pageSize: 100,
+            }),
+        } as Response)
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ items: [], total: 0, page: 1, pageSize: 100 }),
+      } as Response)
+    })
+
+    render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} />)
+
+    expect(await screen.findByRole('heading', { name: /^Spurgeon Sermons$/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /Calvin commentaries/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^Grace$/i })).toHaveAttribute('href', '/sg00001')
+    expect(screen.getByRole('link', { name: /Calvin on Genesis/i })).toHaveAttribute('href', '/cvgen')
+  })
+
   it('shows sermon title without leading Sermon N. catalog prefix in search results', async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          items: [{ slug: 'sg00042', title: 'Sermon 42. Grace Abounding' }],
-          total: 1,
-          page: 1,
-          pageSize: 100,
-        }),
-    } as Response)
+    mockFetch.mockImplementation((input: string | URL | Request) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
+      if (url.includes('/api/spurgeon/sermons')) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              items: [{ slug: 'sg00042', title: 'Sermon 42. Grace Abounding' }],
+              total: 1,
+              page: 1,
+              pageSize: 100,
+            }),
+        } as Response)
+      }
+      if (url.includes('/api/calvin/books')) {
+        return Promise.resolve(emptyPagedResponse())
+      }
+      return Promise.resolve(emptyPagedResponse())
+    })
 
     render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} />)
 
@@ -188,16 +340,25 @@ describe('SpurgeonSermonsModal', () => {
     const user = userEvent.setup()
     const onFollowSermonLink = jest.fn()
     const onClose = jest.fn()
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () =>
-        Promise.resolve({
-          items: [{ slug: 'sg00999', title: 'Follow This Sermon' }],
-          total: 1,
-          page: 1,
-          pageSize: 100,
-        }),
-    } as Response)
+    mockFetch.mockImplementation((input: string | URL | Request) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
+      if (url.includes('/api/spurgeon/sermons')) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              items: [{ slug: 'sg00999', title: 'Follow This Sermon' }],
+              total: 1,
+              page: 1,
+              pageSize: 100,
+            }),
+        } as Response)
+      }
+      if (url.includes('/api/calvin/books')) {
+        return Promise.resolve(emptyPagedResponse())
+      }
+      return Promise.resolve(emptyPagedResponse())
+    })
 
     render(
       <SpurgeonSermonsModal

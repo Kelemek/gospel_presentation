@@ -10,7 +10,9 @@ import {
   parseResourceOrder,
   isResourceOrderItemMorningEveningLibrary,
   isResourceOrderItemSpurgeonLibrary,
+  isResourceOrderItemCalvinLibrary,
 } from "@/lib/types";
+import { isCalvinCommentaryProfileSlug } from "@/lib/calvin/calvinSlug";
 import { isMorneveProfileSlug } from "@/lib/spurgeon/morneveSlug";
 import { isSpurgeonSermonProfileSlug } from "@/lib/spurgeon/sortBySpurgeonSermonSlug";
 import { restoreNewProfileFromBackupFile } from "@/lib/createProfileFromBackup";
@@ -244,6 +246,7 @@ export default function AdminSettingsPage() {
   const hasMorningEveningLibraryRow = orderItems.some((i) =>
     isResourceOrderItemMorningEveningLibrary(i)
   );
+  const hasCalvinLibraryRow = orderItems.some((i) => isResourceOrderItemCalvinLibrary(i));
 
   const addSpurgeonLibraryRow = () => {
     if (hasSpurgeonLibraryRow) return;
@@ -270,6 +273,19 @@ export default function AdminSettingsPage() {
     setOrderItems((prev) =>
       prev.map((item, i) =>
         i === index && isResourceOrderItemMorningEveningLibrary(item) ? { ...item, title } : item
+      )
+    );
+  };
+
+  const addCalvinLibraryRow = () => {
+    if (hasCalvinLibraryRow) return;
+    setOrderItems((prev) => [...prev, { type: "calvinLibrary", title: "Calvin's Commentaries" }]);
+  };
+
+  const updateCalvinLibraryTitle = (index: number, title: string) => {
+    setOrderItems((prev) =>
+      prev.map((item, i) =>
+        i === index && isResourceOrderItemCalvinLibrary(item) ? { ...item, title } : item
       )
     );
   };
@@ -391,7 +407,8 @@ export default function AdminSettingsPage() {
     (t) =>
       !slugsInOrder.has(t.slug) &&
       !isSpurgeonSermonProfileSlug(t.slug) &&
-      !isMorneveProfileSlug(t.slug)
+      !isMorneveProfileSlug(t.slug) &&
+      !isCalvinCommentaryProfileSlug(t.slug)
   );
 
   const addCategory = () => {
@@ -665,6 +682,19 @@ export default function AdminSettingsPage() {
                     >
                       Add Morning &amp; Evening
                     </button>
+                    <button
+                      type="button"
+                      onClick={addCalvinLibraryRow}
+                      disabled={hasCalvinLibraryRow}
+                      title={
+                        hasCalvinLibraryRow
+                          ? "Calvin library row is already in the list"
+                          : "Add a Resources row that opens the Calvin commentaries finder"
+                      }
+                      className="px-3 py-1.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Add Calvin library
+                    </button>
                     {availableTemplates.length > 0 && (
                       <select
                         value=""
@@ -781,6 +811,40 @@ export default function AdminSettingsPage() {
                               onClick={() => removeTopLevelTemplate(index)}
                               className="text-slate-400 hover:text-red-600 text-xs px-1 ml-auto"
                               aria-label="Remove Morning and Evening library row"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ) : isResourceOrderItemCalvinLibrary(item) ? (
+                          <div
+                            key={`calvin-${index}`}
+                            draggable
+                            onDragStart={() => handleDragStartTopLevel(index)}
+                            onDragEnd={handleDragEnd}
+                            onDragOver={(e) => handleDragOverTopLevel(e, index)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDropTopLevel(e, index)}
+                            className={`flex flex-wrap items-center gap-2 px-4 py-3 text-sm text-slate-700 border-b border-slate-100 last:border-b-0 transition-colors cursor-grab active:cursor-grabbing ${dropTarget?.kind === "top-level" && dropTarget.index === index ? "bg-blue-100 ring-1 ring-blue-300" : "hover:bg-slate-50"}`}
+                          >
+                            <span className="shrink-0" aria-hidden>
+                              <GripIcon />
+                            </span>
+                            <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                              Calvin library
+                            </span>
+                            <input
+                              type="text"
+                              value={item.title}
+                              onChange={(e) => updateCalvinLibraryTitle(index, e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex-1 min-w-32 px-2 py-1 border border-slate-300 rounded text-slate-900 text-sm"
+                              aria-label="Label shown in Resources menu"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeTopLevelTemplate(index)}
+                              className="text-slate-400 hover:text-red-600 text-xs px-1 ml-auto"
+                              aria-label="Remove Calvin library row"
                             >
                               Remove
                             </button>

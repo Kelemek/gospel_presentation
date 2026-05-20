@@ -127,6 +127,7 @@ export type PublicResourceItem =
   | { type: 'category'; id: string; name: string; templates: { slug: string; title: string }[] }
   | { type: 'spurgeonLibrary'; title: string }
   | { type: 'morningEveningLibrary'; title: string }
+  | { type: 'calvinLibrary'; title: string }
 
 /**
  * Gets public resources structure for the Resources dropdown (categories + templates with titles).
@@ -180,6 +181,11 @@ export async function getPublicResourcesStructure(): Promise<PublicResourceItem[
         items.push({
           type: 'morningEveningLibrary',
           title: morneveLibraryMenuTitle(item.title),
+        })
+      } else if (item.type === 'calvinLibrary') {
+        items.push({
+          type: 'calvinLibrary',
+          title: item.title?.trim() || "Calvin's Commentaries",
         })
       } else {
         const templates: { slug: string; title: string }[] = []

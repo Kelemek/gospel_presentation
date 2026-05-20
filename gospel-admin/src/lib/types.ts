@@ -162,11 +162,18 @@ export interface ResourceOrderItemMorningEveningLibrary {
   title: string
 }
 
+/** Opens the Calvin commentaries library modal (not a profile slug). */
+export interface ResourceOrderItemCalvinLibrary {
+  type: 'calvinLibrary'
+  title: string
+}
+
 export type ResourceOrderItem =
   | ResourceOrderItemTemplate
   | ResourceOrderItemCategory
   | ResourceOrderItemSpurgeonLibrary
   | ResourceOrderItemMorningEveningLibrary
+  | ResourceOrderItemCalvinLibrary
 
 export function isResourceOrderItemCategory(
   item: ResourceOrderItem
@@ -190,6 +197,12 @@ export function isResourceOrderItemMorningEveningLibrary(
   item: ResourceOrderItem
 ): item is ResourceOrderItemMorningEveningLibrary {
   return item.type === 'morningEveningLibrary'
+}
+
+export function isResourceOrderItemCalvinLibrary(
+  item: ResourceOrderItem
+): item is ResourceOrderItemCalvinLibrary {
+  return item.type === 'calvinLibrary'
 }
 
 /** Parse public_template_order JSON from DB into ResourceOrderItem[] (new format only). */
@@ -224,6 +237,13 @@ export function parseResourceOrder(raw: unknown): ResourceOrderItem[] {
             ? rawTitle.trim()
             : "Spurgeon's Morning and Evening"
         out.push({ type: 'morningEveningLibrary', title })
+      } else if ((el as any).type === 'calvinLibrary') {
+        const rawTitle = (el as any).title
+        const title =
+          typeof rawTitle === 'string' && rawTitle.trim()
+            ? rawTitle.trim()
+            : "Calvin's Commentaries"
+        out.push({ type: 'calvinLibrary', title })
       }
     }
   }

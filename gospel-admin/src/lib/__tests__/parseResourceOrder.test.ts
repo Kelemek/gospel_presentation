@@ -30,4 +30,10 @@ describe('parseResourceOrder', () => {
       { type: 'morningEveningLibrary', title: "Spurgeon's Morning and Evening" },
     ])
   })
+
+  it('parses calvinLibrary with default title', () => {
+    expect(parseResourceOrder([{ type: 'calvinLibrary' }])).toEqual([
+      { type: 'calvinLibrary', title: "Calvin's Commentaries" },
+    ])
+  })
 })

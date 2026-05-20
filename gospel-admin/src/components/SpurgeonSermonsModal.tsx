@@ -23,15 +23,26 @@ import {
 } from '@/lib/presentationReadCompleteStorage'
 
 const SEARCH_PAGE_SIZE = 100
+export const STUDY_MODAL_DEFAULT_TITLE = 'Study resources'
+
+/** Which corpora to load when opened from a Resources row vs unified Study. */
+export type StudyLibraryFocus = 'all' | 'spurgeon' | 'calvin'
 
 interface SpurgeonSermonsModalProps {
   isOpen: boolean
   onClose: () => void
+  /** Dialog heading (Resources menu row label or default). */
+  modalTitle?: string
+  /**
+   * `spurgeon` / `calvin`: Resources menu rows (sermons+devotions vs commentaries only).
+   * `all`: scripture modal Study (all three By scripture sections).
+   */
+  libraryFocus?: StudyLibraryFocus
   /** When set as the modal opens, switches to “By scripture”, fills the reference, and runs lookup (all matches). */
   initialByReference?: string | null
   /**
-   * Called when the user follows a sermon profile link (before navigation).
-   * Use this to dismiss stacked UI such as the scripture reader so the sermon opens as a normal full-page profile.
+   * Called when the user follows a profile link (before navigation).
+   * Use this to dismiss stacked UI such as the scripture reader so the resource opens as a normal full-page profile.
    */
   onFollowSermonLink?: () => void
 }
@@ -46,10 +57,15 @@ interface SermonRow {
 export default function SpurgeonSermonsModal({
   isOpen,
   onClose,
+  modalTitle = STUDY_MODAL_DEFAULT_TITLE,
+  libraryFocus = 'all',
   initialByReference,
   onFollowSermonLink,
 }: SpurgeonSermonsModalProps) {
   const titleId = useId()
+  const showSpurgeon = libraryFocus === 'all' || libraryFocus === 'spurgeon'
+  const showCalvin = libraryFocus === 'all' || libraryFocus === 'calvin'
+  const showReadTab = showSpurgeon
   const [tab, setTab] = useState<Tab>('search')
   const [q, setQ] = useState('')
   const [debouncedQ, setDebouncedQ] = useState('')
@@ -58,6 +74,9 @@ export default function SpurgeonSermonsModal({
   const [searchItems, setSearchItems] = useState<SermonRow[]>([])
   const [refItems, setRefItems] = useState<SermonRow[]>([])
   const [morneveRefItems, setMorneveRefItems] = useState<SermonRow[]>([])
+  const [calvinRefItems, setCalvinRefItems] = useState<SermonRow[]>([])
+  const [calvinSearchItems, setCalvinSearchItems] = useState<SermonRow[]>([])
+  const [calvinSearchTotal, setCalvinSearchTotal] = useState(0)
   const [searchLoading, setSearchLoading] = useState(false)
   const [refLoading, setRefLoading] = useState(false)
   const [searchError, setSearchError] = useState('')
@@ -131,24 +150,61 @@ export default function SpurgeonSermonsModal({
         pageSize: String(SEARCH_PAGE_SIZE),
       })
       if (debouncedQ) params.set('q', debouncedQ)
-      const res = await fetch(`/api/spurgeon/sermons?${params.toString()}`, { cache: 'no-store' })
-      const data = await res.json()
-      if (!res.ok) {
-        setSearchError(typeof data.error === 'string' ? data.error : 'Could not load sermons')
+      const query = params.toString()
+
+      let sermonRes: Response | null = null
+      let calvinRes: Response | null = null
+      if (showSpurgeon) {
+        sermonRes = await fetch(`/api/spurgeon/sermons?${query}`, { cache: 'no-store' })
+      }
+      if (showCalvin) {
+        calvinRes = await fetch(`/api/calvin/books?${query}`, { cache: 'no-store' })
+      }
+
+      const sermonData = sermonRes ? await sermonRes.json() : {}
+      const calvinData = calvinRes ? await calvinRes.json() : {}
+
+      const sermonFailed = showSpurgeon && sermonRes && !sermonRes.ok
+      const calvinFailed = showCalvin && calvinRes && !calvinRes.ok
+      if (sermonFailed && calvinFailed) {
+        setSearchError(
+          typeof sermonData.error === 'string'
+            ? sermonData.error
+            : typeof calvinData.error === 'string'
+              ? calvinData.error
+              : 'Could not load study resources'
+        )
         setSearchItems([])
         setSearchTotal(0)
+        setCalvinSearchItems([])
+        setCalvinSearchTotal(0)
         return
       }
-      setSearchItems(Array.isArray(data.items) ? data.items : [])
-      setSearchTotal(typeof data.total === 'number' ? data.total : (data.items?.length ?? 0))
+      if (sermonFailed || !showSpurgeon) {
+        setSearchItems([])
+        setSearchTotal(0)
+      } else {
+        setSearchItems(Array.isArray(sermonData.items) ? sermonData.items : [])
+        setSearchTotal(typeof sermonData.total === 'number' ? sermonData.total : (sermonData.items?.length ?? 0))
+      }
+      if (calvinFailed || !showCalvin) {
+        setCalvinSearchItems([])
+        setCalvinSearchTotal(0)
+      } else {
+        setCalvinSearchItems(Array.isArray(calvinData.items) ? calvinData.items : [])
+        setCalvinSearchTotal(typeof calvinData.total === 'number' ? calvinData.total : (calvinData.items?.length ?? 0))
+      }
+      setSearchError('')
     } catch {
-      setSearchError('Could not load sermons')
+      setSearchError('Could not load study resources')
       setSearchItems([])
       setSearchTotal(0)
+      setCalvinSearchItems([])
+      setCalvinSearchTotal(0)
     } finally {
       setSearchLoading(false)
     }
-  }, [debouncedQ, searchPage])
+  }, [debouncedQ, searchPage, showSpurgeon, showCalvin])
 
   useEffect(() => {
     if (!isOpen || tab !== 'search') return
@@ -173,6 +229,7 @@ export default function SpurgeonSermonsModal({
     if (!trimmed) {
       setRefItems([])
       setMorneveRefItems([])
+      setCalvinRefItems([])
       setRefError('')
       return
     }
@@ -180,43 +237,69 @@ export default function SpurgeonSermonsModal({
     setRefError('')
     try {
       const q = encodeURIComponent(trimmed)
-      const [sermonRes, morneveRes] = await Promise.all([
-        fetch(`/api/spurgeon/by-reference?reference=${q}`, { cache: 'no-store' }),
-        fetch(`/api/morneve/by-reference?reference=${q}`, { cache: 'no-store' }),
-      ])
-      const sermonData = await sermonRes.json()
-      const morneveData = await morneveRes.json()
-      if (!sermonRes.ok && !morneveRes.ok) {
+      const fetches: Promise<Response>[] = []
+      if (showSpurgeon) {
+        fetches.push(fetch(`/api/spurgeon/by-reference?reference=${q}`, { cache: 'no-store' }))
+        fetches.push(fetch(`/api/morneve/by-reference?reference=${q}`, { cache: 'no-store' }))
+      }
+      if (showCalvin) {
+        fetches.push(fetch(`/api/calvin/by-reference?reference=${q}`, { cache: 'no-store' }))
+      }
+
+      const results = await Promise.all(fetches)
+      let ri = 0
+      const sermonRes = showSpurgeon ? results[ri++] : null
+      const morneveRes = showSpurgeon ? results[ri++] : null
+      const calvinRes = showCalvin ? results[ri++] : null
+
+      const sermonData = sermonRes ? await sermonRes.json() : {}
+      const morneveData = morneveRes ? await morneveRes.json() : {}
+      const calvinData = calvinRes ? await calvinRes.json() : {}
+
+      const spurgeonAnyOk =
+        !showSpurgeon || Boolean(sermonRes?.ok) || Boolean(morneveRes?.ok)
+      const calvinOk = !showCalvin || Boolean(calvinRes?.ok)
+      if (!spurgeonAnyOk && !calvinOk) {
         setRefError(
           typeof sermonData.error === 'string'
             ? sermonData.error
             : typeof morneveData.error === 'string'
               ? morneveData.error
-              : 'Lookup failed'
+              : typeof calvinData.error === 'string'
+                ? calvinData.error
+                : 'Lookup failed'
         )
         setRefItems([])
         setMorneveRefItems([])
+        setCalvinRefItems([])
         return
       }
-      if (!sermonRes.ok) {
+
+      if (!showSpurgeon || !sermonRes?.ok) {
         setRefItems([])
       } else {
         setRefItems(Array.isArray(sermonData.items) ? sermonData.items : [])
       }
-      if (!morneveRes.ok) {
+      if (!showSpurgeon || !morneveRes?.ok) {
         setMorneveRefItems([])
       } else {
         setMorneveRefItems(Array.isArray(morneveData.items) ? morneveData.items : [])
+      }
+      if (!showCalvin || !calvinRes?.ok) {
+        setCalvinRefItems([])
+      } else {
+        setCalvinRefItems(Array.isArray(calvinData.items) ? calvinData.items : [])
       }
       setRefError('')
     } catch {
       setRefError('Lookup failed')
       setRefItems([])
       setMorneveRefItems([])
+      setCalvinRefItems([])
     } finally {
       setRefLoading(false)
     }
-  }, [])
+  }, [showSpurgeon, showCalvin])
 
   useEffect(() => {
     if (!isOpen) {
@@ -230,6 +313,9 @@ export default function SpurgeonSermonsModal({
         setSearchItems([])
         setRefItems([])
         setMorneveRefItems([])
+        setCalvinRefItems([])
+        setCalvinSearchItems([])
+        setCalvinSearchTotal(0)
         setReadTabItems([])
         setReadTabError('')
         setReadTabLoading(false)
@@ -256,7 +342,7 @@ export default function SpurgeonSermonsModal({
   }, [isOpen, tab, debouncedScriptureRef, runScriptureLookupForRef])
 
   useEffect(() => {
-    if (!isOpen || tab !== 'read') return
+    if (!isOpen || tab !== 'read' || !showReadTab) return
     const slugs = spurgeonReadSlugsKey ? spurgeonReadSlugsKey.split(',') : []
     if (slugs.length === 0) {
       startTransition(() => {
@@ -303,13 +389,61 @@ export default function SpurgeonSermonsModal({
     return () => {
       cancelled = true
     }
-  }, [isOpen, tab, spurgeonReadSlugsKey])
+  }, [isOpen, tab, spurgeonReadSlugsKey, showReadTab])
+
+  useEffect(() => {
+    if (tab === 'read' && !showReadTab) {
+      setTab('search')
+    }
+  }, [tab, showReadTab])
 
   if (!isOpen) return null
 
-  const searchTotalPages = Math.max(1, Math.ceil(searchTotal / SEARCH_PAGE_SIZE))
-  const searchFrom = searchTotal === 0 ? 0 : (searchPage - 1) * SEARCH_PAGE_SIZE + 1
-  const searchTo = Math.min(searchPage * SEARCH_PAGE_SIZE, searchTotal)
+  const searchPlaceholder = showSpurgeon && showCalvin
+    ? 'Title or keyword (sermons or commentary books)'
+    : showCalvin
+      ? 'Commentary book title or keyword'
+      : 'Sermon title or keyword'
+
+  const sermonSearchTotalPages =
+    showSpurgeon && searchTotal > 0 ? Math.ceil(searchTotal / SEARCH_PAGE_SIZE) : 0
+  const calvinSearchTotalPages =
+    showCalvin && calvinSearchTotal > 0 ? Math.ceil(calvinSearchTotal / SEARCH_PAGE_SIZE) : 0
+  const combinedSearchTotalPages = Math.max(sermonSearchTotalPages, calvinSearchTotalPages, 1)
+
+  const sermonRangeOnPage =
+    showSpurgeon && searchTotal > 0 && searchPage <= sermonSearchTotalPages
+  const calvinRangeOnPage =
+    showCalvin && calvinSearchTotal > 0 && searchPage <= calvinSearchTotalPages
+
+  const sermonSearchFrom = sermonRangeOnPage ? (searchPage - 1) * SEARCH_PAGE_SIZE + 1 : 0
+  const sermonSearchTo = sermonRangeOnPage
+    ? Math.min(searchPage * SEARCH_PAGE_SIZE, searchTotal)
+    : 0
+  const calvinSearchFrom = calvinRangeOnPage ? (searchPage - 1) * SEARCH_PAGE_SIZE + 1 : 0
+  const calvinSearchTo = calvinRangeOnPage
+    ? Math.min(searchPage * SEARCH_PAGE_SIZE, calvinSearchTotal)
+    : 0
+
+  const hasSearchResults =
+    (showSpurgeon && searchTotal > 0) || (showCalvin && calvinSearchTotal > 0)
+
+  const searchEmptyMessage = showSpurgeon && showCalvin
+    ? 'No matching public sermons or Calvin commentary books.'
+    : showCalvin
+      ? 'No matching Calvin commentary books.'
+      : 'No matching public sermons.'
+
+  const scriptureEmptyMessage = showSpurgeon && showCalvin
+    ? 'No indexed study resources for that reference.'
+    : showCalvin
+      ? 'No indexed Calvin commentary for that reference.'
+      : 'No indexed sermons or Morning & Evening devotions for that reference.'
+
+  const followResourceLink = () => {
+    onFollowSermonLink?.()
+    onClose()
+  }
 
   return (
     <div
@@ -326,7 +460,7 @@ export default function SpurgeonSermonsModal({
       >
         <div className="shrink-0 border-b border-gray-200 dark:border-slate-600 px-5 py-4 flex items-center justify-between gap-3">
           <h2 id={titleId} className="text-lg font-semibold text-slate-800 dark:text-slate-100">
-            Spurgeon sermons
+            {modalTitle}
           </h2>
           <button
             type="button"
@@ -363,17 +497,19 @@ export default function SpurgeonSermonsModal({
           >
             By scripture
           </button>
-          <button
-            type="button"
-            onClick={() => setTab('read')}
-            className={`cursor-pointer px-3 py-2 text-sm font-medium rounded-t-md border-b-2 -mb-px transition-colors ${
-              tab === 'read'
-                ? 'border-blue-600 text-blue-700 dark:text-blue-300 dark:border-blue-400'
-                : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            By read
-          </button>
+          {showReadTab ? (
+            <button
+              type="button"
+              onClick={() => setTab('read')}
+              className={`cursor-pointer px-3 py-2 text-sm font-medium rounded-t-md border-b-2 -mb-px transition-colors ${
+                tab === 'read'
+                  ? 'border-blue-600 text-blue-700 dark:text-blue-300 dark:border-blue-400'
+                  : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+              }`}
+            >
+              By read
+            </button>
+          ) : null}
         </div>
 
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -385,7 +521,7 @@ export default function SpurgeonSermonsModal({
                   type="search"
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
-                  placeholder="Title or keyword (e.g. grace)"
+                  placeholder={searchPlaceholder}
                   className="w-full min-w-0 px-3 py-2 text-base rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
                   autoComplete="off"
                   data-tour="spurgeon-modal-search"
@@ -456,33 +592,62 @@ export default function SpurgeonSermonsModal({
                     <div className="flex h-56 items-center justify-center">
                       <div className="h-8 w-8 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
                     </div>
-                  ) : searchItems.length === 0 ? (
+                  ) : (showSpurgeon ? searchItems.length === 0 : true) &&
+                    (showCalvin ? calvinSearchItems.length === 0 : true) ? (
                     <div className="flex h-56 items-start pt-2">
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
-                        No matching public sermons.
-                      </p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">{searchEmptyMessage}</p>
                     </div>
                   ) : (
-                    <ul className="space-y-1">
-                      {searchItems.map((row) => (
-                        <li key={row.slug}>
-                          <Link
-                            href={`/${row.slug}`}
-                            onClick={() => {
-                              onFollowSermonLink?.()
-                              onClose()
-                            }}
-                            className={`block rounded-md px-2 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700/80 ${
-                              readCompleteSlugs.has(row.slug)
-                                ? 'font-extrabold text-blue-900 dark:text-blue-200'
-                                : 'font-normal text-blue-700 dark:text-blue-300'
-                            }`}
-                          >
-                            {spurgeonSermonTitleForModalDisplay(row.title)}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
+                    <div className="space-y-4">
+                      {showSpurgeon && searchItems.length > 0 && (
+                        <div>
+                          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
+                            Spurgeon Sermons
+                          </h3>
+                          <ul className="space-y-1">
+                            {searchItems.map((row) => (
+                              <li key={row.slug}>
+                                <Link
+                                  href={`/${row.slug}`}
+                                  onClick={followResourceLink}
+                                  className={`block rounded-md px-2 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700/80 ${
+                                    readCompleteSlugs.has(row.slug)
+                                      ? 'font-extrabold text-blue-900 dark:text-blue-200'
+                                      : 'font-normal text-blue-700 dark:text-blue-300'
+                                  }`}
+                                >
+                                  {spurgeonSermonTitleForModalDisplay(row.title)}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {showCalvin && calvinSearchItems.length > 0 && (
+                        <div>
+                          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
+                            Calvin commentaries
+                          </h3>
+                          <ul className="space-y-1">
+                            {calvinSearchItems.map((row) => (
+                              <li key={row.slug}>
+                                <Link
+                                  href={`/${row.slug}`}
+                                  onClick={followResourceLink}
+                                  className={`block rounded-md px-2 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700/80 ${
+                                    readCompleteSlugs.has(row.slug)
+                                      ? 'font-extrabold text-blue-900 dark:text-blue-200'
+                                      : 'font-normal text-blue-700 dark:text-blue-300'
+                                  }`}
+                                >
+                                  {row.title}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </>
@@ -491,28 +656,23 @@ export default function SpurgeonSermonsModal({
             {tab === 'scripture' && (
               <div className="min-h-40 space-y-4">
                 {!refLoading &&
-                  refItems.length === 0 &&
-                  morneveRefItems.length === 0 &&
+                  (showSpurgeon ? refItems.length === 0 && morneveRefItems.length === 0 : true) &&
+                  (showCalvin ? calvinRefItems.length === 0 : true) &&
                   scriptureRef.trim() &&
                   !refError && (
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      No indexed sermons or Morning &amp; Evening devotions for that reference.
-                    </p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{scriptureEmptyMessage}</p>
                   )}
-                {refItems.length > 0 && (
+                {showSpurgeon && refItems.length > 0 && (
                   <div>
                     <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
-                      Sermons
+                      Spurgeon Sermons
                     </h3>
                     <ul className="space-y-1">
                       {refItems.map((row) => (
                         <li key={row.slug}>
                           <Link
                             href={`/${row.slug}`}
-                            onClick={() => {
-                              onFollowSermonLink?.()
-                              onClose()
-                            }}
+                            onClick={followResourceLink}
                             className={`block rounded-md px-2 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700/80 ${
                               readCompleteSlugs.has(row.slug)
                                 ? 'font-extrabold text-blue-900 dark:text-blue-200'
@@ -526,7 +686,7 @@ export default function SpurgeonSermonsModal({
                     </ul>
                   </div>
                 )}
-                {morneveRefItems.length > 0 && (
+                {showSpurgeon && morneveRefItems.length > 0 && (
                   <div>
                     <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
                       Morning &amp; Evening
@@ -536,10 +696,31 @@ export default function SpurgeonSermonsModal({
                         <li key={row.slug}>
                           <Link
                             href={`/${row.slug}`}
-                            onClick={() => {
-                              onFollowSermonLink?.()
-                              onClose()
-                            }}
+                            onClick={followResourceLink}
+                            className={`block rounded-md px-2 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700/80 ${
+                              readCompleteSlugs.has(row.slug)
+                                ? 'font-extrabold text-blue-900 dark:text-blue-200'
+                                : 'font-normal text-blue-700 dark:text-blue-300'
+                            }`}
+                          >
+                            {row.title}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {showCalvin && calvinRefItems.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
+                      Calvin commentaries
+                    </h3>
+                    <ul className="space-y-1">
+                      {calvinRefItems.map((row) => (
+                        <li key={row.slug}>
+                          <Link
+                            href={`/${row.slug}`}
+                            onClick={followResourceLink}
                             className={`block rounded-md px-2 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700/80 ${
                               readCompleteSlugs.has(row.slug)
                                 ? 'font-extrabold text-blue-900 dark:text-blue-200'
@@ -590,14 +771,24 @@ export default function SpurgeonSermonsModal({
             )}
           </div>
 
-          {tab === 'search' && !searchLoading && searchTotal > 0 && (
+          {tab === 'search' && !searchLoading && hasSearchResults && (
             <nav
               className="shrink-0 border-t border-slate-200 dark:border-slate-600 px-5 py-3 flex flex-wrap items-center justify-between gap-2 bg-slate-50/90 dark:bg-slate-900/80"
-              aria-label="Sermon search pagination"
+              aria-label="Study search pagination"
             >
               <p className="text-xs text-slate-600 dark:text-slate-400 tabular-nums">
-                {searchFrom}–{searchTo} of {searchTotal}
-                {searchTotalPages > 1 ? ` · Page ${searchPage} of ${searchTotalPages}` : null}
+                {sermonRangeOnPage ? (
+                  <>
+                    Sermons {sermonSearchFrom}–{sermonSearchTo} of {searchTotal}
+                  </>
+                ) : null}
+                {sermonRangeOnPage && calvinRangeOnPage ? ' · ' : null}
+                {calvinRangeOnPage ? (
+                  <>
+                    Calvin {calvinSearchFrom}–{calvinSearchTo} of {calvinSearchTotal}
+                  </>
+                ) : null}
+                {combinedSearchTotalPages > 1 ? ` · Page ${searchPage} of ${combinedSearchTotalPages}` : null}
               </p>
               <div className="flex items-center gap-2">
                 <button
@@ -610,8 +801,8 @@ export default function SpurgeonSermonsModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSearchPage((p) => Math.min(searchTotalPages, p + 1))}
-                  disabled={searchPage >= searchTotalPages}
+                  onClick={() => setSearchPage((p) => Math.min(combinedSearchTotalPages, p + 1))}
+                  disabled={searchPage >= combinedSearchTotalPages}
                   className="cursor-pointer px-3 py-1.5 text-sm font-medium rounded-md border-2 border-slate-400 dark:border-slate-500 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent dark:disabled:hover:bg-transparent"
                 >
                   Next
