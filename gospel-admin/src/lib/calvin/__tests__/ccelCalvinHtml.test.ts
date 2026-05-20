@@ -56,6 +56,24 @@ describe('parseCcelCalvinVolume', () => {
     expect(rom!.subsections.length).toBeGreaterThanOrEqual(1)
   })
 
+  it('routes harmony Gospels scripture div2 by title, not cross-ref footnotes', () => {
+    const vol = getCalvinVolume('calcom31')!
+    const snippet = `
+<div1 type="section" title="Commentary" id="ix">
+<div2 type="scripture" title="Luke 1:18-20" id="ix.iv">
+<p><scripRef passage="Luke 1:18-20" osisRef="Bible:Luke.1.18-Luke.1.20">Luke 1:18-20</scripRef></p>
+<p>Compare <scripRef passage="Heb 2:16" osisRef="Bible:Heb.2.16">Hebrews 2:16</scripRef> and
+<scripRef passage="Heb 1:1" osisRef="Bible:Heb.1.1">Hebrews 1:1</scripRef>.</p>
+</div2>
+</div1>
+`
+    const chunks = parseCcelCalvinVolume(snippet, vol)
+    expect(chunks.find((c) => c.bookUsfm === 'HEB')).toBeUndefined()
+    const luk = chunks.find((c) => c.bookUsfm === 'LUK')
+    expect(luk).toBeDefined()
+    expect(luk!.subsections[0].title).toContain('Luke 1:18')
+  })
+
   it('routes harmony Law volume blocks by dominant scripRef book', () => {
     const vol = getCalvinVolume('calcom03')!
     const snippet = `

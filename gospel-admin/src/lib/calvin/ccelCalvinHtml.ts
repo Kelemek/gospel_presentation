@@ -119,6 +119,29 @@ function dominantBookUsfmFromFragment(fragment: string): string | null {
   return best
 }
 
+/** CCEL `div2 type="scripture"` titles name the passage being expounded (e.g. Luke 1:18-20). */
+function bookUsfmFromScriptureDiv2OpenTag(openTag: string): string | null {
+  const type = (attrFromTag(openTag, 'type') ?? '').toLowerCase()
+  if (type !== 'scripture') return null
+  const title = attrFromTag(openTag, 'title') ?? ''
+  if (!title.trim()) return null
+  return bookUsfmFromPassageText(title)
+}
+
+function bookUsfmForCommentaryUnit(
+  openTag: string,
+  inner: string,
+  div1Book: string | null,
+  fallbackBook: string | null
+): string | null {
+  return (
+    bookUsfmFromScriptureDiv2OpenTag(openTag) ??
+    dominantBookUsfmFromFragment(inner) ??
+    div1Book ??
+    fallbackBook
+  )
+}
+
 function bookUsfmFromDiv1Title(title: string): string | null {
   const t = title.trim()
   const m = /^Commentary on\s+(.+)$/i.exec(t)
@@ -201,7 +224,8 @@ function unitsFromDiv1Inner(
       if (scriptureChildren.some((c) => (attrFromTag(c.openTag, 'type') ?? '').toLowerCase() === 'scripture')) {
         for (const child of scriptureChildren) {
           if ((attrFromTag(child.openTag, 'type') ?? '').toLowerCase() !== 'scripture') continue
-          const routed = dominantBookUsfmFromFragment(child.inner) ?? book
+          const routed = bookUsfmForCommentaryUnit(child.openTag, child.inner, book, null)
+          if (!routed) continue
           out.push({
             bookUsfm: routed,
             title: subsectionTitleFromUnit(child.openTag, routed, attrFromTag(openTag, 'title')),
@@ -226,7 +250,7 @@ function unitsFromDiv1Inner(
 
   if (scriptureDiv2s.length > 0) {
     for (const { openTag, inner } of scriptureDiv2s) {
-      const routed = dominantBookUsfmFromFragment(inner) ?? div1Book ?? fallbackBook
+      const routed = bookUsfmForCommentaryUnit(openTag, inner, div1Book, fallbackBook)
       if (!routed) continue
       out.push({
         bookUsfm: routed,
@@ -244,7 +268,7 @@ function unitsFromDiv1Inner(
       for (const { openTag, inner } of blocks) {
         const type = attrFromTag(openTag, 'type') ?? ''
         if (!COMMENTARY_UNIT_DIV2_TYPES.has(type) && type.toLowerCase() !== 'scripture') continue
-        const routed = dominantBookUsfmFromFragment(inner) ?? div1Book ?? fallbackBook
+        const routed = bookUsfmForCommentaryUnit(openTag, inner, div1Book, fallbackBook)
         if (!routed) continue
         out.push({
           bookUsfm: routed,
@@ -316,8 +340,8 @@ export function parseCcelCalvinVolume(
         book = lockedBook
       } else if (volume.kind === 'harmonyLaw' || volume.kind === 'harmonyGospels') {
         const dominant = dominantBookUsfmFromFragment(unit.inner)
-        if (!dominant) continue
-        book = dominant
+        book = unit.bookUsfm ?? dominant
+        if (!book) continue
       }
       const volumeBooks = volume.books?.map((b) => normalizeCalvinBookUsfm(b) ?? b) ?? []
       if (volumeBooks.length > 0 && !volumeBooks.includes(book)) {
