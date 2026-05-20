@@ -820,6 +820,7 @@ function resourcesListPanelReady(panel: Element): boolean {
   if (t.includes('No resources available')) return true
   if (panel.querySelector(RESOURCE_CATEGORY)) return true
   if (panel.querySelector('[data-resource-spurgeon-library]')) return true
+  if (panel.querySelector('[data-resource-calvin-library]')) return true
   if (panel.querySelector('a[href^="/"]')) return true
   return false
 }
@@ -840,7 +841,11 @@ async function fetchPublicResourceItemsForTour(): Promise<PublicResourceItem[]> 
 
 function resourcesListOverviewCopy(items: PublicResourceItem[]): string {
   const hasFolderLike = items.some(
-    (i) => i.type === 'category' || i.type === 'spurgeonLibrary' || i.type === 'morningEveningLibrary'
+    (i) =>
+      i.type === 'category' ||
+      i.type === 'spurgeonLibrary' ||
+      i.type === 'morningEveningLibrary' ||
+      i.type === 'calvinLibrary'
   )
   if (items.length === 0) {
     return 'Nothing is listed yet. When your church adds shared profiles or categories in admin, they will appear here.'
@@ -848,7 +853,7 @@ function resourcesListOverviewCopy(items: PublicResourceItem[]): string {
   if (!hasFolderLike) {
     return 'The next steps highlight each group of top-level links and explain what those presentations are for—tap a link when you want to open one.'
   }
-  return 'The next steps highlight each section: groups of top-level links, the Spurgeon sermon library row when present, and each category folder. Each step lists what is inside and what those resources are for. Folders expand automatically when highlighted—tap any link when you want to open a presentation.'
+  return 'The next steps highlight each section: groups of top-level links, library rows (Spurgeon sermons, Morning & Evening, Calvin commentaries) when present, and each category folder. Each step lists what is inside and what those resources are for. Folders expand automatically when highlighted—tap any link when you want to open a presentation.'
 }
 
 function resourceTemplatesBlockTitle(count: number): string {
@@ -3139,6 +3144,24 @@ async function runResourcesFeatureTourAsync(options?: ProfileFeatureTourOptions)
           title: safeTitle,
           description:
             '<p>This row opens <strong>Morning and Evening</strong>: jump to today’s devotional or pick any day on the calendar.</p><p class="mt-2">Tap it when you want Spurgeon’s daily readings for a specific date.</p>',
+          side: 'right',
+          align: 'start',
+        },
+      })
+      continue
+    }
+
+    if (g.kind === 'calvinLibrary') {
+      const safeTitle = escapeForPopoverText(g.title.trim() || "Calvin's Commentaries")
+      steps.push({
+        element: () =>
+          document.querySelector(
+            `${RESOURCES_LIST_PANEL} [data-resource-calvin-library]`
+          ) ?? document.querySelector(RESOURCES_LIST_PANEL)!,
+        popover: {
+          title: safeTitle,
+          description:
+            '<p>This row opens <strong>Calvin’s commentaries</strong>: search by book title or by Bible reference, then open a commentary volume as a read-only presentation.</p><p class="mt-2">Tap it when you want John Calvin’s exposition on a passage or book.</p>',
           side: 'right',
           align: 'start',
         },
