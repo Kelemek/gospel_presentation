@@ -873,12 +873,14 @@ function resourceTemplatesBlockDescription(
 
 function resourceCategoryBlockDescription(cat: Extract<PublicResourceItem, { type: 'category' }>): string {
   const safeCatName = escapeForPopoverText(cat.name.trim() || 'Category')
-  if (cat.templates.length === 0) {
+  if (cat.children.length === 0) {
     return `<p>This folder (<strong>${safeCatName}</strong>) is for related presentations. None are listed yet—your church can add shared profiles here in admin.</p>`
   }
-  const titles = cat.templates.map((t) => escapeForPopoverText(t.title.trim() || t.slug))
+  const titles = cat.children.map((c) =>
+    escapeForPopoverText(c.type === 'template' ? c.title.trim() || c.slug : c.title.trim())
+  )
   const list = titles.map((t) => `<li><strong>${t}</strong></li>`).join('')
-  return `<p>These are shared gospel profiles grouped under <strong>${safeCatName}</strong>. Each link opens a different presentation.</p><ul class="list-disc pl-5 mt-2 text-sm">${list}</ul><p class="mt-2">Tap a link when you want to open one.</p>`
+  return `<p>These items are grouped under <strong>${safeCatName}</strong>—presentations and library shortcuts your church added.</p><ul class="list-disc pl-5 mt-2 text-sm">${list}</ul><p class="mt-2">Tap a link when you want to open one.</p>`
 }
 
 /** Safe for use inside `[attr="..."]` selectors. */
@@ -892,7 +894,14 @@ function escapeAttrSelectorValue(value: string): string {
 function expandResourceCategoryIfCollapsed(categoryId: string, drv: Pick<Driver, 'refresh'>): void {
   const block = document.querySelector(`[data-resource-category-id="${escapeAttrSelectorValue(categoryId)}"]`)
   if (!block) return
-  if (block.querySelector('a[data-resource-template-slug]')) return
+  if (
+    block.querySelector('a[data-resource-template-slug]') ||
+    block.querySelector('[data-resource-spurgeon-library]') ||
+    block.querySelector('[data-resource-morneve-library]') ||
+    block.querySelector('[data-resource-calvin-library]')
+  ) {
+    return
+  }
   const btn = block.querySelector<HTMLElement>('[data-tour="resource-category"]')
   btn?.click()
   window.setTimeout(() => drv.refresh(), 280)
@@ -3186,7 +3195,7 @@ async function runResourcesFeatureTourAsync(options?: ProfileFeatureTourOptions)
         align: 'start',
       },
       onHighlightStarted:
-        cat.templates.length > 0
+        cat.children.length > 0
           ? (_el, _step, { driver: drv }) => expandResourceCategoryIfCollapsed(cat.id, drv)
           : undefined,
     })
@@ -3204,7 +3213,7 @@ async function runResourcesFeatureTourAsync(options?: ProfileFeatureTourOptions)
 
 function findCategoryIdForTemplateSlug(items: PublicResourceItem[], slug: string): string | null {
   for (const i of items) {
-    if (i.type === 'category' && i.templates.some((t) => t.slug === slug)) return i.id
+    if (i.type === 'category' && i.children.some((c) => c.type === 'template' && c.slug === slug)) return i.id
   }
   return null
 }
@@ -3432,7 +3441,9 @@ async function runMarriageSeminarResourcesTourAsync(options?: ProfileFeatureTour
   const hasListedTemplate =
     inTopLevel ||
     items.some(
-      (i) => i.type === 'category' && i.templates.some((t) => t.slug === MARRIAGE_SEMINAR_PROFILE_SLUG)
+      (i) =>
+        i.type === 'category' &&
+        i.children.some((c) => c.type === 'template' && c.slug === MARRIAGE_SEMINAR_PROFILE_SLUG)
     )
 
   let navigationScheduled = false

@@ -315,22 +315,66 @@ export default function TableOfContents({
                           </svg>
                         </span>
                       </button>
-                      {expandedCategoryIds.has(group.item.id) && group.item.templates.length > 0 && (
+                      {expandedCategoryIds.has(group.item.id) && group.item.children.length > 0 && (
                         <div className="bg-slate-50 dark:bg-slate-700/50">
-                          {group.item.templates.map((t) => (
-                            <Link
-                              key={t.slug}
-                              href={`/${t.slug}`}
-                              data-resource-template-slug={t.slug}
-                              className={`block py-2 pl-8 pr-4 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors ${
-                                readCompleteSlugs.has(t.slug)
-                                  ? 'font-extrabold text-slate-900 dark:text-slate-50'
-                                  : 'font-normal text-slate-700 dark:text-slate-200'
-                              }`}
-                            >
-                              {t.title}
-                            </Link>
-                          ))}
+                          {group.item.children.map((child, childIdx) =>
+                            child.type === 'template' ? (
+                              <Link
+                                key={`${group.item.id}-t-${child.slug}`}
+                                href={`/${child.slug}`}
+                                data-resource-template-slug={child.slug}
+                                className={`block py-2 pl-8 pr-4 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors ${
+                                  readCompleteSlugs.has(child.slug)
+                                    ? 'font-extrabold text-slate-900 dark:text-slate-50'
+                                    : 'font-normal text-slate-700 dark:text-slate-200'
+                                }`}
+                              >
+                                {child.title}
+                              </Link>
+                            ) : child.type === 'spurgeonLibrary' ? (
+                              <button
+                                key={`${group.item.id}-sg-${childIdx}`}
+                                type="button"
+                                data-resource-spurgeon-library
+                                disabled={!onOpenSpurgeonLibrary}
+                                onClick={() => {
+                                  onOpenSpurgeonLibrary?.(child.title)
+                                  onNavigate?.()
+                                }}
+                                className="flex w-full cursor-pointer items-center gap-2 py-2 pl-8 pr-4 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {child.title}
+                              </button>
+                            ) : child.type === 'morningEveningLibrary' ? (
+                              <button
+                                key={`${group.item.id}-me-${childIdx}`}
+                                type="button"
+                                data-resource-morneve-library
+                                disabled={!onOpenMorneveLibrary}
+                                onClick={() => {
+                                  onOpenMorneveLibrary?.()
+                                  onNavigate?.()
+                                }}
+                                className="flex w-full cursor-pointer items-center gap-2 py-2 pl-8 pr-4 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {child.title}
+                              </button>
+                            ) : (
+                              <button
+                                key={`${group.item.id}-cv-${childIdx}`}
+                                type="button"
+                                data-resource-calvin-library
+                                disabled={!onOpenCalvinLibrary}
+                                onClick={() => {
+                                  onOpenCalvinLibrary?.(child.title)
+                                  onNavigate?.()
+                                }}
+                                className="flex w-full cursor-pointer items-center gap-2 py-2 pl-8 pr-4 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {child.title}
+                              </button>
+                            )
+                          )}
                         </div>
                       )}
                     </div>

@@ -143,11 +143,18 @@ export interface ResourceOrderItemTemplate {
   slug: string
 }
 
+export type ResourceOrderCategoryChild =
+  | ResourceOrderItemTemplate
+  | ResourceOrderItemSpurgeonLibrary
+  | ResourceOrderItemMorningEveningLibrary
+  | ResourceOrderItemCalvinLibrary
+
 export interface ResourceOrderItemCategory {
   type: 'category'
   id: string
   name: string
-  templateSlugs: string[]
+  /** Ordered mix of templates and library rows inside this category. */
+  children: ResourceOrderCategoryChild[]
 }
 
 /** Opens the in-app Spurgeon library modal (not a profile slug). */
@@ -205,47 +212,4 @@ export function isResourceOrderItemCalvinLibrary(
   return item.type === 'calvinLibrary'
 }
 
-/** Parse public_template_order JSON from DB into ResourceOrderItem[] (new format only). */
-export function parseResourceOrder(raw: unknown): ResourceOrderItem[] {
-  if (!Array.isArray(raw)) return []
-  const out: ResourceOrderItem[] = []
-  for (const el of raw) {
-    if (el && typeof el === 'object' && 'type' in el) {
-      if ((el as any).type === 'template' && typeof (el as any).slug === 'string') {
-        out.push({ type: 'template', slug: (el as any).slug })
-      } else if (
-        (el as any).type === 'category' &&
-        typeof (el as any).id === 'string' &&
-        typeof (el as any).name === 'string' &&
-        Array.isArray((el as any).templateSlugs)
-      ) {
-        out.push({
-          type: 'category',
-          id: (el as any).id,
-          name: (el as any).name,
-          templateSlugs: (el as any).templateSlugs.filter((s: unknown) => typeof s === 'string')
-        })
-      } else if ((el as any).type === 'spurgeonLibrary') {
-        const rawTitle = (el as any).title
-        const title =
-          typeof rawTitle === 'string' && rawTitle.trim() ? rawTitle.trim() : 'Spurgeon sermons'
-        out.push({ type: 'spurgeonLibrary', title })
-      } else if ((el as any).type === 'morningEveningLibrary') {
-        const rawTitle = (el as any).title
-        const title =
-          typeof rawTitle === 'string' && rawTitle.trim()
-            ? rawTitle.trim()
-            : "Spurgeon's Morning and Evening"
-        out.push({ type: 'morningEveningLibrary', title })
-      } else if ((el as any).type === 'calvinLibrary') {
-        const rawTitle = (el as any).title
-        const title =
-          typeof rawTitle === 'string' && rawTitle.trim()
-            ? rawTitle.trim()
-            : "Calvin's Commentaries"
-        out.push({ type: 'calvinLibrary', title })
-      }
-    }
-  }
-  return out
-}
+export { parseResourceOrder } from '@/lib/resourceOrderCategory'

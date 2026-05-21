@@ -25,7 +25,12 @@ describe('GET /api/profiles/public-templates', () => {
 
   it('returns items with categories when present', async () => {
     const items = [
-      { type: 'category' as const, id: 'cat-1', name: 'Category A', templates: [{ slug: 't1', title: 'T1' }] },
+      {
+        type: 'category' as const,
+        id: 'cat-1',
+        name: 'Category A',
+        children: [{ type: 'template' as const, slug: 't1', title: 'T1' }],
+      },
       { type: 'template' as const, slug: 't2', title: 'T2' }
     ]
     mockDataService.getPublicResourcesStructure.mockResolvedValue(items)

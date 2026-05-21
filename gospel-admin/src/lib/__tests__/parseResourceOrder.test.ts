@@ -15,7 +15,15 @@ describe('parseResourceOrder', () => {
     expect(parseResourceOrder(raw)).toEqual([
       { type: 'template', slug: 'foo' },
       { type: 'spurgeonLibrary', title: 'Custom label' },
-      { type: 'category', id: 'c1', name: 'Cat', templateSlugs: ['a', 'b'] },
+      {
+        type: 'category',
+        id: 'c1',
+        name: 'Cat',
+        children: [
+          { type: 'template', slug: 'a' },
+          { type: 'template', slug: 'b' },
+        ],
+      },
     ])
   })
 

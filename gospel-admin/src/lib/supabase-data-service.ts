@@ -4,7 +4,7 @@
 // Note: Type checking disabled due to Supabase client type inference issues
 import { createClient, createAdminClient } from './supabase/server'
 import type { GospelProfile, CreateProfileRequest, GospelPresentationData } from './types'
-import { parseResourceOrder } from './types'
+import { parseResourceOrder } from './resourceOrderCategory'
 import { morneveLibraryMenuTitle } from './spurgeon/morneveSlug'
 import { logger } from './logger'
 import { validateProfileSlug } from './profile-service'
@@ -122,9 +122,15 @@ export async function getProfiles(): Promise<GospelProfile[]> {
   }
 }
 
+export type PublicResourceCategoryChild =
+  | { type: 'template'; slug: string; title: string }
+  | { type: 'spurgeonLibrary'; title: string }
+  | { type: 'morningEveningLibrary'; title: string }
+  | { type: 'calvinLibrary'; title: string }
+
 export type PublicResourceItem =
   | { type: 'template'; slug: string; title: string }
-  | { type: 'category'; id: string; name: string; templates: { slug: string; title: string }[] }
+  | { type: 'category'; id: string; name: string; children: PublicResourceCategoryChild[] }
   | { type: 'spurgeonLibrary'; title: string }
   | { type: 'morningEveningLibrary'; title: string }
   | { type: 'calvinLibrary'; title: string }
@@ -188,15 +194,32 @@ export async function getPublicResourcesStructure(): Promise<PublicResourceItem[
           title: item.title?.trim() || "Calvin's Commentaries",
         })
       } else {
-        const templates: { slug: string; title: string }[] = []
-        for (const slug of item.templateSlugs) {
-          const p = bySlug.get(slug)
-          if (p) {
-            templates.push({ slug: p.slug, title: p.title })
-            usedSlugs.add(p.slug)
+        const children: PublicResourceCategoryChild[] = []
+        for (const child of item.children) {
+          if (child.type === 'template') {
+            const p = bySlug.get(child.slug)
+            if (p) {
+              children.push({ type: 'template', slug: p.slug, title: p.title })
+              usedSlugs.add(p.slug)
+            }
+          } else if (child.type === 'spurgeonLibrary') {
+            children.push({
+              type: 'spurgeonLibrary',
+              title: child.title?.trim() || 'Spurgeon sermons',
+            })
+          } else if (child.type === 'morningEveningLibrary') {
+            children.push({
+              type: 'morningEveningLibrary',
+              title: morneveLibraryMenuTitle(child.title),
+            })
+          } else if (child.type === 'calvinLibrary') {
+            children.push({
+              type: 'calvinLibrary',
+              title: child.title?.trim() || "Calvin's Commentaries",
+            })
           }
         }
-        items.push({ type: 'category', id: item.id, name: item.name, templates })
+        items.push({ type: 'category', id: item.id, name: item.name, children })
       }
     }
 

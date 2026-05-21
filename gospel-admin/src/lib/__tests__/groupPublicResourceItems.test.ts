@@ -8,9 +8,9 @@ function tpl(slug: string, title: string): Extract<PublicResourceItem, { type: '
 function cat(
   id: string,
   name: string,
-  templates: { slug: string; title: string }[] = []
+  children: Extract<PublicResourceItem, { type: 'category' }>['children'] = []
 ): Extract<PublicResourceItem, { type: 'category' }> {
-  return { type: 'category', id, name, templates }
+  return { type: 'category', id, name, children }
 }
 
 describe('groupPublicResourceItems', () => {

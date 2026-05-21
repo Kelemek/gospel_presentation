@@ -102,7 +102,7 @@ describe('TableOfContents additional behaviors', () => {
                 type: 'category',
                 id: 'cat-1',
                 name: 'My Category',
-                templates: [{ slug: 'inner', title: 'Inner Template' }]
+                children: [{ type: 'template', slug: 'inner', title: 'Inner Template' }]
               }
             ]
           })
@@ -151,7 +151,7 @@ describe('TableOfContents additional behaviors', () => {
                 type: 'category',
                 id: 'cat-1',
                 name: 'My Category',
-                templates: [{ slug: 'inner', title: 'Inner Template' }]
+                children: [{ type: 'template', slug: 'inner', title: 'Inner Template' }]
               }
             ]
           })
