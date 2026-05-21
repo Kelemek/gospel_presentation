@@ -6,6 +6,7 @@ import {
   normalizeStepBibleWordFields,
   normalizeStrongsForLookup,
 } from '@/lib/step-bible-text'
+import { wordStudyLanguageLabelFromPassageKey } from '@/lib/step-bible-reference'
 import type { StepBibleLexiconResult, StepBibleWord, StepBibleWordStudyResult } from '@/lib/step-bible-types'
 
 interface ScriptureWordStudyPanelProps {
@@ -158,7 +159,9 @@ function ScriptureWordStudyPanelContent({
     void loadLexicon(key, detailLevel)
   }
 
-  const langLabel = study?.language === 'heb' ? 'Hebrew' : study?.language === 'grc' ? 'Greek' : 'Original'
+  const langLabel = study
+    ? wordStudyLanguageLabelFromPassageKey(study.language, study.passageKey)
+    : 'Original'
   const lexiconOpen = Boolean(expandedStrongs || selectedWord)
 
   const lexiconDetail = lexiconOpen ? (

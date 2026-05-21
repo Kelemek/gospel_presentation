@@ -24,7 +24,10 @@ import type { VerseBookmarkColorId, VersePinColorId } from '@/lib/versePinStorag
 import ScriptureModalPinPick from '@/components/ScriptureModalPinPick'
 import ScriptureModalToolbarMenu from '@/components/ScriptureModalToolbarMenu'
 import ScriptureWordStudyModal from '@/components/ScriptureWordStudyModal'
-import { wordStudyAvailableFromReference } from '@/lib/step-bible-reference'
+import {
+  wordStudyAvailableFromReference,
+  wordStudyLanguageLabelFromReference,
+} from '@/lib/step-bible-reference'
 import type { ScriptureModalPresentationLocation } from '@/lib/presentationLocationFromAnchors'
 
 export type { ScriptureModalPresentationLocation } from '@/lib/presentationLocationFromAnchors'
@@ -136,6 +139,11 @@ export default function ScriptureModal({
 
   const wordStudyAvailable = useMemo(
     () => wordStudyAvailableFromReference(reference),
+    [reference]
+  )
+
+  const wordStudyLanguageLabel = useMemo(
+    () => wordStudyLanguageLabelFromReference(reference),
     [reference]
   )
 
@@ -867,11 +875,13 @@ export default function ScriptureModal({
                     : !wordStudyAvailable
                       ? 'Word study requires a verse reference'
                       : wordStudyEnabled
-                        ? 'Close word study'
-                        : 'Open word study (STEP Bible)'
+                        ? `Close ${wordStudyLanguageLabel ?? 'word'} study`
+                        : `Open ${wordStudyLanguageLabel ?? 'word'} study (STEP Bible)`
                 }
                 aria-label={
-                  wordStudyEnabled ? 'Close word study' : 'Open word study'
+                  wordStudyEnabled
+                    ? `Close ${wordStudyLanguageLabel ?? 'word'} study`
+                    : `Open ${wordStudyLanguageLabel ?? 'word'} study`
                 }
                 aria-pressed={wordStudyEnabled}
                 className={`px-1.5 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 shrink-0 ${
@@ -882,7 +892,7 @@ export default function ScriptureModal({
                       : 'cursor-pointer text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600'
                 }`}
               >
-                Words
+                {wordStudyLanguageLabel ?? 'Words'}
               </button>
 
               {onOpenSpurgeonStudy && (

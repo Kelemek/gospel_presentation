@@ -1,8 +1,10 @@
 import {
+  isAramaicVerse,
   parseStepBibleWordLineRef,
   stepRefToUsfmPassageId,
   usfmPassageIdToStepRef,
   wordStudyAvailableFromReference,
+  wordStudyLanguageLabelFromReference,
   wordStudyTargetFromReference,
   wordStudyTargetsFromReference,
 } from '@/lib/step-bible-reference'
@@ -68,5 +70,22 @@ describe('step-bible-reference', () => {
 
   it('returns null for chapter-only reference', () => {
     expect(wordStudyTargetFromReference('Psalm 23')).toBeNull()
+  })
+
+  it('isAramaicVerse identifies biblical Aramaic passages', () => {
+    expect(isAramaicVerse('DAN', 2, 3)).toBe(false)
+    expect(isAramaicVerse('DAN', 2, 4)).toBe(true)
+    expect(isAramaicVerse('DAN', 7, 28)).toBe(true)
+    expect(isAramaicVerse('EZR', 4, 7)).toBe(false)
+    expect(isAramaicVerse('EZR', 4, 8)).toBe(true)
+    expect(isAramaicVerse('GEN', 1, 1)).toBe(false)
+    expect(isAramaicVerse('GEN', 31, 47)).toBe(true)
+  })
+
+  it('wordStudyLanguageLabelFromReference returns Greek, Hebrew, or Aramaic', () => {
+    expect(wordStudyLanguageLabelFromReference('2 Corinthians 13:14')).toBe('Greek')
+    expect(wordStudyLanguageLabelFromReference('Genesis 1:1')).toBe('Hebrew')
+    expect(wordStudyLanguageLabelFromReference('Daniel 2:4')).toBe('Aramaic')
+    expect(wordStudyLanguageLabelFromReference('Psalm 23')).toBeNull()
   })
 })

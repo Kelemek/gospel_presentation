@@ -190,6 +190,45 @@ export function wordStudyAvailableFromReference(reference: string): boolean {
   return wordStudyTargetsFromReference(reference).length > 0
 }
 
+/** Protestant canon OT passages in Biblical Aramaic (ESV verse numbering). */
+export function isAramaicVerse(usfm: string, chapter: number, verse: number): boolean {
+  const book = usfm.toUpperCase()
+  if (book === 'DAN') {
+    if (chapter >= 3 && chapter <= 7) return true
+    if (chapter === 2 && verse >= 4) return true
+    return false
+  }
+  if (book === 'EZR') {
+    if (chapter === 4 && verse >= 8) return true
+    if (chapter === 5) return true
+    if (chapter === 6 && verse <= 18) return true
+    if (chapter === 7 && verse >= 12 && verse <= 26) return true
+    return false
+  }
+  if (book === 'JER' && chapter === 10 && verse === 11) return true
+  if (book === 'GEN' && chapter === 31 && verse === 47) return true
+  return false
+}
+
+export type WordStudyLanguageLabel = 'Greek' | 'Hebrew' | 'Aramaic'
+
+export function wordStudyLanguageLabelFromPassageKey(
+  language: 'heb' | 'grc',
+  passageKey: string
+): WordStudyLanguageLabel {
+  if (language === 'grc') return 'Greek'
+  const m = passageKey.match(/^([A-Z0-9]{2,3})\.(\d+)\.(\d+)$/)
+  if (m && isAramaicVerse(m[1], parseInt(m[2], 10), parseInt(m[3], 10))) return 'Aramaic'
+  return 'Hebrew'
+}
+
+/** Toolbar label for the word-study toggle (from reference, before fetch). */
+export function wordStudyLanguageLabelFromReference(reference: string): WordStudyLanguageLabel | null {
+  const first = wordStudyTargetsFromReference(reference)[0]
+  if (!first) return null
+  return wordStudyLanguageLabelFromPassageKey(first.language, first.passageKey)
+}
+
 /** First verse target (compat). */
 export function wordStudyTargetFromReference(reference: string): WordStudyPassageTarget | null {
   return wordStudyTargetsFromReference(reference)[0] ?? null
