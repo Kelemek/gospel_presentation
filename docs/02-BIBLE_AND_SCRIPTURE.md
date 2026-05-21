@@ -82,7 +82,7 @@ On profile gospel pages, **ScriptureModal** includes a **Words** toolbar toggle 
 | `GET /api/scripture/word-study?reference=Romans%2012%3A2` | Hebrew (OT) or Greek (NT) tokens per verse: surface form, transliteration, Strong’s, brief gloss |
 | `GET /api/scripture/lexicon?strongs=G3339&detail=brief\|full` | TBESG / TBESH brief entries; Greek **full** uses TFLSJ where available |
 
-**Data on disk:** Imported JSON under `gospel-admin/data/stepbible/` (`words/{USFM}/{chapter}.json`, `lexicon/greek.json`, `lexicon/hebrew.json`). No Supabase tables. Run `npm run import-stepbible` from `gospel-admin/` after clone or when updating the STEPBible pin (see `scripts/import-stepbible-data.js`). Tests use `npm run import-stepbible:fixtures` for minimal samples.
+**Data on disk:** Imported JSON under `gospel-admin/data/stepbible/` (`words/{USFM}/{chapter}.json`, `lexicon/greek.json`, `lexicon/hebrew.json`). No Supabase tables; `words/` and `lexicon/` are **gitignored**. Local: `npm run import-stepbible` from `gospel-admin/`. **Vercel:** `npm run build` runs `scripts/ensure-stepbible-data.js` to import when missing (~15–20 min on a cold build); cache `data/stepbible` in the Vercel project so redeploys skip re-download. Tests use `npm run import-stepbible:fixtures`.
 
 **Scope:** Full Protestant canon (TAGNT + TAHOT). Verse ranges (same chapter, e.g. Romans 12:2–4) show word study for **each** verse in the range. Chapter context disables **Words**. In compare mode, **Words** still opens the same overlay above the reader (not tied to either translation column).
 

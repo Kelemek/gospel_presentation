@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/ensure-stepbible-data.js && next build",
     "start": "next start",
     "lint": "eslint",
     "knip": "knip",

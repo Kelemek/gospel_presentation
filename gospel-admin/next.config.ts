@@ -4,7 +4,13 @@ import { withSentryConfig } from "@sentry/nextjs";
 const nextConfig: NextConfig = {
   // Use standard build for Netlify (not static export)
   // This allows API routes to work as Netlify Functions
-  
+
+  // Word-study API routes read JSON via fs; include gitignored data/stepbible in the serverless trace.
+  outputFileTracingIncludes: {
+    "/api/scripture/word-study": ["./data/stepbible/**/*"],
+    "/api/scripture/lexicon": ["./data/stepbible/**/*"],
+  },
+
   // Disable image optimization for Netlify
   images: {
     unoptimized: true
