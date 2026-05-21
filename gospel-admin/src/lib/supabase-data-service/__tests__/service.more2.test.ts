@@ -100,7 +100,9 @@ describe('supabase-data-service load/getProfile edge cases', () => {
                   eq: () => ({
                     not: () => ({
                       not: () => ({
-                        not: async () => Promise.resolve({ data: rows, error: null }),
+                        not: () => ({
+                          not: async () => Promise.resolve({ data: rows, error: null }),
+                        }),
                       }),
                     }),
                   }),
@@ -142,15 +144,17 @@ describe('supabase-data-service load/getProfile edge cases', () => {
                   eq: () => ({
                     not: () => ({
                       not: () => ({
-                        not: async () => ({
-                          data: [
-                            {
-                              slug: 'default',
-                              title: 'Default',
-                              include_in_resources_menu: true,
-                            },
-                          ],
-                          error: null,
+                        not: () => ({
+                          not: async () => ({
+                            data: [
+                              {
+                                slug: 'default',
+                                title: 'Default',
+                                include_in_resources_menu: true,
+                              },
+                            ],
+                            error: null,
+                          }),
                         }),
                       }),
                     }),
@@ -212,7 +216,9 @@ describe('supabase-data-service load/getProfile edge cases', () => {
                   eq: () => ({
                     not: () => ({
                       not: () => ({
-                        not: async () => Promise.resolve({ data: null, error: { message: 'fail' } }),
+                        not: () => ({
+                          not: async () => Promise.resolve({ data: null, error: { message: 'fail' } }),
+                        }),
                       }),
                     }),
                   }),

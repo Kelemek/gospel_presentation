@@ -10,6 +10,9 @@ const BOOK_ALIAS_TO_USFM: Record<string, string> = {
   leviticus: 'LEV',
   numbers: 'NUM',
   deuteronomy: 'DEU',
+  deut: 'DEU',
+  deu: 'DEU',
+  dut: 'DEU',
   joshua: 'JOS',
   judges: 'JDG',
   ruth: 'RUT',
@@ -116,41 +119,51 @@ const ALL_USFM_BOOK_CODES = new Set(Object.values(BOOK_ALIAS_TO_USFM))
  * or if a USFM code starts with a compact alphanumeric query (e.g. {@code jhn}, {@code 1co}).
  * Single-digit-only queries are ignored as too ambiguous.
  */
+/** Collapse spaced letter-by-letter typing (e.g. {@code d u t}) for book-prefix matching. */
+function compactBookSearchQuery(query: string): string {
+  return query.replace(/\s+/g, '')
+}
+
 export function usfmBookPrefixesForSearchQuery(query: string): string[] {
   const raw = query.trim()
   if (!raw) return []
 
   const q = normalizeBookKey(raw)
-  if (!/^[a-z0-9\s]+$/i.test(q)) return []
-  if (q.length === 1 && /^\d$/.test(q)) return []
-
-  const exact = BOOK_ALIAS_TO_USFM[q]
-  if (exact) {
-    return [exact]
-  }
+  const qCompact = compactBookSearchQuery(q)
+  const variants = qCompact !== q && qCompact.length > 0 ? [q, qCompact] : [q]
 
   const codes = new Set<string>()
 
-  for (const [alias, usfm] of Object.entries(BOOK_ALIAS_TO_USFM)) {
-    const a = normalizeBookKey(alias)
-    if (a.startsWith(q)) {
-      codes.add(usfm)
+  for (const variant of variants) {
+    if (!/^[a-z0-9\s]+$/i.test(variant)) continue
+    if (variant.length === 1 && /^\d$/.test(variant)) continue
+
+    const exact = BOOK_ALIAS_TO_USFM[variant]
+    if (exact) {
+      codes.add(exact)
       continue
     }
-    for (const w of a.split(/\s+/)) {
-      if (w.length > 0 && w.startsWith(q)) {
+
+    for (const [alias, usfm] of Object.entries(BOOK_ALIAS_TO_USFM)) {
+      const a = normalizeBookKey(alias)
+      if (a.startsWith(variant)) {
         codes.add(usfm)
-        break
+        continue
+      }
+      for (const w of a.split(/\s+/)) {
+        if (w.length > 0 && w.startsWith(variant)) {
+          codes.add(usfm)
+          break
+        }
       }
     }
-  }
 
-  const compact = q.replace(/\s/g, '')
-  if (compact.length > 0 && /^[0-9a-z]+$/i.test(compact)) {
-    const cl = compact.toUpperCase()
-    for (const code of ALL_USFM_BOOK_CODES) {
-      if (code.toLowerCase().startsWith(cl.toLowerCase())) {
-        codes.add(code)
+    if (variant.length > 0 && /^[0-9a-z]+$/i.test(variant)) {
+      const cl = variant.toUpperCase()
+      for (const code of ALL_USFM_BOOK_CODES) {
+        if (code.toLowerCase().startsWith(cl.toLowerCase())) {
+          codes.add(code)
+        }
       }
     }
   }

@@ -51,4 +51,13 @@ describe('groupPublicResourceItems', () => {
       { kind: 'templates', items: [tpl('b', 'B')] },
     ])
   })
+
+  it('emits edwardsLibrary row', () => {
+    const items: PublicResourceItem[] = [
+      { type: 'edwardsLibrary', title: 'Jonathan Edwards sermons' },
+    ]
+    expect(groupPublicResourceItems(items)).toEqual([
+      { kind: 'edwardsLibrary', title: 'Jonathan Edwards sermons' },
+    ])
+  })
 })

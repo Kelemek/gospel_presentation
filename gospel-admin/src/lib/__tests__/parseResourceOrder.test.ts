@@ -44,4 +44,10 @@ describe('parseResourceOrder', () => {
       { type: 'calvinLibrary', title: "Calvin's Commentaries" },
     ])
   })
+
+  it('parses edwardsLibrary with default title', () => {
+    expect(parseResourceOrder([{ type: 'edwardsLibrary' }])).toEqual([
+      { type: 'edwardsLibrary', title: 'Jonathan Edwards sermons' },
+    ])
+  })
 })

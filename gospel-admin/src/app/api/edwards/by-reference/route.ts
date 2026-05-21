@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
-import { sortCalvinBooksByCanonOrder } from '@/lib/calvin/calvinSlug'
+import { sortEdwardsSermonsByDisplayTitleAZ } from '@/lib/edwards/edwardsSlug'
 import {
   profileIdsFromPassageIndexLookup,
   publicProfilesByIdsAndSlugPrefix,
 } from '@/lib/spurgeon/spurgeonPassageIndexLookup'
 
 /**
- * GET /api/calvin/by-reference?reference=John+3:16
- * Returns public Calvin commentary book profiles indexed on that passage (A–Z by title).
+ * GET /api/edwards/by-reference?reference=John+3:16
+ * Returns public Edwards sermon profiles indexed on that passage (A–Z by title).
  */
 export async function GET(request: NextRequest) {
   try {
@@ -19,13 +19,13 @@ export async function GET(request: NextRequest) {
     }
 
     const admin = createAdminClient()
-    const ids = await profileIdsFromPassageIndexLookup(admin, ref, { slugPrefix: 'cv' })
+    const ids = await profileIdsFromPassageIndexLookup(admin, ref, { slugPrefix: 'je' })
     if (ids.length === 0) {
       return NextResponse.json({ items: [] })
     }
 
-    const profiles = await publicProfilesByIdsAndSlugPrefix(admin, ids, 'cv')
-    const sorted = sortCalvinBooksByCanonOrder(profiles)
+    const profiles = await publicProfilesByIdsAndSlugPrefix(admin, ids, 'je')
+    const sorted = sortEdwardsSermonsByDisplayTitleAZ(profiles)
     const items = sorted.map((p) => ({
       slug: p.slug,
       title: p.title || p.slug,
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ items })
   } catch (e) {
-    logger.error('[API] GET /api/calvin/by-reference', e)
+    logger.error('[API] GET /api/edwards/by-reference', e)
     return NextResponse.json({ error: 'Lookup failed' }, { status: 500 })
   }
 }

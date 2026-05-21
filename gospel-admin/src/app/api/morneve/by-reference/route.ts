@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     const admin = createAdminClient()
-    const ids = await profileIdsFromPassageIndexLookup(admin, ref)
+    const ids = await profileIdsFromPassageIndexLookup(admin, ref, { slugPrefix: 'me' })
     const profiles = await publicProfilesByIdsAndSlugPrefix(admin, ids, 'me')
     const sorted = sortMorneveRowsByCalendar(profiles)
     const items = sorted.map((p) => ({

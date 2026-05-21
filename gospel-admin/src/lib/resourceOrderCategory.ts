@@ -3,12 +3,14 @@ import type {
   ResourceOrderItem,
   ResourceOrderItemCalvinLibrary,
   ResourceOrderItemCategory,
+  ResourceOrderItemEdwardsLibrary,
   ResourceOrderItemMorningEveningLibrary,
   ResourceOrderItemSpurgeonLibrary,
   ResourceOrderItemTemplate,
 } from '@/lib/types'
 import {
   isResourceOrderItemCalvinLibrary,
+  isResourceOrderItemEdwardsLibrary,
   isResourceOrderItemMorningEveningLibrary,
   isResourceOrderItemSpurgeonLibrary,
 } from '@/lib/types'
@@ -23,6 +25,7 @@ function normalizeOrderTemplateSlug(slug: string): string {
 export type {
   ResourceOrderCategoryChild,
   ResourceOrderItemCalvinLibrary,
+  ResourceOrderItemEdwardsLibrary,
   ResourceOrderItemMorningEveningLibrary,
   ResourceOrderItemSpurgeonLibrary,
   ResourceOrderItemTemplate,
@@ -33,11 +36,13 @@ export function isResourceOrderLibraryItem(
 ): item is
   | ResourceOrderItemSpurgeonLibrary
   | ResourceOrderItemMorningEveningLibrary
-  | ResourceOrderItemCalvinLibrary {
+  | ResourceOrderItemCalvinLibrary
+  | ResourceOrderItemEdwardsLibrary {
   return (
     isResourceOrderItemSpurgeonLibrary(item) ||
     isResourceOrderItemMorningEveningLibrary(item) ||
-    isResourceOrderItemCalvinLibrary(item)
+    isResourceOrderItemCalvinLibrary(item) ||
+    isResourceOrderItemEdwardsLibrary(item)
   )
 }
 
@@ -68,6 +73,14 @@ export function parseCategoryChild(el: unknown): ResourceOrderCategoryChild | nu
         ? rawTitle.trim()
         : "Calvin's Commentaries"
     return { type: 'calvinLibrary', title }
+  }
+  if (o.type === 'edwardsLibrary') {
+    const rawTitle = o.title
+    const title =
+      typeof rawTitle === 'string' && rawTitle.trim()
+        ? rawTitle.trim()
+        : 'Jonathan Edwards sermons'
+    return { type: 'edwardsLibrary', title }
   }
   return null
 }
@@ -119,6 +132,16 @@ export function orderContainsCalvinLibrary(items: ResourceOrderItem[]): boolean 
     if (isResourceOrderItemCalvinLibrary(item)) return true
     if (item.type === 'category') {
       return item.children.some((c) => c.type === 'calvinLibrary')
+    }
+    return false
+  })
+}
+
+export function orderContainsEdwardsLibrary(items: ResourceOrderItem[]): boolean {
+  return items.some((item) => {
+    if (isResourceOrderItemEdwardsLibrary(item)) return true
+    if (item.type === 'category') {
+      return item.children.some((c) => c.type === 'edwardsLibrary')
     }
     return false
   })
@@ -211,7 +234,7 @@ export function applyResourceOrderDrop(
     if (cat.type !== 'category') return items
     const child = cat.children[source.childIndex]
     if (!child) return items
-    let next = [...items]
+    const next = [...items]
     const newChildren = cat.children.filter((_, i) => i !== source.childIndex)
     next[catIdx] = { ...cat, children: newChildren }
     const insertAt = Math.min(target.index, next.length)
@@ -227,7 +250,7 @@ export function applyResourceOrderDrop(
     const child = fromCat.children[source.childIndex]
     if (!child) return items
 
-    let next = [...items]
+    const next = [...items]
     const fromChildren = fromCat.children.filter((_, i) => i !== source.childIndex)
     next[fromCatIdx] = { ...fromCat, children: fromChildren }
 
@@ -284,7 +307,7 @@ export function applyResourceOrderDrop(
       const cat = afterRemove[catIdx]
       if (cat.type !== 'category') return afterRemove
       const isSameCategory = source.categoryId === target.categoryId
-      let children = isSameCategory
+      const children = isSameCategory
         ? cat.children.filter((c) => !(c.type === 'template' && c.slug === slug))
         : [...cat.children]
       const insertAt =
@@ -349,6 +372,13 @@ export function parseResourceOrder(raw: unknown): ResourceOrderItem[] {
             ? rawTitle.trim()
             : "Calvin's Commentaries"
         out.push({ type: 'calvinLibrary', title })
+      } else if (o.type === 'edwardsLibrary') {
+        const rawTitle = o.title
+        const title =
+          typeof rawTitle === 'string' && rawTitle.trim()
+            ? rawTitle.trim()
+            : 'Jonathan Edwards sermons'
+        out.push({ type: 'edwardsLibrary', title })
       }
     }
   }

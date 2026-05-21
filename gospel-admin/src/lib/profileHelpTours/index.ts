@@ -845,7 +845,8 @@ function resourcesListOverviewCopy(items: PublicResourceItem[]): string {
       i.type === 'category' ||
       i.type === 'spurgeonLibrary' ||
       i.type === 'morningEveningLibrary' ||
-      i.type === 'calvinLibrary'
+      i.type === 'calvinLibrary' ||
+      i.type === 'edwardsLibrary'
   )
   if (items.length === 0) {
     return 'Nothing is listed yet. When your church adds shared profiles or categories in admin, they will appear here.'
@@ -853,7 +854,7 @@ function resourcesListOverviewCopy(items: PublicResourceItem[]): string {
   if (!hasFolderLike) {
     return 'The next steps highlight each group of top-level links and explain what those presentations are for—tap a link when you want to open one.'
   }
-  return 'The next steps highlight each section: groups of top-level links, library rows (Spurgeon sermons, Morning & Evening, Calvin commentaries) when present, and each category folder. Each step lists what is inside and what those resources are for. Folders expand automatically when highlighted—tap any link when you want to open a presentation.'
+  return 'The next steps highlight each section: groups of top-level links, library rows (Spurgeon sermons, Morning & Evening, Calvin commentaries, Edwards sermons) when present, and each category folder. Each step lists what is inside and what those resources are for. Folders expand automatically when highlighted—tap any link when you want to open a presentation.'
 }
 
 function resourceTemplatesBlockTitle(count: number): string {
@@ -3178,6 +3179,25 @@ async function runResourcesFeatureTourAsync(options?: ProfileFeatureTourOptions)
       continue
     }
 
+    if (g.kind === 'edwardsLibrary') {
+      const safeTitle = escapeForPopoverText(g.title.trim() || 'Jonathan Edwards sermons')
+      steps.push({
+        element: () =>
+          document.querySelector(
+            `${RESOURCES_LIST_PANEL} [data-resource-edwards-library]`
+          ) ?? document.querySelector(RESOURCES_LIST_PANEL)!,
+        popover: {
+          title: safeTitle,
+          description:
+            '<p>This row opens the <strong>Edwards sermon library</strong>: search by keyword or by Bible reference, then open a Select Sermons volume as a read-only presentation.</p><p class="mt-2">Tap it when you want to browse Jonathan Edwards’s published sermons.</p>',
+          side: 'right',
+          align: 'start',
+        },
+      })
+      continue
+    }
+
+    if (g.kind !== 'category') continue
     if (categoriesVisited >= MAX_RESOURCE_CATEGORY_STEPS) continue
     categoriesVisited++
 

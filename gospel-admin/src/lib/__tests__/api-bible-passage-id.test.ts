@@ -40,6 +40,13 @@ describe('api-bible-passage-id', () => {
       expect(usfmBookPrefixesForSearchQuery('1co').sort()).toEqual(['1CO'])
     })
 
+    it('maps Deuteronomy abbreviations and spaced letter typing', () => {
+      expect(usfmBookPrefixesForSearchQuery('deut').sort()).toEqual(['DEU'])
+      expect(usfmBookPrefixesForSearchQuery('dut').sort()).toEqual(['DEU'])
+      expect(usfmBookPrefixesForSearchQuery('d u t').sort()).toEqual(['DEU'])
+      expect(usfmBookPrefixesForSearchQuery('Deuteronomy').sort()).toEqual(['DEU'])
+    })
+
     it('returns multiple books when the prefix is ambiguous', () => {
       const j = usfmBookPrefixesForSearchQuery('j')
       expect(j).toContain('JHN')

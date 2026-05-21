@@ -143,11 +143,18 @@ export interface ResourceOrderItemTemplate {
   slug: string
 }
 
+/** Opens the Edwards Select Sermons library modal (not a profile slug). */
+export interface ResourceOrderItemEdwardsLibrary {
+  type: 'edwardsLibrary'
+  title: string
+}
+
 export type ResourceOrderCategoryChild =
   | ResourceOrderItemTemplate
   | ResourceOrderItemSpurgeonLibrary
   | ResourceOrderItemMorningEveningLibrary
   | ResourceOrderItemCalvinLibrary
+  | ResourceOrderItemEdwardsLibrary
 
 export interface ResourceOrderItemCategory {
   type: 'category'
@@ -181,6 +188,7 @@ export type ResourceOrderItem =
   | ResourceOrderItemSpurgeonLibrary
   | ResourceOrderItemMorningEveningLibrary
   | ResourceOrderItemCalvinLibrary
+  | ResourceOrderItemEdwardsLibrary
 
 export function isResourceOrderItemCategory(
   item: ResourceOrderItem
@@ -210,6 +218,12 @@ export function isResourceOrderItemCalvinLibrary(
   item: ResourceOrderItem
 ): item is ResourceOrderItemCalvinLibrary {
   return item.type === 'calvinLibrary'
+}
+
+export function isResourceOrderItemEdwardsLibrary(
+  item: ResourceOrderItem
+): item is ResourceOrderItemEdwardsLibrary {
+  return item.type === 'edwardsLibrary'
 }
 
 export { parseResourceOrder } from '@/lib/resourceOrderCategory'

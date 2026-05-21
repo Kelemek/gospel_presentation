@@ -298,6 +298,7 @@ export default function MemorizationPracticeSession({
         const payload = data as {
           items?: unknown
           sermonCount?: number
+          edwardsCount?: number
           morneveCount?: number
           calvinCount?: number
         }
@@ -307,9 +308,12 @@ export default function MemorizationPracticeSession({
             : Array.isArray(payload.items)
               ? payload.items.length
               : 0
+        const edwardsCount = typeof payload.edwardsCount === 'number' ? payload.edwardsCount : 0
         const morneveCount = typeof payload.morneveCount === 'number' ? payload.morneveCount : 0
         const calvinCount = typeof payload.calvinCount === 'number' ? payload.calvinCount : 0
-        setSpurgeonStudyMatch(sermonCount + morneveCount + calvinCount > 0 ? 'yes' : 'no')
+        setSpurgeonStudyMatch(
+          sermonCount + edwardsCount + morneveCount + calvinCount > 0 ? 'yes' : 'no'
+        )
       })
       .catch(() => {
         if (!cancelled) setSpurgeonStudyMatch('no')

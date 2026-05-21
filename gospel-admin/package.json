@@ -29,7 +29,8 @@
     "backfill-spurgeon-passage-index": "tsx scripts/backfill-spurgeon-passage-index-from-profiles.ts",
     "import-morneve": "tsx scripts/import-morneve-ccel.ts",
     "import-calvin": "tsx scripts/import-calvin-ccel.ts",
-    "import-luther-galatians": "tsx scripts/import-luther-galatians-ccel.ts"
+    "import-luther-galatians": "tsx scripts/import-luther-galatians-ccel.ts",
+    "import-edwards": "tsx scripts/import-edwards-ccel.ts"
   },
   "dependencies": {
     "@capacitor/android": "8.1.0",

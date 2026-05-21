@@ -1072,6 +1072,12 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                   setStudyLibraryFocus('calvin')
                   setIsSpurgeonLibraryOpen(true)
                 }}
+                onOpenEdwardsLibrary={(menuTitle) => {
+                  setSpurgeonStudyReference(null)
+                  setStudyModalTitle(menuTitle ?? STUDY_MODAL_DEFAULT_TITLE)
+                  setStudyLibraryFocus('edwards')
+                  setIsSpurgeonLibraryOpen(true)
+                }}
               />
               
               {/* Profile Info in Sidebar */}

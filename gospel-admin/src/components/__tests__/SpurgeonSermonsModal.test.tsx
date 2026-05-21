@@ -88,6 +88,45 @@ describe('SpurgeonSermonsModal', () => {
     expect(container.firstChild).toBeNull()
   })
 
+  it('does not keep stale Spurgeon pagination after close and reopen with no results', async () => {
+    let spurgeonSearchCalls = 0
+    mockFetch.mockImplementation((input: string | URL | Request) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
+      if (url.includes('/api/spurgeon/sermons')) {
+        spurgeonSearchCalls += 1
+        if (spurgeonSearchCalls === 1) {
+          return Promise.resolve({
+            ok: true,
+            json: () =>
+              Promise.resolve({
+                items: [{ slug: 'sg00001', title: 'Sermon 1. Grace' }],
+                total: 250,
+                page: 1,
+                pageSize: 100,
+              }),
+          } as Response)
+        }
+        return Promise.resolve(emptyPagedResponse())
+      }
+      return Promise.resolve(emptyPagedResponse())
+    })
+
+    const { rerender } = render(
+      <SpurgeonSermonsModal isOpen onClose={jest.fn()} libraryFocus="spurgeon" />
+    )
+
+    expect(await screen.findByLabelText(/Study search pagination/i)).toHaveTextContent('of 250')
+
+    rerender(<SpurgeonSermonsModal isOpen={false} onClose={jest.fn()} libraryFocus="spurgeon" />)
+    rerender(<SpurgeonSermonsModal isOpen onClose={jest.fn()} libraryFocus="spurgeon" />)
+
+    await waitFor(() => {
+      expect(spurgeonSearchCalls).toBeGreaterThanOrEqual(2)
+    })
+    expect(screen.queryByLabelText(/Study search pagination/i)).not.toBeInTheDocument()
+    expect(await screen.findByText(/No matching public sermons/i)).toBeInTheDocument()
+  })
+
   it('loads sermons when opened on search tab', async () => {
     render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} />)
 
@@ -203,6 +242,195 @@ describe('SpurgeonSermonsModal', () => {
       'href',
       '/cvrom?studyRef=Romans%208%3A28'
     )
+  })
+
+  it('paginates Edwards-only search when total exceeds page size', async () => {
+    const user = userEvent.setup()
+
+    mockFetch.mockImplementation((input: string | URL | Request) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
+      const page = Number(new URL(url, 'http://localhost').searchParams.get('page') || '1')
+
+      if (url.includes('/api/edwards/sermons')) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              items:
+                page === 1
+                  ? [{ slug: 'je01', title: 'Sinners in the Hands of an Angry God' }]
+                  : [{ slug: 'je02', title: 'A Divine and Supernatural Light' }],
+              total: 150,
+              page,
+              pageSize: 100,
+            }),
+        } as Response)
+      }
+      return Promise.resolve(emptyPagedResponse())
+    })
+
+    render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} libraryFocus="edwards" />)
+
+    const footer = await screen.findByLabelText(/Study search pagination/i)
+    expect(footer).toHaveTextContent('Edwards 1–100 of 150')
+    expect(footer).toHaveTextContent('Page 1 of 2')
+    expect(screen.getByRole('button', { name: /^Next$/i })).not.toBeDisabled()
+
+    await user.click(screen.getByRole('button', { name: /^Next$/i }))
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Study search pagination/i)).toHaveTextContent('Edwards 101–150 of 150')
+    })
+    expect(screen.getByLabelText(/Study search pagination/i)).toHaveTextContent('Page 2 of 2')
+    expect(screen.getByRole('button', { name: /^Next$/i })).toBeDisabled()
+  })
+
+  it('search empty message for libraryFocus all mentions Edwards sermons', async () => {
+    mockFetch.mockImplementation(() => Promise.resolve(emptyPagedResponse()))
+
+    render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} libraryFocus="all" />)
+
+    expect(
+      await screen.findByText(
+        /No matching public sermons, Edwards sermons, or Calvin commentary books/i
+      )
+    ).toBeInTheDocument()
+  })
+
+  it('scripture empty message for libraryFocus all uses generic study resources copy', async () => {
+    const user = userEvent.setup()
+    mockFetch.mockImplementation(mockByReferenceFetch([], [], []))
+
+    render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} libraryFocus="all" />)
+
+    await user.click(screen.getByRole('button', { name: /By scripture/i }))
+    await user.type(screen.getByLabelText(/Scripture reference/i), 'Romans 8:28')
+
+    expect(
+      await screen.findByText(/No indexed study resources for that reference/i)
+    ).toBeInTheDocument()
+  })
+
+  it('does not show scripture empty message before debounced lookup finishes', async () => {
+    const user = userEvent.setup()
+    mockFetch.mockImplementation(mockByReferenceFetch([{ slug: 'sg00001', title: 'Sermon' }]))
+
+    render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} libraryFocus="spurgeon" />)
+
+    await user.click(screen.getByRole('button', { name: /By scripture/i }))
+    await user.type(screen.getByLabelText(/Scripture reference/i), 'John 3:16')
+
+    expect(screen.queryByText(/No indexed sermons or Morning & Evening/i)).not.toBeInTheDocument()
+
+    expect(await screen.findByRole('link', { name: /Sermon/i })).toBeInTheDocument()
+  })
+
+  it('opens Edwards library on Search tab with sermon list', async () => {
+    mockFetch.mockImplementation((input: string | URL | Request) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
+      if (url.includes('/api/edwards/sermons')) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              items: [{ slug: 'je01', title: 'Sinners in the Hands of an Angry God' }],
+              total: 1,
+              page: 1,
+              pageSize: 100,
+            }),
+        } as Response)
+      }
+      return Promise.resolve(emptyPagedResponse())
+    })
+
+    render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} libraryFocus="edwards" />)
+
+    expect(await screen.findByRole('link', { name: /Sinners in the Hands of an Angry God/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Search$/i })).toHaveClass('border-blue-600')
+  })
+
+  it('loads Edwards by-reference hits after debounce', async () => {
+    const user = userEvent.setup()
+    mockFetch.mockImplementation((input: string | URL | Request) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
+      if (url.includes('/api/edwards/by-reference')) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              items: [{ slug: 'je01', title: 'Sinners in the Hands of an Angry God' }],
+            }),
+        } as Response)
+      }
+      return Promise.resolve(emptyPagedResponse())
+    })
+
+    render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} libraryFocus="edwards" />)
+
+    await user.click(screen.getByRole('button', { name: /By scripture/i }))
+    await user.type(screen.getByLabelText(/Scripture reference/i), 'Deuteronomy 32:35')
+
+    expect(
+      await screen.findByRole('link', { name: /Sinners in the Hands of an Angry God/i })
+    ).toHaveAttribute('href', '/je01?studyRef=Deuteronomy%2032%3A35')
+  })
+
+  it('shows Edwards API error on search when libraryFocus is edwards and sermons request fails', async () => {
+    mockFetch.mockImplementation((input: string | URL | Request) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
+      if (url.includes('/api/edwards/sermons')) {
+        return Promise.resolve({
+          ok: false,
+          json: () => Promise.resolve({ error: 'Edwards catalog unavailable' }),
+        } as Response)
+      }
+      return Promise.resolve(emptyPagedResponse())
+    })
+
+    render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} libraryFocus="edwards" />)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Edwards catalog unavailable')
+  })
+
+  it('shows Edwards API error on By scripture when Edwards by-reference fails', async () => {
+    const user = userEvent.setup()
+    mockFetch.mockImplementation((input: string | URL | Request) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
+      if (url.includes('/api/edwards/by-reference')) {
+        return Promise.resolve({
+          ok: false,
+          json: () => Promise.resolve({ error: 'Edwards index offline' }),
+        } as Response)
+      }
+      return Promise.resolve(emptyPagedResponse())
+    })
+
+    render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} libraryFocus="edwards" />)
+
+    await user.click(screen.getByRole('button', { name: /By scripture/i }))
+    await user.type(screen.getByLabelText(/Scripture reference/i), 'Romans 8:28')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Edwards index offline')
+  })
+
+  it('prefers Edwards error over generic fallback when all enabled search APIs fail', async () => {
+    mockFetch.mockImplementation((input: string | URL | Request) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
+      if (url.includes('/api/edwards/sermons')) {
+        return Promise.resolve({
+          ok: false,
+          json: () => Promise.resolve({ error: 'Edwards search failed' }),
+        } as Response)
+      }
+      return Promise.resolve({
+        ok: false,
+        json: () => Promise.resolve({}),
+      } as Response)
+    })
+
+    render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} libraryFocus="all" />)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Edwards search failed')
   })
 
   it('with libraryFocus calvin only fetches Calvin books on search, not sermons', async () => {

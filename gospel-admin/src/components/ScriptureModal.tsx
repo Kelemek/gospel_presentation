@@ -307,15 +307,17 @@ export default function ScriptureModal({
         const payload = data as {
           items?: unknown
           sermonCount?: number
+          edwardsCount?: number
           morneveCount?: number
           calvinCount?: number
         }
         const items = payload.items
         const list = Array.isArray(items) ? items : []
         const sermonCount = typeof payload.sermonCount === 'number' ? payload.sermonCount : list.length
+        const edwardsCount = typeof payload.edwardsCount === 'number' ? payload.edwardsCount : 0
         const morneveCount = typeof payload.morneveCount === 'number' ? payload.morneveCount : 0
         const calvinCount = typeof payload.calvinCount === 'number' ? payload.calvinCount : 0
-        const anyStudy = sermonCount + morneveCount + calvinCount > 0
+        const anyStudy = sermonCount + edwardsCount + morneveCount + calvinCount > 0
         setSpurgeonStudyResolved({
           ref,
           match: anyStudy ? 'yes' : 'no',

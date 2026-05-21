@@ -5,10 +5,11 @@ import {
 } from '@/lib/resourcesMenuPickableTemplates'
 
 describe('resourcesMenuPickableTemplates', () => {
-  it('treats sermon, morneve, and calvin slugs as corpus', () => {
+  it('treats sermon, morneve, calvin, and edwards slugs as corpus', () => {
     expect(isCcelCorpusProfileSlug('sg00042')).toBe(true)
     expect(isCcelCorpusProfileSlug('me0315')).toBe(true)
     expect(isCcelCorpusProfileSlug('cvrom')).toBe(true)
+    expect(isCcelCorpusProfileSlug('je01')).toBe(true)
   })
 
   it('allows lgal and ordinary templates in the picker', () => {

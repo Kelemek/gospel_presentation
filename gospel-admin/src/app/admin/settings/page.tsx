@@ -11,6 +11,7 @@ import {
   isResourceOrderItemMorningEveningLibrary,
   isResourceOrderItemSpurgeonLibrary,
   isResourceOrderItemCalvinLibrary,
+  isResourceOrderItemEdwardsLibrary,
 } from "@/lib/types";
 import {
   isResourcesMenuPickableTemplateSlug,
@@ -23,6 +24,7 @@ import {
   emptyCategory,
   isResourceOrderLibraryItem,
   orderContainsCalvinLibrary,
+  orderContainsEdwardsLibrary,
   orderContainsMorningEveningLibrary,
   orderContainsSpurgeonLibrary,
   type ResourceOrderDragSource,
@@ -126,6 +128,7 @@ export default function AdminSettingsPage() {
         .not("slug", "ilike", "sg%")
         .not("slug", "ilike", "me%")
         .not("slug", "ilike", "cv%")
+        .not("slug", "ilike", "je%")
         .order("title", { ascending: true });
 
       if (templatesError) {
@@ -270,6 +273,7 @@ export default function AdminSettingsPage() {
   const hasSpurgeonLibraryRow = orderContainsSpurgeonLibrary(orderItems);
   const hasMorningEveningLibraryRow = orderContainsMorningEveningLibrary(orderItems);
   const hasCalvinLibraryRow = orderContainsCalvinLibrary(orderItems);
+  const hasEdwardsLibraryRow = orderContainsEdwardsLibrary(orderItems);
 
   const addSpurgeonLibraryRow = () => {
     if (hasSpurgeonLibraryRow) return;
@@ -312,6 +316,20 @@ export default function AdminSettingsPage() {
       )
     );
   };
+
+  const addEdwardsLibraryRow = () => {
+    if (hasEdwardsLibraryRow) return;
+    setOrderItems((prev) => [...prev, { type: "edwardsLibrary", title: "Jonathan Edwards sermons" }]);
+  };
+
+  const updateEdwardsLibraryTitle = (index: number, title: string) => {
+    setOrderItems((prev) =>
+      prev.map((item, i) =>
+        i === index && isResourceOrderItemEdwardsLibrary(item) ? { ...item, title } : item
+      )
+    );
+  };
+
   const handleDragStartCategoryTemplate = (e: React.DragEvent, categoryId: string, slug: string, indexInCategory: number) => {
     e.stopPropagation();
     setDragSource({ kind: "template", slug, categoryId, indexInCategory });
@@ -714,6 +732,19 @@ export default function AdminSettingsPage() {
                     >
                       Add Calvin library
                     </button>
+                    <button
+                      type="button"
+                      onClick={addEdwardsLibraryRow}
+                      disabled={hasEdwardsLibraryRow}
+                      title={
+                        hasEdwardsLibraryRow
+                          ? "Edwards library row is already in the list"
+                          : "Add a Resources row that opens the Edwards Select Sermons finder"
+                      }
+                      className="px-3 py-1.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Add Edwards library
+                    </button>
                     <select
                       value=""
                       disabled={availableTemplates.length === 0}
@@ -838,6 +869,40 @@ export default function AdminSettingsPage() {
                               onClick={() => removeTopLevelTemplate(index)}
                               className="text-slate-400 hover:text-red-600 text-xs px-1 ml-auto"
                               aria-label="Remove Morning and Evening library row"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ) : isResourceOrderItemEdwardsLibrary(item) ? (
+                          <div
+                            key={`edwards-${index}`}
+                            draggable
+                            onDragStart={() => handleDragStartTopLevel(index)}
+                            onDragEnd={handleDragEnd}
+                            onDragOver={(e) => handleDragOverTopLevel(e, index)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDropTopLevel(e, index)}
+                            className={`flex flex-wrap items-center gap-2 px-4 py-3 text-sm text-slate-700 border-b border-slate-100 last:border-b-0 transition-colors cursor-grab active:cursor-grabbing ${dropTarget?.kind === "top-level" && dropTarget.index === index ? "bg-blue-100 ring-1 ring-blue-300" : "hover:bg-slate-50"}`}
+                          >
+                            <span className="shrink-0" aria-hidden>
+                              <GripIcon />
+                            </span>
+                            <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-sky-700">
+                              Edwards library
+                            </span>
+                            <input
+                              type="text"
+                              value={item.title}
+                              onChange={(e) => updateEdwardsLibraryTitle(index, e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex-1 min-w-32 px-2 py-1 border border-slate-300 rounded text-slate-900 text-sm"
+                              aria-label="Label shown in Resources menu"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeTopLevelTemplate(index)}
+                              className="text-slate-400 hover:text-red-600 text-xs px-1 ml-auto"
+                              aria-label="Remove Edwards library row"
                             >
                               Remove
                             </button>
@@ -974,14 +1039,18 @@ export default function AdminSettingsPage() {
                                           ? "text-violet-700"
                                           : child.type === "morningEveningLibrary"
                                             ? "text-amber-700"
-                                            : "text-emerald-700"
+                                            : child.type === "edwardsLibrary"
+                                              ? "text-sky-700"
+                                              : "text-emerald-700"
                                       }`}
                                     >
                                       {child.type === "spurgeonLibrary"
                                         ? "Spurgeon library"
                                         : child.type === "morningEveningLibrary"
                                           ? "Morning & Evening"
-                                          : "Calvin library"}
+                                          : child.type === "edwardsLibrary"
+                                            ? "Edwards library"
+                                            : "Calvin library"}
                                     </span>
                                     <input
                                       type="text"
