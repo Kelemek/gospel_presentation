@@ -3,7 +3,21 @@ import {
   emptyCategory,
   orderContainsSpurgeonLibrary,
   parseResourceOrder,
+  templateSlugsInResourceOrder,
 } from '@/lib/resourceOrderCategory'
+
+describe('templateSlugsInResourceOrder', () => {
+  it('collects top-level and category template slugs', () => {
+    expect(
+      templateSlugsInResourceOrder(
+        parseResourceOrder([
+          { type: 'template', slug: 'default' },
+          { type: 'category', id: 'c1', name: 'Study', templateSlugs: ['lgal'] },
+        ])
+      )
+    ).toEqual(['default', 'lgal'])
+  })
+})
 
 describe('parseResourceOrder category children', () => {
   it('migrates legacy templateSlugs to children', () => {

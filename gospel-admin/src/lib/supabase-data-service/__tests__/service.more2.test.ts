@@ -97,9 +97,15 @@ describe('supabase-data-service load/getProfile edge cases', () => {
             return {
               select: () => ({
                 eq: () => ({
-                  eq: () => Promise.resolve({ data: rows, error: null })
-                })
-              })
+                  eq: () => ({
+                    not: () => ({
+                      not: () => ({
+                        not: async () => Promise.resolve({ data: rows, error: null }),
+                      }),
+                    }),
+                  }),
+                }),
+              }),
             }
           }
           if (table === 'admin_settings') {
@@ -125,6 +131,76 @@ describe('supabase-data-service load/getProfile edge cases', () => {
     expect(res[1]).toEqual({ type: 'template', slug: 't2', title: 'Template Two' })
   })
 
+  it('getPublicResourcesStructure includes ordered lgal when bulk query omits it', async () => {
+    jest.doMock('@/lib/supabase/server', () => ({
+      createClient: jest.fn().mockResolvedValue({
+        from: (table: string) => {
+          if (table === 'profiles') {
+            return {
+              select: () => ({
+                eq: () => ({
+                  eq: () => ({
+                    not: () => ({
+                      not: () => ({
+                        not: async () => ({
+                          data: [
+                            {
+                              slug: 'default',
+                              title: 'Default',
+                              include_in_resources_menu: true,
+                            },
+                          ],
+                          error: null,
+                        }),
+                      }),
+                    }),
+                    in: async () => ({
+                      data: [
+                        {
+                          slug: 'lgal',
+                          title: 'Commentary on Galatians (Martin Luther)',
+                          include_in_resources_menu: true,
+                        },
+                      ],
+                      error: null,
+                    }),
+                  }),
+                }),
+              }),
+            }
+          }
+          if (table === 'admin_settings') {
+            return {
+              select: () => ({
+                eq: () => ({
+                  single: () =>
+                    Promise.resolve({
+                      data: {
+                        public_template_order: [
+                          { type: 'template', slug: 'default' },
+                          { type: 'template', slug: 'lgal' },
+                        ],
+                      },
+                      error: null,
+                    }),
+                }),
+              }),
+            }
+          }
+          return {}
+        },
+      }),
+      createAdminClient: jest.fn().mockReturnValue({}),
+    }))
+
+    const mod = await import('@/lib/supabase-data-service')
+    const res = await mod.getPublicResourcesStructure()
+    expect(res.map((i) => (i.type === 'template' ? i.slug : null)).filter(Boolean)).toEqual([
+      'default',
+      'lgal',
+    ])
+  })
+
   it('getPublicResourcesStructure returns empty array when profiles error', async () => {
     jest.doMock('@/lib/supabase/server', () => ({
       createClient: jest.fn().mockResolvedValue({
@@ -133,9 +209,15 @@ describe('supabase-data-service load/getProfile edge cases', () => {
             return {
               select: () => ({
                 eq: () => ({
-                  eq: () => Promise.resolve({ data: null, error: { message: 'fail' } })
-                })
-              })
+                  eq: () => ({
+                    not: () => ({
+                      not: () => ({
+                        not: async () => Promise.resolve({ data: null, error: { message: 'fail' } }),
+                      }),
+                    }),
+                  }),
+                }),
+              }),
             }
           }
           if (table === 'admin_settings') {

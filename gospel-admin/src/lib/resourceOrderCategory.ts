@@ -301,6 +301,20 @@ export function applyResourceOrderDrop(
   return items
 }
 
+/** Template slugs referenced in saved Resources menu order (top-level and inside categories). */
+export function templateSlugsInResourceOrder(order: ResourceOrderItem[]): string[] {
+  const slugs: string[] = []
+  for (const item of order) {
+    if (item.type === 'template') slugs.push(item.slug)
+    else if (item.type === 'category') {
+      for (const child of item.children) {
+        if (child.type === 'template') slugs.push(child.slug)
+      }
+    }
+  }
+  return slugs
+}
+
 export function parseResourceOrder(raw: unknown): ResourceOrderItem[] {
   if (!Array.isArray(raw)) return []
   const out: ResourceOrderItem[] = []

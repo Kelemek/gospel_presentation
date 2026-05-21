@@ -4,7 +4,8 @@
 // Note: Type checking disabled due to Supabase client type inference issues
 import { createClient, createAdminClient } from './supabase/server'
 import type { GospelProfile, CreateProfileRequest, GospelPresentationData } from './types'
-import { parseResourceOrder } from './resourceOrderCategory'
+import { parseResourceOrder, templateSlugsInResourceOrder } from './resourceOrderCategory'
+import { isResourcesMenuPickableTemplateSlug } from './resourcesMenuPickableTemplates'
 import { morneveLibraryMenuTitle } from './spurgeon/morneveSlug'
 import { logger } from './logger'
 import { validateProfileSlug } from './profile-service'
@@ -149,7 +150,10 @@ export async function getPublicResourcesStructure(): Promise<PublicResourceItem[
         .from('profiles')
         .select('slug, title, include_in_resources_menu')
         .eq('is_template', true)
-        .eq('is_public', true),
+        .eq('is_public', true)
+        .not('slug', 'ilike', 'sg%')
+        .not('slug', 'ilike', 'me%')
+        .not('slug', 'ilike', 'cv%'),
       supabase
         .from('admin_settings')
         .select('public_template_order')
@@ -162,12 +166,41 @@ export async function getPublicResourcesStructure(): Promise<PublicResourceItem[
       return []
     }
 
-    const bySlug = new Map(
-      (profilesResult.data || [])
-        .filter((row: any) => row.include_in_resources_menu !== false)
-        .map((row: any) => [row.slug, { slug: row.slug, title: row.title || row.slug }])
-    )
     const order = parseResourceOrder(orderResult.data?.public_template_order)
+    const bySlug = new Map<string, { slug: string; title: string }>()
+
+    const addMenuProfileRow = (row: { slug: string; title: string | null; include_in_resources_menu?: boolean }) => {
+      if (row.include_in_resources_menu === false) return
+      if (!isResourcesMenuPickableTemplateSlug(row.slug)) return
+      bySlug.set(row.slug, { slug: row.slug, title: row.title || row.slug })
+    }
+
+    for (const row of profilesResult.data || []) {
+      addMenuProfileRow(row)
+    }
+
+    const orderSlugs = [...new Set(templateSlugsInResourceOrder(order))]
+    const missingOrderSlugs = orderSlugs.filter((slug) => !bySlug.has(slug))
+    if (missingOrderSlugs.length > 0) {
+      const { data: orderProfileRows, error: orderProfilesError } = await supabase
+        .from('profiles')
+        .select('slug, title, include_in_resources_menu')
+        .eq('is_template', true)
+        .eq('is_public', true)
+        .in('slug', missingOrderSlugs)
+
+      if (orderProfilesError) {
+        logger.error(
+          '[supabase-data-service] Error loading ordered template profiles:',
+          orderProfilesError
+        )
+      } else {
+        for (const row of orderProfileRows || []) {
+          if (row.include_in_resources_menu === false) continue
+          bySlug.set(row.slug, { slug: row.slug, title: row.title || row.slug })
+        }
+      }
+    }
     const usedSlugs = new Set<string>()
     const items: PublicResourceItem[] = []
 
