@@ -32,6 +32,18 @@ describe('step-bible-reference', () => {
     })
   })
 
+  it('parses bracket alternate verse (STEP vs ESV numbering)', () => {
+    const row = parseStepBibleWordLineRef('2Co.13.13[13.14]#01=NKO\tἩ (Hē)')
+    expect(row).toEqual({
+      stepBook: '2Co',
+      chapter: 13,
+      verse: 14,
+      usfm: '2CO',
+      stepRef: '2Co.13.14',
+      passageKey: '2CO.13.14',
+    })
+  })
+
   it('wordStudyTargetsFromReference expands verse ranges', () => {
     const targets = wordStudyTargetsFromReference('John 3:16-18')
     expect(targets).toHaveLength(3)

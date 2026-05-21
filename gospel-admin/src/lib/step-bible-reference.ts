@@ -75,8 +75,8 @@ const STEP_TO_USFM: Record<string, string> = Object.fromEntries(
   Object.entries(USFM_TO_STEP_BOOK).map(([usfm, step]) => [step, usfm])
 )
 
-/** Data row prefix: Rom.12.2#01=NKO or Gen.1.1#01=L */
-const STEP_WORD_LINE_RE = /^([1-3]?[A-Za-z]{2,4})\.(\d+)\.(\d+)#\d+=/
+/** Data row prefix: Rom.12.2#01=NKO; 2Co.13.13[13.14]#01=NKO uses bracket for English verse. */
+const STEP_WORD_LINE_RE = /^([1-3]?[A-Za-z]{2,4})\.(\d+)\.(\d+)(?:\[(\d+)\.(\d+)\])?#\d+=/
 
 export function usfmBookToStepBook(usfm: string): string | null {
   return USFM_TO_STEP_BOOK[usfm.toUpperCase()] ?? null
@@ -123,8 +123,12 @@ export function parseStepBibleWordLineRef(line: string): {
   const m = line.trim().match(STEP_WORD_LINE_RE)
   if (!m) return null
   const stepBook = m[1]
-  const chapter = parseInt(m[2], 10)
-  const verse = parseInt(m[3], 10)
+  let chapter = parseInt(m[2], 10)
+  let verse = parseInt(m[3], 10)
+  if (m[4] !== undefined && m[5] !== undefined) {
+    chapter = parseInt(m[4], 10)
+    verse = parseInt(m[5], 10)
+  }
   const usfm = stepBookToUsfmBook(stepBook)
   if (!usfm) return null
   const passageKey = `${usfm}.${chapter}.${verse}`

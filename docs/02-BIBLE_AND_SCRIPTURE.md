@@ -86,6 +86,8 @@ On profile gospel pages, **ScriptureModal** includes a **Words** toolbar toggle 
 
 **Scope:** Full Protestant canon (TAGNT + TAHOT). Verse ranges (same chapter, e.g. Romans 12:2–4) show word study for **each** verse in the range. Chapter context disables **Words**. In compare mode, **Words** still opens the same overlay above the reader (not tied to either translation column).
 
+**Verse numbering:** STEPBible sometimes tags rows with an alternate English verse in brackets (e.g. `2Co.13.13[13.14]` → stored as **2 Corinthians 13:14**). The import script maps those to ESV/modern verse numbers. After an import fix, set Vercel env `FORCE_STEPBIBLE_REIMPORT=1` once (or clear the `data/stepbible` build cache) and redeploy so production JSON is regenerated.
+
 **Attribution:** Credit [STEP Bible](https://www.stepbible.org/) (Tyndale House, Cambridge), CC BY 4.0—see `/copyright`.
 
 **Android (Capacitor):** The word-study card uses the same bottom inset floors as help-tour popovers (`72px` narrow web Android, `96px` native Capacitor Android via `body.capacitor-android` in `globals.css`) so it stays above the system navigation bar when `env(safe-area-inset-bottom)` is zero.

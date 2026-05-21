@@ -26,6 +26,11 @@ function main() {
     process.exit(0)
   }
 
+  if (process.env.FORCE_STEPBIBLE_REIMPORT === '1' && fs.existsSync(WORDS_DIR)) {
+    console.log('FORCE_STEPBIBLE_REIMPORT=1 — removing existing data/stepbible/words')
+    fs.rmSync(WORDS_DIR, { recursive: true, force: true })
+  }
+
   if (stepBibleDataReady()) {
     console.log('STEPBible data already present under data/stepbible/words — skipping import')
     process.exit(0)

@@ -50,7 +50,8 @@ const NT_USFM = new Set([
   '1TH', '2TH', '1TI', '2TI', 'TIT', 'PHM', 'HEB', 'JAS', '1PE', '2PE', '1JN', '2JN', '3JN', 'JUD', 'REV',
 ])
 
-const WORD_LINE_RE = /^([1-3]?[A-Za-z]{2,4})\.(\d+)\.(\d+)#\d+=/
+/** Optional [ch.v] = modern English verse (e.g. 2Co.13.13[13.14] → store under v14). */
+const WORD_LINE_RE = /^([1-3]?[A-Za-z]{2,4})\.(\d+)\.(\d+)(?:\[(\d+)\.(\d+)\])?#\d+=/
 
 function ensureDir(dir) {
   fs.mkdirSync(dir, { recursive: true })
@@ -114,8 +115,12 @@ function parseWordLine(line) {
   const refM = cols[0].trim().match(WORD_LINE_RE)
   if (!refM) return null
   const stepBook = refM[1]
-  const chapter = parseInt(refM[2], 10)
-  const verse = parseInt(refM[3], 10)
+  let chapter = parseInt(refM[2], 10)
+  let verse = parseInt(refM[3], 10)
+  if (refM[4] !== undefined && refM[5] !== undefined) {
+    chapter = parseInt(refM[4], 10)
+    verse = parseInt(refM[5], 10)
+  }
   const usfm = STEP_TO_USFM[stepBook]
   if (!usfm) return null
   const posM = cols[0].match(/#(\d+)=/)

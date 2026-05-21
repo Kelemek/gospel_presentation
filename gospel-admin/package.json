@@ -32,7 +32,8 @@
     "import-luther-galatians": "tsx scripts/import-luther-galatians-ccel.ts",
     "import-edwards": "tsx scripts/import-edwards-ccel.ts",
     "import-stepbible": "node scripts/import-stepbible-data.js",
-    "import-stepbible:fixtures": "node scripts/import-stepbible-data.js --fixtures-only"
+    "import-stepbible:fixtures": "node scripts/import-stepbible-data.js --fixtures-only",
+    "reimport-stepbible": "FORCE_STEPBIBLE_REIMPORT=1 node scripts/ensure-stepbible-data.js"
   },
   "dependencies": {
     "@capacitor/android": "8.1.0",
