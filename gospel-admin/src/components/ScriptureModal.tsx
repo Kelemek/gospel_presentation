@@ -6,6 +6,7 @@ import {
   useEffect,
   useRef,
   useMemo,
+  useCallback,
   useSyncExternalStore,
   type TouchEvent,
 } from 'react'
@@ -22,6 +23,8 @@ import {
 import type { VerseBookmarkColorId, VersePinColorId } from '@/lib/versePinStorage'
 import ScriptureModalPinPick from '@/components/ScriptureModalPinPick'
 import ScriptureModalToolbarMenu from '@/components/ScriptureModalToolbarMenu'
+import ScriptureWordStudyModal from '@/components/ScriptureWordStudyModal'
+import { wordStudyAvailableFromReference } from '@/lib/step-bible-reference'
 import type { ScriptureModalPresentationLocation } from '@/lib/presentationLocationFromAnchors'
 
 export type { ScriptureModalPresentationLocation } from '@/lib/presentationLocationFromAnchors'
@@ -71,6 +74,7 @@ export default function ScriptureModal({
 
   // Compare translation (second column)
   const [compareTranslation, setCompareTranslation] = useState<string | null>(null)
+  const [wordStudyEnabled, setWordStudyEnabled] = useState(false)
 
   const [scriptureResolved, setScriptureResolved] = useState<{
     key: string
@@ -129,6 +133,11 @@ export default function ScriptureModal({
     if (!isOpen || !reference.trim()) return null
     return `${reference.trim()}|${translation}`
   }, [isOpen, reference, translation])
+
+  const wordStudyAvailable = useMemo(
+    () => wordStudyAvailableFromReference(reference),
+    [reference]
+  )
 
   const scriptureFetchKey = verseViewSessionKey
 
@@ -205,6 +214,10 @@ export default function ScriptureModal({
 
   /** Verse ↔ chapter toggle: fixed width so label does not shift (Chapter / Verse / Loading…). */
   const verseChapterToggleWidthClass = 'w-[88px] min-w-[88px] max-w-[88px] shrink-0'
+
+  /** Active toolbar control (Chapter/Verse toggle, Words when open). */
+  const scriptureToolbarActiveClass =
+    'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-100 border-blue-500 dark:border-blue-400'
 
   const compareMenuOptions = useMemo(
     () => [
@@ -511,8 +524,13 @@ export default function ScriptureModal({
 
   const handleClose = () => {
     setChapterView(null)
+    setWordStudyEnabled(false)
     onClose()
   }
+
+  const closeWordStudy = useCallback(() => {
+    setWordStudyEnabled(false)
+  }, [])
 
   if (!isOpen) return null
 
@@ -812,6 +830,7 @@ export default function ScriptureModal({
                   if (showingContext) {
                     setChapterView(null)
                   } else {
+                    setWordStudyEnabled(false)
                     void fetchChapterContext()
                   }
                 }}
@@ -830,7 +849,7 @@ export default function ScriptureModal({
                       ? 'Verse'
                       : 'Chapter context'
                 }
-                className={`${verseChapterToggleWidthClass} px-2 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border-blue-400 dark:border-blue-600 ${
+                className={`${verseChapterToggleWidthClass} px-2 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 ${scriptureToolbarActiveClass} ${
                   !showingContext && contextLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                 }`}
               >
@@ -839,19 +858,33 @@ export default function ScriptureModal({
 
               <button
                 type="button"
-                data-tour="scripture-modal-memorize"
-                onClick={handleMemorize}
-                disabled={loading || !!error || !(scriptureText ?? '').trim() || isMemoized}
-                title={isMemoized ? 'Already in memorization list' : 'Save this verse to memorize later'}
-                aria-label={isMemoized ? 'Verse already in memorization list' : 'Memorize this verse'}
+                data-tour="scripture-modal-word-study"
+                onClick={() => setWordStudyEnabled((v) => !v)}
+                disabled={!wordStudyAvailable || showingContext}
+                title={
+                  showingContext
+                    ? 'Word study is available for a single verse'
+                    : !wordStudyAvailable
+                      ? 'Word study requires a verse reference'
+                      : wordStudyEnabled
+                        ? 'Close word study'
+                        : 'Open word study (STEP Bible)'
+                }
+                aria-label={
+                  wordStudyEnabled ? 'Close word study' : 'Open word study'
+                }
+                aria-pressed={wordStudyEnabled}
                 className={`px-1.5 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 shrink-0 ${
-                  isMemoized || loading || !!error || !(scriptureText ?? '').trim()
+                  !wordStudyAvailable || showingContext
                     ? 'text-slate-400 dark:text-slate-500 border-slate-300 dark:border-slate-600 cursor-not-allowed bg-slate-50 dark:bg-slate-700/50'
-                    : 'cursor-pointer text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500'
+                    : wordStudyEnabled
+                      ? `cursor-pointer ${scriptureToolbarActiveClass}`
+                      : 'cursor-pointer text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600'
                 }`}
               >
-                Memorize
+                Words
               </button>
+
               {onOpenSpurgeonStudy && (
                 <button
                   type="button"
@@ -897,6 +930,22 @@ export default function ScriptureModal({
                   Study
                 </button>
               )}
+
+              <button
+                type="button"
+                data-tour="scripture-modal-memorize"
+                onClick={handleMemorize}
+                disabled={loading || !!error || !(scriptureText ?? '').trim() || isMemoized}
+                title={isMemoized ? 'Already in memorization list' : 'Save this verse to memorize later'}
+                aria-label={isMemoized ? 'Verse already in memorization list' : 'Memorize this verse'}
+                className={`px-1.5 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 shrink-0 ${
+                  isMemoized || loading || !!error || !(scriptureText ?? '').trim()
+                    ? 'text-slate-400 dark:text-slate-500 border-slate-300 dark:border-slate-600 cursor-not-allowed bg-slate-50 dark:bg-slate-700/50'
+                    : 'cursor-pointer text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500'
+                }`}
+              >
+                Memorize
+              </button>
             </div>
           </div>
         </div>
@@ -927,7 +976,7 @@ export default function ScriptureModal({
         {/* Scrollable Content Area — data-tour scroll-area when single column so driver.js can spotlight this pane (pointer-events); compare mode uses compare-columns */}
         <div 
           ref={scrollAreaRef}
-          className={`flex-1 overflow-y-auto px-4 py-4 min-h-0 ${isComparing ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''}`}
+          className={`relative flex-1 overflow-y-auto px-4 py-4 min-h-0 ${isComparing ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''}`}
           data-tour={isComparing ? 'scripture-modal-compare-columns' : 'scripture-modal-scroll-area'}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
@@ -1101,6 +1150,14 @@ export default function ScriptureModal({
             </>
           )}
 
+          {wordStudyEnabled && wordStudyAvailable && (
+            <ScriptureWordStudyModal
+              reference={reference}
+              isOpen
+              onClose={closeWordStudy}
+            />
+          )}
+
           {/* Attribution - inside scrollable area; same bg as section block (bg-slate-50 dark:bg-slate-700/50) */}
           <div className="scripture-modal-attribution space-y-2 bg-slate-50 dark:bg-slate-700/50 px-4 py-3 mt-4 border-y border-slate-200 dark:border-slate-600 md:col-span-2">
             {renderAttribution(translation)}
@@ -1108,6 +1165,7 @@ export default function ScriptureModal({
           </div>
         </div>
       </div>
+
     </div>
   )
 }

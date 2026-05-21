@@ -145,6 +145,32 @@ export default function CopyrightPage() {
                 </li>
                 <li className="flex items-start">
                   <span className="text-blue-600 dark:text-blue-400 font-bold mr-3">•</span>
+                  <span>
+                    <strong className="text-slate-800 dark:text-slate-100">Word study (STEP Bible):</strong>{' '}
+                    Hebrew and Greek word data and lexicons are from{' '}
+                    <a
+                      href="https://www.stepbible.org/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors"
+                    >
+                      STEP Bible
+                    </a>{' '}
+                    (Tyndale House, Cambridge), licensed under{' '}
+                    <a
+                      href="https://creativecommons.org/licenses/by/4.0/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors"
+                    >
+                      CC BY 4.0
+                    </a>
+                    . Brief Greek definitions draw on Abbott-Smith; brief Hebrew on abridged BDB; full Greek entries
+                    use formatted LSJ where provided in STEPBible-Data.
+                  </span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-600 dark:text-blue-400 font-bold mr-3">•</span>
                   <span>Users are limited to viewing individual passages as displayed</span>
                 </li>
                 <li className="flex items-start">

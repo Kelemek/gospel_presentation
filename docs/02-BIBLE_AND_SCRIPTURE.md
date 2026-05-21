@@ -73,6 +73,23 @@ On **profile** pages, the scripture modal uses **`GET /api/scripture/spurgeon-li
 
 **Provenance:** Sermon text for public `sg…` profiles is attributed on the in-app **Copyright & Attribution** page (`/copyright`)—public-domain sermons by Charles H. Spurgeon, with the ThML electronic edition credited to the **Christian Classics Ethereal Library (CCEL)** and a link to CCEL’s copyright information.
 
+### Word study (STEP Bible, Scripture modal)
+
+On profile gospel pages, **ScriptureModal** includes a **Words** toolbar toggle (verse view only) that opens a **word study overlay** floating over the reader’s verse scroll area (English text stays visible underneath; toolbar unchanged). It loads original-language data from [STEPBible-Data](https://github.com/STEPBible/STEPBible-Data) (CC BY 4.0)—**not** tied to the English translation (ESV, KJV, NASB, etc.). Tapping a word opens a **bottom sheet** definition over the word chips, not a fixed panel above them.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /api/scripture/word-study?reference=Romans%2012%3A2` | Hebrew (OT) or Greek (NT) tokens per verse: surface form, transliteration, Strong’s, brief gloss |
+| `GET /api/scripture/lexicon?strongs=G3339&detail=brief\|full` | TBESG / TBESH brief entries; Greek **full** uses TFLSJ where available |
+
+**Data on disk:** Imported JSON under `gospel-admin/data/stepbible/` (`words/{USFM}/{chapter}.json`, `lexicon/greek.json`, `lexicon/hebrew.json`). No Supabase tables. Run `npm run import-stepbible` from `gospel-admin/` after clone or when updating the STEPBible pin (see `scripts/import-stepbible-data.js`). Tests use `npm run import-stepbible:fixtures` for minimal samples.
+
+**Scope:** Full Protestant canon (TAGNT + TAHOT). Verse ranges (same chapter, e.g. Romans 12:2–4) show word study for **each** verse in the range. Chapter context disables **Words**. In compare mode, **Words** still opens the same overlay above the reader (not tied to either translation column).
+
+**Attribution:** Credit [STEP Bible](https://www.stepbible.org/) (Tyndale House, Cambridge), CC BY 4.0—see `/copyright`.
+
+**Android (Capacitor):** The word-study card uses the same bottom inset floors as help-tour popovers (`72px` narrow web Android, `96px` native Capacitor Android via `body.capacitor-android` in `globals.css`) so it stays above the system navigation bar when `env(safe-area-inset-bottom)` is zero.
+
 ### Response
 ```json
 {
