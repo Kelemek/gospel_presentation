@@ -83,6 +83,10 @@ const SCRIPTURE_MODAL_NEXT = '[data-tour="scripture-modal-next"]'
 const SCRIPTURE_MODAL_CLOSE = '[data-tour="scripture-modal-close"]'
 const SCRIPTURE_MODAL_MEMORIZE = '[data-tour="scripture-modal-memorize"]'
 const SCRIPTURE_MODAL_PIN_COLOR = '[data-tour="scripture-modal-pin-color"]'
+const SCRIPTURE_MODAL_WORD_STUDY = '[data-tour="scripture-modal-word-study"]'
+const SCRIPTURE_MODAL_WORD_STUDY_OVERLAY = '[data-tour="scripture-modal-word-study-overlay"]'
+const SCRIPTURE_MODAL_WORD_STUDY_PANEL = '[data-tour="scripture-modal-word-study-panel"]'
+const SCRIPTURE_MODAL_WORD_STUDY_LEXICON = '[data-tour="scripture-modal-word-study-lexicon"]'
 const ALERT_MODAL_OK = '[data-tour="alert-modal-ok"]'
 const SCRIPTURE_VERSE_PINNED_CARD = '[data-scripture-verse-pinned="true"]'
 const SCRIPTURE_PROGRESS_UNPIN = '[data-tour="scripture-progress-unpin"]'
@@ -159,6 +163,7 @@ function serializeMarriageSeminarTourResumeForNavigation(options?: ProfileFeatur
 export const SCRIPTURE_READER_TOUR_DEFAULT_SLUG = 'default'
 
 const SCRIPTURE_READER_TOUR_RESUME_STORAGE_KEY = 'gospel-scripture-reader-tour-resume-v1'
+const WORD_STUDY_TOUR_RESUME_STORAGE_KEY = 'gospel-word-study-tour-resume-v1'
 /** Same payload shape as scripture reader resume; only one of these keys should be set when navigating to `/default`. */
 const MEMORIZE_TOUR_RESUME_STORAGE_KEY = 'gospel-memorize-tour-resume-v1'
 
@@ -803,6 +808,53 @@ function compareColumnsVisible(): boolean {
 
 function modalSingleVerseViewReady(): boolean {
   return modalVerseBodyHasText() && !document.querySelector(SCRIPTURE_MODAL_CHAPTER_BODY)
+}
+
+function wordStudyToolbarButton(): HTMLButtonElement | null {
+  return document.querySelector<HTMLButtonElement>(SCRIPTURE_MODAL_WORD_STUDY)
+}
+
+function wordStudyOverlayOpen(): boolean {
+  return !!document.querySelector(SCRIPTURE_MODAL_WORD_STUDY_OVERLAY)
+}
+
+function firstWordStudyChipButton(): HTMLButtonElement | null {
+  const panel = document.querySelector(SCRIPTURE_MODAL_WORD_STUDY_PANEL)
+  return panel?.querySelector<HTMLButtonElement>('ul button[type="button"]') ?? null
+}
+
+function wordStudyLexiconHasEntryBody(): boolean {
+  const sheet = document.querySelector(SCRIPTURE_MODAL_WORD_STUDY_LEXICON)
+  if (!sheet) return false
+  return (
+    !!sheet.querySelector('[class*="space-y-2"]') &&
+    (sheet.textContent?.includes('Lemma') === true ||
+      sheet.textContent?.includes('Gloss') === true ||
+      sheet.textContent?.includes('Definition') === true)
+  )
+}
+
+/** Word study is disabled in chapter view; return to single-verse view when needed. */
+function ensureModalVerseViewForWordStudy(): Promise<void> {
+  if (modalSingleVerseViewReady()) return Promise.resolve()
+  const toggle = document.querySelector<HTMLButtonElement>(SCRIPTURE_MODAL_VERSE_CHAPTER_TOGGLE)
+  if (toggle?.textContent?.trim() === 'Verse') {
+    toggle.click()
+    return waitUntil(() => modalSingleVerseViewReady(), 12000).then(() => undefined)
+  }
+  return Promise.resolve()
+}
+
+function openWordStudyOverlayForTour(): Promise<void> {
+  return ensureModalVerseViewForWordStudy().then(() => {
+    const btn = wordStudyToolbarButton()
+    if (btn && !btn.disabled && !wordStudyOverlayOpen()) {
+      btn.click()
+    }
+    return waitUntil(() => wordStudyOverlayOpen() && !!firstWordStudyChipButton(), 15000).then(
+      () => undefined
+    )
+  })
 }
 
 /** Escape minimal HTML for safe use inside driver popover title/description (innerHTML). */
@@ -2602,6 +2654,152 @@ export function runScriptureHoverPreviewFeatureTour(options?: ProfileFeatureTour
 }
 
 /**
+ * Greek / Hebrew word study tour: opens a scripture card, toggles **Greek** or **Hebrew** in the reader toolbar,
+ * walks word chips (STEP Bible), and the lexicon bottom sheet (TBESG / TBESH).
+ *
+ * When not on `/default`, stores resume state and navigates there first (`tryStartWordStudyTourAfterNavigation`).
+ */
+export function runWordStudyFeatureTour(options?: ProfileFeatureTourOptions): void {
+  if (typeof window === 'undefined') return
+  if (!isDefaultProfilePath(window.location.pathname)) {
+    const payload: ScriptureReaderTourResumePayloadV1 = {
+      v: 1,
+      captiveForTour: options?.captive === true,
+      continueFullWalkthroughAt:
+        options?.captive === true ? getFullWalkthroughIndexAfterWordStudy() : undefined,
+      segmentIntro: options?.segmentIntro,
+    }
+    try {
+      sessionStorage.removeItem(SCRIPTURE_READER_TOUR_RESUME_STORAGE_KEY)
+      sessionStorage.removeItem(MEMORIZE_TOUR_RESUME_STORAGE_KEY)
+      sessionStorage.setItem(WORD_STUDY_TOUR_RESUME_STORAGE_KEY, JSON.stringify(payload))
+    } catch {
+      runWordStudyFeatureTourOnCurrentPage(options)
+      return
+    }
+    scriptureReaderTourNavigation.assign(`/${SCRIPTURE_READER_TOUR_DEFAULT_SLUG}`)
+    return
+  }
+  runWordStudyFeatureTourOnCurrentPage(options)
+}
+
+function runWordStudyFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions): void {
+  const narrow = isNarrowProfileHelpTourViewport()
+  const pop = (
+    wide: { side: Side; align: Alignment },
+    narrowOverride?: { side: Side; align: Alignment }
+  ): { side: Side; align: Alignment } =>
+    narrow ? (narrowOverride ?? { side: 'bottom', align: 'center' }) : wide
+
+  const steps: DriveStep[] = [
+    {
+      element: SCRIPTURE_CARD,
+      popover: {
+        title: 'Open a scripture card',
+        description:
+          'Blue cards open the full reader. Word study needs a <strong>verse</strong> reference (not a whole chapter alone). Use <strong>Next</strong> to open the first card for this tour.',
+        ...pop({ side: 'top', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          document.querySelector<HTMLElement>(SCRIPTURE_CARD)?.click()
+          void waitUntil(() => !!document.querySelector(SCRIPTURE_MODAL_TOOLBAR), 12000).then(() => {
+            void waitUntil(() => modalSingleVerseViewReady(), 15000).then(() => {
+              window.setTimeout(() => {
+                drv.refresh()
+                drv.moveNext()
+              }, 200)
+            })
+          })
+        },
+      },
+    },
+    {
+      element: SCRIPTURE_MODAL_WORD_STUDY,
+      popover: {
+        title: 'Greek or Hebrew',
+        description:
+          'In the reader toolbar, this button is labeled <strong>Greek</strong> (New Testament), <strong>Hebrew</strong> (most Old Testament), or <strong>Aramaic</strong> (e.g. Daniel 2:4–7:28). It only works in <strong>verse</strong> view—if you see the full <strong>Chapter</strong>, tap <strong>Verse</strong> on the toggle first. Data comes from STEP Bible (CC BY 4.0), not from your English translation. Use <strong>Next</strong> to open word study.',
+        ...pop({ side: 'bottom', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          void openWordStudyOverlayForTour().then(() => {
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, 300)
+          })
+        },
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(SCRIPTURE_MODAL_WORD_STUDY_PANEL) ??
+        document.querySelector(SCRIPTURE_MODAL_WORD_STUDY_OVERLAY)!,
+      popover: {
+        title: 'Word study overlay',
+        description:
+          'This card sits over the English passage with original-language <strong>tokens</strong> for the verse (often fewer chips than English words when STEP merges prefixes and suffixes). The toolbar button stays highlighted while word study is open.',
+        ...pop({ side: 'top', align: 'start' }),
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(SCRIPTURE_MODAL_WORD_STUDY_PANEL) ??
+        document.querySelector(SCRIPTURE_MODAL_WORD_STUDY_OVERLAY)!,
+      popover: {
+        title: 'Word chips',
+        description:
+          'Each chip shows the <strong>form in the text</strong> (large Hebrew or Greek), <strong>transliteration</strong>, a short <strong>English gloss</strong>, and a <strong>Strong’s</strong> code (e.g. H3644G). These follow the verse, not the ESV/KJV wording.',
+        ...pop({ side: 'top', align: 'start' }),
+      },
+    },
+    {
+      element: () => firstWordStudyChipButton() ?? document.querySelector(SCRIPTURE_MODAL_WORD_STUDY_PANEL)!,
+      popover: {
+        title: 'Tap a word',
+        description:
+          'Tap any chip to open the <strong>lexicon</strong> sheet at the bottom. Use <strong>Next</strong> to select the first word for this tour.',
+        ...pop({ side: 'top', align: 'center' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          firstWordStudyChipButton()?.click()
+          void waitUntil(() => wordStudyLexiconHasEntryBody(), 12000).then(() => {
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, 200)
+          })
+        },
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(SCRIPTURE_MODAL_WORD_STUDY_LEXICON) ??
+        document.querySelector(SCRIPTURE_MODAL_WORD_STUDY_PANEL)!,
+      popover: {
+        title: 'Lexicon sheet',
+        description:
+          '<p>The bottom sheet shows the <strong>dictionary lemma</strong> (root form), transliteration, gloss, and definition from TBESH (Hebrew) or TBESG (Greek). The <strong>lemma</strong> may differ from the large text on the chip—that chip is the <strong>inflected form in this verse</strong> (prefixes, suffixes, and maqqef).</p>' +
+          '<p class="mt-2">Greek entries can switch <strong>Brief</strong> and <strong>Full</strong> (TFLSJ when available). Hebrew uses brief TBESH only. Tap <strong>×</strong> on the sheet or the same toolbar button to close.</p>',
+        ...pop({ side: 'top', align: 'center' }, { side: 'top', align: 'center' }),
+      },
+    },
+    {
+      element: SCRIPTURE_MODAL_WORD_STUDY,
+      popover: {
+        title: 'You are set',
+        description:
+          'Use <strong>Greek</strong> or <strong>Hebrew</strong> anytime you are reading a single verse. For compare mode, word study still works over the passage.',
+        ...pop({ side: 'bottom', align: 'start' }),
+      },
+    },
+  ]
+
+  const d = createProfileHelpDriver({
+    ...baseProfileHelpDriverConfig(options),
+    steps: prependSegmentIntroIfAny(options, steps),
+  })
+  d.drive()
+}
+
+/**
  * Scripture modal tour: opens the first scripture **card** on the page, then walks compare, verse/chapter toggle
  * (chapter view then back to the passage), next/prev arrows, optional **Pin** color (saved on close), close, pinned card,
  * per-color unpin on the card (explained only—no tap), **Menu** pinned-passage summary, and **Clear pinned passages**.
@@ -3704,6 +3902,14 @@ const FULL_WALKTHROUGH_SEGMENTS_FROM_RESOURCES: FullProfileWalkthroughSegment[] 
     },
   },
   {
+    run: runWordStudyFeatureTour,
+    intro: {
+      title: 'Greek and Hebrew word study',
+      description:
+        'Original-language tokens and Strong’s lexicon in the scripture reader: Greek, Hebrew, or Aramaic toolbar button, word chips, and the definition sheet.',
+    },
+  },
+  {
     run: runMemorizeFeatureTour,
     intro: {
       title: 'Verse memorization',
@@ -3799,6 +4005,12 @@ function getFullWalkthroughIndexAfterScriptureReader(): number {
   return i >= 0 ? i + 1 : segments.length
 }
 
+function getFullWalkthroughIndexAfterWordStudy(): number {
+  const segments = getFullWalkthroughSegments()
+  const i = segments.findIndex((s) => s.run === runWordStudyFeatureTour)
+  return i >= 0 ? i + 1 : segments.length
+}
+
 function getFullWalkthroughIndexAfterMemorize(): number {
   const segments = getFullWalkthroughSegments()
   const i = segments.findIndex((s) => s.run === runMemorizeFeatureTour)
@@ -3850,6 +4062,38 @@ export function runFullProfileHelpTutorial(): void {
  * After navigation to `/default`, resumes the scripture reader tour if `runScriptureModalFeatureTour` scheduled it.
  * Call from `ProfilePageClient` once the profile has loaded.
  */
+/**
+ * After navigation to `/default`, resumes the word study tour if `runWordStudyFeatureTour` scheduled it.
+ */
+export function tryStartWordStudyTourAfterNavigation(currentSlug: string): void {
+  if (typeof window === 'undefined') return
+  if (currentSlug !== SCRIPTURE_READER_TOUR_DEFAULT_SLUG) return
+  const raw = sessionStorage.getItem(WORD_STUDY_TOUR_RESUME_STORAGE_KEY)
+  if (!raw) return
+  sessionStorage.removeItem(WORD_STUDY_TOUR_RESUME_STORAGE_KEY)
+  let payload: ScriptureReaderTourResumePayloadV1
+  try {
+    payload = JSON.parse(raw) as ScriptureReaderTourResumePayloadV1
+  } catch {
+    return
+  }
+  if (payload.v !== 1) return
+  const continueAt = payload.continueFullWalkthroughAt
+  const resumeOptions: ProfileFeatureTourOptions = {
+    captive: payload.captiveForTour,
+    segmentIntro: payload.segmentIntro,
+    onComplete:
+      continueAt !== undefined
+        ? () => {
+            window.requestAnimationFrame(() => runFullProfileHelpTutorialFromSegment(continueAt))
+          }
+        : undefined,
+  }
+  window.requestAnimationFrame(() => {
+    runWordStudyFeatureTourOnCurrentPage(resumeOptions)
+  })
+}
+
 export function tryStartScriptureReaderTourAfterNavigation(currentSlug: string): void {
   if (typeof window === 'undefined') return
   if (currentSlug !== SCRIPTURE_READER_TOUR_DEFAULT_SLUG) return

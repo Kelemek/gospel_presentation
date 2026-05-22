@@ -9,6 +9,7 @@ import {
   tryStartMarriageSeminarTourAfterNavigation,
   tryStartMemorizeTourAfterNavigation,
   tryStartScriptureReaderTourAfterNavigation,
+  tryStartWordStudyTourAfterNavigation,
 } from '@/lib/profileHelpTours'
 
 interface ProfilePageClientProps {
@@ -54,6 +55,7 @@ export default function ProfilePageClient({ slug }: ProfilePageClientProps) {
   useEffect(() => {
     if (!profile) return
     tryStartScriptureReaderTourAfterNavigation(slug)
+    tryStartWordStudyTourAfterNavigation(slug)
     tryStartMemorizeTourAfterNavigation(slug)
     tryStartMarriageSeminarTourAfterNavigation(slug)
   }, [profile, slug])

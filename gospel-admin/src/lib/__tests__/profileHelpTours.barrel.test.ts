@@ -14,5 +14,9 @@ describe('profileHelpTours public entry', () => {
     expect(fromPublic.runProfileListenFeatureTour).toBe(fromIndex.runProfileListenFeatureTour)
     expect(fromPublic.runHighlightsFeatureTour).toBe(fromIndex.runHighlightsFeatureTour)
     expect(fromPublic.runShareResourceFeatureTour).toBe(fromIndex.runShareResourceFeatureTour)
+    expect(fromPublic.runWordStudyFeatureTour).toBe(fromIndex.runWordStudyFeatureTour)
+    expect(fromPublic.tryStartWordStudyTourAfterNavigation).toBe(
+      fromIndex.tryStartWordStudyTourAfterNavigation
+    )
   })
 })

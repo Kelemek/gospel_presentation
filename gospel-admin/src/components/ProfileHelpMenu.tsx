@@ -16,6 +16,7 @@ import {
   runProfileListenFeatureTour,
   runResourcesFeatureTour,
   runScriptureModalFeatureTour,
+  runWordStudyFeatureTour,
   runScriptureHoverPreviewFeatureTour,
   runShareResourceFeatureTour,
   runTableOfContentsFeatureTour,
@@ -36,6 +37,7 @@ export type ProfileTutorialId =
   | 'print'
   | 'bibleTranslation'
   | 'scriptureModal'
+  | 'wordStudy'
   | 'memorize'
   | 'addCustomMemorization'
   | 'scriptureHoverPreview'
@@ -88,7 +90,7 @@ export function buildProfileTutorialMenuItems(): TutorialItem[] {
       id: 'full',
       label: 'Full walkthrough',
       description:
-        'All tutorials in order—after Full: theme, then header icons right-to-left (Share, bookmarks, Highlights, Listen when available), then slide-out menu topics, scripture, memorization, and more',
+        'All tutorials in order—after Full: theme, then header icons right-to-left (Share, bookmarks, Highlights, Listen when available), then slide-out menu topics, scripture reader, Greek/Hebrew word study, memorization, and more',
       run: runFullProfileHelpTutorial,
     },
     {
@@ -133,6 +135,13 @@ export function buildProfileTutorialMenuItems(): TutorialItem[] {
       label: 'Scripture reader',
       description: 'Cards, compare, verse/chapter toggle, colored local pins, and Menu clear-all',
       run: runScriptureModalFeatureTour,
+    },
+    {
+      id: 'wordStudy',
+      label: 'Greek and Hebrew word study',
+      description:
+        'STEP Bible tokens in the reader: Greek, Hebrew, or Aramaic button, word chips, Strong’s codes, and lexicon sheet',
+      run: runWordStudyFeatureTour,
     },
     {
       id: 'memorize',

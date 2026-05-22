@@ -395,6 +395,7 @@ function ScriptureWordStudyPanelContent({
         </div>
         {lexiconOpen && (
           <div
+            data-tour="scripture-modal-word-study-lexicon"
             className="scripture-word-study-lexicon-sheet absolute inset-x-0 bottom-0 z-20 max-h-[min(48vh,360px)] overflow-y-auto rounded-t-xl border-t border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-[0_-10px_28px_rgba(0,0,0,0.28)] dark:shadow-[0_-10px_28px_rgba(0,0,0,0.5)]"
             role="region"
             aria-label="Lexicon definition"
