@@ -144,3 +144,13 @@ export function paragraphIndentToolbarState(editor: Editor): {
 export function indentClassForMarkup(markup: ParagraphIndentMarkup): string | null {
   return htmlClassFromIndentMarkup(markup)
 }
+
+declare module '@tiptap/core' {
+  interface Commands<ReturnType> {
+    paragraphIndent: {
+      setParagraphIndentOn: () => ReturnType
+      setParagraphIndentOff: () => ReturnType
+      clearParagraphIndentClasses: () => ReturnType
+    }
+  }
+}
