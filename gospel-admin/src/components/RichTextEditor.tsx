@@ -10,6 +10,7 @@ import Subscript from '@tiptap/extension-subscript'
 import { useEffect } from 'react'
 import { Extension } from '@tiptap/core'
 import { getTipTapSplitHtmlAtSelection } from '@/lib/splitTipTapDocAtSelection'
+import { DivBlock, ParagraphIndent, paragraphIndentToolbarState } from '@/lib/tiptapParagraphIndent'
 
 // Extension to add custom HTML attributes to ordered lists
 const OrderedListExtended = Extension.create({
@@ -72,6 +73,8 @@ export default function RichTextEditor({
         nested: true, // Allow nested task lists
       }),
       OrderedListExtended,
+      DivBlock,
+      ParagraphIndent,
       Superscript,
       Subscript,
     ],
@@ -154,6 +157,38 @@ export default function RichTextEditor({
           X<sub>2</sub>
         </button>
         
+        <div className="w-px h-6 bg-slate-300 mx-1" />
+
+        {(() => {
+          const indentState = paragraphIndentToolbarState(editor)
+          return (
+            <>
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().setParagraphIndentOn().run()}
+                disabled={!indentState.canIndent}
+                className={`px-2 py-1 text-sm rounded hover:bg-slate-200 transition-colors cursor-pointer ${
+                  indentState.indentActive ? 'bg-slate-300' : 'bg-white'
+                } disabled:cursor-not-allowed disabled:opacity-50`}
+                title="First-line indent (Tab)"
+              >
+                Indent ¶
+              </button>
+              <button
+                type="button"
+                onClick={() => editor.chain().focus().setParagraphIndentOff().run()}
+                disabled={!indentState.canIndent}
+                className={`px-2 py-1 text-sm rounded hover:bg-slate-200 transition-colors cursor-pointer ${
+                  indentState.outdentActive ? 'bg-slate-300' : 'bg-white'
+                } disabled:cursor-not-allowed disabled:opacity-50`}
+                title="No indent (Shift+Tab)"
+              >
+                Outdent ¶
+              </button>
+            </>
+          )
+        })()}
+
         <div className="w-px h-6 bg-slate-300 mx-1" />
         
         {multiline && (

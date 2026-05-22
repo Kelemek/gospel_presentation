@@ -227,6 +227,18 @@ mark[data-resource-highlight-id] span:not([data-gospel-mount]):not(:has([data-go
     margin: 0.1rem 0 0.2rem 0;
   }
 
+  .print-content p:not(.paragraph-no-indent) {
+    text-indent: 1.5em;
+  }
+
+  .print-content .paragraph-first-line-indent {
+    text-indent: 1.5em;
+  }
+
+  .print-content .paragraph-no-indent {
+    text-indent: 0;
+  }
+
   /* Scripture references - very compact */
   .print-scripture {
     margin: 0.1rem 0;
@@ -824,6 +836,38 @@ ol.academic-style li > div {
 }
 
 /* HTML content rendering (for preview/display) */
+.print-content p:not(.paragraph-no-indent) {
+  text-indent: 1.5em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.print-content .paragraph-first-line-indent {
+  text-indent: 1.5em;
+}
+
+.print-content .paragraph-no-indent {
+  text-indent: 0;
+}
+
+.print-content li p:not(.paragraph-no-indent) {
+  text-indent: 0;
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+}
+
+.rich-text-editor .ProseMirror p:not(.paragraph-no-indent) {
+  text-indent: 1.5em;
+}
+
+.rich-text-editor .ProseMirror .paragraph-first-line-indent {
+  text-indent: 1.5em;
+}
+
+.rich-text-editor .ProseMirror .paragraph-no-indent {
+  text-indent: 0;
+}
+
 .print-content ul,
 .print-content ol {
   padding-left: 1.5rem;
