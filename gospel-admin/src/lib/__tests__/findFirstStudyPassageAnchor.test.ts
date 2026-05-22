@@ -109,6 +109,60 @@ describe('findFirstStudyPassageAnchor', () => {
     })
   })
 
+  it('scrolls to Matthew Henry chapter subsection for a verse in that chapter', () => {
+    const sections: GospelSection[] = [
+      {
+        section: 'mhrom',
+        title: 'Matthew Henry on Romans',
+        subsections: [
+          { title: 'Romans — Chapter 7', content: '<p>Chapter seven.</p>' },
+          { title: 'Romans — Chapter 8', content: '<p>Chapter eight.</p>' },
+        ],
+      },
+    ]
+    expect(findFirstStudyPassageAnchor(sections, 'Romans 8:28')).toEqual({
+      sectionId: 'section-mhrom',
+      subsectionId: 'section-mhrom-1',
+    })
+  })
+
+  it('prefers Henry chapter title over an earlier chapter footnote', () => {
+    const sections: GospelSection[] = [
+      {
+        section: 'mhrom',
+        title: 'Matthew Henry on Romans',
+        subsections: [
+          {
+            title: 'Romans — Chapter 1',
+            content: '<p>See <scripRef passage="Rom 8:28">Romans 8:28</scripRef> ahead.</p>',
+          },
+          { title: 'Romans — Chapter 8', content: '<p>We know that all things work together.</p>' },
+        ],
+      },
+    ]
+    expect(findFirstStudyPassageAnchor(sections, 'Romans 8:28')).toEqual({
+      sectionId: 'section-mhrom',
+      subsectionId: 'section-mhrom-1',
+    })
+  })
+
+  it('matches Psalm N subsection titles for a verse in that psalm', () => {
+    const sections: GospelSection[] = [
+      {
+        section: 'mhpsa',
+        title: 'Matthew Henry on Psalms',
+        subsections: [
+          { title: 'Psalm 50', content: '<p>Fifty.</p>' },
+          { title: 'Psalm 51', content: '<p>Fifty-one.</p>' },
+        ],
+      },
+    ]
+    expect(findFirstStudyPassageAnchor(sections, 'Psalm 51:1')).toEqual({
+      sectionId: 'section-mhpsa',
+      subsectionId: 'section-mhpsa-1',
+    })
+  })
+
   it('returns null when nothing overlaps the lookup reference', () => {
     const sections: GospelSection[] = [
       {

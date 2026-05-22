@@ -103,9 +103,19 @@ function normalizeBookKey(book: string): string {
   return book.toLowerCase().trim().replace(/\s+/g, ' ')
 }
 
+/** CCEL Matthew Henry div1 titles use "First Samuel" / "Third John" instead of "1 Samuel". */
+function expandFirstSecondThirdBookPrefix(key: string): string {
+  return key
+    .replace(/^first /, '1 ')
+    .replace(/^second /, '2 ')
+    .replace(/^third /, '3 ')
+}
+
 export function bookNameToUsfm(book: string): string | null {
   const key = normalizeBookKey(book)
   if (BOOK_ALIAS_TO_USFM[key]) return BOOK_ALIAS_TO_USFM[key]
+  const expanded = expandFirstSecondThirdBookPrefix(key)
+  if (expanded !== key && BOOK_ALIAS_TO_USFM[expanded]) return BOOK_ALIAS_TO_USFM[expanded]
   return null
 }
 

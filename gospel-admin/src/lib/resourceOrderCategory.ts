@@ -2,6 +2,7 @@ import type {
   ResourceOrderCategoryChild,
   ResourceOrderItem,
   ResourceOrderItemCalvinLibrary,
+  ResourceOrderItemHenryLibrary,
   ResourceOrderItemCategory,
   ResourceOrderItemEdwardsLibrary,
   ResourceOrderItemMorningEveningLibrary,
@@ -10,6 +11,7 @@ import type {
 } from '@/lib/types'
 import {
   isResourceOrderItemCalvinLibrary,
+  isResourceOrderItemHenryLibrary,
   isResourceOrderItemEdwardsLibrary,
   isResourceOrderItemMorningEveningLibrary,
   isResourceOrderItemSpurgeonLibrary,
@@ -37,11 +39,13 @@ export function isResourceOrderLibraryItem(
   | ResourceOrderItemSpurgeonLibrary
   | ResourceOrderItemMorningEveningLibrary
   | ResourceOrderItemCalvinLibrary
+  | ResourceOrderItemHenryLibrary
   | ResourceOrderItemEdwardsLibrary {
   return (
     isResourceOrderItemSpurgeonLibrary(item) ||
     isResourceOrderItemMorningEveningLibrary(item) ||
     isResourceOrderItemCalvinLibrary(item) ||
+    isResourceOrderItemHenryLibrary(item) ||
     isResourceOrderItemEdwardsLibrary(item)
   )
 }
@@ -73,6 +77,14 @@ export function parseCategoryChild(el: unknown): ResourceOrderCategoryChild | nu
         ? rawTitle.trim()
         : "Calvin's Commentaries"
     return { type: 'calvinLibrary', title }
+  }
+  if (o.type === 'henryLibrary') {
+    const rawTitle = o.title
+    const title =
+      typeof rawTitle === 'string' && rawTitle.trim()
+        ? rawTitle.trim()
+        : "Matthew Henry's Commentary"
+    return { type: 'henryLibrary', title }
   }
   if (o.type === 'edwardsLibrary') {
     const rawTitle = o.title
@@ -142,6 +154,16 @@ export function orderContainsEdwardsLibrary(items: ResourceOrderItem[]): boolean
     if (isResourceOrderItemEdwardsLibrary(item)) return true
     if (item.type === 'category') {
       return item.children.some((c) => c.type === 'edwardsLibrary')
+    }
+    return false
+  })
+}
+
+export function orderContainsHenryLibrary(items: ResourceOrderItem[]): boolean {
+  return items.some((item) => {
+    if (isResourceOrderItemHenryLibrary(item)) return true
+    if (item.type === 'category') {
+      return item.children.some((c) => c.type === 'henryLibrary')
     }
     return false
   })
@@ -372,6 +394,13 @@ export function parseResourceOrder(raw: unknown): ResourceOrderItem[] {
             ? rawTitle.trim()
             : "Calvin's Commentaries"
         out.push({ type: 'calvinLibrary', title })
+      } else if (o.type === 'henryLibrary') {
+        const rawTitle = o.title
+        const title =
+          typeof rawTitle === 'string' && rawTitle.trim()
+            ? rawTitle.trim()
+            : "Matthew Henry's Commentary"
+        out.push({ type: 'henryLibrary', title })
       } else if (o.type === 'edwardsLibrary') {
         const rawTitle = o.title
         const title =

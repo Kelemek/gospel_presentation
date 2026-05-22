@@ -5,6 +5,7 @@ import {
 } from '@/lib/spurgeon/passageKeysFromGospelData'
 import { segmentPlainTextForGospelInlines } from '@/lib/injectGospelInlineMarkersInHtml'
 import { spurgeonPassageKeySpansOverlap } from '@/lib/spurgeon/spurgeonPassageKeyMatch'
+import { commentarySubsectionTitleMatchesChapter } from '@/lib/studyCommentaryChapterTitleMatch'
 
 export type StudyPassageAnchor = { sectionId: string; subsectionId: string }
 
@@ -69,7 +70,10 @@ function subsectionTitleOrCardMatches(sub: Subsection, lookupRef: string): boole
     if (r && referenceOverlapsLookup(r, lookupRef)) return true
   }
   const title = sub.title?.trim()
-  if (title && referenceOverlapsLookup(title, lookupRef)) return true
+  if (title) {
+    if (referenceOverlapsLookup(title, lookupRef)) return true
+    if (commentarySubsectionTitleMatchesChapter(title, lookupRef)) return true
+  }
   return false
 }
 
@@ -86,7 +90,10 @@ function nestedTitleOrCardMatches(nested: NestedSubsection, lookupRef: string): 
     if (r && referenceOverlapsLookup(r, lookupRef)) return true
   }
   const title = nested.title?.trim()
-  if (title && referenceOverlapsLookup(title, lookupRef)) return true
+  if (title) {
+    if (referenceOverlapsLookup(title, lookupRef)) return true
+    if (commentarySubsectionTitleMatchesChapter(title, lookupRef)) return true
+  }
   return false
 }
 

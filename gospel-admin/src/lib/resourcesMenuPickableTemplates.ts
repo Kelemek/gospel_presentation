@@ -1,4 +1,5 @@
 import { isCalvinCommentaryProfileSlug } from '@/lib/calvin/calvinSlug'
+import { isHenryCommentaryProfileSlug } from '@/lib/henry/henrySlug'
 import { isEdwardsSermonProfileSlug } from '@/lib/edwards/edwardsSlug'
 import { isDeprecatedLutherGalatiansSlug } from '@/lib/luther/lutherSlug'
 import { isMorneveProfileSlug } from '@/lib/spurgeon/morneveSlug'
@@ -10,6 +11,7 @@ export function isCcelCorpusProfileSlug(slug: string): boolean {
     isSpurgeonSermonProfileSlug(slug) ||
     isMorneveProfileSlug(slug) ||
     isCalvinCommentaryProfileSlug(slug) ||
+    isHenryCommentaryProfileSlug(slug) ||
     isEdwardsSermonProfileSlug(slug)
   )
 }

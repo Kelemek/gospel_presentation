@@ -42,9 +42,13 @@ describe('Copyright page', () => {
     expect(techHeading).toBeInTheDocument()
 
     expect(screen.getByText(/Charles H\. Spurgeon sermons/i)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Christian Classics Ethereal Library \(CCEL\)/i })).toHaveAttribute(
-      'href',
-      'https://www.ccel.org/ccel/spurgeon/'
+    expect(screen.getByText(/Matthew Henry.*Commentary on the Whole Bible/i)).toBeInTheDocument()
+    const ccelLinks = screen.getAllByRole('link', { name: /Christian Classics Ethereal Library \(CCEL\)/i })
+    expect(ccelLinks.some((l) => l.getAttribute('href') === 'https://www.ccel.org/ccel/spurgeon/')).toBe(
+      true
+    )
+    expect(ccelLinks.some((l) => l.getAttribute('href') === 'https://www.ccel.org/ccel/henry/mhc.html')).toBe(
+      true
     )
 
     const year = new Date().getFullYear().toString()

@@ -104,6 +104,32 @@ export default function CopyrightPage() {
                 .
               </p>
             </div>
+
+            <div className="bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-400 dark:border-blue-600 rounded-lg p-6 mt-6">
+              <p className="text-slate-700 dark:text-slate-200 mb-3 leading-relaxed text-base md:text-lg">
+                <strong className="text-slate-800 dark:text-slate-100">Matthew Henry&apos;s Commentary on the Whole Bible:</strong>{' '}
+                The underlying commentary is in the public domain. Text in this app was imported from the
+                six-volume ThML edition on the{' '}
+                <a
+                  href="https://www.ccel.org/ccel/henry/mhc.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors break-all"
+                >
+                  Christian Classics Ethereal Library (CCEL)
+                </a>
+                . See also{' '}
+                <a
+                  href="https://www.ccel.org/about/copyright.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors break-all"
+                >
+                  CCEL copyright information
+                </a>
+                .
+              </p>
+            </div>
           </section>
 
           {/* Scripture Attribution Section */}

@@ -30,7 +30,7 @@ const SEARCH_PAGE_SIZE = 100
 export const STUDY_MODAL_DEFAULT_TITLE = 'Study resources'
 
 /** Which corpora to load when opened from a Resources row vs unified Study. */
-export type StudyLibraryFocus = 'all' | 'spurgeon' | 'calvin' | 'edwards'
+export type StudyLibraryFocus = 'all' | 'spurgeon' | 'calvin' | 'henry' | 'edwards'
 
 interface SpurgeonSermonsModalProps {
   isOpen: boolean
@@ -38,7 +38,7 @@ interface SpurgeonSermonsModalProps {
   /** Dialog heading (Resources menu row label or default). */
   modalTitle?: string
   /**
-   * `spurgeon` / `calvin` / `edwards`: Resources menu rows (corpus-specific).
+   * `spurgeon` / `calvin` / `henry` / `edwards`: Resources menu rows (corpus-specific).
    * `all`: scripture modal Study (all By scripture sections).
    */
   libraryFocus?: StudyLibraryFocus
@@ -90,6 +90,7 @@ export default function SpurgeonSermonsModal({
   const showSpurgeon = libraryFocus === 'all' || libraryFocus === 'spurgeon'
   const showEdwards = libraryFocus === 'all' || libraryFocus === 'edwards'
   const showCalvin = libraryFocus === 'all' || libraryFocus === 'calvin'
+  const showHenry = libraryFocus === 'all' || libraryFocus === 'henry'
   const showReadTab = showSpurgeon || showEdwards
   const [tab, setTab] = useState<Tab>('search')
   /** When read tab is hidden (e.g. Calvin-only library), treat stale `read` selection as search. */
@@ -103,10 +104,13 @@ export default function SpurgeonSermonsModal({
   const [edwardsRefItems, setEdwardsRefItems] = useState<SermonRow[]>([])
   const [morneveRefItems, setMorneveRefItems] = useState<SermonRow[]>([])
   const [calvinRefItems, setCalvinRefItems] = useState<SermonRow[]>([])
+  const [henryRefItems, setHenryRefItems] = useState<SermonRow[]>([])
   const [edwardsSearchItems, setEdwardsSearchItems] = useState<SermonRow[]>([])
   const [edwardsSearchTotal, setEdwardsSearchTotal] = useState(0)
   const [calvinSearchItems, setCalvinSearchItems] = useState<SermonRow[]>([])
   const [calvinSearchTotal, setCalvinSearchTotal] = useState(0)
+  const [henrySearchItems, setHenrySearchItems] = useState<SermonRow[]>([])
+  const [henrySearchTotal, setHenrySearchTotal] = useState(0)
   const [searchLoading, setSearchLoading] = useState(false)
   const [refLoading, setRefLoading] = useState(false)
   const [searchError, setSearchError] = useState('')
@@ -193,6 +197,7 @@ export default function SpurgeonSermonsModal({
       let sermonRes: Response | null = null
       let edwardsRes: Response | null = null
       let calvinRes: Response | null = null
+      let henryRes: Response | null = null
       if (showSpurgeon) {
         sermonRes = await fetch(`/api/spurgeon/sermons?${query}`, { cache: 'no-store' })
       }
@@ -202,18 +207,24 @@ export default function SpurgeonSermonsModal({
       if (showCalvin) {
         calvinRes = await fetch(`/api/calvin/books?${query}`, { cache: 'no-store' })
       }
+      if (showHenry) {
+        henryRes = await fetch(`/api/henry/books?${query}`, { cache: 'no-store' })
+      }
 
       const sermonData = sermonRes ? await sermonRes.json() : {}
       const edwardsData = edwardsRes ? await edwardsRes.json() : {}
       const calvinData = calvinRes ? await calvinRes.json() : {}
+      const henryData = henryRes ? await henryRes.json() : {}
 
       const sermonFailed = showSpurgeon && sermonRes && !sermonRes.ok
       const edwardsFailed = showEdwards && edwardsRes && !edwardsRes.ok
       const calvinFailed = showCalvin && calvinRes && !calvinRes.ok
+      const henryFailed = showHenry && henryRes && !henryRes.ok
       const searchFailureSources = [
         { active: showSpurgeon, failed: sermonFailed, payload: sermonData },
         { active: showEdwards, failed: edwardsFailed, payload: edwardsData },
         { active: showCalvin, failed: calvinFailed, payload: calvinData },
+        { active: showHenry, failed: henryFailed, payload: henryData },
       ] as const
       if (seq !== searchLoadSeqRef.current) return
 
@@ -227,6 +238,8 @@ export default function SpurgeonSermonsModal({
         setEdwardsSearchTotal(0)
         setCalvinSearchItems([])
         setCalvinSearchTotal(0)
+        setHenrySearchItems([])
+        setHenrySearchTotal(0)
         return
       }
       if (sermonFailed || !showSpurgeon) {
@@ -252,6 +265,13 @@ export default function SpurgeonSermonsModal({
         setCalvinSearchItems(Array.isArray(calvinData.items) ? calvinData.items : [])
         setCalvinSearchTotal(typeof calvinData.total === 'number' ? calvinData.total : (calvinData.items?.length ?? 0))
       }
+      if (henryFailed || !showHenry) {
+        setHenrySearchItems([])
+        setHenrySearchTotal(0)
+      } else {
+        setHenrySearchItems(Array.isArray(henryData.items) ? henryData.items : [])
+        setHenrySearchTotal(typeof henryData.total === 'number' ? henryData.total : (henryData.items?.length ?? 0))
+      }
       setSearchError('')
     } catch {
       if (seq !== searchLoadSeqRef.current) return
@@ -262,12 +282,14 @@ export default function SpurgeonSermonsModal({
       setEdwardsSearchTotal(0)
       setCalvinSearchItems([])
       setCalvinSearchTotal(0)
+      setHenrySearchItems([])
+      setHenrySearchTotal(0)
     } finally {
       if (seq === searchLoadSeqRef.current) {
         setSearchLoading(false)
       }
     }
-  }, [debouncedQ, searchPage, showSpurgeon, showEdwards, showCalvin])
+  }, [debouncedQ, searchPage, showSpurgeon, showEdwards, showCalvin, showHenry])
 
   useEffect(() => {
     if (!isOpen || activeTab !== 'search') return
@@ -296,6 +318,7 @@ export default function SpurgeonSermonsModal({
       setEdwardsRefItems([])
       setMorneveRefItems([])
       setCalvinRefItems([])
+      setHenryRefItems([])
       setRefError('')
       setRefLoading(false)
       return
@@ -315,6 +338,9 @@ export default function SpurgeonSermonsModal({
       if (showCalvin) {
         fetches.push(fetch(`/api/calvin/by-reference?reference=${q}`, { cache: 'no-store' }))
       }
+      if (showHenry) {
+        fetches.push(fetch(`/api/henry/by-reference?reference=${q}`, { cache: 'no-store' }))
+      }
 
       const results = await Promise.all(fetches)
       let ri = 0
@@ -322,16 +348,19 @@ export default function SpurgeonSermonsModal({
       const morneveRes = showSpurgeon ? results[ri++] : null
       const edwardsRes = showEdwards ? results[ri++] : null
       const calvinRes = showCalvin ? results[ri++] : null
+      const henryRes = showHenry ? results[ri++] : null
 
       const sermonData = sermonRes ? await sermonRes.json() : {}
       const morneveData = morneveRes ? await morneveRes.json() : {}
       const edwardsData = edwardsRes ? await edwardsRes.json() : {}
       const calvinData = calvinRes ? await calvinRes.json() : {}
+      const henryData = henryRes ? await henryRes.json() : {}
 
       const spurgeonAnyOk =
         !showSpurgeon || Boolean(sermonRes?.ok) || Boolean(morneveRes?.ok)
       const edwardsLookupFailed = showEdwards && edwardsRes && !edwardsRes.ok
       const calvinLookupFailed = showCalvin && calvinRes && !calvinRes.ok
+      const henryLookupFailed = showHenry && henryRes && !henryRes.ok
       const scriptureFailureSources = [
         {
           active: showSpurgeon,
@@ -345,6 +374,7 @@ export default function SpurgeonSermonsModal({
           payload: morneveData,
         },
         { active: showCalvin, failed: calvinLookupFailed, payload: calvinData },
+        { active: showHenry, failed: henryLookupFailed, payload: henryData },
       ] as const
       if (seq !== scriptureLookupSeqRef.current) return
 
@@ -354,6 +384,7 @@ export default function SpurgeonSermonsModal({
         setEdwardsRefItems([])
         setMorneveRefItems([])
         setCalvinRefItems([])
+        setHenryRefItems([])
         return
       }
 
@@ -377,6 +408,11 @@ export default function SpurgeonSermonsModal({
       } else {
         setCalvinRefItems(Array.isArray(calvinData.items) ? calvinData.items : [])
       }
+      if (!showHenry || !henryRes?.ok) {
+        setHenryRefItems([])
+      } else {
+        setHenryRefItems(Array.isArray(henryData.items) ? henryData.items : [])
+      }
       setRefError('')
     } catch {
       if (seq !== scriptureLookupSeqRef.current) return
@@ -385,12 +421,13 @@ export default function SpurgeonSermonsModal({
       setEdwardsRefItems([])
       setMorneveRefItems([])
       setCalvinRefItems([])
+      setHenryRefItems([])
     } finally {
       if (seq === scriptureLookupSeqRef.current) {
         setRefLoading(false)
       }
     }
-  }, [showSpurgeon, showEdwards, showCalvin])
+  }, [showSpurgeon, showEdwards, showCalvin, showHenry])
 
   useEffect(() => {
     if (!isOpen) {
@@ -407,10 +444,13 @@ export default function SpurgeonSermonsModal({
         setEdwardsRefItems([])
         setMorneveRefItems([])
         setCalvinRefItems([])
+        setHenryRefItems([])
         setEdwardsSearchItems([])
         setEdwardsSearchTotal(0)
         setCalvinSearchItems([])
         setCalvinSearchTotal(0)
+        setHenrySearchItems([])
+        setHenrySearchTotal(0)
         setReadTabItems([])
         setReadTabError('')
         setReadTabLoading(false)
@@ -428,7 +468,7 @@ export default function SpurgeonSermonsModal({
         setScriptureRef(initialByReference.trim())
         return
       }
-      if (libraryFocus === 'edwards' || libraryFocus === 'calvin') {
+      if (libraryFocus === 'edwards' || libraryFocus === 'calvin' || libraryFocus === 'henry') {
         setTab('search')
       }
     })
@@ -515,13 +555,13 @@ export default function SpurgeonSermonsModal({
   if (!isOpen) return null
 
   const searchPlaceholder =
-    showSpurgeon && showEdwards && showCalvin
+    libraryFocus === 'all'
       ? 'Title or keyword (sermons or commentary books)'
-      : showSpurgeon && showEdwards
-        ? 'Sermon title or keyword'
-        : showCalvin
+      : libraryFocus === 'henry'
+        ? 'Matthew Henry commentary book title or keyword'
+        : libraryFocus === 'calvin'
           ? 'Commentary book title or keyword'
-          : showEdwards
+          : libraryFocus === 'edwards'
             ? 'Edwards sermon title or keyword'
             : 'Sermon title or keyword'
 
@@ -531,10 +571,13 @@ export default function SpurgeonSermonsModal({
     showEdwards && edwardsSearchTotal > 0 ? Math.ceil(edwardsSearchTotal / SEARCH_PAGE_SIZE) : 0
   const calvinSearchTotalPages =
     showCalvin && calvinSearchTotal > 0 ? Math.ceil(calvinSearchTotal / SEARCH_PAGE_SIZE) : 0
+  const henrySearchTotalPages =
+    showHenry && henrySearchTotal > 0 ? Math.ceil(henrySearchTotal / SEARCH_PAGE_SIZE) : 0
   const combinedSearchTotalPages = Math.max(
     sermonSearchTotalPages,
     edwardsSearchTotalPages,
     calvinSearchTotalPages,
+    henrySearchTotalPages,
     1
   )
 
@@ -544,6 +587,8 @@ export default function SpurgeonSermonsModal({
     showEdwards && edwardsSearchTotal > 0 && searchPage <= edwardsSearchTotalPages
   const calvinRangeOnPage =
     showCalvin && calvinSearchTotal > 0 && searchPage <= calvinSearchTotalPages
+  const henryRangeOnPage =
+    showHenry && henrySearchTotal > 0 && searchPage <= henrySearchTotalPages
 
   const sermonSearchFrom = sermonRangeOnPage ? (searchPage - 1) * SEARCH_PAGE_SIZE + 1 : 0
   const sermonSearchTo = sermonRangeOnPage
@@ -557,6 +602,10 @@ export default function SpurgeonSermonsModal({
   const calvinSearchTo = calvinRangeOnPage
     ? Math.min(searchPage * SEARCH_PAGE_SIZE, calvinSearchTotal)
     : 0
+  const henrySearchFrom = henryRangeOnPage ? (searchPage - 1) * SEARCH_PAGE_SIZE + 1 : 0
+  const henrySearchTo = henryRangeOnPage
+    ? Math.min(searchPage * SEARCH_PAGE_SIZE, henrySearchTotal)
+    : 0
 
   const searchRangeLabels: string[] = []
   if (sermonRangeOnPage) {
@@ -568,41 +617,37 @@ export default function SpurgeonSermonsModal({
   if (calvinRangeOnPage) {
     searchRangeLabels.push(`Calvin ${calvinSearchFrom}–${calvinSearchTo} of ${calvinSearchTotal}`)
   }
+  if (henryRangeOnPage) {
+    searchRangeLabels.push(`Matthew Henry ${henrySearchFrom}–${henrySearchTo} of ${henrySearchTotal}`)
+  }
 
   const hasSearchResults =
     (showSpurgeon && searchTotal > 0) ||
     (showEdwards && edwardsSearchTotal > 0) ||
-    (showCalvin && calvinSearchTotal > 0)
+    (showCalvin && calvinSearchTotal > 0) ||
+    (showHenry && henrySearchTotal > 0)
 
   const searchEmptyMessage =
-    showSpurgeon && showEdwards && showCalvin
-      ? 'No matching public sermons, Edwards sermons, or Calvin commentary books.'
-      : showSpurgeon && showEdwards
-        ? 'No matching public sermons or Edwards sermons.'
-        : showSpurgeon && showCalvin
-          ? 'No matching public sermons or Calvin commentary books.'
-          : showEdwards && showCalvin
-            ? 'No matching Edwards sermons or Calvin commentary books.'
-            : showEdwards
-              ? 'No matching Edwards sermons.'
-              : showCalvin
-                ? 'No matching Calvin commentary books.'
-                : 'No matching public sermons.'
+    libraryFocus === 'all'
+      ? 'No matching study resources.'
+      : libraryFocus === 'henry'
+        ? 'No matching Matthew Henry commentary books.'
+        : libraryFocus === 'calvin'
+          ? 'No matching Calvin commentary books.'
+          : libraryFocus === 'edwards'
+            ? 'No matching Edwards sermons.'
+            : 'No matching public sermons.'
 
   const scriptureEmptyMessage =
-    showSpurgeon && showEdwards && showCalvin
+    libraryFocus === 'all'
       ? 'No indexed study resources for that reference.'
-      : showSpurgeon && showEdwards
-        ? 'No indexed Spurgeon or Edwards sermons or Morning & Evening devotions for that reference.'
-        : showSpurgeon && showCalvin
-          ? 'No indexed study resources for that reference.'
-          : showEdwards && showCalvin
-            ? 'No indexed Edwards sermons or Calvin commentary for that reference.'
-            : showEdwards
-              ? 'No Edwards sermons indexed for that reference. Try Deuteronomy 32:35, or use the Search tab to browse all 19 sermons.'
-              : showCalvin
-                ? 'No indexed Calvin commentary for that reference.'
-                : 'No indexed sermons or Morning & Evening devotions for that reference.'
+      : libraryFocus === 'henry'
+        ? 'No indexed Matthew Henry commentary for that reference.'
+        : libraryFocus === 'calvin'
+          ? 'No indexed Calvin commentary for that reference.'
+          : libraryFocus === 'edwards'
+            ? 'No Edwards sermons indexed for that reference. Try Deuteronomy 32:35, or use the Search tab to browse all 19 sermons.'
+            : 'No indexed sermons or Morning & Evening devotions for that reference.'
 
   const followResourceLink = () => {
     onFollowSermonLink?.()
@@ -778,7 +823,8 @@ export default function SpurgeonSermonsModal({
                     </div>
                   ) : (showSpurgeon ? searchItems.length === 0 : true) &&
                     (showEdwards ? edwardsSearchItems.length === 0 : true) &&
-                    (showCalvin ? calvinSearchItems.length === 0 : true) ? (
+                    (showCalvin ? calvinSearchItems.length === 0 : true) &&
+                    (showHenry ? henrySearchItems.length === 0 : true) ? (
                     <div className="flex h-56 items-start pt-2">
                       <p className="text-sm text-slate-500 dark:text-slate-400">{searchEmptyMessage}</p>
                     </div>
@@ -856,6 +902,30 @@ export default function SpurgeonSermonsModal({
                           </ul>
                         </div>
                       )}
+                      {showHenry && henrySearchItems.length > 0 && (
+                        <div>
+                          <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
+                            Matthew Henry commentaries
+                          </h3>
+                          <ul className="space-y-1">
+                            {henrySearchItems.map((row) => (
+                              <li key={row.slug}>
+                                <Link
+                                  href={`/${row.slug}`}
+                                  onClick={followResourceLink}
+                                  className={`block rounded-md px-2 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700/80 ${
+                                    readCompleteSlugs.has(row.slug)
+                                      ? 'font-extrabold text-blue-900 dark:text-blue-200'
+                                      : 'font-normal text-blue-700 dark:text-blue-300'
+                                  }`}
+                                >
+                                  {row.title}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -878,6 +948,7 @@ export default function SpurgeonSermonsModal({
                   (showSpurgeon ? refItems.length === 0 && morneveRefItems.length === 0 : true) &&
                   (showEdwards ? edwardsRefItems.length === 0 : true) &&
                   (showCalvin ? calvinRefItems.length === 0 : true) &&
+                  (showHenry ? henryRefItems.length === 0 : true) &&
                   debouncedScriptureQuery &&
                   !refError && (
                     <p className="text-sm text-slate-500 dark:text-slate-400">{scriptureEmptyMessage}</p>
@@ -964,6 +1035,31 @@ export default function SpurgeonSermonsModal({
                     </h3>
                     <ul className="space-y-1">
                       {calvinRefItems.map((row) => (
+                        <li key={row.slug}>
+                          <Link
+                            href={profileHref(row.slug)}
+                            scroll={false}
+                            onClick={followResourceLink}
+                            className={`block rounded-md px-2 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700/80 ${
+                              readCompleteSlugs.has(row.slug)
+                                ? 'font-extrabold text-blue-900 dark:text-blue-200'
+                                : 'font-normal text-blue-700 dark:text-blue-300'
+                            }`}
+                          >
+                            {row.title}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {showHenry && henryRefItems.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
+                      Matthew Henry commentaries
+                    </h3>
+                    <ul className="space-y-1">
+                      {henryRefItems.map((row) => (
                         <li key={row.slug}>
                           <Link
                             href={profileHref(row.slug)}

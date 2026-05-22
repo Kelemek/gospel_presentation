@@ -13,7 +13,7 @@ const BOOK_PREFIX_INDEX_ROW_CAP = 4000
 /** Max public template profile ids to pass into `.in('profile_id', …)` for book-prefix scans. */
 const BOOK_PREFIX_PROFILE_IN_CAP = 500
 
-export type PassageIndexSlugPrefix = 'sg' | 'me' | 'cv' | 'je'
+export type PassageIndexSlugPrefix = 'sg' | 'me' | 'cv' | 'je' | 'mh'
 
 export type PassageIndexLookupOptions = {
   /** Limit book-prefix index rows to profiles with this slug prefix (fixes cap misses for small corpora). */
@@ -113,7 +113,7 @@ export async function profileIdsFromPassageIndexLookup(
 export async function publicProfilesByIdsAndSlugPrefix(
   admin: SupabaseClient,
   profileIds: string[],
-  slugPrefix: 'sg' | 'me' | 'cv' | 'je'
+  slugPrefix: PassageIndexSlugPrefix
 ): Promise<{ slug: string; title: string }[]> {
   if (profileIds.length === 0) return []
 

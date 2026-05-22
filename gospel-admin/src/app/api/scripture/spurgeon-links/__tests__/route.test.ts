@@ -57,6 +57,7 @@ describe('GET /api/scripture/spurgeon-links', () => {
     expect(body.edwardsCount).toBe(0)
     expect(body.morneveCount).toBe(0)
     expect(body.calvinCount).toBe(0)
+    expect(body.henryCount).toBe(0)
   })
 
   it('includes Edwards hits after Spurgeon in combined items', async () => {
@@ -102,6 +103,51 @@ describe('GET /api/scripture/spurgeon-links', () => {
     const body = await res.json()
     expect(body.items.map((x: { kind: string }) => x.kind)).toEqual(['sermon', 'edwards'])
     expect(body.edwardsCount).toBe(1)
+    expect(body.henryCount).toBe(0)
+  })
+
+  it('includes Matthew Henry hits after Calvin in combined items', async () => {
+    const from = jest.fn((table: string) => {
+      if (table === 'spurgeon_passage_index') {
+        return {
+          select: jest.fn(() => ({
+            eq: jest.fn().mockResolvedValue({
+              data: [{ profile_id: 'pMh' }],
+              error: null,
+            }),
+            or: jest.fn().mockResolvedValue({ data: [], error: null }),
+          })),
+        }
+      }
+      if (table === 'profiles') {
+        return {
+          select: jest.fn().mockReturnThis(),
+          in: jest.fn().mockReturnThis(),
+          eq: jest.fn().mockReturnThis(),
+          like: jest.fn((_col: string, pattern: string) => {
+            if (pattern === 'mh%') {
+              return Promise.resolve({
+                data: [{ slug: 'mhgen', title: 'Matthew Henry on Genesis' }],
+                error: null,
+              })
+            }
+            return Promise.resolve({ data: [], error: null })
+          }),
+        }
+      }
+      return {}
+    })
+    mockCreateAdminClient.mockReturnValue({ from } as never)
+
+    const res = await GET(
+      new NextRequest('http://localhost/api/scripture/spurgeon-links?reference=Genesis%201:1')
+    )
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.items).toEqual([
+      { slug: 'mhgen', title: 'Matthew Henry on Genesis', kind: 'henry' },
+    ])
+    expect(body.henryCount).toBe(1)
   })
 
   it('falls back to same-chapter range index rows when exact verse key misses', async () => {
@@ -144,6 +190,7 @@ describe('GET /api/scripture/spurgeon-links', () => {
     expect(body.edwardsCount).toBe(0)
     expect(body.morneveCount).toBe(0)
     expect(body.calvinCount).toBe(0)
+    expect(body.henryCount).toBe(0)
   })
 
   it('falls back when modal range overlaps a single verse in the index', async () => {
@@ -185,5 +232,6 @@ describe('GET /api/scripture/spurgeon-links', () => {
     expect(body.sermonCount).toBe(1)
     expect(body.morneveCount).toBe(0)
     expect(body.calvinCount).toBe(0)
+    expect(body.henryCount).toBe(0)
   })
 })

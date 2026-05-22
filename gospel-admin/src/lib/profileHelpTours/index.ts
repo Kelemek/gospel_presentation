@@ -898,6 +898,7 @@ function resourcesListOverviewCopy(items: PublicResourceItem[]): string {
       i.type === 'spurgeonLibrary' ||
       i.type === 'morningEveningLibrary' ||
       i.type === 'calvinLibrary' ||
+      i.type === 'henryLibrary' ||
       i.type === 'edwardsLibrary'
   )
   if (items.length === 0) {
@@ -3370,6 +3371,24 @@ async function runResourcesFeatureTourAsync(options?: ProfileFeatureTourOptions)
           title: safeTitle,
           description:
             '<p>This row opens <strong>Calvin’s commentaries</strong>: search by book title or by Bible reference, then open a commentary volume as a read-only presentation.</p><p class="mt-2">Tap it when you want John Calvin’s exposition on a passage or book.</p>',
+          side: 'right',
+          align: 'start',
+        },
+      })
+      continue
+    }
+
+    if (g.kind === 'henryLibrary') {
+      const safeTitle = escapeForPopoverText(g.title.trim() || "Matthew Henry's Commentary")
+      steps.push({
+        element: () =>
+          document.querySelector(
+            `${RESOURCES_LIST_PANEL} [data-resource-henry-library]`
+          ) ?? document.querySelector(RESOURCES_LIST_PANEL)!,
+        popover: {
+          title: safeTitle,
+          description:
+            '<p>This row opens <strong>Matthew Henry’s commentary</strong>: search by book title or by Bible reference, then open a commentary volume as a read-only presentation.</p><p class="mt-2">Tap it when you want Henry’s exposition on a passage or book.</p>',
           side: 'right',
           align: 'start',
         },

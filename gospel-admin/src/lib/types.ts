@@ -154,6 +154,7 @@ export type ResourceOrderCategoryChild =
   | ResourceOrderItemSpurgeonLibrary
   | ResourceOrderItemMorningEveningLibrary
   | ResourceOrderItemCalvinLibrary
+  | ResourceOrderItemHenryLibrary
   | ResourceOrderItemEdwardsLibrary
 
 export interface ResourceOrderItemCategory {
@@ -182,12 +183,19 @@ export interface ResourceOrderItemCalvinLibrary {
   title: string
 }
 
+/** Opens the Matthew Henry commentaries library modal (not a profile slug). */
+export interface ResourceOrderItemHenryLibrary {
+  type: 'henryLibrary'
+  title: string
+}
+
 export type ResourceOrderItem =
   | ResourceOrderItemTemplate
   | ResourceOrderItemCategory
   | ResourceOrderItemSpurgeonLibrary
   | ResourceOrderItemMorningEveningLibrary
   | ResourceOrderItemCalvinLibrary
+  | ResourceOrderItemHenryLibrary
   | ResourceOrderItemEdwardsLibrary
 
 export function isResourceOrderItemCategory(
@@ -218,6 +226,12 @@ export function isResourceOrderItemCalvinLibrary(
   item: ResourceOrderItem
 ): item is ResourceOrderItemCalvinLibrary {
   return item.type === 'calvinLibrary'
+}
+
+export function isResourceOrderItemHenryLibrary(
+  item: ResourceOrderItem
+): item is ResourceOrderItemHenryLibrary {
+  return item.type === 'henryLibrary'
 }
 
 export function isResourceOrderItemEdwardsLibrary(

@@ -12,6 +12,9 @@ describe('api-bible-passage-id', () => {
     expect(bookNameToUsfm('Psalms')).toBe('PSA')
     expect(bookNameToUsfm('1 Corinthians')).toBe('1CO')
     expect(bookNameToUsfm('Song of Solomon')).toBe('SNG')
+    expect(bookNameToUsfm('First Samuel')).toBe('1SA')
+    expect(bookNameToUsfm('Second Kings')).toBe('2KI')
+    expect(bookNameToUsfm('Third John')).toBe('3JN')
   })
 
   it('builds passage ids for verse, range, and chapter', () => {

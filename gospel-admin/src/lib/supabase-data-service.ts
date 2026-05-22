@@ -128,6 +128,7 @@ export type PublicResourceCategoryChild =
   | { type: 'spurgeonLibrary'; title: string }
   | { type: 'morningEveningLibrary'; title: string }
   | { type: 'calvinLibrary'; title: string }
+  | { type: 'henryLibrary'; title: string }
   | { type: 'edwardsLibrary'; title: string }
 
 export type PublicResourceItem =
@@ -136,6 +137,7 @@ export type PublicResourceItem =
   | { type: 'spurgeonLibrary'; title: string }
   | { type: 'morningEveningLibrary'; title: string }
   | { type: 'calvinLibrary'; title: string }
+  | { type: 'henryLibrary'; title: string }
   | { type: 'edwardsLibrary'; title: string }
 
 /**
@@ -156,6 +158,7 @@ export async function getPublicResourcesStructure(): Promise<PublicResourceItem[
         .not('slug', 'ilike', 'sg%')
         .not('slug', 'ilike', 'me%')
         .not('slug', 'ilike', 'cv%')
+        .not('slug', 'ilike', 'mh%')
         .not('slug', 'ilike', 'je%'),
       supabase
         .from('admin_settings')
@@ -229,6 +232,11 @@ export async function getPublicResourcesStructure(): Promise<PublicResourceItem[
           type: 'calvinLibrary',
           title: item.title?.trim() || "Calvin's Commentaries",
         })
+      } else if (item.type === 'henryLibrary') {
+        items.push({
+          type: 'henryLibrary',
+          title: item.title?.trim() || "Matthew Henry's Commentary",
+        })
       } else if (item.type === 'edwardsLibrary') {
         items.push({
           type: 'edwardsLibrary',
@@ -257,6 +265,11 @@ export async function getPublicResourcesStructure(): Promise<PublicResourceItem[
             children.push({
               type: 'calvinLibrary',
               title: child.title?.trim() || "Calvin's Commentaries",
+            })
+          } else if (child.type === 'henryLibrary') {
+            children.push({
+              type: 'henryLibrary',
+              title: child.title?.trim() || "Matthew Henry's Commentary",
             })
           } else if (child.type === 'edwardsLibrary') {
             children.push({

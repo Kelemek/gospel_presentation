@@ -1,0 +1,11 @@
+<div1 title="Genesis" n="i" id="Gen">
+<p id="Gen-p1">Genesis is a name taken from the Greek.</p>
+<div2 title="Chapter I" n="ii" id="Gen.ii">
+  <h2 id="Gen.ii-p0.1">G E N E S I S</h2>
+  <h3 id="Gen.ii-p0.2">CHAP. I.</h3>
+  <p id="Gen.ii-p1">The first verse of the Bible
+<scripRef passage="Ge 1:1" osisRef="Bible:Gen.1.1">first verse</scripRef> teaches creation.</p>
+  <p id="Gen.ii-p2">God said, Let there be light;
+<scripRef passage="Ge 1:3-5" osisRef="Bible:Gen.1.3-Gen.1.5">ver. 3-5</scripRef>.</p>
+</div2>
+</div1>

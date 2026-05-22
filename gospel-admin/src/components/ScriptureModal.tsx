@@ -331,6 +331,7 @@ export default function ScriptureModal({
           edwardsCount?: number
           morneveCount?: number
           calvinCount?: number
+          henryCount?: number
         }
         const items = payload.items
         const list = Array.isArray(items) ? items : []
@@ -338,7 +339,8 @@ export default function ScriptureModal({
         const edwardsCount = typeof payload.edwardsCount === 'number' ? payload.edwardsCount : 0
         const morneveCount = typeof payload.morneveCount === 'number' ? payload.morneveCount : 0
         const calvinCount = typeof payload.calvinCount === 'number' ? payload.calvinCount : 0
-        const anyStudy = sermonCount + edwardsCount + morneveCount + calvinCount > 0
+        const henryCount = typeof payload.henryCount === 'number' ? payload.henryCount : 0
+        const anyStudy = sermonCount + edwardsCount + morneveCount + calvinCount + henryCount > 0
         setSpurgeonStudyResolved({
           ref,
           match: anyStudy ? 'yes' : 'no',
@@ -914,10 +916,10 @@ export default function ScriptureModal({
                     !reference.trim()
                       ? 'Open a passage to search study resources'
                       : spurgeonStudyMatch === 'loading' || spurgeonStudyMatch === 'unset'
-                        ? 'Checking indexed Spurgeon, devotions, and Calvin commentaries…'
+                        ? 'Checking indexed study resources…'
                         : spurgeonStudyMatch === 'no'
-                          ? 'No indexed Spurgeon, Morning & Evening, or Calvin commentary for this passage'
-                          : 'Search Spurgeon, Morning & Evening, and Calvin commentaries for this passage'
+                          ? 'No indexed study resources for this passage'
+                          : 'Search Spurgeon, devotions, Calvin, and Matthew Henry commentaries for this passage'
                   }
                   aria-label={
                     !reference.trim()
@@ -926,7 +928,7 @@ export default function ScriptureModal({
                         ? 'Study: checking indexed resources'
                         : spurgeonStudyMatch === 'no'
                           ? 'Study: no indexed resources for this passage'
-                          : 'Study: indexed Spurgeon, devotions, and Calvin commentaries for this passage'
+                          : 'Study: indexed Spurgeon, devotions, Calvin, and Matthew Henry commentaries for this passage'
                   }
                   className={`px-1.5 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 shrink-0 ${
                     !reference.trim() ||

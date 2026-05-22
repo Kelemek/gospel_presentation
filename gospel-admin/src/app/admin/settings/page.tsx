@@ -11,6 +11,7 @@ import {
   isResourceOrderItemMorningEveningLibrary,
   isResourceOrderItemSpurgeonLibrary,
   isResourceOrderItemCalvinLibrary,
+  isResourceOrderItemHenryLibrary,
   isResourceOrderItemEdwardsLibrary,
 } from "@/lib/types";
 import {
@@ -24,6 +25,7 @@ import {
   emptyCategory,
   isResourceOrderLibraryItem,
   orderContainsCalvinLibrary,
+  orderContainsHenryLibrary,
   orderContainsEdwardsLibrary,
   orderContainsMorningEveningLibrary,
   orderContainsSpurgeonLibrary,
@@ -273,6 +275,7 @@ export default function AdminSettingsPage() {
   const hasSpurgeonLibraryRow = orderContainsSpurgeonLibrary(orderItems);
   const hasMorningEveningLibraryRow = orderContainsMorningEveningLibrary(orderItems);
   const hasCalvinLibraryRow = orderContainsCalvinLibrary(orderItems);
+  const hasHenryLibraryRow = orderContainsHenryLibrary(orderItems);
   const hasEdwardsLibraryRow = orderContainsEdwardsLibrary(orderItems);
 
   const addSpurgeonLibraryRow = () => {
@@ -313,6 +316,22 @@ export default function AdminSettingsPage() {
     setOrderItems((prev) =>
       prev.map((item, i) =>
         i === index && isResourceOrderItemCalvinLibrary(item) ? { ...item, title } : item
+      )
+    );
+  };
+
+  const addHenryLibraryRow = () => {
+    if (hasHenryLibraryRow) return;
+    setOrderItems((prev) => [
+      ...prev,
+      { type: "henryLibrary", title: "Matthew Henry's Commentary" },
+    ]);
+  };
+
+  const updateHenryLibraryTitle = (index: number, title: string) => {
+    setOrderItems((prev) =>
+      prev.map((item, i) =>
+        i === index && isResourceOrderItemHenryLibrary(item) ? { ...item, title } : item
       )
     );
   };
@@ -734,6 +753,19 @@ export default function AdminSettingsPage() {
                     </button>
                     <button
                       type="button"
+                      onClick={addHenryLibraryRow}
+                      disabled={hasHenryLibraryRow}
+                      title={
+                        hasHenryLibraryRow
+                          ? "Matthew Henry library row is already in the list"
+                          : "Add a Resources row that opens the Matthew Henry commentaries finder"
+                      }
+                      className="px-3 py-1.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Add Matthew Henry library
+                    </button>
+                    <button
+                      type="button"
                       onClick={addEdwardsLibraryRow}
                       disabled={hasEdwardsLibraryRow}
                       title={
@@ -941,6 +973,40 @@ export default function AdminSettingsPage() {
                               Remove
                             </button>
                           </div>
+                        ) : isResourceOrderItemHenryLibrary(item) ? (
+                          <div
+                            key={`henry-${index}`}
+                            draggable
+                            onDragStart={() => handleDragStartTopLevel(index)}
+                            onDragEnd={handleDragEnd}
+                            onDragOver={(e) => handleDragOverTopLevel(e, index)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDropTopLevel(e, index)}
+                            className={`flex flex-wrap items-center gap-2 px-4 py-3 text-sm text-slate-700 border-b border-slate-100 last:border-b-0 transition-colors cursor-grab active:cursor-grabbing ${dropTarget?.kind === "top-level" && dropTarget.index === index ? "bg-blue-100 ring-1 ring-blue-300" : "hover:bg-slate-50"}`}
+                          >
+                            <span className="shrink-0" aria-hidden>
+                              <GripIcon />
+                            </span>
+                            <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-teal-700">
+                              Matthew Henry library
+                            </span>
+                            <input
+                              type="text"
+                              value={item.title}
+                              onChange={(e) => updateHenryLibraryTitle(index, e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex-1 min-w-32 px-2 py-1 border border-slate-300 rounded text-slate-900 text-sm"
+                              aria-label="Label shown in Resources menu"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeTopLevelTemplate(index)}
+                              className="text-slate-400 hover:text-red-600 text-xs px-1 ml-auto"
+                              aria-label="Remove Matthew Henry library row"
+                            >
+                              Remove
+                            </button>
+                          </div>
                         ) : (
                           <div
                             key={`c-${item.id}`}
@@ -1041,7 +1107,9 @@ export default function AdminSettingsPage() {
                                             ? "text-amber-700"
                                             : child.type === "edwardsLibrary"
                                               ? "text-sky-700"
-                                              : "text-emerald-700"
+                                              : child.type === "henryLibrary"
+                                                ? "text-teal-700"
+                                                : "text-emerald-700"
                                       }`}
                                     >
                                       {child.type === "spurgeonLibrary"
@@ -1050,7 +1118,9 @@ export default function AdminSettingsPage() {
                                           ? "Morning & Evening"
                                           : child.type === "edwardsLibrary"
                                             ? "Edwards library"
-                                            : "Calvin library"}
+                                            : child.type === "henryLibrary"
+                                              ? "Matthew Henry library"
+                                              : "Calvin library"}
                                     </span>
                                     <input
                                       type="text"

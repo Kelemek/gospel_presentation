@@ -7,7 +7,8 @@ const config: Config = {
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', { useESM: false }],
+    // isolatedModules: faster transforms (skip type-checking per file; use `tsc` separately).
+    '^.+\\.(ts|tsx)$': ['ts-jest', { useESM: false, isolatedModules: true }],
   },
   moduleNameMapper: {
     '^@/components/(.*)$': '<rootDir>/src/components/$1',

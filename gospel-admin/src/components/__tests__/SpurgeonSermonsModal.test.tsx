@@ -51,6 +51,18 @@ function mockByReferenceFetch(
         json: () => Promise.resolve({ items: calvinItems }),
       } as Response)
     }
+    if (url.includes('/api/edwards/by-reference')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ items: [] }),
+      } as Response)
+    }
+    if (url.includes('/api/henry/by-reference')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ items: [] }),
+      } as Response)
+    }
     if (url.includes('/api/spurgeon/by-reference')) {
       return Promise.resolve({
         ok: true,
@@ -292,7 +304,7 @@ describe('SpurgeonSermonsModal', () => {
 
     expect(
       await screen.findByText(
-        /No matching public sermons, Edwards sermons, or Calvin commentary books/i
+        /No matching study resources/i
       )
     ).toBeInTheDocument()
   })
@@ -439,6 +451,21 @@ describe('SpurgeonSermonsModal', () => {
     await waitFor(() => {
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringMatching(/\/api\/calvin\/books\?/),
+        expect.any(Object)
+      )
+    })
+    expect(
+      mockFetch.mock.calls.some((c) => String(c[0]).includes('/api/spurgeon/sermons'))
+    ).toBe(false)
+    expect(screen.queryByRole('heading', { name: /^Spurgeon Sermons$/i })).not.toBeInTheDocument()
+  })
+
+  it('with libraryFocus henry only fetches Henry books on search, not sermons', async () => {
+    render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} libraryFocus="henry" />)
+
+    await waitFor(() => {
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringMatching(/\/api\/henry\/books\?/),
         expect.any(Object)
       )
     })
