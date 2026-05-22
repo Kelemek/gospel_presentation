@@ -287,7 +287,7 @@ export default function AdminSettingsPage() {
     if (hasMorningEveningLibraryRow) return;
     setOrderItems((prev) => [
       ...prev,
-      { type: "morningEveningLibrary", title: "Spurgeon's Morning and Evening" },
+      { type: "morningEveningLibrary", title: "Spurgeon's Morning & Evening" },
     ]);
   };
 

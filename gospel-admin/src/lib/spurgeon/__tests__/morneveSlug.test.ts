@@ -48,9 +48,12 @@ describe('morneveSlug', () => {
   })
 
   it('morneveLibraryMenuTitle maps legacy defaults and keeps custom titles', () => {
-    expect(morneveLibraryMenuTitle(undefined)).toBe("Spurgeon's Morning and Evening")
+    expect(morneveLibraryMenuTitle(undefined)).toBe("Spurgeon's Morning & Evening")
     expect(morneveLibraryMenuTitle('Morning and Evening Devotions')).toBe(
-      "Spurgeon's Morning and Evening"
+      "Spurgeon's Morning & Evening"
+    )
+    expect(morneveLibraryMenuTitle("Spurgeon's Morning and Evening")).toBe(
+      "Spurgeon's Morning & Evening"
     )
     expect(morneveLibraryMenuTitle('My custom label')).toBe('My custom label')
   })

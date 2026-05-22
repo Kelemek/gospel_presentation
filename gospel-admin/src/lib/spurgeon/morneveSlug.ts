@@ -17,11 +17,12 @@ export const MORNEVE_MONTH_NAMES = [
 const MORNEVE_SLUG_RE = /^me(\d{4})$/i
 
 /** Default label for the Resources menu row that opens {@link MorneveDevotionsModal}. */
-export const MORNING_EVENING_LIBRARY_DEFAULT_TITLE = "Spurgeon's Morning and Evening"
+export const MORNING_EVENING_LIBRARY_DEFAULT_TITLE = "Spurgeon's Morning & Evening"
 
 const LEGACY_MORNEVE_LIBRARY_MENU_TITLES = new Set([
   'Morning and Evening Devotions',
   'Morning & Evening Devotions',
+  "Spurgeon's Morning and Evening",
 ])
 
 /** Resources menu title; maps legacy defaults to {@link MORNING_EVENING_LIBRARY_DEFAULT_TITLE}. */

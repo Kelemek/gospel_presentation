@@ -868,6 +868,50 @@ ol.academic-style li > div {
   text-indent: 0;
 }
 
+/* Morning & Evening menu: rise 5s → hold 5s → set 5s, loop (TableOfContents) */
+@property --sun-elevation {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+@keyframes sun-moon-horizon-cycle {
+  0% {
+    --sun-elevation: 0;
+  }
+  33.333% {
+    --sun-elevation: 1;
+  }
+  66.666% {
+    --sun-elevation: 1;
+  }
+  100% {
+    --sun-elevation: 0;
+  }
+}
+
+.sun-moon-animated-icon {
+  /* Top ray is at y=3; must clear sky clip at y=16 when fully set */
+  --sun-travel: 14px;
+  animation: sun-moon-horizon-cycle 15s ease-in-out infinite;
+}
+
+.sun-moon-animated-icon__sun {
+  transform: translateY(calc((1 - var(--sun-elevation)) * var(--sun-travel)));
+}
+
+.sun-moon-animated-icon__water-line {
+  opacity: calc(var(--sun-elevation) * 0.85);
+  transform: scaleX(var(--sun-elevation));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sun-moon-animated-icon {
+    animation: none;
+    --sun-elevation: 1;
+  }
+}
+
 .print-content ul,
 .print-content ol {
   padding-left: 1.5rem;

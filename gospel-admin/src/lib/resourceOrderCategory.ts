@@ -67,7 +67,7 @@ export function parseCategoryChild(el: unknown): ResourceOrderCategoryChild | nu
     const title =
       typeof rawTitle === 'string' && rawTitle.trim()
         ? rawTitle.trim()
-        : "Spurgeon's Morning and Evening"
+        : "Spurgeon's Morning & Evening"
     return { type: 'morningEveningLibrary', title }
   }
   if (o.type === 'calvinLibrary') {
@@ -385,7 +385,7 @@ export function parseResourceOrder(raw: unknown): ResourceOrderItem[] {
         const title =
           typeof rawTitle === 'string' && rawTitle.trim()
             ? rawTitle.trim()
-            : "Spurgeon's Morning and Evening"
+            : "Spurgeon's Morning & Evening"
         out.push({ type: 'morningEveningLibrary', title })
       } else if (o.type === 'calvinLibrary') {
         const rawTitle = o.title

@@ -3343,7 +3343,7 @@ async function runResourcesFeatureTourAsync(options?: ProfileFeatureTourOptions)
     }
 
     if (g.kind === 'morningEveningLibrary') {
-      const safeTitle = escapeForPopoverText(g.title.trim() || "Spurgeon's Morning and Evening")
+      const safeTitle = escapeForPopoverText(g.title.trim() || "Spurgeon's Morning & Evening")
       steps.push({
         element: () =>
           document.querySelector(

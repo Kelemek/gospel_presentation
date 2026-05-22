@@ -65,7 +65,7 @@ export default function MorneveDevotionsModal({
       >
         <div className="shrink-0 border-b border-gray-200 dark:border-slate-600 px-5 py-4 flex items-center justify-between gap-3">
           <h2 id={titleId} className="text-lg font-semibold text-slate-800 dark:text-slate-100">
-            Spurgeon&apos;s Morning and Evening
+            Spurgeon&apos;s Morning &amp; Evening
           </h2>
           <button
             type="button"
