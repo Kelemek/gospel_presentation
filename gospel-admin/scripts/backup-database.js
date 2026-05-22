@@ -20,6 +20,8 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   process.exit(1);
 }
 
+const { isReimportableCorpusProfileSlug } = require('./lib/reimportableCorpusProfileSlug');
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 async function createBackup() {
@@ -42,7 +44,11 @@ async function createBackup() {
       .select('*');
     
     if (profilesError) throw profilesError;
-    console.log(`   ✅ Found ${profiles.length} profiles`);
+    const profilesForBackup = profiles.filter((p) => !isReimportableCorpusProfileSlug(p.slug ?? ''));
+    const corpusExcluded = profiles.length - profilesForBackup.length;
+    console.log(
+      `   ✅ Found ${profiles.length} profiles (${profilesForBackup.length} in backup; ${corpusExcluded} CCEL corpus excluded)`
+    );
     
     // Backup user_profiles table
     console.log('📊 Fetching user_profiles...');
@@ -59,12 +65,14 @@ async function createBackup() {
       backup_type: 'manual',
       version: '1.2',
       tables: {
-        profiles: profiles,
+        profiles: profilesForBackup,
         user_profiles: userProfiles,
       },
       metadata: {
-        total_records: profiles.length + userProfiles.length,
-        tables_count: 2
+        total_records: profilesForBackup.length + userProfiles.length,
+        tables_count: 2,
+        excluded_reimportable_corpus: true,
+        corpus_profiles_excluded: corpusExcluded,
       }
     };
     
@@ -108,7 +116,8 @@ async function createBackup() {
     
     console.log('\n✅ Backup completed successfully!');
     console.log(`\n📈 Summary:`);
-    console.log(`   Profiles: ${profiles.length}`);
+    console.log(`   Profiles (backed up): ${profilesForBackup.length}`);
+    console.log(`   CCEL corpus excluded: ${corpusExcluded}`);
     console.log(`   User Profiles: ${userProfiles.length}`);
     console.log(`   Total Records: ${backup.metadata.total_records}`);
     console.log(`\n📂 Location: ${backupDir}`);

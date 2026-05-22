@@ -1,6 +1,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+/** Keep in sync with gospel-admin/src/lib/backup/reimportableCorpusProfileSlug.ts */
+function isReimportableCorpusProfileSlug(slug: string): boolean {
+  const s = slug.trim();
+  return (
+    /^sg\d+$/i.test(s) ||
+    /^me\d{4}$/i.test(s) ||
+    /^cv([a-z0-9]+)$/i.test(s) ||
+    /^mh([a-z0-9]+)$/i.test(s) ||
+    /^je\d+$/i.test(s) ||
+    /^lgal$/i.test(s) ||
+    /^luthergal$/i.test(s)
+  );
+}
+
 /**
  * Supabase Edge: after returning `Response`, the runtime may stop the isolate unless
  * outbound work is registered with `waitUntil`. Required for self-POST backup continuations.
@@ -71,6 +85,8 @@ interface BackupCheckpointV1 {
   differential_since_iso?: string | null;
   base_full_run_id?: string | null;
   storage_prefix_kind?: "daily" | "differential";
+  /** Profile UUIDs omitted from backup (CCEL corpora — re-import from npm scripts). */
+  corpus_profile_ids?: string[];
 }
 
 interface BackupRunRow {
@@ -266,6 +282,31 @@ type TableBackupFilter =
   | { kind: "full" }
   | { kind: "differential"; sinceIso: string };
 
+/** Profile ids for CCEL corpora excluded from `profiles` and `spurgeon_passage_index` shards. */
+async function fetchCorpusProfileIds(supabase: ServiceClient): Promise<Set<string>> {
+  const ids = new Set<string>();
+  const pageSize = 1000;
+  let from = 0;
+  for (;;) {
+    const { data, error } = await supabase.from("profiles").select("id, slug").range(from, from + pageSize - 1);
+    if (error) throw new Error(`profiles corpus scan: ${error.message}`);
+    const rows = data ?? [];
+    for (const row of rows) {
+      const rec = row as { id?: string; slug?: string };
+      if (
+        typeof rec.id === "string" &&
+        typeof rec.slug === "string" &&
+        isReimportableCorpusProfileSlug(rec.slug)
+      ) {
+        ids.add(rec.id);
+      }
+    }
+    if (rows.length < pageSize) break;
+    from += pageSize;
+  }
+  return ids;
+}
+
 /** Stable pagination order; `translation_settings` has no `id` (PK is `translation_code`). */
 function orderColumnForBackupTable(tableName: string): string {
   if (tableName === "translation_settings") return "translation_code";
@@ -285,7 +326,8 @@ async function backupOneTableWithSlice(
   checkDeadline: () => void,
   start: { rangeFrom: number; shardIndex: number; paths: string[]; slugMap: Record<string, string> },
   sliceDeadlineMs: number,
-  tableFilter: TableBackupFilter
+  tableFilter: TableBackupFilter,
+  corpusProfileIds: Set<string>
 ): Promise<TableBackupOutcome> {
   const paths = [...start.paths];
   let rowCount = 0;
@@ -337,6 +379,14 @@ async function backupOneTableWithSlice(
 
     for (const row of rows) {
       const rec = row as Record<string, unknown>;
+      if (tableName === "profiles") {
+        const sid = rec.id;
+        if (typeof sid === "string" && corpusProfileIds.has(sid)) continue;
+      }
+      if (tableName === "spurgeon_passage_index") {
+        const pid = rec.profile_id;
+        if (typeof pid === "string" && corpusProfileIds.has(pid)) continue;
+      }
       const rowJson = stringifyShardRow(tableName, row);
       const rowUtf8 = enc.encode(rowJson).byteLength;
       if (rowUtf8 >= shardMaxApproxUtf8) {
@@ -853,6 +903,16 @@ serve(async (req: Request) => {
       throw new Error("Differential backup missing watermark (incremental_base_completed_at); cannot continue.");
     }
 
+    let corpusProfileIds: Set<string>;
+    if (preloadedCp?.corpus_profile_ids?.length) {
+      corpusProfileIds = new Set(preloadedCp.corpus_profile_ids);
+    } else {
+      corpusProfileIds = await fetchCorpusProfileIds(supabase);
+      runWarnings.push(
+        `Excluded ${corpusProfileIds.size} re-importable CCEL corpus profile(s) from profiles and spurgeon_passage_index.`
+      );
+    }
+
     while (tableIdx < tablesToBackup.length) {
       checkDeadline();
       const tableName = tablesToBackup[tableIdx];
@@ -877,7 +937,8 @@ serve(async (req: Request) => {
         checkDeadline,
         start,
         sliceDeadlineMs,
-        tableFilter
+        tableFilter,
+        corpusProfileIds
       );
 
       totalCompressedBytes += outcome.bytes;
@@ -912,6 +973,7 @@ serve(async (req: Request) => {
           differential_since_iso: differentialSinceIso,
           base_full_run_id: baseFullRunId,
           storage_prefix_kind: backupKind === "differential" ? "differential" : "daily",
+          corpus_profile_ids: Array.from(corpusProfileIds),
         };
         await saveCheckpoint(supabase as StorageUploader, cp);
         const { error: partialErr } = await supabase
@@ -994,6 +1056,8 @@ serve(async (req: Request) => {
         backup_kind: backupKind,
         differential_since: differentialSinceIso,
         base_full_run_id: baseFullRunId,
+        excluded_reimportable_corpus: true,
+        corpus_profile_count_excluded: corpusProfileIds.size,
       },
     };
 

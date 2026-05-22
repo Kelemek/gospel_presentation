@@ -84,8 +84,12 @@ Full-database restore from monolithic JSON is not a supported CLI path. Use **`r
 
 ### Recovery Steps
 1. Confirm latest automated run in `public.backup_runs` and Storage `db-backups`. For **`restore-profile-from-backup`**, use a manifest from a **full** backup (`latest/latest-backup.json` points at full runs; differential-only manifests omit unchanged rows).
-2. For one profile: invoke `restore-profile-from-backup` with manifest path + slug or id
-3. For full disaster recovery: plan outside this repo (hosted backups, point-in-time recovery, or custom tooling)
+2. For one **user or template** profile: invoke `restore-profile-from-backup` with manifest path + slug or id (not CCEL corpus slugs — those are excluded from backups).
+3. For **CCEL corpora** (Spurgeon, Calvin, Henry, Morning & Evening, Edwards, Luther Galatians): re-import from `gospel-admin/` (`npm run import-spurgeon`, `import-calvin`, `import-henry`, `import-morneve`, `import-edwards`, `import-luther-galatians`).
+4. For full disaster recovery: plan outside this repo (hosted backups, point-in-time recovery, or custom tooling).
+
+### Reclaiming backup storage (Free tier)
+After deploying corpus-exclusion backups, purge legacy shards: `npm run purge-db-backups -- --dry-run` then `npm run purge-db-backups` (requires `SUPABASE_SERVICE_KEY`; may take a while for ~100k+ objects). Deploy Edge functions, run one full `backup-to-storage` (`POST {}`), and `VACUUM FULL storage.objects;` in SQL Editor if database size stays high.
 
 ## Testing
 

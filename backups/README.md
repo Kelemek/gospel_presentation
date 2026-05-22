@@ -60,6 +60,26 @@ Automated backups are performed by the Supabase Edge Function `backup-to-storage
 **Table discovery:**
 - Uses `get_backup_tables()` to dynamically include new `public` tables (excludes cache/log/session tables, `backup_runs`, `bible_verses`, `scripture_access_logs`, `verification_codes`; apply **`sql/migrations/20260509_get_backup_tables_fix_log_exclusions.sql`** if an older migration still listed the wrong log table name and pulled full access logs into backups).
 
+**Excluded from export (re-importable CCEL corpora):**
+- `backup-to-storage` and `npm run backup` **skip** `profiles` rows with slugs `sg…`, `meMMDD`, `cv…`, `mh…`, `je…`, `lgal` (and deprecated `luthergal`), plus `spurgeon_passage_index` rows for those profile ids. User-authored profiles and non-corpus index rows are still backed up.
+- Manifest `metadata.excluded_reimportable_corpus` and `metadata.corpus_profile_count_excluded` record the policy.
+- **`restore-profile-from-backup`** rejects corpus slugs with **400** (use import scripts instead).
+
+| Corpus | Re-import (from `gospel-admin/`) |
+|--------|----------------------------------|
+| Spurgeon sermons | `npm run import-spurgeon` (+ gap scripts as needed) |
+| Morning & Evening | `npm run import-morneve` |
+| Calvin | `npm run import-calvin` |
+| Matthew Henry | `npm run import-henry` |
+| Edwards | `npm run import-edwards` |
+| Luther Galatians | `npm run import-luther-galatians` |
+
+**One-time purge of legacy bloated backups:**
+1. Deploy updated `backup-to-storage` and `restore-profile-from-backup` Edge functions (deploy **`index.ts` only** from the dashboard, or use `supabase functions deploy` from the repo).
+2. `cd gospel-admin && node scripts/purge-db-backups-bucket.js --dry-run` then run without `--dry-run` (needs `SUPABASE_SERVICE_KEY` in `.env.local`).
+3. Trigger one **full** backup (`POST {}` to `backup-to-storage` or Sunday cron).
+4. If Supabase **database size** stays high, run `VACUUM FULL storage.objects;` in the SQL Editor during low traffic (direct `DELETE` on `storage.objects` is blocked by Supabase; use the script or Storage API).
+
 **Retention (free-tier guardrail):**
 - Keep a short rolling window for **full** backups (recommended: 7): **`BACKUP_KEEP_DAILY`** prunes **`daily/`** date folders on successful **full** runs.
 - Differential artifacts prune separately: **`BACKUP_KEEP_DIFFERENTIAL_DAYS`** applies to **`differential/`** on successful **differential** runs.

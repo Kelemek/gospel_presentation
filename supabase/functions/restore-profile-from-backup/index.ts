@@ -1,6 +1,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+/** Keep in sync with gospel-admin/src/lib/backup/reimportableCorpusProfileSlug.ts */
+function isReimportableCorpusProfileSlug(slug: string): boolean {
+  const s = slug.trim();
+  return (
+    /^sg\d+$/i.test(s) ||
+    /^me\d{4}$/i.test(s) ||
+    /^cv([a-z0-9]+)$/i.test(s) ||
+    /^mh([a-z0-9]+)$/i.test(s) ||
+    /^je\d+$/i.test(s) ||
+    /^lgal$/i.test(s) ||
+    /^luthergal$/i.test(s)
+  );
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -161,6 +175,17 @@ serve(async (req: Request) => {
       });
     }
 
+    if (!UUID_RE.test(profileKey) && isReimportableCorpusProfileSlug(profileKey)) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "This profile is a re-importable CCEL corpus (sg/me/cv/mh/je/lgal) and is not included in backups. Re-run the appropriate npm import script from gospel-admin instead.",
+          profile_slug_or_id: profileKey,
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     let matchedFromBackup: Record<string, unknown> | null = null;
 
     const { text: initialText, usedPath } = await downloadText(supabase, backupPath);
@@ -248,6 +273,18 @@ serve(async (req: Request) => {
       return new Response(
         JSON.stringify({ error: `No profile found in backup for key: ${profileKey}`, backup_path: backupPath }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const restoredSlug = String(matchedFromBackup.slug ?? "");
+    if (restoredSlug && isReimportableCorpusProfileSlug(restoredSlug)) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "This profile is a re-importable CCEL corpus and is not included in current backups. Re-run the appropriate npm import script from gospel-admin instead.",
+          profile_slug: restoredSlug,
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
