@@ -622,7 +622,6 @@ describe('MemorizationPracticeSession', () => {
     expect(study).toBeDisabled()
     expect(study).toHaveTextContent('Study')
     fetchSpy.mockRestore()
-    delete (HTMLElement.prototype as unknown as { scrollIntoView?: unknown }).scrollIntoView
   })
 
   it('shows Spurgeon Study when spurgeon-links returns items and calls onOpenSpurgeonStudy on click', async () => {
@@ -658,6 +657,5 @@ describe('MemorizationPracticeSession', () => {
     expect(onClose).toHaveBeenCalled()
     expect(openStudy).toHaveBeenCalledWith('John 3:16')
     fetchSpy.mockRestore()
-    delete (HTMLElement.prototype as unknown as { scrollIntoView?: unknown }).scrollIntoView
   })
 })

@@ -1,7 +1,13 @@
 /**
- * Scripture pins per profile (localStorage only): one yellow (“last verse viewed”) + unlimited
+ * Scripture pins per profile: one yellow (“last verse viewed”) + unlimited
  * tinted bookmarks (red/blue/green/violet repeats allowed across passages).
  */
+
+import {
+  gospelStorageGetSync,
+  gospelStorageRemoveSync,
+  gospelStorageSet,
+} from '@/lib/gospelClientStorage'
 
 export const VERSE_PIN_COLOR_IDS = ['red', 'blue', 'yellow', 'green', 'violet'] as const
 export type VersePinColorId = (typeof VERSE_PIN_COLOR_IDS)[number]
@@ -256,32 +262,33 @@ function clearRowConflictsMutable(state: VersePinsStoredState, entry: VersePinSl
 export function loadVersePins(profileSlug: string): VersePinsStoredState {
   if (typeof window === 'undefined') return emptyState()
   try {
-    const { state, needsV2Persist } = parseStoredJSON(localStorage.getItem(versePinStorageKey(profileSlug)))
+    const { state, needsV2Persist } = parseStoredJSON(gospelStorageGetSync(versePinStorageKey(profileSlug)))
     const legacyKey = legacyScriptureProgressStorageKey(profileSlug)
 
     if (needsV2Persist) {
-      persistVersePinsOrFalse(profileSlug, state)
+      void persistVersePinsDurable(profileSlug, state)
     }
 
     if (hasAnyStoredPin(state)) {
       try {
-        localStorage.removeItem(legacyKey)
+        gospelStorageRemoveSync(legacyKey)
       } catch {
         /* ignore */
       }
       return state
     }
 
-    const legacySlot = parseLegacyScriptureProgress(localStorage.getItem(legacyKey))
+    const legacySlot = parseLegacyScriptureProgress(gospelStorageGetSync(legacyKey))
     if (legacySlot) {
       state.yellow = { ...legacySlot }
-      if (persistVersePinsOrFalse(profileSlug, state)) {
+      void persistVersePinsDurable(profileSlug, state).then((ok) => {
+        if (!ok) return
         try {
-          localStorage.removeItem(legacyKey)
+          gospelStorageRemoveSync(legacyKey)
         } catch {
           /* ignore */
         }
-      }
+      })
     }
 
     return state
@@ -290,8 +297,11 @@ export function loadVersePins(profileSlug: string): VersePinsStoredState {
   }
 }
 
-/** Returns true iff persisted and read-back matches. */
-function persistVersePinsOrFalse(profileSlug: string, state: VersePinsStoredState): boolean {
+/** Returns true only after IndexedDB (or localStorage fallback) accepts the write. */
+async function persistVersePinsDurable(
+  profileSlug: string,
+  state: VersePinsStoredState
+): Promise<boolean> {
   if (typeof window === 'undefined') return false
   try {
     const key = versePinStorageKey(profileSlug)
@@ -300,22 +310,20 @@ function persistVersePinsOrFalse(profileSlug: string, state: VersePinsStoredStat
       yellow: state.yellow,
       bookmarks: state.bookmarks,
     }
-    const serialized = JSON.stringify(payload)
-    localStorage.setItem(key, serialized)
-    return localStorage.getItem(key) === serialized
+    return await gospelStorageSet(key, JSON.stringify(payload))
   } catch {
     return false
   }
 }
 
 function savePins(profileSlug: string, state: VersePinsStoredState): void {
-  void persistVersePinsOrFalse(profileSlug, state)
+  void persistVersePinsDurable(profileSlug, state)
 }
 
 export function clearAllVersePins(profileSlug: string): void {
   if (typeof window === 'undefined') return
   try {
-    localStorage.removeItem(versePinStorageKey(profileSlug))
+    gospelStorageRemoveSync(versePinStorageKey(profileSlug))
   } catch {
     /* ignore */
   }

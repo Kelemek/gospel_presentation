@@ -1,3 +1,5 @@
+import { gospelStorageGetSync, gospelStorageSetSync } from '@/lib/gospelClientStorage'
+
 export const PROFILE_BOOKMARKS_STORAGE_KEY = 'gospel-profile-bookmarks'
 export const PROFILE_BOOKMARKS_SCHEMA_VERSION = 1
 
@@ -18,7 +20,7 @@ interface StoredShape {
 export function loadBookmarks(): ProfileBookmark[] {
   if (typeof window === 'undefined') return []
   try {
-    const raw = window.localStorage.getItem(PROFILE_BOOKMARKS_STORAGE_KEY)
+    const raw = gospelStorageGetSync(PROFILE_BOOKMARKS_STORAGE_KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw) as StoredShape
     if (!parsed || parsed.v !== PROFILE_BOOKMARKS_SCHEMA_VERSION || !Array.isArray(parsed.bookmarks)) {
@@ -46,7 +48,7 @@ function persist(bookmarks: ProfileBookmark[]): void {
       v: PROFILE_BOOKMARKS_SCHEMA_VERSION,
       bookmarks,
     }
-    window.localStorage.setItem(PROFILE_BOOKMARKS_STORAGE_KEY, JSON.stringify(payload))
+    gospelStorageSetSync(PROFILE_BOOKMARKS_STORAGE_KEY, JSON.stringify(payload))
   } catch {
     // quota / private mode
   }

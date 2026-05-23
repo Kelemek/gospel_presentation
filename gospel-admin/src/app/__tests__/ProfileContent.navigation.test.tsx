@@ -5,6 +5,9 @@ import React, { type ReactElement } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TextSizeProvider } from '@/contexts/TextSizeContext'
+import { gospelStorageGetSync, gospelStorageSetSync, resetGospelClientStorageForTests } from '@/lib/gospelClientStorage'
+import { versePinStorageKey } from '@/lib/versePinStorage'
+import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
 
 function renderWithTextSize(ui: ReactElement) {
   return render(<TextSizeProvider>{ui}</TextSizeProvider>)
@@ -55,7 +58,8 @@ const profileInfo = {
 describe('ProfileContent navigation & pins', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    localStorage.clear()
+    resetGospelClientStorageForTests()
+    installTestLocalStorage()
     ;(global as any).fetch = jest.fn((input: RequestInfo | URL | any) => {
       const url = typeof input === 'string' ? input : String(input)
       if (url.includes('/visit')) return Promise.resolve({ ok: true, json: async () => ({}) }) as any
@@ -87,21 +91,20 @@ describe('ProfileContent navigation & pins', () => {
     const user = userEvent.setup()
     const profile = { id: 'p', isDefault: false }
 
-    localStorage.setItem(
-      'gospel-verse-pins-p1',
+    gospelStorageSetSync(
+      versePinStorageKey('p1'),
       JSON.stringify({
-        v: 1,
-        byColor: {
-          red: {
+        v: 2,
+        yellow: null,
+        bookmarks: [
+          {
+            id: 'bm-red-1',
+            colorId: 'red',
             reference: 'John 3:16',
             sectionId: 'section-1',
             subsectionId: 'section-1-0',
           },
-          blue: null,
-          yellow: null,
-          green: null,
-          violet: null,
-        },
+        ],
       })
     )
 
@@ -110,6 +113,6 @@ describe('ProfileContent navigation & pins', () => {
     const unpinBtn = await screen.findByRole('button', { name: /remove red pin/i })
     await user.click(unpinBtn)
 
-    await waitFor(() => expect(localStorage.getItem('gospel-verse-pins-p1')).toBeNull())
+    await waitFor(() => expect(gospelStorageGetSync(versePinStorageKey('p1'))).toBeNull())
   })
 })

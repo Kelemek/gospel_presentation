@@ -12,7 +12,8 @@ import {
   writeMemorizeAddTestament,
   type MemorizeAddTestament,
 } from '@/lib/memorizationAddVersePrefs'
-import { addMemorizedVerse, isMemoizedForReference } from '@/lib/verseMemorizationStorage'
+import { memorizationSaveFailureMessage } from '@/lib/memorizationSaveFailureMessage'
+import { tryAddMemorizedVerse } from '@/lib/verseMemorizationStorage'
 
 export interface AddMemorizedVerseModalProps {
   isOpen: boolean
@@ -158,16 +159,12 @@ export default function AddMemorizedVerseModal({
         showAlert('No text returned for this passage.')
         return
       }
-      const ok = addMemorizedVerse(ref, text, translation)
-      if (ok) {
+      const result = await tryAddMemorizedVerse(ref, text, translation)
+      if (result.ok) {
         showAlert('Added to memorization list.\n\nYou can find this verse under Memorize in the menu.')
         onClose()
-      } else if (isMemoizedForReference(ref, translation)) {
-        showAlert('This verse is already in your memorization list.')
       } else {
-        showAlert(
-          'Could not save this verse on your device. If Safari Private Browsing is on, turn it off or allow website data for this site, then try again.'
-        )
+        showAlert(memorizationSaveFailureMessage(result.reason))
       }
     } catch (e: unknown) {
       showAlert(e instanceof Error ? e.message : 'Failed to add passage.')

@@ -19,10 +19,11 @@ import {
   memorizeAddBookFromReference,
   writeMemorizeAddTestament,
 } from '@/lib/memorizationAddVersePrefs'
+import { memorizationSaveFailureMessage } from '@/lib/memorizationSaveFailureMessage'
 import {
-  addMemorizedVerse,
   GOSPEL_MEMORIZATION_CHANGED_EVENT,
   isMemoizedForReference,
+  tryAddMemorizedVerse,
 } from '@/lib/verseMemorizationStorage'
 import type { VerseBookmarkColorId, VersePinColorId } from '@/lib/versePinStorage'
 import ScriptureModalPinPick from '@/components/ScriptureModalPinPick'
@@ -85,6 +86,7 @@ export default function ScriptureModal({
   // Compare translation (second column)
   const [compareTranslation, setCompareTranslation] = useState<string | null>(null)
   const [wordStudyEnabled, setWordStudyEnabled] = useState(false)
+  const [memorizeInFlight, setMemorizeInFlight] = useState(false)
 
   const [scriptureResolved, setScriptureResolved] = useState<{
     key: string
@@ -526,7 +528,9 @@ export default function ScriptureModal({
     return () => abortController.abort()
   }, [compareChapterFetchKey, reference, activeCompareTranslation])
 
-  const handleMemorize = () => {
+  const handleMemorize = async () => {
+    if (memorizeInFlight || isMemoized) return
+
     const text = scriptureText ?? ''
     if (loading) {
       showAlert('Still loading this passage. Wait a moment, then tap Memorize again.')
@@ -540,19 +544,21 @@ export default function ScriptureModal({
       showAlert('No verse text is available to save yet.')
       return
     }
-    const ok = addMemorizedVerse(reference, text, translation)
-    if (ok) {
-      const book = memorizeAddBookFromReference(reference)
-      if (book) writeMemorizeAddTestament(book.testament)
-      showAlert(
-        'Added to memorization list.\n\nYou can find this verse under Memorize in the menu.'
-      )
-    } else if (isMemoizedForReference(reference, translation)) {
-      showAlert('This verse is already in your memorization list.')
-    } else {
-      showAlert(
-        'Could not save this verse on your device. If Safari Private Browsing is on, turn it off or allow website data for this site, then try again.'
-      )
+
+    setMemorizeInFlight(true)
+    try {
+      const result = await tryAddMemorizedVerse(reference, text, translation)
+      if (result.ok) {
+        const book = memorizeAddBookFromReference(reference)
+        if (book) writeMemorizeAddTestament(book.testament)
+        showAlert(
+          'Added to memorization list.\n\nYou can find this verse under Memorize in the menu.'
+        )
+      } else {
+        showAlert(memorizationSaveFailureMessage(result.reason))
+      }
+    } finally {
+      setMemorizeInFlight(false)
     }
   }
 
@@ -970,27 +976,38 @@ export default function ScriptureModal({
               <button
                 type="button"
                 data-tour="scripture-modal-memorize"
-                onClick={handleMemorize}
-                disabled={isMemoized}
+                onClick={() => {
+                  void handleMemorize()
+                }}
+                disabled={isMemoized || memorizeInFlight}
+                aria-busy={memorizeInFlight}
                 title={
                   isMemoized
                     ? 'Already in memorization list'
-                    : loading
-                      ? 'Loading passage…'
-                      : error
-                        ? 'Passage failed to load'
-                        : !(scriptureText ?? '').trim()
-                          ? 'No verse text loaded yet'
-                          : 'Save this verse to memorize later'
+                    : memorizeInFlight
+                      ? 'Saving to memorization list…'
+                      : loading
+                        ? 'Loading passage…'
+                        : error
+                          ? 'Passage failed to load'
+                          : !(scriptureText ?? '').trim()
+                            ? 'No verse text loaded yet'
+                            : 'Save this verse to memorize later'
                 }
-                aria-label={isMemoized ? 'Verse already in memorization list' : 'Memorize this verse'}
-                className={`px-1.5 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 shrink-0 ${
+                aria-label={
                   isMemoized
+                    ? 'Verse already in memorization list'
+                    : memorizeInFlight
+                      ? 'Saving verse to memorization list'
+                      : 'Memorize this verse'
+                }
+                className={`px-1.5 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 shrink-0 ${
+                  isMemoized || memorizeInFlight
                     ? 'text-slate-400 dark:text-slate-500 border-slate-300 dark:border-slate-600 cursor-not-allowed bg-slate-50 dark:bg-slate-700/50'
                     : 'cursor-pointer text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500'
                 }`}
               >
-                Memorize
+                {memorizeInFlight ? 'Memorizing…' : 'Memorize'}
               </button>
             </div>
           </div>

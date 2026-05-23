@@ -5,11 +5,9 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import MemorizeDropdown from '@/components/MemorizeDropdown'
-import {
-  addMemorizedVerse,
-  loadMemorizedVerses,
-  VERSE_MEMORIZATION_STORAGE_KEY,
-} from '@/lib/verseMemorizationStorage'
+import { resetGospelClientStorageForTests } from '@/lib/gospelClientStorage'
+import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
+import { addMemorizedVerse, loadMemorizedVerses } from '@/lib/verseMemorizationStorage'
 
 const mockShowConfirm = jest.fn()
 
@@ -38,7 +36,8 @@ jest.mock('@/components/MemorizationPracticeSession', () => ({
 
 describe('MemorizeDropdown', () => {
   beforeEach(() => {
-    window.localStorage.clear()
+    resetGospelClientStorageForTests()
+    installTestLocalStorage()
     mockShowConfirm.mockReset()
     mockShowConfirm.mockResolvedValue(true)
   })
@@ -47,7 +46,11 @@ describe('MemorizeDropdown', () => {
     const user = userEvent.setup()
     render(<MemorizeDropdown />)
     await user.click(screen.getByRole('button', { name: /memorize/i }))
-    expect(screen.getByText(/No verses saved yet/i)).toBeInTheDocument()
+    const panel = screen.getByRole('region', { name: 'Memorization list' })
+    expect(panel).toHaveTextContent(/No verses saved yet/)
+    expect(panel).toHaveTextContent(/Tap \+ Add to choose a verse/)
+    expect(panel.textContent).toMatch(/\+ Add to choose/)
+    expect(panel.textContent).not.toMatch(/\+ Addto/i)
   })
 
   it('shows + Add when Memorize panel is expanded', async () => {
@@ -67,7 +70,7 @@ describe('MemorizeDropdown', () => {
 
   it('lists verses grouped by mastery', async () => {
     addMemorizedVerse('John 3:16', 'For God so loved the world.', 'esv')
-    expect(window.localStorage.getItem(VERSE_MEMORIZATION_STORAGE_KEY)).toBeTruthy()
+    expect(loadMemorizedVerses()).toHaveLength(1)
     const user = userEvent.setup()
     render(<MemorizeDropdown />)
     await user.click(screen.getByRole('button', { name: /memorize/i }))

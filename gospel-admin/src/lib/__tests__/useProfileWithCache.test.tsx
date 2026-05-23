@@ -1,6 +1,10 @@
 import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import * as gospelClientStorage from '@/lib/gospelClientStorage'
+import { gospelStorageSetSync } from '@/lib/gospelClientStorage'
+import { profileOfflineCacheKey } from '@/lib/gospelClientStoragePolicy'
+import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
 import { useProfileWithCache } from '../useProfileWithCache'
 
 function TestHarness({ slug }: { slug: string }) {
@@ -18,22 +22,20 @@ function TestHarness({ slug }: { slug: string }) {
 
 describe('useProfileWithCache', () => {
   const originalFetch = global.fetch
-  const originalLocalStorage = global.localStorage
 
   beforeEach(() => {
     jest.clearAllMocks()
-    ;(global as any).localStorage = {
-      getItem: jest.fn(() => null),
-      setItem: jest.fn(),
-      removeItem: jest.fn(),
-      clear: jest.fn()
-    }
+    installTestLocalStorage()
   })
 
   afterEach(() => {
     ;(global as any).fetch = originalFetch
-    ;(global as any).localStorage = originalLocalStorage
   })
+
+  function seedOfflineCache(slug: string, payload: unknown) {
+    const value = typeof payload === 'string' ? payload : JSON.stringify(payload)
+    gospelStorageSetSync(profileOfflineCacheKey(slug), value)
+  }
 
   it('fetches profile when no cache and sets loading state', async () => {
     const mockProfile = {
@@ -81,9 +83,7 @@ describe('useProfileWithCache', () => {
       },
       updatedAt: new Date().toISOString()
     }
-    ;(global as any).localStorage.getItem = jest.fn((key: string) =>
-      key === 'gospel-profile-cached' ? JSON.stringify(cached) : null
-    )
+    seedOfflineCache('cached', cached)
 
     let fetchCount = 0
     ;(global as any).fetch = jest.fn((url: string) => {
@@ -214,9 +214,7 @@ describe('useProfileWithCache', () => {
       visitCount: 0,
       updatedAt: '2021-01-01T00:00:00Z'
     }
-    ;(global as any).localStorage.getItem = jest.fn((key: string) =>
-      key === 'gospel-profile-stale' ? JSON.stringify(cached) : null
-    )
+    seedOfflineCache('stale', cached)
     let profileFetchCount = 0
     ;(global as any).fetch = jest.fn((url: string) => {
       if (url.includes('/modified')) {
@@ -248,9 +246,7 @@ describe('useProfileWithCache', () => {
       },
       updatedAt: new Date().toISOString()
     }
-    ;(global as any).localStorage.getItem = jest.fn((key: string) =>
-      key === 'gospel-profile-keep' ? JSON.stringify(cached) : null
-    )
+    seedOfflineCache('keep', cached)
     ;(global as any).fetch = jest.fn((url: string) => {
       if (url.includes('/modified')) return Promise.reject(new Error('Network error'))
       return Promise.resolve({ ok: true, json: async () => ({ profile: cached.profile }) })
@@ -276,9 +272,7 @@ describe('useProfileWithCache', () => {
       },
       updatedAt: '2023-01-01T00:00:00Z'
     }
-    ;(global as any).localStorage.getItem = jest.fn((key: string) =>
-      key === 'gospel-profile-full' ? JSON.stringify(cached) : null
-    )
+    seedOfflineCache('full', cached)
     ;(global as any).fetch = jest.fn((url: string) => {
       if (url.includes('/modified')) return Promise.resolve({ ok: true, json: async () => ({ updatedAt: cached.updatedAt }) })
       return Promise.resolve({ ok: true, json: async () => ({ profile: cached.profile }) })
@@ -288,9 +282,7 @@ describe('useProfileWithCache', () => {
   })
 
   it('fetches when cache has no profile.slug (parseCachedProfile returns null)', async () => {
-    ;(global as any).localStorage.getItem = jest.fn((key: string) =>
-      key === 'gospel-profile-noslug' ? JSON.stringify({ profile: { id: 'x' }, updatedAt: '' }) : null
-    )
+    seedOfflineCache('noslug', { profile: { id: 'x' }, updatedAt: '' })
     const mockProfile = { id: 'p1', slug: 'noslug', title: 'From API', gospelData: [], isDefault: false, isTemplate: false, visitCount: 0, updatedAt: new Date().toISOString() }
     ;(global as any).fetch = jest.fn((url: string) => {
       if (url.includes('/api/profiles/noslug') && !url.includes('/modified')) return Promise.resolve({ ok: true, json: async () => ({ profile: mockProfile }) })
@@ -312,9 +304,7 @@ describe('useProfileWithCache', () => {
       visitCount: 0,
       updatedAt: new Date().toISOString()
     }
-    ;(global as any).localStorage.getItem = jest.fn((key: string) =>
-      key === 'gospel-profile-badjson' ? 'not valid json' : null
-    )
+    seedOfflineCache('badjson', 'not valid json')
     ;(global as any).fetch = jest.fn((url: string) => {
       if (url.includes('/api/profiles/badjson') && !url.includes('/modified')) {
         return Promise.resolve({ ok: true, json: async () => ({ profile: mockProfile }) })
@@ -328,7 +318,7 @@ describe('useProfileWithCache', () => {
     await waitFor(() => expect(screen.getByTestId('profile')).toHaveTextContent('Fetched After Bad Cache'))
   })
 
-  it('still sets profile when localStorage.setItem throws (quota)', async () => {
+  it('still sets profile when offline cache write fails (quota)', async () => {
     const mockProfile = {
       id: 'p1',
       slug: 'quota',
@@ -339,9 +329,7 @@ describe('useProfileWithCache', () => {
       visitCount: 0,
       updatedAt: new Date().toISOString()
     }
-    ;(global as any).localStorage.setItem = jest.fn(() => {
-      throw new Error('QuotaExceeded')
-    })
+    jest.spyOn(gospelClientStorage, 'gospelStorageSet').mockResolvedValue(false)
     ;(global as any).fetch = jest.fn((url: string) => {
       if (url.includes('/api/profiles/quota') && !url.includes('/modified')) {
         return Promise.resolve({ ok: true, json: async () => ({ profile: mockProfile }) })

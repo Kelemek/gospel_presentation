@@ -1,8 +1,16 @@
 import type { BibleTranslation } from '@/lib/bible-translations'
 import { isBibleTranslation } from '@/lib/bible-translations'
+import {
+  gospelStorageGetSync,
+  gospelStorageSet,
+  gospelStorageSetSync,
+  hydrateGospelClientStorage,
+} from '@/lib/gospelClientStorage'
+import { VERSE_MEMORIZATION_STORAGE_KEY as MEMORIZATION_KEY } from '@/lib/gospelClientStoragePolicy'
+import { idbGetItem, isIndexedDbWritable } from '@/lib/gospelClientKvStore'
 import { stripHtmlTags } from '@/lib/stripHtmlTags'
 
-export const VERSE_MEMORIZATION_STORAGE_KEY = 'gospel-memorization-verses'
+export const VERSE_MEMORIZATION_STORAGE_KEY = MEMORIZATION_KEY
 export const VERSE_MEMORIZATION_SCHEMA_VERSION = 1
 
 export type MemorizationMasterLevel = 'learning' | 'practicing' | 'mastered'
@@ -178,11 +186,9 @@ function normalizeVerse(v: unknown): MemorizedVerse | null {
   }
 }
 
-export function loadMemorizedVerses(): MemorizedVerse[] {
-  if (typeof window === 'undefined') return []
+function parseMemorizationStorageRaw(raw: string | null): MemorizedVerse[] {
+  if (!raw) return []
   try {
-    const raw = window.localStorage.getItem(VERSE_MEMORIZATION_STORAGE_KEY)
-    if (!raw) return []
     const parsed = JSON.parse(raw) as StoredShape
     if (!parsed || parsed.v !== VERSE_MEMORIZATION_SCHEMA_VERSION || !Array.isArray(parsed.verses)) {
       return []
@@ -193,6 +199,38 @@ export function loadMemorizedVerses(): MemorizedVerse[] {
   }
 }
 
+function serializeMemorizationVerses(verses: MemorizedVerse[]): string {
+  const payload: StoredShape = {
+    v: VERSE_MEMORIZATION_SCHEMA_VERSION,
+    verses,
+  }
+  return JSON.stringify(payload)
+}
+
+/** Migrates client storage; notifies listeners only if memorization bytes in memory changed. */
+export async function hydrateMemorizedVersesStorage(): Promise<void> {
+  const before = gospelStorageGetSync(VERSE_MEMORIZATION_STORAGE_KEY)
+  await hydrateGospelClientStorage()
+  if (!gospelStorageGetSync(VERSE_MEMORIZATION_STORAGE_KEY)) {
+    try {
+      const idbValue = await idbGetItem(VERSE_MEMORIZATION_STORAGE_KEY)
+      if (idbValue != null) {
+        gospelStorageSetSync(VERSE_MEMORIZATION_STORAGE_KEY, idbValue)
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  if (gospelStorageGetSync(VERSE_MEMORIZATION_STORAGE_KEY) !== before) {
+    emitMemorizationChanged()
+  }
+}
+
+export function loadMemorizedVerses(): MemorizedVerse[] {
+  if (typeof window === 'undefined') return []
+  return parseMemorizationStorageRaw(gospelStorageGetSync(VERSE_MEMORIZATION_STORAGE_KEY))
+}
+
 export const GOSPEL_MEMORIZATION_CHANGED_EVENT = 'gospel-memorization-changed'
 
 export function emitMemorizationChanged(): void {
@@ -200,20 +238,80 @@ export function emitMemorizationChanged(): void {
   window.dispatchEvent(new CustomEvent(GOSPEL_MEMORIZATION_CHANGED_EVENT))
 }
 
-function persist(verses: MemorizedVerse[]): boolean {
+export type AddMemorizedVerseFailureReason =
+  | 'empty_reference'
+  | 'empty_text'
+  | 'duplicate'
+  | 'storage_unavailable'
+  | 'storage_full'
+
+export type AddMemorizedVerseOutcome =
+  | { ok: true }
+  | { ok: false; reason: AddMemorizedVerseFailureReason }
+
+const LS_WRITE_PROBE_KEY = '__gospel_ls_write_probe__'
+const MAX_PRACTICE_SESSIONS_WHEN_COMPACTING = 12
+
+/** True when a throwaway write succeeds (private mode / blocked storage often fails here). */
+export function isLocalStorageWritable(): boolean {
   if (typeof window === 'undefined') return false
   try {
-    const payload: StoredShape = {
-      v: VERSE_MEMORIZATION_SCHEMA_VERSION,
-      verses,
-    }
-    window.localStorage.setItem(VERSE_MEMORIZATION_STORAGE_KEY, JSON.stringify(payload))
-    emitMemorizationChanged()
+    window.localStorage.setItem(LS_WRITE_PROBE_KEY, '1')
+    window.localStorage.removeItem(LS_WRITE_PROBE_KEY)
     return true
   } catch {
-    // quota / private mode
     return false
   }
+}
+
+/** Drop resume blobs and trim practice history so saves succeed when storage is tight. */
+function compactVersesForStoragePressure(
+  verses: MemorizedVerse[],
+  level: 0 | 1 | 2
+): MemorizedVerse[] {
+  if (level === 0) return verses
+  const withoutProgress = verses.map((verse) => {
+    if (!verse.inProgressPractice) return verse
+    const { inProgressPractice: _removed, ...rest } = verse
+    return rest
+  })
+  if (level === 1) return withoutProgress
+  return withoutProgress.map((verse) => ({
+    ...verse,
+    practiceSessions:
+      verse.practiceSessions.length > MAX_PRACTICE_SESSIONS_WHEN_COMPACTING
+        ? verse.practiceSessions.slice(-MAX_PRACTICE_SESSIONS_WHEN_COMPACTING)
+        : verse.practiceSessions,
+  }))
+}
+
+async function persistWithRetry(
+  verses: MemorizedVerse[],
+  opts?: { skipNotifyIfLevel0?: boolean }
+): Promise<{ ok: true } | { ok: false; reason: 'storage_unavailable' | 'storage_full' }> {
+  if (typeof window === 'undefined') {
+    return { ok: false, reason: 'storage_unavailable' }
+  }
+  for (const level of [0, 1, 2] as const) {
+    const serialized = serializeMemorizationVerses(compactVersesForStoragePressure(verses, level))
+    if (await gospelStorageSet(VERSE_MEMORIZATION_STORAGE_KEY, serialized)) {
+      // `persist()` already notified at level 0; compacted saves still need a refresh.
+      if (level > 0 || !opts?.skipNotifyIfLevel0) emitMemorizationChanged()
+      return { ok: true }
+    }
+  }
+  const idbWritable = await isIndexedDbWritable()
+  return {
+    ok: false,
+    reason: idbWritable || isLocalStorageWritable() ? 'storage_full' : 'storage_unavailable',
+  }
+}
+
+function persist(verses: MemorizedVerse[]): boolean {
+  gospelStorageSetSync(VERSE_MEMORIZATION_STORAGE_KEY, serializeMemorizationVerses(verses))
+  emitMemorizationChanged()
+  void persistWithRetry(verses, { skipNotifyIfLevel0: true })
+  return true
 }
 
 /** Plain text for memorization: strip HTML and verse number markers like [16]. */
@@ -237,19 +335,22 @@ export function getMasterLevel(verse: MemorizedVerse): MemorizationMasterLevel {
   return 'mastered'
 }
 
-/** Returns false if duplicate reference+translation or storage failed. */
-export function addMemorizedVerse(
+export async function tryAddMemorizedVerse(
   reference: string,
   text: string,
   translation: BibleTranslation
-): boolean {
+): Promise<AddMemorizedVerseOutcome> {
+  await hydrateGospelClientStorage()
+
   const normalizedRef = reference.trim()
+  if (!normalizedRef) return { ok: false, reason: 'empty_reference' }
+
   const plain = stripScriptureForMemorization(text)
-  if (!normalizedRef || !plain) return false
+  if (!plain) return { ok: false, reason: 'empty_text' }
 
   const list = loadMemorizedVerses()
   const dup = list.some((v) => v.reference === normalizedRef && v.translation === translation)
-  if (dup) return false
+  if (dup) return { ok: false, reason: 'duplicate' }
 
   const next: MemorizedVerse = {
     id: newId(),
@@ -260,7 +361,37 @@ export function addMemorizedVerse(
     lastPracticedAt: null,
     practiceSessions: [],
   }
-  return persist([next, ...list])
+
+  const merged = [next, ...list]
+  const saved = await persistWithRetry(merged)
+  if (saved.ok) return { ok: true }
+  return { ok: false, reason: saved.reason }
+}
+
+/** Returns false if duplicate reference+translation or storage failed. */
+export function addMemorizedVerse(
+  reference: string,
+  text: string,
+  translation: BibleTranslation
+): boolean {
+  const normalizedRef = reference.trim()
+  if (!normalizedRef) return false
+  const plain = stripScriptureForMemorization(text)
+  if (!plain) return false
+  const list = loadMemorizedVerses()
+  if (list.some((v) => v.reference === normalizedRef && v.translation === translation)) return false
+  const next: MemorizedVerse = {
+    id: newId(),
+    reference: normalizedRef,
+    text: plain,
+    translation,
+    dateAdded: Date.now(),
+    lastPracticedAt: null,
+    practiceSessions: [],
+  }
+  gospelStorageSetSync(VERSE_MEMORIZATION_STORAGE_KEY, serializeMemorizationVerses([next, ...list]))
+  void persistWithRetry([next, ...list])
+  return true
 }
 
 export function removeMemorizedVerse(id: string): void {

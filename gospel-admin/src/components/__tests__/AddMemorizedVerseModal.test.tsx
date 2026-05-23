@@ -17,15 +17,13 @@ jest.mock('@/contexts/AlertModalContext', () => ({
   }),
 }))
 
-const mockAddMemorizedVerse = jest.fn(
-  (_reference: string, _text: string, _translation: BibleTranslation) => true
+const mockTryAddMemorizedVerse = jest.fn(
+  async (_reference: string, _text: string, _translation: BibleTranslation) =>
+    ({ ok: true as const })
 )
-const mockIsMemoizedForReference = jest.fn(() => false)
 jest.mock('@/lib/verseMemorizationStorage', () => ({
-  addMemorizedVerse: (reference: string, text: string, translation: BibleTranslation) =>
-    mockAddMemorizedVerse(reference, text, translation),
-  isMemoizedForReference: (reference: string, translation: BibleTranslation) =>
-    mockIsMemoizedForReference(reference, translation),
+  tryAddMemorizedVerse: (reference: string, text: string, translation: BibleTranslation) =>
+    mockTryAddMemorizedVerse(reference, text, translation),
 }))
 
 function setupFetchSuccess(text = 'In the beginning God created the heaven and the earth.') {
@@ -67,10 +65,8 @@ describe('AddMemorizedVerseModal', () => {
   beforeEach(() => {
     mockOnClose.mockClear()
     mockShowAlert.mockClear()
-    mockAddMemorizedVerse.mockReset()
-    mockAddMemorizedVerse.mockReturnValue(true)
-    mockIsMemoizedForReference.mockReset()
-    mockIsMemoizedForReference.mockReturnValue(false)
+    mockTryAddMemorizedVerse.mockReset()
+    mockTryAddMemorizedVerse.mockResolvedValue({ ok: true })
     window.sessionStorage.clear()
     setupFetchSuccess()
   })
@@ -132,7 +128,7 @@ describe('AddMemorizedVerseModal', () => {
     await user.click(addBtn)
 
     await waitFor(() => {
-      expect(mockAddMemorizedVerse).toHaveBeenCalled()
+      expect(mockTryAddMemorizedVerse).toHaveBeenCalled()
     })
     expect(mockOnClose).toHaveBeenCalled()
     expect(global.fetch).toHaveBeenCalled()
@@ -153,8 +149,8 @@ describe('AddMemorizedVerseModal', () => {
     await user.click(verseButtons[0])
 
     await user.click(screen.getByRole('button', { name: /^Add$/i }))
-    await waitFor(() => expect(mockAddMemorizedVerse).toHaveBeenCalled())
-    const refArg = mockAddMemorizedVerse.mock.calls[0][0] as string
+    await waitFor(() => expect(mockTryAddMemorizedVerse).toHaveBeenCalled())
+    const refArg = mockTryAddMemorizedVerse.mock.calls[0][0] as string
     expect(refArg).toMatch(/Genesis 1:1$/)
   })
 
@@ -170,8 +166,8 @@ describe('AddMemorizedVerseModal', () => {
     await user.click(verseButtons[4])
 
     await user.click(screen.getByRole('button', { name: /^Add$/i }))
-    await waitFor(() => expect(mockAddMemorizedVerse).toHaveBeenCalled())
-    const refArg = mockAddMemorizedVerse.mock.calls[0][0] as string
+    await waitFor(() => expect(mockTryAddMemorizedVerse).toHaveBeenCalled())
+    const refArg = mockTryAddMemorizedVerse.mock.calls[0][0] as string
     expect(refArg).toMatch(/Genesis 1:5$/)
   })
 
@@ -187,8 +183,8 @@ describe('AddMemorizedVerseModal', () => {
     await user.click(verseButtons[2])
 
     await user.click(screen.getByRole('button', { name: /^Add$/i }))
-    await waitFor(() => expect(mockAddMemorizedVerse).toHaveBeenCalled())
-    const refArg = mockAddMemorizedVerse.mock.calls[0][0] as string
+    await waitFor(() => expect(mockTryAddMemorizedVerse).toHaveBeenCalled())
+    const refArg = mockTryAddMemorizedVerse.mock.calls[0][0] as string
     expect(refArg).toMatch(/Genesis 1:1-3/)
   })
 
@@ -202,8 +198,8 @@ describe('AddMemorizedVerseModal', () => {
     await user.click(getVerseButtons()[0])
     await user.click(screen.getByRole('button', { name: /^Add$/i }))
 
-    await waitFor(() => expect(mockAddMemorizedVerse).toHaveBeenCalled())
-    const refArg = mockAddMemorizedVerse.mock.calls[0][0] as string
+    await waitFor(() => expect(mockTryAddMemorizedVerse).toHaveBeenCalled())
+    const refArg = mockTryAddMemorizedVerse.mock.calls[0][0] as string
     expect(refArg).toMatch(/^Psalm /)
   })
 
@@ -254,8 +250,7 @@ describe('AddMemorizedVerseModal', () => {
   })
 
   it('shows alert when verse is duplicate', async () => {
-    mockAddMemorizedVerse.mockReturnValue(false)
-    mockIsMemoizedForReference.mockReturnValue(true)
+    mockTryAddMemorizedVerse.mockResolvedValue({ ok: false, reason: 'duplicate' })
     const user = userEvent.setup()
     render(<AddMemorizedVerseModal isOpen onClose={mockOnClose} translation="esv" />)
 
@@ -301,8 +296,7 @@ describe('AddMemorizedVerseModal', () => {
   })
 
   it('shows alert when local storage save fails', async () => {
-    mockAddMemorizedVerse.mockReturnValue(false)
-    mockIsMemoizedForReference.mockReturnValue(false)
+    mockTryAddMemorizedVerse.mockResolvedValue({ ok: false, reason: 'storage_full' })
     const user = userEvent.setup()
     render(<AddMemorizedVerseModal isOpen onClose={mockOnClose} translation="esv" />)
 
@@ -313,7 +307,7 @@ describe('AddMemorizedVerseModal', () => {
 
     await waitFor(() => {
       expect(mockShowAlert).toHaveBeenCalledWith(
-        expect.stringContaining('Could not save this verse on your device')
+        expect.stringContaining('browser storage for this site is full')
       )
     })
     expect(mockOnClose).not.toHaveBeenCalled()

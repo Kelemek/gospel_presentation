@@ -25,11 +25,15 @@ jest.mock('@/components/ScriptureHoverModal', () => {
   return Component
 })
 
+import * as gospelClientStorage from '@/lib/gospelClientStorage'
+import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
 import GospelSection from '../GospelSection'
 
 describe('GospelSection (extra tests)', () => {
   beforeEach(() => {
     jest.useFakeTimers()
+    gospelClientStorage.resetGospelClientStorageForTests()
+    installTestLocalStorage()
   })
 
   afterEach(() => {
@@ -173,7 +177,7 @@ describe('GospelSection (extra tests)', () => {
       maxLength: 50,
     }
 
-    const setItem = jest.spyOn(Storage.prototype, 'setItem')
+    const mutateStorage = jest.spyOn(gospelClientStorage, 'gospelStorageMutate').mockResolvedValue(true)
 
     render(
       <GospelSection
@@ -199,7 +203,7 @@ describe('GospelSection (extra tests)', () => {
     const saveBtn = await screen.findByRole('button', { name: /Save Answer/i })
     await user.click(saveBtn)
 
-    await waitFor(() => expect(setItem).toHaveBeenCalled())
+    await waitFor(() => expect(mutateStorage).toHaveBeenCalled())
 
     await screen.findByText(/✓ Saved/)
 
@@ -207,8 +211,36 @@ describe('GospelSection (extra tests)', () => {
       jest.advanceTimersByTime(3000)
     })
 
-    expect(setItem).toHaveBeenCalled()
-    setItem.mockRestore()
+    expect(mutateStorage).toHaveBeenCalled()
+    mutateStorage.mockRestore()
+  })
+
+  it('shows alert and not saved status when durable storage write fails', async () => {
+    const user = userEvent.setup({ delay: null })
+    const question = {
+      id: 'q1',
+      question: 'Q: Simple',
+      maxLength: 50,
+    }
+    const { showAlert } = (global as any).__alertModalMocks
+    jest.spyOn(gospelClientStorage, 'gospelStorageMutate').mockResolvedValue(false)
+
+    render(
+      <GospelSection
+        section={{ section: 's4', title: 'S4', subsections: [{ title: 'sub', content: 'c', questions: [question] }] }}
+        onScriptureClick={() => {}}
+        profileSlug="profile-save-fail"
+      />
+    )
+
+    const textarea = await screen.findByPlaceholderText(/Type your answer here/i)
+    await user.type(textarea, 'my answer')
+    await user.click(screen.getByRole('button', { name: /Save Answer/i }))
+
+    await waitFor(() =>
+      expect(showAlert).toHaveBeenCalledWith(expect.stringContaining('Could not save your answer'))
+    )
+    expect(screen.queryByText(/✓ Saved/)).not.toBeInTheDocument()
   })
 
   it('renders Four Rules of Communication as button and opens Four Rules modal on click', async () => {

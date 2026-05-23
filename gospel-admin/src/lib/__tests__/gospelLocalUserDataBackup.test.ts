@@ -1,3 +1,14 @@
+/**
+ * @jest-environment jsdom
+ */
+
+import {
+  gospelStorageGetSync,
+  gospelStorageSet,
+  hydrateGospelClientStorage,
+  resetGospelClientStorageForTests,
+} from '@/lib/gospelClientStorage'
+import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
 import {
   GOSPEL_LOCAL_USER_DATA_KIND,
   GOSPEL_LOCAL_USER_DATA_SCHEMA_VERSION,
@@ -44,6 +55,11 @@ function createMemoryStorage(initial: Record<string, string | null> = {}): Stora
 }
 
 describe('gospelLocalUserDataBackup', () => {
+  beforeEach(() => {
+    resetGospelClientStorageForTests()
+    installTestLocalStorage()
+  })
+
   it('gospelLocalBackupFilename uses .txt on native Android only', () => {
     expect(gospelLocalBackupFilename('20260101', 'android', true)).toBe('gospel-local-backup-20260101.txt')
     expect(gospelLocalBackupFilename('20260101', 'android', false)).toBe('gospel-local-backup-20260101.json')
@@ -93,15 +109,35 @@ describe('gospelLocalUserDataBackup', () => {
     expect(map[PROFILE_BOOKMARKS_STORAGE_KEY]).toBeDefined()
   })
 
-  it('buildGospelLocalUserDataPayload sets kind, schemaVersion, and localStorage map', () => {
+  it('buildGospelLocalUserDataPayload sets kind, schemaVersion, and localStorage map', async () => {
     const s = createMemoryStorage({
       [VERSE_MEMORIZATION_STORAGE_KEY]: '{"v":1,"verses":[]}',
     })
-    const p = buildGospelLocalUserDataPayload(s)
+    const p = await buildGospelLocalUserDataPayload(s)
     expect(p.kind).toBe(GOSPEL_LOCAL_USER_DATA_KIND)
     expect(p.schemaVersion).toBe(GOSPEL_LOCAL_USER_DATA_SCHEMA_VERSION)
     expect(p.localStorage[VERSE_MEMORIZATION_STORAGE_KEY]).toBe('{"v":1,"verses":[]}')
     expect(typeof p.exportedAt).toBe('string')
+  })
+
+  it('buildGospelLocalUserDataPayload includes IndexedDB-only prefix keys after migration', async () => {
+    const s = createMemoryStorage()
+    const pinsKey = 'gospel-verse-pins-profile-a'
+    const answersKey = 'gospel-answers-profile-a'
+    const readAlongKey = 'gospel-profile-read-along:profile-a:section-1-0'
+
+    await gospelStorageSet(pinsKey, '{"v":2,"yellow":null,"bookmarks":[{"id":"b1"}]}')
+    await gospelStorageSet(answersKey, '{"saved":[{"id":"q1","answer":"hi"}]}')
+    await gospelStorageSet(readAlongKey, '{"v":1,"plainOffset":4,"fingerprint":"fp"}')
+    await hydrateGospelClientStorage()
+
+    expect(s.getItem(pinsKey)).toBeNull()
+    expect(s.getItem(answersKey)).toBeNull()
+
+    const p = await buildGospelLocalUserDataPayload(s)
+    expect(p.localStorage[pinsKey]).toContain('"b1"')
+    expect(p.localStorage[answersKey]).toContain('hi')
+    expect(p.localStorage[readAlongKey]).toContain('"plainOffset":4')
   })
 
   it('parseGospelLocalUserDataImport accepts valid payload', () => {
@@ -161,7 +197,7 @@ describe('gospelLocalUserDataBackup', () => {
     ).toThrow(/cannot be restored safely/i)
   })
 
-  it('applyGospelLocalUserDataImport restores read-along persistence keys', () => {
+  it('applyGospelLocalUserDataImport restores read-along persistence keys', async () => {
     const target = createMemoryStorage()
     const payload = parseGospelLocalUserDataImport(
       JSON.stringify({
@@ -175,12 +211,12 @@ describe('gospelLocalUserDataBackup', () => {
         },
       })
     )
-    applyGospelLocalUserDataImport(payload, target)
-    expect(target.getItem('gospel-profile-read-along:slug:section-1')).toContain('10')
-    expect(target.getItem('gospel-profile-read-along-last:slug')).toContain('section-1')
+    await applyGospelLocalUserDataImport(payload, target)
+    expect(gospelStorageGetSync('gospel-profile-read-along:slug:section-1')).toContain('10')
+    expect(gospelStorageGetSync('gospel-profile-read-along-last:slug')).toContain('section-1')
   })
 
-  it('applyGospelLocalUserDataImport round-trips into storage', () => {
+  it('applyGospelLocalUserDataImport round-trips into storage', async () => {
     const target = createMemoryStorage()
     const payload = parseGospelLocalUserDataImport(
       JSON.stringify({
@@ -193,11 +229,11 @@ describe('gospelLocalUserDataBackup', () => {
         },
       })
     )
-    applyGospelLocalUserDataImport(payload, target)
+    await applyGospelLocalUserDataImport(payload, target)
     expect(target.getItem('gospel-preferred-translation')).toBe('kjv')
   })
 
-  it('applyGospelLocalUserDataImport restores presentation read-complete key', () => {
+  it('applyGospelLocalUserDataImport restores presentation read-complete key', async () => {
     const target = createMemoryStorage()
     const readPayload = '{"v":1,"slugs":["sermon-a"]}'
     const payload = parseGospelLocalUserDataImport(
@@ -211,7 +247,7 @@ describe('gospelLocalUserDataBackup', () => {
         },
       })
     )
-    applyGospelLocalUserDataImport(payload, target)
-    expect(target.getItem(PRESENTATION_READ_COMPLETE_STORAGE_KEY)).toBe(readPayload)
+    await applyGospelLocalUserDataImport(payload, target)
+    expect(gospelStorageGetSync(PRESENTATION_READ_COMPLETE_STORAGE_KEY)).toBe(readPayload)
   })
 })

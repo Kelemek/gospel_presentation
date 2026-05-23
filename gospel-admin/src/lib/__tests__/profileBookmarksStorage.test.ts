@@ -1,3 +1,5 @@
+import { gospelStorageSetSync } from '@/lib/gospelClientStorage'
+import { resetGospelStorageTestState, installTestLocalStorage } from '@/lib/testing/testLocalStorage'
 import {
   PROFILE_BOOKMARKS_STORAGE_KEY,
   addBookmark,
@@ -6,8 +8,9 @@ import {
 } from '../profileBookmarksStorage'
 
 describe('profileBookmarksStorage', () => {
-  beforeEach(() => {
-    window.localStorage.clear()
+  beforeEach(async () => {
+    await resetGospelStorageTestState()
+    installTestLocalStorage()
   })
 
   it('adds and loads bookmarks', () => {
@@ -55,7 +58,7 @@ describe('profileBookmarksStorage', () => {
   })
 
   it('returns empty on corrupt JSON', () => {
-    window.localStorage.setItem(PROFILE_BOOKMARKS_STORAGE_KEY, 'not-json')
+    gospelStorageSetSync(PROFILE_BOOKMARKS_STORAGE_KEY, 'not-json')
     expect(loadBookmarks()).toEqual([])
   })
 })

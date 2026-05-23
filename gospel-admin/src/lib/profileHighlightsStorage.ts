@@ -1,3 +1,5 @@
+import { gospelStorageGetSync, gospelStorageSetSync } from '@/lib/gospelClientStorage'
+
 export const PROFILE_HIGHLIGHTS_STORAGE_KEY = 'gospel-profile-highlights'
 export const PROFILE_HIGHLIGHTS_SCHEMA_VERSION = 1
 
@@ -41,7 +43,7 @@ function isValidHighlight(h: unknown): h is ProfileHighlight {
 export function loadHighlights(): ProfileHighlight[] {
   if (typeof window === 'undefined') return []
   try {
-    const raw = window.localStorage.getItem(PROFILE_HIGHLIGHTS_STORAGE_KEY)
+    const raw = gospelStorageGetSync(PROFILE_HIGHLIGHTS_STORAGE_KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw) as StoredShape
     if (!parsed || parsed.v !== PROFILE_HIGHLIGHTS_SCHEMA_VERSION || !Array.isArray(parsed.highlights)) return []
@@ -53,13 +55,8 @@ export function loadHighlights(): ProfileHighlight[] {
 
 function persist(highlights: ProfileHighlight[]): boolean {
   if (typeof window === 'undefined') return false
-  try {
-    const payload: StoredShape = { v: PROFILE_HIGHLIGHTS_SCHEMA_VERSION, highlights }
-    window.localStorage.setItem(PROFILE_HIGHLIGHTS_STORAGE_KEY, JSON.stringify(payload))
-    return true
-  } catch {
-    return false
-  }
+  const payload: StoredShape = { v: PROFILE_HIGHLIGHTS_SCHEMA_VERSION, highlights }
+  return gospelStorageSetSync(PROFILE_HIGHLIGHTS_STORAGE_KEY, JSON.stringify(payload))
 }
 
 function nextId(): string {

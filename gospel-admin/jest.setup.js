@@ -1,5 +1,11 @@
 // jest.setup.js
 require('@testing-library/jest-dom')
+require('fake-indexeddb/auto')
+
+// fake-indexeddb uses structuredClone; Jest's jsdom does not provide it.
+if (typeof global.structuredClone === 'undefined') {
+  global.structuredClone = (value) => JSON.parse(JSON.stringify(value))
+}
 
 // Mock Vercel analytics and speed-insights to avoid .mjs ESM parse issues
 // when Jest imports the app `layout.tsx`. Tests don't need the real
@@ -129,6 +135,18 @@ global.fetch = jest.fn((url, opts) => {
   return Promise.resolve({ ok: true, json: async () => ({}) })
 })
 
+// jsdom: `scrollIntoView` is missing or incomplete on some elements; memorization/reorder use it.
+if (typeof HTMLElement !== 'undefined') {
+  const proto = HTMLElement.prototype
+  if (typeof proto.scrollIntoView !== 'function') {
+    Object.defineProperty(proto, 'scrollIntoView', {
+      configurable: true,
+      writable: true,
+      value: jest.fn(),
+    })
+  }
+}
+
 // JSDOM does not define `SpeechSynthesisUtterance`; memorization "Listen" uses TTS in tests.
 if (typeof global.SpeechSynthesisUtterance === 'undefined') {
   global.SpeechSynthesisUtterance = class SpeechSynthesisUtterancePolyfill {
@@ -179,8 +197,16 @@ console.error = (...args) => {
 }
 
 // Setup cleanup after each test
-afterEach(() => {
+afterEach(async () => {
   jest.clearAllMocks()
+  try {
+    const { resetGospelClientStorageForTests } = require('@/lib/gospelClientStorage')
+    const { deleteGospelIdbForTests } = require('@/lib/gospelClientKvStore')
+    resetGospelClientStorageForTests()
+    await deleteGospelIdbForTests()
+  } catch {
+    // ignore if storage modules are unavailable in a narrow test run
+  }
   localStorage.clear()
   sessionStorage.clear()
 })

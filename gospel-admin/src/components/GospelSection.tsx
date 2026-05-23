@@ -11,6 +11,8 @@ import type { VersePinAnchoredEntry, VersePinColorId } from '@/lib/versePinStora
 import { anchoredPinMatchesDisplayRow } from '@/lib/versePinStorage'
 import GospelInlineHtml from '@/components/GospelInlineHtml'
 import { VERSE_PIN_PILL_STYLES } from '@/components/gospelInlinePillStyles'
+import { gospelStorageGetSync, gospelStorageMutate } from '@/lib/gospelClientStorage'
+import { GOSPEL_ANSWERS_KEY_PREFIX } from '@/lib/gospelClientStoragePolicy'
 
 type ScriptureClickHandler = (
   reference: string,
@@ -20,7 +22,7 @@ type ScriptureClickHandler = (
 
 type VersePinRemoveHandler = (pin: Pick<VersePinAnchoredEntry, 'bookmarkId' | 'colorId'>) => void
 
-const ANSWERS_STORAGE_KEY_PREFIX = 'gospel-answers-'
+const ANSWERS_STORAGE_KEY_PREFIX = GOSPEL_ANSWERS_KEY_PREFIX
 
 /** iOS Safari can leave the page visually "zoomed" after a text control loses focus. */
 function nudgeIosVisualViewport() {
@@ -237,6 +239,7 @@ interface QuestionsProps {
 function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick }: QuestionsProps) {
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [savedStatus, setSavedStatus] = useState<Record<string, boolean>>({})
+  const [savingQuestionId, setSavingQuestionId] = useState<string | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
   const [expandedQuestions, setExpandedQuestions] = useState<Record<string, boolean>>({})
   const [showComaModal, setShowComaModal] = useState(false)
@@ -251,7 +254,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
       const loadedAnswers: Record<string, string> = {}
 
       try {
-        const stored = localStorage.getItem(storageKey)
+        const stored = gospelStorageGetSync(storageKey)
         const fromStorage: SavedAnswer[] = stored ? JSON.parse(stored) : []
         questions.forEach(q => {
           const saved = fromStorage.find(sa => sa.questionId === q.id)
@@ -337,7 +340,9 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
     }))
   }
 
-  const handleSaveAnswer = (questionId: string, maxLength?: number) => {
+  const handleSaveAnswer = async (questionId: string, maxLength?: number) => {
+    if (savingQuestionId === questionId) return
+
     const answer = answers[questionId] || ''
     const limit = maxLength || PROFILE_VALIDATION.ANSWER_MAX_LENGTH
 
@@ -349,22 +354,32 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
 
     const trimmed = answer.trim()
 
-    // Write to localStorage (omit empty answers)
+    setSavingQuestionId(questionId)
     try {
-      const stored = localStorage.getItem(storageKey)
-      const fromStorage: SavedAnswer[] = stored ? JSON.parse(stored) : []
-      const updated = fromStorage.filter(sa => sa.questionId !== questionId)
-      if (trimmed !== '') {
-        updated.push({ questionId, answer: trimmed, answeredAt: new Date() })
+      const saved = await gospelStorageMutate(storageKey, (stored) => {
+        const fromStorage: SavedAnswer[] = stored ? JSON.parse(stored) : []
+        const updated = fromStorage.filter((sa) => sa.questionId !== questionId)
+        if (trimmed !== '') {
+          updated.push({ questionId, answer: trimmed, answeredAt: new Date() })
+        }
+        return JSON.stringify(updated)
+      })
+      if (!saved) {
+        showAlert(
+          'Could not save your answer on this device. Storage may be full or unavailable — try Menu → Save my data to back up, then free space and try again.'
+        )
+        return
       }
-      localStorage.setItem(storageKey, JSON.stringify(updated))
-    } catch (e) {
-      console.error('Error saving to localStorage:', e)
-    }
 
-    setSavedStatus(prev => ({ ...prev, [questionId]: true }))
-    setTimeout(() => setSavedStatus(prev => ({ ...prev, [questionId]: false })), 3000)
-    nudgeIosViewportAfterLeavingTextControl()
+      setSavedStatus((prev) => ({ ...prev, [questionId]: true }))
+      setTimeout(() => setSavedStatus((prev) => ({ ...prev, [questionId]: false })), 3000)
+      nudgeIosViewportAfterLeavingTextControl()
+    } catch (e) {
+      console.error('Error saving reflection answer:', e)
+      showAlert('Could not save your answer. Please try again.')
+    } finally {
+      setSavingQuestionId((current) => (current === questionId ? null : current))
+    }
   }
 
   if (!questions || questions.length === 0) return null
@@ -380,6 +395,7 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
       {(questions || []).filter((q): q is QuestionAnswer => q && typeof q === 'object' && !Array.isArray(q)).map((question, index) => {
         const currentAnswer = answers[question.id] ?? ''
         const maxLength = question.maxLength || PROFILE_VALIDATION.ANSWER_MAX_LENGTH
+        const isSaving = savingQuestionId === question.id
         const isSaved = savedStatus[question.id]
         const isExpanded = expandedQuestions[question.id]
         const questionContent = question.question ?? ''
@@ -467,14 +483,20 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
                 <button
                   type="button"
                   data-tour="profile-save-answer"
-                  onClick={() => handleSaveAnswer(question.id, question.maxLength)}
-                  className={`cursor-pointer px-3 py-1.5 text-base sm:text-sm print:text-sm rounded-lg font-medium transition-all ${
-                    isSaved
-                      ? 'bg-green-600 text-white'
-                      : 'bg-slate-500 hover:bg-slate-600 text-white'
+                  onClick={() => {
+                    void handleSaveAnswer(question.id, question.maxLength)
+                  }}
+                  disabled={isSaving}
+                  aria-busy={isSaving}
+                  className={`px-3 py-1.5 text-base sm:text-sm print:text-sm rounded-lg font-medium transition-all ${
+                    isSaving
+                      ? 'bg-slate-400 text-white cursor-wait'
+                      : isSaved
+                        ? 'bg-green-600 text-white cursor-pointer'
+                        : 'bg-slate-500 hover:bg-slate-600 text-white cursor-pointer'
                   }`}
                 >
-                  {isSaved ? '✓ Saved' : 'Save Answer'}
+                  {isSaving ? 'Saving…' : isSaved ? '✓ Saved' : 'Save Answer'}
                 </button>
               </div>
             </div>

@@ -1,5 +1,10 @@
 /** Resume read-aloud position per profile slug + TOC anchor (`section-*`). Device-only. */
 
+import {
+  gospelStorageGetSync,
+  gospelStorageRemoveSync,
+  gospelStorageSetSync,
+} from '@/lib/gospelClientStorage'
 import { buildOrderedTocAnchorIds } from '@/lib/tocAnchorFromScroll'
 import type { GospelSection } from '@/lib/types'
 
@@ -47,7 +52,7 @@ export function saveProfileReadAlongProgress(
   if (typeof window === 'undefined') return
   try {
     const payload: ProfileReadAlongProgressV1 = { v: 1, plainOffset, fingerprint }
-    localStorage.setItem(readAlongProgressStorageKey(profileSlug, anchorId), JSON.stringify(payload))
+    gospelStorageSetSync(readAlongProgressStorageKey(profileSlug, anchorId), JSON.stringify(payload))
   } catch {
     // quota / private mode
   }
@@ -67,7 +72,7 @@ export function saveProfileReadAlongLastSession(
       plainOffset,
       fingerprint,
     }
-    localStorage.setItem(readAlongLastSessionStorageKey(profileSlug), JSON.stringify(payload))
+    gospelStorageSetSync(readAlongLastSessionStorageKey(profileSlug), JSON.stringify(payload))
   } catch {
     // quota / private mode
   }
@@ -76,7 +81,7 @@ export function saveProfileReadAlongLastSession(
 export function loadProfileReadAlongLastSession(profileSlug: string): ProfileReadAlongLastSessionV1 | null {
   if (typeof window === 'undefined') return null
   try {
-    const raw = localStorage.getItem(readAlongLastSessionStorageKey(profileSlug))
+    const raw = gospelStorageGetSync(readAlongLastSessionStorageKey(profileSlug))
     if (!raw) return null
     const parsed = JSON.parse(raw) as Partial<ProfileReadAlongLastSessionV1>
     if (
@@ -101,7 +106,7 @@ export function loadProfileReadAlongLastSession(profileSlug: string): ProfileRea
 export function clearProfileReadAlongLastSession(profileSlug: string): void {
   if (typeof window === 'undefined') return
   try {
-    localStorage.removeItem(readAlongLastSessionStorageKey(profileSlug))
+    gospelStorageRemoveSync(readAlongLastSessionStorageKey(profileSlug))
   } catch {
     /* ignore */
   }
@@ -124,7 +129,7 @@ export function loadProfileReadAlongProgress(
 ): ProfileReadAlongProgressV1 | null {
   if (typeof window === 'undefined') return null
   try {
-    const raw = localStorage.getItem(readAlongProgressStorageKey(profileSlug, anchorId))
+    const raw = gospelStorageGetSync(readAlongProgressStorageKey(profileSlug, anchorId))
     if (!raw) return null
     const parsed = JSON.parse(raw) as Partial<ProfileReadAlongProgressV1>
     if (parsed?.v !== 1 || typeof parsed.plainOffset !== 'number' || typeof parsed.fingerprint !== 'string') {
@@ -139,7 +144,7 @@ export function loadProfileReadAlongProgress(
 export function clearProfileReadAlongProgress(profileSlug: string, anchorId: string): void {
   if (typeof window === 'undefined') return
   try {
-    localStorage.removeItem(readAlongProgressStorageKey(profileSlug, anchorId))
+    gospelStorageRemoveSync(readAlongProgressStorageKey(profileSlug, anchorId))
   } catch {
     // ignore
   }
@@ -159,7 +164,7 @@ export function clearAllProfileReadAlongProgressForSlug(
   }
   for (const anchorId of buildOrderedTocAnchorIds(sections)) {
     try {
-      localStorage.removeItem(readAlongProgressStorageKey(profileSlug, anchorId))
+      gospelStorageRemoveSync(readAlongProgressStorageKey(profileSlug, anchorId))
     } catch {
       /* ignore */
     }

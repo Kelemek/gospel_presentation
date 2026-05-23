@@ -11,9 +11,21 @@ import {
   PROFILE_READ_ALONG_LAST_SESSION_KEY_PREFIX,
   PROFILE_READ_ALONG_PROGRESS_KEY_PREFIX,
 } from '@/lib/profileReadAlongProgressStorage'
+import {
+  getGospelClientStorageMemoryEntries,
+  gospelStorageGet,
+  gospelStorageSet,
+  hydrateGospelClientStorage,
+} from '@/lib/gospelClientStorage'
+import { idbListKeys } from '@/lib/gospelClientKvStore'
+import {
+  GOSPEL_ANSWERS_KEY_PREFIX,
+  isProfileOfflineCacheKey,
+  isProfileReadAlongPersistenceKey,
+  shouldUseIndexedDb,
+} from '@/lib/gospelClientStoragePolicy'
 
-/** Keep in sync with `ANSWERS_STORAGE_KEY_PREFIX` in `GospelSection.tsx`. */
-export const GOSPEL_ANSWERS_KEY_PREFIX = 'gospel-answers-'
+export { GOSPEL_ANSWERS_KEY_PREFIX }
 
 export const GOSPEL_LOCAL_USER_DATA_KIND = 'gospel-local-user-data' as const
 export const GOSPEL_LOCAL_USER_DATA_SCHEMA_VERSION = 1 as const
@@ -45,13 +57,6 @@ const KEY_PREFIXES = [
 /** Never export or import these exact keys. */
 const BLOCKED_EXACT_KEYS = new Set<string>(['gospel-admin-auth', 'gospel-view-preference'])
 
-const ALLOWED_GOSPEL_PROFILE_SUFFIXES = new Set([
-  'bookmarks',
-  'highlights',
-  'theme',
-  'text-size',
-])
-
 export interface GospelLocalUserDataPayload {
   kind: typeof GOSPEL_LOCAL_USER_DATA_KIND
   schemaVersion: typeof GOSPEL_LOCAL_USER_DATA_SCHEMA_VERSION
@@ -60,25 +65,11 @@ export interface GospelLocalUserDataPayload {
   localStorage: Record<string, string>
 }
 
-function isProfileReadAlongPersistenceKey(key: string): boolean {
-  return (
-    key.startsWith(PROFILE_READ_ALONG_PROGRESS_KEY_PREFIX) ||
-    key.startsWith(PROFILE_READ_ALONG_LAST_SESSION_KEY_PREFIX)
-  )
-}
-
-/** Offline profile HTML blobs (`gospel-profile-{slug}`) stay out of backup; user-owned `gospel-profile-*` keys are allowlisted or matched above. */
-function isProfileCacheKey(key: string): boolean {
-  if (isProfileReadAlongPersistenceKey(key)) return false
-  if (!key.startsWith('gospel-profile-')) return false
-  const rest = key.slice('gospel-profile-'.length)
-  return !ALLOWED_GOSPEL_PROFILE_SUFFIXES.has(rest)
-}
-
+/** Offline profile HTML blobs stay out of backup; user-owned `gospel-profile-*` keys are allowlisted or matched above. */
 export function isGospelLocalUserDataImportKey(key: string): boolean {
   if (BLOCKED_EXACT_KEYS.has(key)) return false
   if (isProfileReadAlongPersistenceKey(key)) return true
-  if (isProfileCacheKey(key)) return false
+  if (isProfileOfflineCacheKey(key)) return false
   if ((GOSPEL_LOCAL_USER_DATA_FIXED_KEYS as readonly string[]).includes(key)) return true
   return KEY_PREFIXES.some((p) => key.startsWith(p))
 }
@@ -118,17 +109,55 @@ export function collectGospelLocalUserDataForExport(storage: Storage): Record<st
     }
   }
 
+  for (const [key, value] of getGospelClientStorageMemoryEntries()) {
+    if (!isGospelLocalUserDataImportKey(key)) continue
+    if (value !== '') out[key] = value
+  }
+
   return out
 }
 
-export function buildGospelLocalUserDataPayload(storage: Storage): GospelLocalUserDataPayload {
+async function mergeExportableKey(
+  localStorageMap: Record<string, string>,
+  key: string
+): Promise<void> {
+  if (!isGospelLocalUserDataImportKey(key)) return
+  const v = await gospelStorageGet(key)
+  if (v != null && v !== '') {
+    localStorageMap[key] = v
+  }
+}
+
+export async function buildGospelLocalUserDataPayload(storage: Storage): Promise<GospelLocalUserDataPayload> {
+  await hydrateGospelClientStorage()
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const localStorageMap: Record<string, string> = collectGospelLocalUserDataForExport(storage)
+
+  for (const key of GOSPEL_LOCAL_USER_DATA_FIXED_KEYS) {
+    await mergeExportableKey(localStorageMap, key)
+  }
+
+  for (const key of readAllLocalStorageKeys(storage)) {
+    await mergeExportableKey(localStorageMap, key)
+  }
+
+  // Keys migrated to IndexedDB are removed from localStorage; enumerate IDB so
+  // per-profile pins, answers, read-along, etc. are not omitted from backup.
+  try {
+    const idbKeys = await idbListKeys()
+    for (const key of idbKeys) {
+      await mergeExportableKey(localStorageMap, key)
+    }
+  } catch {
+    /* IDB unavailable — rely on localStorage + in-memory cache */
+  }
+
   return {
     kind: GOSPEL_LOCAL_USER_DATA_KIND,
     schemaVersion: GOSPEL_LOCAL_USER_DATA_SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
     origin,
-    localStorage: collectGospelLocalUserDataForExport(storage),
+    localStorage: localStorageMap,
   }
 }
 
@@ -180,14 +209,30 @@ export function parseGospelLocalUserDataImport(jsonText: string): GospelLocalUse
   }
 }
 
-export function applyGospelLocalUserDataImport(payload: GospelLocalUserDataPayload, storage: Storage): void {
+export async function applyGospelLocalUserDataImport(
+  payload: GospelLocalUserDataPayload,
+  storage: Storage
+): Promise<void> {
+  await hydrateGospelClientStorage()
   for (const [key, value] of Object.entries(payload.localStorage)) {
     if (!isGospelLocalUserDataImportKey(key)) continue
-    try {
-      storage.setItem(key, value)
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e)
-      throw new Error(`Could not save restored data (${msg}). Your browser storage may be full.`)
+    if (!shouldUseIndexedDb(key)) {
+      try {
+        storage.setItem(key, value)
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        throw new Error(`Could not save restored data (${msg}). Your device storage may be full.`)
+      }
+      continue
+    }
+    const saved = await gospelStorageSet(key, value)
+    if (!saved) {
+      try {
+        storage.setItem(key, value)
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        throw new Error(`Could not save restored data (${msg}). Your device storage may be full.`)
+      }
     }
   }
   emitMemorizationChanged()

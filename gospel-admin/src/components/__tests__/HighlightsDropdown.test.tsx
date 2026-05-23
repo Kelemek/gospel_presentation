@@ -1,10 +1,12 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import HighlightsDropdown from '../HighlightsDropdown'
+import { gospelStorageSetSync } from '@/lib/gospelClientStorage'
 import {
   PROFILE_HIGHLIGHTS_STORAGE_KEY,
   loadHighlights,
 } from '@/lib/profileHighlightsStorage'
+import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
 import { GOSPEL_CLOSE_BOOKMARKS_PANEL_EVENT } from '@/lib/bookmarksPanelCloseEvent'
 import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
 
@@ -27,7 +29,7 @@ jest.mock('@/lib/scrollToTocAnchor', () => ({
 
 describe('HighlightsDropdown', () => {
   beforeEach(() => {
-    window.localStorage.removeItem(PROFILE_HIGHLIGHTS_STORAGE_KEY)
+    installTestLocalStorage()
     mockPush.mockClear()
     mockShowConfirm.mockReset()
     ;(scrollToTocAnchor as jest.Mock).mockClear()
@@ -35,7 +37,7 @@ describe('HighlightsDropdown', () => {
 
   it('shows quote without raw HTML angle brackets when stored quote contains tags', async () => {
     const user = userEvent.setup()
-    window.localStorage.setItem(
+    gospelStorageSetSync(
       PROFILE_HIGHLIGHTS_STORAGE_KEY,
       JSON.stringify({
         v: 1,
@@ -64,7 +66,7 @@ describe('HighlightsDropdown', () => {
 
   it('opens and shows grouped highlights', async () => {
     const user = userEvent.setup()
-    window.localStorage.setItem(
+    gospelStorageSetSync(
       PROFILE_HIGHLIGHTS_STORAGE_KEY,
       JSON.stringify({
         v: 1,
@@ -95,7 +97,7 @@ describe('HighlightsDropdown', () => {
   it('same slug opens via scroll and callback', async () => {
     const user = userEvent.setup()
     const onOpen = jest.fn()
-    window.localStorage.setItem(
+    gospelStorageSetSync(
       PROFILE_HIGHLIGHTS_STORAGE_KEY,
       JSON.stringify({
         v: 1,
@@ -125,7 +127,7 @@ describe('HighlightsDropdown', () => {
   it('remove asks confirm and removes entry', async () => {
     mockShowConfirm.mockResolvedValue(true)
     const user = userEvent.setup()
-    window.localStorage.setItem(
+    gospelStorageSetSync(
       PROFILE_HIGHLIGHTS_STORAGE_KEY,
       JSON.stringify({
         v: 1,
@@ -169,7 +171,7 @@ describe('HighlightsDropdown', () => {
     jest.useFakeTimers()
     try {
       const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
-      window.localStorage.setItem(
+      gospelStorageSetSync(
         PROFILE_HIGHLIGHTS_STORAGE_KEY,
         JSON.stringify({
           v: 1,
@@ -223,7 +225,7 @@ describe('HighlightsDropdown', () => {
     jest.useFakeTimers()
     try {
       const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
-      window.localStorage.setItem(
+      gospelStorageSetSync(
         PROFILE_HIGHLIGHTS_STORAGE_KEY,
         JSON.stringify({
           v: 1,

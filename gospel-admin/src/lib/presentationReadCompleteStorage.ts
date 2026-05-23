@@ -1,3 +1,5 @@
+import { gospelStorageGetSync, gospelStorageSetSync } from '@/lib/gospelClientStorage'
+
 /** Slugs the user has read to the end (Listen through last anchor or scrolled to bottom). Device-only. */
 export const PRESENTATION_READ_COMPLETE_STORAGE_KEY = 'gospel-presentation-read-complete:v1'
 
@@ -32,7 +34,7 @@ function writeSlugs(slugs: string[]): void {
   if (typeof window === 'undefined') return
   try {
     const unique = [...new Set(slugs)]
-    localStorage.setItem(
+    gospelStorageSetSync(
       PRESENTATION_READ_COMPLETE_STORAGE_KEY,
       JSON.stringify({ v: SCHEMA_V, slugs: unique } satisfies StoredShape)
     )
@@ -53,7 +55,7 @@ function emitReadStatus(slug: string, read: boolean): void {
 export function loadPresentationReadCompleteSlugs(): string[] {
   if (typeof window === 'undefined') return []
   try {
-    return parseStored(localStorage.getItem(PRESENTATION_READ_COMPLETE_STORAGE_KEY))
+    return parseStored(gospelStorageGetSync(PRESENTATION_READ_COMPLETE_STORAGE_KEY))
   } catch {
     return []
   }

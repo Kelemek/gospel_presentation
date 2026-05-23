@@ -5,7 +5,9 @@ import BookmarksDropdown, {
 } from '../BookmarksDropdown'
 import type { GospelSection } from '@/lib/types'
 import { GOSPEL_CLOSE_BOOKMARKS_PANEL_EVENT } from '@/lib/bookmarksPanelCloseEvent'
+import { gospelStorageSetSync } from '@/lib/gospelClientStorage'
 import { loadBookmarks, PROFILE_BOOKMARKS_STORAGE_KEY } from '@/lib/profileBookmarksStorage'
+import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
 import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
 
 const mockPush = jest.fn()
@@ -40,7 +42,7 @@ const sections: GospelSection[] = [
 
 describe('BookmarksDropdown', () => {
   beforeEach(() => {
-    window.localStorage.removeItem(PROFILE_BOOKMARKS_STORAGE_KEY)
+    installTestLocalStorage()
     mockPush.mockClear()
     mockShowConfirm.mockReset()
     ;(scrollToTocAnchor as jest.Mock).mockClear()
@@ -122,7 +124,7 @@ describe('BookmarksDropdown', () => {
 
   it('navigates other slug via router.push', async () => {
     const user = userEvent.setup()
-    window.localStorage.setItem(
+    gospelStorageSetSync(
       PROFILE_BOOKMARKS_STORAGE_KEY,
       JSON.stringify({
         v: 1,
@@ -155,7 +157,7 @@ describe('BookmarksDropdown', () => {
   it('remove asks confirm and removes', async () => {
     mockShowConfirm.mockResolvedValue(true)
     const user = userEvent.setup()
-    window.localStorage.setItem(
+    gospelStorageSetSync(
       PROFILE_BOOKMARKS_STORAGE_KEY,
       JSON.stringify({
         v: 1,
@@ -193,7 +195,7 @@ describe('BookmarksDropdown', () => {
   it('filters bookmarks by debounced search', async () => {
     jest.useFakeTimers()
     try {
-      window.localStorage.setItem(
+      gospelStorageSetSync(
         PROFILE_BOOKMARKS_STORAGE_KEY,
         JSON.stringify({
           v: 1,

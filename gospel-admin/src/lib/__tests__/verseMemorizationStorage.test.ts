@@ -2,10 +2,21 @@
  * @jest-environment jsdom
  */
 
+import { idbRemoveItem, idbSetItem } from '@/lib/gospelClientKvStore'
+import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
+import * as gospelClientStorage from '@/lib/gospelClientStorage'
 import {
+  gospelStorageGetSync,
+  gospelStorageSetSync,
+  resetGospelClientStorageForTests,
+} from '@/lib/gospelClientStorage'
+import {
+  GOSPEL_MEMORIZATION_CHANGED_EVENT,
   VERSE_MEMORIZATION_STORAGE_KEY,
   addMemorizedVerse,
+  tryAddMemorizedVerse,
   clearMemorizationInProgress,
+  hydrateMemorizedVersesStorage,
   loadMemorizedVerses,
   removeMemorizedVerse,
   saveMemorizationInProgress,
@@ -14,9 +25,23 @@ import {
   getMasterLevel,
 } from '@/lib/verseMemorizationStorage'
 
+function countMemorizationChangedEvents(spy: jest.SpyInstance<typeof window.dispatchEvent>): number {
+  return spy.mock.calls.filter(
+    (args) =>
+      args[0] instanceof CustomEvent && args[0].type === GOSPEL_MEMORIZATION_CHANGED_EVENT
+  ).length
+}
+
 describe('verseMemorizationStorage', () => {
-  beforeEach(() => {
-    window.localStorage.clear()
+  beforeEach(async () => {
+    resetGospelClientStorageForTests()
+    installTestLocalStorage()
+    jest.restoreAllMocks()
+    try {
+      await idbRemoveItem(VERSE_MEMORIZATION_STORAGE_KEY)
+    } catch {
+      /* first run */
+    }
   })
 
   it('addMemorizedVerse stores plain text and rejects duplicates', () => {
@@ -25,6 +50,68 @@ describe('verseMemorizationStorage', () => {
     expect(loadMemorizedVerses()[0].text).toBe('For God')
     expect(loadMemorizedVerses()[0].reference).toBe('John 3:16')
     expect(addMemorizedVerse('John 3:16', 'other', 'esv')).toBe(false)
+  })
+
+  it('hydrateMemorizedVersesStorage does not emit when memorization bytes are unchanged', async () => {
+    const payload = JSON.stringify({
+      v: 1,
+      verses: [
+        {
+          id: 'v1',
+          reference: 'John 3:16',
+          text: 'For God',
+          translation: 'esv',
+          dateAdded: 1,
+          lastPracticedAt: null,
+          practiceSessions: [],
+        },
+      ],
+    })
+    window.localStorage.setItem(VERSE_MEMORIZATION_STORAGE_KEY, payload)
+    gospelStorageSetSync(VERSE_MEMORIZATION_STORAGE_KEY, payload)
+
+    const dispatchSpy = jest.spyOn(window, 'dispatchEvent')
+    await hydrateMemorizedVersesStorage()
+    expect(countMemorizationChangedEvents(dispatchSpy)).toBe(0)
+    dispatchSpy.mockRestore()
+  })
+
+  it('hydrateMemorizedVersesStorage emits when IndexedDB-only data loads into memory', async () => {
+    const payload = JSON.stringify({
+      v: 1,
+      verses: [
+        {
+          id: 'v1',
+          reference: 'John 3:16',
+          text: 'For God',
+          translation: 'esv',
+          dateAdded: 1,
+          lastPracticedAt: null,
+          practiceSessions: [],
+        },
+      ],
+    })
+    await idbSetItem(VERSE_MEMORIZATION_STORAGE_KEY, payload)
+    resetGospelClientStorageForTests()
+
+    const dispatchSpy = jest.spyOn(window, 'dispatchEvent')
+    await hydrateMemorizedVersesStorage()
+    expect(countMemorizationChangedEvents(dispatchSpy)).toBe(1)
+    expect(loadMemorizedVerses()).toHaveLength(1)
+    dispatchSpy.mockRestore()
+  })
+
+  it('persist notifies memorization listeners once per save', async () => {
+    addMemorizedVerse('John 3:16', 'For God', 'esv')
+    const id = loadMemorizedVerses()[0].id
+    const dispatchSpy = jest.spyOn(window, 'dispatchEvent')
+
+    removeMemorizedVerse(id)
+    expect(countMemorizationChangedEvents(dispatchSpy)).toBe(1)
+
+    await Promise.resolve()
+    expect(countMemorizationChangedEvents(dispatchSpy)).toBe(1)
+    dispatchSpy.mockRestore()
   })
 
   it('removeMemorizedVerse removes by id', () => {
@@ -86,7 +173,7 @@ describe('verseMemorizationStorage', () => {
 
   it('persists under expected storage key', () => {
     addMemorizedVerse('Gen 1:1', 'In the beginning', 'esv')
-    expect(window.localStorage.getItem(VERSE_MEMORIZATION_STORAGE_KEY)).toContain('"v":1')
+    expect(gospelStorageGetSync(VERSE_MEMORIZATION_STORAGE_KEY)).toContain('"v":1')
   })
 
   it('saveMemorizationInProgress stores resume payload and clearMemorizationInProgress removes it', () => {
@@ -117,7 +204,7 @@ describe('verseMemorizationStorage', () => {
       practiceMode: 'word',
     })
     expect(loadMemorizedVerses()[0].inProgressPractice?.practiceMode).toBe('word')
-    const raw = window.localStorage.getItem(VERSE_MEMORIZATION_STORAGE_KEY)
+    const raw = gospelStorageGetSync(VERSE_MEMORIZATION_STORAGE_KEY)
     expect(raw).toContain('"practiceMode":"word"')
   })
 
@@ -132,7 +219,7 @@ describe('verseMemorizationStorage', () => {
       practiceMode: 'reorder',
     })
     expect(loadMemorizedVerses()[0].inProgressPractice?.practiceMode).toBe('reorder')
-    const raw = window.localStorage.getItem(VERSE_MEMORIZATION_STORAGE_KEY)
+    const raw = gospelStorageGetSync(VERSE_MEMORIZATION_STORAGE_KEY)
     expect(raw).toContain('"practiceMode":"reorder"')
   })
 
@@ -147,7 +234,7 @@ describe('verseMemorizationStorage', () => {
       practiceMode: 'firstLetters',
     })
     expect(loadMemorizedVerses()[0].inProgressPractice?.practiceMode).toBe('firstLetters')
-    const raw = window.localStorage.getItem(VERSE_MEMORIZATION_STORAGE_KEY)
+    const raw = gospelStorageGetSync(VERSE_MEMORIZATION_STORAGE_KEY)
     expect(raw).toContain('"practiceMode":"firstLetters"')
   })
 
@@ -167,13 +254,47 @@ describe('verseMemorizationStorage', () => {
     expect(after.practiceSessions).toHaveLength(1)
   })
 
-  it('addMemorizedVerse returns false when localStorage setItem throws', () => {
-    const spy = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new Error('QuotaExceededError')
+  it('tryAddMemorizedVerse fails when storage writes fail', async () => {
+    jest.spyOn(gospelClientStorage, 'gospelStorageSet').mockResolvedValue(false)
+    await expect(tryAddMemorizedVerse('1 Peter 2:13', 'Be subject', 'esv')).resolves.toEqual({
+      ok: false,
+      reason: 'storage_full',
     })
-    expect(addMemorizedVerse('1 Peter 2:13', 'Be subject', 'esv')).toBe(false)
-    expect(loadMemorizedVerses()).toHaveLength(0)
-    spy.mockRestore()
+    expect(loadMemorizedVerses().some((v) => v.reference === '1 Peter 2:13')).toBe(false)
+  })
+
+  it('tryAddMemorizedVerse reports empty text after stripping markers', async () => {
+    await expect(tryAddMemorizedVerse('1 Peter 2:13', '[13]', 'esv')).resolves.toEqual({
+      ok: false,
+      reason: 'empty_text',
+    })
+  })
+
+  it('persist retries without in-progress practice when first write hits quota', async () => {
+    addMemorizedVerse('John 3:16', 'For God', 'esv')
+    const id = loadMemorizedVerses()[0].id
+    saveMemorizationInProgress(id, {
+      sessionSeed: 'seed',
+      wrongAttempts: 0,
+      correctKeystrokes: 0,
+      phase: { kind: 'inRound', roundIndex: 1 },
+    })
+    expect(loadMemorizedVerses()[0].inProgressPractice).toBeDefined()
+
+    jest.spyOn(gospelClientStorage, 'gospelStorageSet').mockImplementation(async (key, value) => {
+      if (key === VERSE_MEMORIZATION_STORAGE_KEY && value.includes('inProgressPractice')) {
+        return false
+      }
+      gospelStorageSetSync(key, value)
+      return true
+    })
+
+    const result = await tryAddMemorizedVerse('1 Peter 2:13', 'Be subject', 'esv')
+    expect(result).toEqual({ ok: true })
+    const verses = loadMemorizedVerses()
+    expect(verses.some((v) => v.reference === '1 Peter 2:13')).toBe(true)
+    const john = verses.find((v) => v.reference === 'John 3:16')
+    expect(john?.inProgressPractice).toBeUndefined()
   })
 
   it('getMasterLevel ignores in-progress only (completed sessions only)', () => {

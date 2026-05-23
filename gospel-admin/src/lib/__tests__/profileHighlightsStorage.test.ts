@@ -1,3 +1,5 @@
+import { gospelStorageSetSync } from '@/lib/gospelClientStorage'
+import { resetGospelStorageTestState, installTestLocalStorage } from '@/lib/testing/testLocalStorage'
 import {
   PROFILE_HIGHLIGHTS_STORAGE_KEY,
   addHighlight,
@@ -7,8 +9,9 @@ import {
 } from '../profileHighlightsStorage'
 
 describe('profileHighlightsStorage', () => {
-  beforeEach(() => {
-    window.localStorage.clear()
+  beforeEach(async () => {
+    await resetGospelStorageTestState()
+    installTestLocalStorage()
   })
 
   it('adds and loads highlights', () => {
@@ -97,7 +100,7 @@ describe('profileHighlightsStorage', () => {
   })
 
   it('returns empty on corrupt JSON', () => {
-    window.localStorage.setItem(PROFILE_HIGHLIGHTS_STORAGE_KEY, 'not-json')
+    gospelStorageSetSync(PROFILE_HIGHLIGHTS_STORAGE_KEY, 'not-json')
     expect(loadHighlights()).toEqual([])
   })
 })

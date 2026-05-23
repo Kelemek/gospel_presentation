@@ -2,6 +2,9 @@ import React, { type ReactElement } from 'react'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TextSizeProvider } from '@/contexts/TextSizeContext'
+import { gospelStorageGetSync, resetGospelClientStorageForTests } from '@/lib/gospelClientStorage'
+import { loadVersePins, versePinStorageKey } from '@/lib/versePinStorage'
+import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
 
 function renderWithTextSize(ui: ReactElement) {
   return render(<TextSizeProvider>{ui}</TextSizeProvider>)
@@ -29,7 +32,8 @@ jest.mock('@/components/TableOfContents', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks()
-  localStorage.clear()
+  resetGospelClientStorageForTests()
+  installTestLocalStorage()
   global.fetch = jest.fn((input: Parameters<typeof fetch>[0]) => {
     const url = typeof input === 'string' ? input : String(input)
     if (url.includes('/visit')) {
@@ -199,11 +203,14 @@ describe('ProfileContent extra interactions', () => {
 
     await user.click(screen.getByRole('button', { name: /close modal/i }))
 
-    const raw = localStorage.getItem('gospel-verse-pins-p1')
-    expect(raw).toBeTruthy()
-    expect(raw).toContain('John 3:16')
-    expect(raw).toContain('red')
-    const parsed = JSON.parse(raw!) as { v: number; bookmarks: Array<{ colorId: string; reference: string }> }
+    await waitFor(() => {
+      const raw = gospelStorageGetSync(versePinStorageKey('p1'))
+      expect(raw).toBeTruthy()
+      expect(raw).toContain('John 3:16')
+      expect(raw).toContain('red')
+    })
+    const raw = gospelStorageGetSync(versePinStorageKey('p1'))!
+    const parsed = JSON.parse(raw) as { v: number; bookmarks: Array<{ colorId: string; reference: string }> }
     expect(parsed.v).toBe(2)
     expect(parsed.bookmarks.some((b) => b.colorId === 'red' && b.reference === 'John 3:16')).toBe(true)
   })
@@ -236,10 +243,8 @@ describe('ProfileContent extra interactions', () => {
     await screen.findByRole('button', { name: /^Pin color:/i })
     await user.click(screen.getByRole('button', { name: /close modal/i }))
 
-    const raw = localStorage.getItem('gospel-verse-pins-p1')
-    expect(raw).toBeTruthy()
-    const parsed = JSON.parse(raw!) as { v: number; yellow: { reference: string } }
-    expect(parsed.v).toBe(2)
-    expect(parsed.yellow.reference).toBe('John 3:16')
+    await waitFor(() => {
+      expect(loadVersePins('p1').yellow?.reference).toBe('John 3:16')
+    })
   })
 })

@@ -218,7 +218,9 @@ export function MemorizationReorderPanel({
         y: r.top + r.height / 2,
       })
       requestAnimationFrame(() => {
-        li.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
+        if (typeof li.scrollIntoView === 'function') {
+          li.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
+        }
       })
     },
     [clearPending]
@@ -435,7 +437,9 @@ export function MemorizationReorderPanel({
       }
       const target = e.currentTarget as HTMLElement
       requestAnimationFrame(() => {
-        target.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
+        if (typeof target.scrollIntoView === 'function') {
+          target.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' })
+        }
       })
     },
     [slotChunkIds]

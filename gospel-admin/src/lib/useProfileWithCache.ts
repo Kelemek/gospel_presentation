@@ -2,12 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import type { GospelProfile } from './types'
-
-const PROFILE_CACHE_KEY_PREFIX = 'gospel-profile-'
-
-function getCacheKey(slug: string): string {
-  return `${PROFILE_CACHE_KEY_PREFIX}${slug}`
-}
+import { getProfileOfflineCache, setProfileOfflineCache } from '@/lib/profileOfflineCache'
+import { profileOfflineCacheKey } from '@/lib/gospelClientStoragePolicy'
 
 function parseCachedProfile(value: string | null): { profile: GospelProfile; updatedAt: string } | null {
   if (!value) return null
@@ -66,7 +62,7 @@ export interface UseProfileWithCacheResult {
 }
 
 /**
- * Cache-first profile loading. Uses localStorage first; only fetches from API when
+ * Cache-first profile loading. Uses IndexedDB offline cache first; only fetches from API when
  * no cache or when admin has updated the profile (checked via /api/profiles/[slug]/modified).
  */
 export function useProfileWithCache(slug: string): UseProfileWithCacheResult {
@@ -114,7 +110,7 @@ export function useProfileWithCache(slug: string): UseProfileWithCacheResult {
       }
       if (typeof window !== 'undefined') {
         try {
-          localStorage.setItem(getCacheKey(slug), serializeForCache(profileObj))
+          await setProfileOfflineCache(slug, serializeForCache(profileObj))
         } catch {
           // ignore quota errors
         }
@@ -142,7 +138,14 @@ export function useProfileWithCache(slug: string): UseProfileWithCacheResult {
     let cancelled = false
 
     const run = async () => {
-      const cached = typeof window !== 'undefined' ? parseCachedProfile(localStorage.getItem(getCacheKey(slug))) : null
+      const cachedRaw =
+        typeof window !== 'undefined'
+          ? getProfileOfflineCache(slug) ??
+            (typeof localStorage !== 'undefined'
+              ? localStorage.getItem(profileOfflineCacheKey(slug))
+              : null)
+          : null
+      const cached = parseCachedProfile(cachedRaw)
 
       if (cached) {
         setProfile(cached.profile)

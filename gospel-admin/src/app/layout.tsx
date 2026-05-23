@@ -6,6 +6,7 @@ import { ClarityProvider } from "@/components/ClarityProvider";
 import { ApplyTheme } from "@/components/ApplyTheme";
 import { CapacitorKeepLinksInApp } from "@/components/CapacitorKeepLinksInApp";
 import { CapacitorProfileHelpTourNavigation } from "@/components/CapacitorProfileHelpTourNavigation";
+import { GospelClientStorageHydration } from "@/components/GospelClientStorageHydration";
 import { SplashScreenController } from "@/components/SplashScreenController";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { TextSizeProvider } from "@/contexts/TextSizeContext";
@@ -76,6 +77,7 @@ export default function RootLayout({
           <TextSizeProvider>
             <ApplyTextSize />
             <CapacitorKeepLinksInApp />
+            <GospelClientStorageHydration />
             <CapacitorProfileHelpTourNavigation />
             <SplashScreenController />
             <ClarityProvider />

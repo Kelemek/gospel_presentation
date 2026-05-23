@@ -205,7 +205,10 @@ export default function MemorizeDropdown({
           >
             {verses.length === 0 ? (
               <p className="text-sm text-slate-500 dark:text-slate-400 px-1 py-2">
-                No verses saved yet. Use <strong className="font-medium text-slate-600 dark:text-slate-300">+ Add</strong> above, or open a scripture and choose &quot;Memorize this verse&quot;.
+                No verses saved yet. Tap{' '}
+                <strong className="font-medium text-slate-600 dark:text-slate-300">+ Add</strong>
+                {' '}
+                to choose a verse, or open a scripture passage and choose &quot;Memorize this verse&quot;.
               </p>
             ) : (
               <>

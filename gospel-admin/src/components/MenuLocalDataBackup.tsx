@@ -10,7 +10,6 @@ import {
   downloadGospelLocalUserDataBackup,
   parseGospelLocalUserDataImport,
 } from '@/lib/gospelLocalUserDataBackup'
-
 const tocControlButtonClass =
   'inline-flex items-center justify-start w-full pl-12 pr-4 py-3 text-base md:text-lg font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500 border border-slate-300 dark:border-slate-600 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px] cursor-pointer'
 
@@ -45,7 +44,7 @@ export default function MenuLocalDataBackup(props: MenuLocalDataBackupProps = {}
   const handleSave = useCallback(async () => {
     if (typeof window === 'undefined') return
     try {
-      const payload = buildGospelLocalUserDataPayload(window.localStorage)
+      const payload = await buildGospelLocalUserDataPayload(window.localStorage)
       await downloadGospelLocalUserDataBackup(payload)
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Something went wrong.'
@@ -104,7 +103,7 @@ export default function MenuLocalDataBackup(props: MenuLocalDataBackupProps = {}
       if (!ok) return
 
       try {
-        applyGospelLocalUserDataImport(payload, window.localStorage)
+        await applyGospelLocalUserDataImport(payload, window.localStorage)
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Restore failed.'
         void showAlert(msg)
