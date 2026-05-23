@@ -192,7 +192,8 @@ export default function CopyrightPage() {
                       CC BY 4.0
                     </a>
                     . Brief Greek definitions draw on Abbott-Smith; brief Hebrew on abridged BDB; full Greek entries
-                    use formatted LSJ where provided in STEPBible-Data.
+                    use formatted LSJ where provided in STEPBible-Data. Strong’s concordance (verse lists per
+                    number) is built from the same TAGNT/TAHOT amalgamated word data at import time.
                   </span>
                 </li>
                 <li className="flex items-start">

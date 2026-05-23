@@ -45,3 +45,19 @@ export interface StepBibleLexiconResult {
   detail: 'brief' | 'full'
   note?: string
 }
+
+export interface StepBibleConcordanceOccurrence {
+  passageKey: string
+  reference: string
+  position: number
+  gloss?: string
+}
+
+export interface StepBibleConcordanceResult {
+  strongs: string
+  language: StepBibleLanguage
+  total: number
+  offset: number
+  limit: number
+  occurrences: StepBibleConcordanceOccurrence[]
+}

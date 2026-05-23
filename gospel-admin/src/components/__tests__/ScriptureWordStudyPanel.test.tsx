@@ -2,6 +2,18 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import ScriptureWordStudyPanel from '@/components/ScriptureWordStudyPanel'
 
+jest.mock('@/components/ScriptureHoverModal', () => {
+  return function MockScriptureHoverModal({
+    children,
+    reference,
+  }: {
+    children: React.ReactNode
+    reference: string
+  }) {
+    return <div data-testid={`hover-${reference}`}>{children}</div>
+  }
+})
+
 describe('ScriptureWordStudyPanel', () => {
   beforeEach(() => {
     global.fetch = jest.fn(async (url: string | URL) => {
@@ -52,6 +64,22 @@ describe('ScriptureWordStudyPanel', () => {
             definition: 'to transform',
             source: 'TBESG',
             detail: 'brief',
+          }),
+        } as Response
+      }
+      if (u.includes('/api/scripture/concordance')) {
+        return {
+          ok: true,
+          json: async () => ({
+            strongs: 'G3339',
+            language: 'grc',
+            total: 2,
+            offset: 0,
+            limit: 50,
+            occurrences: [
+              { passageKey: 'ROM.12.2', reference: 'Romans 12:2', position: 8 },
+              { passageKey: 'ROM.12.3', reference: 'Romans 12:3', position: 1 },
+            ],
           }),
         } as Response
       }
@@ -240,6 +268,29 @@ describe('ScriptureWordStudyPanel', () => {
     await waitFor(() => {
       expect(screen.getByText(message)).toBeInTheDocument()
     })
+  })
+
+  it('shows concordance tab with verse links', async () => {
+    const user = userEvent.setup()
+    const onOpenReference = jest.fn()
+    render(
+      <ScriptureWordStudyPanel
+        reference="Romans 12:2"
+        enabled
+        onOpenReference={onOpenReference}
+      />
+    )
+    await waitFor(() => expect(screen.getByText('G3339')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /G3339/i }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Concordance$/i })).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /^Concordance$/i }))
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Romans 12:3/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Concordance \(2\)/i })).toBeInTheDocument()
+    })
+    expect(screen.queryByText('Source: TBESG (brief)')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /Romans 12:3/i }))
+    expect(onOpenReference).toHaveBeenCalledWith('Romans 12:3')
   })
 
   it('shows lexicon in a bottom sheet when embedded', async () => {

@@ -1,13 +1,19 @@
 'use client'
 
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import ScriptureHoverModal from '@/components/ScriptureHoverModal'
 import {
   formatStrongsChipLabel,
   normalizeStepBibleWordFields,
   normalizeStrongsForLookup,
 } from '@/lib/step-bible-text'
 import { wordStudyLanguageLabelFromPassageKey } from '@/lib/step-bible-reference'
-import type { StepBibleLexiconResult, StepBibleWord, StepBibleWordStudyResult } from '@/lib/step-bible-types'
+import type {
+  StepBibleConcordanceOccurrence,
+  StepBibleLexiconResult,
+  StepBibleWord,
+  StepBibleWordStudyResult,
+} from '@/lib/step-bible-types'
 
 interface ScriptureWordStudyPanelProps {
   reference: string
@@ -15,13 +21,31 @@ interface ScriptureWordStudyPanelProps {
   enabled?: boolean
   /** True when rendered inside ScriptureWordStudyModal (overlay over verse text). */
   embedded?: boolean
+  /** Open a verse in the parent ScriptureModal (concordance links). */
+  onOpenReference?: (reference: string) => void
 }
+
+type LexiconDetail = 'brief' | 'full' | 'concordance'
 
 type LexiconState =
   | { status: 'idle' }
   | { status: 'loading'; strongs: string }
   | { status: 'ready'; strongs: string; entry: StepBibleLexiconResult }
   | { status: 'error'; strongs: string; message: string }
+
+type ConcordanceState =
+  | { status: 'idle' }
+  | { status: 'loading'; strongs: string }
+  | {
+      status: 'ready'
+      strongs: string
+      total: number
+      offset: number
+      occurrences: StepBibleConcordanceOccurrence[]
+    }
+  | { status: 'error'; strongs: string; message: string }
+
+const CONCORDANCE_PAGE_SIZE = 50
 
 function WordStudyFieldLabel({ children }: { children: string }) {
   return (
@@ -51,9 +75,11 @@ function WordStudyLabeledField({
 function ScriptureWordStudyPanelContent({
   reference,
   embedded = false,
+  onOpenReference,
 }: {
   reference: string
   embedded?: boolean
+  onOpenReference?: (reference: string) => void
 }) {
   const [study, setStudy] = useState<StepBibleWordStudyResult | null>(null)
   const [loading, setLoading] = useState(true)
@@ -61,7 +87,15 @@ function ScriptureWordStudyPanelContent({
   const [expandedStrongs, setExpandedStrongs] = useState<string | null>(null)
   const [selectedWord, setSelectedWord] = useState<StepBibleWord | null>(null)
   const [lexicon, setLexicon] = useState<LexiconState>({ status: 'idle' })
-  const [detail, setDetail] = useState<'brief' | 'full'>('brief')
+  const [concordance, setConcordance] = useState<ConcordanceState>({ status: 'idle' })
+  const [detail, setDetail] = useState<LexiconDetail>('brief')
+
+  const currentPassageKeys = useMemo(() => {
+    if (!study) return new Set<string>()
+    const keys = (study.verses ?? []).map((v) => v.passageKey)
+    if (study.passageKey) keys.push(study.passageKey)
+    return new Set(keys)
+  }, [study])
 
   useEffect(() => {
     let cancelled = false
@@ -131,18 +165,62 @@ function ScriptureWordStudyPanelContent({
     []
   )
 
+  const loadConcordance = useCallback(async (strongs: string, offset = 0, append = false) => {
+    if (!append) {
+      setConcordance({ status: 'loading', strongs })
+    }
+    try {
+      const res = await fetch(
+        `/api/scripture/concordance?strongs=${encodeURIComponent(strongs)}&offset=${offset}&limit=${CONCORDANCE_PAGE_SIZE}`,
+        { cache: 'no-store' }
+      )
+      const data = await res.json()
+      if (!res.ok) {
+        setConcordance({
+          status: 'error',
+          strongs,
+          message: typeof data.error === 'string' ? data.error : 'Concordance lookup failed',
+        })
+        return
+      }
+      const page = (data.occurrences ?? []) as StepBibleConcordanceOccurrence[]
+      const total = typeof data.total === 'number' ? data.total : page.length
+      setConcordance((prev) => {
+        if (append && prev.status === 'ready' && prev.strongs === strongs) {
+          return {
+            status: 'ready',
+            strongs,
+            total,
+            offset,
+            occurrences: [...prev.occurrences, ...page],
+          }
+        }
+        return { status: 'ready', strongs, total, offset, occurrences: page }
+      })
+    } catch {
+      setConcordance({ status: 'error', strongs, message: 'Concordance lookup failed' })
+    }
+  }, [])
+
   const lookupStrongs = (raw: string) => normalizeStrongsForLookup(raw)?.key ?? null
+
+  const closeLexiconSheet = () => {
+    setExpandedStrongs(null)
+    setSelectedWord(null)
+    setLexicon({ status: 'idle' })
+    setConcordance({ status: 'idle' })
+    setDetail('brief')
+  }
 
   const onWordClick = (raw: StepBibleWord) => {
     const word = normalizeStepBibleWordFields(raw)
     const key = lookupStrongs(word.strongs)
     if (key && expandedStrongs === key) {
-      setExpandedStrongs(null)
-      setSelectedWord(null)
-      setLexicon({ status: 'idle' })
+      closeLexiconSheet()
       return
     }
     setSelectedWord(word)
+    setConcordance({ status: 'idle' })
     if (!key) {
       setExpandedStrongs(null)
       setLexicon({
@@ -154,10 +232,21 @@ function ScriptureWordStudyPanelContent({
       return
     }
     setExpandedStrongs(key)
-    const detailLevel = study?.language === 'heb' ? 'brief' : detail
-    if (study?.language === 'heb' && detail !== 'brief') setDetail('brief')
-    void loadLexicon(key, detailLevel)
+    setDetail('brief')
+    void loadLexicon(key, 'brief')
   }
+
+  const concordanceCountLabel =
+    concordance.status === 'ready' && concordance.strongs === expandedStrongs
+      ? ` (${concordance.total})`
+      : ''
+
+  const tabButtonClass = (active: boolean) =>
+    `text-xs px-2 py-0.5 rounded border ${
+      active
+        ? 'border-blue-500 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200'
+        : 'border-slate-300 dark:border-slate-500 text-slate-600 dark:text-slate-300'
+    }`
 
   const langLabel = study
     ? wordStudyLanguageLabelFromPassageKey(study.language, study.passageKey)
@@ -176,110 +265,175 @@ function ScriptureWordStudyPanelContent({
             {selectedWord?.gloss ?? selectedWord?.text ?? 'Word'}
           </span>
         )}
-        {study?.language === 'heb' && (
+        {study?.language === 'heb' && detail === 'brief' && (
           <span className="text-xs text-slate-500 dark:text-slate-400">TBESH (brief)</span>
         )}
-        {study?.language === 'grc' && (
-          <div className="flex gap-1">
+        {expandedStrongs && (
+          <div className="flex gap-1 flex-wrap">
             <button
               type="button"
               onClick={() => {
                 setDetail('brief')
-                void loadLexicon(expandedStrongs!, 'brief')
+                void loadLexicon(expandedStrongs, 'brief')
               }}
-              className={`text-xs px-2 py-0.5 rounded border ${
-                detail === 'brief'
-                  ? 'border-blue-500 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200'
-                  : 'border-slate-300 dark:border-slate-500 text-slate-600 dark:text-slate-300'
-              }`}
+              className={tabButtonClass(detail === 'brief')}
             >
               Brief
             </button>
+            {study?.language === 'grc' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDetail('full')
+                  void loadLexicon(expandedStrongs, 'full')
+                }}
+                className={tabButtonClass(detail === 'full')}
+              >
+                Full
+              </button>
+            )}
             <button
               type="button"
+              data-tour="scripture-modal-word-study-concordance"
               onClick={() => {
-                setDetail('full')
-                void loadLexicon(expandedStrongs!, 'full')
+                setDetail('concordance')
+                if (
+                  concordance.status !== 'ready' ||
+                  concordance.strongs !== expandedStrongs
+                ) {
+                  void loadConcordance(expandedStrongs, 0, false)
+                }
               }}
-              className={`text-xs px-2 py-0.5 rounded border ${
-                detail === 'full'
-                  ? 'border-blue-500 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200'
-                  : 'border-slate-300 dark:border-slate-500 text-slate-600 dark:text-slate-300'
-              }`}
+              className={tabButtonClass(detail === 'concordance')}
             >
-              Full
+              Concordance{concordanceCountLabel}
             </button>
           </div>
         )}
         <button
           type="button"
-          onClick={() => {
-            setExpandedStrongs(null)
-            setSelectedWord(null)
-            setLexicon({ status: 'idle' })
-          }}
+          onClick={closeLexiconSheet}
           className="ml-auto text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 text-lg leading-none px-1"
           aria-label="Close definition"
         >
           ×
         </button>
       </div>
-      {lexicon.status === 'loading' && (
+      {detail !== 'concordance' && lexicon.status === 'loading' && (
         <p className="text-sm text-slate-600 dark:text-slate-300">Loading definition…</p>
       )}
-      {lexicon.status === 'error' &&
+      {detail !== 'concordance' &&
+        lexicon.status === 'error' &&
         (lexicon.strongs === expandedStrongs || (!expandedStrongs && selectedWord)) && (
           <p className="text-sm text-amber-700 dark:text-amber-300">{lexicon.message}</p>
         )}
-      {lexicon.status === 'ready' && lexicon.strongs === expandedStrongs && (
-        <div className="text-sm text-slate-800 dark:text-slate-200 space-y-2.5 max-h-[38vh] overflow-y-auto">
-          {lexicon.entry.lemma && (
-            <WordStudyLabeledField label="Lemma">
-              <p
-                className={`text-slate-900 dark:text-slate-100 ${
-                  study?.language === 'heb'
-                    ? 'text-lg font-serif text-left'
-                    : 'text-base'
-                }`}
-                dir={study?.language === 'heb' ? 'rtl' : 'ltr'}
-              >
-                {lexicon.entry.lemma}
-              </p>
-            </WordStudyLabeledField>
-          )}
-          {lexicon.entry.transliteration && (
-            <WordStudyLabeledField label="Transliteration">
-              <p
-                className="text-sm text-slate-600 dark:text-slate-400 italic text-left"
-                dir="ltr"
-              >
-                {lexicon.entry.transliteration}
-              </p>
-            </WordStudyLabeledField>
-          )}
-          {lexicon.entry.gloss && (
-            <WordStudyLabeledField label="Gloss">
-              <p className="font-medium text-slate-700 dark:text-slate-300">{lexicon.entry.gloss}</p>
-            </WordStudyLabeledField>
-          )}
-          {lexicon.entry.definition &&
-            (detail === 'full' ||
-              study?.language === 'heb' ||
-              (detail === 'brief' && !lexicon.entry.gloss)) && (
-              <WordStudyLabeledField label="Definition">
-                <p className="whitespace-pre-wrap leading-relaxed text-slate-700 dark:text-slate-300">
-                  {lexicon.entry.definition}
+      {detail !== 'concordance' &&
+        lexicon.status === 'ready' &&
+        lexicon.strongs === expandedStrongs && (
+          <div className="text-sm text-slate-800 dark:text-slate-200 space-y-2.5 max-h-[38vh] overflow-y-auto">
+            {lexicon.entry.lemma && (
+              <WordStudyLabeledField label="Lemma">
+                <p
+                  className={`text-slate-900 dark:text-slate-100 ${
+                    study?.language === 'heb'
+                      ? 'text-lg font-serif text-left'
+                      : 'text-base'
+                  }`}
+                  dir={study?.language === 'heb' ? 'rtl' : 'ltr'}
+                >
+                  {lexicon.entry.lemma}
                 </p>
               </WordStudyLabeledField>
             )}
-          {lexicon.entry.note && (
-            <p className="text-xs text-slate-500 dark:text-slate-400 italic">{lexicon.entry.note}</p>
-          )}
-          <p className="text-xs text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200 dark:border-slate-600">
-            Source: {lexicon.entry.source} ({lexicon.entry.detail})
-          </p>
-        </div>
+            {lexicon.entry.transliteration && (
+              <WordStudyLabeledField label="Transliteration">
+                <p
+                  className="text-sm text-slate-600 dark:text-slate-400 italic text-left"
+                  dir="ltr"
+                >
+                  {lexicon.entry.transliteration}
+                </p>
+              </WordStudyLabeledField>
+            )}
+            {lexicon.entry.gloss && (
+              <WordStudyLabeledField label="Gloss">
+                <p className="font-medium text-slate-700 dark:text-slate-300">{lexicon.entry.gloss}</p>
+              </WordStudyLabeledField>
+            )}
+            {lexicon.entry.definition &&
+              (detail === 'full' ||
+                study?.language === 'heb' ||
+                (detail === 'brief' && !lexicon.entry.gloss)) && (
+                <WordStudyLabeledField label="Definition">
+                  <p className="whitespace-pre-wrap leading-relaxed text-slate-700 dark:text-slate-300">
+                    {lexicon.entry.definition}
+                  </p>
+                </WordStudyLabeledField>
+              )}
+            {lexicon.entry.note && (
+              <p className="text-xs text-slate-500 dark:text-slate-400 italic">{lexicon.entry.note}</p>
+            )}
+            <p className="text-xs text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200 dark:border-slate-600">
+              Source: {lexicon.entry.source} ({lexicon.entry.detail})
+            </p>
+          </div>
+        )}
+      {detail === 'concordance' && concordance.status === 'loading' && (
+        <p className="text-sm text-slate-600 dark:text-slate-300">Loading concordance…</p>
       )}
+      {detail === 'concordance' &&
+        concordance.status === 'error' &&
+        concordance.strongs === expandedStrongs && (
+          <p className="text-sm text-amber-700 dark:text-amber-300">{concordance.message}</p>
+        )}
+      {detail === 'concordance' &&
+        concordance.status === 'ready' &&
+        concordance.strongs === expandedStrongs && (
+          <div className="text-sm max-h-[38vh] overflow-y-auto">
+            <ul className="flex flex-col gap-1.5 list-none p-0 m-0">
+              {concordance.occurrences.map((occ) => {
+                const isCurrent = currentPassageKeys.has(occ.passageKey)
+                return (
+                  <li key={`${occ.passageKey}-${occ.position}`}>
+                    <ScriptureHoverModal reference={occ.reference} hoverDelayMs={500} inline>
+                      <button
+                        type="button"
+                        onClick={() => onOpenReference?.(occ.reference)}
+                        className={`w-full text-left px-3 py-2 rounded-md border transition-colors cursor-pointer min-h-[44px] flex flex-col justify-center ${
+                          isCurrent
+                            ? 'bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-500 text-blue-900 dark:text-blue-100 font-medium'
+                            : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 text-blue-800 dark:text-blue-200 hover:bg-blue-100 dark:hover:bg-blue-900/40'
+                        }`}
+                      >
+                        <span className="font-medium">{occ.reference}</span>
+                        {occ.gloss && (
+                          <span className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 line-clamp-2">
+                            {occ.gloss}
+                          </span>
+                        )}
+                      </button>
+                    </ScriptureHoverModal>
+                  </li>
+                )
+              })}
+            </ul>
+            {concordance.occurrences.length < concordance.total && (
+              <button
+                type="button"
+                onClick={() =>
+                  void loadConcordance(
+                    concordance.strongs,
+                    concordance.occurrences.length,
+                    true
+                  )
+                }
+                className="mt-2 w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-500 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
+              >
+                Load more ({concordance.occurrences.length} of {concordance.total})
+              </button>
+            )}
+          </div>
+        )}
     </div>
   ) : null
 
@@ -419,6 +573,7 @@ export default function ScriptureWordStudyPanel({
   reference,
   enabled = true,
   embedded = false,
+  onOpenReference,
 }: ScriptureWordStudyPanelProps) {
   const fetchKey = enabled && reference.trim() ? reference.trim() : null
   if (!fetchKey) return null
@@ -428,6 +583,7 @@ export default function ScriptureWordStudyPanel({
       key={fetchKey}
       reference={fetchKey}
       embedded={embedded}
+      onOpenReference={onOpenReference}
     />
   )
 }

@@ -1,21 +1,12 @@
 /** @jest-environment node */
 
-import { execSync } from 'child_process'
 import { NextRequest } from 'next/server'
-import path from 'path'
-import fs from 'fs'
 import { clearStepBibleLexiconCache } from '@/lib/step-bible-lexicon'
-
-const FIXTURE_ROOT = path.join(process.cwd(), 'data', 'stepbible')
+import { ensureStepBibleTestFixtures } from '@/lib/test/ensureStepBibleTestFixtures'
 
 describe('GET /api/scripture/lexicon', () => {
   beforeAll(() => {
-    if (!fs.existsSync(path.join(FIXTURE_ROOT, 'lexicon', 'greek.json'))) {
-      execSync('node scripts/import-stepbible-data.js --fixtures-only', {
-        cwd: process.cwd(),
-        stdio: 'pipe',
-      })
-    }
+    ensureStepBibleTestFixtures()
     clearStepBibleLexiconCache()
   })
 

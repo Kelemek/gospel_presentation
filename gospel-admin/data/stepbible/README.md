@@ -5,8 +5,10 @@ This folder is **not** in git (see `.gitignore`). `words/` and `lexicon/` are ge
 ```bash
 npm run import-stepbible          # full Bible (~15–20 min download/parse)
 npm run reimport-stepbible        # wipe words/ and re-import (after import script fixes)
-npm run import-stepbible:fixtures # minimal samples for Jest
+npm run import-stepbible:fixtures # minimal samples for Jest (CI only — overwrites GEN/1, ROM/12, JHN/3)
 ```
+
+After a **full** import, do **not** run `import-stepbible:fixtures` on your dev machine (it replaces three chapter files with tiny samples). Jest uses fixtures only when data is missing, or when no full import is detected.
 
 After re-importing, **restart `npm run dev`** so API routes drop cached chapter JSON.
 

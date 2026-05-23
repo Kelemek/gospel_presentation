@@ -1,6 +1,7 @@
 import {
   isAramaicVerse,
   parseStepBibleWordLineRef,
+  passageKeyToReference,
   stepRefToUsfmPassageId,
   usfmPassageIdToStepRef,
   wordStudyAvailableFromReference,
@@ -20,6 +21,12 @@ describe('step-bible-reference', () => {
   it('maps STEPBible ref to USFM', () => {
     expect(stepRefToUsfmPassageId('Rom.12.2')).toBe('ROM.12.2')
     expect(stepRefToUsfmPassageId('Gen.1.1')).toBe('GEN.1.1')
+  })
+
+  it('passageKeyToReference formats display labels', () => {
+    expect(passageKeyToReference('ROM.12.2')).toBe('Romans 12:2')
+    expect(passageKeyToReference('GEN.1.1')).toBe('Genesis 1:1')
+    expect(passageKeyToReference('invalid')).toBeNull()
   })
 
   it('parses word data line prefix', () => {

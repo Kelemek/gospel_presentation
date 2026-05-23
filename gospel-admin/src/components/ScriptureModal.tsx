@@ -52,6 +52,8 @@ interface ScriptureModalProps {
   }
   /** Opens unified study library modal with “by scripture” search for this reference (profile pages). */
   onOpenSpurgeonStudy?: (reference: string) => void
+  /** Navigate the reader to another verse (e.g. concordance link in word study). */
+  onNavigateReference?: (reference: string) => void
 }
 
 export default function ScriptureModal({ 
@@ -65,6 +67,7 @@ export default function ScriptureModal({
   presentationLocation,
   versePinControl,
   onOpenSpurgeonStudy,
+  onNavigateReference,
 }: ScriptureModalProps) {
   const { translation, setTranslation, enabledTranslations } = useTranslation()
   const { textSize } = useTextSize()
@@ -1167,6 +1170,7 @@ export default function ScriptureModal({
               reference={reference}
               isOpen
               onClose={closeWordStudy}
+              onOpenReference={onNavigateReference}
             />
           )}
 

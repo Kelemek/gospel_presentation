@@ -7,6 +7,7 @@ interface ScriptureWordStudyModalProps {
   reference: string
   isOpen: boolean
   onClose: () => void
+  onOpenReference?: (reference: string) => void
 }
 
 /**
@@ -17,6 +18,7 @@ export default function ScriptureWordStudyModal({
   reference,
   isOpen,
   onClose,
+  onOpenReference,
 }: ScriptureWordStudyModalProps) {
   const titleId = useId()
   const onCloseRef = useRef(onClose)
@@ -70,7 +72,12 @@ export default function ScriptureWordStudyModal({
           className="flex-1 min-h-0 overflow-hidden relative"
           data-tour="scripture-modal-word-study-panel"
         >
-          <ScriptureWordStudyPanel reference={reference} enabled embedded />
+          <ScriptureWordStudyPanel
+            reference={reference}
+            enabled
+            embedded
+            onOpenReference={onOpenReference}
+          />
         </div>
       </div>
     </div>

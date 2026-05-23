@@ -1,4 +1,5 @@
 .cache/
-# Full import (~100MB+). Run `npm run import-stepbible` before deploy. CI/tests use `npm run import-stepbible:fixtures`.
+# Full import (~100MB+). Run `npm run import-stepbible` before deploy. CI/tests use `npm run import-stepbible:fixtures`. words/, lexicon/, concordance/ are generated.
 words/
 lexicon/
+concordance/

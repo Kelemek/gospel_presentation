@@ -1186,6 +1186,9 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
         reference={selectedScripture.reference}
         isOpen={selectedScripture.isOpen}
         onClose={closeModal}
+        onNavigateReference={(ref) => {
+          setSelectedScripture((prev) => ({ ...prev, reference: ref }))
+        }}
         onPrevious={hasPrevious ? navigateToPrevious : undefined}
         onNext={hasNext ? navigateToNext : undefined}
         hasPrevious={hasPrevious}

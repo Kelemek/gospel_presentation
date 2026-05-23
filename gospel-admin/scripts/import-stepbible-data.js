@@ -87,6 +87,49 @@ function normalizeHebrew(code) {
   return m ? `H${parseInt(m[1], 10)}` : code.toUpperCase()
 }
 
+/** STEP Hebrew morphology prefixes (H9001–H9099) — not dictionary Strong’s. */
+function isStepHebrewMorphPrefix(code) {
+  return /^H90\d{2}$/.test(code)
+}
+
+/** Match {@link parseLexiconHebrewStrongs} in step-bible-text.ts for concordance keys. */
+function parseLexiconHebrewStrongs(dStrongs) {
+  const raw = (dStrongs || '').trim()
+  if (!raw) return null
+  const braced = [...raw.matchAll(/\{H(\d{1,5}[A-Z]?)/gi)]
+  if (braced.length) {
+    return normalizeHebrew(`H${braced[braced.length - 1][1]}`)
+  }
+  const hAll = [...raw.matchAll(/H(\d{1,5}[A-Z]?)/gi)]
+  for (let i = hAll.length - 1; i >= 0; i--) {
+    const code = normalizeHebrew(`H${hAll[i][1]}`)
+    if (!isStepHebrewMorphPrefix(code)) return code
+  }
+  if (hAll.length) return normalizeHebrew(`H${hAll[hAll.length - 1][1]}`)
+  return null
+}
+
+/** Lexicon/concordance lookup key (G3339 / H430) from STEP dStrongs field. */
+function concordanceLookupKey(strongsRaw, language) {
+  const raw = (strongsRaw || '').trim()
+  if (!raw) return null
+  const g = raw.match(/(G\d{1,5}[A-Z]?)/i)
+  if (g) return normalizeGreek(g[1])
+  if (language === 'heb') return parseLexiconHebrewStrongs(raw)
+  const h = raw.match(/(H\d{1,5}[A-Z]?)/i)
+  if (h) return normalizeHebrew(h[1])
+  return null
+}
+
+function concordanceShardFile(strongsKey) {
+  const m = strongsKey.match(/^([GH])(\d+)/)
+  if (!m) return strongsKey
+  const digits = m[2]
+  /** H430 → H4; G3339 → G33 */
+  const prefixLen = digits.length <= 3 ? 1 : 2
+  return `${m[1]}${digits.slice(0, prefixLen)}`
+}
+
 function parseStrongsMorph(cell) {
   const raw = cell.trim()
   const g = raw.match(/(G\d{1,5}[A-Z]?)/i)
@@ -166,6 +209,9 @@ function parseWordLine(line) {
 /** In-memory chapters: key `${usfm}.${chapter}` → { verse: { language, words } } */
 const chapters = new Map()
 
+/** Strong’s key → [{ passageKey, position, gloss? }] */
+const concordance = new Map()
+
 function addWord(parsed) {
   const key = `${parsed.usfm}.${parsed.chapter}`
   if (!chapters.has(key)) chapters.set(key, {})
@@ -173,6 +219,15 @@ function addWord(parsed) {
   const vk = String(parsed.verse)
   if (!ch[vk]) ch[vk] = { language: parsed.language, words: [] }
   ch[vk].words.push(parsed.word)
+
+  const strongsKey = concordanceLookupKey(parsed.word.strongs, parsed.language)
+  if (strongsKey) {
+    const passageKey = `${parsed.usfm}.${parsed.chapter}.${parsed.verse}`
+    const occ = { passageKey, position: parsed.word.position }
+    if (parsed.word.gloss) occ.gloss = parsed.word.gloss
+    if (!concordance.has(strongsKey)) concordance.set(strongsKey, [])
+    concordance.get(strongsKey).push(occ)
+  }
 }
 
 function writeChapterFiles() {
@@ -185,6 +240,30 @@ function writeChapterFiles() {
     const out = path.join(dir, `${ch}.json`)
     fs.writeFileSync(out, JSON.stringify(verses))
   }
+}
+
+function writeConcordanceFiles() {
+  const concordRoot = path.join(ROOT, 'concordance')
+  const buckets = new Map()
+
+  for (const [strongsKey, occurrences] of concordance) {
+    occurrences.sort(
+      (a, b) =>
+        a.passageKey.localeCompare(b.passageKey) || a.position - b.position
+    )
+    const lang = strongsKey.startsWith('G') ? 'greek' : 'hebrew'
+    const shard = concordanceShardFile(strongsKey)
+    const rel = `${lang}/${shard}.json`
+    if (!buckets.has(rel)) buckets.set(rel, {})
+    buckets.get(rel)[strongsKey] = occurrences
+  }
+
+  for (const [rel, data] of buckets) {
+    const out = path.join(concordRoot, rel)
+    ensureDir(path.dirname(out))
+    fs.writeFileSync(out, JSON.stringify(data))
+  }
+  console.log('  Concordance keys:', concordance.size, 'shard files:', buckets.size)
 }
 
 function cachePathForUrl(url) {
@@ -387,6 +466,30 @@ function writeFixturesOnly() {
       },
     })
   )
+
+  const concordDir = path.join(ROOT, 'concordance')
+  ensureDir(path.join(concordDir, 'greek'))
+  ensureDir(path.join(concordDir, 'hebrew'))
+  fs.writeFileSync(
+    path.join(concordDir, 'greek', 'G33.json'),
+    JSON.stringify({
+      G3339: [{ passageKey: 'ROM.12.2', position: 8, gloss: 'do be transformed' }],
+      G3004: [{ passageKey: 'ROM.12.3', position: 1, gloss: 'I say' }],
+    })
+  )
+  fs.writeFileSync(
+    path.join(concordDir, 'greek', 'G37.json'),
+    JSON.stringify({
+      G3779: [{ passageKey: 'JHN.3.16', position: 1, gloss: 'Thus' }],
+    })
+  )
+  fs.writeFileSync(
+    path.join(concordDir, 'hebrew', 'H4.json'),
+    JSON.stringify({
+      H430: [{ passageKey: 'GEN.1.1', position: 3, gloss: 'God' }],
+    })
+  )
+
   console.log('Wrote fixture data under data/stepbible/')
 }
 
@@ -403,6 +506,7 @@ async function main() {
     await processWordFile(url)
   }
   writeChapterFiles()
+  writeConcordanceFiles()
   await importLexicons()
   console.log('Done. Chapters:', chapters.size)
 }

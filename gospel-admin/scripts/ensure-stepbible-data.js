@@ -10,11 +10,28 @@ const path = require('path')
 const ROOT = path.join(__dirname, '..', 'data', 'stepbible')
 const WORDS_DIR = path.join(ROOT, 'words')
 
+function concordanceDataReady() {
+  const concordRoot = path.join(ROOT, 'concordance')
+  if (!fs.existsSync(concordRoot)) return false
+  try {
+    for (const lang of ['greek', 'hebrew']) {
+      const dir = path.join(concordRoot, lang)
+      if (!fs.existsSync(dir)) return false
+      const shards = fs.readdirSync(dir).filter((name) => name.endsWith('.json'))
+      if (shards.length === 0) return false
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
 function stepBibleDataReady() {
   if (!fs.existsSync(WORDS_DIR)) return false
   try {
     const books = fs.readdirSync(WORDS_DIR).filter((name) => !name.startsWith('.'))
-    return books.length > 0
+    if (books.length === 0) return false
+    return concordanceDataReady()
   } catch {
     return false
   }
@@ -32,7 +49,7 @@ function main() {
   }
 
   if (stepBibleDataReady()) {
-    console.log('STEPBible data already present under data/stepbible/words — skipping import')
+    console.log('STEPBible data (words + concordance) already present — skipping import')
     process.exit(0)
   }
 
