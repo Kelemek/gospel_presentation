@@ -183,7 +183,7 @@ describe('ScriptureHoverModal', () => {
       ok: true,
       json: async () => ({ reference: 'John 3:16', text: 'Short text.' }),
     })
-    const { container } = render(
+    render(
       <ScriptureHoverModal reference="John 3:16" hoverDelayMs={100}>
         <span>Edge</span>
       </ScriptureHoverModal>
@@ -206,7 +206,7 @@ describe('ScriptureHoverModal', () => {
     })
     await waitFor(() => expect(global.fetch).toHaveBeenCalled())
     await waitFor(() => expect(screen.getByText('Short text.')).toBeInTheDocument())
-    const pop = container.querySelector('.fixed.z-50') as HTMLElement
+    const pop = document.querySelector('[data-scripture-hover-popover]') as HTMLElement
     expect(pop).toBeTruthy()
     // Center of trigger (380) is clamped so the popover (up to ~376px wide) fits inside 400px width.
     expect(pop.style.left).toBe('200px')
@@ -230,7 +230,7 @@ describe('ScriptureHoverModal', () => {
     fireEvent.touchStart(wrapper, { changedTouches: [{ clientX: 100, clientY: 200 }] })
     act(() => { jest.advanceTimersByTime(500) })
     await waitFor(() => expect(screen.getByText('Touch verse')).toBeInTheDocument())
-    const backdrop = document.querySelector('.fixed.inset-0.z-40')
+    const backdrop = document.querySelector('[data-scripture-hover-backdrop]')
     expect(backdrop).toBeInTheDocument()
     fireEvent.click(backdrop!)
     await waitFor(() => expect(screen.queryByText('Touch verse')).not.toBeInTheDocument())

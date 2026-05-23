@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from '@/contexts/TranslationContext'
 import { Capacitor } from '@capacitor/core'
 import { formatScriptureApiError } from '@/lib/format-scripture-api-error'
@@ -37,6 +38,9 @@ const PLACEMENT_PROBE_HEIGHT_PX = 520
 const MIN_POPOVER_MAX_HEIGHT_PX = 120
 const VIEWPORT_PADDING_PX = 12
 const ANCHOR_GAP_PX = 10
+/** Above ScriptureModal (`z-50`) and word-study overlays; portaled to `body` to escape overflow clipping. */
+const POPOVER_Z_CLASS = 'z-[60]'
+const LONG_PRESS_BACKDROP_Z_CLASS = 'z-[55]'
 
 function modalWidthCapPx(viewportWidth: number): number {
   if (viewportWidth >= MODAL_WIDTH_BREAKPOINT_DESKTOP) return MODAL_WIDTH_CAP_DESKTOP_PX
@@ -356,48 +360,25 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
     onTouchCancel: handleTouchCancel,
   }
 
-  return (
-    <>
-      {inline ? (
-        <span
-          ref={(el) => {
-            containerRef.current = el
-          }}
-          {...wrapperEvents}
-          className="inline select-none"
-        >
-          {children}
-        </span>
-      ) : (
-        <div
-          ref={(el) => {
-            containerRef.current = el
-          }}
-          {...wrapperEvents}
-          className="relative select-none"
-        >
-          {children}
-        </div>
-      )}
-
-      {/* Backdrop to close long-press popup when tapping outside */}
-      {isVisible && openedByLongPress && (
-        <div
-          className="fixed inset-0 z-40"
-          aria-hidden
-          onClick={closeLongPressPopup}
-          onTouchEnd={(e) => {
-            e.preventDefault()
-            closeLongPressPopup()
-          }}
-        />
-      )}
-
-      {/* Modal */}
-      {isVisible && (
+  const popoverLayer =
+    isVisible && typeof document !== 'undefined' ? (
+      <>
+        {openedByLongPress && (
+          <div
+            className={`fixed inset-0 ${LONG_PRESS_BACKDROP_Z_CLASS}`}
+            data-scripture-hover-backdrop
+            aria-hidden
+            onClick={closeLongPressPopup}
+            onTouchEnd={(e) => {
+              e.preventDefault()
+              closeLongPressPopup()
+            }}
+          />
+        )}
         <div
           ref={popoverRef}
-          className="fixed z-50 box-border flex min-h-0 max-w-none flex-col overflow-hidden rounded-lg border border-slate-300 bg-white shadow-xl dark:border-slate-600 dark:bg-slate-800"
+          data-scripture-hover-popover
+          className={`fixed ${POPOVER_Z_CLASS} box-border flex min-h-0 max-w-none flex-col overflow-hidden rounded-lg border border-slate-300 bg-white shadow-xl dark:border-slate-600 dark:bg-slate-800`}
           style={{
             left: `${position.x}px`,
             top: `${position.y}px`,
@@ -435,7 +416,6 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
             )}
           </div>
 
-          {/* Arrow — outside the scroll region so it stays attached to the card edge */}
           {isAbove ? (
             <div
               className="pointer-events-none absolute top-full left-1/2 h-0 w-0 -translate-x-1/2 border-t-4 border-r-4 border-l-4 border-transparent border-t-white dark:border-t-slate-800"
@@ -448,7 +428,34 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
             />
           )}
         </div>
+      </>
+    ) : null
+
+  return (
+    <>
+      {inline ? (
+        <span
+          ref={(el) => {
+            containerRef.current = el
+          }}
+          {...wrapperEvents}
+          className="inline select-none"
+        >
+          {children}
+        </span>
+      ) : (
+        <div
+          ref={(el) => {
+            containerRef.current = el
+          }}
+          {...wrapperEvents}
+          className="relative select-none"
+        >
+          {children}
+        </div>
       )}
+
+      {popoverLayer ? createPortal(popoverLayer, document.body) : null}
     </>
   )
 }
