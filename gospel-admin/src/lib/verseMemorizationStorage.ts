@@ -200,8 +200,8 @@ export function emitMemorizationChanged(): void {
   window.dispatchEvent(new CustomEvent(GOSPEL_MEMORIZATION_CHANGED_EVENT))
 }
 
-function persist(verses: MemorizedVerse[]): void {
-  if (typeof window === 'undefined') return
+function persist(verses: MemorizedVerse[]): boolean {
+  if (typeof window === 'undefined') return false
   try {
     const payload: StoredShape = {
       v: VERSE_MEMORIZATION_SCHEMA_VERSION,
@@ -209,8 +209,10 @@ function persist(verses: MemorizedVerse[]): void {
     }
     window.localStorage.setItem(VERSE_MEMORIZATION_STORAGE_KEY, JSON.stringify(payload))
     emitMemorizationChanged()
+    return true
   } catch {
     // quota / private mode
+    return false
   }
 }
 
@@ -258,8 +260,7 @@ export function addMemorizedVerse(
     lastPracticedAt: null,
     practiceSessions: [],
   }
-  persist([next, ...list])
-  return true
+  return persist([next, ...list])
 }
 
 export function removeMemorizedVerse(id: string): void {

@@ -6,14 +6,20 @@ import type { BibleTranslation } from '@/lib/bible-translations'
 import { BIBLE_BOOKS_PUBLIC } from '@/lib/bibleCanonPublic'
 import { referenceBookNameFromApiBook } from '@/lib/bibleReferenceBookName'
 import type { BibleBookPublic } from '@/lib/bible-structure-types'
-import { addMemorizedVerse } from '@/lib/verseMemorizationStorage'
-
-type TestamentFilter = 'ot' | 'nt'
+import {
+  memorizeAddBookFromReference,
+  readMemorizeAddTestament,
+  writeMemorizeAddTestament,
+  type MemorizeAddTestament,
+} from '@/lib/memorizationAddVersePrefs'
+import { addMemorizedVerse, isMemoizedForReference } from '@/lib/verseMemorizationStorage'
 
 export interface AddMemorizedVerseModalProps {
   isOpen: boolean
   onClose: () => void
   translation: BibleTranslation
+  /** When provided on open, switches to the correct testament and expands that book. */
+  seedReference?: string | null
 }
 
 function buildReference(
@@ -36,9 +42,10 @@ export default function AddMemorizedVerseModal({
   isOpen,
   onClose,
   translation,
+  seedReference = null,
 }: AddMemorizedVerseModalProps) {
   const { showAlert } = useAlertModal()
-  const [testament, setTestament] = useState<TestamentFilter>('ot')
+  const [testament, setTestament] = useState<MemorizeAddTestament>(() => readMemorizeAddTestament())
 
   const [expandedBookId, setExpandedBookId] = useState<string | null>(null)
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(null)
@@ -60,16 +67,6 @@ export default function AddMemorizedVerseModal({
     [testament]
   )
 
-  useEffect(() => {
-    setExpandedBookId(null)
-  }, [testament])
-
-  useLayoutEffect(() => {
-    if (!isOpen) return
-    const el = bookListScrollRef.current
-    if (el) el.scrollTop = 0
-  }, [testament, isOpen])
-
   const resetSelection = useCallback(() => {
     setSelectedChapterId(null)
     setSelectedChapterNum(null)
@@ -78,13 +75,38 @@ export default function AddMemorizedVerseModal({
     setVerseEnd(null)
   }, [])
 
+  const setTestamentAndRemember = useCallback(
+    (next: MemorizeAddTestament) => {
+      setTestament(next)
+      writeMemorizeAddTestament(next)
+      setExpandedBookId(null)
+      setSelectedBookId(null)
+      setSelectedBookName('')
+      resetSelection()
+    },
+    [resetSelection]
+  )
+
+  useLayoutEffect(() => {
+    if (!isOpen) return
+    const el = bookListScrollRef.current
+    if (el) el.scrollTop = 0
+  }, [testament, isOpen])
+
   useLayoutEffect(() => {
     if (!isOpen) return
     setExpandedBookId(null)
     setSelectedBookId(null)
     setSelectedBookName('')
     resetSelection()
-  }, [isOpen, resetSelection])
+    const seed = seedReference?.trim()
+    if (!seed) return
+    const book = memorizeAddBookFromReference(seed)
+    if (!book) return
+    setTestament(book.testament)
+    writeMemorizeAddTestament(book.testament)
+    setExpandedBookId(book.id)
+  }, [isOpen, resetSelection, seedReference])
 
   const onChapterClick = useCallback((book: BibleBookPublic, chapterId: string, chapterNumber: number) => {
     const ch = book.chapters.find((c) => c.id === chapterId)
@@ -140,8 +162,12 @@ export default function AddMemorizedVerseModal({
       if (ok) {
         showAlert('Added to memorization list.\n\nYou can find this verse under Memorize in the menu.')
         onClose()
-      } else {
+      } else if (isMemoizedForReference(ref, translation)) {
         showAlert('This verse is already in your memorization list.')
+      } else {
+        showAlert(
+          'Could not save this verse on your device. If Safari Private Browsing is on, turn it off or allow website data for this site, then try again.'
+        )
       }
     } catch (e: unknown) {
       showAlert(e instanceof Error ? e.message : 'Failed to add passage.')
@@ -265,7 +291,7 @@ export default function AddMemorizedVerseModal({
             >
               <button
                 type="button"
-                onClick={() => setTestament('ot')}
+                onClick={() => setTestamentAndRemember('ot')}
                 className={`flex-1 cursor-pointer py-2.5 text-sm font-medium rounded-md transition-colors ${
                   testament === 'ot'
                     ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
@@ -276,7 +302,7 @@ export default function AddMemorizedVerseModal({
               </button>
               <button
                 type="button"
-                onClick={() => setTestament('nt')}
+                onClick={() => setTestamentAndRemember('nt')}
                 className={`flex-1 cursor-pointer py-2.5 text-sm font-medium rounded-md transition-colors ${
                   testament === 'nt'
                     ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm'
@@ -286,6 +312,9 @@ export default function AddMemorizedVerseModal({
                 New Testament
               </button>
             </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 px-1 pb-1">
+              Books like 1 Peter, 2 Timothy, and Psalms are listed under the matching testament tab.
+            </p>
           </div>
 
           <div ref={bookListScrollRef} className="flex-1 min-h-0 overflow-y-auto px-3 pb-3">

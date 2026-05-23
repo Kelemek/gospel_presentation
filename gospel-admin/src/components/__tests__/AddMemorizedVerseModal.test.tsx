@@ -20,9 +20,12 @@ jest.mock('@/contexts/AlertModalContext', () => ({
 const mockAddMemorizedVerse = jest.fn(
   (_reference: string, _text: string, _translation: BibleTranslation) => true
 )
+const mockIsMemoizedForReference = jest.fn(() => false)
 jest.mock('@/lib/verseMemorizationStorage', () => ({
   addMemorizedVerse: (reference: string, text: string, translation: BibleTranslation) =>
     mockAddMemorizedVerse(reference, text, translation),
+  isMemoizedForReference: (reference: string, translation: BibleTranslation) =>
+    mockIsMemoizedForReference(reference, translation),
 }))
 
 function setupFetchSuccess(text = 'In the beginning God created the heaven and the earth.') {
@@ -66,6 +69,9 @@ describe('AddMemorizedVerseModal', () => {
     mockShowAlert.mockClear()
     mockAddMemorizedVerse.mockReset()
     mockAddMemorizedVerse.mockReturnValue(true)
+    mockIsMemoizedForReference.mockReset()
+    mockIsMemoizedForReference.mockReturnValue(false)
+    window.sessionStorage.clear()
     setupFetchSuccess()
   })
 
@@ -249,6 +255,7 @@ describe('AddMemorizedVerseModal', () => {
 
   it('shows alert when verse is duplicate', async () => {
     mockAddMemorizedVerse.mockReturnValue(false)
+    mockIsMemoizedForReference.mockReturnValue(true)
     const user = userEvent.setup()
     render(<AddMemorizedVerseModal isOpen onClose={mockOnClose} translation="esv" />)
 
@@ -291,6 +298,47 @@ describe('AddMemorizedVerseModal', () => {
 
     await user.click(genesisBtn)
     expect(screen.queryByText('Chapter')).not.toBeInTheDocument()
+  })
+
+  it('shows alert when local storage save fails', async () => {
+    mockAddMemorizedVerse.mockReturnValue(false)
+    mockIsMemoizedForReference.mockReturnValue(false)
+    const user = userEvent.setup()
+    render(<AddMemorizedVerseModal isOpen onClose={mockOnClose} translation="esv" />)
+
+    await user.click(screen.getByRole('button', { name: /^Genesis$/i }))
+    await user.click(getChapterButtons()[0])
+    await user.click(getVerseButtons()[0])
+    await user.click(screen.getByRole('button', { name: /^Add$/i }))
+
+    await waitFor(() => {
+      expect(mockShowAlert).toHaveBeenCalledWith(
+        expect.stringContaining('Could not save this verse on your device')
+      )
+    })
+    expect(mockOnClose).not.toHaveBeenCalled()
+  })
+
+  it('opens New Testament and expands 1 Peter when seedReference is set', async () => {
+    render(
+      <AddMemorizedVerseModal
+        isOpen
+        onClose={mockOnClose}
+        translation="esv"
+        seedReference="1 Peter 2:13"
+      />
+    )
+    expect(screen.getByRole('button', { name: /^1 Peter$/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Genesis$/i })).not.toBeInTheDocument()
+    expect(screen.getByText('Chapter')).toBeInTheDocument()
+    expect(window.sessionStorage.getItem('gospel-memorization-add-testament')).toBe('nt')
+  })
+
+  it('remembers New Testament tab in sessionStorage', async () => {
+    const user = userEvent.setup()
+    render(<AddMemorizedVerseModal isOpen onClose={mockOnClose} translation="esv" />)
+    await user.click(screen.getByRole('button', { name: 'New Testament' }))
+    expect(window.sessionStorage.getItem('gospel-memorization-add-testament')).toBe('nt')
   })
 
   it('resets expanded book when switching testament tab', async () => {

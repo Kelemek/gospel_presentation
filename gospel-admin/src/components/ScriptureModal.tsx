@@ -16,6 +16,10 @@ import { useAlertModal } from '@/contexts/AlertModalContext'
 import { splitScriptureReferenceForHeader } from '@/lib/splitScriptureReferenceForHeader'
 import { formatScriptureApiError } from '@/lib/format-scripture-api-error'
 import {
+  memorizeAddBookFromReference,
+  writeMemorizeAddTestament,
+} from '@/lib/memorizationAddVersePrefs'
+import {
   addMemorizedVerse,
   GOSPEL_MEMORIZATION_CHANGED_EVENT,
   isMemoizedForReference,
@@ -524,14 +528,31 @@ export default function ScriptureModal({
 
   const handleMemorize = () => {
     const text = scriptureText ?? ''
-    if (!text.trim() || loading || error) return
+    if (loading) {
+      showAlert('Still loading this passage. Wait a moment, then tap Memorize again.')
+      return
+    }
+    if (error) {
+      showAlert('This passage could not be loaded. Fix the error above, then try again.')
+      return
+    }
+    if (!text.trim()) {
+      showAlert('No verse text is available to save yet.')
+      return
+    }
     const ok = addMemorizedVerse(reference, text, translation)
     if (ok) {
+      const book = memorizeAddBookFromReference(reference)
+      if (book) writeMemorizeAddTestament(book.testament)
       showAlert(
         'Added to memorization list.\n\nYou can find this verse under Memorize in the menu.'
       )
-    } else {
+    } else if (isMemoizedForReference(reference, translation)) {
       showAlert('This verse is already in your memorization list.')
+    } else {
+      showAlert(
+        'Could not save this verse on your device. If Safari Private Browsing is on, turn it off or allow website data for this site, then try again.'
+      )
     }
   }
 
@@ -950,11 +971,21 @@ export default function ScriptureModal({
                 type="button"
                 data-tour="scripture-modal-memorize"
                 onClick={handleMemorize}
-                disabled={loading || !!error || !(scriptureText ?? '').trim() || isMemoized}
-                title={isMemoized ? 'Already in memorization list' : 'Save this verse to memorize later'}
+                disabled={isMemoized}
+                title={
+                  isMemoized
+                    ? 'Already in memorization list'
+                    : loading
+                      ? 'Loading passage…'
+                      : error
+                        ? 'Passage failed to load'
+                        : !(scriptureText ?? '').trim()
+                          ? 'No verse text loaded yet'
+                          : 'Save this verse to memorize later'
+                }
                 aria-label={isMemoized ? 'Verse already in memorization list' : 'Memorize this verse'}
                 className={`px-1.5 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 shrink-0 ${
-                  isMemoized || loading || !!error || !(scriptureText ?? '').trim()
+                  isMemoized
                     ? 'text-slate-400 dark:text-slate-500 border-slate-300 dark:border-slate-600 cursor-not-allowed bg-slate-50 dark:bg-slate-700/50'
                     : 'cursor-pointer text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500'
                 }`}

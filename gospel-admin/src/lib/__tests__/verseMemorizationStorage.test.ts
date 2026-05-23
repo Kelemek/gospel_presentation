@@ -167,6 +167,15 @@ describe('verseMemorizationStorage', () => {
     expect(after.practiceSessions).toHaveLength(1)
   })
 
+  it('addMemorizedVerse returns false when localStorage setItem throws', () => {
+    const spy = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError')
+    })
+    expect(addMemorizedVerse('1 Peter 2:13', 'Be subject', 'esv')).toBe(false)
+    expect(loadMemorizedVerses()).toHaveLength(0)
+    spy.mockRestore()
+  })
+
   it('getMasterLevel ignores in-progress only (completed sessions only)', () => {
     addMemorizedVerse('Prov 1:1', 'The proverbs', 'esv')
     const id = loadMemorizedVerses()[0].id
