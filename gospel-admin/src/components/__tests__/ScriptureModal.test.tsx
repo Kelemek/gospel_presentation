@@ -4,6 +4,12 @@ import userEvent from '@testing-library/user-event'
 import { TextSizeProvider } from '@/contexts/TextSizeContext'
 import ScriptureModal from '../ScriptureModal'
 
+const mockShareScripturePassage = jest.fn(() => Promise.resolve('shared' as const))
+
+jest.mock('@/lib/shareScripturePassage', () => ({
+  shareScripturePassage: (...args: unknown[]) => mockShareScripturePassage(...args),
+}))
+
 function renderWithTextSize(ui: ReactElement) {
   return render(<TextSizeProvider>{ui}</TextSizeProvider>)
 }
@@ -464,6 +470,66 @@ describe('ScriptureModal Component', () => {
     } finally {
       window.matchMedia = prevMm
     }
+  })
+
+  it('enables Share after load and calls share helper with reference and translation', async () => {
+    const user = userEvent.setup()
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = fetchUrl(input)
+      if (url.includes('/api/scripture?')) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              text: 'For God so loved the world.',
+            }),
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected fetch: ${url}`))
+    })
+
+    renderWithTextSize(<ScriptureModal {...defaultProps} />)
+
+    const shareButton = await screen.findByRole('button', { name: 'Share passage' })
+    await waitFor(() => expect(shareButton).not.toBeDisabled())
+
+    await user.click(shareButton)
+
+    expect(mockShareScripturePassage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reference: 'John 3:16',
+        translationLabel: 'ESV (English Standard Version)',
+        passageText: 'For God so loved the world.',
+        dialogTitle: 'Share passage',
+      })
+    )
+  })
+
+  it('disables Share while loading and when main column has an error', async () => {
+    const pendingCtl: { resolve?: (r: Response) => void } = {}
+    const pendingScripture = new Promise<Response>((resolve) => {
+      pendingCtl.resolve = resolve
+    })
+
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = fetchUrl(input)
+      if (url.includes('/api/scripture?')) {
+        return pendingScripture
+      }
+      return Promise.reject(new Error(`Unexpected fetch: ${url}`))
+    })
+
+    renderWithTextSize(<ScriptureModal {...defaultProps} />)
+
+    expect(screen.getByRole('button', { name: 'Share passage' })).toBeDisabled()
+
+    pendingCtl.resolve?.({
+      ok: true,
+      json: () => Promise.resolve({ error: 'Verse not found' }),
+    } as Response)
+
+    await waitFor(() => expect(screen.getByText(/Verse not found/)).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: 'Share passage' })).toBeDisabled()
   })
 
   it('calls onOpenSpurgeonStudy when Study is shown and clicked', async () => {

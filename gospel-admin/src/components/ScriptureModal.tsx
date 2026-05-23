@@ -20,6 +20,8 @@ import {
   writeMemorizeAddTestament,
 } from '@/lib/memorizationAddVersePrefs'
 import { memorizationSaveFailureMessage } from '@/lib/memorizationSaveFailureMessage'
+import { logger } from '@/lib/logger'
+import { shareScripturePassage } from '@/lib/shareScripturePassage'
 import {
   GOSPEL_MEMORIZATION_CHANGED_EVENT,
   isMemoizedForReference,
@@ -74,7 +76,8 @@ export default function ScriptureModal({
   onOpenSpurgeonStudy,
   onNavigateReference,
 }: ScriptureModalProps) {
-  const { translation, setTranslation, enabledTranslations } = useTranslation()
+  const { translation, setTranslation, enabledTranslations, enabledTranslationOptions } =
+    useTranslation()
   const { textSize } = useTextSize()
   const { showAlert } = useAlertModal()
   const [chapterView, setChapterView] = useState<{ sessionKey: string; text: string } | null>(null)
@@ -87,6 +90,7 @@ export default function ScriptureModal({
   const [compareTranslation, setCompareTranslation] = useState<string | null>(null)
   const [wordStudyEnabled, setWordStudyEnabled] = useState(false)
   const [memorizeInFlight, setMemorizeInFlight] = useState(false)
+  const [shareInFlight, setShareInFlight] = useState(false)
 
   const [scriptureResolved, setScriptureResolved] = useState<{
     key: string
@@ -528,6 +532,45 @@ export default function ScriptureModal({
     return () => abortController.abort()
   }, [compareChapterFetchKey, reference, activeCompareTranslation])
 
+  const translationLabel = useMemo(() => {
+    const match = enabledTranslationOptions.find((o) => o.translation_code === translation)
+    return match?.translation_name ?? translation.toUpperCase()
+  }, [enabledTranslationOptions, translation])
+
+  const shareablePassageText = showingContext ? chapterText : scriptureText
+  const shareDisabled =
+    shareInFlight ||
+    loading ||
+    contextLoading ||
+    !!error ||
+    !(shareablePassageText ?? '').trim()
+
+  /** Share primary translation column only (not compare), verse or chapter as shown. */
+  const handleSharePassage = async () => {
+    if (shareDisabled) return
+
+    const shareRef = showingContext ? getChapterReference(reference) : reference
+    const raw = showingContext ? chapterText : scriptureText
+
+    setShareInFlight(true)
+    try {
+      const result = await shareScripturePassage({
+        reference: shareRef,
+        translationLabel,
+        passageText: raw,
+        dialogTitle: 'Share passage',
+      })
+      if (result === 'copied') {
+        showAlert('Passage copied to clipboard')
+      }
+    } catch (e) {
+      logger.error('Share scripture passage failed', e)
+      showAlert('Could not share this passage. Please try again.')
+    } finally {
+      setShareInFlight(false)
+    }
+  }
+
   const handleMemorize = async () => {
     if (memorizeInFlight || isMemoized) return
 
@@ -804,6 +847,32 @@ export default function ScriptureModal({
               </button>
             </div>
             <div className="flex-1 flex justify-end items-center gap-1.5">
+              <button
+                type="button"
+                data-tour="scripture-modal-share"
+                onClick={() => {
+                  void handleSharePassage()
+                }}
+                disabled={shareDisabled}
+                aria-label={shareInFlight ? 'Sharing…' : 'Share passage'}
+                title="Share passage"
+                className="shrink-0 p-2 rounded-md flex items-center justify-center min-h-[36px] min-w-[36px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 8.25H7.5a2.25 2.25 0 0 0-2.25 2.25v9a2.25 2.25 0 0 0 2.25 2.25h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25H15m0-3-3-3m0 0-3 3m3-3V15"
+                  />
+                </svg>
+              </button>
               <button
                 type="button"
                 data-tour="scripture-modal-close"
