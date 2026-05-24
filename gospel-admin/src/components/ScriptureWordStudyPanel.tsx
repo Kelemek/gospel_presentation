@@ -254,8 +254,8 @@ function ScriptureWordStudyPanelContent({
   const lexiconOpen = Boolean(expandedStrongs || selectedWord)
 
   const lexiconDetail = lexiconOpen ? (
-    <div className="p-3 bg-white dark:bg-slate-800">
-      <div className="flex flex-wrap items-center gap-2 mb-2">
+    <div className="flex flex-col min-h-0 h-full bg-white dark:bg-slate-800">
+      <div className="sticky top-0 z-10 shrink-0 flex flex-wrap items-center gap-2 px-3 py-2 border-b border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800">
         {expandedStrongs ? (
           <span className="font-mono text-sm font-semibold text-blue-700 dark:text-blue-300">
             {expandedStrongs}
@@ -313,12 +313,13 @@ function ScriptureWordStudyPanelContent({
         <button
           type="button"
           onClick={closeLexiconSheet}
-          className="ml-auto text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 text-lg leading-none px-1"
+          className="ml-auto inline-flex h-9 min-h-[36px] min-w-[36px] shrink-0 items-center justify-center rounded-md text-2xl leading-none text-slate-500 dark:text-slate-400 hover:bg-slate-100 hover:text-slate-800 dark:hover:bg-slate-700 dark:hover:text-slate-200"
           aria-label="Close definition"
         >
           ×
         </button>
       </div>
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3">
       {detail !== 'concordance' && lexicon.status === 'loading' && (
         <p className="text-sm text-slate-600 dark:text-slate-300">Loading definition…</p>
       )}
@@ -330,7 +331,7 @@ function ScriptureWordStudyPanelContent({
       {detail !== 'concordance' &&
         lexicon.status === 'ready' &&
         lexicon.strongs === expandedStrongs && (
-          <div className="text-sm text-slate-800 dark:text-slate-200 space-y-2.5 max-h-[38vh] overflow-y-auto">
+          <div className="text-sm text-slate-800 dark:text-slate-200 space-y-2.5">
             {lexicon.entry.lemma && (
               <WordStudyLabeledField label="Lemma">
                 <p
@@ -389,7 +390,7 @@ function ScriptureWordStudyPanelContent({
       {detail === 'concordance' &&
         concordance.status === 'ready' &&
         concordance.strongs === expandedStrongs && (
-          <div className="text-sm max-h-[38vh] overflow-y-auto">
+          <div className="text-sm">
             <ul className="flex flex-col gap-1.5 list-none p-0 m-0">
               {concordance.occurrences.map((occ) => {
                 const isCurrent = currentPassageKeys.has(occ.passageKey)
@@ -434,6 +435,7 @@ function ScriptureWordStudyPanelContent({
             )}
           </div>
         )}
+      </div>
     </div>
   ) : null
 
@@ -550,7 +552,7 @@ function ScriptureWordStudyPanelContent({
         {lexiconOpen && (
           <div
             data-tour="scripture-modal-word-study-lexicon"
-            className="scripture-word-study-lexicon-sheet absolute inset-x-0 bottom-0 z-20 max-h-[min(48vh,360px)] overflow-y-auto rounded-t-xl border-t border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-[0_-10px_28px_rgba(0,0,0,0.28)] dark:shadow-[0_-10px_28px_rgba(0,0,0,0.5)]"
+            className="scripture-word-study-lexicon-sheet absolute inset-x-0 bottom-0 z-20 flex max-h-[min(48vh,360px)] flex-col overflow-hidden rounded-t-xl border-t border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 shadow-[0_-10px_28px_rgba(0,0,0,0.28)] dark:shadow-[0_-10px_28px_rgba(0,0,0,0.5)]"
             role="region"
             aria-label="Lexicon definition"
           >
