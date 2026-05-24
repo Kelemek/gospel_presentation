@@ -8,6 +8,7 @@ import {
   normalizeStrongsForLookup,
 } from '@/lib/step-bible-text'
 import { wordStudyLanguageLabelFromPassageKey } from '@/lib/step-bible-reference'
+import { dedupeConcordanceOccurrencesByPassage } from '@/lib/step-bible-concordance-dedupe'
 import type {
   StepBibleConcordanceOccurrence,
   StepBibleLexiconResult,
@@ -40,8 +41,9 @@ type ConcordanceState =
       status: 'ready'
       strongs: string
       total: number
-      offset: number
-      occurrences: StepBibleConcordanceOccurrence[]
+      /** Raw occurrence rows fetched from the API (pagination offset). */
+      fetchedCount: number
+      occurrences: ReturnType<typeof dedupeConcordanceOccurrencesByPassage>
     }
   | { status: 'error'; strongs: string; message: string }
 
@@ -187,15 +189,22 @@ function ScriptureWordStudyPanelContent({
       const total = typeof data.total === 'number' ? data.total : page.length
       setConcordance((prev) => {
         if (append && prev.status === 'ready' && prev.strongs === strongs) {
+          const fetchedCount = prev.fetchedCount + page.length
           return {
             status: 'ready',
             strongs,
             total,
-            offset,
-            occurrences: [...prev.occurrences, ...page],
+            fetchedCount,
+            occurrences: dedupeConcordanceOccurrencesByPassage([...prev.occurrences, ...page]),
           }
         }
-        return { status: 'ready', strongs, total, offset, occurrences: page }
+        return {
+          status: 'ready',
+          strongs,
+          total,
+          fetchedCount: page.length,
+          occurrences: dedupeConcordanceOccurrencesByPassage(page),
+        }
       })
     } catch {
       setConcordance({ status: 'error', strongs, message: 'Concordance lookup failed' })
@@ -395,7 +404,7 @@ function ScriptureWordStudyPanelContent({
               {concordance.occurrences.map((occ) => {
                 const isCurrent = currentPassageKeys.has(occ.passageKey)
                 return (
-                  <li key={`${occ.passageKey}-${occ.position}`}>
+                  <li key={occ.passageKey}>
                     <ScriptureHoverModal reference={occ.reference} hoverDelayMs={500} inline>
                       <button
                         type="button"
@@ -418,19 +427,15 @@ function ScriptureWordStudyPanelContent({
                 )
               })}
             </ul>
-            {concordance.occurrences.length < concordance.total && (
+            {concordance.fetchedCount < concordance.total && (
               <button
                 type="button"
                 onClick={() =>
-                  void loadConcordance(
-                    concordance.strongs,
-                    concordance.occurrences.length,
-                    true
-                  )
+                  void loadConcordance(concordance.strongs, concordance.fetchedCount, true)
                 }
                 className="mt-2 w-full text-xs px-3 py-2 rounded border border-slate-300 dark:border-slate-500 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
               >
-                Load more ({concordance.occurrences.length} of {concordance.total})
+                Load more ({concordance.fetchedCount} of {concordance.total})
               </button>
             )}
           </div>

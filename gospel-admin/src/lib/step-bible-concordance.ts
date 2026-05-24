@@ -53,6 +53,8 @@ function loadShard(language: StepBibleLanguage, strongsKey: string): Concordance
   }
 }
 
+export { dedupeConcordanceOccurrencesByPassage } from '@/lib/step-bible-concordance-dedupe'
+
 export function isConcordanceDataPresent(): boolean {
   const root = getStepBibleDataRoot()
   return (

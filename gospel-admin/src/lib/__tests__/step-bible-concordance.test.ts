@@ -1,5 +1,6 @@
 /** @jest-environment node */
 
+import { dedupeConcordanceOccurrencesByPassage } from '@/lib/step-bible-concordance-dedupe'
 import {
   clearStepBibleConcordanceCache,
   isConcordanceDataPresent,
@@ -39,6 +40,17 @@ describe('step-bible-concordance', () => {
 
   it('returns null for unknown key', () => {
     expect(lookupConcordance('G999999')).toBeNull()
+  })
+
+  it('dedupes concordance rows to one entry per passageKey', () => {
+    const deduped = dedupeConcordanceOccurrencesByPassage([
+      { passageKey: '1CH.11.2', reference: '1 Chronicles 11:2', position: 1, gloss: 'you' },
+      { passageKey: '1CH.11.2', reference: '1 Chronicles 11:2', position: 4, gloss: 'you' },
+      { passageKey: 'ROM.12.3', reference: 'Romans 12:3', position: 1 },
+    ])
+    expect(deduped).toHaveLength(2)
+    expect(deduped[0]).toMatchObject({ passageKey: '1CH.11.2', gloss: 'you' })
+    expect(deduped[1].passageKey).toBe('ROM.12.3')
   })
 
   it('looks up Hebrew Strong’s', () => {

@@ -270,6 +270,88 @@ describe('ScriptureWordStudyPanel', () => {
     })
   })
 
+  it('dedupes concordance list to one row per verse', async () => {
+    ;(global.fetch as jest.Mock).mockImplementation(async (url: string | URL) => {
+      const u = String(url)
+      if (u.includes('/api/scripture/word-study')) {
+        return {
+          ok: true,
+          json: async () => ({
+            reference: 'Romans 12:2',
+            passageKey: 'ROM.12.2',
+            stepRef: 'Rom.12.2',
+            language: 'grc',
+            words: [
+              {
+                position: 8,
+                text: 'μεταμορφοῦσθε',
+                transliteration: 'metamorphousthe',
+                strongs: 'G3339',
+                gloss: 'do be transformed',
+              },
+            ],
+            verses: [
+              {
+                verse: 2,
+                passageKey: 'ROM.12.2',
+                stepRef: 'Rom.12.2',
+                words: [
+                  {
+                    position: 8,
+                    text: 'μεταμορφοῦσθε',
+                    strongs: 'G3339',
+                    gloss: 'do be transformed',
+                  },
+                ],
+              },
+            ],
+          }),
+        } as Response
+      }
+      if (u.includes('/api/scripture/lexicon')) {
+        return {
+          ok: true,
+          json: async () => ({
+            strongs: 'G3339',
+            language: 'grc',
+            gloss: 'to transform',
+            definition: 'to transform',
+            source: 'TBESG',
+            detail: 'brief',
+          }),
+        } as Response
+      }
+      if (u.includes('/api/scripture/concordance')) {
+        return {
+          ok: true,
+          json: async () => ({
+            strongs: 'G3339',
+            language: 'grc',
+            total: 3,
+            offset: 0,
+            limit: 50,
+            occurrences: [
+              { passageKey: '1CH.11.2', reference: '1 Chronicles 11:2', position: 1, gloss: 'you' },
+              { passageKey: '1CH.11.2', reference: '1 Chronicles 11:2', position: 4, gloss: 'you' },
+              { passageKey: 'ROM.12.3', reference: 'Romans 12:3', position: 1 },
+            ],
+          }),
+        } as Response
+      }
+      return { ok: false, json: async () => ({}) } as Response
+    })
+    const user = userEvent.setup()
+    render(<ScriptureWordStudyPanel reference="Romans 12:2" enabled />)
+    await waitFor(() => expect(screen.getByText('G3339')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /G3339/i }))
+    await user.click(await screen.findByRole('button', { name: /^Concordance$/i }))
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /1 Chronicles 11:2/i })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Romans 12:3/i })).toBeInTheDocument()
+    })
+    expect(screen.getAllByRole('button', { name: /1 Chronicles 11:2/i })).toHaveLength(1)
+  })
+
   it('shows concordance tab with verse links', async () => {
     const user = userEvent.setup()
     const onOpenReference = jest.fn()
