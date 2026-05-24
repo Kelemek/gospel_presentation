@@ -41,13 +41,21 @@ describe('Copyright page', () => {
     const techHeading = screen.getByRole('heading', { name: /Technical Implementation/i })
     expect(techHeading).toBeInTheDocument()
 
+    expect(screen.getByRole('heading', { name: /Christian Classics Ethereal Library \(CCEL\)/i })).toBeInTheDocument()
     expect(screen.getByText(/Charles H\. Spurgeon sermons/i)).toBeInTheDocument()
+    expect(screen.getByText(/Charles H\. Spurgeon, Morning and Evening/i)).toBeInTheDocument()
+    expect(screen.getByText(/John Calvin, Commentaries/i)).toBeInTheDocument()
+    expect(screen.getByText(/Jonathan Edwards, Select Sermons/i)).toBeInTheDocument()
     expect(screen.getByText(/Matthew Henry.*Commentary on the Whole Bible/i)).toBeInTheDocument()
+    expect(screen.getByText(/Martin Luther, Commentary on Galatians/i)).toBeInTheDocument()
+    expect(screen.getByText(/John Bunyan, The Pilgrim's Progress/i)).toBeInTheDocument()
     const ccelLinks = screen.getAllByRole('link', { name: /Christian Classics Ethereal Library \(CCEL\)/i })
-    expect(ccelLinks.some((l) => l.getAttribute('href') === 'https://www.ccel.org/ccel/spurgeon/')).toBe(
+    expect(ccelLinks.some((l) => l.getAttribute('href') === 'https://www.ccel.org/ccel/spurgeon/')).toBe(true)
+    expect(ccelLinks.some((l) => l.getAttribute('href') === 'https://www.ccel.org/ccel/henry/mhc.html')).toBe(true)
+    expect(ccelLinks.some((l) => l.getAttribute('href') === 'https://www.ccel.org/ccel/bunyan/pilgrim.html')).toBe(
       true
     )
-    expect(ccelLinks.some((l) => l.getAttribute('href') === 'https://www.ccel.org/ccel/henry/mhc.html')).toBe(
+    expect(ccelLinks.some((l) => l.getAttribute('href') === 'https://www.ccel.org/ccel/calvin/commentaries.html')).toBe(
       true
     )
 

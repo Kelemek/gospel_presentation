@@ -1,8 +1,10 @@
 'use client'
 
 import Link from 'next/link'
+import { CcelPublicDomainAttribution } from '@/components/CcelPublicDomainAttribution'
 import { CopyrightScriptureAttributionSections } from '@/components/CopyrightScriptureAttributionSections'
 import { ScriptureFooterAttributionParagraphs } from '@/components/ScriptureFooterAttributionParagraphs'
+import { CCEL_COPYRIGHT_ATTRIBUTIONS, CCEL_COPYRIGHT_POLICY_URL } from '@/lib/ccelCopyrightAttributions'
 import { useTranslation } from '@/contexts/TranslationContext'
 import { useApplyPageThemeToDocument, usePageTheme } from '@/lib/usePageTheme'
 
@@ -79,56 +81,27 @@ export default function CopyrightPage() {
               </p>
             </div>
 
-            <div className="bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-400 dark:border-blue-600 rounded-lg p-6">
-              <p className="text-slate-700 dark:text-slate-200 mb-3 leading-relaxed text-base md:text-lg">
-                <strong className="text-slate-800 dark:text-slate-100">Charles H. Spurgeon sermons:</strong> The
-                underlying sermons are in the public domain. Sermon text in this app was imported from the
-                ThML-encoded Metropolitan Tabernacle / New Park Street volumes on the{' '}
-                <a
-                  href="https://www.ccel.org/ccel/spurgeon/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors break-all"
-                >
-                  Christian Classics Ethereal Library (CCEL)
-                </a>
-                . See also{' '}
-                <a
-                  href="https://www.ccel.org/about/copyright.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors break-all"
-                >
-                  CCEL copyright information
-                </a>
-                .
-              </p>
-            </div>
-
-            <div className="bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-400 dark:border-blue-600 rounded-lg p-6 mt-6">
-              <p className="text-slate-700 dark:text-slate-200 mb-3 leading-relaxed text-base md:text-lg">
-                <strong className="text-slate-800 dark:text-slate-100">Matthew Henry&apos;s Commentary on the Whole Bible:</strong>{' '}
-                The underlying commentary is in the public domain. Text in this app was imported from the
-                six-volume ThML edition on the{' '}
-                <a
-                  href="https://www.ccel.org/ccel/henry/mhc.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors break-all"
-                >
-                  Christian Classics Ethereal Library (CCEL)
-                </a>
-                . See also{' '}
-                <a
-                  href="https://www.ccel.org/about/copyright.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors break-all"
-                >
-                  CCEL copyright information
-                </a>
-                .
-              </p>
+            <h3 className="text-xl md:text-2xl font-semibold text-slate-800 dark:text-slate-100 mt-8 mb-3">
+              Christian Classics Ethereal Library (CCEL)
+            </h3>
+            <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-base md:text-lg mb-6">
+              Classic texts below were imported from CCEL. The underlying works are generally in the
+              public domain in the United States; editions may include introductions, markup, or other
+              material with separate terms. See{' '}
+              <a
+                href={CCEL_COPYRIGHT_POLICY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors break-all"
+              >
+                CCEL copyright information
+              </a>{' '}
+              for personal, educational, and non-profit use.
+            </p>
+            <div className="space-y-6">
+              {CCEL_COPYRIGHT_ATTRIBUTIONS.map((attribution) => (
+                <CcelPublicDomainAttribution key={attribution.title} attribution={attribution} />
+              ))}
             </div>
           </section>
 
