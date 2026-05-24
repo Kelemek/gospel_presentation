@@ -4,7 +4,7 @@ import {
   shareScripturePassage,
 } from '../shareScripturePassage'
 
-const mockShare = jest.fn(() => Promise.resolve())
+const mockShare = jest.fn((_options?: unknown) => Promise.resolve())
 
 jest.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -15,7 +15,7 @@ jest.mock('@capacitor/core', () => ({
 
 jest.mock('@capacitor/share', () => ({
   Share: {
-    share: (...args: unknown[]) => mockShare(...args),
+    share: (options: unknown) => mockShare(options),
   },
 }))
 
@@ -39,6 +39,17 @@ describe('formatScripturePassageForShare', () => {
         passageText: '   ',
       })
     ).toBe('John 3:16 (ESV)')
+  })
+
+  it('appends deep link when pageUrl is set', () => {
+    const formatted = formatScripturePassageForShare({
+      reference: 'John 3:16',
+      translationLabel: 'ESV',
+      passageText: 'For God so loved the world.',
+      pageUrl: 'https://example.com/default?scriptureRef=John%203%3A16',
+    })
+    expect(formatted).toContain('Open in The Gospel Presentation:')
+    expect(formatted).toContain('https://example.com/default?scriptureRef=John%203%3A16')
   })
 })
 
@@ -77,20 +88,42 @@ describe('shareScripturePassage', () => {
     })
   })
 
-  it('uses Capacitor Share on native platforms', async () => {
+  it('embeds pageUrl in share text without a separate url field (avoids link-only shares)', async () => {
+    const pageUrl = 'https://example.com/default?scriptureRef=Psalm%20113%3A5'
+    const navShare = jest.fn((_opts?: unknown) => Promise.resolve())
+    global.navigator.share = navShare
+
+    await shareScripturePassage({ ...sampleOptions, pageUrl })
+
+    expect(navShare).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: expect.stringMatching(
+          /Who is like the LORD[\s\S]*Open in The Gospel Presentation:[\s\S]*example\.com/
+        ),
+      })
+    )
+    const webSharePayload = navShare.mock.calls[0]?.[0] as Record<string, unknown> | undefined
+    expect(webSharePayload).toBeDefined()
+    expect(webSharePayload).not.toHaveProperty('url')
+  })
+
+  it('uses Capacitor Share on native platforms with passage text only in text field', async () => {
     ;(Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true)
     ;(Capacitor.getPlatform as jest.Mock).mockReturnValue('ios')
+    const pageUrl = 'https://example.com/default?scriptureRef=Psalm%20113%3A5'
 
-    const result = await shareScripturePassage(sampleOptions)
+    const result = await shareScripturePassage({ ...sampleOptions, pageUrl })
 
     expect(result).toBe('shared')
     expect(mockShare).toHaveBeenCalledWith(
       expect.objectContaining({
         title: 'Psalm 113:5',
-        text: expect.stringContaining('Who is like the LORD'),
+        text: expect.stringMatching(
+          /Who is like the LORD[\s\S]*Open in The Gospel Presentation:[\s\S]*example\.com/
+        ),
       })
     )
-    expect(mockShare.mock.calls[0][0]).not.toHaveProperty('url')
+    expect(mockShare.mock.calls[0]?.[0]).not.toHaveProperty('url')
   })
 
   it('includes dialogTitle on Android native', async () => {
@@ -132,7 +165,7 @@ describe('shareScripturePassage', () => {
   })
 
   it('copies formatted passage to clipboard when share is unavailable', async () => {
-    const writeText = jest.fn(() => Promise.resolve())
+    const writeText = jest.fn((_text: string) => Promise.resolve())
     Object.defineProperty(global.navigator, 'clipboard', {
       configurable: true,
       writable: true,
@@ -152,7 +185,7 @@ describe('shareScripturePassage', () => {
     ;(Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true)
     mockShare.mockRejectedValueOnce(new Error('plugin broken'))
 
-    const writeText = jest.fn(() => Promise.resolve())
+    const writeText = jest.fn((_text: string) => Promise.resolve())
     Object.defineProperty(global.navigator, 'clipboard', {
       configurable: true,
       writable: true,

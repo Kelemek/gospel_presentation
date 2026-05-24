@@ -35,8 +35,12 @@ jest.mock('next/navigation', () => ({
       refresh: jest.fn(),
       prefetch: jest.fn(),
     }),
-  useSearchParams: () => new URLSearchParams(),
-  usePathname: () => '/',
+  useSearchParams: () =>
+    global.__testSearchParams instanceof URLSearchParams
+      ? global.__testSearchParams
+      : new URLSearchParams(),
+  usePathname: () =>
+    typeof global.__testPathname === 'string' ? global.__testPathname : '/',
 }))
 
 // Mock Next.js server components

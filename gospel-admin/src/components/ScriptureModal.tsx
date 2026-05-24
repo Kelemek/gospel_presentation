@@ -21,6 +21,7 @@ import {
 } from '@/lib/memorizationAddVersePrefs'
 import { memorizationSaveFailureMessage } from '@/lib/memorizationSaveFailureMessage'
 import { logger } from '@/lib/logger'
+import { buildScriptureModalShareUrl } from '@/lib/scriptureModalShareUrl'
 import { shareScripturePassage } from '@/lib/shareScripturePassage'
 import {
   GOSPEL_MEMORIZATION_CHANGED_EVENT,
@@ -61,6 +62,10 @@ interface ScriptureModalProps {
   onOpenSpurgeonStudy?: (reference: string) => void
   /** Navigate the reader to another verse (e.g. concordance link in word study). */
   onNavigateReference?: (reference: string) => void
+  /** When true (e.g. `?scriptureView=chapter` deep link), load full chapter after open. */
+  initialChapterView?: boolean
+  /** Profile slug for share deep links (current resource). Omit to share passage text only. */
+  profileSlug?: string
 }
 
 export default function ScriptureModal({ 
@@ -75,15 +80,22 @@ export default function ScriptureModal({
   versePinControl,
   onOpenSpurgeonStudy,
   onNavigateReference,
+  initialChapterView = false,
+  profileSlug,
 }: ScriptureModalProps) {
   const { translation, setTranslation, enabledTranslations, enabledTranslationOptions } =
     useTranslation()
   const { textSize } = useTextSize()
   const { showAlert } = useAlertModal()
   const [chapterView, setChapterView] = useState<{ sessionKey: string; text: string } | null>(null)
+  const [chapterContextError, setChapterContextError] = useState<{
+    sessionKey: string
+    error: string
+  } | null>(null)
   const [contextLoading, setContextLoading] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const verseTabButtonRef = useRef<HTMLButtonElement>(null)
+  const initialChapterViewFetchedRef = useRef(false)
   const scriptureModalTitleId = useId()
 
   // Compare translation (second column)
@@ -197,6 +209,9 @@ export default function ScriptureModal({
 
   const error = scriptureResolved?.key === scriptureFetchKey ? scriptureResolved.error : ''
 
+  const chapterError =
+    chapterContextError?.sessionKey === verseViewSessionKey ? chapterContextError.error : ''
+
   const showingContext =
     verseViewSessionKey !== null &&
     chapterView !== null &&
@@ -287,11 +302,12 @@ export default function ScriptureModal({
     return []
   }
 
-  const fetchChapterContext = async () => {
+  const fetchChapterContext = useCallback(async () => {
     if (!verseViewSessionKey) return
     const chapterRef = getChapterReference(reference)
     const sessionKey = verseViewSessionKey
     setContextLoading(true)
+    setChapterContextError(null)
 
     try {
       const response = await fetch(
@@ -302,20 +318,47 @@ export default function ScriptureModal({
 
       const errMsg = formatScriptureApiError(data)
       if (errMsg) {
-        setScriptureResolved({ key: sessionKey, text: '', error: errMsg })
+        setChapterView(null)
+        setChapterContextError({ sessionKey, error: errMsg })
       } else {
         setChapterView({ sessionKey, text: typeof data.text === 'string' ? data.text : '' })
+        setChapterContextError(null)
       }
     } catch {
-      setScriptureResolved({
-        key: sessionKey,
-        text: '',
+      setChapterView(null)
+      setChapterContextError({
+        sessionKey,
         error: 'Failed to load chapter context',
       })
     } finally {
       setContextLoading(false)
     }
-  }
+  }, [verseViewSessionKey, reference, translation])
+
+  useEffect(() => {
+    if (!isOpen) {
+      initialChapterViewFetchedRef.current = false
+      return
+    }
+    if (
+      !initialChapterView ||
+      showingContext ||
+      contextLoading ||
+      initialChapterViewFetchedRef.current ||
+      !verseViewSessionKey
+    ) {
+      return
+    }
+    initialChapterViewFetchedRef.current = true
+    void fetchChapterContext()
+  }, [
+    isOpen,
+    initialChapterView,
+    showingContext,
+    contextLoading,
+    verseViewSessionKey,
+    fetchChapterContext,
+  ])
 
   /** Verse content first: scroll to top and move focus to Verse (not toolbar controls like Study). */
   useEffect(() => {
@@ -552,12 +595,25 @@ export default function ScriptureModal({
     const shareRef = showingContext ? getChapterReference(reference) : reference
     const raw = showingContext ? chapterText : scriptureText
 
+    const shareSlug = profileSlug?.trim().replace(/^\/+|\/+$/g, '') ?? ''
+    const pageUrl =
+      shareSlug && typeof window !== 'undefined'
+        ? buildScriptureModalShareUrl({
+            origin: window.location.origin,
+            profileSlug: shareSlug,
+            reference: shareRef,
+            translation,
+            scriptureView: showingContext ? 'chapter' : undefined,
+          })
+        : undefined
+
     setShareInFlight(true)
     try {
       const result = await shareScripturePassage({
         reference: shareRef,
         translationLabel,
         passageText: raw,
+        pageUrl,
         dialogTitle: 'Share passage',
       })
       if (result === 'copied') {
@@ -607,6 +663,7 @@ export default function ScriptureModal({
 
   const handleClose = () => {
     setChapterView(null)
+    setChapterContextError(null)
     setWordStudyEnabled(false)
     onClose()
   }
@@ -914,6 +971,7 @@ export default function ScriptureModal({
                 onSelect={async (val) => {
                   await setTranslation(val as BibleTranslation)
                   setChapterView(null)
+                  setChapterContextError(null)
                   if (compareTranslation === val) {
                     setCompareTranslation(null)
                   }
@@ -938,6 +996,7 @@ export default function ScriptureModal({
                 onClick={() => {
                   if (showingContext) {
                     setChapterView(null)
+                    setChapterContextError(null)
                   } else {
                     setWordStudyEnabled(false)
                     void fetchChapterContext()
@@ -1183,6 +1242,14 @@ export default function ScriptureModal({
                     </span>
                   </div>
                 )}
+                {chapterError && !contextLoading && (
+                  <div className="text-red-600 text-center py-4 mb-4">
+                    <p className="mb-2 text-base md:text-lg">⚠️ {chapterError}</p>
+                    <p className="text-sm md:text-base text-slate-500">
+                      Chapter context could not be loaded. The verse text is still shown below.
+                    </p>
+                  </div>
+                )}
                 {error && (
                   <div className="text-red-600 text-center py-8">
                     <p className="mb-2 text-base md:text-lg">⚠️ {error}</p>
@@ -1235,6 +1302,14 @@ export default function ScriptureModal({
                   <span className="ml-3 text-slate-600 text-base md:text-lg">
                     {contextLoading ? 'Loading chapter context...' : 'Loading scripture...'}
                   </span>
+                </div>
+              )}
+              {chapterError && !contextLoading && (
+                <div className="text-red-600 text-center py-4 mb-4">
+                  <p className="mb-2 text-base md:text-lg">⚠️ {chapterError}</p>
+                  <p className="text-sm md:text-base text-slate-500">
+                    Chapter context could not be loaded. The verse text is still shown below.
+                  </p>
                 </div>
               )}
               {error && (

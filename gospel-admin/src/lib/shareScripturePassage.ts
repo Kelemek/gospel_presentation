@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 import { logger } from '@/lib/logger'
+import { appendScriptureShareLink } from '@/lib/scriptureModalShareUrl'
 import { stripScriptureForMemorization } from '@/lib/verseMemorizationStorage'
 
 export type ShareScripturePassageResult = 'shared' | 'copied' | 'cancelled'
@@ -8,6 +9,8 @@ export type FormatScripturePassageForShareOptions = {
   reference: string
   translationLabel: string
   passageText: string
+  /** Optional deep link appended to share body (e.g. /default?scriptureRef=…). */
+  pageUrl?: string
 }
 
 export type ShareScripturePassageOptions = FormatScripturePassageForShareOptions & {
@@ -19,15 +22,15 @@ function isAbortError(e: unknown): boolean {
   return name === 'AbortError'
 }
 
-/** Plain-text body for share sheet / clipboard (reference, translation, passage). */
+/** Plain-text body for share sheet / clipboard (reference, translation, passage, optional link). */
 export function formatScripturePassageForShare(options: FormatScripturePassageForShareOptions): string {
-  const { reference, translationLabel, passageText } = options
+  const { reference, translationLabel, passageText, pageUrl } = options
   const ref = reference.trim()
   const label = translationLabel.trim()
   const body = stripScriptureForMemorization(passageText)
   const header = label ? `${ref} (${label})` : ref
-  if (!body) return header
-  return `${header}\n\n${body}`
+  const passageBlock = body ? `${header}\n\n${body}` : header
+  return appendScriptureShareLink(passageBlock, pageUrl ?? '')
 }
 
 /**
@@ -41,9 +44,16 @@ export async function shareScripturePassage(
     return 'cancelled'
   }
 
-  const { reference, translationLabel, passageText, dialogTitle } = options
-  const formatted = formatScripturePassageForShare({ reference, translationLabel, passageText })
+  const { reference, translationLabel, passageText, pageUrl, dialogTitle } = options
+  const formatted = formatScripturePassageForShare({
+    reference,
+    translationLabel,
+    passageText,
+    pageUrl,
+  })
   const title = reference.trim() || 'Scripture passage'
+  // Passage + deep link live in `formatted` only. Do not also pass `url` — many share targets
+  // (Web Share on Windows, iOS, Capacitor) prefer `url` over `text` and drop the scripture body.
 
   if (Capacitor.isNativePlatform()) {
     try {

@@ -24,8 +24,12 @@ jest.mock('next/navigation', () => {
   global.__mockNextPush = pushMock
   return {
     useRouter: () => ({ push: pushMock, replace: jest.fn(), back: jest.fn(), forward: jest.fn(), refresh: jest.fn(), prefetch: jest.fn() }),
-    useSearchParams: () => new URLSearchParams(),
-    usePathname: () => '/',
+    useSearchParams: () =>
+      global.__testSearchParams instanceof URLSearchParams
+        ? global.__testSearchParams
+        : new URLSearchParams(),
+    usePathname: () =>
+      typeof global.__testPathname === 'string' ? global.__testPathname : '/',
   }
 })
 

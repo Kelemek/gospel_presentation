@@ -6,6 +6,27 @@ import { gospelStorageGetSync, resetGospelClientStorageForTests } from '@/lib/go
 import { loadVersePins, versePinStorageKey } from '@/lib/versePinStorage'
 import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
 
+const mockSetTranslation = jest.fn(() => Promise.resolve())
+let mockTranslationsLoading = false
+
+jest.mock('@/contexts/TranslationContext', () => ({
+  __esModule: true,
+  useTranslation: () => ({
+    translation: 'esv',
+    setTranslation: mockSetTranslation,
+    get isLoading() {
+      return mockTranslationsLoading
+    },
+    enabledTranslations: ['esv', 'kjv', 'nasb'],
+    enabledTranslationOptions: [
+      { translation_code: 'esv', translation_name: 'ESV (English Standard Version)' },
+      { translation_code: 'kjv', translation_name: 'KJV (King James Version)' },
+      { translation_code: 'nasb', translation_name: 'NASB (New American Standard Bible)' },
+    ],
+  }),
+  TranslationProvider: ({ children }: { children: React.ReactNode }) => children,
+}))
+
 function renderWithTextSize(ui: ReactElement) {
   return render(<TextSizeProvider>{ui}</TextSizeProvider>)
 }
@@ -30,8 +51,20 @@ jest.mock('@/components/TableOfContents', () => ({
   default: () => <div data-testid="toc" />,
 }))
 
+let profileSearchParams = new URLSearchParams()
+
+function syncProfileNavigationTestGlobals() {
+  ;(globalThis as typeof globalThis & { __testSearchParams?: URLSearchParams }).__testSearchParams =
+    profileSearchParams
+  ;(globalThis as typeof globalThis & { __testPathname?: string }).__testPathname = '/default'
+}
+
 beforeEach(() => {
   jest.clearAllMocks()
+  mockTranslationsLoading = false
+  mockSetTranslation.mockImplementation(() => Promise.resolve())
+  profileSearchParams = new URLSearchParams()
+  syncProfileNavigationTestGlobals()
   resetGospelClientStorageForTests()
   installTestLocalStorage()
   global.fetch = jest.fn((input: Parameters<typeof fetch>[0]) => {
@@ -61,6 +94,81 @@ afterEach(() => {
 })
 
 describe('ProfileContent extra interactions', () => {
+  test('opens scripture modal from ?scriptureRef= deep link', async () => {
+    profileSearchParams = new URLSearchParams('scriptureRef=John+3%3A16')
+    syncProfileNavigationTestGlobals()
+    const { ProfileContent } = await import('../[slug]/ProfileContent')
+
+    const sections = [
+      {
+        section: '1',
+        title: 'Intro',
+        subsections: [
+          {
+            title: 'Sub',
+            content: 'c',
+            scriptureReferences: [{ reference: 'John 3:16', favorite: false }],
+            nestedSubsections: [],
+          },
+        ],
+      },
+    ]
+
+    const profileInfo = { title: 'Default', slug: 'default', favoriteScriptures: [] }
+    const profile = { id: 'd1', slug: 'default', isDefault: true }
+
+    renderWithTextSize(
+      <ProfileContent sections={sections as any} profileInfo={profileInfo as any} profile={profile as any} />
+    )
+
+    expect(await screen.findByRole('heading', { name: /john 3:16/i })).toBeInTheDocument()
+  })
+
+  test('applies ?translation= after enabled translations finish loading', async () => {
+    mockTranslationsLoading = true
+    profileSearchParams = new URLSearchParams('scriptureRef=John+3%3A16&translation=kjv')
+    syncProfileNavigationTestGlobals()
+    const { ProfileContent } = await import('../[slug]/ProfileContent')
+
+    const sections = [
+      {
+        section: '1',
+        title: 'Intro',
+        subsections: [
+          {
+            title: 'Sub',
+            content: 'c',
+            scriptureReferences: [{ reference: 'John 3:16', favorite: false }],
+            nestedSubsections: [],
+          },
+        ],
+      },
+    ]
+    const profileInfo = { title: 'Default', slug: 'default', favoriteScriptures: [] }
+    const profile = { id: 'd1', slug: 'default', isDefault: true }
+    const props = {
+      sections: sections as any,
+      profileInfo: profileInfo as any,
+      profile: profile as any,
+    }
+
+    const { rerender } = renderWithTextSize(<ProfileContent {...props} />)
+
+    expect(screen.queryByRole('heading', { name: /john 3:16/i })).not.toBeInTheDocument()
+    expect(mockSetTranslation).not.toHaveBeenCalled()
+
+    mockTranslationsLoading = false
+    syncProfileNavigationTestGlobals()
+    rerender(
+      <TextSizeProvider>
+        <ProfileContent {...props} />
+      </TextSizeProvider>
+    )
+
+    await waitFor(() => expect(mockSetTranslation).toHaveBeenCalledWith('kjv'))
+    expect(await screen.findByRole('heading', { name: /john 3:16/i })).toBeInTheDocument()
+  })
+
   test('opening a scripture loads the modal', async () => {
     const { ProfileContent } = await import('../[slug]/ProfileContent')
     const user = userEvent.setup()

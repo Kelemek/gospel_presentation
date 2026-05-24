@@ -53,7 +53,8 @@ import { isMemorizeAndroidWebHost } from '@/lib/memorizationViewportPlatform'
 import { shareResourceUrl } from '@/lib/shareResourceUrl'
 import { createClient } from '@/lib/supabase/client'
 import { useAlertModal } from '@/contexts/AlertModalContext'
-import { useTranslation } from '@/contexts/TranslationContext'
+import { useTranslation, type BibleTranslation } from '@/contexts/TranslationContext'
+import { isBibleTranslation } from '@/lib/bible-translations'
 import { GOSPEL_CLOSE_PROFILE_SLIDEOUT_MENU_EVENT } from '@/lib/bookmarksPanelCloseEvent'
 import {
   GOSPEL_PRESENTATION_READ_STATUS_CHANGED_EVENT,
@@ -131,8 +132,14 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const [selectedScripture, setSelectedScripture] = useState<{
     reference: string
     isOpen: boolean
+    initialChapterView?: boolean
   }>({ reference: '', isOpen: false })
-  
+  /** When set, matches `scriptureRef` query param the user dismissed (deep link modal closed). */
+  const [dismissedScriptureRefParam, setDismissedScriptureRefParam] = useState<string | null>(
+    null
+  )
+  const deepLinkTranslationAppliedRef = useRef<string | null>(null)
+
   const [currentReferenceIndex, setCurrentReferenceIndex] = useState(0)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isSharingResource, setIsSharingResource] = useState(false)
@@ -155,13 +162,16 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null)
   const activeHighlightTimerRef = useRef<number | null>(null)
   const { showConfirm, showAlert } = useAlertModal()
-  const { enabledTranslations, isLoading: translationsLoading } = useTranslation()
+  const { enabledTranslations, isLoading: translationsLoading, setTranslation } = useTranslation()
   const footerAttributionEnabledCodes = translationsLoading ? null : enabledTranslations
   /** Matches `ProfileResourceReadAloud` (Listen hidden on Android Web hosts). */
   const profileHeaderAndroidHost = useMemo(() => isMemorizeAndroidWebHost(), [])
 
   const searchParams = useSearchParams()
   const studyRefParam = searchParams.get('studyRef')?.trim() ?? ''
+  const scriptureRefParam = searchParams.get('scriptureRef')?.trim().replace(/–/g, '-') ?? ''
+  const scriptureViewParam = searchParams.get('scriptureView')?.trim() ?? ''
+  const translationParam = searchParams.get('translation')?.trim().toLowerCase() ?? ''
 
   const isHydrated = useSyncExternalStore(
     () => () => {},
@@ -513,55 +523,158 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     [sections]
   )
 
-  const handleScriptureClick = (
-    reference: string,
-    anchorSectionId?: string,
-    anchorSubsectionId?: string
-  ) => {
-    let sectionId = anchorSectionId?.trim() ?? ''
-    let subsectionId = anchorSubsectionId?.trim() ?? ''
-    if (!sectionId || !subsectionId) {
-      if (sections) {
-        const found = findFirstScriptureCardAnchors(sections, reference)
-        if (found) {
-          sectionId = found.sectionId
-          subsectionId = found.subsectionId
+  const handleScriptureClick = useCallback(
+    (
+      reference: string,
+      anchorSectionId?: string,
+      anchorSubsectionId?: string,
+      options?: { initialChapterView?: boolean }
+    ) => {
+      let sectionId = anchorSectionId?.trim() ?? ''
+      let subsectionId = anchorSubsectionId?.trim() ?? ''
+      if (!sectionId || !subsectionId) {
+        if (sections) {
+          const found = findFirstScriptureCardAnchors(sections, reference)
+          if (found) {
+            sectionId = found.sectionId
+            subsectionId = found.subsectionId
+          }
         }
       }
-    }
 
-    const navEntry =
-      sectionId && subsectionId
-        ? allScriptureRefs.find(
-            r => r.reference === reference && r.sectionId === sectionId && r.subsectionId === subsectionId
-          )
-        : undefined
+      const navEntry =
+        sectionId && subsectionId
+          ? allScriptureRefs.find(
+              r =>
+                r.reference === reference &&
+                r.sectionId === sectionId &&
+                r.subsectionId === subsectionId
+            )
+          : undefined
 
-    if (sectionId && subsectionId) {
-      setModalOpenAnchors({ reference, sectionId, subsectionId })
-    } else {
-      setModalOpenAnchors({
+      if (sectionId && subsectionId) {
+        setModalOpenAnchors({ reference, sectionId, subsectionId })
+      } else {
+        setModalOpenAnchors({
+          reference,
+          sectionId: 'modal-view',
+          subsectionId: 'modal-view',
+        })
+      }
+
+      if (favoriteReferences.length > 0) {
+        const favIndex = favoriteReferences.indexOf(reference)
+        if (favIndex !== -1) setCurrentReferenceIndex(favIndex)
+      } else {
+        const allIndex = navEntry
+          ? allScriptureRefs.indexOf(navEntry)
+          : allScriptureRefs.findIndex(r => r.reference === reference)
+        if (allIndex !== -1) setCurrentReferenceIndex(allIndex)
+      }
+
+      setSelectedScripture({
         reference,
-        sectionId: 'modal-view',
-        subsectionId: 'modal-view',
+        isOpen: true,
+        ...(options?.initialChapterView ? { initialChapterView: true } : {}),
       })
-    }
+    },
+    [sections, allScriptureRefs, favoriteReferences]
+  )
 
+  const deepLinkTranslation = useMemo((): BibleTranslation | null => {
+    if (!translationParam || !isBibleTranslation(translationParam)) return null
+    return translationParam
+  }, [translationParam])
+
+  const scriptureFromDeepLink = useMemo(() => {
+    if (!isHydrated || sectionCount === 0 || !profileSlug || !scriptureRefParam) return null
+    if (dismissedScriptureRefParam === scriptureRefParam) return null
+    if (deepLinkTranslation && translationsLoading) return null
+    return {
+      reference: scriptureRefParam,
+      isOpen: true as const,
+      ...(scriptureViewParam === 'chapter' ? { initialChapterView: true as const } : {}),
+    }
+  }, [
+    isHydrated,
+    sectionCount,
+    profileSlug,
+    scriptureRefParam,
+    scriptureViewParam,
+    dismissedScriptureRefParam,
+    deepLinkTranslation,
+    translationsLoading,
+  ])
+
+  const activeScripture =
+    selectedScripture.isOpen ? selectedScripture : (scriptureFromDeepLink ?? selectedScripture)
+
+  const deepLinkModalAnchors = useMemo(() => {
+    if (!scriptureRefParam || !sections) return null
+    const found = findFirstScriptureCardAnchors(sections, scriptureRefParam)
+    if (found) {
+      return {
+        reference: scriptureRefParam,
+        sectionId: found.sectionId,
+        subsectionId: found.subsectionId,
+      }
+    }
+    return {
+      reference: scriptureRefParam,
+      sectionId: 'modal-view',
+      subsectionId: 'modal-view',
+    }
+  }, [scriptureRefParam, sections])
+
+  const effectiveModalOpenAnchors = useMemo(() => {
+    if (
+      selectedScripture.isOpen &&
+      modalOpenAnchors?.reference === selectedScripture.reference
+    ) {
+      return modalOpenAnchors
+    }
+    if (scriptureFromDeepLink && deepLinkModalAnchors) {
+      return deepLinkModalAnchors
+    }
+    return modalOpenAnchors
+  }, [
+    selectedScripture.isOpen,
+    selectedScripture.reference,
+    modalOpenAnchors,
+    scriptureFromDeepLink,
+    deepLinkModalAnchors,
+  ])
+
+  const deepLinkNavIndex = useMemo(() => {
+    if (!scriptureFromDeepLink) return null
+    const reference = scriptureRefParam
     if (favoriteReferences.length > 0) {
       const favIndex = favoriteReferences.indexOf(reference)
-      if (favIndex !== -1) setCurrentReferenceIndex(favIndex)
-    } else {
-      const allIndex = navEntry
-        ? allScriptureRefs.indexOf(navEntry)
-        : allScriptureRefs.findIndex(r => r.reference === reference)
-      if (allIndex !== -1) setCurrentReferenceIndex(allIndex)
+      if (favIndex !== -1) return favIndex
     }
-    
-    setSelectedScripture({ 
-      reference, 
-      isOpen: true,
-    })
-  }
+    const allIndex = allScriptureRefs.findIndex((r) => r.reference === reference)
+    return allIndex !== -1 ? allIndex : null
+  }, [scriptureFromDeepLink, scriptureRefParam, favoriteReferences, allScriptureRefs])
+
+  const navReferenceIndex =
+    selectedScripture.isOpen || deepLinkNavIndex === null
+      ? currentReferenceIndex
+      : deepLinkNavIndex
+
+  useEffect(() => {
+    if (!scriptureFromDeepLink || !deepLinkTranslation) return
+    if (!enabledTranslations.includes(deepLinkTranslation)) return
+    const token = `${scriptureRefParam}|${deepLinkTranslation}`
+    if (deepLinkTranslationAppliedRef.current === token) return
+    deepLinkTranslationAppliedRef.current = token
+    void setTranslation(deepLinkTranslation)
+  }, [
+    scriptureFromDeepLink,
+    deepLinkTranslation,
+    enabledTranslations,
+    scriptureRefParam,
+    setTranslation,
+  ])
 
   const navListLength =
     favoriteReferences.length > 0 ? favoriteReferences.length : allScriptureRefs.length
@@ -571,7 +684,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     if (navListLength === 0) return
 
     if (favoriteReferences.length > 0) {
-      const newIndex = (currentReferenceIndex - 1 + navListLength) % navListLength
+      const newIndex = (navReferenceIndex - 1 + navListLength) % navListLength
       setCurrentReferenceIndex(newIndex)
       const reference = favoriteReferences[newIndex]!
       const entry = allScriptureRefs.find(r => r.reference === reference)
@@ -588,7 +701,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       return
     }
 
-    const newIndex = (currentReferenceIndex - 1 + allScriptureRefs.length) % allScriptureRefs.length
+    const newIndex = (navReferenceIndex - 1 + allScriptureRefs.length) % allScriptureRefs.length
     setCurrentReferenceIndex(newIndex)
     const item = allScriptureRefs[newIndex]!
     syncModalAnchorsForNav(item.reference, {
@@ -602,7 +715,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   }, [
     favoriteReferences,
     navListLength,
-    currentReferenceIndex,
+    navReferenceIndex,
     allScriptureRefs,
     syncModalAnchorsForNav,
   ])
@@ -611,7 +724,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     if (navListLength === 0) return
 
     if (favoriteReferences.length > 0) {
-      const newIndex = (currentReferenceIndex + 1) % navListLength
+      const newIndex = (navReferenceIndex + 1) % navListLength
       setCurrentReferenceIndex(newIndex)
       const reference = favoriteReferences[newIndex]!
       const entry = allScriptureRefs.find(r => r.reference === reference)
@@ -628,7 +741,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       return
     }
 
-    const newIndex = (currentReferenceIndex + 1) % allScriptureRefs.length
+    const newIndex = (navReferenceIndex + 1) % allScriptureRefs.length
     setCurrentReferenceIndex(newIndex)
     const item = allScriptureRefs[newIndex]!
     syncModalAnchorsForNav(item.reference, {
@@ -642,7 +755,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   }, [
     favoriteReferences,
     navListLength,
-    currentReferenceIndex,
+    navReferenceIndex,
     allScriptureRefs,
     syncModalAnchorsForNav,
   ])
@@ -652,7 +765,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const hasNext = navListLength > 1
 
   useEffect(() => {
-    if (!selectedScripture.isOpen) return
+    if (!activeScripture.isOpen) return
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'ArrowLeft') {
         event.preventDefault()
@@ -664,12 +777,12 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [selectedScripture.isOpen, navigateToPrevious, navigateToNext])
+  }, [activeScripture.isOpen, navigateToPrevious, navigateToNext])
 
   const modalPassageAnchorsForPins: VersePinSlotEntry | null = useMemo(() => {
-    if (!selectedScripture.isOpen || !selectedScripture.reference.trim()) return null
-    const refStr = selectedScripture.reference
-    const snap = modalOpenAnchors
+    if (!activeScripture.isOpen || !activeScripture.reference.trim()) return null
+    const refStr = activeScripture.reference
+    const snap = effectiveModalOpenAnchors
     if (
       snap?.reference === refStr &&
       snap.sectionId?.trim() !== '' &&
@@ -692,10 +805,10 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       }
     }
     return { reference: refStr, sectionId: '', subsectionId: '' }
-  }, [selectedScripture.isOpen, selectedScripture.reference, sections, modalOpenAnchors])
+  }, [activeScripture.isOpen, activeScripture.reference, sections, effectiveModalOpenAnchors])
 
   const modalPinSyncedKey =
-    selectedScripture.isOpen && modalPassageAnchorsForPins?.reference
+    activeScripture.isOpen && modalPassageAnchorsForPins?.reference
       ? `${modalPassageAnchorsForPins.reference}|${modalPassageAnchorsForPins.sectionId}|${modalPassageAnchorsForPins.subsectionId}`
       : null
 
@@ -719,10 +832,10 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
 
   /** “Where you are” in the profile when the scripture modal is open (pinned anchors + nav index). */
   const scriptureModalPresentationLocation = useMemo(() => {
-    if (!selectedScripture.isOpen) return undefined
-    const refStr = selectedScripture.reference.trim()
+    if (!activeScripture.isOpen) return undefined
+    const refStr = activeScripture.reference.trim()
     if (!refStr) return undefined
-    const snap = modalOpenAnchors
+    const snap = effectiveModalOpenAnchors
     if (!snap || snap.reference !== refStr) return undefined
     if (
       snap.sectionId === 'modal-view' ||
@@ -752,12 +865,18 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       presentationLocationFromProfileAnchors(sections, snap.sectionId, snap.subsectionId) ??
       undefined
     )
-  }, [selectedScripture.isOpen, selectedScripture.reference, allScriptureRefs, sections, modalOpenAnchors])
+  }, [
+    activeScripture.isOpen,
+    activeScripture.reference,
+    allScriptureRefs,
+    sections,
+    effectiveModalOpenAnchors,
+  ])
 
   const closeModal = () => {
-    const refTxt = selectedScripture.reference.trim()
+    const refTxt = activeScripture.reference.trim()
     if (refTxt && profileInfo?.slug) {
-      const snap = modalOpenAnchors
+      const snap = effectiveModalOpenAnchors
       let sectionId =
         snap?.reference === refTxt ? (snap.sectionId?.trim() ?? '') : ''
       let subsectionId =
@@ -788,6 +907,9 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     }
     setModalPinUserOverride(null)
     setModalOpenAnchors(null)
+    if (scriptureFromDeepLink && scriptureRefParam) {
+      setDismissedScriptureRefParam(scriptureRefParam)
+    }
     setSelectedScripture({ reference: '', isOpen: false })
   }
 
@@ -1183,11 +1305,17 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
 
       {/* Scripture Modal */}
       <ScriptureModal
-        reference={selectedScripture.reference}
-        isOpen={selectedScripture.isOpen}
+        reference={activeScripture.reference}
+        isOpen={activeScripture.isOpen}
+        profileSlug={profileSlug}
+        initialChapterView={activeScripture.initialChapterView ?? false}
         onClose={closeModal}
         onNavigateReference={(ref) => {
-          setSelectedScripture((prev) => ({ ...prev, reference: ref }))
+          setSelectedScripture((prev) => ({
+            ...prev,
+            reference: ref,
+            initialChapterView: undefined,
+          }))
         }}
         onPrevious={hasPrevious ? navigateToPrevious : undefined}
         onNext={hasNext ? navigateToNext : undefined}

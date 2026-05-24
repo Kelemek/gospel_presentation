@@ -4,10 +4,10 @@ import userEvent from '@testing-library/user-event'
 import { TextSizeProvider } from '@/contexts/TextSizeContext'
 import ScriptureModal from '../ScriptureModal'
 
-const mockShareScripturePassage = jest.fn(() => Promise.resolve('shared' as const))
+const mockShareScripturePassage = jest.fn((_options?: unknown) => Promise.resolve('shared' as const))
 
 jest.mock('@/lib/shareScripturePassage', () => ({
-  shareScripturePassage: (...args: unknown[]) => mockShareScripturePassage(...args),
+  shareScripturePassage: (options: unknown) => mockShareScripturePassage(options),
 }))
 
 function renderWithTextSize(ui: ReactElement) {
@@ -26,6 +26,7 @@ describe('ScriptureModal Component', () => {
     reference: 'John 3:16',
     isOpen: true,
     onClose: jest.fn(),
+    profileSlug: 'default',
   }
 
   beforeEach(() => {
@@ -286,6 +287,7 @@ describe('ScriptureModal Component', () => {
     )
     await user.click(screen.getByRole('button', { name: /chapter context/i }))
     await waitFor(() => expect(screen.getByText(/Chapter not found/)).toBeInTheDocument())
+    expect(screen.getByText(/Main verse/)).toBeInTheDocument()
   })
 
   it('should show error when chapter context fetch throws', async () => {
@@ -309,6 +311,7 @@ describe('ScriptureModal Component', () => {
     )
     await user.click(screen.getByRole('button', { name: /chapter context/i }))
     await waitFor(() => expect(screen.getByText(/Failed to load chapter context/)).toBeInTheDocument())
+    expect(screen.getByText(/Main verse/)).toBeInTheDocument()
   })
 
   it('should fetch and show compare translation when Compare dropdown is selected', async () => {
@@ -501,6 +504,7 @@ describe('ScriptureModal Component', () => {
         translationLabel: 'ESV (English Standard Version)',
         passageText: 'For God so loved the world.',
         dialogTitle: 'Share passage',
+        pageUrl: expect.stringContaining('/default?scriptureRef=John'),
       })
     )
   })
