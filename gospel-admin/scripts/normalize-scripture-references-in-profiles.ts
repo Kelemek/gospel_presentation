@@ -12,7 +12,7 @@
  *   npm run normalize-scripture-refs -- --slug je08 --bump-updated-at
  *   npm run normalize-scripture-refs -- --slug-like 'je%' --audit
  */
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import * as dotenv from 'dotenv'
 import * as path from 'path'
 import { edwardsSermonNumberFromSlug, isEdwardsSermonProfileSlug } from '../src/lib/edwards/edwardsSlug'
@@ -97,8 +97,15 @@ function sermonNoForProfileSlug(slug: string): number | null {
   return null
 }
 
+type PassageIndexInsertRow = {
+  passage_key: string
+  profile_id: string
+  sermon_no: number | null
+  is_primary: boolean
+}
+
 async function rebuildPassageIndex(
-  supabase: ReturnType<typeof createClient>,
+  supabase: SupabaseClient,
   profileId: string,
   slug: string,
   gospelData: GospelPresentationData,
@@ -121,14 +128,14 @@ async function rebuildPassageIndex(
 
   if (keys.length === 0) return 0
 
-  const rows = keys.map((passage_key, i) => ({
+  const rows: PassageIndexInsertRow[] = keys.map((passage_key, i) => ({
     passage_key,
     profile_id: profileId,
     sermon_no: sermonNo,
     is_primary: i === 0,
   }))
 
-  const { error: insErr } = await supabase.from('spurgeon_passage_index').insert(rows)
+  const { error: insErr } = await supabase.from('spurgeon_passage_index').insert(rows as never)
   if (insErr) {
     throw new Error(`Insert index for ${slug}: ${JSON.stringify(insErr)}`)
   }

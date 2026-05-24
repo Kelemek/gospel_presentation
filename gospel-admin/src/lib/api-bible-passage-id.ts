@@ -100,7 +100,6 @@ const BOOK_ALIAS_TO_USFM: Record<string, string> = {
   canticles: 'SNG',
   song: 'SNG',
   songs: 'SNG',
-  deut: 'DEU',
   exod: 'EXO',
   heb: 'HEB',
   romans: 'ROM',
