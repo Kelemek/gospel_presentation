@@ -1,7 +1,8 @@
 /**
  * Plain text for profile body read-aloud (Web Speech). Omits COMA / Four Rules mount UI, most
- * **`<button>`** text (verse-pin chrome), and optionally **`h1`–`h6`** on Spurgeon sermon profiles
- * ({@link ProfileListenTextOptions.omitHeadingText}). **Scripture** is included: inline
+ * **`<button>`** text (verse-pin chrome), and optionally **`h1`–`h6`** on CCEL sermon/commentary
+ * profiles ({@link isListenOmitHeadingProfileSlug}, {@link ProfileListenTextOptions.omitHeadingText}).
+ * **Scripture** is included: inline
  * `data-gospel-mount="scripture"` labels and **`data-tour="scripture-card"`** verse cards speak the
  * visible reference.
  *
@@ -11,12 +12,27 @@
  * collapsed string (same length budget as speech per character for read-along); pauses across
  * blocks are handled by **utterance gaps** in {@link splitListenRawIntoTtsChunksWithOffsets}.
  */
+import { isEdwardsSermonProfileSlug } from '@/lib/edwards/edwardsSlug'
+import { isHenryCommentaryProfileSlug } from '@/lib/henry/henrySlug'
+import { isLutherGalatiansProfileSlug } from '@/lib/luther/lutherSlug'
 import {
   isListenPlainTextNodeExcluded,
   type ProfileListenTextOptions,
 } from '@/lib/profileHighlightVisibleText'
+import { isSpurgeonSermonProfileSlug } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
 
 export type { ProfileListenTextOptions }
+
+/** Spurgeon, Edwards, Matthew Henry, and Luther CCEL profiles omit section headings in Listen. */
+export function isListenOmitHeadingProfileSlug(slug: string): boolean {
+  const s = slug.trim()
+  return (
+    isSpurgeonSermonProfileSlug(s) ||
+    isEdwardsSermonProfileSlug(s) ||
+    isHenryCommentaryProfileSlug(s) ||
+    isLutherGalatiansProfileSlug(s)
+  )
+}
 
 /** Approximate block containers where `innerText` inserts a break between siblings. */
 const LISTEN_BLOCK_TAGS = new Set([

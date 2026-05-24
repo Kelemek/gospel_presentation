@@ -57,7 +57,7 @@ import {
   writeProfileReadAlongUnderlineStyleToStorage,
   type ProfileReadAlongUnderlineStyle,
 } from '@/lib/profileReadAlongUnderlineStyleStorage'
-import { isSpurgeonSermonProfileSlug } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
+import { isListenOmitHeadingProfileSlug } from '@/lib/profileResourceListenText'
 import { addPresentationReadCompleteSlug } from '@/lib/presentationReadCompleteStorage'
 
 /** After chunks ending in `.` `!` `?`, brief delay before the next utterance so engines do not run sentences together. */
@@ -145,7 +145,7 @@ export function useProfileResourceReadAloud({
   useLayoutEffect(() => {
     profileSlugRef.current = profileSlug
     listenTextOptionsRef.current = {
-      omitHeadingText: isSpurgeonSermonProfileSlug(profileSlug ?? ''),
+      omitHeadingText: isListenOmitHeadingProfileSlug(profileSlug ?? ''),
     }
   }, [profileSlug])
 

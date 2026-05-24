@@ -4,6 +4,7 @@
 
 import { locateListenVisibleTextOffset } from '@/lib/profileHighlightVisibleText'
 import {
+  isListenOmitHeadingProfileSlug,
   listenCollapsedPlainFromRaw,
   locateListenRawTextOffset,
   plainTextForProfileResourceListen,
@@ -137,5 +138,20 @@ describe('locateListenRawTextOffset', () => {
     const end = locateListenRawTextOffset(scope, rawLen)
     expect(end?.node.textContent).toBe('ab')
     expect(end?.offset).toBe(2)
+  })
+})
+
+describe('isListenOmitHeadingProfileSlug', () => {
+  it('matches Spurgeon, Edwards, Matthew Henry, and Luther Galatians slugs', () => {
+    expect(isListenOmitHeadingProfileSlug('sg00001')).toBe(true)
+    expect(isListenOmitHeadingProfileSlug('je12')).toBe(true)
+    expect(isListenOmitHeadingProfileSlug('mhgen')).toBe(true)
+    expect(isListenOmitHeadingProfileSlug('lgal')).toBe(true)
+  })
+
+  it('does not match other profile slugs', () => {
+    expect(isListenOmitHeadingProfileSlug('default')).toBe(false)
+    expect(isListenOmitHeadingProfileSlug('cvgen')).toBe(false)
+    expect(isListenOmitHeadingProfileSlug('')).toBe(false)
   })
 })
