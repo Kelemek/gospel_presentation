@@ -1,5 +1,6 @@
+import { finalizeGospelDataForImport } from '@/lib/finalizeGospelDataForImport'
+import { profileDbTouchFields } from '@/lib/profileDbTouch'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { GospelPresentationData } from '@/lib/types'
 import type { ParsedCcelMorneveDay } from '@/lib/spurgeon/ccelMorneveHtml'
 
 /** Upsert one parsed CCEL Morning & Evening day into `profiles` and rebuild `spurgeon_passage_index`. */
@@ -7,7 +8,9 @@ export async function importCcelMorneveDayToSupabase(
   supabase: SupabaseClient,
   day: ParsedCcelMorneveDay
 ): Promise<{ slug: string; action: 'inserted' | 'updated'; passageKeyCount: number }> {
-  const gospelData: GospelPresentationData = [day.gospelSection]
+  const { gospelData, passageKeys } = finalizeGospelDataForImport([day.gospelSection], {
+    additionalPassageKeys: day.passageKeys,
+  })
 
   const { data: existing, error: selErr } = await supabase
     .from('profiles')
@@ -33,6 +36,7 @@ export async function importCcelMorneveDayToSupabase(
         is_template: true,
         is_public: true,
         include_in_resources_menu: false,
+        ...profileDbTouchFields(),
       })
       .eq('id', profileId)
 
@@ -67,9 +71,8 @@ export async function importCcelMorneveDayToSupabase(
     throw new Error(`Clear index for ${day.slug}: ${JSON.stringify(delErr)}`)
   }
 
-  const keys = day.passageKeys
-  if (keys.length > 0) {
-    const rows = keys.map((passage_key, i) => ({
+  if (passageKeys.length > 0) {
+    const rows = passageKeys.map((passage_key, i) => ({
       passage_key,
       profile_id: profileId,
       sermon_no: null,
@@ -81,5 +84,5 @@ export async function importCcelMorneveDayToSupabase(
     }
   }
 
-  return { slug: day.slug, action, passageKeyCount: keys.length }
+  return { slug: day.slug, action, passageKeyCount: passageKeys.length }
 }

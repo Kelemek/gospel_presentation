@@ -1,5 +1,6 @@
+import { finalizeGospelDataForImport } from '@/lib/finalizeGospelDataForImport'
+import { profileDbTouchFields } from '@/lib/profileDbTouch'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { GospelPresentationData } from '@/lib/types'
 import type { ParsedLutherGalatians } from '@/lib/luther/ccelLutherGalatiansHtml'
 
 /** Upsert Luther Galatians commentary (`lgal`) and rebuild `spurgeon_passage_index`. */
@@ -12,7 +13,9 @@ export async function importLutherGalatiansToSupabase(
   passageKeyCount: number
   subsectionCount: number
 }> {
-  const gospelData: GospelPresentationData = [parsed.gospelSection]
+  const { gospelData, passageKeys } = finalizeGospelDataForImport([parsed.gospelSection], {
+    additionalPassageKeys: parsed.passageKeys,
+  })
 
   const { data: existing, error: selErr } = await supabase
     .from('profiles')
@@ -38,6 +41,7 @@ export async function importLutherGalatiansToSupabase(
         is_template: true,
         is_public: true,
         include_in_resources_menu: true,
+        ...profileDbTouchFields(),
       })
       .eq('id', profileId)
 
@@ -72,9 +76,8 @@ export async function importLutherGalatiansToSupabase(
     throw new Error(`Clear index for ${parsed.slug}: ${JSON.stringify(delErr)}`)
   }
 
-  const keys = parsed.passageKeys
-  if (keys.length > 0) {
-    const rows = keys.map((passage_key, i) => ({
+  if (passageKeys.length > 0) {
+    const rows = passageKeys.map((passage_key, i) => ({
       passage_key,
       profile_id: profileId,
       sermon_no: null,
@@ -89,7 +92,7 @@ export async function importLutherGalatiansToSupabase(
   return {
     slug: parsed.slug,
     action,
-    passageKeyCount: keys.length,
+    passageKeyCount: passageKeys.length,
     subsectionCount: parsed.gospelSection.subsections.length,
   }
 }

@@ -564,6 +564,10 @@ export async function updateProfile(
       updateData.is_public = updates.isPublic
     }
 
+    if (Object.keys(updateData).length > 0) {
+      updateData.updated_at = new Date().toISOString()
+    }
+
     const { data, error } = await clientToUse
       .from('profiles')
       .update(updateData)

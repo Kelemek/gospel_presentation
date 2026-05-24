@@ -1,4 +1,4 @@
-import { GOSPEL_BIBLE_BOOK_NAMES } from '@/lib/gospelBibleBookNames'
+import { scanCanonicalScriptureSpansInPlainText } from '@/lib/scriptureReferenceNormalize'
 
 export type GospelInlineSegment =
   | { kind: 'text'; value: string }
@@ -9,31 +9,6 @@ export type GospelInlineSegment =
 
 const COMA_RE = /(C\.O\.M\.A\.|COMA)/gi
 const FOUR_RULES_PHRASE = 'Four Rules of Communication'
-
-/** Insert display space when rich text removed a gap (e.g. `Acts` + `26` → `Acts26`). */
-function normalizeScriptureDisplay(ref: string): string {
-  return ref
-    .replace(/\s+/g, ' ')
-    .replace(/([a-zA-Z])(\d)/g, '$1 $2')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-/**
- * Flattened-text scripture pattern. Uses `\s*` before chapter so `Acts26:15` still matches
- * when TipTap splits bold across tags with no whitespace between book and digits.
- */
-function buildScripturePlainTextRegex(): RegExp {
-  const word = '[A-Z][a-z]+'
-  const ws = '\\s+'
-  const leadingNum = '(?:\\d+\\s*)?'
-  return new RegExp(
-    `\\b(${leadingNum}${word}(?:${ws}(?:of|and|the)${ws}${word})*)\\s*(\\d+):(\\d+)(?:-\\d+)?(?:,\\s*\\d+(?::\\d+)?)*\\b`,
-    'gi'
-  )
-}
-
-const SCRIPTURE_PLAIN_RE = buildScripturePlainTextRegex()
 
 function splitComaInText(value: string): GospelInlineSegment[] {
   const out: GospelInlineSegment[] = []
@@ -67,29 +42,19 @@ function splitFourRulesInText(value: string): GospelInlineSegment[] {
 }
 
 function splitScriptureInText(value: string): GospelInlineSegment[] {
+  const norm = value.replace(/\u2013/g, '-').replace(/\u2014/g, '-')
+  const spans = scanCanonicalScriptureSpansInPlainText(norm)
+  if (spans.length === 0) {
+    return norm.length > 0 ? [{ kind: 'text', value: norm }] : []
+  }
   const out: GospelInlineSegment[] = []
   let last = 0
-  // En/em dashes in verse ranges must become ASCII `-` so the plain-text regex matches full ranges
-  // (same normalization as {@link parseReference}); keeps `data-gospel-ref` aligned with passage index keys.
-  const norm = value.replace(/\u2013/g, '-').replace(/\u2014/g, '-')
-  SCRIPTURE_PLAIN_RE.lastIndex = 0
-  let m: RegExpExecArray | null
-  while ((m = SCRIPTURE_PLAIN_RE.exec(norm)) !== null) {
-    if (m.index > last) out.push({ kind: 'text', value: norm.slice(last, m.index) })
-
-    const bookName = m[1].replace(/\s+/g, ' ').trim()
-    if (!GOSPEL_BIBLE_BOOK_NAMES.has(bookName)) {
-      SCRIPTURE_PLAIN_RE.lastIndex = m.index + 1
-      continue
-    }
-
-    const cleanRef = normalizeScriptureDisplay(m[0])
-    out.push({ kind: 'scripture', cleanRef, rawLength: m[0].length })
-    last = m.index + m[0].length
-    SCRIPTURE_PLAIN_RE.lastIndex = last
+  for (const sp of spans) {
+    if (sp.start > last) out.push({ kind: 'text', value: norm.slice(last, sp.start) })
+    out.push({ kind: 'scripture', cleanRef: sp.cleanRef, rawLength: sp.end - sp.start })
+    last = sp.end
   }
   if (last < norm.length) out.push({ kind: 'text', value: norm.slice(last) })
-  if (out.length === 0 && value.length > 0) out.push({ kind: 'text', value })
   return out
 }
 

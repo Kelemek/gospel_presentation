@@ -22,6 +22,84 @@ describe('segmentPlainTextForGospelInlines', () => {
     expect(segs).toEqual([{ kind: 'text', value: 'Hebrew 11:1 is not a book' }])
   })
 
+  it('segments comma verse lists as a hyphen range for verse cards', () => {
+    const segs = segmentPlainTextForGospelInlines('See 2 Peter 1:16,17 here.')
+    expect(segs).toEqual([
+      { kind: 'text', value: 'See ' },
+      { kind: 'scripture', cleanRef: '2 Peter 1:16-17', rawLength: '2 Peter 1:16,17'.length },
+      { kind: 'text', value: ' here.' },
+    ])
+  })
+
+  it('segments scripture with following-verse marker (f.)', () => {
+    const segs = segmentPlainTextForGospelInlines('See Colossians 1:16f. here.')
+    expect(segs).toEqual([
+      { kind: 'text', value: 'See ' },
+      { kind: 'scripture', cleanRef: 'Colossians 1:16', rawLength: 'Colossians 1:16f.'.length },
+      { kind: 'text', value: ' here.' },
+    ])
+  })
+
+  it('segments chapter-only refs (Pilgrim prose)', () => {
+    const segs = segmentPlainTextForGospelInlines(
+      'at the bar. 1 Corinthians 15; Jude 15; John 5:28,29;'
+    )
+    const refs = segs.filter((s) => s.kind === 'scripture').map((s) => (s.kind === 'scripture' ? s.cleanRef : ''))
+    expect(refs).toEqual(['1 Corinthians 15', 'Jude 15', 'John 5:28-29'])
+  })
+
+  it('segments refs with space after colon (CCEL Pilgrim)', () => {
+    const segs = segmentPlainTextForGospelInlines(
+      'John 5: 28,29; 2 Thessalonians 1: 8-10; Revelation 20: 11-14;'
+    )
+    const refs = segs.filter((s) => s.kind === 'scripture').map((s) => (s.kind === 'scripture' ? s.cleanRef : ''))
+    expect(refs).toEqual(['John 5:28-29', '2 Thessalonians 1:8-10', 'Revelation 20:11-14'])
+  })
+
+  it('covers orphan abbrev letters in DOM range (R Revelation, J John)', () => {
+    const html = '<p>R Revelation 4:4 and J John 12:25 here.</p>'
+    const out = injectGospelInlineMarkersInHtml(html, document)
+    expect(out).toContain('data-gospel-ref="Revelation 4:4"')
+    expect(out).toContain('data-gospel-ref="John 12:25"')
+    const host = document.createElement('div')
+    host.innerHTML = out
+    expect(host.textContent).not.toMatch(/\bR\s+Revelation/)
+    expect(host.textContent).not.toMatch(/\bJ\s+John/)
+  })
+
+  it('segments inherited semicolon refs without mutating string length (Revelation 1; 4:4)', () => {
+    const segs = segmentPlainTextForGospelInlines('Revelation 1; 4:4 end.')
+    const refs = segs.filter((s) => s.kind === 'scripture')
+    expect(refs).toEqual([
+      { kind: 'scripture', cleanRef: 'Revelation 1', rawLength: 'Revelation 1'.length },
+      { kind: 'scripture', cleanRef: 'Revelation 4:4', rawLength: '; 4:4'.length },
+    ])
+  })
+
+  it('segments 1 Thessalonians after CCEL Isaiah 1 typo (Pilgrim)', () => {
+    const segs = segmentPlainTextForGospelInlines(
+      'Isaiah 6:2; Isaiah 1 Thessalonians 4:16-17; Revelation 5:11;'
+    )
+    const refs = segs.filter((s) => s.kind === 'scripture').map((s) => (s.kind === 'scripture' ? s.cleanRef : ''))
+    expect(refs).toEqual(['Isaiah 6:2', '1 Thessalonians 4:16-17', 'Revelation 5:11'])
+  })
+
+  it('inherits book number for ; Thessalonians after 1 Thessalonians', () => {
+    const segs = segmentPlainTextForGospelInlines('see 1 Thessalonians 4:16; Thessalonians 4:16-17.')
+    const refs = segs.filter((s) => s.kind === 'scripture').map((s) => (s.kind === 'scripture' ? s.cleanRef : ''))
+    expect(refs).toEqual(['1 Thessalonians 4:16', '1 Thessalonians 4:16-17'])
+  })
+
+  it('segments bare chapter:verse after semicolon using preceding book (Pilgrim prose)', () => {
+    const segs = segmentPlainTextForGospelInlines('Psalms 5:4 ; 50:1-3 ; Malachi 3:2.')
+    const refs = segs.filter((s) => s.kind === 'scripture')
+    expect(refs).toEqual([
+      { kind: 'scripture', cleanRef: 'Psalms 5:4', rawLength: 'Psalms 5:4'.length },
+      { kind: 'scripture', cleanRef: 'Psalms 50:1-3', rawLength: ' ; 50:1-3'.length },
+      { kind: 'scripture', cleanRef: 'Malachi 3:2', rawLength: 'Malachi 3:2'.length },
+    ])
+  })
+
   it('treats en-dash verse ranges like a hyphen so the full range is one scripture ref', () => {
     const segs = segmentPlainTextForGospelInlines('See Acts 26:15–18 here.')
     expect(segs).toEqual([

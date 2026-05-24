@@ -1,3 +1,5 @@
+import { finalizeGospelDataForImport } from '@/lib/finalizeGospelDataForImport'
+import { profileDbTouchFields } from '@/lib/profileDbTouch'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { GospelPresentationData, Subsection } from '@/lib/types'
 import { gospelSectionForHenryBook, type ParsedHenryBookChunk } from '@/lib/henry/ccelHenryHtml'
@@ -34,7 +36,10 @@ export async function importHenryBookToSupabase(
     mergedSubsections = [...prior, ...subsections]
   }
 
-  const gospelData: GospelPresentationData = [gospelSectionForHenryBook(bookUsfm, mergedSubsections)]
+  const { gospelData, passageKeys: keys } = finalizeGospelDataForImport(
+    [gospelSectionForHenryBook(bookUsfm, mergedSubsections)],
+    { additionalPassageKeys: passageKeys }
+  )
 
   let profileId: string
   let action: 'inserted' | 'updated'
@@ -50,6 +55,7 @@ export async function importHenryBookToSupabase(
         is_template: true,
         is_public: true,
         include_in_resources_menu: false,
+        ...profileDbTouchFields(),
       })
       .eq('id', profileId)
 
@@ -77,19 +83,6 @@ export async function importHenryBookToSupabase(
     }
     profileId = inserted.id
     action = 'inserted'
-  }
-
-  let keys = [...new Set(passageKeys)]
-  if (mergeMode === 'append' && existing?.id) {
-    const { data: priorIdx, error: idxSelErr } = await supabase
-      .from('spurgeon_passage_index')
-      .select('passage_key')
-      .eq('profile_id', profileId)
-    if (idxSelErr) {
-      throw new Error(`Read index for ${slug}: ${JSON.stringify(idxSelErr)}`)
-    }
-    const priorKeys = (priorIdx ?? []).map((r) => r.passage_key).filter(Boolean)
-    keys = [...new Set([...priorKeys, ...keys])]
   }
 
   const { error: delErr } = await supabase.from('spurgeon_passage_index').delete().eq('profile_id', profileId)

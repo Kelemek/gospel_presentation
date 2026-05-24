@@ -36,11 +36,16 @@ const THML_BOOK_ABBREV_TO_BOOK_ALIAS: Record<string, string> = {
   mk: 'mark',
   mt: 'matthew',
   ps: 'psalm',
+  psa: 'psalms',
+  psal: 'psalms',
   pss: 'psalms',
   ex: 'exodus',
   exo: 'exodus',
   gn: 'genesis',
   gen: 'genesis',
+  ge: 'genesis',
+  ac: 'acts',
+  habak: 'habakkuk',
   lev: 'leviticus',
   lv: 'leviticus',
   nm: 'numbers',
@@ -55,6 +60,9 @@ const THML_BOOK_ABBREV_TO_BOOK_ALIAS: Record<string, string> = {
   '2ki': '2 kings',
   '1chr': '1 chronicles',
   '2chr': '2 chronicles',
+  chron: '1 chronicles',
+  '1 chron': '1 chronicles',
+  '2 chron': '2 chronicles',
   isa: 'isaiah',
   jer: 'jeremiah',
   lam: 'lamentations',
@@ -68,6 +76,7 @@ const THML_BOOK_ABBREV_TO_BOOK_ALIAS: Record<string, string> = {
   jon: 'jonah',
   nah: 'nahum',
   hab: 'habakkuk',
+  hag: 'haggai',
   zeph: 'zephaniah',
   mic: 'micah',
   zech: 'zechariah',
@@ -75,10 +84,12 @@ const THML_BOOK_ABBREV_TO_BOOK_ALIAS: Record<string, string> = {
   ec: 'ecclesiastes',
   eccl: 'ecclesiastes',
   ecc: 'ecclesiastes',
+  eccles: 'ecclesiastes',
   gal: 'galatians',
   eph: 'ephesians',
   php: 'philippians',
   col: 'colossians',
+  colos: 'colossians',
   tit: 'titus',
   phm: 'philemon',
   phlm: 'philemon',
@@ -87,6 +98,49 @@ const THML_BOOK_ABBREV_TO_BOOK_ALIAS: Record<string, string> = {
   jas: 'james',
   rev: 'revelation',
   apoc: 'revelation',
+  act: 'acts',
+  acts: 'acts',
+  cor: '1 corinthians',
+  '1 cor': '1 corinthians',
+  '1cor': '1 corinthians',
+  '2 cor': '2 corinthians',
+  '2cor': '2 corinthians',
+  thess: '1 thessalonians',
+  '1thess': '1 thessalonians',
+  '2thess': '2 thessalonians',
+  tim: '1 timothy',
+  '1tim': '1 timothy',
+  '2tim': '2 timothy',
+  pet: '1 peter',
+  '1pet': '1 peter',
+  '2pet': '2 peter',
+  prov: 'proverbs',
+  pro: 'proverbs',
+  matt: 'matthew',
+  phil: 'philippians',
+  philip: 'philippians',
+  'i cor': '1 corinthians',
+  'ii cor': '2 corinthians',
+  'i pet': '1 peter',
+  'ii pet': '2 peter',
+  'i thess': '1 thessalonians',
+  'ii thess': '2 thessalonians',
+  'i tim': '1 timothy',
+  'ii tim': '2 timothy',
+  'i sam': '1 samuel',
+  'ii sam': '2 samuel',
+  'i ki': '1 kings',
+  'ii ki': '2 kings',
+  'i chr': '1 chronicles',
+  'ii chr': '2 chronicles',
+  numb: 'numbers',
+  num: 'numbers',
+  cant: 'song of songs',
+  canticles: 'song of songs',
+  song: 'song of songs',
+  songs: 'song of songs',
+  deut: 'deuteronomy',
+  exod: 'exodus',
 }
 
 /** Map a book string that {@link bookNameToUsfm} accepts to canonical Gospel-present display name (USFM-aligned). */
@@ -99,12 +153,31 @@ function gospelCanonicalBookDisplay(bookRawThatResolves: string): string | null 
   return null
 }
 
+/** CCEL prose: "I Cor.", "II Pet." → "1 cor", "2 pet" for alias lookup. */
+function expandRomanNumeralBookPrefix(key: string): string {
+  if (/^iii\s/.test(key)) return key.replace(/^iii\s/, '3 ')
+  if (/^ii\s/.test(key)) return key.replace(/^ii\s/, '2 ')
+  if (/^i\s/.test(key)) return key.replace(/^i\s/, '1 ')
+  return key
+}
+
 function canonicalBookCandidateFromFragment(bookFragment: string): string | null {
   const t = bookFragment.trim()
   if (!t) return null
   if (bookNameToUsfm(t)) return t.replace(/\s+/g, ' ')
-  const ab = THML_BOOK_ABBREV_TO_BOOK_ALIAS[t.toLowerCase().replace(/\./g, '')]
-  return ab ?? null
+  const lower = t.toLowerCase().replace(/\./g, '')
+  const keys = [
+    lower,
+    lower.replace(/\s+/g, ''),
+    expandRomanNumeralBookPrefix(lower),
+    expandRomanNumeralBookPrefix(lower.replace(/\s+/g, '')),
+  ]
+  for (const key of keys) {
+    if (bookNameToUsfm(key)) return key.replace(/\s+/g, ' ')
+    const ab = THML_BOOK_ABBREV_TO_BOOK_ALIAS[key]
+    if (ab) return ab
+  }
+  return null
 }
 
 /**

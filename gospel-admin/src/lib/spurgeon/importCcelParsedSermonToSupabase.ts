@@ -1,5 +1,6 @@
+import { finalizeGospelDataForImport } from '@/lib/finalizeGospelDataForImport'
+import { profileDbTouchFields } from '@/lib/profileDbTouch'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { GospelPresentationData } from '@/lib/types'
 import type { ParsedCcelSermonDiv1 } from '@/lib/spurgeon/ccelSermonHtml'
 
 /** Upsert one parsed CCEL sermon into `profiles` and rebuild `spurgeon_passage_index` (same rules as the import script). */
@@ -7,7 +8,9 @@ export async function importCcelParsedSermonToSupabase(
   supabase: SupabaseClient,
   sermon: ParsedCcelSermonDiv1
 ): Promise<{ slug: string; action: 'inserted' | 'updated'; passageKeyCount: number }> {
-  const gospelData: GospelPresentationData = [sermon.gospelSection]
+  const { gospelData, passageKeys } = finalizeGospelDataForImport([sermon.gospelSection], {
+    additionalPassageKeys: sermon.passageKeys,
+  })
 
   const { data: existing, error: selErr } = await supabase
     .from('profiles')
@@ -36,6 +39,7 @@ export async function importCcelParsedSermonToSupabase(
         is_template: true,
         is_public: nextPublic,
         include_in_resources_menu: false,
+        ...profileDbTouchFields(),
       })
       .eq('id', profileId)
 
@@ -70,9 +74,8 @@ export async function importCcelParsedSermonToSupabase(
     throw new Error(`Clear index for ${sermon.slug}: ${JSON.stringify(delErr)}`)
   }
 
-  const keys = sermon.passageKeys
-  if (keys.length > 0) {
-    const rows = keys.map((passage_key, i) => ({
+  if (passageKeys.length > 0) {
+    const rows = passageKeys.map((passage_key, i) => ({
       passage_key,
       profile_id: profileId,
       sermon_no: sermon.sermonNo,
@@ -84,5 +87,5 @@ export async function importCcelParsedSermonToSupabase(
     }
   }
 
-  return { slug: sermon.slug, action, passageKeyCount: keys.length }
+  return { slug: sermon.slug, action, passageKeyCount: passageKeys.length }
 }

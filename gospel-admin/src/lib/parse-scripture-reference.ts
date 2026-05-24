@@ -9,7 +9,7 @@ export function parseReference(
 ): { book: string; chapter: number; verseStart: number | null; verseEnd: number | null } | null {
   const normalized = reference.replace(/–/g, '-').replace(/(\d+)[a-z]+/g, '$1')
 
-  const match = normalized.match(/^(.+?)\s+(\d+)(?::(\d+)(?:-(\d+))?)?$/)
+  const match = normalized.match(/^(.+?)\s+(\d+)(?::\s*(\d+)(?:\s*-\s*(\d+))?)?$/)
   if (!match) return null
 
   return {
