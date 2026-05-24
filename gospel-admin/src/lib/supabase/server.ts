@@ -2,12 +2,11 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import type { Database } from '@/lib/supabase/database.types'
-import * as Sentry from '@sentry/nextjs'
 
 export const createClient = async () => {
   const cookieStore = await cookies()
 
-  const client = createServerClient<Database>(
+  return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -32,26 +31,11 @@ export const createClient = async () => {
       },
     }
   )
-  
-  // Add Sentry breadcrumbs for Supabase operations (skip if mocked)
-  if (client.from && typeof client.from === 'function') {
-    const originalFrom = client.from.bind(client)
-    client.from = (table: any) => {
-      Sentry.addBreadcrumb({
-        category: 'supabase',
-        message: `Query table: ${table}`,
-        level: 'info',
-      })
-      return originalFrom(table)
-    }
-  }
-  
-  return client
 }
 
 // Admin client for bypassing RLS (use carefully!)
 export const createAdminClient = () => {
-  const client = createServerClient<Database>(
+  return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_KEY!, // Service role key
     {
@@ -62,19 +46,4 @@ export const createAdminClient = () => {
       },
     }
   )
-  
-  // Add Sentry breadcrumbs for admin operations (skip if mocked)
-  if (client.from && typeof client.from === 'function') {
-    const originalFrom = client.from.bind(client)
-    client.from = (table: any) => {
-      Sentry.addBreadcrumb({
-        category: 'supabase',
-        message: `Admin query table: ${table}`,
-        level: 'info',
-      })
-      return originalFrom(table)
-    }
-  }
-  
-  return client
 }

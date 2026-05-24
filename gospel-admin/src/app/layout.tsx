@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
-import { ClarityProvider } from "@/components/ClarityProvider";
+import { PostHogPageView } from "@/components/PostHogPageView";
+import { PostHogProvider } from "@/components/PostHogProvider";
 import { ApplyTheme } from "@/components/ApplyTheme";
 import { CapacitorKeepLinksInApp } from "@/components/CapacitorKeepLinksInApp";
 import { CapacitorProfileHelpTourNavigation } from "@/components/CapacitorProfileHelpTourNavigation";
@@ -72,22 +74,26 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider>
-          <ApplyTheme />
-          <TextSizeProvider>
-            <ApplyTextSize />
-            <CapacitorKeepLinksInApp />
-            <GospelClientStorageHydration />
-            <CapacitorProfileHelpTourNavigation />
-            <SplashScreenController />
-            <ClarityProvider />
-            <TranslationProvider>
-              <AlertModalProvider>
-                {children}
-              </AlertModalProvider>
-            </TranslationProvider>
-          </TextSizeProvider>
-        </ThemeProvider>
+        <PostHogProvider>
+          <ThemeProvider>
+            <ApplyTheme />
+            <TextSizeProvider>
+              <ApplyTextSize />
+              <CapacitorKeepLinksInApp />
+              <GospelClientStorageHydration />
+              <CapacitorProfileHelpTourNavigation />
+              <SplashScreenController />
+              <Suspense fallback={null}>
+                <PostHogPageView />
+              </Suspense>
+              <TranslationProvider>
+                <AlertModalProvider>
+                  {children}
+                </AlertModalProvider>
+              </TranslationProvider>
+            </TextSizeProvider>
+          </ThemeProvider>
+        </PostHogProvider>
         <Analytics />
         <SpeedInsights />
       </body>

@@ -7,8 +7,7 @@
     "jest.coverage.setup.cjs"
   ],
   "ignoreDependencies": [
-    "@capacitor/ios",
-    "clarity-js"
+    "@capacitor/ios"
   ],
   "ignoreExportsUsedInFile": {
     "interface": true,

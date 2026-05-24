@@ -71,6 +71,43 @@ Tables use RLS appropriate to their sensitivity (see Supabase **Policies** and `
 - [ ] Scripture lookups working
 - [ ] Admin features accessible
 
+## Monitoring (free tier)
+
+Observability uses **PostHog Cloud (free)** for errors, session replay, heatmaps, and traffic/geo analytics. **Sentry** and **Microsoft Clarity** are not used.
+
+| Tool | Role |
+|------|------|
+| **PostHog** | Client errors, session replay (sampled), product analytics, geo |
+| **Vercel Analytics** | Page views (optional complement on Vercel) |
+| **Vercel Speed Insights** | Web Vitals |
+
+### Environment variables
+
+Set in Vercel (and `gospel-admin/.env.local` for local dev with live analytics):
+
+- `NEXT_PUBLIC_POSTHOG_KEY` — project API key from PostHog project settings
+- `NEXT_PUBLIC_POSTHOG_HOST` — ingest host (e.g. `https://us.i.posthog.com` or EU equivalent)
+
+If these are unset, PostHog does not initialize (safe for CI and local test runs).
+
+Client init uses Next.js [`instrumentation-client.ts`](../gospel-admin/instrumentation-client.ts) (supported since Next.js 15.3; not `instrumentation.ts`, which is server-only). [`PostHogProvider`](../gospel-admin/src/components/PostHogProvider.tsx) calls the same idempotent init on mount as a fallback.
+
+### Free-tier limits and configuration
+
+- **Session replay:** 5,000 web recordings/month (hard cap; deleting replays does not free quota). Client init samples ~15% of sessions in [`posthog-config.ts`](../gospel-admin/src/lib/posthog-config.ts); adjust `POSTHOG_SESSION_RECORDING_SAMPLE_RATE` or use PostHog project sampling if traffic grows.
+- **Analytics events:** 1M events/month, 1-year retention on free plan.
+- **Error tracking:** 100k exceptions/month.
+- **PostHog AI:** 2,000 credits/month (optional NL replay search / summaries).
+
+Replay masks all inputs and text in the browser to reduce exposure of scripture and counseling content. See the copyright page for user-facing disclosure.
+
+### Verification after deploy
+
+1. Browse the site — confirm events in PostHog (Activity / Web analytics).
+2. Trigger a test client error — confirm in PostHog Error tracking.
+3. Confirm a sampled session replay appears (may take a few minutes).
+4. In browser devtools Network tab, confirm no requests to `sentry.io` or `clarity.ms`.
+
 ## Backups & Recovery
 
 ### Manual Backup

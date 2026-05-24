@@ -5,7 +5,6 @@ jest.mock('@supabase/ssr', () => ({
     return { from: originalFrom }
   }),
 }))
-jest.mock('@sentry/nextjs', () => ({ addBreadcrumb: jest.fn() }))
 
 import { createClient, getSupabaseClient } from '../supabase/client'
 
@@ -16,16 +15,12 @@ describe('supabase client coverage', () => {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'anon-key'
   })
 
-  it('createClient returns a client with Sentry-wrapped from', () => {
+  it('createClient returns a client with from()', () => {
     const client = createClient()
     expect(client).toBeDefined()
     expect(client.from).toBeDefined()
     const result = client.from('test_table')
     expect(result).toHaveProperty('fromTable', 'test_table')
-    const Sentry = require('@sentry/nextjs')
-    expect(Sentry.addBreadcrumb).toHaveBeenCalledWith(
-      expect.objectContaining({ category: 'supabase', message: 'Query table: test_table' })
-    )
   })
 
   it('getSupabaseClient returns singleton', () => {

@@ -209,6 +209,31 @@ export default function CopyrightPage() {
             </div>
           </section>
 
+          {/* Analytics & diagnostics */}
+          <section className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-600 p-8">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-6 border-b border-gray-200 dark:border-slate-600 pb-3">
+              Analytics &amp; diagnostics
+            </h2>
+            <div className="bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-400 dark:border-blue-600 rounded-lg p-6 space-y-3">
+              <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg">
+                This site uses{' '}
+                <a
+                  href="https://posthog.com/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors"
+                >
+                  PostHog
+                </a>{' '}
+                (cloud, free tier) for aggregated usage analytics, error reporting, and sampled session replay to improve reliability and usability.
+                Session recordings mask text and form inputs in the browser. A subset of sessions is recorded to stay within free-tier limits.
+              </p>
+              <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg">
+                <strong className="text-slate-800 dark:text-slate-100">Vercel:</strong> When hosted on Vercel, anonymous page-view and Web Vitals metrics may also be collected by Vercel Analytics and Speed Insights.
+              </p>
+            </div>
+          </section>
+
           {/* Technical Implementation Section */}
           <section className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-600 p-8">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-800 dark:text-slate-100 mb-6 border-b border-gray-200 dark:border-slate-600 pb-3">Technical Implementation</h2>

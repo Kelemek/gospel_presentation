@@ -1,5 +1,4 @@
 import type { NextConfig } from "next";
-import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
   // Use standard build for Netlify (not static export)
@@ -23,7 +22,4 @@ const nextConfig: NextConfig = {
   productionBrowserSourceMaps: false,
 };
 
-export default withSentryConfig(nextConfig, {
-  // Minimal config - error tracking only, no source maps
-  silent: true,
-});
+export default nextConfig;
