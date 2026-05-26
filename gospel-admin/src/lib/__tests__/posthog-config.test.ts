@@ -1,11 +1,18 @@
-import type { PostHogConfig } from 'posthog-js'
+import type { PostHog, PostHogConfig } from 'posthog-js'
 import {
   getPostHogApiHost,
   getPostHogClientInitOptions,
   getPostHogProjectKey,
   initPostHogClient,
+  POSTHOG_DEFAULT_API_HOST,
   POSTHOG_SESSION_RECORDING_SAMPLE_RATE,
 } from '../posthog-config'
+
+type PostHogLoadedArg = Parameters<NonNullable<PostHogConfig['loaded']>>[0]
+
+function posthogLoadedMock(stopSessionRecording: jest.Mock): PostHogLoadedArg {
+  return { stopSessionRecording } as unknown as PostHogLoadedArg
+}
 
 describe('posthog-config', () => {
   const originalKey = process.env.NEXT_PUBLIC_POSTHOG_KEY
@@ -30,9 +37,10 @@ describe('posthog-config', () => {
     expect(getPostHogProjectKey()).toBe('phc_test')
   })
 
-  it('defaults api host to US ingest when unset', () => {
+  it('defaults api host to reverse proxy when unset', () => {
     delete process.env.NEXT_PUBLIC_POSTHOG_HOST
-    expect(getPostHogApiHost()).toBe('https://us.i.posthog.com')
+    expect(getPostHogApiHost()).toBe(POSTHOG_DEFAULT_API_HOST)
+    expect(POSTHOG_DEFAULT_API_HOST).toBe('https://g.cp-church.org')
   })
 
   it('uses custom api host when set', () => {
@@ -54,12 +62,12 @@ describe('posthog-config', () => {
     const options = getPostHogClientInitOptions()
 
     jest.spyOn(Math, 'random').mockReturnValue(0.99)
-    options.loaded({ stopSessionRecording } as Parameters<PostHogConfig['loaded']>[0])
+    options.loaded(posthogLoadedMock(stopSessionRecording))
     expect(stopSessionRecording).toHaveBeenCalled()
 
     jest.spyOn(Math, 'random').mockReturnValue(0)
     stopSessionRecording.mockClear()
-    options.loaded({ stopSessionRecording } as Parameters<PostHogConfig['loaded']>[0])
+    options.loaded(posthogLoadedMock(stopSessionRecording))
     expect(stopSessionRecording).not.toHaveBeenCalled()
 
     jest.restoreAllMocks()
@@ -70,7 +78,7 @@ describe('posthog-config', () => {
     const init = jest.fn(() => {
       posthog.__loaded = true
     })
-    const posthog = { __loaded: false as boolean | undefined, init }
+    const posthog = { __loaded: false, init } as unknown as Pick<PostHog, '__loaded' | 'init'>
 
     expect(initPostHogClient(posthog)).toBe(true)
     expect(init).toHaveBeenCalledTimes(1)
@@ -81,11 +89,15 @@ describe('posthog-config', () => {
   it('initPostHogClient skips when key is missing or already loaded', () => {
     delete process.env.NEXT_PUBLIC_POSTHOG_KEY
     const init = jest.fn()
-    expect(initPostHogClient({ __loaded: false, init })).toBe(false)
+    expect(initPostHogClient({ __loaded: false, init } as Pick<PostHog, '__loaded' | 'init'>)).toBe(
+      false
+    )
     expect(init).not.toHaveBeenCalled()
 
     process.env.NEXT_PUBLIC_POSTHOG_KEY = 'phc_test'
-    expect(initPostHogClient({ __loaded: true, init })).toBe(false)
+    expect(initPostHogClient({ __loaded: true, init } as Pick<PostHog, '__loaded' | 'init'>)).toBe(
+      false
+    )
     expect(init).not.toHaveBeenCalled()
   })
 })

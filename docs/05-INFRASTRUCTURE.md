@@ -86,7 +86,9 @@ Observability uses **PostHog Cloud (free)** for errors, session replay, heatmaps
 Set in Vercel (and `gospel-admin/.env.local` for local dev with live analytics):
 
 - `NEXT_PUBLIC_POSTHOG_KEY` — project API key from PostHog project settings
-- `NEXT_PUBLIC_POSTHOG_HOST` — ingest host (e.g. `https://us.i.posthog.com` or EU equivalent)
+- `NEXT_PUBLIC_POSTHOG_HOST` — ingest API host (optional; defaults to **`https://g.cp-church.org`**, a reverse proxy to PostHog Cloud so events are less likely to be blocked by ad blockers)
+
+Set both in Vercel production/preview and in `gospel-admin/.env.local` for local dev with live analytics.
 
 If these are unset, PostHog does not initialize (safe for CI and local test runs).
 

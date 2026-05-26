@@ -12,11 +12,11 @@ export function getPostHogProjectKey(): string | undefined {
   return process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim() || undefined
 }
 
+/** PostHog ingest via reverse proxy (see docs/05-INFRASTRUCTURE.md). */
+export const POSTHOG_DEFAULT_API_HOST = 'https://g.cp-church.org'
+
 export function getPostHogApiHost(): string {
-  return (
-    process.env.NEXT_PUBLIC_POSTHOG_HOST?.trim() ||
-    'https://us.i.posthog.com'
-  )
+  return process.env.NEXT_PUBLIC_POSTHOG_HOST?.trim() || POSTHOG_DEFAULT_API_HOST
 }
 
 export function getPostHogClientInitOptions(): Pick<
