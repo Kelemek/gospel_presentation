@@ -77,9 +77,7 @@ Observability uses **PostHog Cloud (free)** for errors, session replay, heatmaps
 
 | Tool | Role |
 |------|------|
-| **PostHog** | Client errors, session replay (sampled), product analytics, geo |
-| **Vercel Analytics** | Page views (optional complement on Vercel) |
-| **Vercel Speed Insights** | Web Vitals |
+| **PostHog** | Client errors, session replay (sampled), product analytics, page views, geo |
 
 ### Environment variables
 

@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Analytics } from "@vercel/analytics/react";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { PostHogPageView } from "@/components/PostHogPageView";
 import { PostHogProvider } from "@/components/PostHogProvider";
 import { ApplyTheme } from "@/components/ApplyTheme";
@@ -94,8 +92,6 @@ export default function RootLayout({
             </TextSizeProvider>
           </ThemeProvider>
         </PostHogProvider>
-        <Analytics />
-        <SpeedInsights />
       </body>
     </html>
   );

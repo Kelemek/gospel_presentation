@@ -14,10 +14,6 @@ if (typeof global.Response === 'undefined') {
   }
 }
 
-// Mock Vercel packages (no-op React components)
-jest.mock('@vercel/analytics/react', () => ({ Analytics: () => null }))
-jest.mock('@vercel/speed-insights/next', () => ({ SpeedInsights: () => null }))
-
 // Mock Next navigation and expose push mock
 jest.mock('next/navigation', () => {
   const pushMock = jest.fn()

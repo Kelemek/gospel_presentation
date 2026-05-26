@@ -7,16 +7,6 @@ if (typeof global.structuredClone === 'undefined') {
   global.structuredClone = (value) => JSON.parse(JSON.stringify(value))
 }
 
-// Mock Vercel analytics and speed-insights to avoid .mjs ESM parse issues
-// when Jest imports the app `layout.tsx`. Tests don't need the real
-// implementations; a noop React component is sufficient.
-jest.mock('@vercel/analytics/react', () => ({
-  Analytics: () => null,
-}))
-jest.mock('@vercel/speed-insights/next', () => ({
-  SpeedInsights: () => null,
-}))
-
 // Create push mock once so it can be assigned to global before any test file reads it
 const nextRouterPushMock = jest.fn()
 try {
