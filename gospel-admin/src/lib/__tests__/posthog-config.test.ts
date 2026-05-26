@@ -48,11 +48,11 @@ describe('posthog-config', () => {
     expect(getPostHogApiHost()).toBe('https://eu.i.posthog.com')
   })
 
-  it('enables exception capture and masks session replay content', () => {
+  it('enables exception capture and masks session replay inputs', () => {
     const options = getPostHogClientInitOptions()
     expect(options.capture_exceptions).toBe(true)
     expect(options.session_recording.maskAllInputs).toBe(true)
-    expect(options.session_recording.maskTextSelector).toBe('*')
+    expect(options.session_recording.maskTextSelector).toBeUndefined()
     expect(POSTHOG_SESSION_RECORDING_SAMPLE_RATE).toBeGreaterThan(0)
     expect(POSTHOG_SESSION_RECORDING_SAMPLE_RATE).toBeLessThanOrEqual(1)
   })

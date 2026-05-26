@@ -29,7 +29,6 @@ export function getPostHogClientInitOptions(): Pick<
     capture_exceptions: true,
     session_recording: {
       maskAllInputs: true,
-      maskTextSelector: '*',
     },
     loaded(posthog) {
       if (Math.random() > sampleRate) {

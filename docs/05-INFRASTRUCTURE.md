@@ -101,7 +101,7 @@ Client init uses Next.js [`instrumentation-client.ts`](../gospel-admin/instrumen
 - **Error tracking:** 100k exceptions/month.
 - **PostHog AI:** 2,000 credits/month (optional NL replay search / summaries).
 
-Replay masks all inputs and text in the browser to reduce exposure of scripture and counseling content. See the copyright page for user-facing disclosure.
+Replay masks form inputs in the browser (not general page text). See the copyright page for user-facing disclosure.
 
 ### Verification after deploy
 

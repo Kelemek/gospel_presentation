@@ -226,7 +226,7 @@ export default function CopyrightPage() {
                   PostHog
                 </a>{' '}
                 (cloud, free tier) for aggregated usage analytics, error reporting, and sampled session replay to improve reliability and usability.
-                Session recordings mask text and form inputs in the browser. A subset of sessions is recorded to stay within free-tier limits.
+                Session recordings mask form inputs in the browser. A subset of sessions is recorded to stay within free-tier limits.
               </p>
               <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg">
                 <strong className="text-slate-800 dark:text-slate-100">Vercel:</strong> When hosted on Vercel, anonymous page-view and Web Vitals metrics may also be collected by Vercel Analytics and Speed Insights.
