@@ -51,6 +51,27 @@ import type { ScriptureModalPresentationLocation } from '@/lib/presentationLocat
 
 export type { ScriptureModalPresentationLocation } from '@/lib/presentationLocationFromAnchors'
 
+const scriptureModalHeaderTitleClass =
+  'text-base md:text-lg font-semibold text-slate-800 dark:text-slate-100 leading-tight px-1 min-w-0 flex-1 max-w-full overflow-hidden flex items-center justify-center min-h-0'
+
+function ScriptureModalHeaderReference({
+  book,
+  suffix,
+}: {
+  book: string
+  suffix: string
+}) {
+  if (!suffix) {
+    return <span className="min-w-0 truncate">{book}</span>
+  }
+  return (
+    <span className="min-w-0 max-w-full inline-flex items-baseline gap-1 overflow-hidden">
+      <span className="truncate">{book}</span>
+      <span className="shrink-0 whitespace-nowrap">{suffix}</span>
+    </span>
+  )
+}
+
 type SpurgeonStudyMatch = 'unset' | 'loading' | 'yes' | 'no'
 
 interface ScriptureModalProps {
@@ -902,15 +923,24 @@ export default function ScriptureModal({
                   }
                 }}
                 disabled={!hasPrevious}
-                className={`shrink-0 h-9 min-h-[36px] min-w-[36px] box-border rounded-md transition-colors inline-flex items-center justify-center px-1.5 text-lg font-bold leading-none ${
-                  hasPrevious 
-                    ? 'cursor-pointer text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500' 
-                    : 'text-slate-300 dark:text-slate-500 cursor-not-allowed'
-                }`}
+                className={scriptureModalHeaderIconButtonClass}
                 title="Previous Scripture"
                 aria-label="Previous Scripture"
               >
-                ◀
+                <svg
+                  className="w-5 h-5 shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 19l-7-7 7-7"
+                  />
+                </svg>
               </button>
               </span>
               {onNavigateReference ? (
@@ -919,34 +949,20 @@ export default function ScriptureModal({
                   id={scriptureModalTitleId}
                   data-tour="scripture-modal-reference-picker"
                   onClick={() => setPassagePickerOpen(true)}
-                  className="text-base md:text-lg font-semibold text-slate-800 dark:text-slate-100 leading-tight px-1 min-w-0 flex-1 max-w-full overflow-hidden flex items-baseline gap-1 min-h-0 cursor-pointer rounded-md hover:bg-slate-200/80 dark:hover:bg-slate-600/80 active:bg-slate-300/80 dark:active:bg-slate-500/80 transition-colors text-left"
+                  className={`${scriptureModalHeaderTitleClass} cursor-pointer rounded-md hover:bg-slate-200/80 dark:hover:bg-slate-600/80 active:bg-slate-300/80 dark:active:bg-slate-500/80 transition-colors`}
                   title={`${reference} — choose another passage`}
                   aria-label={`${reference}. Choose another passage`}
                 >
-                  {!headerSuffix ? (
-                    <span className="min-w-0 truncate">{headerBook}</span>
-                  ) : (
-                    <>
-                      <span className="min-w-0 flex-1 truncate">{headerBook}</span>
-                      <span className="shrink-0 whitespace-nowrap">{headerSuffix}</span>
-                    </>
-                  )}
+                  <ScriptureModalHeaderReference book={headerBook} suffix={headerSuffix} />
                 </button>
               ) : (
                 <h3
                   id={scriptureModalTitleId}
-                  className="text-base md:text-lg font-semibold text-slate-800 dark:text-slate-100 leading-tight px-1 min-w-0 flex-1 max-w-full overflow-hidden flex items-baseline gap-1 min-h-0"
+                  className={scriptureModalHeaderTitleClass}
                   title={reference}
                   aria-label={reference}
                 >
-                  {!headerSuffix ? (
-                    <span className="min-w-0 truncate">{headerBook}</span>
-                  ) : (
-                    <>
-                      <span className="min-w-0 flex-1 truncate">{headerBook}</span>
-                      <span className="shrink-0 whitespace-nowrap">{headerSuffix}</span>
-                    </>
-                  )}
+                  <ScriptureModalHeaderReference book={headerBook} suffix={headerSuffix} />
                 </h3>
               )}
               <span data-scripture-modal-chrome className="shrink-0 inline-flex">
@@ -959,15 +975,24 @@ export default function ScriptureModal({
                   }
                 }}
                 disabled={!hasNext}
-                className={`shrink-0 h-9 min-h-[36px] min-w-[36px] box-border rounded-md transition-colors inline-flex items-center justify-center px-1.5 text-lg font-bold leading-none ${
-                  hasNext 
-                    ? 'cursor-pointer text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500' 
-                    : 'text-slate-300 dark:text-slate-500 cursor-not-allowed'
-                }`}
+                className={scriptureModalHeaderIconButtonClass}
                 title="Next Scripture"
                 aria-label="Next Scripture"
               >
-                ▶
+                <svg
+                  className="w-5 h-5 shrink-0"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
               </button>
               </span>
             </div>

@@ -1,6 +1,6 @@
-/** Shared 36×36 scripture modal header icon buttons (Listen, Share, Close). */
+/** Shared 36×36 scripture modal header icon buttons (prev/next, Listen, Share). */
 const SCRIPTURE_MODAL_HEADER_BTN_BOX =
-  'shrink-0 box-border h-9 w-9 min-h-[36px] min-w-[36px] p-0 rounded-md inline-flex items-center justify-center leading-none transition-colors'
+  'shrink-0 box-border h-9 w-9 min-h-[36px] min-w-[36px] p-0 rounded-md inline-flex items-center justify-center leading-none transition-colors appearance-none'
 
 export const scriptureModalHeaderIconButtonClass =
   `${SCRIPTURE_MODAL_HEADER_BTN_BOX} bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed`
