@@ -965,18 +965,16 @@ export default function ScriptureModal({
               </button>
             </div>
             <div className="flex-1 flex justify-end items-center gap-1.5">
-              {showScriptureListen && (
-                <ScriptureModalChapterListen
-                  passageReference={passageAudioReference}
-                  chapterReference={getChapterReference(reference)}
-                  translation={translation}
-                  enabled
-                  dayChapterReferences={mcheyneDayChapterReferences}
-                  onPlaylistChapterChange={
-                    isMcheyneDayPlaylist ? onNavigateReference : undefined
-                  }
-                />
-              )}
+              <ScriptureModalChapterListen
+                passageReference={passageAudioReference}
+                chapterReference={getChapterReference(reference)}
+                translation={translation}
+                enabled={showScriptureListen}
+                dayChapterReferences={mcheyneDayChapterReferences}
+                onPlaylistChapterChange={
+                  isMcheyneDayPlaylist ? onNavigateReference : undefined
+                }
+              />
               <button
                 type="button"
                 data-tour="scripture-modal-share"

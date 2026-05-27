@@ -13,7 +13,7 @@ describe('ScriptureModalChapterListen', () => {
     HTMLMediaElement.prototype.load = jest.fn()
   })
 
-  it('renders nothing when disabled', () => {
+  it('renders a disabled listen button when not enabled', () => {
     render(
       <ScriptureModalChapterListen
         passageReference="John 3"
@@ -22,7 +22,8 @@ describe('ScriptureModalChapterListen', () => {
         enabled={false}
       />
     )
-    expect(screen.queryByRole('button', { name: /listen/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /listen/i })).toBeDisabled()
+    expect(document.querySelector('audio')).toBeNull()
   })
 
   it('opens listen dialog with Play and speed, without Repeat', async () => {

@@ -8,7 +8,7 @@ import { scriptureChapterReferenceKey } from '@/lib/parse-scripture-reference'
 import type { BibleTranslation } from '@/contexts/TranslationContext'
 
 const TRIGGER_CLASS =
-  'shrink-0 p-2 rounded-md flex items-center justify-center min-h-[36px] min-w-[36px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white transition-colors cursor-pointer'
+  'shrink-0 p-2 rounded-md flex items-center justify-center min-h-[36px] min-w-[36px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
 
 const SCRIPTURE_MODAL_LISTEN_DIALOG_ID = 'scripture-modal-listen-controls-dialog'
 const SCRIPTURE_MODAL_LISTEN_TITLE_ID = 'scripture-modal-listen-controls-title'
@@ -106,20 +106,17 @@ export default function ScriptureModalChapterListen({
       ? "Listen to today's readings"
       : 'Listen'
 
-  if (!enabled) {
-    return null
-  }
-
   return (
     <>
       <button
         type="button"
         data-tour="scripture-modal-chapter-listen"
-        onClick={openControls}
+        onClick={enabled ? openControls : undefined}
+        disabled={!enabled}
         className={TRIGGER_CLASS}
-        aria-haspopup="dialog"
-        aria-expanded={controlsOpen}
-        aria-controls={SCRIPTURE_MODAL_LISTEN_DIALOG_ID}
+        aria-haspopup={enabled ? 'dialog' : undefined}
+        aria-expanded={enabled ? controlsOpen : undefined}
+        aria-controls={enabled ? SCRIPTURE_MODAL_LISTEN_DIALOG_ID : undefined}
         aria-label={listenTitle}
         title={listenTitle}
       >
@@ -139,31 +136,35 @@ export default function ScriptureModalChapterListen({
         </svg>
       </button>
 
-      <audio
-        ref={passageAudioRef}
-        preload="none"
-        className="hidden"
-        aria-hidden
-        onPlay={handlePassageAudioPlay}
-        onPause={handlePassageAudioPause}
-        onEnded={handlePassageAudioEnded}
-        onError={handlePassageAudioError}
-      />
+      {enabled ? (
+        <>
+          <audio
+            ref={passageAudioRef}
+            preload="none"
+            className="hidden"
+            aria-hidden
+            onPlay={handlePassageAudioPlay}
+            onPause={handlePassageAudioPause}
+            onEnded={handlePassageAudioEnded}
+            onError={handlePassageAudioError}
+          />
 
-      <MemorizeListenControlsDialog
-        open={controlsOpen}
-        onClose={closeControls}
-        dialogId={SCRIPTURE_MODAL_LISTEN_DIALOG_ID}
-        titleId={SCRIPTURE_MODAL_LISTEN_TITLE_ID}
-        presentation="modal"
-        showRepeat={false}
-        onPrimaryClick={handlePrimaryClick}
-        primaryLabel={readAloudDialogPrimaryLabel}
-        primaryAriaLabel={readAloudDialogPrimaryAriaLabel}
-        primaryAriaPressed={listenAriaPressed}
-        listenPlaybackRate={listenPlaybackRate}
-        onSelectSpeed={onSelectSpeed}
-      />
+          <MemorizeListenControlsDialog
+            open={controlsOpen}
+            onClose={closeControls}
+            dialogId={SCRIPTURE_MODAL_LISTEN_DIALOG_ID}
+            titleId={SCRIPTURE_MODAL_LISTEN_TITLE_ID}
+            presentation="modal"
+            showRepeat={false}
+            onPrimaryClick={handlePrimaryClick}
+            primaryLabel={readAloudDialogPrimaryLabel}
+            primaryAriaLabel={readAloudDialogPrimaryAriaLabel}
+            primaryAriaPressed={listenAriaPressed}
+            listenPlaybackRate={listenPlaybackRate}
+            onSelectSpeed={onSelectSpeed}
+          />
+        </>
+      ) : null}
     </>
   )
 }
