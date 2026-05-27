@@ -40,6 +40,10 @@ import ScriptureModalToolbarMenu from '@/components/ScriptureModalToolbarMenu'
 import ScriptureWordStudyModal from '@/components/ScriptureWordStudyModal'
 import ScriptureModalChapterListen from '@/components/ScriptureModalChapterListen'
 import {
+  scriptureModalHeaderCloseButtonClass,
+  scriptureModalHeaderIconButtonClass,
+} from '@/components/scriptureModalHeaderButtons'
+import {
   wordStudyAvailableFromReference,
   wordStudyLanguageLabelFromReference,
 } from '@/lib/step-bible-reference'
@@ -990,10 +994,10 @@ export default function ScriptureModal({
                 disabled={shareDisabled}
                 aria-label={shareInFlight ? 'Sharing…' : 'Share passage'}
                 title="Share passage"
-                className="shrink-0 p-2 rounded-md flex items-center justify-center min-h-[36px] min-w-[36px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className={scriptureModalHeaderIconButtonClass}
               >
                 <svg
-                  className="w-5 h-5"
+                  className="w-5 h-5 shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1011,7 +1015,7 @@ export default function ScriptureModal({
                 type="button"
                 data-tour="scripture-modal-close"
                 onClick={handleClose}
-                className="cursor-pointer text-slate-600 dark:text-slate-200 text-xl font-bold h-9 min-h-[36px] min-w-[36px] box-border rounded-md inline-flex items-center justify-center leading-none bg-white dark:bg-slate-600 shadow-sm ring-1 ring-slate-300/80 dark:ring-slate-500/60 hover:bg-slate-50 dark:hover:bg-slate-500 hover:ring-slate-400 dark:hover:ring-slate-400 active:bg-slate-100 dark:active:bg-slate-400"
+                className={scriptureModalHeaderCloseButtonClass}
                 aria-label="Close modal"
               >
                 ×

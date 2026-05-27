@@ -6,9 +6,7 @@ import { useAlertModal } from '@/contexts/AlertModalContext'
 import { useChapterStreamingAudioListen } from '@/hooks/useChapterStreamingAudioListen'
 import { scriptureChapterReferenceKey } from '@/lib/parse-scripture-reference'
 import type { BibleTranslation } from '@/contexts/TranslationContext'
-
-const TRIGGER_CLASS =
-  'shrink-0 p-2 rounded-md flex items-center justify-center min-h-[36px] min-w-[36px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed'
+import { scriptureModalHeaderIconButtonClass } from '@/components/scriptureModalHeaderButtons'
 
 const SCRIPTURE_MODAL_LISTEN_DIALOG_ID = 'scripture-modal-listen-controls-dialog'
 const SCRIPTURE_MODAL_LISTEN_TITLE_ID = 'scripture-modal-listen-controls-title'
@@ -113,7 +111,7 @@ export default function ScriptureModalChapterListen({
         data-tour="scripture-modal-chapter-listen"
         onClick={enabled ? openControls : undefined}
         disabled={!enabled}
-        className={TRIGGER_CLASS}
+        className={scriptureModalHeaderIconButtonClass}
         aria-haspopup={enabled ? 'dialog' : undefined}
         aria-expanded={enabled ? controlsOpen : undefined}
         aria-controls={enabled ? SCRIPTURE_MODAL_LISTEN_DIALOG_ID : undefined}
