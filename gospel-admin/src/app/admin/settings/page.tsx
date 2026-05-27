@@ -8,6 +8,7 @@ import { logger } from "@/lib/logger";
 import type { ResourceOrderItem } from "@/lib/types";
 import {
   parseResourceOrder,
+  isResourceOrderItemBibleReader,
   isResourceOrderItemMorningEveningLibrary,
   isResourceOrderItemSpurgeonLibrary,
   isResourceOrderItemCalvinLibrary,
@@ -24,6 +25,7 @@ import {
   categoryChildrenAsTopLevelItems,
   emptyCategory,
   isResourceOrderLibraryItem,
+  orderContainsBibleReader,
   orderContainsCalvinLibrary,
   orderContainsHenryLibrary,
   orderContainsEdwardsLibrary,
@@ -272,11 +274,25 @@ export default function AdminSettingsPage() {
     }
   };
 
+  const hasBibleReaderRow = orderContainsBibleReader(orderItems);
   const hasSpurgeonLibraryRow = orderContainsSpurgeonLibrary(orderItems);
   const hasMorningEveningLibraryRow = orderContainsMorningEveningLibrary(orderItems);
   const hasCalvinLibraryRow = orderContainsCalvinLibrary(orderItems);
   const hasHenryLibraryRow = orderContainsHenryLibrary(orderItems);
   const hasEdwardsLibraryRow = orderContainsEdwardsLibrary(orderItems);
+
+  const addBibleReaderRow = () => {
+    if (hasBibleReaderRow) return;
+    setOrderItems((prev) => [...prev, { type: "bibleReader", title: "Bible Reader" }]);
+  };
+
+  const updateBibleReaderTitle = (index: number, title: string) => {
+    setOrderItems((prev) =>
+      prev.map((item, i) =>
+        i === index && isResourceOrderItemBibleReader(item) ? { ...item, title } : item
+      )
+    );
+  };
 
   const addSpurgeonLibraryRow = () => {
     if (hasSpurgeonLibraryRow) return;
@@ -714,6 +730,19 @@ export default function AdminSettingsPage() {
                     </button>
                     <button
                       type="button"
+                      onClick={addBibleReaderRow}
+                      disabled={hasBibleReaderRow}
+                      title={
+                        hasBibleReaderRow
+                          ? "Bible Reader row is already in the list"
+                          : "Add a Resources row that opens the Bible passage picker"
+                      }
+                      className="px-3 py-1.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Add Bible Reader
+                    </button>
+                    <button
+                      type="button"
                       onClick={addSpurgeonLibraryRow}
                       disabled={hasSpurgeonLibraryRow}
                       title={
@@ -867,6 +896,40 @@ export default function AdminSettingsPage() {
                               onClick={() => removeTopLevelTemplate(index)}
                               className="text-slate-400 hover:text-red-600 text-xs px-1 ml-auto"
                               aria-label="Remove Spurgeon library row"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ) : isResourceOrderItemBibleReader(item) ? (
+                          <div
+                            key={`bible-reader-${index}`}
+                            draggable
+                            onDragStart={() => handleDragStartTopLevel(index)}
+                            onDragEnd={handleDragEnd}
+                            onDragOver={(e) => handleDragOverTopLevel(e, index)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDropTopLevel(e, index)}
+                            className={`flex flex-wrap items-center gap-2 px-4 py-3 text-sm text-slate-700 border-b border-slate-100 last:border-b-0 transition-colors cursor-grab active:cursor-grabbing ${dropTarget?.kind === "top-level" && dropTarget.index === index ? "bg-blue-100 ring-1 ring-blue-300" : "hover:bg-slate-50"}`}
+                          >
+                            <span className="shrink-0" aria-hidden>
+                              <GripIcon />
+                            </span>
+                            <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-indigo-700">
+                              Bible Reader
+                            </span>
+                            <input
+                              type="text"
+                              value={item.title}
+                              onChange={(e) => updateBibleReaderTitle(index, e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex-1 min-w-32 px-2 py-1 border border-slate-300 rounded text-slate-900 text-sm"
+                              aria-label="Label shown in Resources menu"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeTopLevelTemplate(index)}
+                              className="text-slate-400 hover:text-red-600 text-xs px-1 ml-auto"
+                              aria-label="Remove Bible Reader row"
                             >
                               Remove
                             </button>
@@ -1101,26 +1164,30 @@ export default function AdminSettingsPage() {
                                     </span>
                                     <span
                                       className={`shrink-0 text-xs font-semibold uppercase tracking-wide ${
-                                        child.type === "spurgeonLibrary"
-                                          ? "text-violet-700"
-                                          : child.type === "morningEveningLibrary"
-                                            ? "text-amber-700"
-                                            : child.type === "edwardsLibrary"
-                                              ? "text-sky-700"
-                                              : child.type === "henryLibrary"
-                                                ? "text-teal-700"
-                                                : "text-emerald-700"
+                                        child.type === "bibleReader"
+                                          ? "text-indigo-700"
+                                          : child.type === "spurgeonLibrary"
+                                            ? "text-violet-700"
+                                            : child.type === "morningEveningLibrary"
+                                              ? "text-amber-700"
+                                              : child.type === "edwardsLibrary"
+                                                ? "text-sky-700"
+                                                : child.type === "henryLibrary"
+                                                  ? "text-teal-700"
+                                                  : "text-emerald-700"
                                       }`}
                                     >
-                                      {child.type === "spurgeonLibrary"
-                                        ? "Spurgeon library"
-                                        : child.type === "morningEveningLibrary"
-                                          ? "Morning & Evening"
-                                          : child.type === "edwardsLibrary"
-                                            ? "Edwards library"
-                                            : child.type === "henryLibrary"
-                                              ? "Matthew Henry library"
-                                              : "Calvin library"}
+                                      {child.type === "bibleReader"
+                                        ? "Bible Reader"
+                                        : child.type === "spurgeonLibrary"
+                                          ? "Spurgeon library"
+                                          : child.type === "morningEveningLibrary"
+                                            ? "Morning & Evening"
+                                            : child.type === "edwardsLibrary"
+                                              ? "Edwards library"
+                                              : child.type === "henryLibrary"
+                                                ? "Matthew Henry library"
+                                                : "Calvin library"}
                                     </span>
                                     <input
                                       type="text"

@@ -271,6 +271,38 @@ describe('TableOfContents additional behaviors', () => {
     expect(plainLink.querySelector('svg[aria-hidden="true"]')).not.toBeInTheDocument()
   })
 
+  it('shows Bible Reader Resources row from order and calls onOpenBibleReader', async () => {
+    const fetchSpy = jest.fn((input: RequestInfo | URL) => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.href
+            : (input as Request).url
+      if (String(url).includes('/api/profiles/public-templates')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            items: [{ type: 'bibleReader', title: 'Bible Reader' }],
+          }),
+        }) as any
+      }
+      return Promise.resolve({ ok: false }) as any
+    })
+    global.fetch = fetchSpy as typeof fetch
+
+    const onOpenBibleReader = jest.fn()
+    const TableOfContents = require('../TableOfContents').default
+    renderToc(<TableOfContents sections={[]} onOpenBibleReader={onOpenBibleReader} />)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /Resources/i }))
+
+    const bibleReader = await screen.findByRole('button', { name: /Bible Reader/i })
+    fireEvent.click(bibleReader)
+    expect(onOpenBibleReader).toHaveBeenCalledTimes(1)
+  })
+
   it('Bible translation list opens and setTranslation is called when an option is chosen', () => {
     const TableOfContents = require('../TableOfContents').default
     const { useTranslation } = require('@/contexts/TranslationContext')

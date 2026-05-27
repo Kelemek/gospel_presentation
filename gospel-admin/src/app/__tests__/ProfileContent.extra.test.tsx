@@ -121,7 +121,9 @@ describe('ProfileContent extra interactions', () => {
       <ProfileContent sections={sections as any} profileInfo={profileInfo as any} profile={profile as any} />
     )
 
-    expect(await screen.findByRole('heading', { name: /john 3:16/i })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('button', { name: /john 3:16\. choose another passage/i })
+    ).toBeInTheDocument()
   })
 
   test('applies ?translation= after enabled translations finish loading', async () => {
@@ -154,7 +156,9 @@ describe('ProfileContent extra interactions', () => {
 
     const { rerender } = renderWithTextSize(<ProfileContent {...props} />)
 
-    expect(screen.queryByRole('heading', { name: /john 3:16/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /john 3:16\. choose another passage/i })
+    ).not.toBeInTheDocument()
     expect(mockSetTranslation).not.toHaveBeenCalled()
 
     mockTranslationsLoading = false
@@ -166,7 +170,9 @@ describe('ProfileContent extra interactions', () => {
     )
 
     await waitFor(() => expect(mockSetTranslation).toHaveBeenCalledWith('kjv'))
-    expect(await screen.findByRole('heading', { name: /john 3:16/i })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('button', { name: /john 3:16\. choose another passage/i })
+    ).toBeInTheDocument()
   })
 
   test('opening a scripture loads the modal', async () => {
@@ -197,7 +203,9 @@ describe('ProfileContent extra interactions', () => {
     await user.click(btn)
 
     await waitFor(() =>
-      expect(screen.getByRole('heading', { name: /john 3:16/i })).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: /john 3:16\. choose another passage/i })
+      ).toBeInTheDocument()
     )
     const loc = screen.getByTestId('scripture-modal-presentation-location')
     expect(loc).toHaveTextContent('Intro')
@@ -237,7 +245,9 @@ describe('ProfileContent extra interactions', () => {
     await user.click(await screen.findByRole('button', { name: /^Romans 1:1$/i }))
 
     await waitFor(() =>
-      expect(screen.getByRole('heading', { name: /romans 1:1/i })).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: /romans 1:1\. choose another passage/i })
+      ).toBeInTheDocument()
     )
     const loc = screen.getByTestId('scripture-modal-presentation-location')
     expect(loc).toHaveTextContent('Intro')
@@ -273,7 +283,9 @@ describe('ProfileContent extra interactions', () => {
     await user.click(await screen.findByRole('button', { name: /^John 3:16$/i }))
 
     await waitFor(() =>
-      expect(screen.getByRole('heading', { name: /john 3:16/i })).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: /john 3:16\. choose another passage/i })
+      ).toBeInTheDocument()
     )
     const loc = screen.getByTestId('scripture-modal-presentation-location')
     expect(loc).toHaveTextContent('Main Sermon')

@@ -22,6 +22,7 @@ import SpurgeonSermonsModal, {
 } from '@/components/SpurgeonSermonsModal'
 import MorneveDevotionsModal from '@/components/MorneveDevotionsModal'
 import McheyneReadingPlanModal from '@/components/McheyneReadingPlanModal'
+import BiblePassagePickerModal from '@/components/BiblePassagePickerModal'
 import SidebarAuthNav from '@/components/SidebarAuthNav'
 import MenuLocalDataBackup from '@/components/MenuLocalDataBackup'
 import ThemeToggle from '@/components/ThemeToggle'
@@ -65,7 +66,6 @@ import {
   removePresentationReadCompleteSlug,
 } from '@/lib/presentationReadCompleteStorage'
 import { scrollToTocAnchor, scrollToTocAnchorWhenReady } from '@/lib/scrollToTocAnchor'
-import { scrollToVersePinWhenReady } from '@/lib/scrollToVersePinWhenReady'
 import { mcheyneDayChapterReferencesForAnchor } from '@/lib/mcheyne/mcheyneReadingDay'
 import { isMcheyneProfileSlug } from '@/lib/mcheyne/mcheyneSlug'
 import {
@@ -79,6 +79,11 @@ import {
   setPendingMcheyneResumePin,
 } from '@/lib/mcheyne/mcheynePendingNavigation'
 import { findFirstScriptureCardAnchors } from '@/lib/findFirstScriptureCardAnchors'
+import {
+  adjacentPickerPassage,
+  pickerPassageHasNext,
+  pickerPassageHasPrevious,
+} from '@/lib/biblePassagePickerNavigation'
 import { isChapterOnlyScriptureReference } from '@/lib/parse-scripture-reference'
 import { findFirstStudyPassageAnchor } from '@/lib/findFirstStudyPassageAnchor'
 import { presentationLocationFromProfileAnchors } from '@/lib/presentationLocationFromAnchors'
@@ -144,12 +149,20 @@ function textOffsetWithinScope(scopeEl: HTMLElement, node: Node, nodeOffset: num
   return visibleTextLengthBeforeBoundary(scopeEl, node, nodeOffset)
 }
 
+/** Scripture modal open state (user selection, deep link, or picker navigation). */
+type ScriptureModalState = {
+  reference: string
+  isOpen: boolean
+  initialChapterView?: boolean
+  /** Prev/next move by verse/chapter in-book (Bible Reader or header passage picker). */
+  pickerNavigation?: boolean
+}
+
 function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
-  const [selectedScripture, setSelectedScripture] = useState<{
-    reference: string
-    isOpen: boolean
-    initialChapterView?: boolean
-  }>({ reference: '', isOpen: false })
+  const [selectedScripture, setSelectedScripture] = useState<ScriptureModalState>({
+    reference: '',
+    isOpen: false,
+  })
   /** When set, matches `scriptureRef` query param the user dismissed (deep link modal closed). */
   const [dismissedScriptureRefParam, setDismissedScriptureRefParam] = useState<string | null>(
     null
@@ -166,6 +179,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const [isSpurgeonLibraryOpen, setIsSpurgeonLibraryOpen] = useState(false)
   const [isMorneveLibraryOpen, setIsMorneveLibraryOpen] = useState(false)
   const [isMcheynePlanModalOpen, setIsMcheynePlanModalOpen] = useState(false)
+  const [bibleReaderOpen, setBibleReaderOpen] = useState(false)
   /** When opening study library from the scripture modal “Study”, pre-fill By scripture with this reference. */
   const [spurgeonStudyReference, setSpurgeonStudyReference] = useState<string | null>(null)
   const [studyModalTitle, setStudyModalTitle] = useState(STUDY_MODAL_DEFAULT_TITLE)
@@ -689,7 +703,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       reference: string,
       anchorSectionId?: string,
       anchorSubsectionId?: string,
-      options?: { initialChapterView?: boolean }
+      options?: { initialChapterView?: boolean; pickerNavigation?: boolean }
     ) => {
       let sectionId = anchorSectionId?.trim() ?? ''
       let subsectionId = anchorSubsectionId?.trim() ?? ''
@@ -739,6 +753,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
         ...(options?.initialChapterView || isChapterOnlyScriptureReference(reference)
           ? { initialChapterView: true }
           : {}),
+        ...(options?.pickerNavigation ? { pickerNavigation: true as const } : {}),
       })
     },
     [sections, allScriptureRefs, favoriteReferences]
@@ -749,15 +764,15 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     return translationParam
   }, [translationParam])
 
-  const scriptureFromDeepLink = useMemo(() => {
+  const scriptureFromDeepLink = useMemo((): ScriptureModalState | null => {
     if (!isHydrated || sectionCount === 0 || !profileSlug || !scriptureRefParam) return null
     if (dismissedScriptureRefParam === scriptureRefParam) return null
     if (deepLinkTranslation && translationsLoading) return null
     return {
       reference: scriptureRefParam,
-      isOpen: true as const,
+      isOpen: true,
       ...(scriptureViewParam === 'chapter' || isChapterOnlyScriptureReference(scriptureRefParam)
-        ? { initialChapterView: true as const }
+        ? { initialChapterView: true }
         : {}),
     }
   }, [
@@ -844,8 +859,30 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const navListLength =
     favoriteReferences.length > 0 ? favoriteReferences.length : allScriptureRefs.length
   
+  const navigatePickerPassage = useCallback((direction: 'prev' | 'next') => {
+    const ref = activeScripture.reference.trim()
+    if (!ref) return
+    const adjacent = adjacentPickerPassage(ref, direction)
+    if (!adjacent) return
+    setModalOpenAnchors({
+      reference: adjacent.reference,
+      sectionId: 'modal-view',
+      subsectionId: 'modal-view',
+    })
+    setSelectedScripture({
+      reference: adjacent.reference,
+      isOpen: true,
+      pickerNavigation: true,
+      ...(adjacent.initialChapterView ? { initialChapterView: true as const } : {}),
+    })
+  }, [activeScripture.reference])
+
   // Navigation functions for favorite references or all references if no favorites
   const navigateToPrevious = useCallback(() => {
+    if (activeScripture.pickerNavigation) {
+      navigatePickerPassage('prev')
+      return
+    }
     if (navListLength === 0) return
 
     if (favoriteReferences.length > 0) {
@@ -878,14 +915,20 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       isOpen: true,
     })
   }, [
+    activeScripture.pickerNavigation,
     favoriteReferences,
     navListLength,
     navReferenceIndex,
     allScriptureRefs,
     syncModalAnchorsForNav,
+    navigatePickerPassage,
   ])
 
   const navigateToNext = useCallback(() => {
+    if (activeScripture.pickerNavigation) {
+      navigatePickerPassage('next')
+      return
+    }
     if (navListLength === 0) return
 
     if (favoriteReferences.length > 0) {
@@ -918,16 +961,22 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       isOpen: true,
     })
   }, [
+    activeScripture.pickerNavigation,
     favoriteReferences,
     navListLength,
     navReferenceIndex,
     allScriptureRefs,
     syncModalAnchorsForNav,
+    navigatePickerPassage,
   ])
 
-  // Navigation state: enabled if more than one reference available
-  const hasPrevious = navListLength > 1
-  const hasNext = navListLength > 1
+  const pickerNavRef = activeScripture.isOpen ? activeScripture.reference.trim() : ''
+  const hasPrevious = activeScripture.pickerNavigation
+    ? pickerPassageHasPrevious(pickerNavRef)
+    : navListLength > 1
+  const hasNext = activeScripture.pickerNavigation
+    ? pickerPassageHasNext(pickerNavRef)
+    : navListLength > 1
 
   useEffect(() => {
     if (!activeScripture.isOpen) return
@@ -1077,7 +1126,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       }
     },
     [
-      profileInfo?.slug,
+      profileInfo,
       effectiveModalOpenAnchors,
       sections,
       modalPinDraftColor,
@@ -1097,16 +1146,23 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     setSelectedScripture({ reference: '', isOpen: false })
   }
 
-  const scripturePinCommitOnUnmountRef = useRef({
+  const scripturePinCommitOnUnmountRef = useRef<{
+    isOpen: boolean
+    reference: string
+    commit: (ref: string) => void
+  }>({
     isOpen: false,
     reference: '',
-    commit: (_ref: string) => {},
+    commit: () => {},
   })
-  scripturePinCommitOnUnmountRef.current = {
-    isOpen: activeScripture.isOpen,
-    reference: activeScripture.reference,
-    commit: commitVersePinForClosedScripture,
-  }
+
+  useEffect(() => {
+    scripturePinCommitOnUnmountRef.current = {
+      isOpen: activeScripture.isOpen,
+      reference: activeScripture.reference,
+      commit: commitVersePinForClosedScripture,
+    }
+  }, [activeScripture.isOpen, activeScripture.reference, commitVersePinForClosedScripture])
 
   useEffect(() => {
     return () => {
@@ -1413,6 +1469,10 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                   setStudyLibraryFocus('edwards')
                   setIsSpurgeonLibraryOpen(true)
                 }}
+                onOpenBibleReader={() => {
+                  setBibleReaderOpen(true)
+                  closeMenu()
+                }}
               />
               
               {/* Profile Info in Sidebar */}
@@ -1518,13 +1578,24 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
         mcheyneDayChapterReferences={mcheyneDayListenReferences}
         initialChapterView={activeScripture.initialChapterView ?? false}
         onClose={closeModal}
-        onNavigateReference={(ref) => {
+        onNavigateReference={(ref, meta) => {
+          const chapterView =
+            meta?.initialChapterView === true ||
+            (meta?.initialChapterView !== false && isChapterOnlyScriptureReference(ref))
+          if (meta?.fromPassagePicker) {
+            setModalOpenAnchors({
+              reference: ref,
+              sectionId: 'modal-view',
+              subsectionId: 'modal-view',
+            })
+          }
           setSelectedScripture((prev) => ({
             ...prev,
             reference: ref,
-            ...(isChapterOnlyScriptureReference(ref)
-              ? { initialChapterView: true as const }
-              : { initialChapterView: undefined }),
+            ...(chapterView ? { initialChapterView: true as const } : { initialChapterView: undefined }),
+            ...(meta?.fromPassagePicker || prev.pickerNavigation
+              ? { pickerNavigation: true as const }
+              : { pickerNavigation: undefined }),
           }))
         }}
         onPrevious={hasPrevious ? navigateToPrevious : undefined}
@@ -1585,6 +1656,26 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
         }}
         onClose={() => setIsMcheynePlanModalOpen(false)}
       />
+
+      {typeof document !== 'undefined' &&
+        bibleReaderOpen &&
+        createPortal(
+          <BiblePassagePickerModal
+            isOpen={bibleReaderOpen}
+            onClose={() => setBibleReaderOpen(false)}
+            confirmLabel="Read"
+            requireVerse={false}
+            variant="reader"
+            onConfirm={(ref, meta) => {
+              handleScriptureClick(ref, undefined, undefined, {
+                initialChapterView: meta.initialChapterView,
+                pickerNavigation: true,
+              })
+              setBibleReaderOpen(false)
+            }}
+          />,
+          document.body
+        )}
 
       {typeof document !== 'undefined' &&
         memorizationPracticeVerse &&

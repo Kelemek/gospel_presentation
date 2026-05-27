@@ -895,6 +895,7 @@ function resourcesListOverviewCopy(items: PublicResourceItem[]): string {
   const hasFolderLike = items.some(
     (i) =>
       i.type === 'category' ||
+      i.type === 'bibleReader' ||
       i.type === 'spurgeonLibrary' ||
       i.type === 'morningEveningLibrary' ||
       i.type === 'calvinLibrary' ||
@@ -3315,6 +3316,24 @@ async function runResourcesFeatureTourAsync(options?: ProfileFeatureTourOptions)
         popover: {
           title: resourceTemplatesBlockTitle(g.items.length),
           description: resourceTemplatesBlockDescription(g.items),
+          side: 'right',
+          align: 'start',
+        },
+      })
+      continue
+    }
+
+    if (g.kind === 'bibleReaderLibrary') {
+      const safeTitle = escapeForPopoverText(g.title.trim() || 'Bible Reader')
+      steps.push({
+        element: () =>
+          document.querySelector(
+            `${RESOURCES_LIST_PANEL} [data-resource-bible-reader]`
+          ) ?? document.querySelector(RESOURCES_LIST_PANEL)!,
+        popover: {
+          title: safeTitle,
+          description:
+            '<p>This row opens the <strong>Bible Reader</strong>: pick a book, chapter, and optional verses, then read in the scripture modal on the current profile.</p><p class="mt-2">Tap it when you want to read any passage without leaving this presentation.</p>',
           side: 'right',
           align: 'start',
         },

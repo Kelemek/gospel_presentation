@@ -10,6 +10,8 @@ import {
   useSyncExternalStore,
   type TouchEvent,
 } from 'react'
+import { createPortal } from 'react-dom'
+import BiblePassagePickerModal from '@/components/BiblePassagePickerModal'
 import { useTranslation, type BibleTranslation } from '@/contexts/TranslationContext'
 import { useTextSize } from '@/contexts/TextSizeContext'
 import { useAlertModal } from '@/contexts/AlertModalContext'
@@ -65,8 +67,11 @@ interface ScriptureModalProps {
   }
   /** Opens unified study library modal with “by scripture” search for this reference (profile pages). */
   onOpenSpurgeonStudy?: (reference: string) => void
-  /** Navigate the reader to another verse (e.g. concordance link in word study). */
-  onNavigateReference?: (reference: string) => void
+  /** Navigate the reader to another verse (e.g. concordance link in word study, passage picker). */
+  onNavigateReference?: (
+    reference: string,
+    meta?: { initialChapterView?: boolean; fromPassagePicker?: boolean }
+  ) => void
   /** When true (e.g. `?scriptureView=chapter` deep link), load full chapter after open. Chapter-only refs (e.g. `Genesis 1`) also open in chapter view automatically. */
   initialChapterView?: boolean
   /** Profile slug for share deep links (current resource). Omit to share passage text only. */
@@ -111,6 +116,7 @@ export default function ScriptureModal({
   const [wordStudyEnabled, setWordStudyEnabled] = useState(false)
   const [memorizeInFlight, setMemorizeInFlight] = useState(false)
   const [shareInFlight, setShareInFlight] = useState(false)
+  const [passagePickerOpen, setPassagePickerOpen] = useState(false)
 
   const [scriptureResolved, setScriptureResolved] = useState<{
     key: string
@@ -854,6 +860,7 @@ export default function ScriptureModal({
   }
 
   return (
+    <>
     <div
       className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 z-50 flex items-start lg:items-center justify-center p-0 lg:p-4"
       style={{
@@ -901,21 +908,42 @@ export default function ScriptureModal({
               >
                 ◀
               </button>
-              <h3
-                id={scriptureModalTitleId}
-                className="text-base md:text-lg font-semibold text-slate-800 dark:text-slate-100 leading-tight px-1 min-w-0 max-w-[50vw] flex items-baseline gap-1 min-h-0"
-                title={reference}
-                aria-label={reference}
-              >
-                {!headerSuffix ? (
-                  <span className="min-w-0 truncate">{headerBook}</span>
-                ) : (
-                  <>
+              {onNavigateReference ? (
+                <button
+                  type="button"
+                  id={scriptureModalTitleId}
+                  data-tour="scripture-modal-reference-picker"
+                  onClick={() => setPassagePickerOpen(true)}
+                  className="text-base md:text-lg font-semibold text-slate-800 dark:text-slate-100 leading-tight px-1 min-w-0 max-w-[50vw] flex items-baseline gap-1 min-h-0 cursor-pointer rounded-md hover:bg-slate-200/80 dark:hover:bg-slate-600/80 active:bg-slate-300/80 dark:active:bg-slate-500/80 transition-colors text-left"
+                  title={`${reference} — choose another passage`}
+                  aria-label={`${reference}. Choose another passage`}
+                >
+                  {!headerSuffix ? (
                     <span className="min-w-0 truncate">{headerBook}</span>
-                    <span className="shrink-0 whitespace-nowrap">{headerSuffix}</span>
-                  </>
-                )}
-              </h3>
+                  ) : (
+                    <>
+                      <span className="min-w-0 truncate">{headerBook}</span>
+                      <span className="shrink-0 whitespace-nowrap">{headerSuffix}</span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                <h3
+                  id={scriptureModalTitleId}
+                  className="text-base md:text-lg font-semibold text-slate-800 dark:text-slate-100 leading-tight px-1 min-w-0 max-w-[50vw] flex items-baseline gap-1 min-h-0"
+                  title={reference}
+                  aria-label={reference}
+                >
+                  {!headerSuffix ? (
+                    <span className="min-w-0 truncate">{headerBook}</span>
+                  ) : (
+                    <>
+                      <span className="min-w-0 truncate">{headerBook}</span>
+                      <span className="shrink-0 whitespace-nowrap">{headerSuffix}</span>
+                    </>
+                  )}
+                </h3>
+              )}
               <button
                 type="button"
                 data-tour="scripture-modal-next"
@@ -1420,5 +1448,28 @@ export default function ScriptureModal({
       </div>
 
     </div>
+
+      {typeof document !== 'undefined' &&
+        passagePickerOpen &&
+        onNavigateReference &&
+        createPortal(
+          <BiblePassagePickerModal
+            isOpen={passagePickerOpen}
+            onClose={() => setPassagePickerOpen(false)}
+            confirmLabel="Read"
+            requireVerse={false}
+            variant="reader"
+            seedReference={reference}
+            onConfirm={(ref, meta) => {
+              setChapterView(null)
+              setChapterContextError(null)
+              initialChapterViewFetchedRef.current = false
+              onNavigateReference(ref, { ...meta, fromPassagePicker: true })
+              setPassagePickerOpen(false)
+            }}
+          />,
+          document.body
+        )}
+    </>
   )
 }

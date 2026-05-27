@@ -151,6 +151,7 @@ export interface ResourceOrderItemEdwardsLibrary {
 
 export type ResourceOrderCategoryChild =
   | ResourceOrderItemTemplate
+  | ResourceOrderItemBibleReader
   | ResourceOrderItemSpurgeonLibrary
   | ResourceOrderItemMorningEveningLibrary
   | ResourceOrderItemCalvinLibrary
@@ -163,6 +164,12 @@ export interface ResourceOrderItemCategory {
   name: string
   /** Ordered mix of templates and library rows inside this category. */
   children: ResourceOrderCategoryChild[]
+}
+
+/** Opens the Bible passage picker / scripture reader (not a profile slug). */
+export interface ResourceOrderItemBibleReader {
+  type: 'bibleReader'
+  title: string
 }
 
 /** Opens the in-app Spurgeon library modal (not a profile slug). */
@@ -192,6 +199,7 @@ export interface ResourceOrderItemHenryLibrary {
 export type ResourceOrderItem =
   | ResourceOrderItemTemplate
   | ResourceOrderItemCategory
+  | ResourceOrderItemBibleReader
   | ResourceOrderItemSpurgeonLibrary
   | ResourceOrderItemMorningEveningLibrary
   | ResourceOrderItemCalvinLibrary
@@ -208,6 +216,12 @@ export function isResourceOrderItemTemplate(
   item: ResourceOrderItem
 ): item is ResourceOrderItemTemplate {
   return item.type === 'template'
+}
+
+export function isResourceOrderItemBibleReader(
+  item: ResourceOrderItem
+): item is ResourceOrderItemBibleReader {
+  return item.type === 'bibleReader'
 }
 
 export function isResourceOrderItemSpurgeonLibrary(

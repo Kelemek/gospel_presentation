@@ -125,6 +125,7 @@ export async function getProfiles(): Promise<GospelProfile[]> {
 
 export type PublicResourceCategoryChild =
   | { type: 'template'; slug: string; title: string }
+  | { type: 'bibleReader'; title: string }
   | { type: 'spurgeonLibrary'; title: string }
   | { type: 'morningEveningLibrary'; title: string }
   | { type: 'calvinLibrary'; title: string }
@@ -134,6 +135,7 @@ export type PublicResourceCategoryChild =
 export type PublicResourceItem =
   | { type: 'template'; slug: string; title: string }
   | { type: 'category'; id: string; name: string; children: PublicResourceCategoryChild[] }
+  | { type: 'bibleReader'; title: string }
   | { type: 'spurgeonLibrary'; title: string }
   | { type: 'morningEveningLibrary'; title: string }
   | { type: 'calvinLibrary'; title: string }
@@ -217,6 +219,11 @@ export async function getPublicResourcesStructure(): Promise<PublicResourceItem[
           items.push({ type: 'template', slug: p.slug, title: p.title })
           usedSlugs.add(p.slug)
         }
+      } else if (item.type === 'bibleReader') {
+        items.push({
+          type: 'bibleReader',
+          title: item.title?.trim() || 'Bible Reader',
+        })
       } else if (item.type === 'spurgeonLibrary') {
         items.push({
           type: 'spurgeonLibrary',
@@ -251,6 +258,11 @@ export async function getPublicResourcesStructure(): Promise<PublicResourceItem[
               children.push({ type: 'template', slug: p.slug, title: p.title })
               usedSlugs.add(p.slug)
             }
+          } else if (child.type === 'bibleReader') {
+            children.push({
+              type: 'bibleReader',
+              title: child.title?.trim() || 'Bible Reader',
+            })
           } else if (child.type === 'spurgeonLibrary') {
             children.push({
               type: 'spurgeonLibrary',

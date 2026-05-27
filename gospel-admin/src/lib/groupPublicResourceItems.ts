@@ -4,6 +4,7 @@ import { morneveLibraryMenuTitle } from '@/lib/spurgeon/morneveSlug'
 export type ResourceRenderGroup =
   | { kind: 'templates'; items: Extract<PublicResourceItem, { type: 'template' }>[] }
   | { kind: 'category'; item: Extract<PublicResourceItem, { type: 'category' }> }
+  | { kind: 'bibleReaderLibrary'; title: string }
   | { kind: 'spurgeonLibrary'; title: string }
   | { kind: 'morningEveningLibrary'; title: string }
   | { kind: 'calvinLibrary'; title: string }
@@ -35,6 +36,8 @@ export function groupPublicResourceItems(items: PublicResourceItem[]): ResourceR
       run = []
       if (item.type === 'category') {
         groups.push({ kind: 'category', item })
+      } else if (item.type === 'bibleReader') {
+        groups.push({ kind: 'bibleReaderLibrary', title: item.title.trim() || 'Bible Reader' })
       } else if (item.type === 'morningEveningLibrary') {
         groups.push({ kind: 'morningEveningLibrary', title: morneveLibraryMenuTitle(item.title) })
       } else if (item.type === 'calvinLibrary') {
@@ -43,7 +46,7 @@ export function groupPublicResourceItems(items: PublicResourceItem[]): ResourceR
         groups.push({ kind: 'henryLibrary', title: item.title })
       } else if (item.type === 'edwardsLibrary') {
         groups.push({ kind: 'edwardsLibrary', title: item.title })
-      } else {
+      } else if (item.type === 'spurgeonLibrary') {
         groups.push({ kind: 'spurgeonLibrary', title: item.title })
       }
     }

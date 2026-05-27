@@ -57,6 +57,22 @@ describe('ScriptureModal Component', () => {
     })
   })
 
+  it('opens passage picker when header reference is clicked and onNavigateReference is set', async () => {
+    const user = userEvent.setup()
+    renderWithTextSize(
+      <ScriptureModal {...defaultProps} onNavigateReference={jest.fn()} />
+    )
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: /John 3:16\. Choose another passage/i })
+      ).toBeInTheDocument()
+    )
+    await user.click(
+      screen.getByRole('button', { name: /John 3:16\. Choose another passage/i })
+    )
+    expect(screen.getByRole('heading', { name: 'Pick Chapter' })).toBeInTheDocument()
+  })
+
   it('shows presentation location strip when presentationLocation is set', async () => {
     renderWithTextSize(
       <ScriptureModal

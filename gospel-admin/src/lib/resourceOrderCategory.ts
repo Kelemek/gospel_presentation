@@ -1,6 +1,7 @@
 import type {
   ResourceOrderCategoryChild,
   ResourceOrderItem,
+  ResourceOrderItemBibleReader,
   ResourceOrderItemCalvinLibrary,
   ResourceOrderItemHenryLibrary,
   ResourceOrderItemCategory,
@@ -10,6 +11,7 @@ import type {
   ResourceOrderItemTemplate,
 } from '@/lib/types'
 import {
+  isResourceOrderItemBibleReader,
   isResourceOrderItemCalvinLibrary,
   isResourceOrderItemHenryLibrary,
   isResourceOrderItemEdwardsLibrary,
@@ -26,6 +28,7 @@ function normalizeOrderTemplateSlug(slug: string): string {
 
 export type {
   ResourceOrderCategoryChild,
+  ResourceOrderItemBibleReader,
   ResourceOrderItemCalvinLibrary,
   ResourceOrderItemEdwardsLibrary,
   ResourceOrderItemMorningEveningLibrary,
@@ -36,12 +39,14 @@ export type {
 export function isResourceOrderLibraryItem(
   item: ResourceOrderItem | ResourceOrderCategoryChild
 ): item is
+  | ResourceOrderItemBibleReader
   | ResourceOrderItemSpurgeonLibrary
   | ResourceOrderItemMorningEveningLibrary
   | ResourceOrderItemCalvinLibrary
   | ResourceOrderItemHenryLibrary
   | ResourceOrderItemEdwardsLibrary {
   return (
+    isResourceOrderItemBibleReader(item) ||
     isResourceOrderItemSpurgeonLibrary(item) ||
     isResourceOrderItemMorningEveningLibrary(item) ||
     isResourceOrderItemCalvinLibrary(item) ||
@@ -55,6 +60,12 @@ export function parseCategoryChild(el: unknown): ResourceOrderCategoryChild | nu
   const o = el as Record<string, unknown>
   if (o.type === 'template' && typeof o.slug === 'string') {
     return { type: 'template', slug: normalizeOrderTemplateSlug(o.slug) }
+  }
+  if (o.type === 'bibleReader') {
+    const rawTitle = o.title
+    const title =
+      typeof rawTitle === 'string' && rawTitle.trim() ? rawTitle.trim() : 'Bible Reader'
+    return { type: 'bibleReader', title }
   }
   if (o.type === 'spurgeonLibrary') {
     const rawTitle = o.title
@@ -117,6 +128,16 @@ export function parseCategoryChildrenFromRaw(el: Record<string, unknown>): Resou
 
 export function emptyCategory(id: string, name: string): ResourceOrderItemCategory {
   return { type: 'category', id, name, children: [] }
+}
+
+export function orderContainsBibleReader(items: ResourceOrderItem[]): boolean {
+  return items.some((item) => {
+    if (isResourceOrderItemBibleReader(item)) return true
+    if (item.type === 'category') {
+      return item.children.some((c) => c.type === 'bibleReader')
+    }
+    return false
+  })
 }
 
 export function orderContainsSpurgeonLibrary(items: ResourceOrderItem[]): boolean {
@@ -375,6 +396,11 @@ export function parseResourceOrder(raw: unknown): ResourceOrderItem[] {
           name: o.name,
           children: parseCategoryChildrenFromRaw(o),
         })
+      } else if (o.type === 'bibleReader') {
+        const rawTitle = o.title
+        const title =
+          typeof rawTitle === 'string' && rawTitle.trim() ? rawTitle.trim() : 'Bible Reader'
+        out.push({ type: 'bibleReader', title })
       } else if (o.type === 'spurgeonLibrary') {
         const rawTitle = o.title
         const title =

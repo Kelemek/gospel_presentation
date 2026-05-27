@@ -27,6 +27,12 @@ describe('parseResourceOrder', () => {
     ])
   })
 
+  it('defaults bibleReader title when missing', () => {
+    expect(parseResourceOrder([{ type: 'bibleReader' }])).toEqual([
+      { type: 'bibleReader', title: 'Bible Reader' },
+    ])
+  })
+
   it('defaults spurgeonLibrary title when missing', () => {
     expect(parseResourceOrder([{ type: 'spurgeonLibrary' }])).toEqual([
       { type: 'spurgeonLibrary', title: 'Spurgeon sermons' },

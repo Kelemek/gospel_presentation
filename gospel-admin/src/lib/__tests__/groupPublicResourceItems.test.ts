@@ -60,4 +60,11 @@ describe('groupPublicResourceItems', () => {
       { kind: 'edwardsLibrary', title: 'Jonathan Edwards sermons' },
     ])
   })
+
+  it('emits bibleReaderLibrary row', () => {
+    const items: PublicResourceItem[] = [{ type: 'bibleReader', title: 'Read the Bible' }]
+    expect(groupPublicResourceItems(items)).toEqual([
+      { kind: 'bibleReaderLibrary', title: 'Read the Bible' },
+    ])
+  })
 })

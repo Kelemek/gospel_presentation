@@ -83,7 +83,9 @@ describe('ProfileContent navigation & pins', () => {
     await user.click(john)
 
     await waitFor(() =>
-      expect(screen.getByRole('heading', { name: /john 3:16/i })).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: /john 3:16\. choose another passage/i })
+      ).toBeInTheDocument()
     )
   })
 
