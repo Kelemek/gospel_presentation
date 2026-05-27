@@ -11,6 +11,16 @@ const API_BIBLE_ID_ENV: Record<ApiBibleTranslation, string> = {
   csb: 'API_BIBLE_BIBLE_ID_CSB',
 }
 
+/** Optional override when auto-discovery picks the wrong linked audio Bible (e.g. LSB text vs another edition). */
+const API_BIBLE_AUDIO_ID_ENV: Record<ApiBibleTranslation, string> = {
+  kjv: 'API_BIBLE_AUDIO_BIBLE_ID_KJV',
+  nasb: 'API_BIBLE_AUDIO_BIBLE_ID_NASB',
+  lsb: 'API_BIBLE_AUDIO_BIBLE_ID_LSB',
+  niv: 'API_BIBLE_AUDIO_BIBLE_ID_NIV',
+  nlt: 'API_BIBLE_AUDIO_BIBLE_ID_NLT',
+  csb: 'API_BIBLE_AUDIO_BIBLE_ID_CSB',
+}
+
 type BibleMetaResponse = {
   data?: {
     id?: string
@@ -102,11 +112,11 @@ function listAudioBibleIdsFromListJson(
   return uniqueIds(loose)
 }
 
-async function fetchListAudioBibleIds(
+async function fetchListAudioBibleRows(
   base: string,
   apiKey: string,
   textBibleId: string
-): Promise<string[]> {
+): Promise<AudioBibleListRow[]> {
   /** List Audio Bibles accepts `bibleId` (+ filters); `limit`/`offset` are not in the public schema and return 400 on rest.api.bible. */
   const listUrl = `${base}/v1/audio-bibles?${new URLSearchParams({ bibleId: textBibleId })}`
   const listRes = await fetch(listUrl, { headers: { 'api-key': apiKey } })
@@ -114,7 +124,59 @@ async function fetchListAudioBibleIds(
     return []
   }
   const listJson = (await listRes.json()) as AudioBibleListResponse
-  return listAudioBibleIdsFromListJson(listJson, textBibleId)
+  const rows = listJson?.data
+  return Array.isArray(rows) ? rows : []
+}
+
+/** Same DBL edition as the configured text Bible (`GET /v1/bibles/{textBibleId}`). */
+function filterAudioBiblesByDblId(
+  rows: AudioBibleListRow[],
+  textMeta: BibleMetaResponse['data'] | undefined,
+  textBibleId: string
+): string[] {
+  const dblId = textMeta?.dblId?.trim()
+  if (!dblId) return []
+  return uniqueIds(
+    rows
+      .filter(
+        (r) =>
+          r?.id &&
+          r.id !== textBibleId &&
+          r.type !== 'text' &&
+          Boolean(r.dblId?.trim()) &&
+          r.dblId === dblId
+      )
+      .map((r) => r.id!)
+  )
+}
+
+/**
+ * Audio ids from `GET /v1/audio-bibles?bibleId={textBibleId}` that match that text edition
+ * (DBL id, then abbreviation/name). Never falls back to unrelated linked rows.
+ */
+async function audioBibleIdsLinkedToTextBible(
+  base: string,
+  apiKey: string,
+  rows: AudioBibleListRow[],
+  textBibleId: string,
+  textMeta: BibleMetaResponse['data'] | undefined
+): Promise<string[]> {
+  if (rows.length === 0 || !textMeta) {
+    return []
+  }
+
+  let ids = filterAudioBiblesByDblId(rows, textMeta, textBibleId)
+  if (ids.length === 0) {
+    ids = applyWideFilters(rows, textMeta, textBibleId)
+  }
+  if (ids.length === 0) {
+    const enriched = await enrichAudioBibleListRows(base, apiKey, rows)
+    ids = filterAudioBiblesByDblId(enriched, textMeta, textBibleId)
+    if (ids.length === 0) {
+      ids = applyWideFilters(enriched, textMeta, textBibleId)
+    }
+  }
+  return ids
 }
 
 /**
@@ -490,8 +552,9 @@ async function tryAudioBibleIds(
 /**
  * Resolves a time-limited MP3 URL for the chapter containing the passage.
  * Env `API_BIBLE_BIBLE_ID_*` is the **text** edition id for `/v1/bibles/...`. Audio uses
- * `GET /v1/audio-bibles/{audioBibleId}/chapters/...` where `audioBibleId` is often different;
- * we collect linked ids from metadata and list/discovery, then call the chapter endpoint per API.Bible.
+ * `GET /v1/audio-bibles/{audioBibleId}/chapters/...` where `audioBibleId` is a different id but must
+ * be linked to that same text bible (`data.audioBibles` or `GET /v1/audio-bibles?bibleId={textBibleId}`
+ * with matching DBL id / edition abbreviation), not another translation that happens to resolve first.
  * @see https://api.bible/api-reference — “Audio Bibles” (GET `/v1/audio-bibles`, `/v1/audio-bibles/.../chapters/...`)
  */
 export async function resolveApiBiblePassageAudioUrl(
@@ -522,11 +585,11 @@ export async function resolveApiBiblePassageAudioUrl(
   const chapterId = `${usfm}.${parsed.chapter}`
   const base = (process.env.API_BIBLE_BASE_URL || 'https://rest.api.bible').replace(/\/$/, '')
 
-  const [bibleRes, fromList] = await Promise.all([
+  const [bibleRes, listRows] = await Promise.all([
     fetch(`${base}/v1/bibles/${encodeURIComponent(textBibleId)}`, {
       headers: { 'api-key': apiKey },
     }),
-    fetchListAudioBibleIds(base, apiKey, textBibleId),
+    fetchListAudioBibleRows(base, apiKey, textBibleId),
   ])
 
   let fromEmbed: string[] = []
@@ -537,12 +600,26 @@ export async function resolveApiBiblePassageAudioUrl(
     textMeta = bj.data
   }
 
+  const envAudioId = process.env[API_BIBLE_AUDIO_ID_ENV[translation]]?.trim()
+  const fromList = await audioBibleIdsLinkedToTextBible(
+    base,
+    apiKey,
+    listRows,
+    textBibleId,
+    textMeta
+  )
+
   let fromDiscover: string[] = []
   if (fromEmbed.length === 0 && fromList.length === 0 && textMeta) {
     fromDiscover = await discoverAudioBibleIdsFromTextMetadata(base, apiKey, textBibleId, textMeta)
   }
 
-  const candidates = uniqueIds([...fromEmbed, ...fromList, ...fromDiscover])
+  const candidates = uniqueIds([
+    ...(envAudioId ? [envAudioId] : []),
+    ...fromEmbed,
+    ...fromList,
+    ...fromDiscover,
+  ])
   if (candidates.length === 0) {
     return null
   }

@@ -1,6 +1,7 @@
 import type { GospelPresentationData, GospelSection, NestedSubsection, ScriptureReference, Subsection } from '@/lib/types'
 import { MCHEYNE_COPYRIGHT_PAGE_HREF } from '@/lib/mcheyne/mcheyneCopyrightAttribution'
 import type { McheynePlanDay, McheynePlanFile } from '@/lib/mcheyne/mcheynePlanTypes'
+import { expandMcheyneReadingToChapterCards } from '@/lib/mcheyne/mcheyneReferenceNormalize'
 import { MCHEYNE_SLUG, mcheyneProfileTitle } from '@/lib/mcheyne/mcheyneSlug'
 import { passageKeysFromGospelPresentationData } from '@/lib/spurgeon/passageKeysFromGospelData'
 
@@ -47,7 +48,12 @@ export function monthSectionId(month: number): string {
 }
 
 function scriptureCards(refs: readonly string[]): ScriptureReference[] {
-  return refs.map((reference) => ({ reference, favorite: false }))
+  return refs.flatMap((reference) =>
+    expandMcheyneReadingToChapterCards(reference).map((ref) => ({
+      reference: ref,
+      favorite: false,
+    }))
+  )
 }
 
 function nestedReadingGroup(title: string, refs: readonly string[]): NestedSubsection {

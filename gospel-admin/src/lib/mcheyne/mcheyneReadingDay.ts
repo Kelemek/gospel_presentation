@@ -2,6 +2,7 @@ import type { GospelSection } from '@/lib/types'
 import planFile from '../../../data/mcheyne/plan.json'
 import { monthNameForPlan, monthSectionId } from '@/lib/mcheyne/buildMcheyneGospelData'
 import { mcheyneCalendarDateForPlanDay } from '@/lib/mcheyne/mcheyneCalendar'
+import { expandMcheyneReadingToChapterCards } from '@/lib/mcheyne/mcheyneReferenceNormalize'
 import type { McheynePlanFile } from '@/lib/mcheyne/mcheynePlanTypes'
 
 const plan = planFile as McheynePlanFile
@@ -158,4 +159,22 @@ export function findMcheyneDayAnchor(
     }
   }
   return null
+}
+
+/** Four chapter references for a plan day: Family (2) then Secret (2). */
+export function mcheyneDayChapterReferences(planDay: number): string[] {
+  if (!Number.isFinite(planDay) || planDay < 1 || planDay > MCHEYNE_PLAN_DAYS) {
+    return []
+  }
+  const day = plan.days.find((d) => d.day === planDay)
+  if (!day) return []
+  return [...day.family, ...day.secret].flatMap(expandMcheyneReadingToChapterCards)
+}
+
+/** Day playlist for M'Cheyne modal Listen, or null (e.g. January intro). */
+export function mcheyneDayChapterReferencesForAnchor(subsectionId: string): string[] | null {
+  const planDay = mcheynePlanDayFromDaySubsectionId(subsectionId)
+  if (planDay == null) return null
+  const refs = mcheyneDayChapterReferences(planDay)
+  return refs.length > 0 ? refs : null
 }

@@ -1,3 +1,5 @@
+import { scriptureReferenceForPassageQuery } from '@/lib/parse-scripture-reference'
+
 /**
  * Resolves the ESV API passage-audio redirect chain to a final MP3 URL.
  * @see https://api.esv.org/docs/passage-audio/
@@ -7,7 +9,7 @@ export async function resolveEsvPassageAudioUrl(reference: string): Promise<stri
   if (!apiToken) {
     return null
   }
-  const q = reference.trim()
+  const q = scriptureReferenceForPassageQuery(reference.trim())
   if (!q) return null
 
   let url = `https://api.esv.org/v3/passage/audio/?q=${encodeURIComponent(q)}`

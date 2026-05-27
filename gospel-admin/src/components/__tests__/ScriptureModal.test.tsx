@@ -290,6 +290,54 @@ describe('ScriptureModal Component', () => {
     expect(screen.getByText(/Main verse/)).toBeInTheDocument()
   })
 
+  it('shows Listen control in verse view when verse text is loaded', async () => {
+    renderWithTextSize(<ScriptureModal {...defaultProps} />)
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /John 3:16/ })).toBeInTheDocument()
+    )
+    await waitFor(() => expect(screen.getByLabelText(/^Listen$/i)).toBeInTheDocument())
+    expect(screen.queryByRole('button', { name: /chapter context/i })).toBeInTheDocument()
+  })
+
+  it('shows chapter Listen control left of Share when chapter context is loaded', async () => {
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = fetchUrl(input)
+      if (url.includes('reference=John%203&') && !url.includes('%3A')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ text: 'Full chapter text.' }),
+        } as Response)
+      }
+      if (url.includes('/api/scripture/spurgeon-links')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ items: [] }),
+        } as Response)
+      }
+      if (url.includes('/api/scripture?')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ text: 'Verse sixteen.' }),
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected fetch: ${url}`))
+    })
+    const user = userEvent.setup()
+    renderWithTextSize(<ScriptureModal {...defaultProps} />)
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /John 3:16/ })).toBeInTheDocument()
+    )
+    await waitFor(() => expect(screen.getByLabelText(/^Listen$/i)).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /chapter context/i }))
+    await waitFor(() => expect(screen.getByText(/Full chapter text/)).toBeInTheDocument())
+    const listen = screen.getByRole('button', { name: /^Listen$/i })
+    const share = screen.getByRole('button', { name: /share passage/i })
+    const headerRow = listen.parentElement
+    expect(headerRow).toContainElement(share)
+    const buttons: HTMLElement[] = Array.from(headerRow?.querySelectorAll('button') ?? [])
+    expect(buttons.indexOf(listen)).toBeLessThan(buttons.indexOf(share))
+  })
+
   it('should show error when chapter context fetch throws', async () => {
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = fetchUrl(input)

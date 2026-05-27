@@ -28,6 +28,29 @@ describe('ScriptureModal additional behaviors', () => {
     mockFetch.mockResolvedValue(defaultFetchSuccess)
   })
 
+  it('opens in chapter view automatically for chapter-only references', async () => {
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (url.includes('reference=Genesis%201&')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ text: '[1] In the beginning' }),
+        } as unknown as Response)
+      }
+      return Promise.resolve(defaultFetchSuccess)
+    })
+
+    renderWithTextSize(<ScriptureModal reference="Genesis 1" isOpen onClose={jest.fn()} />)
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^Verse$/i })).toBeInTheDocument()
+    )
+    expect(screen.queryByRole('button', { name: /chapter context/i })).not.toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.getByLabelText(/^Listen$/i)).toBeInTheDocument()
+    )
+  })
+
   it('fetches chapter context and highlights verses with ids', async () => {
     const user = userEvent.setup()
 

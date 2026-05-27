@@ -13,6 +13,10 @@ import {
 import { useTranslation, type BibleTranslation } from '@/contexts/TranslationContext'
 import { useTextSize } from '@/contexts/TextSizeContext'
 import { useAlertModal } from '@/contexts/AlertModalContext'
+import {
+  isChapterOnlyScriptureReference,
+  scriptureReferenceForPassageQuery,
+} from '@/lib/parse-scripture-reference'
 import { splitScriptureReferenceForHeader } from '@/lib/splitScriptureReferenceForHeader'
 import { formatScriptureApiError } from '@/lib/format-scripture-api-error'
 import {
@@ -32,6 +36,7 @@ import type { VerseBookmarkColorId, VersePinColorId } from '@/lib/versePinStorag
 import ScriptureModalPinPick from '@/components/ScriptureModalPinPick'
 import ScriptureModalToolbarMenu from '@/components/ScriptureModalToolbarMenu'
 import ScriptureWordStudyModal from '@/components/ScriptureWordStudyModal'
+import ScriptureModalChapterListen from '@/components/ScriptureModalChapterListen'
 import {
   wordStudyAvailableFromReference,
   wordStudyLanguageLabelFromReference,
@@ -62,10 +67,12 @@ interface ScriptureModalProps {
   onOpenSpurgeonStudy?: (reference: string) => void
   /** Navigate the reader to another verse (e.g. concordance link in word study). */
   onNavigateReference?: (reference: string) => void
-  /** When true (e.g. `?scriptureView=chapter` deep link), load full chapter after open. */
+  /** When true (e.g. `?scriptureView=chapter` deep link), load full chapter after open. Chapter-only refs (e.g. `Genesis 1`) also open in chapter view automatically. */
   initialChapterView?: boolean
   /** Profile slug for share deep links (current resource). Omit to share passage text only. */
   profileSlug?: string
+  /** M'Cheyne: four chapter refs for the open day (Family + Secret); Listen plays all in order. */
+  mcheyneDayChapterReferences?: readonly string[]
 }
 
 export default function ScriptureModal({ 
@@ -82,6 +89,7 @@ export default function ScriptureModal({
   onNavigateReference,
   initialChapterView = false,
   profileSlug,
+  mcheyneDayChapterReferences,
 }: ScriptureModalProps) {
   const { translation, setTranslation, enabledTranslations, enabledTranslationOptions } =
     useTranslation()
@@ -162,6 +170,11 @@ export default function ScriptureModal({
     return `${reference.trim()}|${translation}`
   }, [isOpen, reference, translation])
 
+  const preferChapterView = useMemo(
+    () => initialChapterView || isChapterOnlyScriptureReference(reference),
+    [initialChapterView, reference]
+  )
+
   const wordStudyAvailable = useMemo(
     () => wordStudyAvailableFromReference(reference),
     [reference]
@@ -219,6 +232,18 @@ export default function ScriptureModal({
     chapterView.text.length > 0
 
   const chapterText = showingContext ? chapterView.text : ''
+
+  const isMcheyneDayPlaylist =
+    translation === 'esv' &&
+    mcheyneDayChapterReferences != null &&
+    mcheyneDayChapterReferences.length > 1
+
+  /** ESV passage audio (Crossway): verse-level in verse view, chapter-level in chapter view; M'Cheyne day playlist uses chapters. */
+  const showScriptureListen =
+    translation === 'esv' &&
+    (isMcheyneDayPlaylist ||
+      (showingContext && chapterText.length > 0 && !contextLoading) ||
+      (!showingContext && scriptureText.length > 0 && !loading))
 
   const compareLoading =
     compareVerseFetchKey !== null &&
@@ -286,6 +311,10 @@ export default function ScriptureModal({
     return verseRef
   }
 
+  const passageAudioReference = scriptureReferenceForPassageQuery(
+    showingContext ? getChapterReference(reference) : reference.trim()
+  )
+
   // Extract verse numbers for highlighting
   const getVerseNumbers = (verseRef: string): number[] => {
     // Match both regular hyphen (-) and en-dash (–) for verse ranges
@@ -336,12 +365,16 @@ export default function ScriptureModal({
   }, [verseViewSessionKey, reference, translation])
 
   useEffect(() => {
+    initialChapterViewFetchedRef.current = false
+  }, [verseViewSessionKey])
+
+  useEffect(() => {
     if (!isOpen) {
       initialChapterViewFetchedRef.current = false
       return
     }
     if (
-      !initialChapterView ||
+      !preferChapterView ||
       showingContext ||
       contextLoading ||
       initialChapterViewFetchedRef.current ||
@@ -353,7 +386,7 @@ export default function ScriptureModal({
     void fetchChapterContext()
   }, [
     isOpen,
-    initialChapterView,
+    preferChapterView,
     showingContext,
     contextLoading,
     verseViewSessionKey,
@@ -904,6 +937,18 @@ export default function ScriptureModal({
               </button>
             </div>
             <div className="flex-1 flex justify-end items-center gap-1.5">
+              {showScriptureListen && (
+                <ScriptureModalChapterListen
+                  passageReference={passageAudioReference}
+                  chapterReference={getChapterReference(reference)}
+                  translation={translation}
+                  enabled
+                  dayChapterReferences={mcheyneDayChapterReferences}
+                  onPlaylistChapterChange={
+                    isMcheyneDayPlaylist ? onNavigateReference : undefined
+                  }
+                />
+              )}
               <button
                 type="button"
                 data-tour="scripture-modal-share"

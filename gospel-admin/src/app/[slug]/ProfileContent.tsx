@@ -66,6 +66,7 @@ import {
 } from '@/lib/presentationReadCompleteStorage'
 import { scrollToTocAnchor, scrollToTocAnchorWhenReady } from '@/lib/scrollToTocAnchor'
 import { scrollToVersePinWhenReady } from '@/lib/scrollToVersePinWhenReady'
+import { mcheyneDayChapterReferencesForAnchor } from '@/lib/mcheyne/mcheyneReadingDay'
 import { isMcheyneProfileSlug } from '@/lib/mcheyne/mcheyneSlug'
 import {
   findMcheyneDayAnchor,
@@ -78,6 +79,7 @@ import {
   setPendingMcheyneResumePin,
 } from '@/lib/mcheyne/mcheynePendingNavigation'
 import { findFirstScriptureCardAnchors } from '@/lib/findFirstScriptureCardAnchors'
+import { isChapterOnlyScriptureReference } from '@/lib/parse-scripture-reference'
 import { findFirstStudyPassageAnchor } from '@/lib/findFirstStudyPassageAnchor'
 import { presentationLocationFromProfileAnchors } from '@/lib/presentationLocationFromAnchors'
 import { stripHtmlTags } from '@/lib/stripHtmlTags'
@@ -734,7 +736,9 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       setSelectedScripture({
         reference,
         isOpen: true,
-        ...(options?.initialChapterView ? { initialChapterView: true } : {}),
+        ...(options?.initialChapterView || isChapterOnlyScriptureReference(reference)
+          ? { initialChapterView: true }
+          : {}),
       })
     },
     [sections, allScriptureRefs, favoriteReferences]
@@ -752,7 +756,9 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     return {
       reference: scriptureRefParam,
       isOpen: true as const,
-      ...(scriptureViewParam === 'chapter' ? { initialChapterView: true as const } : {}),
+      ...(scriptureViewParam === 'chapter' || isChapterOnlyScriptureReference(scriptureRefParam)
+        ? { initialChapterView: true as const }
+        : {}),
     }
   }, [
     isHydrated,
@@ -1031,6 +1037,14 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     sections,
     effectiveModalOpenAnchors,
   ])
+
+  const mcheyneDayListenSubsectionId = effectiveModalOpenAnchors?.subsectionId?.trim() || ''
+
+  const mcheyneDayListenReferences = useMemo(() => {
+    if (!profileSlug || !isMcheyneProfileSlug(profileSlug)) return undefined
+    if (!mcheyneDayListenSubsectionId) return undefined
+    return mcheyneDayChapterReferencesForAnchor(mcheyneDayListenSubsectionId) ?? undefined
+  }, [profileSlug, mcheyneDayListenSubsectionId])
 
   const commitVersePinForClosedScripture = useCallback(
     (refTxt: string) => {
@@ -1501,13 +1515,16 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
         reference={activeScripture.reference}
         isOpen={activeScripture.isOpen}
         profileSlug={profileSlug}
+        mcheyneDayChapterReferences={mcheyneDayListenReferences}
         initialChapterView={activeScripture.initialChapterView ?? false}
         onClose={closeModal}
         onNavigateReference={(ref) => {
           setSelectedScripture((prev) => ({
             ...prev,
             reference: ref,
-            initialChapterView: undefined,
+            ...(isChapterOnlyScriptureReference(ref)
+              ? { initialChapterView: true as const }
+              : { initialChapterView: undefined }),
           }))
         }}
         onPrevious={hasPrevious ? navigateToPrevious : undefined}

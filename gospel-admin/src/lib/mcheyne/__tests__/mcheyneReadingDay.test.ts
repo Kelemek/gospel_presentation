@@ -3,6 +3,8 @@ import {
   findMcheyneDayAnchor,
   formatLocalIsoDate,
   isMcheynePlanComplete,
+  mcheyneDayChapterReferences,
+  mcheyneDayChapterReferencesForAnchor,
   mcheyneDaySubsectionIdFromAnchor,
   mcheynePlanDayForDates,
   mcheynePlanDayFromDaySubsectionId,
@@ -74,6 +76,40 @@ describe('mcheyneReadingDay', () => {
 
     it('maps nested Family anchor to the parent day', () => {
       expect(mcheynePlanDayFromDaySubsectionId('section-may-26-0')).toBe(147)
+    })
+  })
+
+  describe('mcheyneDayChapterReferences', () => {
+    it('returns Family then Secret chapters for a plan day', () => {
+      expect(mcheyneDayChapterReferences(1)).toEqual([
+        'Genesis 1',
+        'Matthew 1',
+        'Ezra 1',
+        'Acts 1',
+      ])
+    })
+
+    it('resolves nested anchor to the day playlist', () => {
+      expect(mcheyneDayChapterReferencesForAnchor('section-jan-1-0')).toEqual([
+        'Genesis 1',
+        'Matthew 1',
+        'Ezra 1',
+        'Acts 1',
+      ])
+    })
+
+    it('returns null for January intro', () => {
+      expect(mcheyneDayChapterReferencesForAnchor('section-jan-0')).toBeNull()
+    })
+
+    it('expands chapter-range readings for the day Listen playlist', () => {
+      expect(mcheyneDayChapterReferences(91)).toEqual([
+        'Leviticus 4',
+        'Psalms 1',
+        'Psalms 2',
+        'Proverbs 19',
+        'Colossians 2',
+      ])
     })
   })
 

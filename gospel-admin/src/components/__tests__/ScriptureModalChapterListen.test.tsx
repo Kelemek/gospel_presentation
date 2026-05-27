@@ -1,0 +1,165 @@
+/**
+ * @jest-environment jsdom
+ */
+
+import { act, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import ScriptureModalChapterListen from '@/components/ScriptureModalChapterListen'
+
+describe('ScriptureModalChapterListen', () => {
+  beforeEach(() => {
+    HTMLMediaElement.prototype.play = jest.fn().mockResolvedValue(undefined)
+    HTMLMediaElement.prototype.pause = jest.fn()
+    HTMLMediaElement.prototype.load = jest.fn()
+  })
+
+  it('renders nothing when disabled', () => {
+    render(
+      <ScriptureModalChapterListen
+        passageReference="John 3"
+        chapterReference="John 3"
+        translation="esv"
+        enabled={false}
+      />
+    )
+    expect(screen.queryByRole('button', { name: /listen/i })).not.toBeInTheDocument()
+  })
+
+  it('opens listen dialog with Play and speed, without Repeat', async () => {
+    const user = userEvent.setup()
+    render(
+      <ScriptureModalChapterListen
+        passageReference="John 3:16"
+        chapterReference="John 3"
+        translation="esv"
+        enabled
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /listen/i }))
+    expect(screen.getByRole('dialog', { name: 'Listen' })).toBeInTheDocument()
+    expect(screen.getByTestId('memorize-listen-passage')).toBeInTheDocument()
+    expect(screen.getByTestId('memorize-listen-speed')).toBeInTheDocument()
+    expect(screen.queryByTestId('memorize-listen-repeat')).not.toBeInTheDocument()
+  })
+
+  it('labels and queues all day chapters when dayChapterReferences is set', async () => {
+    const user = userEvent.setup()
+    render(
+      <ScriptureModalChapterListen
+        passageReference="Genesis 1"
+        chapterReference="Genesis 1"
+        translation="esv"
+        enabled
+        dayChapterReferences={['Genesis 1', 'Matthew 1', 'Ezra 1', 'Acts 1']}
+      />
+    )
+    expect(
+      screen.getByRole('button', { name: /listen to today's readings/i })
+    ).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /listen to today's readings/i }))
+    await user.click(screen.getByTestId('memorize-listen-passage'))
+    const audio = document.querySelector('audio') as HTMLAudioElement
+    expect(audio.src).toContain('reference=Genesis')
+  })
+
+  it('starts playback at the current chapter when not on the first reading', async () => {
+    const user = userEvent.setup()
+    render(
+      <ScriptureModalChapterListen
+        passageReference="Matthew 1"
+        chapterReference="Matthew 1"
+        translation="esv"
+        enabled
+        dayChapterReferences={['Genesis 1', 'Matthew 1', 'Ezra 1', 'Acts 1']}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /listen to today's readings/i }))
+    await user.click(screen.getByTestId('memorize-listen-passage'))
+    const audio = document.querySelector('audio') as HTMLAudioElement
+    expect(audio.src).toContain('Matthew')
+    expect(audio.src).not.toContain('Genesis')
+  })
+
+  it('keeps stable playlist URLs when chapterReference changes during playback', () => {
+    const dayRefs = ['Genesis 1', 'Matthew 1', 'Ezra 1', 'Acts 1'] as const
+    const { rerender } = render(
+      <ScriptureModalChapterListen
+        passageReference="Genesis 1"
+        chapterReference="Genesis 1"
+        translation="esv"
+        enabled
+        dayChapterReferences={dayRefs}
+      />
+    )
+    const firstAudio = document.querySelector('audio') as HTMLAudioElement
+    rerender(
+      <ScriptureModalChapterListen
+        passageReference="Matthew 1"
+        chapterReference="Matthew 1"
+        translation="esv"
+        enabled
+        dayChapterReferences={dayRefs}
+      />
+    )
+    const secondAudio = document.querySelector('audio') as HTMLAudioElement
+    expect(secondAudio).toBe(firstAudio)
+  })
+
+  it('notifies onPlaylistChapterChange when the playlist advances', async () => {
+    const onPlaylistChapterChange = jest.fn()
+    const user = userEvent.setup()
+    render(
+      <ScriptureModalChapterListen
+        passageReference="Genesis 1"
+        chapterReference="Genesis 1"
+        translation="esv"
+        enabled
+        dayChapterReferences={['Genesis 1', 'Matthew 1']}
+        onPlaylistChapterChange={onPlaylistChapterChange}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /listen to today's readings/i }))
+    await user.click(screen.getByTestId('memorize-listen-passage'))
+    expect(onPlaylistChapterChange).toHaveBeenCalledWith('Genesis 1')
+
+    const audio = document.querySelector('audio') as HTMLAudioElement
+    await act(async () => {
+      audio.dispatchEvent(new Event('ended'))
+    })
+    expect(onPlaylistChapterChange).toHaveBeenCalledWith('Matthew 1')
+  })
+
+  it('uses verse reference in audio URL when not on a day playlist', async () => {
+    const user = userEvent.setup()
+    render(
+      <ScriptureModalChapterListen
+        passageReference="John 3:16"
+        chapterReference="John 3"
+        translation="esv"
+        enabled
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /listen/i }))
+    await user.click(screen.getByTestId('memorize-listen-passage'))
+    const audio = document.querySelector('audio') as HTMLAudioElement
+    expect(audio.src).toContain('John')
+    expect(audio.src).toContain('3%3A16')
+  })
+
+  it('builds chapter-scoped audio URL from reference and translation', async () => {
+    const user = userEvent.setup()
+    render(
+      <ScriptureModalChapterListen
+        passageReference="Genesis 1"
+        chapterReference="Genesis 1"
+        translation="kjv"
+        enabled
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /listen/i }))
+    await user.click(screen.getByTestId('memorize-listen-passage'))
+    const audio = document.querySelector('audio') as HTMLAudioElement
+    expect(audio.src).toContain('reference=Genesis')
+    expect(audio.src).toContain('translation=kjv')
+  })
+})

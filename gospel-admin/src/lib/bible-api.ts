@@ -5,6 +5,7 @@ import type { ApiBibleTranslation, BibleTranslation } from '@/lib/bible-translat
 import { formatApiBiblePassageText } from '@/lib/api-bible-format'
 import { referenceToApiBiblePassageId } from '@/lib/api-bible-passage-id'
 import { logger } from '@/lib/logger'
+import { scriptureReferenceForPassageQuery } from '@/lib/parse-scripture-reference'
 
 export type { BibleTranslation } from '@/lib/bible-translations'
 
@@ -24,9 +25,10 @@ async function fetchFromESV(reference: string): Promise<ScriptureResult> {
   }
 
   const cleanReference = reference.trim()
+  const queryReference = scriptureReferenceForPassageQuery(cleanReference)
 
   const response = await fetch(
-    `https://api.esv.org/v3/passage/text/?q=${encodeURIComponent(cleanReference)}&include-headings=false&include-footnotes=false&include-verse-numbers=true&include-short-copyright=false&include-passage-references=false`,
+    `https://api.esv.org/v3/passage/text/?q=${encodeURIComponent(queryReference)}&include-headings=false&include-footnotes=false&include-verse-numbers=true&include-short-copyright=false&include-passage-references=false`,
     {
       headers: {
         Authorization: `Token ${apiToken}`,

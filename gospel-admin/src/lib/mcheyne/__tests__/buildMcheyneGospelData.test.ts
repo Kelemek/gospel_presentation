@@ -4,7 +4,10 @@ import {
   parseMcheynePlanFile,
 } from '@/lib/mcheyne/buildMcheyneGospelData'
 import { buildPlanFromRaw } from '@/lib/mcheyne/buildMcheynePlanFromRaw'
-import { normalizeMcheyneReference } from '@/lib/mcheyne/mcheyneReferenceNormalize'
+import {
+  expandMcheyneReadingToChapterCards,
+  normalizeMcheyneReference,
+} from '@/lib/mcheyne/mcheyneReferenceNormalize'
 import { MCHEYNE_SLUG } from '@/lib/mcheyne/mcheyneSlug'
 import type { McheynePlanFile } from '@/lib/mcheyne/mcheynePlanTypes'
 import planThreeDays from './fixtures/plan-three-days.json'
@@ -19,6 +22,63 @@ describe('mcheyneReferenceNormalize', () => {
   it('keeps chapter-range readings used in the plan', () => {
     expect(normalizeMcheyneReference('Genesis 9-10')).toBe('Genesis 9-10')
     expect(normalizeMcheyneReference('Psalms 1-2')).toBe('Psalms 1-2')
+  })
+})
+
+describe('expandMcheyneReadingToChapterCards', () => {
+  it('splits same-book chapter ranges into one reference per chapter', () => {
+    expect(expandMcheyneReadingToChapterCards('Psalms 1-2')).toEqual(['Psalms 1', 'Psalms 2'])
+    expect(expandMcheyneReadingToChapterCards('Genesis 9-10')).toEqual(['Genesis 9', 'Genesis 10'])
+    expect(expandMcheyneReadingToChapterCards('Jeremiah 36-45')).toEqual(
+      expect.arrayContaining(['Jeremiah 36', 'Jeremiah 45'])
+    )
+    expect(expandMcheyneReadingToChapterCards('Jeremiah 36-45')).toHaveLength(10)
+  })
+
+  it('leaves single chapters and same-chapter verse ranges unchanged', () => {
+    expect(expandMcheyneReadingToChapterCards('Psalms 9')).toEqual(['Psalms 9'])
+    expect(expandMcheyneReadingToChapterCards('Luke 1:1-38')).toEqual(['Luke 1:1-38'])
+    expect(expandMcheyneReadingToChapterCards('Genesis 1')).toEqual(['Genesis 1'])
+    expect(expandMcheyneReadingToChapterCards('Judges 11:12')).toEqual(['Judges 11:12'])
+    expect(expandMcheyneReadingToChapterCards('Psalms 119:1-24')).toEqual(['Psalms 119:1-24'])
+  })
+
+  it('splits cross-chapter readings that end in a verse', () => {
+    expect(expandMcheyneReadingToChapterCards('Exodus 11-12:21')).toEqual([
+      'Exodus 11',
+      'Exodus 12:1-21',
+    ])
+    expect(expandMcheyneReadingToChapterCards('Deuteronomy 27-28:19')).toEqual([
+      'Deuteronomy 27',
+      'Deuteronomy 28:1-19',
+    ])
+    expect(expandMcheyneReadingToChapterCards('Joshua 5-6:5')).toEqual([
+      'Joshua 5',
+      'Joshua 6:1-5',
+    ])
+    expect(expandMcheyneReadingToChapterCards('Judges 10-11:11')).toEqual([
+      'Judges 10',
+      'Judges 11:1-11',
+    ])
+    expect(expandMcheyneReadingToChapterCards('2 Chronicles 5-6:11')).toEqual([
+      '2 Chronicles 5',
+      '2 Chronicles 6:1-11',
+    ])
+    expect(expandMcheyneReadingToChapterCards('Zechariah 12-13:1')).toEqual([
+      'Zechariah 12',
+      'Zechariah 13:1',
+    ])
+    expect(expandMcheyneReadingToChapterCards('Isaiah 8-9:7')).toEqual([
+      'Isaiah 8',
+      'Isaiah 9:1-7',
+    ])
+  })
+
+  it('splits cross-chapter readings with a verse span on both ends', () => {
+    expect(expandMcheyneReadingToChapterCards('Isaiah 9:8-10:4')).toEqual([
+      'Isaiah 9:8-21',
+      'Isaiah 10:1-4',
+    ])
   })
 })
 
@@ -74,6 +134,31 @@ describe('buildMcheyneGospelData', () => {
   it('formats month names', () => {
     expect(monthNameForPlan(1)).toBe('January')
     expect(monthNameForPlan(12)).toBe('December')
+  })
+
+  it('expands chapter-range plan readings into separate scripture cards', () => {
+    const rangePlan: McheynePlanFile = {
+      version: 1,
+      leapDayNote: 'test',
+      days: [
+        {
+          day: 1,
+          month: 1,
+          monthDay: 1,
+          family: ['Leviticus 4', 'Psalms 1-2'],
+          secret: ['Proverbs 19', 'Colossians 2'],
+        },
+      ],
+    }
+    const daySub = buildMcheyneGospelData(rangePlan)[0].subsections.find((s) =>
+      s.title?.startsWith('Day 1')
+    )
+    const familyCards = daySub!.nestedSubsections![0].scriptureReferences
+    expect(familyCards).toEqual([
+      { reference: 'Leviticus 4', favorite: false },
+      { reference: 'Psalms 1', favorite: false },
+      { reference: 'Psalms 2', favorite: false },
+    ])
   })
 })
 

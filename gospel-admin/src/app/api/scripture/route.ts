@@ -4,6 +4,7 @@ import type { BibleTranslation } from '@/lib/bible-translations'
 import { isBibleTranslation } from '@/lib/bible-translations'
 import { normalizeScriptureCachedText } from '@/lib/api-bible-format'
 import { canonicalScriptureCacheReference } from '@/lib/api-bible-passage-id'
+import { scriptureReferenceForPassageQuery } from '@/lib/parse-scripture-reference'
 import { logger } from '@/lib/logger'
 import { createAdminClient } from '@/lib/supabase/server'
 import { getTotalCacheVerseCountForTranslation, getTotalEsvCacheVerseCount } from '@/lib/verse-counter'
@@ -47,8 +48,9 @@ export async function GET(request: NextRequest) {
   }
 
   const sessionId = getSessionId(request)
-  /** One cache row per passage: USFM id when parseable (e.g. PSA.23.4), else normalized string. */
-  const cacheReference = canonicalScriptureCacheReference(normalizedReference)
+  /** Provider query (e.g. `2 John 1` → `2 John 1:1-13` for one-chapter epistles); cache key must match that passage. */
+  const passageQueryReference = scriptureReferenceForPassageQuery(normalizedReference)
+  const cacheReference = canonicalScriptureCacheReference(passageQueryReference)
 
   try {
     // Every valid translation uses scripture_cache + remote fetch (ESV API or API.Bible).
@@ -88,8 +90,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    logger.debug(`❌ Cache miss: ${normalizedReference} (${translation}) - fetching from remote API`)
-    const result = await fetchScripture(normalizedReference, translation)
+    logger.debug(
+      `❌ Cache miss: ${normalizedReference} (${translation}) query=${passageQueryReference} - fetching from remote API`
+    )
+    const result = await fetchScripture(passageQueryReference, translation)
 
     const { error: insertError } = await (supabase.from('scripture_cache' as any).upsert as any)(
       {

@@ -12,6 +12,8 @@ describe('resolveApiBiblePassageAudioUrl', () => {
     delete process.env.API_BIBLE_KEY
     delete process.env.API_BIBLE_BIBLE_ID_NIV
     delete process.env.API_BIBLE_BIBLE_ID_CSB
+    delete process.env.API_BIBLE_BIBLE_ID_LSB
+    delete process.env.API_BIBLE_AUDIO_BIBLE_ID_LSB
   })
 
   it('merges GET /v1/bibles/{textId} audioBibles with GET /v1/audio-bibles?bibleId= and resolves chapter (kebab-case paths)', async () => {
@@ -24,13 +26,21 @@ describe('resolveApiBiblePassageAudioUrl', () => {
       calls.push(url)
       if (url.includes('/v1/bibles/') && url.includes('niv-text-id')) {
         return Promise.resolve(
-          new Response(JSON.stringify({ data: { id: 'niv-text-id', audioBibles: [] } }), { status: 200 })
+          new Response(
+            JSON.stringify({
+              data: { id: 'niv-text-id', abbreviationLocal: 'NIV', audioBibles: [] },
+            }),
+            { status: 200 }
+          )
         )
       }
       if (url.includes('/v1/audio-bibles?') && url.includes('bibleId=')) {
         expect(url).toContain(encodeURIComponent('niv-text-id'))
         return Promise.resolve(
-          new Response(JSON.stringify({ data: [{ id: 'audio-1', type: 'audio' }] }), { status: 200 })
+          new Response(
+            JSON.stringify({ data: [{ id: 'audio-1', type: 'audio', abbreviationLocal: 'NIV' }] }),
+            { status: 200 }
+          )
         )
       }
       if (url.includes('/v1/audio-bibles/audio-1/chapters/JHN.3')) {
@@ -55,13 +65,23 @@ describe('resolveApiBiblePassageAudioUrl', () => {
       const url = typeof input === 'string' ? input : input.toString()
       if (url.includes('/v1/bibles/')) {
         return Promise.resolve(
-          new Response(JSON.stringify({ data: { audioBibles: [] } }), { status: 200 })
+          new Response(
+            JSON.stringify({
+              data: { id: 'niv-text-id', abbreviationLocal: 'NIV', audioBibles: [] },
+            }),
+            { status: 200 }
+          )
         )
       }
       if (url.includes('/v1/audio-bibles?') && url.includes('bibleId=')) {
         return Promise.resolve(
           new Response(
-            JSON.stringify({ data: [{ id: 'fails', type: 'audio' }, { id: 'wins', type: 'audio' }] }),
+            JSON.stringify({
+              data: [
+                { id: 'fails', type: 'audio', abbreviationLocal: 'NIV' },
+                { id: 'wins', type: 'audio', abbreviationLocal: 'NIV' },
+              ],
+            }),
             { status: 200 }
           )
         )
@@ -458,5 +478,147 @@ describe('resolveApiBiblePassageAudioUrl', () => {
 
     const out = await resolveApiBiblePassageAudioUrl('Deuteronomy 23:17', 'csb')
     expect(out).toBe('https://signed.example/enriched.mp3')
+  })
+
+  it('prefers LSB-matching audio bible over another linked edition that resolves first', async () => {
+    process.env.API_BIBLE_KEY = 'k'
+    process.env.API_BIBLE_BIBLE_ID_LSB = 'lsb-text-id'
+
+    const chapterCalls: string[] = []
+    global.fetch = jest.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (url.includes('/v1/bibles/lsb-text-id')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: {
+                id: 'lsb-text-id',
+                dblId: 'lsb-dbl',
+                abbreviationLocal: 'LSB',
+                nameLocal: 'Legacy Standard Bible',
+                audioBibles: [],
+              },
+            }),
+            { status: 200 }
+          )
+        )
+      }
+      if (url.includes('/v1/audio-bibles?') && url.includes('bibleId=')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [
+                { id: 'nasb-audio', type: 'audio', abbreviationLocal: 'NASB', dblId: 'nasb-dbl' },
+                { id: 'lsb-audio', type: 'audio', abbreviationLocal: 'LSB', dblId: 'lsb-dbl' },
+              ],
+            }),
+            { status: 200 }
+          )
+        )
+      }
+      if (url.includes('/v1/audio-bibles/') && url.includes('/chapters/')) {
+        chapterCalls.push(url)
+        if (url.includes('/nasb-audio/')) {
+          return Promise.resolve(
+            new Response(JSON.stringify({ data: { resourceUrl: 'https://signed.example/nasb.mp3' } }), {
+              status: 200,
+            })
+          )
+        }
+        if (url.includes('/lsb-audio/')) {
+          return Promise.resolve(
+            new Response(JSON.stringify({ data: { resourceUrl: 'https://signed.example/lsb.mp3' } }), {
+              status: 200,
+            })
+          )
+        }
+      }
+      return Promise.resolve(new Response('not found', { status: 404 }))
+    }) as unknown as typeof fetch
+
+    const out = await resolveApiBiblePassageAudioUrl('John 3:16', 'lsb')
+    expect(out).toBe('https://signed.example/lsb.mp3')
+    expect(chapterCalls[0]).toContain('/lsb-audio/')
+    expect(chapterCalls.some((u) => u.includes('/nasb-audio/'))).toBe(false)
+  })
+
+  it('does not play audio from a linked row that does not match the text edition', async () => {
+    process.env.API_BIBLE_KEY = 'k'
+    process.env.API_BIBLE_BIBLE_ID_LSB = 'lsb-text-id'
+
+    global.fetch = jest.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (url.includes('/v1/bibles/lsb-text-id')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: {
+                id: 'lsb-text-id',
+                dblId: 'lsb-dbl',
+                abbreviationLocal: 'LSB',
+                audioBibles: [],
+              },
+            }),
+            { status: 200 }
+          )
+        )
+      }
+      if (url.includes('/v1/audio-bibles?') && url.includes('bibleId=')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              data: [{ id: 'nasb-only', type: 'audio', abbreviationLocal: 'NASB', dblId: 'nasb-dbl' }],
+            }),
+            { status: 200 }
+          )
+        )
+      }
+      if (url.includes('/v1/audio-bibles/nasb-only/chapters/')) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ data: { resourceUrl: 'https://signed.example/nasb.mp3' } }), {
+            status: 200,
+          })
+        )
+      }
+      return Promise.resolve(new Response('not found', { status: 404 }))
+    }) as unknown as typeof fetch
+
+    const out = await resolveApiBiblePassageAudioUrl('John 3:16', 'lsb')
+    expect(out).toBeNull()
+  })
+
+  it('uses API_BIBLE_AUDIO_BIBLE_ID_LSB override when set', async () => {
+    process.env.API_BIBLE_KEY = 'k'
+    process.env.API_BIBLE_BIBLE_ID_LSB = 'lsb-text-id'
+    process.env.API_BIBLE_AUDIO_BIBLE_ID_LSB = 'forced-lsb-audio'
+
+    global.fetch = jest.fn((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (url.includes('/v1/bibles/')) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ data: { id: 'lsb-text-id', audioBibles: [] } }), { status: 200 })
+        )
+      }
+      if (url.includes('/v1/audio-bibles?')) {
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({ data: [{ id: 'other-audio', type: 'audio', abbreviationLocal: 'NASB' }] }),
+            { status: 200 }
+          )
+        )
+      }
+      if (url.includes('/v1/audio-bibles/forced-lsb-audio/chapters/')) {
+        return Promise.resolve(
+          new Response(JSON.stringify({ data: { resourceUrl: 'https://signed.example/forced.mp3' } }), {
+            status: 200,
+          })
+        )
+      }
+      return Promise.resolve(new Response('not found', { status: 404 }))
+    }) as unknown as typeof fetch
+
+    const out = await resolveApiBiblePassageAudioUrl('John 3:16', 'lsb')
+    expect(out).toBe('https://signed.example/forced.mp3')
+    delete process.env.API_BIBLE_AUDIO_BIBLE_ID_LSB
   })
 })
