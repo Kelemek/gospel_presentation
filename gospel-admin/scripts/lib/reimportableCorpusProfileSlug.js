@@ -12,6 +12,7 @@ const LUTHER_GALATIANS = /^lgal$/i
 const DEPRECATED_LUTHER = /^luthergal$/i
 const PILGRIM = /^ppgr$/i
 const ALL_OF_GRACE = /^aogr$/i
+const WATSON_BOOK = /^tw(cm|bt|bd|dc|lp|tc)$/i
 
 function isReimportableCorpusProfileSlug(slug) {
   const s = String(slug).trim()
@@ -24,7 +25,8 @@ function isReimportableCorpusProfileSlug(slug) {
     LUTHER_GALATIANS.test(s) ||
     DEPRECATED_LUTHER.test(s) ||
     PILGRIM.test(s) ||
-    ALL_OF_GRACE.test(s)
+    ALL_OF_GRACE.test(s) ||
+    WATSON_BOOK.test(s)
   )
 }
 

@@ -52,4 +52,34 @@ export const CCEL_COPYRIGHT_ATTRIBUTIONS: readonly CcelCopyrightAttribution[] = 
     body: 'The underlying sermons are in the public domain. Sermon text in this app was imported from the ThML-encoded Metropolitan Tabernacle / New Park Street volumes',
     sourceHref: 'https://www.ccel.org/ccel/spurgeon/',
   },
+  {
+    title: 'Thomas Watson, The Art of Divine Contentment',
+    body: 'The underlying work is in the public domain. Text in this app was imported from the ThML edition',
+    sourceHref: 'https://www.ccel.org/ccel/watson/contentment.html',
+  },
+  {
+    title: 'Thomas Watson, The Beatitudes',
+    body: 'The underlying work is in the public domain. Text in this app was imported from the ThML edition',
+    sourceHref: 'https://www.ccel.org/ccel/watson/beatitudes.html',
+  },
+  {
+    title: 'Thomas Watson, A Body of Divinity',
+    body: 'The underlying work is in the public domain. Text in this app was imported from the ThML edition',
+    sourceHref: 'https://www.ccel.org/ccel/watson/divinity.html',
+  },
+  {
+    title: 'Thomas Watson, All Things for Good (Divine Cordial)',
+    body: 'The underlying work is in the public domain. Text in this app was imported from the ThML edition',
+    sourceHref: 'https://www.ccel.org/ccel/watson/cordial.html',
+  },
+  {
+    title: "Thomas Watson, The Lord's Prayer",
+    body: 'The underlying work is in the public domain. Text in this app was imported from the ThML edition',
+    sourceHref: 'https://www.ccel.org/ccel/watson/prayer.html',
+  },
+  {
+    title: 'Thomas Watson, The Ten Commandments',
+    body: 'The underlying work is in the public domain. Text in this app was imported from the ThML edition',
+    sourceHref: 'https://www.ccel.org/ccel/watson/commandments.html',
+  },
 ]

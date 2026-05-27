@@ -106,6 +106,7 @@ const OSIS_BOOK_TO_CANONICAL_USFM: Record<string, string> = {
   EZR: 'EZR',
   NEH: 'NEH',
   EST: 'EST',
+  ESTH: 'EST',
   JOB: 'JOB',
   PSA: 'PSA',
   PS: 'PSA',

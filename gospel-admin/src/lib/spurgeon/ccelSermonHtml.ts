@@ -18,8 +18,16 @@
  */
 import type { GospelPresentationData, GospelSection, NestedSubsection, Subsection } from '@/lib/types'
 import { bookNameToUsfm, canonicalScriptureCacheReference } from '@/lib/api-bible-passage-id'
+import { normalizeCalvinBookUsfm } from '@/lib/calvin/calvinUsfmNormalize'
 import { GOSPEL_BIBLE_BOOK_NAMES } from '@/lib/gospelBibleBookNames'
 import { parseReference } from '@/lib/parse-scripture-reference'
+import {
+  commaVerseTailToRange,
+  isGospelCanonicalScriptureRef,
+} from '@/lib/scriptureReferenceNormalize'
+
+/** `Mat 7:22, 23` — same-chapter comma verse list after period normalization. */
+const COMMA_VERSE_TAIL_RE = /^(.+\d+:\s*\d+)((?:,\s*\d+(?::\s*\d+)?)+)$/
 
 const MAX_NAV_TITLE_LEN = 52
 
@@ -141,6 +149,54 @@ const THML_BOOK_ABBREV_TO_BOOK_ALIAS: Record<string, string> = {
   songs: 'song of songs',
   deut: 'deuteronomy',
   exod: 'exodus',
+  /** Watson / older CCEL ThML (often without osisRef). */
+  ep: 'ephesians',
+  he: 'hebrews',
+  mat: 'matthew',
+  lu: 'luke',
+  ro: 'romans',
+  ez: 'ezekiel',
+  go: 'genesis',
+  es: 'esther',
+  nu: 'numbers',
+  can: 'song of songs',
+  pe: '1 peter',
+  ph: 'philippians',
+  ti: '1 timothy',
+  is: 'isaiah',
+}
+
+/**
+ * CCEL Watson uses periods between chapter and verse (`Ep. 2. 1`, `Philippians 4. 11`).
+ * Convert to colon form before {@link parseReference}.
+ */
+export function normalizeThmlPeriodVerseSeparators(passage: string): string {
+  const trimmed = passage.replace(/\s+/g, ' ').trim()
+  const abbrevWithVerse =
+    /^((?:\d+\s+)?[A-Za-z][A-Za-z.]*)\.\s+(\d+)\.\s*(\d+(?:\s*-\s*\d+)?(?:\s*,\s*\d+(?:\s*-\s*\d+)?)*)\s*$/.exec(
+      trimmed
+    )
+  if (abbrevWithVerse) {
+    const book = abbrevWithVerse[1].trim()
+    const ch = abbrevWithVerse[2]
+    const vs = abbrevWithVerse[3].replace(/\s*-\s*/g, '-').replace(/\s*,\s*/g, ', ')
+    return `${book} ${ch}:${vs}`
+  }
+  const fullNameWithVerse =
+    /^((?:\d+\s+)?[A-Za-z]+(?:\s+[A-Za-z]+)?)\s+(\d+)\.\s*(\d+(?:\s*-\s*\d+)?(?:\s*,\s*\d+(?:\s*-\s*\d+)?)*)\s*$/.exec(
+      trimmed
+    )
+  if (fullNameWithVerse) {
+    const book = fullNameWithVerse[1].trim()
+    const ch = fullNameWithVerse[2]
+    const vs = fullNameWithVerse[3].replace(/\s*-\s*/g, '-').replace(/\s*,\s*/g, ', ')
+    return `${book} ${ch}:${vs}`
+  }
+  const abbrevChapterOnly = /^((?:\d+\s+)?[A-Za-z][A-Za-z.]*)\.\s+(\d+)\s*$/.exec(trimmed)
+  if (abbrevChapterOnly) {
+    return `${abbrevChapterOnly[1].trim()} ${abbrevChapterOnly[2]}`
+  }
+  return trimmed
 }
 
 /** Map a book string that {@link bookNameToUsfm} accepts to canonical Gospel-present display name (USFM-aligned). */
@@ -185,8 +241,18 @@ function canonicalBookCandidateFromFragment(bookFragment: string): string | null
  * ("John 8:58", "Romans 8:28"). Used in stored sermon HTML and for passage-key indexing.
  */
 export function normalizedPassageDisplayForInline(passage: string): string {
-  const trimmed = passage.replace(/\s+/g, ' ').trim()
+  const trimmed = normalizeThmlPeriodVerseSeparators(passage.replace(/\s+/g, ' ').trim())
   if (!trimmed) return trimmed
+
+  const commaTail = trimmed.match(COMMA_VERSE_TAIL_RE)
+  if (commaTail) {
+    const headNorm = normalizedPassageDisplayForInline(commaTail[1])
+    const ranged = commaVerseTailToRange(headNorm, commaTail[2])
+    if (ranged && isGospelCanonicalScriptureRef(ranged)) return ranged
+    if (isGospelCanonicalScriptureRef(headNorm)) {
+      return headNorm + commaTail[2].replace(/,\s+/g, ', ')
+    }
+  }
 
   const parsed = parseReference(trimmed.replace(/–/g, '-'))
   if (!parsed) return trimmed
@@ -206,23 +272,79 @@ export function normalizedPassageDisplayForInline(passage: string): string {
   return `${bookOut} ${chapter}:${verseStart}`
 }
 
+function gospelDisplayBookForUsfm(usfm: string): string {
+  const code = (normalizeCalvinBookUsfm(usfm) ?? usfm).toUpperCase()
+  for (const name of GOSPEL_BIBLE_BOOK_NAMES) {
+    if (bookNameToUsfm(name) === code) return name
+  }
+  return code
+}
+
+function parseableNormalizedRef(raw: string): string | null {
+  const normalized = normalizedPassageDisplayForInline(raw)
+  if (!normalized || !isGospelCanonicalScriptureRef(normalized)) return null
+  return normalized
+}
+
+/** Convert CCEL `osisRef` (e.g. `Bible:Rom.8.28`, `Bible:Rom.8`) to display text for inline refs. */
+export function osisRefToDisplayPassage(osisRef: string): string | null {
+  const trimmed = osisRef.trim().split(/\s+/)[0] ?? osisRef.trim()
+  const range = /^Bible:([A-Za-z0-9]+)\.(\d+)\.(\d+)-Bible:[A-Za-z0-9]+\.(\d+)\.(\d+)$/i.exec(trimmed)
+  if (range) {
+    const name = gospelDisplayBookForUsfm(range[1])
+    return `${name} ${range[2]}:${range[3]}-${range[5]}`
+  }
+  const single = /^Bible:([A-Za-z0-9]+)\.(\d+)\.(\d+)$/i.exec(trimmed)
+  if (single) {
+    const name = gospelDisplayBookForUsfm(single[1])
+    return `${name} ${single[2]}:${single[3]}`
+  }
+  const chapterOnly = /^Bible:([A-Za-z0-9]+)\.(\d+)$/i.exec(trimmed)
+  if (chapterOnly) {
+    const name = gospelDisplayBookForUsfm(chapterOnly[1])
+    return `${name} ${chapterOnly[2]}`
+  }
+  return null
+}
+
 const SCRIPREF_BLOCK_RE = /<scripRef\b([^>]*)>([\s\S]*?)<\/scripRef>/gi
 
 function stripScripInnerToPlain(inner: string): string {
   return inner.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
 }
 
+function hasUnnormalizedThmlRef(text: string): boolean {
+  return /\b[ivxlcdm]+\.\s*\d/i.test(text) || /^verse\b/i.test(text.trim())
+}
+
 /**
  * Expand each `scripRef` to canonical inline reference text.
  * When CCEL provides visible text inside the tag (e.g. `Ecclesiastes 10:7`), prefer that over
- * abbreviated `passage="Ec 10:7"` attributes.
+ * abbreviated `passage="Ec 10:7"` attributes. Falls back to `osisRef` for Roman-numeral Watson refs.
  */
 export function expandScripRefsToInlinePlain(innerXml: string): string {
   return innerXml.replace(SCRIPREF_BLOCK_RE, (_full, attrs, inner) => {
+    const attrStr = String(attrs)
     const plain = stripScripInnerToPlain(String(inner))
-    if (plain) return normalizedPassageDisplayForInline(plain)
-    const pm = /\bpassage="([^"]+)"/i.exec(String(attrs))
-    if (pm?.[1]) return normalizedPassageDisplayForInline(pm[1])
+
+    if (plain && !hasUnnormalizedThmlRef(plain)) {
+      const fromInner = parseableNormalizedRef(plain)
+      if (fromInner) return fromInner
+    }
+
+    const om = /\bosisRef="([^"]+)"/i.exec(attrStr)
+    if (om?.[1]) {
+      const fromOsis = osisRefToDisplayPassage(om[1])
+      if (fromOsis) return fromOsis
+    }
+
+    const pm = /\bpassage="([^"]+)"/i.exec(attrStr)
+    if (pm?.[1]) {
+      const fromPassage = parseableNormalizedRef(pm[1])
+      if (fromPassage) return fromPassage
+      return normalizedPassageDisplayForInline(pm[1])
+    }
+
     return plain
   })
 }
@@ -242,6 +364,24 @@ export function extractPassageAttributes(fragment: string): string[] {
   while ((m = re.exec(fragment)) !== null) {
     const p = m[1].trim()
     if (p) out.push(p)
+  }
+  return out
+}
+
+/** Collect display passage strings from ThML `passage=` and `osisRef` attributes. */
+export function passageDisplaysFromFragment(fragment: string): string[] {
+  const out: string[] = []
+  for (const raw of extractPassageAttributes(fragment)) {
+    const parsed = parseableNormalizedRef(raw)
+    out.push(parsed ?? normalizedPassageDisplayForInline(raw))
+  }
+  const osisRe = /\bosisRef="([^"]+)"/gi
+  let om: RegExpExecArray | null
+  while ((om = osisRe.exec(fragment)) !== null) {
+    for (const part of om[1].trim().split(/\s+/)) {
+      const d = osisRefToDisplayPassage(part)
+      if (d) out.push(d)
+    }
   }
   return out
 }

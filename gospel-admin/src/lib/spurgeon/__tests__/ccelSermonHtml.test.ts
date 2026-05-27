@@ -25,10 +25,46 @@ describe('ccelSermonHtml', () => {
     expect(normalizedPassageDisplayForInline('Ec 10:7')).toBe('Ecclesiastes 10:7')
   })
 
+  it('normalizedPassageDisplayForInline handles Watson period-separated refs', () => {
+    expect(normalizedPassageDisplayForInline('Ep. 2. 1')).toBe('Ephesians 2:1')
+    expect(normalizedPassageDisplayForInline('He. 11. 26')).toBe('Hebrews 11:26')
+    expect(normalizedPassageDisplayForInline('Go. 37. 9')).toBe('Genesis 37:9')
+    expect(normalizedPassageDisplayForInline('Philippians 4. 11')).toBe('Philippians 4:11')
+    expect(normalizedPassageDisplayForInline('Can. 2:1')).toBe('Song of Songs 2:1')
+    expect(normalizedPassageDisplayForInline('Mat. 7. 22, 23')).toBe('Matthew 7:22-23')
+    expect(normalizedPassageDisplayForInline('Es. 3. 1')).toBe('Esther 3:1')
+  })
+
+  it('unwrapScripRefTags resolves Esther osisRef to canonical display', () => {
+    expect(
+      unwrapScripRefTags(
+        '<scripRef passage="Es. 3. 1" osisRef="Bible:Esth.3.1">Es. 3. 1</scripRef>'
+      )
+    ).toBe('Esther 3:1')
+    expect(
+      unwrapScripRefTags('<scripRef passage="Ep. 2. 1">Ep. 2. 1</scripRef>')
+    ).toBe('Ephesians 2:1')
+    expect(
+      unwrapScripRefTags('<scripRef passage="Go. 37. 9">Go. 37. 9</scripRef>')
+    ).toBe('Genesis 37:9')
+  })
+
   it('expandScripRefsToInlinePlain prefers inner text over abbreviated passage attribute', () => {
     const s =
       '<scripRef passage="Ec 10:7" parsed="|Eccl|10|7|0|0">Ecclesiastes 10:7</scripRef>'
     expect(unwrapScripRefTags(s)).toBe('Ecclesiastes 10:7')
+  })
+
+  it('expandScripRefsToInlinePlain uses osisRef for Roman-numeral CCEL refs', () => {
+    const s =
+      '<scripRef passage="Romans viii. 28" osisRef="Bible:Rom.8.28">Romans viii. 28</scripRef>'
+    expect(unwrapScripRefTags(s)).toBe('Romans 8:28')
+  })
+
+  it('expandScripRefsToInlinePlain uses osisRef when inner is verse-only', () => {
+    const s =
+      '<scripRef passage="1Kings 3:10" osisRef="Bible:1Kgs.3.10">verse 10</scripRef>'
+    expect(unwrapScripRefTags(s)).toBe('1 Kings 3:10')
   })
 
   it('extractPassageAttributes collects passage attributes', () => {

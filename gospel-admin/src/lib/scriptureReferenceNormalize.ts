@@ -1,6 +1,9 @@
 import { GOSPEL_BIBLE_BOOK_NAMES } from '@/lib/gospelBibleBookNames'
 import { parseReference } from '@/lib/parse-scripture-reference'
-import { normalizedPassageDisplayForInline } from '@/lib/spurgeon/ccelSermonHtml'
+import {
+  normalizeThmlPeriodVerseSeparators,
+  normalizedPassageDisplayForInline,
+} from '@/lib/spurgeon/ccelSermonHtml'
 import type {
   GospelPresentationData,
   GospelSection,
@@ -325,7 +328,9 @@ function normalizeScriptureReferenceStringInner(ref: string): string {
   const trimmed = ref.trim()
   if (!trimmed) return trimmed
   const withoutFollowing = stripFollowingVersesMarker(trimmed)
-  const displayNorm = normalizeScriptureDisplay(withoutFollowing.replace(/–/g, '-'))
+  const displayNorm = normalizeScriptureDisplay(
+    normalizeThmlPeriodVerseSeparators(withoutFollowing).replace(/–/g, '-')
+  )
 
   const commaTail = displayNorm.match(COMMA_VERSE_TAIL_RE)
   if (commaTail) {
