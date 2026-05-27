@@ -3,7 +3,7 @@ import { normalizeMcheyneReference } from '@/lib/mcheyne/mcheyneReferenceNormali
 
 export type { McheynePlanDay, McheynePlanFile }
 
-type RawDay = { family: string[]; secret: string[] }
+export type RawDay = { family: string[]; secret: string[] }
 
 export function buildPlanFromRaw(rawPlan: Record<string, RawDay>): McheynePlanFile {
   const keys = Object.keys(rawPlan).sort()

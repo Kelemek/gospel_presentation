@@ -10,7 +10,7 @@
  */
 import * as fs from 'fs'
 import * as path from 'path'
-import { buildPlanFromRaw } from '../src/lib/mcheyne/buildMcheynePlanFromRaw'
+import { buildPlanFromRaw, type RawDay } from '../src/lib/mcheyne/buildMcheynePlanFromRaw'
 
 const SOURCE_URL =
   'https://raw.githubusercontent.com/speric/mcheyne-api/master/plan.json'

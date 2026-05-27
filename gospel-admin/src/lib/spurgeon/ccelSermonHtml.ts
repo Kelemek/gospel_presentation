@@ -159,13 +159,11 @@ const THML_BOOK_ABBREV_TO_BOOK_ALIAS: Record<string, string> = {
   ez: 'ezekiel',
   go: 'genesis',
   es: 'esther',
-  nu: 'numbers',
   can: 'song of songs',
   pe: '1 peter',
   ph: 'philippians',
   ti: '1 timothy',
   is: 'isaiah',
-  thess: '1 thessalonians',
 }
 
 /**
