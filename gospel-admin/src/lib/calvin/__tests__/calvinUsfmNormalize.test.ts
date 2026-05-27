@@ -13,6 +13,7 @@ describe('normalizeCalvinBookUsfm', () => {
     expect(normalizeCalvinBookUsfm('Matt')).toBe('MAT')
     expect(normalizeCalvinBookUsfm('Acts')).toBe('ACT')
     expect(normalizeCalvinBookUsfm('1Cor')).toBe('1CO')
+    expect(normalizeCalvinBookUsfm('1John')).toBe('1JN')
     expect(normalizeCalvinBookUsfm('2Kgs')).toBe('2KI')
     expect(normalizeCalvinBookUsfm('Nah')).toBe('NAM')
   })

@@ -2,6 +2,7 @@ import {
   unwrapScripRefTags,
   extractPassageAttributes,
   normalizedPassageDisplayForInline,
+  osisRefToDisplayPassage,
   slugForSermonNumber,
   extractSermonCatalogNumberFromDiv1Title,
   div1XmlToGospelSubsections,
@@ -33,6 +34,15 @@ describe('ccelSermonHtml', () => {
     expect(normalizedPassageDisplayForInline('Can. 2:1')).toBe('Song of Songs 2:1')
     expect(normalizedPassageDisplayForInline('Mat. 7. 22, 23')).toBe('Matthew 7:22-23')
     expect(normalizedPassageDisplayForInline('Es. 3. 1')).toBe('Esther 3:1')
+    expect(normalizedPassageDisplayForInline('Thess. v. 18')).toBe('1 Thessalonians 5:18')
+    expect(normalizedPassageDisplayForInline('1 Peter:18, 19')).toBe('1 Peter 1:18-19')
+  })
+
+  it('osisRefToDisplayPassage handles CCEL Watson range and numbered-book OSIS codes', () => {
+    expect(osisRefToDisplayPassage('Bible:1John.2.27')).toBe('1 John 2:27')
+    expect(osisRefToDisplayPassage('Bible:1Cor.12.5-1Cor.12.6')).toBe('1 Corinthians 12:5-6')
+    expect(osisRefToDisplayPassage('Bible:Ps.116.12-Ps.116.13')).toBe('Psalms 116:12-13')
+    expect(osisRefToDisplayPassage('Bible:Acts.12.5-Acts.12.7')).toBe('Acts 12:5-7')
   })
 
   it('unwrapScripRefTags resolves Esther osisRef to canonical display', () => {

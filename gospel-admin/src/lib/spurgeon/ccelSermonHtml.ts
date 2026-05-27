@@ -25,6 +25,7 @@ import {
   commaVerseTailToRange,
   isGospelCanonicalScriptureRef,
 } from '@/lib/scriptureReferenceNormalize'
+import { romanNumeralToArabic } from '@/lib/henry/ccelHenryHtml'
 
 /** `Mat 7:22, 23` — same-chapter comma verse list after period normalization. */
 const COMMA_VERSE_TAIL_RE = /^(.+\d+:\s*\d+)((?:,\s*\d+(?::\s*\d+)?)+)$/
@@ -164,6 +165,7 @@ const THML_BOOK_ABBREV_TO_BOOK_ALIAS: Record<string, string> = {
   ph: 'philippians',
   ti: '1 timothy',
   is: 'isaiah',
+  thess: '1 thessalonians',
 }
 
 /**
@@ -197,6 +199,49 @@ export function normalizeThmlPeriodVerseSeparators(passage: string): string {
     return `${abbrevChapterOnly[1].trim()} ${abbrevChapterOnly[2]}`
   }
   return trimmed
+}
+
+/** CCEL typo: `1 Peter:18, 19` (chapter omitted) → `1 Peter 1:18, 19`. */
+function normalizeCcelMissingChapterColon(passage: string): string {
+  const m = /^(\d+\s+[A-Za-z]+):(\d+(?:\s*,\s*\d+)*)\s*$/.exec(passage)
+  if (!m) return passage
+  return `${m[1]} 1:${m[2].replace(/\s*,\s*/g, ', ')}`
+}
+
+/**
+ * Roman numeral chapters in Watson ThML (`Thess. v. 18`, `Psalm cxvi. 12, 13`, `Deut. xxxiii. 27`).
+ */
+export function normalizeThmlRomanChapterVerse(passage: string): string {
+  const abbrevDotRoman =
+    /^((?:\d+\s+)?[A-Za-z][A-Za-z.]*)\.\s*([ivxlcdm]+)\.\s*(\d+(?:\s*-\s*\d+)?(?:\s*,\s*\d+(?:\s*-\s*\d+)?)*)\s*$/i.exec(
+      passage
+    )
+  if (abbrevDotRoman) {
+    const ch = romanNumeralToArabic(abbrevDotRoman[2])
+    if (ch != null) {
+      const vs = abbrevDotRoman[3].replace(/\s*-\s*/g, '-').replace(/\s*,\s*/g, ', ')
+      return `${abbrevDotRoman[1].trim()} ${ch}:${vs}`
+    }
+  }
+  const bookSpaceRoman =
+    /^((?:\d+\s+)?[A-Za-z]+(?:\s+[A-Za-z]+)?)\s+([ivxlcdm]+)\.\s*(\d+(?:\s*-\s*\d+)?(?:\s*,\s*\d+(?:\s*-\s*\d+)?)*)\s*$/i.exec(
+      passage
+    )
+  if (bookSpaceRoman) {
+    const ch = romanNumeralToArabic(bookSpaceRoman[2])
+    if (ch != null) {
+      const vs = bookSpaceRoman[3].replace(/\s*-\s*/g, '-').replace(/\s*,\s*/g, ', ')
+      return `${bookSpaceRoman[1].trim()} ${ch}:${vs}`
+    }
+  }
+  return passage
+}
+
+function preprocessThmlPassageForInline(passage: string): string {
+  let s = passage.replace(/\s+/g, ' ').trim().replace(/\.$/, '')
+  s = normalizeCcelMissingChapterColon(s)
+  s = normalizeThmlRomanChapterVerse(s)
+  return normalizeThmlPeriodVerseSeparators(s)
 }
 
 /** Map a book string that {@link bookNameToUsfm} accepts to canonical Gospel-present display name (USFM-aligned). */
@@ -241,7 +286,7 @@ function canonicalBookCandidateFromFragment(bookFragment: string): string | null
  * ("John 8:58", "Romans 8:28"). Used in stored sermon HTML and for passage-key indexing.
  */
 export function normalizedPassageDisplayForInline(passage: string): string {
-  const trimmed = normalizeThmlPeriodVerseSeparators(passage.replace(/\s+/g, ' ').trim())
+  const trimmed = preprocessThmlPassageForInline(passage)
   if (!trimmed) return trimmed
 
   const commaTail = trimmed.match(COMMA_VERSE_TAIL_RE)
@@ -289,10 +334,11 @@ function parseableNormalizedRef(raw: string): string | null {
 /** Convert CCEL `osisRef` (e.g. `Bible:Rom.8.28`, `Bible:Rom.8`) to display text for inline refs. */
 export function osisRefToDisplayPassage(osisRef: string): string | null {
   const trimmed = osisRef.trim().split(/\s+/)[0] ?? osisRef.trim()
-  const range = /^Bible:([A-Za-z0-9]+)\.(\d+)\.(\d+)-Bible:[A-Za-z0-9]+\.(\d+)\.(\d+)$/i.exec(trimmed)
+  const range =
+    /^Bible:([A-Za-z0-9]+)\.(\d+)\.(\d+)-(?:Bible:)?([A-Za-z0-9]+)\.(\d+)\.(\d+)$/i.exec(trimmed)
   if (range) {
     const name = gospelDisplayBookForUsfm(range[1])
-    return `${name} ${range[2]}:${range[3]}-${range[5]}`
+    return `${name} ${range[2]}:${range[3]}-${range[6]}`
   }
   const single = /^Bible:([A-Za-z0-9]+)\.(\d+)\.(\d+)$/i.exec(trimmed)
   if (single) {
