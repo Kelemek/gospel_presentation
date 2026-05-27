@@ -13,13 +13,15 @@ html.text-size-largest {
   font-size: 125%;
 }
 
-/* Sticky profile toolbar (Menu + header icons): rem-based controls scale with html font-size,
+/* Sticky profile toolbar + scripture modal chrome: rem-based controls scale with html font-size,
    which pushes buttons off-screen at Larger/Largest. Inverse zoom keeps chrome ~the same visual
    size as Normal while body text still scales. */
-html.text-size-larger [data-profile-sticky-header] {
+html.text-size-larger [data-profile-sticky-header],
+html.text-size-larger [data-scripture-modal-chrome] {
   zoom: 0.8888888889;
 }
-html.text-size-largest [data-profile-sticky-header] {
+html.text-size-largest [data-profile-sticky-header],
+html.text-size-largest [data-scripture-modal-chrome] {
   zoom: 0.8;
 }
 

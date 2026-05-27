@@ -886,9 +886,9 @@ export default function ScriptureModal({
           data-tour="scripture-modal-toolbar"
         >
           {/* Navigation Controls - Always at Top */}
-          <div className="flex justify-between items-center mb-2">
-            <div className="flex-1 min-w-0" aria-hidden />
-            <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1.5 min-w-0 mb-2">
+            <div className="flex items-center gap-1.5 min-w-0 flex-1 justify-center">
+              <span data-scripture-modal-chrome className="shrink-0 inline-flex">
               <button
                 type="button"
                 data-tour="scripture-modal-prev"
@@ -898,7 +898,7 @@ export default function ScriptureModal({
                   }
                 }}
                 disabled={!hasPrevious}
-                className={`h-9 min-h-[36px] min-w-[36px] box-border rounded-md transition-colors inline-flex items-center justify-center px-1.5 text-lg font-bold leading-none ${
+                className={`shrink-0 h-9 min-h-[36px] min-w-[36px] box-border rounded-md transition-colors inline-flex items-center justify-center px-1.5 text-lg font-bold leading-none ${
                   hasPrevious 
                     ? 'cursor-pointer text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500' 
                     : 'text-slate-300 dark:text-slate-500 cursor-not-allowed'
@@ -908,13 +908,14 @@ export default function ScriptureModal({
               >
                 ◀
               </button>
+              </span>
               {onNavigateReference ? (
                 <button
                   type="button"
                   id={scriptureModalTitleId}
                   data-tour="scripture-modal-reference-picker"
                   onClick={() => setPassagePickerOpen(true)}
-                  className="text-base md:text-lg font-semibold text-slate-800 dark:text-slate-100 leading-tight px-1 min-w-0 max-w-[50vw] flex items-baseline gap-1 min-h-0 cursor-pointer rounded-md hover:bg-slate-200/80 dark:hover:bg-slate-600/80 active:bg-slate-300/80 dark:active:bg-slate-500/80 transition-colors text-left"
+                  className="text-base md:text-lg font-semibold text-slate-800 dark:text-slate-100 leading-tight px-1 min-w-0 flex-1 max-w-full overflow-hidden flex items-baseline gap-1 min-h-0 cursor-pointer rounded-md hover:bg-slate-200/80 dark:hover:bg-slate-600/80 active:bg-slate-300/80 dark:active:bg-slate-500/80 transition-colors text-left"
                   title={`${reference} — choose another passage`}
                   aria-label={`${reference}. Choose another passage`}
                 >
@@ -922,7 +923,7 @@ export default function ScriptureModal({
                     <span className="min-w-0 truncate">{headerBook}</span>
                   ) : (
                     <>
-                      <span className="min-w-0 truncate">{headerBook}</span>
+                      <span className="min-w-0 flex-1 truncate">{headerBook}</span>
                       <span className="shrink-0 whitespace-nowrap">{headerSuffix}</span>
                     </>
                   )}
@@ -930,7 +931,7 @@ export default function ScriptureModal({
               ) : (
                 <h3
                   id={scriptureModalTitleId}
-                  className="text-base md:text-lg font-semibold text-slate-800 dark:text-slate-100 leading-tight px-1 min-w-0 max-w-[50vw] flex items-baseline gap-1 min-h-0"
+                  className="text-base md:text-lg font-semibold text-slate-800 dark:text-slate-100 leading-tight px-1 min-w-0 flex-1 max-w-full overflow-hidden flex items-baseline gap-1 min-h-0"
                   title={reference}
                   aria-label={reference}
                 >
@@ -938,12 +939,13 @@ export default function ScriptureModal({
                     <span className="min-w-0 truncate">{headerBook}</span>
                   ) : (
                     <>
-                      <span className="min-w-0 truncate">{headerBook}</span>
+                      <span className="min-w-0 flex-1 truncate">{headerBook}</span>
                       <span className="shrink-0 whitespace-nowrap">{headerSuffix}</span>
                     </>
                   )}
                 </h3>
               )}
+              <span data-scripture-modal-chrome className="shrink-0 inline-flex">
               <button
                 type="button"
                 data-tour="scripture-modal-next"
@@ -953,7 +955,7 @@ export default function ScriptureModal({
                   }
                 }}
                 disabled={!hasNext}
-                className={`h-9 min-h-[36px] min-w-[36px] box-border rounded-md transition-colors inline-flex items-center justify-center px-1.5 text-lg font-bold leading-none ${
+                className={`shrink-0 h-9 min-h-[36px] min-w-[36px] box-border rounded-md transition-colors inline-flex items-center justify-center px-1.5 text-lg font-bold leading-none ${
                   hasNext 
                     ? 'cursor-pointer text-slate-600 dark:text-slate-300 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500' 
                     : 'text-slate-300 dark:text-slate-500 cursor-not-allowed'
@@ -963,8 +965,12 @@ export default function ScriptureModal({
               >
                 ▶
               </button>
+              </span>
             </div>
-            <div className="flex-1 flex justify-end items-center gap-1.5">
+            <div
+              data-scripture-modal-chrome
+              className="flex shrink-0 items-center gap-1.5"
+            >
               <ScriptureModalChapterListen
                 passageReference={passageAudioReference}
                 chapterReference={getChapterReference(reference)}
@@ -1014,7 +1020,10 @@ export default function ScriptureModal({
           </div>
           
           {/* Toolbar: row1 = Compare + Translation + pin; row2 = verse/chapter toggle + Memorize (+ Study) */}
-          <div className="flex flex-wrap gap-1 justify-center items-center">
+          <div
+            data-scripture-modal-chrome
+            className="flex flex-wrap gap-1 justify-center items-center"
+          >
             <div className="w-full sm:w-auto flex flex-wrap gap-1 justify-center sm:justify-start items-center">
               {/* Compare menu — custom listbox to match pin control styling (no native select). */}
               <ScriptureModalToolbarMenu
