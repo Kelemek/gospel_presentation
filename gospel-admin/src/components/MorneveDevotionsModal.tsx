@@ -2,24 +2,17 @@
 
 import { useId, useState } from 'react'
 import Link from 'next/link'
+import MonthCalendarGrid from '@/components/MonthCalendarGrid'
 import {
-  MORNEVE_MONTH_NAMES,
-  firstWeekdayOfMonth,
   morneveSlugForLocalDate,
   morneveSlugForMmdd,
   morneveTitleForMmdd,
 } from '@/lib/spurgeon/morneveSlug'
 
-const DAYS_IN_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] as const
-
 function mmddForCalendarDay(monthIndex: number, day: number): string {
   const mm = String(monthIndex + 1).padStart(2, '0')
   const dd = String(day).padStart(2, '0')
   return `${mm}${dd}`
-}
-
-function daysInMonth(monthIndex: number): number {
-  return DAYS_IN_MONTH[monthIndex] ?? 31
 }
 
 interface MorneveDevotionsModalProps {
@@ -41,14 +34,6 @@ export default function MorneveDevotionsModal({
   const [monthIndex, setMonthIndex] = useState(now.getMonth())
 
   if (!isOpen) return null
-
-  const monthName = MORNEVE_MONTH_NAMES[monthIndex]
-  const count = daysInMonth(monthIndex)
-  const firstWeekday = firstWeekdayOfMonth(now.getFullYear(), monthIndex)
-  const cells: (number | null)[] = []
-  for (let i = 0; i < firstWeekday; i++) cells.push(null)
-  for (let d = 1; d <= count; d++) cells.push(d)
-  while (cells.length % 7 !== 0) cells.push(null)
 
   return (
     <div
@@ -94,76 +79,46 @@ export default function MorneveDevotionsModal({
             </Link>
           </div>
 
-          <div className="space-y-3" data-tour="morneve-modal-calendar">
-            <div className="flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => setMonthIndex((m) => (m <= 0 ? 11 : m - 1))}
-                className="cursor-pointer px-3 py-1.5 text-sm font-medium rounded-md border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
-                aria-label="Previous month"
-              >
-                ‹
-              </button>
-              <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">{monthName}</span>
-              <button
-                type="button"
-                onClick={() => setMonthIndex((m) => (m >= 11 ? 0 : m + 1))}
-                className="cursor-pointer px-3 py-1.5 text-sm font-medium rounded-md border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
-                aria-label="Next month"
-              >
-                ›
-              </button>
-            </div>
+          <MonthCalendarGrid
+            monthIndex={monthIndex}
+            onMonthChange={setMonthIndex}
+            year={now.getFullYear()}
+            tourId="morneve-modal-calendar"
+            renderDay={(day, monthIdx) => {
+              const mmdd = mmddForCalendarDay(monthIdx, day)
+              const slug = morneveSlugForMmdd(mmdd)
+              const isToday =
+                monthIdx === now.getMonth() &&
+                day === now.getDate() &&
+                (monthIdx !== 1 || day !== 29 || now.getDate() === 29)
+              const isTodayFeb28NonLeap =
+                monthIdx === 1 &&
+                day === 28 &&
+                now.getMonth() === 1 &&
+                now.getDate() === 28 &&
+                todaySlug === morneveSlugForMmdd('0229')
 
-            <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-slate-500 dark:text-slate-400">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-                <div key={d} className="py-1">
-                  {d}
-                </div>
-              ))}
-            </div>
+              const highlight = isToday || isTodayFeb28NonLeap
 
-            <div className="grid grid-cols-7 gap-1">
-              {cells.map((day, idx) => {
-                if (day == null) {
-                  return <div key={`empty-${idx}`} className="aspect-square" aria-hidden />
-                }
-                const mmdd = mmddForCalendarDay(monthIndex, day)
-                const slug = morneveSlugForMmdd(mmdd)
-                const isToday =
-                  monthIndex === now.getMonth() &&
-                  day === now.getDate() &&
-                  (monthIndex !== 1 || day !== 29 || now.getDate() === 29)
-                const isTodayFeb28NonLeap =
-                  monthIndex === 1 &&
-                  day === 28 &&
-                  now.getMonth() === 1 &&
-                  now.getDate() === 28 &&
-                  todaySlug === morneveSlugForMmdd('0229')
-
-                const highlight = isToday || isTodayFeb28NonLeap
-
-                return (
-                  <Link
-                    key={slug}
-                    href={`/${slug}`}
-                    onClick={() => {
-                      onFollowDayLink?.()
-                      onClose()
-                    }}
-                    className={`aspect-square flex items-center justify-center rounded-md text-sm transition-colors ${
-                      highlight
-                        ? 'font-bold bg-blue-600 text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600'
-                        : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
-                    }`}
-                    aria-label={morneveTitleForMmdd(mmdd)}
-                  >
-                    {day}
-                  </Link>
-                )
-              })}
-            </div>
-          </div>
+              return (
+                <Link
+                  href={`/${slug}`}
+                  onClick={() => {
+                    onFollowDayLink?.()
+                    onClose()
+                  }}
+                  className={`aspect-square flex w-full h-full items-center justify-center rounded-md text-sm transition-colors ${
+                    highlight
+                      ? 'font-bold bg-blue-600 text-white dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600'
+                      : 'text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  }`}
+                  aria-label={morneveTitleForMmdd(mmdd)}
+                >
+                  {day}
+                </Link>
+              )
+            }}
+          />
         </div>
       </div>
     </div>

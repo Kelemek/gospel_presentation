@@ -15,6 +15,50 @@ describe('scrollToTocAnchor', () => {
     expect(window.scrollTo).not.toHaveBeenCalled()
   })
 
+  it('scrolls to subsection title when preferSubsectionTitle is set', () => {
+    const container = document.createElement('div')
+    container.id = 'section-1-0'
+    const title = document.createElement('h4')
+    title.className = 'print-subsection-title'
+    container.appendChild(title)
+    document.body.appendChild(container)
+    jest.spyOn(container, 'getBoundingClientRect').mockReturnValue({
+      top: 400,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      width: 0,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+    jest.spyOn(title, 'getBoundingClientRect').mockReturnValue({
+      top: 120,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      width: 0,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
+    Object.defineProperty(window, 'scrollY', { value: 100, writable: true })
+
+    const header = document.createElement('div')
+    header.setAttribute('data-profile-sticky-header', '')
+    Object.defineProperty(header, 'offsetHeight', { value: 64, configurable: true })
+    document.body.appendChild(header)
+
+    const result = scrollToTocAnchor('section-1-0', { behavior: 'auto', preferSubsectionTitle: true })
+    expect(result).toBe(true)
+    expect(window.scrollTo).toHaveBeenCalledWith({
+      top: 120 + 100 - 64 - 8,
+      behavior: 'auto',
+    })
+  })
+
   it('scrolls when element exists', () => {
     const el = document.createElement('div')
     el.id = 'section-1-0'

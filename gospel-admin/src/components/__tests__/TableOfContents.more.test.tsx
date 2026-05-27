@@ -225,7 +225,8 @@ describe('TableOfContents additional behaviors', () => {
     expect(localStorage.getItem('gospel-profile-text-size')).toBe('larger')
   })
 
-  it('shows open-book icon for M\'Cheyne reading plan in Resources menu', async () => {
+  it('opens M\'Cheyne calendar via button instead of direct link', async () => {
+    const onOpenMcheynePlan = jest.fn()
     const clientMod = require('@/lib/supabase/client')
     jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({
       auth: { getUser: async () => ({ data: { user: null } }) }
@@ -254,16 +255,19 @@ describe('TableOfContents additional behaviors', () => {
     global.fetch = fetchSpy as typeof fetch
 
     const TableOfContents = require('../TableOfContents').default
-    renderToc(<TableOfContents sections={[]} />)
+    renderToc(<TableOfContents sections={[]} onOpenMcheynePlan={onOpenMcheynePlan} />)
 
     await waitFor(() => expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument())
     fireEvent.click(screen.getByRole('button', { name: /Resources/i }))
 
-    const mchyLink = await screen.findByRole('link', { name: /M'Cheyne Bible Reading Plan/i })
-    expect(mchyLink).toHaveAttribute('href', '/mchy')
-    expect(mchyLink.querySelector('svg[aria-hidden="true"]')).toBeInTheDocument()
+    const mchyButton = await screen.findByRole('button', { name: /M'Cheyne Bible Reading Plan/i })
+    expect(screen.queryByRole('link', { name: /M'Cheyne Bible Reading Plan/i })).not.toBeInTheDocument()
+    expect(mchyButton.querySelector('svg[aria-hidden="true"]')).toBeInTheDocument()
+    fireEvent.click(mchyButton)
+    expect(onOpenMcheynePlan).toHaveBeenCalledTimes(1)
 
     const plainLink = screen.getByRole('link', { name: /Template One/i })
+    expect(plainLink).toHaveAttribute('href', '/t1')
     expect(plainLink.querySelector('svg[aria-hidden="true"]')).not.toBeInTheDocument()
   })
 

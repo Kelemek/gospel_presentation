@@ -3,7 +3,9 @@ import {
   findMcheyneDayAnchor,
   formatLocalIsoDate,
   isMcheynePlanComplete,
+  mcheyneDaySubsectionIdFromAnchor,
   mcheynePlanDayForDates,
+  mcheynePlanDayFromDaySubsectionId,
   parseLocalIsoDate,
   startOfLocalDay,
 } from '@/lib/mcheyne/mcheyneReadingDay'
@@ -54,6 +56,27 @@ describe('mcheyneReadingDay', () => {
     })
   })
 
+  describe('mcheyneDaySubsectionIdFromAnchor', () => {
+    it('strips nested Family/Secret suffix', () => {
+      expect(mcheyneDaySubsectionIdFromAnchor('section-may-26-0')).toBe('section-may-26')
+      expect(mcheyneDaySubsectionIdFromAnchor('section-may-26')).toBe('section-may-26')
+    })
+  })
+
+  describe('mcheynePlanDayFromDaySubsectionId', () => {
+    it('maps January day 1 subsection (after intro)', () => {
+      expect(mcheynePlanDayFromDaySubsectionId('section-jan-1')).toBe(1)
+    })
+
+    it('returns null for January intro', () => {
+      expect(mcheynePlanDayFromDaySubsectionId('section-jan-0')).toBeNull()
+    })
+
+    it('maps nested Family anchor to the parent day', () => {
+      expect(mcheynePlanDayFromDaySubsectionId('section-may-26-0')).toBe(147)
+    })
+  })
+
   describe('findMcheyneDayAnchor', () => {
     it('finds subsection for plan day 1 in January', () => {
       const anchor = findMcheyneDayAnchor(sections, 1)
@@ -67,6 +90,13 @@ describe('mcheyneReadingDay', () => {
     it('returns null for out-of-range days', () => {
       expect(findMcheyneDayAnchor(sections, 0)).toBeNull()
       expect(findMcheyneDayAnchor(sections, 366)).toBeNull()
+    })
+
+    it('matches subsection titles with hyphen instead of em dash', () => {
+      const hyphenSections = buildMcheyneGospelData(plan)
+      hyphenSections[0].subsections[1].title = 'Day 1 - January 1'
+      const anchor = findMcheyneDayAnchor(hyphenSections, 1)
+      expect(anchor?.subsectionId).toBe('section-jan-1')
     })
   })
 })

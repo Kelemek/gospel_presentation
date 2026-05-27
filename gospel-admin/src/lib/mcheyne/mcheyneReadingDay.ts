@@ -1,4 +1,32 @@
 import type { GospelSection } from '@/lib/types'
+import planFile from '../../../data/mcheyne/plan.json'
+import { monthNameForPlan, monthSectionId } from '@/lib/mcheyne/buildMcheyneGospelData'
+import { mcheyneCalendarDateForPlanDay } from '@/lib/mcheyne/mcheyneCalendar'
+import type { McheynePlanFile } from '@/lib/mcheyne/mcheynePlanTypes'
+
+const plan = planFile as McheynePlanFile
+
+const MONTH_FROM_SECTION_ID = new Map<string, number>(
+  (
+    [
+      'jan',
+      'feb',
+      'mar',
+      'apr',
+      'may',
+      'jun',
+      'jul',
+      'aug',
+      'sep',
+      'oct',
+      'nov',
+      'dec',
+    ] as const
+  ).map((id, index) => [id, index + 1])
+)
+
+const MCHEYNE_DAY_SUBSECTION_ONLY_ID =
+  /^section-(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)-(\d+)$/
 
 export const MCHEYNE_PLAN_DAYS = 365
 
@@ -8,6 +36,35 @@ export type McheyneDayAnchor = {
   sectionId: string
   subsectionId: string
   planDay: number
+}
+
+const MCHEYNE_DAY_SUBSECTION_ID =
+  /^(section-(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)-\d+)(?:-\d+)?$/
+
+/** Day subsection id (e.g. `section-may-26`) from a day or nested Family/Secret anchor. */
+export function mcheyneDaySubsectionIdFromAnchor(subsectionId: string): string {
+  const match = MCHEYNE_DAY_SUBSECTION_ID.exec(subsectionId.trim())
+  return match?.[1] ?? subsectionId
+}
+
+/** Plan day (1–365) for a day subsection anchor, or null (e.g. January intro). */
+export function mcheynePlanDayFromDaySubsectionId(subsectionId: string): number | null {
+  const daySubsectionId = mcheyneDaySubsectionIdFromAnchor(subsectionId)
+  const match = MCHEYNE_DAY_SUBSECTION_ONLY_ID.exec(daySubsectionId)
+  if (!match) return null
+
+  const month = MONTH_FROM_SECTION_ID.get(match[1])
+  if (!month) return null
+
+  const subIndex = parseInt(match[2], 10)
+  if (!Number.isFinite(subIndex) || subIndex < 0) return null
+
+  const monthDays = plan.days.filter((d) => d.month === month)
+  if (month === 1) {
+    if (subIndex === 0) return null
+    return monthDays[subIndex - 1]?.day ?? null
+  }
+  return monthDays[subIndex]?.day ?? null
 }
 
 /** Local calendar midnight for date math. */
@@ -52,18 +109,46 @@ export function isMcheynePlanComplete(startDate: Date, today: Date = new Date())
   return elapsed + 1 > MCHEYNE_PLAN_DAYS
 }
 
-/** Find TOC anchor for plan day N (`Day N — …` subsection title). */
+function subsectionMatchesPlanDay(title: string, planDay: number, month: number, monthDay: number): boolean {
+  const trimmed = title.trim()
+  if (!trimmed) return false
+  const monthLabel = monthNameForPlan(month)
+  if (trimmed.includes(`${monthLabel} ${monthDay}`)) return true
+  // Accept em dash, en dash, or hyphen after "Day N"
+  return new RegExp(`^Day\\s+${planDay}\\s*[-–—]`).test(trimmed)
+}
+
+/** Find TOC anchor for plan day N (calendar date from plan.json). */
 export function findMcheyneDayAnchor(
   sectionList: GospelSection[],
   planDay: number
 ): McheyneDayAnchor | null {
   if (!Number.isFinite(planDay) || planDay < 1 || planDay > MCHEYNE_PLAN_DAYS) return null
-  const prefix = `Day ${planDay} —`
+
+  const cal = mcheyneCalendarDateForPlanDay(planDay)
+  if (cal) {
+    const monthSection = monthSectionId(cal.month)
+    for (const section of sectionList) {
+      if (section.section !== monthSection) continue
+      const sectionId = `section-${section.section}`
+      for (let subIndex = 0; subIndex < section.subsections.length; subIndex++) {
+        const title = section.subsections[subIndex].title?.trim() ?? ''
+        if (subsectionMatchesPlanDay(title, planDay, cal.month, cal.monthDay)) {
+          return {
+            sectionId,
+            subsectionId: `${sectionId}-${subIndex}`,
+            planDay,
+          }
+        }
+      }
+    }
+  }
+
   for (const section of sectionList) {
     const sectionId = `section-${section.section}`
     for (let subIndex = 0; subIndex < section.subsections.length; subIndex++) {
       const title = section.subsections[subIndex].title?.trim() ?? ''
-      if (title.startsWith(prefix)) {
+      if (new RegExp(`^Day\\s+${planDay}\\s*[-–—]`).test(title)) {
         return {
           sectionId,
           subsectionId: `${sectionId}-${subIndex}`,

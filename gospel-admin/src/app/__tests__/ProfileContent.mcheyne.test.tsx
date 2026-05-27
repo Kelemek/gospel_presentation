@@ -6,12 +6,30 @@ import React, { type ReactElement } from 'react'
 import { render, waitFor } from '@testing-library/react'
 import { TextSizeProvider } from '@/contexts/TextSizeContext'
 import { assignYellowLastViewed, versePinStorageKey } from '@/lib/versePinStorage'
-import { gospelStorageGetSync, resetGospelClientStorageForTests } from '@/lib/gospelClientStorage'
+import { resetGospelClientStorageForTests } from '@/lib/gospelClientStorage'
+import {
+  setPendingMcheynePlanDay,
+  setPendingMcheyneResumePin,
+} from '@/lib/mcheyne/mcheynePendingNavigation'
 import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
 import { scrollToVersePinWhenReady } from '@/lib/scrollToVersePinWhenReady'
+import { scrollToTocAnchorWhenReady } from '@/lib/scrollToTocAnchor'
 
 jest.mock('@/lib/scrollToVersePinWhenReady', () => ({
-  scrollToVersePinWhenReady: jest.fn(() => () => {}),
+  scrollToVersePinWhenReady: jest.fn((...args: unknown[]) => {
+    const opts = args[1] as { onDone?: () => void } | undefined
+    opts?.onDone?.()
+    return () => {}
+  }),
+}))
+
+jest.mock('@/lib/scrollToTocAnchor', () => ({
+  scrollToTocAnchor: jest.fn(() => false),
+  scrollToTocAnchorWhenReady: jest.fn((...args: unknown[]) => {
+    const opts = args[1] as { onDone?: () => void } | undefined
+    opts?.onDone?.()
+    return () => {}
+  }),
 }))
 
 jest.mock('@/lib/versePinStorage', () => {
@@ -104,37 +122,8 @@ afterEach(() => {
   delete g.fetch
 })
 
-describe('ProfileContent M\'Cheyne resume', () => {
-  test('auto-scrolls to yellow pin on mchy when no hash or studyRef', async () => {
-    assignYellowLastViewed('mchy', {
-      reference: 'Genesis 1',
-      sectionId: 'section-jan',
-      subsectionId: 'section-jan-1',
-    })
-    expect(localStorage.getItem(versePinStorageKey('mchy'))).toBeTruthy()
-
-    const { ProfileContent } = await import('../[slug]/ProfileContent')
-    renderWithTextSize(
-      <ProfileContent
-        sections={mchySections as any}
-        profileInfo={{ title: "M'Cheyne", slug: 'mchy', favoriteScriptures: [] }}
-      />
-    )
-
-    await waitFor(() => {
-      expect(scrollToVersePinWhenReady).toHaveBeenCalledWith(
-        expect.objectContaining({
-          reference: 'Genesis 1',
-          subsectionId: 'section-jan-1',
-        }),
-        expect.objectContaining({ behavior: 'auto' })
-      )
-    })
-  })
-
-  test('does not auto-scroll when studyRef is set', async () => {
-    profileSearchParams = new URLSearchParams('studyRef=John+3%3A16')
-    syncProfileNavigationTestGlobals()
+describe('ProfileContent M\'Cheyne navigation', () => {
+  test('does not auto-scroll to yellow pin on open without query params', async () => {
     assignYellowLastViewed('mchy', {
       reference: 'Genesis 1',
       sectionId: 'section-jan',
@@ -154,8 +143,94 @@ describe('ProfileContent M\'Cheyne resume', () => {
     })
   })
 
-  test('does not auto-scroll when hash deep link is present', async () => {
-    window.location.hash = '#section-jan-0'
+  test('scrolls to plan day when ?planDay=1', async () => {
+    profileSearchParams = new URLSearchParams('planDay=1')
+    syncProfileNavigationTestGlobals()
+
+    const { ProfileContent } = await import('../[slug]/ProfileContent')
+    renderWithTextSize(
+      <ProfileContent
+        sections={mchySections as any}
+        profileInfo={{ title: "M'Cheyne", slug: 'mchy', favoriteScriptures: [] }}
+      />
+    )
+
+    await waitFor(() => {
+      expect(scrollToTocAnchorWhenReady).toHaveBeenCalledWith(
+        'section-jan-1',
+        expect.objectContaining({ behavior: 'auto', preferSubsectionTitle: true })
+      )
+    })
+  })
+
+  test('scrolls to day title once when ?resumePin=1 with duplicate pending', async () => {
+    setPendingMcheyneResumePin()
+    profileSearchParams = new URLSearchParams('resumePin=1')
+    syncProfileNavigationTestGlobals()
+    assignYellowLastViewed('mchy', {
+      reference: 'Genesis 1',
+      sectionId: 'section-jan',
+      subsectionId: 'section-jan-1',
+    })
+    expect(localStorage.getItem(versePinStorageKey('mchy'))).toBeTruthy()
+
+    const { ProfileContent } = await import('../[slug]/ProfileContent')
+    renderWithTextSize(
+      <ProfileContent
+        sections={mchySections as any}
+        profileInfo={{ title: "M'Cheyne", slug: 'mchy', favoriteScriptures: [] }}
+      />
+    )
+
+    await waitFor(() => {
+      expect(scrollToTocAnchorWhenReady).toHaveBeenCalledTimes(1)
+      expect(scrollToTocAnchorWhenReady).toHaveBeenCalledWith(
+        'section-jan-1',
+        expect.objectContaining({ behavior: 'auto', preferSubsectionTitle: true })
+      )
+      expect(scrollToVersePinWhenReady).not.toHaveBeenCalled()
+    })
+  })
+
+  test('invalid planDay param preserves pending then scrolls when param clears', async () => {
+    setPendingMcheynePlanDay(1)
+    profileSearchParams = new URLSearchParams('planDay=0')
+    syncProfileNavigationTestGlobals()
+
+    const { ProfileContent } = await import('../[slug]/ProfileContent')
+    const view = renderWithTextSize(
+      <ProfileContent
+        sections={mchySections as any}
+        profileInfo={{ title: "M'Cheyne", slug: 'mchy', favoriteScriptures: [] }}
+      />
+    )
+
+    await waitFor(() => {
+      expect(scrollToTocAnchorWhenReady).not.toHaveBeenCalled()
+    })
+
+    profileSearchParams = new URLSearchParams()
+    syncProfileNavigationTestGlobals()
+    view.rerender(
+      <TextSizeProvider>
+        <ProfileContent
+          sections={mchySections as any}
+          profileInfo={{ title: "M'Cheyne", slug: 'mchy', favoriteScriptures: [] }}
+        />
+      </TextSizeProvider>
+    )
+
+    await waitFor(() => {
+      expect(scrollToTocAnchorWhenReady).toHaveBeenCalledWith(
+        'section-jan-1',
+        expect.objectContaining({ behavior: 'auto', preferSubsectionTitle: true })
+      )
+    })
+  })
+
+  test('does not scroll for resumePin when studyRef is set', async () => {
+    profileSearchParams = new URLSearchParams('resumePin=1&studyRef=John+3%3A16')
+    syncProfileNavigationTestGlobals()
     assignYellowLastViewed('mchy', {
       reference: 'Genesis 1',
       sectionId: 'section-jan',
@@ -171,6 +246,7 @@ describe('ProfileContent M\'Cheyne resume', () => {
     )
 
     await waitFor(() => {
+      expect(scrollToTocAnchorWhenReady).not.toHaveBeenCalled()
       expect(scrollToVersePinWhenReady).not.toHaveBeenCalled()
     })
   })

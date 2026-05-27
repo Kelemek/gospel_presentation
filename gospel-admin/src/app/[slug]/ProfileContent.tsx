@@ -11,7 +11,7 @@ import {
 import { usePresentationScrollReadComplete } from '@/hooks/usePresentationScrollReadComplete'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import GospelSection from '@/components/GospelSection'
 import ScriptureModal from '@/components/ScriptureModal'
 import MemorizationPracticeSession from '@/components/MemorizationPracticeSession'
@@ -21,6 +21,7 @@ import SpurgeonSermonsModal, {
   type StudyLibraryFocus,
 } from '@/components/SpurgeonSermonsModal'
 import MorneveDevotionsModal from '@/components/MorneveDevotionsModal'
+import McheyneReadingPlanModal from '@/components/McheyneReadingPlanModal'
 import SidebarAuthNav from '@/components/SidebarAuthNav'
 import MenuLocalDataBackup from '@/components/MenuLocalDataBackup'
 import ThemeToggle from '@/components/ThemeToggle'
@@ -66,7 +67,16 @@ import {
 import { scrollToTocAnchor, scrollToTocAnchorWhenReady } from '@/lib/scrollToTocAnchor'
 import { scrollToVersePinWhenReady } from '@/lib/scrollToVersePinWhenReady'
 import { isMcheyneProfileSlug } from '@/lib/mcheyne/mcheyneSlug'
-import McheyneReadingControls from '@/components/McheyneReadingControls'
+import {
+  findMcheyneDayAnchor,
+  mcheyneDaySubsectionIdFromAnchor,
+} from '@/lib/mcheyne/mcheyneReadingDay'
+import {
+  resolveMcheynePlanDayFromNavigation,
+  resolveMcheyneResumePinFromNavigation,
+  setPendingMcheynePlanDay,
+  setPendingMcheyneResumePin,
+} from '@/lib/mcheyne/mcheynePendingNavigation'
 import { findFirstScriptureCardAnchors } from '@/lib/findFirstScriptureCardAnchors'
 import { findFirstStudyPassageAnchor } from '@/lib/findFirstStudyPassageAnchor'
 import { presentationLocationFromProfileAnchors } from '@/lib/presentationLocationFromAnchors'
@@ -143,12 +153,17 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     null
   )
   const deepLinkTranslationAppliedRef = useRef<string | null>(null)
+  /** Avoid duplicate M'Cheyne plan-day scroll when the nav effect re-runs before query params clear. */
+  const mcheynePlanDayScrollRef = useRef<number | null>(null)
+  /** Avoid duplicate resume-pin scroll when the nav effect re-runs before query params clear. */
+  const mcheyneResumePinScrollRef = useRef(false)
 
   const [currentReferenceIndex, setCurrentReferenceIndex] = useState(0)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isSharingResource, setIsSharingResource] = useState(false)
   const [isSpurgeonLibraryOpen, setIsSpurgeonLibraryOpen] = useState(false)
   const [isMorneveLibraryOpen, setIsMorneveLibraryOpen] = useState(false)
+  const [isMcheynePlanModalOpen, setIsMcheynePlanModalOpen] = useState(false)
   /** When opening study library from the scripture modal “Study”, pre-fill By scripture with this reference. */
   const [spurgeonStudyReference, setSpurgeonStudyReference] = useState<string | null>(null)
   const [studyModalTitle, setStudyModalTitle] = useState(STUDY_MODAL_DEFAULT_TITLE)
@@ -171,11 +186,15 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   /** Matches `ProfileResourceReadAloud` (Listen hidden on Android Web hosts). */
   const profileHeaderAndroidHost = useMemo(() => isMemorizeAndroidWebHost(), [])
 
+  const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
   const studyRefParam = searchParams.get('studyRef')?.trim() ?? ''
   const scriptureRefParam = searchParams.get('scriptureRef')?.trim().replace(/–/g, '-') ?? ''
   const scriptureViewParam = searchParams.get('scriptureView')?.trim() ?? ''
   const translationParam = searchParams.get('translation')?.trim().toLowerCase() ?? ''
+  const mcheynePlanDayParam = searchParams.get('planDay')?.trim() ?? ''
+  const mcheyneResumePinParam = searchParams.get('resumePin')?.trim() ?? ''
 
   const isHydrated = useSyncExternalStore(
     () => () => {},
@@ -301,8 +320,64 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     return scrollToTocAnchorWhenReady(anchor.subsectionId, { behavior: 'auto' })
   }, [isHydrated, sectionCount, profileSlug, studyRefParam, sections])
 
-  // M'Cheyne: resume at yellow pin unless hash or studyRef deep link is active
   const mcheyneYellowPin = versePinMap.yellow
+
+  const clearMcheyneNavQueryParams = useCallback(() => {
+    const hash = typeof window !== 'undefined' ? window.location.hash : ''
+    router.replace(`${pathname}${hash}`, { scroll: false })
+  }, [router, pathname])
+
+  const scrollToMcheynePlanDay = useCallback(
+    (planDay: number, sectionList: GospelSectionType[]) => {
+      const anchor = findMcheyneDayAnchor(sectionList, planDay)
+      if (!anchor) return null
+      return scrollToTocAnchorWhenReady(anchor.subsectionId, {
+        behavior: 'auto',
+        maxFrames: 180,
+        preferSubsectionTitle: true,
+        onDone: clearMcheyneNavQueryParams,
+        onGiveUp: clearMcheyneNavQueryParams,
+      })
+    },
+    [clearMcheyneNavQueryParams]
+  )
+
+  const navigateMcheynePlanDay = useCallback(
+    (planDay: number) => {
+      const onMchy = Boolean(profileSlug && isMcheyneProfileSlug(profileSlug))
+      mcheynePlanDayScrollRef.current = null
+      mcheyneResumePinScrollRef.current = false
+      setPendingMcheynePlanDay(planDay)
+      if (onMchy) {
+        router.replace(`/mchy?planDay=${planDay}`, { scroll: false })
+        return
+      }
+      router.push(`/mchy?planDay=${planDay}`, { scroll: false })
+    },
+    [profileSlug, router]
+  )
+
+  const navigateMcheyneLatest = useCallback(() => {
+    if (profileSlug && isMcheyneProfileSlug(profileSlug) && mcheyneYellowPin?.subsectionId) {
+      const daySubsectionId = mcheyneDaySubsectionIdFromAnchor(mcheyneYellowPin.subsectionId)
+      window.requestAnimationFrame(() => {
+        scrollToTocAnchorWhenReady(daySubsectionId, {
+          behavior: 'auto',
+          maxFrames: 180,
+          preferSubsectionTitle: true,
+          onDone: clearMcheyneNavQueryParams,
+          onGiveUp: clearMcheyneNavQueryParams,
+        })
+      })
+      return
+    }
+    mcheynePlanDayScrollRef.current = null
+    mcheyneResumePinScrollRef.current = false
+    setPendingMcheyneResumePin()
+    router.push('/mchy?resumePin=1', { scroll: false })
+  }, [profileSlug, mcheyneYellowPin, router, clearMcheyneNavQueryParams])
+
+  // M'Cheyne: ?planDay=N or ?resumePin=1 from Resources calendar modal (not on every open)
   useEffect(() => {
     if (!isHydrated || sectionCount === 0 || !profileSlug || !isMcheyneProfileSlug(profileSlug)) {
       return
@@ -310,10 +385,64 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     if (studyRefParam) return
     const rawHash = window.location.hash.slice(1)
     if (rawHash && rawHash.startsWith('section-')) return
-    if (!mcheyneYellowPin?.subsectionId) return
 
-    return scrollToVersePinWhenReady(mcheyneYellowPin, { behavior: 'auto' })
-  }, [isHydrated, sectionCount, profileSlug, studyRefParam, mcheyneYellowPin])
+    const wantsResumePin = resolveMcheyneResumePinFromNavigation(mcheyneResumePinParam)
+    if (wantsResumePin) {
+      if (!mcheyneYellowPin?.subsectionId) {
+        mcheyneResumePinScrollRef.current = false
+        clearMcheyneNavQueryParams()
+        return
+      }
+      if (mcheyneResumePinScrollRef.current) return
+      mcheyneResumePinScrollRef.current = true
+      const daySubsectionId = mcheyneDaySubsectionIdFromAnchor(mcheyneYellowPin.subsectionId)
+      const cancelScroll = scrollToTocAnchorWhenReady(daySubsectionId, {
+        behavior: 'auto',
+        maxFrames: 180,
+        preferSubsectionTitle: true,
+        onDone: clearMcheyneNavQueryParams,
+        onGiveUp: clearMcheyneNavQueryParams,
+      })
+      return () => {
+        if (mcheyneResumePinScrollRef.current) return
+        cancelScroll()
+      }
+    }
+
+    if (!wantsResumePin) {
+      mcheyneResumePinScrollRef.current = false
+    }
+    const planDay = resolveMcheynePlanDayFromNavigation(mcheynePlanDayParam)
+    if (planDay == null || !sections) {
+      mcheynePlanDayScrollRef.current = null
+      return
+    }
+    if (mcheynePlanDayScrollRef.current === planDay) return
+    mcheynePlanDayScrollRef.current = planDay
+
+    const cancelScroll = scrollToMcheynePlanDay(planDay, sections)
+    if (cancelScroll == null) {
+      clearMcheyneNavQueryParams()
+      return
+    }
+    // Do not cancel when the effect re-runs for the same plan day (deps flicker); that
+    // aborted scroll before the anchor mounted and left the page at January.
+    return () => {
+      if (mcheynePlanDayScrollRef.current === planDay) return
+      cancelScroll()
+    }
+  }, [
+    isHydrated,
+    sectionCount,
+    profileSlug,
+    studyRefParam,
+    sections,
+    mcheynePlanDayParam,
+    mcheyneResumePinParam,
+    mcheyneYellowPin,
+    clearMcheyneNavQueryParams,
+    scrollToMcheynePlanDay,
+  ])
 
   useEffect(() => {
     if (!isHydrated || !profileInfo?.slug) return
@@ -1249,6 +1378,9 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                 onOpenMorneveLibrary={() => {
                   setIsMorneveLibraryOpen(true)
                 }}
+                onOpenMcheynePlan={() => {
+                  setIsMcheynePlanModalOpen(true)
+                }}
                 onOpenCalvinLibrary={(menuTitle) => {
                   setSpurgeonStudyReference(null)
                   setStudyModalTitle(menuTitle ?? STUDY_MODAL_DEFAULT_TITLE)
@@ -1280,10 +1412,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                     📖 {profileInfo.favoriteScriptures.length} favorite{profileInfo.favoriteScriptures.length !== 1 ? 's' : ''}
                   </div>
                 )}
-
-                {profileSlug && isMcheyneProfileSlug(profileSlug) && sections ? (
-                  <McheyneReadingControls profileSlug={profileSlug} sections={sections} />
-                ) : null}
 
                 {/* Scripture Progress Section - show when profile exists (localStorage for anonymous/default) */}
                 <div
@@ -1428,6 +1556,17 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
           setMemorizationPracticeVerse(null)
         }}
         onClose={() => setIsMorneveLibraryOpen(false)}
+      />
+
+      <McheyneReadingPlanModal
+        isOpen={isMcheynePlanModalOpen}
+        onNavigateToPlanDay={navigateMcheynePlanDay}
+        onNavigateToLatest={navigateMcheyneLatest}
+        onFollowDayLink={() => {
+          closeModal()
+          setMemorizationPracticeVerse(null)
+        }}
+        onClose={() => setIsMcheynePlanModalOpen(false)}
       />
 
       {typeof document !== 'undefined' &&

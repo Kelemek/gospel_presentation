@@ -4,6 +4,14 @@
 
 export const FALLBACK_HEADER_OFFSET = 80
 
+/** Extra space below the sticky header when aligning to a subsection title. */
+export const SUBSECTION_TITLE_SCROLL_GAP_PX = 8
+
+/** Direct child h4/h5 with `.print-subsection-title` (day/month headings). */
+export function getSubsectionTitleElement(container: HTMLElement): HTMLElement | null {
+  return container.querySelector<HTMLElement>(':scope > .print-subsection-title')
+}
+
 /** Physical notch / home-indicator insets when `viewport-fit=cover` applies (often 0 in desktop devtools). */
 export function getSafeAreaInsetsPx(): {
   top: number
@@ -56,21 +64,57 @@ export function getProfileHeaderScrollOffset(): number {
   return offset
 }
 
+const SMOOTH_SCROLL_ON_DONE_FALLBACK_MS = 900
+
+/** Run `onDone` after scroll settles (smooth scroll fires `onDone` too early if called synchronously). */
+function scheduleScrollCompleteCallback(
+  behavior: ScrollBehavior | undefined,
+  onDone: (() => void) | undefined
+): void {
+  if (!onDone) return
+  if (behavior !== 'smooth') {
+    onDone()
+    return
+  }
+  let called = false
+  const run = () => {
+    if (called) return
+    called = true
+    onDone()
+  }
+  if ('onscrollend' in window) {
+    window.addEventListener('scrollend', run, { once: true })
+  }
+  window.setTimeout(run, SMOOTH_SCROLL_ON_DONE_FALLBACK_MS)
+}
+
 /**
  * Scroll to element id. Returns true if the element was found and scrolled to.
  */
 export function scrollToTocAnchor(
   anchorId: string,
-  options?: { behavior?: ScrollBehavior; onDone?: () => void }
+  options?: {
+    behavior?: ScrollBehavior
+    onDone?: () => void
+    /** Scroll to the subsection heading (h4/h5) when present instead of the container top. */
+    preferSubsectionTitle?: boolean
+  }
 ): boolean {
   if (typeof window === 'undefined') return false
-  const el = document.getElementById(anchorId)
-  if (!el) return false
+  const container = document.getElementById(anchorId)
+  if (!container) return false
 
-  const offset = getProfileHeaderScrollOffset()
+  const el = options?.preferSubsectionTitle
+    ? getSubsectionTitleElement(container) ?? container
+    : container
+
+  const offset =
+    getProfileHeaderScrollOffset() +
+    (options?.preferSubsectionTitle ? SUBSECTION_TITLE_SCROLL_GAP_PX : 0)
+  const behavior = options?.behavior ?? 'smooth'
   const top = el.getBoundingClientRect().top + window.scrollY - offset
-  window.scrollTo({ top, behavior: options?.behavior ?? 'smooth' })
-  options?.onDone?.()
+  window.scrollTo({ top, behavior })
+  scheduleScrollCompleteCallback(behavior, options?.onDone)
   return true
 }
 
@@ -87,6 +131,7 @@ export function scrollToTocAnchorWhenReady(
     maxFrames?: number
     onDone?: () => void
     onGiveUp?: () => void
+    preferSubsectionTitle?: boolean
   }
 ): () => void {
   if (typeof window === 'undefined') return () => {}
@@ -96,7 +141,13 @@ export function scrollToTocAnchorWhenReady(
   let rafId = 0
 
   const tick = () => {
-    if (scrollToTocAnchor(anchorId, { behavior: options?.behavior ?? 'auto', onDone: options?.onDone })) {
+    if (
+      scrollToTocAnchor(anchorId, {
+        behavior: options?.behavior ?? 'auto',
+        onDone: options?.onDone,
+        preferSubsectionTitle: options?.preferSubsectionTitle,
+      })
+    ) {
       return
     }
     frame += 1

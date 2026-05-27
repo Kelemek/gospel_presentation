@@ -34,6 +34,8 @@ interface TableOfContentsProps {
   onOpenSpurgeonLibrary?: (menuTitle?: string) => void
   /** Opens the Morning & Evening devotions picker (Resources row type morningEveningLibrary). */
   onOpenMorneveLibrary?: () => void
+  /** Opens the M'Cheyne reading plan calendar (template slug `mchy`). */
+  onOpenMcheynePlan?: () => void
   /** Opens the unified study library modal (Resources row type calvinLibrary). */
   onOpenCalvinLibrary?: (menuTitle?: string) => void
   /** Opens the unified study library modal (Resources row type henryLibrary). */
@@ -75,17 +77,40 @@ function ResourceTemplateMenuLink({
   title,
   readComplete,
   nested = false,
+  onOpenMcheynePlan,
+  onNavigate,
 }: {
   slug: string
   title: string
   readComplete: boolean
   nested?: boolean
+  onOpenMcheynePlan?: () => void
+  onNavigate?: () => void
 }) {
+  const className = resourceTemplateLinkClassName(readComplete, nested)
+
+  if (isMcheyneProfileSlug(slug) && onOpenMcheynePlan) {
+    return (
+      <button
+        type="button"
+        data-resource-template-slug={slug}
+        onClick={() => {
+          onOpenMcheynePlan()
+          onNavigate?.()
+        }}
+        className={`${className} w-full text-left cursor-pointer`}
+      >
+        <OpenBookIcon />
+        <span className="min-w-0">{title}</span>
+      </button>
+    )
+  }
+
   return (
     <Link
       href={`/${slug}`}
       data-resource-template-slug={slug}
-      className={resourceTemplateLinkClassName(readComplete, nested)}
+      className={className}
     >
       {isMcheyneProfileSlug(slug) ? <OpenBookIcon /> : null}
       <span className="min-w-0">{title}</span>
@@ -99,6 +124,7 @@ export default function TableOfContents({
   onMemorizationPracticeStart,
   onOpenSpurgeonLibrary,
   onOpenMorneveLibrary,
+  onOpenMcheynePlan,
   onOpenCalvinLibrary,
   onOpenHenryLibrary,
   onOpenEdwardsLibrary,
@@ -246,6 +272,8 @@ export default function TableOfContents({
                           slug={item.slug}
                           title={item.title}
                           readComplete={readCompleteSlugs.has(item.slug)}
+                          onOpenMcheynePlan={onOpenMcheynePlan}
+                          onNavigate={onNavigate}
                         />
                       ))}
                     </div>
@@ -408,6 +436,8 @@ export default function TableOfContents({
                                 title={child.title}
                                 readComplete={readCompleteSlugs.has(child.slug)}
                                 nested
+                                onOpenMcheynePlan={onOpenMcheynePlan}
+                                onNavigate={onNavigate}
                               />
                             ) : child.type === 'spurgeonLibrary' ? (
                               <button
