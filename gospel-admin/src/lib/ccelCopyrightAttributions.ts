@@ -38,6 +38,11 @@ export const CCEL_COPYRIGHT_ATTRIBUTIONS: readonly CcelCopyrightAttribution[] = 
     sourceHref: 'https://www.ccel.org/ccel/luther/galatians.html',
   },
   {
+    title: 'Charles H. Spurgeon, All of Grace',
+    body: 'The underlying work is in the public domain. Text in this app was imported from the ThML edition',
+    sourceHref: 'https://www.ccel.org/ccel/spurgeon/grace.html',
+  },
+  {
     title: 'Charles H. Spurgeon, Morning and Evening',
     body: 'The underlying devotions are in the public domain. Text in this app was imported from the ThML edition of Morning and Evening',
     sourceHref: 'https://www.ccel.org/ccel/spurgeon/morneve.html',

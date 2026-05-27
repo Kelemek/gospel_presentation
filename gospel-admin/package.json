@@ -34,6 +34,7 @@
     "import-henry": "tsx scripts/import-henry-ccel.ts",
     "import-luther-galatians": "tsx scripts/import-luther-galatians-ccel.ts",
     "import-pilgrim": "tsx scripts/import-pilgrim-ccel.ts",
+    "import-all-of-grace": "tsx scripts/import-all-of-grace-ccel.ts",
     "import-edwards": "tsx scripts/import-edwards-ccel.ts",
     "import-stepbible": "node scripts/import-stepbible-data.js",
     "import-stepbible:fixtures": "node scripts/import-stepbible-data.js --fixtures-only",
