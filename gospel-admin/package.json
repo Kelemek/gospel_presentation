@@ -35,6 +35,7 @@
     "import-luther-galatians": "tsx scripts/import-luther-galatians-ccel.ts",
     "import-pilgrim": "tsx scripts/import-pilgrim-ccel.ts",
     "import-all-of-grace": "tsx scripts/import-all-of-grace-ccel.ts",
+    "import-mcheyne": "tsx scripts/import-mcheyne.ts",
     "import-watson": "tsx scripts/import-watson-ccel.ts",
     "import-edwards": "tsx scripts/import-edwards-ccel.ts",
     "import-stepbible": "node scripts/import-stepbible-data.js",

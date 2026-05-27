@@ -24,6 +24,7 @@ import {
   isProfileReadAlongPersistenceKey,
   shouldUseIndexedDb,
 } from '@/lib/gospelClientStoragePolicy'
+import { MCHEYNE_START_DATE_KEY_PREFIX } from '@/lib/mcheyne/mcheyneStartDateStorage'
 
 export { GOSPEL_ANSWERS_KEY_PREFIX }
 
@@ -52,6 +53,7 @@ const KEY_PREFIXES = [
   VERSE_PIN_STORAGE_KEY_PREFIX,
   LEGACY_SCRIPTURE_PROGRESS_KEY_PREFIX,
   GOSPEL_ANSWERS_KEY_PREFIX,
+  MCHEYNE_START_DATE_KEY_PREFIX,
 ] as const
 
 /** Never export or import these exact keys. */

@@ -38,6 +38,7 @@ import {
   availablePinColorsForModalChoice,
   clearAllVersePins,
   createEmptyVersePinsState,
+  hydrateVersePinsFromStorage,
   loadVersePins,
   removeVersePin,
   shouldAdvanceYellowLastViewed,
@@ -63,6 +64,9 @@ import {
   removePresentationReadCompleteSlug,
 } from '@/lib/presentationReadCompleteStorage'
 import { scrollToTocAnchor, scrollToTocAnchorWhenReady } from '@/lib/scrollToTocAnchor'
+import { scrollToVersePinWhenReady } from '@/lib/scrollToVersePinWhenReady'
+import { isMcheyneProfileSlug } from '@/lib/mcheyne/mcheyneSlug'
+import McheyneReadingControls from '@/components/McheyneReadingControls'
 import { findFirstScriptureCardAnchors } from '@/lib/findFirstScriptureCardAnchors'
 import { findFirstStudyPassageAnchor } from '@/lib/findFirstStudyPassageAnchor'
 import { presentationLocationFromProfileAnchors } from '@/lib/presentationLocationFromAnchors'
@@ -248,6 +252,18 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     return loadVersePins(profileSlug)
   }, [profileSlug, versePinRevision])
 
+  // Verse pins are stored in IndexedDB; warm the sync cache after navigation or reload.
+  useEffect(() => {
+    if (!profileSlug) return
+    let cancelled = false
+    void hydrateVersePinsFromStorage(profileSlug).then(() => {
+      if (!cancelled) bumpVersePins()
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [profileSlug, bumpVersePins])
+
   const highlightsByScopeId = useMemo(() => {
     const out: Record<string, Array<{ id: string; startOffset: number; endOffset: number }>> = {}
     profileHighlights.forEach((h) => {
@@ -284,6 +300,20 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
 
     return scrollToTocAnchorWhenReady(anchor.subsectionId, { behavior: 'auto' })
   }, [isHydrated, sectionCount, profileSlug, studyRefParam, sections])
+
+  // M'Cheyne: resume at yellow pin unless hash or studyRef deep link is active
+  const mcheyneYellowPin = versePinMap.yellow
+  useEffect(() => {
+    if (!isHydrated || sectionCount === 0 || !profileSlug || !isMcheyneProfileSlug(profileSlug)) {
+      return
+    }
+    if (studyRefParam) return
+    const rawHash = window.location.hash.slice(1)
+    if (rawHash && rawHash.startsWith('section-')) return
+    if (!mcheyneYellowPin?.subsectionId) return
+
+    return scrollToVersePinWhenReady(mcheyneYellowPin, { behavior: 'auto' })
+  }, [isHydrated, sectionCount, profileSlug, studyRefParam, mcheyneYellowPin])
 
   useEffect(() => {
     if (!isHydrated || !profileInfo?.slug) return
@@ -873,14 +903,12 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     effectiveModalOpenAnchors,
   ])
 
-  const closeModal = () => {
-    const refTxt = activeScripture.reference.trim()
-    if (refTxt && profileInfo?.slug) {
+  const commitVersePinForClosedScripture = useCallback(
+    (refTxt: string) => {
+      if (!refTxt || !profileInfo?.slug) return
       const snap = effectiveModalOpenAnchors
-      let sectionId =
-        snap?.reference === refTxt ? (snap.sectionId?.trim() ?? '') : ''
-      let subsectionId =
-        snap?.reference === refTxt ? (snap.subsectionId?.trim() ?? '') : ''
+      let sectionId = snap?.reference === refTxt ? (snap.sectionId?.trim() ?? '') : ''
+      let subsectionId = snap?.reference === refTxt ? (snap.subsectionId?.trim() ?? '') : ''
       if (!sectionId || !subsectionId) {
         const found = sections ? findFirstScriptureCardAnchors(sections, refTxt) : null
         if (found) {
@@ -904,7 +932,20 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
         assignVersePin(profileInfo.slug, modalPinDraftColor, entry)
         bumpVersePins()
       }
-    }
+    },
+    [
+      profileInfo?.slug,
+      effectiveModalOpenAnchors,
+      sections,
+      modalPinDraftColor,
+      defaultModalPinColor,
+      versePinMap,
+      bumpVersePins,
+    ]
+  )
+
+  const closeModal = () => {
+    commitVersePinForClosedScripture(activeScripture.reference.trim())
     setModalPinUserOverride(null)
     setModalOpenAnchors(null)
     if (scriptureFromDeepLink && scriptureRefParam) {
@@ -912,6 +953,26 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     }
     setSelectedScripture({ reference: '', isOpen: false })
   }
+
+  const scripturePinCommitOnUnmountRef = useRef({
+    isOpen: false,
+    reference: '',
+    commit: (_ref: string) => {},
+  })
+  scripturePinCommitOnUnmountRef.current = {
+    isOpen: activeScripture.isOpen,
+    reference: activeScripture.reference,
+    commit: commitVersePinForClosedScripture,
+  }
+
+  useEffect(() => {
+    return () => {
+      const snap = scripturePinCommitOnUnmountRef.current
+      if (snap.isOpen && snap.reference.trim()) {
+        snap.commit(snap.reference.trim())
+      }
+    }
+  }, [profileSlug])
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
@@ -1219,7 +1280,11 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                     📖 {profileInfo.favoriteScriptures.length} favorite{profileInfo.favoriteScriptures.length !== 1 ? 's' : ''}
                   </div>
                 )}
-                
+
+                {profileSlug && isMcheyneProfileSlug(profileSlug) && sections ? (
+                  <McheyneReadingControls profileSlug={profileSlug} sections={sections} />
+                ) : null}
+
                 {/* Scripture Progress Section - show when profile exists (localStorage for anonymous/default) */}
                 <div
                   className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-600"

@@ -4,6 +4,7 @@
  */
 
 import {
+  gospelStorageGet,
   gospelStorageGetSync,
   gospelStorageRemoveSync,
   gospelStorageSet,
@@ -295,6 +296,19 @@ export function loadVersePins(profileSlug: string): VersePinsStoredState {
   } catch {
     return emptyState()
   }
+}
+
+/**
+ * Load verse pins from IndexedDB into the sync read cache (needed after navigation
+ * or reload when pins live only in IDB, not localStorage).
+ */
+export async function hydrateVersePinsFromStorage(profileSlug: string): Promise<VersePinsStoredState> {
+  if (typeof window === 'undefined') return emptyState()
+  const slug = profileSlug.trim()
+  if (!slug) return emptyState()
+  await gospelStorageGet(versePinStorageKey(slug))
+  await gospelStorageGet(legacyScriptureProgressStorageKey(slug))
+  return loadVersePins(slug)
 }
 
 /** Returns true only after IndexedDB (or localStorage fallback) accepts the write. */

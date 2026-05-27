@@ -11,6 +11,7 @@ import {
   anchoredPinMatchesDisplayRow,
   clearVersePinsMatchingRow,
   createEmptyVersePinsState,
+  hydrateVersePinsFromStorage,
   legacyScriptureProgressStorageKey,
   loadVersePins,
   parseLegacyScriptureProgress,
@@ -368,5 +369,33 @@ describe('versePinStorage', () => {
     const list = versePinsListFromState(loadVersePins('pl'))
     expect(list[0]?.colorId).toBe('red')
     expect(list[list.length - 1]?.colorId).toBe('yellow')
+  })
+
+  test('hydrateVersePinsFromStorage reloads pins from IndexedDB after memory cache reset', async () => {
+    const slug = 'mchy'
+    const { gospelStorageSet } = await import('@/lib/gospelClientStorage')
+    await gospelStorageSet(
+      versePinStorageKey(slug),
+      JSON.stringify({
+        v: 2,
+        yellow: {
+          reference: 'Genesis 1',
+          sectionId: 'section-jan',
+          subsectionId: 'section-jan-1-0',
+        },
+        bookmarks: [],
+      })
+    )
+
+    resetGospelClientStorageForTests()
+    installTestLocalStorage()
+    expect(loadVersePins(slug).yellow).toBeNull()
+
+    const state = await hydrateVersePinsFromStorage(slug)
+    expect(state.yellow).toEqual({
+      reference: 'Genesis 1',
+      sectionId: 'section-jan',
+      subsectionId: 'section-jan-1-0',
+    })
   })
 })

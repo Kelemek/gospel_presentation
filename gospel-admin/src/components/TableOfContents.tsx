@@ -17,7 +17,9 @@ import { Printer } from '@capgo/capacitor-printer'
 import { stripHtmlTags } from '@/lib/stripHtmlTags'
 import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
 import { groupPublicResourceItems } from '@/lib/groupPublicResourceItems'
+import { isMcheyneProfileSlug } from '@/lib/mcheyne/mcheyneSlug'
 import MemorizeDropdown from '@/components/MemorizeDropdown'
+import { OpenBookIcon } from '@/components/OpenBookIcon'
 import SunMoonAnimatedIcon from '@/components/SunMoonAnimatedIcon'
 import type { MemorizedVerse } from '@/lib/verseMemorizationStorage'
 
@@ -56,6 +58,39 @@ function handleTocClick(
     e.preventDefault()
     onNavigate?.()
   }
+}
+
+function resourceTemplateLinkClassName(readComplete: boolean, nested: boolean): string {
+  const layout = nested
+    ? 'flex items-center gap-2 py-2 pl-8 pr-4 text-sm'
+    : 'flex items-center gap-2 px-4 py-3 text-sm'
+  const weight = readComplete
+    ? 'font-extrabold text-slate-900 dark:text-slate-50'
+    : 'font-normal text-slate-700 dark:text-slate-200'
+  return `${layout} hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors ${weight}`
+}
+
+function ResourceTemplateMenuLink({
+  slug,
+  title,
+  readComplete,
+  nested = false,
+}: {
+  slug: string
+  title: string
+  readComplete: boolean
+  nested?: boolean
+}) {
+  return (
+    <Link
+      href={`/${slug}`}
+      data-resource-template-slug={slug}
+      className={resourceTemplateLinkClassName(readComplete, nested)}
+    >
+      {isMcheyneProfileSlug(slug) ? <OpenBookIcon /> : null}
+      <span className="min-w-0">{title}</span>
+    </Link>
+  )
 }
 
 export default function TableOfContents({
@@ -206,18 +241,12 @@ export default function TableOfContents({
                       className="border-b border-slate-100 dark:border-slate-600 last:border-b-0"
                     >
                       {group.items.map((item) => (
-                        <Link
+                        <ResourceTemplateMenuLink
                           key={item.slug}
-                          href={`/${item.slug}`}
-                          data-resource-template-slug={item.slug}
-                          className={`block px-4 py-3 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors ${
-                            readCompleteSlugs.has(item.slug)
-                              ? 'font-extrabold text-slate-900 dark:text-slate-50'
-                              : 'font-normal text-slate-700 dark:text-slate-200'
-                          }`}
-                        >
-                          {item.title}
-                        </Link>
+                          slug={item.slug}
+                          title={item.title}
+                          readComplete={readCompleteSlugs.has(item.slug)}
+                        />
                       ))}
                     </div>
                   ) : group.kind === 'spurgeonLibrary' ? (
@@ -373,18 +402,13 @@ export default function TableOfContents({
                         <div className="bg-slate-50 dark:bg-slate-700/50">
                           {group.item.children.map((child, childIdx) =>
                             child.type === 'template' ? (
-                              <Link
+                              <ResourceTemplateMenuLink
                                 key={`${group.item.id}-t-${child.slug}`}
-                                href={`/${child.slug}`}
-                                data-resource-template-slug={child.slug}
-                                className={`block py-2 pl-8 pr-4 text-sm hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors ${
-                                  readCompleteSlugs.has(child.slug)
-                                    ? 'font-extrabold text-slate-900 dark:text-slate-50'
-                                    : 'font-normal text-slate-700 dark:text-slate-200'
-                                }`}
-                              >
-                                {child.title}
-                              </Link>
+                                slug={child.slug}
+                                title={child.title}
+                                readComplete={readCompleteSlugs.has(child.slug)}
+                                nested
+                              />
                             ) : child.type === 'spurgeonLibrary' ? (
                               <button
                                 key={`${group.item.id}-sg-${childIdx}`}

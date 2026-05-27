@@ -49,6 +49,11 @@ describe('Copyright page', () => {
     expect(screen.getByText(/Matthew Henry.*Commentary on the Whole Bible/i)).toBeInTheDocument()
     expect(screen.getByText(/Martin Luther, Commentary on Galatians/i)).toBeInTheDocument()
     expect(screen.getByText(/John Bunyan, The Pilgrim's Progress/i)).toBeInTheDocument()
+    expect(screen.getByText(/Robert Murray M'Cheyne, Bible Reading Plan/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'mcheyne-api' })).toHaveAttribute(
+      'href',
+      'https://github.com/speric/mcheyne-api/blob/master/plan.json'
+    )
     const ccelLinks = screen.getAllByRole('link', { name: /Christian Classics Ethereal Library \(CCEL\)/i })
     expect(ccelLinks.some((l) => l.getAttribute('href') === 'https://www.ccel.org/ccel/spurgeon/')).toBe(true)
     expect(ccelLinks.some((l) => l.getAttribute('href') === 'https://www.ccel.org/ccel/henry/mhc.html')).toBe(true)

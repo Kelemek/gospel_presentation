@@ -225,6 +225,48 @@ describe('TableOfContents additional behaviors', () => {
     expect(localStorage.getItem('gospel-profile-text-size')).toBe('larger')
   })
 
+  it('shows open-book icon for M\'Cheyne reading plan in Resources menu', async () => {
+    const clientMod = require('@/lib/supabase/client')
+    jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({
+      auth: { getUser: async () => ({ data: { user: null } }) }
+    }))
+
+    const fetchSpy = jest.fn((input: RequestInfo | URL) => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.href
+            : (input as Request).url
+      if (String(url).includes('/api/profiles/public-templates')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            items: [
+              { type: 'template', slug: 'mchy', title: "M'Cheyne Bible Reading Plan" },
+              { type: 'template', slug: 't1', title: 'Template One' },
+            ]
+          })
+        }) as any
+      }
+      return Promise.resolve({ ok: false }) as any
+    })
+    global.fetch = fetchSpy as typeof fetch
+
+    const TableOfContents = require('../TableOfContents').default
+    renderToc(<TableOfContents sections={[]} />)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /Resources/i }))
+
+    const mchyLink = await screen.findByRole('link', { name: /M'Cheyne Bible Reading Plan/i })
+    expect(mchyLink).toHaveAttribute('href', '/mchy')
+    expect(mchyLink.querySelector('svg[aria-hidden="true"]')).toBeInTheDocument()
+
+    const plainLink = screen.getByRole('link', { name: /Template One/i })
+    expect(plainLink.querySelector('svg[aria-hidden="true"]')).not.toBeInTheDocument()
+  })
+
   it('Bible translation list opens and setTranslation is called when an option is chosen', () => {
     const TableOfContents = require('../TableOfContents').default
     const { useTranslation } = require('@/contexts/TranslationContext')

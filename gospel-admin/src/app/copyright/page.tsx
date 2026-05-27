@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { CcelPublicDomainAttribution } from '@/components/CcelPublicDomainAttribution'
+import { McheyneReadingPlanAttribution } from '@/components/McheyneReadingPlanAttribution'
 import { CopyrightScriptureAttributionSections } from '@/components/CopyrightScriptureAttributionSections'
 import { ScriptureFooterAttributionParagraphs } from '@/components/ScriptureFooterAttributionParagraphs'
 import { CCEL_COPYRIGHT_ATTRIBUTIONS, CCEL_COPYRIGHT_POLICY_URL } from '@/lib/ccelCopyrightAttributions'
@@ -80,6 +81,8 @@ export default function CopyrightPage() {
                 <strong className="text-slate-800 dark:text-slate-100">The Doctrine of Repentance:</strong> by Thomas Watson; compilation and arrangement by Mark Larson
               </p>
             </div>
+
+            <McheyneReadingPlanAttribution className="mb-6" />
 
             <h3 className="text-xl md:text-2xl font-semibold text-slate-800 dark:text-slate-100 mt-8 mb-3">
               Christian Classics Ethereal Library (CCEL)

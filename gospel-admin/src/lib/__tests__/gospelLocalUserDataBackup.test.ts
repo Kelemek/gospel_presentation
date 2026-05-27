@@ -74,6 +74,7 @@ describe('gospelLocalUserDataBackup', () => {
       [VERSE_MEMORIZATION_STORAGE_KEY]: '{"v":1,"verses":[]}',
       'gospel-verse-pins-myprofile': '{"v":2,"yellow":null,"bookmarks":[]}',
       'gospel-answers-myprofile': '{}',
+      'gospel-mcheyne-start:v1:mchy': '2026-01-01',
       'gospel-preferred-translation': 'esv',
       'gospel-profile-read-along:slug:section-1': '{"v":1,"plainOffset":0,"fingerprint":"x"}',
       'gospel-profile-read-along-last:slug': '{"v":1,"anchorId":"section-1","plainOffset":0,"fingerprint":"x"}',
@@ -86,6 +87,7 @@ describe('gospelLocalUserDataBackup', () => {
     expect(map[VERSE_MEMORIZATION_STORAGE_KEY]).toBeDefined()
     expect(map['gospel-verse-pins-myprofile']).toBeDefined()
     expect(map['gospel-answers-myprofile']).toBeDefined()
+    expect(map['gospel-mcheyne-start:v1:mchy']).toBe('2026-01-01')
     expect(map['gospel-preferred-translation']).toBe('esv')
     expect(map['gospel-profile-read-along:slug:section-1']).toBe('{"v":1,"plainOffset":0,"fingerprint":"x"}')
     expect(map['gospel-profile-read-along-last:slug']).toBe('{"v":1,"anchorId":"section-1","plainOffset":0,"fingerprint":"x"}')
