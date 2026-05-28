@@ -1,4 +1,5 @@
 import type { GospelSection } from '@/lib/types'
+import { findFirstScriptureCardAnchors } from '@/lib/findFirstScriptureCardAnchors'
 import planFile from '../../../data/mcheyne/plan.json'
 import { monthNameForPlan, monthSectionId } from '@/lib/mcheyne/buildMcheyneGospelData'
 import { mcheyneCalendarDateForPlanDay } from '@/lib/mcheyne/mcheyneCalendar'
@@ -177,4 +178,17 @@ export function mcheyneDayChapterReferencesForAnchor(subsectionId: string): stri
   if (planDay == null) return null
   const refs = mcheyneDayChapterReferences(planDay)
   return refs.length > 0 ? refs : null
+}
+
+/** First scripture card on a plan day (Family reading 1) for modal / swipe navigation. */
+export function findFirstMcheynePlanDayScriptureNav(
+  sectionList: GospelSection[],
+  planDay: number
+): { reference: string; sectionId: string; subsectionId: string } | null {
+  const refs = mcheyneDayChapterReferences(planDay)
+  if (refs.length === 0) return null
+  const reference = refs[0]!
+  const anchors = findFirstScriptureCardAnchors(sectionList, reference)
+  if (!anchors) return null
+  return { reference, ...anchors }
 }

@@ -3,6 +3,7 @@ import {
   findMcheyneDayAnchor,
   formatLocalIsoDate,
   isMcheynePlanComplete,
+  findFirstMcheynePlanDayScriptureNav,
   mcheyneDayChapterReferences,
   mcheyneDayChapterReferencesForAnchor,
   mcheyneDaySubsectionIdFromAnchor,
@@ -110,6 +111,20 @@ describe('mcheyneReadingDay', () => {
         'Proverbs 19',
         'Colossians 2',
       ])
+    })
+  })
+
+  describe('findFirstMcheynePlanDayScriptureNav', () => {
+    it('returns the first Family card anchors for a plan day', () => {
+      expect(findFirstMcheynePlanDayScriptureNav(sections, 1)).toEqual({
+        reference: 'Genesis 1',
+        sectionId: 'section-jan',
+        subsectionId: 'section-jan-1-0',
+      })
+    })
+
+    it('returns null for invalid plan days', () => {
+      expect(findFirstMcheynePlanDayScriptureNav(sections, 0)).toBeNull()
     })
   })
 

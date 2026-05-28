@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TextSizeProvider } from '@/contexts/TextSizeContext'
 import ScriptureModal from '../ScriptureModal'
@@ -28,6 +28,10 @@ describe('ScriptureModal additional behaviors', () => {
     mockFetch.mockResolvedValue(defaultFetchSuccess)
   })
 
+  afterEach(() => {
+    jest.useRealTimers()
+  })
+
   it('opens in chapter view automatically for chapter-only references', async () => {
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString()
@@ -49,6 +53,107 @@ describe('ScriptureModal additional behaviors', () => {
     await waitFor(() =>
       expect(screen.getByLabelText(/^Listen$/i)).toBeInTheDocument()
     )
+  })
+
+  it('keeps chapter-only scroll area at top after chapter text loads', async () => {
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (url.includes('reference=Ezra%202&')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ text: '[1] Now these were the people' }),
+        } as unknown as Response)
+      }
+      return Promise.resolve(defaultFetchSuccess)
+    })
+
+    renderWithTextSize(<ScriptureModal reference="Ezra 2" isOpen onClose={jest.fn()} />)
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^Verse$/i })).toBeInTheDocument()
+    )
+
+    await waitFor(() => {
+      const pane = document.querySelector('[data-tour="scripture-modal-scroll-area"]')
+      expect(pane).toBeTruthy()
+      expect((pane as HTMLDivElement).scrollTop).toBe(0)
+    })
+  })
+
+  it('does not schedule scroll-to-top when navigating verses in chapter context', async () => {
+    const user = userEvent.setup()
+
+    /** scheduleScriptureModalScrollTop uses a 150ms timeout; wait past that with real timers. */
+    const waitPastScrollResetTimeout = () =>
+      act(async () => {
+        await new Promise<void>((resolve) => {
+          setTimeout(resolve, 200)
+        })
+      })
+
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (url.includes('Genesis%201%3A')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ text: 'Initial scripture text' }),
+        } as unknown as Response)
+      }
+      if (url.includes('reference=Genesis%201&')) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              text: '[1] In the beginning\n\n[2] And then\n\n[3] He created',
+            }),
+        } as unknown as Response)
+      }
+      return Promise.resolve(defaultFetchSuccess)
+    })
+
+    const { rerender } = renderWithTextSize(
+      <ScriptureModal reference="Genesis 1:1" isOpen onClose={jest.fn()} />
+    )
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /Genesis 1:1/ })).toBeInTheDocument()
+    )
+
+    const pane = document.querySelector(
+      '[data-tour="scripture-modal-scroll-area"]'
+    ) as HTMLDivElement
+    let scrollTopValue = 100
+    const scrollTopSets: number[] = []
+    Object.defineProperty(pane, 'scrollTop', {
+      configurable: true,
+      get: () => scrollTopValue,
+      set: (v: number) => {
+        scrollTopSets.push(v)
+        scrollTopValue = v
+      },
+    })
+    pane.scrollBy = jest.fn(({ top = 0 }: ScrollToOptions) => {
+      scrollTopValue += top
+    }) as typeof pane.scrollBy
+
+    await user.click(screen.getByRole('button', { name: /chapter context/i }))
+    await waitFor(() => expect(document.querySelector('#chapter-content')).toBeInTheDocument())
+
+    scrollTopSets.length = 0
+
+    rerender(
+      <TextSizeProvider>
+        <ScriptureModal reference="Genesis 1:3" isOpen onClose={jest.fn()} />
+      </TextSizeProvider>
+    )
+
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: /Genesis 1:3/ })).toBeInTheDocument()
+    )
+
+    await waitPastScrollResetTimeout()
+
+    expect(scrollTopSets).not.toContain(0)
   })
 
   it('fetches chapter context and highlights verses with ids', async () => {

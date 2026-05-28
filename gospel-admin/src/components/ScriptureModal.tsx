@@ -51,8 +51,9 @@ import type { ScriptureModalPresentationLocation } from '@/lib/presentationLocat
 
 export type { ScriptureModalPresentationLocation } from '@/lib/presentationLocationFromAnchors'
 
+/** Same 36px row height as prev/next (`scriptureModalHeaderIconButtonClass`). */
 const scriptureModalHeaderTitleClass =
-  'text-base md:text-lg font-semibold text-slate-800 dark:text-slate-100 leading-tight px-1 min-w-0 flex-1 max-w-full overflow-hidden flex items-center justify-center min-h-0'
+  'text-base md:text-lg font-semibold text-slate-800 dark:text-slate-100 leading-tight px-1 min-w-0 flex-1 max-w-full overflow-hidden flex items-center justify-center h-9 min-h-[36px] box-border'
 
 function ScriptureModalHeaderReference({
   book,
@@ -362,6 +363,12 @@ export default function ScriptureModal({
     return []
   }
 
+  /** Chapter pane scroll-to-top (M'Cheyne cards, etc.) — not when a specific verse should stay centered. */
+  const shouldResetChapterPaneScrollTop = (verseRef: string): boolean => {
+    const verseNumbers = getVerseNumbers(verseRef)
+    return verseNumbers.length === 0 || isChapterOnlyScriptureReference(verseRef)
+  }
+
   const fetchChapterContext = useCallback(async () => {
     if (!verseViewSessionKey) return
     const chapterRef = getChapterReference(reference)
@@ -424,16 +431,63 @@ export default function ScriptureModal({
     fetchChapterContext,
   ])
 
+  const resetScriptureModalScrollTop = useCallback(() => {
+    const pane = scrollAreaRef.current
+    if (pane) pane.scrollTop = 0
+  }, [])
+
+  /** After layout paints (chapter HTML, compare columns, etc.), keep the reader at the top. */
+  const scheduleScriptureModalScrollTop = useCallback(() => {
+    resetScriptureModalScrollTop()
+    let raf2 = 0
+    const raf1 = window.requestAnimationFrame(() => {
+      resetScriptureModalScrollTop()
+      raf2 = window.requestAnimationFrame(resetScriptureModalScrollTop)
+    })
+    const t = window.setTimeout(resetScriptureModalScrollTop, 150)
+    return () => {
+      window.cancelAnimationFrame(raf1)
+      if (raf2) window.cancelAnimationFrame(raf2)
+      window.clearTimeout(t)
+    }
+  }, [resetScriptureModalScrollTop])
+
   /** Verse content first: scroll to top and move focus to Verse (not toolbar controls like Study). */
   useEffect(() => {
     if (!isOpen) return
-    const pane = scrollAreaRef.current
-    if (pane) pane.scrollTop = 0
+    const skipScrollTop = !shouldResetChapterPaneScrollTop(reference)
+    const cancelScroll = skipScrollTop ? undefined : scheduleScriptureModalScrollTop()
     const id = window.requestAnimationFrame(() => {
       verseTabButtonRef.current?.focus({ preventScroll: true })
     })
-    return () => window.cancelAnimationFrame(id)
-  }, [isOpen, reference])
+    return () => {
+      cancelScroll?.()
+      window.cancelAnimationFrame(id)
+    }
+  }, [isOpen, reference, scheduleScriptureModalScrollTop])
+
+  /** Chapter view (incl. M'Cheyne chapter cards): reset when chapter HTML mounts — skip when a verse should be auto-scrolled. */
+  useEffect(() => {
+    if (!isOpen || !showingContext || !chapterText) return
+    if (!shouldResetChapterPaneScrollTop(reference)) return
+    return scheduleScriptureModalScrollTop()
+  }, [isOpen, showingContext, chapterText, reference, scheduleScriptureModalScrollTop])
+
+  /** Verse-only view: reset when passage text replaces the loading spinner (not while chapter context is active or loading). */
+  useEffect(() => {
+    if (!isOpen || showingContext || loading || !scriptureText) return
+    if (preferChapterView || chapterView !== null) return
+    return scheduleScriptureModalScrollTop()
+  }, [
+    isOpen,
+    showingContext,
+    loading,
+    scriptureText,
+    reference,
+    preferChapterView,
+    chapterView,
+    scheduleScriptureModalScrollTop,
+  ])
 
   useEffect(() => {
     if (!spurgeonStudyLookupRef) return
@@ -497,14 +551,17 @@ export default function ScriptureModal({
   useEffect(() => {
     if (!showingContext || !chapterText) return
 
+    if (shouldResetChapterPaneScrollTop(reference)) {
+      return scheduleScriptureModalScrollTop()
+    }
+
+    const verseNumbers = getVerseNumbers(reference)
+
     const reduceMotion =
       typeof window !== 'undefined' &&
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
     const behavior: ScrollBehavior = reduceMotion ? 'auto' : 'smooth'
-
-    const verseNumbers = getVerseNumbers(reference)
-    if (verseNumbers.length === 0) return
 
     let elementId = ''
     if (verseNumbers.length > 1) {
@@ -542,7 +599,7 @@ export default function ScriptureModal({
       window.clearTimeout(t1)
       window.clearTimeout(t2)
     }
-  }, [showingContext, chapterText, reference])
+  }, [showingContext, chapterText, reference, scheduleScriptureModalScrollTop])
 
   useEffect(() => {
     if (!scriptureFetchKey) return
