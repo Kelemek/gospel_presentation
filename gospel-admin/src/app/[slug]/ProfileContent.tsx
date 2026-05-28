@@ -698,6 +698,43 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     [sections]
   )
 
+  /** Keep swipe / ◀ ▶ aligned when the modal reference changes (e.g. M'Cheyne Listen day playlist). */
+  const syncNavIndexForReference = useCallback(
+    (reference: string, explicit?: { sectionId: string; subsectionId: string }) => {
+      syncModalAnchorsForNav(reference, explicit)
+      let sectionId = explicit?.sectionId?.trim() ?? ''
+      let subsectionId = explicit?.subsectionId?.trim() ?? ''
+      if (!sectionId || !subsectionId) {
+        if (sections) {
+          const found = findFirstScriptureCardAnchors(sections, reference)
+          if (found) {
+            sectionId = found.sectionId
+            subsectionId = found.subsectionId
+          }
+        }
+      }
+      const navEntry =
+        sectionId && subsectionId
+          ? allScriptureRefs.find(
+              r =>
+                r.reference === reference &&
+                r.sectionId === sectionId &&
+                r.subsectionId === subsectionId
+            )
+          : undefined
+      if (favoriteReferences.length > 0) {
+        const favIndex = favoriteReferences.indexOf(reference)
+        if (favIndex !== -1) setCurrentReferenceIndex(favIndex)
+      } else {
+        const allIndex = navEntry
+          ? allScriptureRefs.indexOf(navEntry)
+          : allScriptureRefs.findIndex(r => r.reference === reference)
+        if (allIndex !== -1) setCurrentReferenceIndex(allIndex)
+      }
+    },
+    [sections, allScriptureRefs, favoriteReferences, syncModalAnchorsForNav]
+  )
+
   const handleScriptureClick = useCallback(
     (
       reference: string,
@@ -1588,6 +1625,8 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
               sectionId: 'modal-view',
               subsectionId: 'modal-view',
             })
+          } else {
+            syncNavIndexForReference(ref)
           }
           setSelectedScripture((prev) => ({
             ...prev,
