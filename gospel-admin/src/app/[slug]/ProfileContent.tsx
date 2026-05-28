@@ -69,12 +69,8 @@ import { scrollToTocAnchor, scrollToTocAnchorWhenReady } from '@/lib/scrollToToc
 import { mcheyneDayChapterReferencesForAnchor } from '@/lib/mcheyne/mcheyneReadingDay'
 import { isMcheyneProfileSlug } from '@/lib/mcheyne/mcheyneSlug'
 import {
-  findFirstMcheynePlanDayScriptureNav,
   findMcheyneDayAnchor,
-  MCHEYNE_PLAN_DAYS,
-  mcheyneDayChapterReferences,
   mcheyneDaySubsectionIdFromAnchor,
-  mcheynePlanDayFromDaySubsectionId,
 } from '@/lib/mcheyne/mcheyneReadingDay'
 import {
   resolveMcheynePlanDayFromNavigation,
@@ -837,36 +833,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     return mcheyneDayChapterReferencesForAnchor(mcheyneDayListenSubsectionId) ?? undefined
   }, [profileSlug, mcheyneDayListenSubsectionId])
 
-  const mcheyneModalPlanDay = useMemo(() => {
-    if (!profileSlug || !isMcheyneProfileSlug(profileSlug)) return null
-    if (!mcheyneDayListenSubsectionId) return null
-    return mcheynePlanDayFromDaySubsectionId(
-      mcheyneDaySubsectionIdFromAnchor(mcheyneDayListenSubsectionId)
-    )
-  }, [profileSlug, mcheyneDayListenSubsectionId])
-
-  const useMcheyneDayModalNav =
-    mcheyneModalPlanDay != null &&
-    mcheyneDayListenReferences != null &&
-    mcheyneDayListenReferences.length > 0
-
-  const navigateMcheyneModalPlanDay = useCallback(
-    (direction: 'prev' | 'next') => {
-      if (!sections || mcheyneModalPlanDay == null) return
-      const targetDay =
-        direction === 'next' ? mcheyneModalPlanDay + 1 : mcheyneModalPlanDay - 1
-      if (targetDay < 1 || targetDay > MCHEYNE_PLAN_DAYS) return
-      if (mcheyneDayChapterReferences(targetDay).length === 0) return
-      const card = findFirstMcheynePlanDayScriptureNav(sections, targetDay)
-      if (!card) return
-      scrollToMcheynePlanDay(targetDay, sections)
-      handleScriptureClick(card.reference, card.sectionId, card.subsectionId, {
-        initialChapterView: true,
-      })
-    },
-    [sections, mcheyneModalPlanDay, scrollToMcheynePlanDay, handleScriptureClick]
-  )
-
   const deepLinkNavIndex = useMemo(() => {
     if (!scriptureFromDeepLink) return null
     const reference = scriptureRefParam
@@ -921,10 +887,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
 
   // Navigation functions for favorite references or all references if no favorites
   const navigateToPrevious = useCallback(() => {
-    if (useMcheyneDayModalNav) {
-      navigateMcheyneModalPlanDay('prev')
-      return
-    }
     if (activeScripture.pickerNavigation) {
       navigatePickerPassage('prev')
       return
@@ -961,8 +923,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       isOpen: true,
     })
   }, [
-    useMcheyneDayModalNav,
-    navigateMcheyneModalPlanDay,
     activeScripture.pickerNavigation,
     favoriteReferences,
     navListLength,
@@ -973,10 +933,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   ])
 
   const navigateToNext = useCallback(() => {
-    if (useMcheyneDayModalNav) {
-      navigateMcheyneModalPlanDay('next')
-      return
-    }
     if (activeScripture.pickerNavigation) {
       navigatePickerPassage('next')
       return
@@ -1013,8 +969,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       isOpen: true,
     })
   }, [
-    useMcheyneDayModalNav,
-    navigateMcheyneModalPlanDay,
     activeScripture.pickerNavigation,
     favoriteReferences,
     navListLength,
@@ -1025,18 +979,12 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   ])
 
   const pickerNavRef = activeScripture.isOpen ? activeScripture.reference.trim() : ''
-  const hasPrevious = useMcheyneDayModalNav
-    ? mcheyneModalPlanDay! > 1 &&
-      mcheyneDayChapterReferences(mcheyneModalPlanDay! - 1).length > 0
-    : activeScripture.pickerNavigation
-      ? pickerPassageHasPrevious(pickerNavRef)
-      : navListLength > 1
-  const hasNext = useMcheyneDayModalNav
-    ? mcheyneModalPlanDay! < MCHEYNE_PLAN_DAYS &&
-      mcheyneDayChapterReferences(mcheyneModalPlanDay! + 1).length > 0
-    : activeScripture.pickerNavigation
-      ? pickerPassageHasNext(pickerNavRef)
-      : navListLength > 1
+  const hasPrevious = activeScripture.pickerNavigation
+    ? pickerPassageHasPrevious(pickerNavRef)
+    : navListLength > 1
+  const hasNext = activeScripture.pickerNavigation
+    ? pickerPassageHasNext(pickerNavRef)
+    : navListLength > 1
 
   useEffect(() => {
     if (!activeScripture.isOpen) return
@@ -1647,11 +1595,9 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
             ...(chapterView ? { initialChapterView: true as const } : { initialChapterView: undefined }),
             ...(meta?.fromPassagePicker
               ? { pickerNavigation: true as const }
-              : useMcheyneDayModalNav
-                ? { pickerNavigation: undefined }
-                : prev.pickerNavigation
-                  ? { pickerNavigation: true as const }
-                  : { pickerNavigation: undefined }),
+              : prev.pickerNavigation
+                ? { pickerNavigation: true as const }
+                : { pickerNavigation: undefined }),
           }))
         }}
         onPrevious={hasPrevious ? navigateToPrevious : undefined}
