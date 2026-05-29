@@ -224,11 +224,53 @@ describe('ScriptureModal additional behaviors', () => {
     expect(onDraft).toHaveBeenCalledWith('blue')
   })
 
-  it('handles left and right swipe to trigger navigation', async () => {
+  it('keeps passage swipe layer mounted while compare translation loads', async () => {
+    const user = userEvent.setup()
+    let resolveCompare!: (value: Response) => void
+    const compareFetch = new Promise<Response>((resolve) => {
+      resolveCompare = resolve
+    })
+
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (url.includes('translation=kjv')) {
+        return compareFetch
+      }
+      return Promise.resolve(defaultFetchSuccess)
+    })
+
+    renderWithTextSize(<ScriptureModal {...defaultProps} />)
+
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-tour="scripture-modal-passage-swipe"]')
+      ).toBeTruthy()
+    )
+
+    await user.click(
+      screen.getByRole('button', { name: /Compare with another translation/i })
+    )
+    await user.click(await screen.findByRole('option', { name: /^KJV$/i }))
+
+    expect(
+      document.querySelector('[data-tour="scripture-modal-passage-swipe"]')
+    ).toBeTruthy()
+
+    await act(async () => {
+      resolveCompare({
+        ok: true,
+        json: () => Promise.resolve({ text: 'Compare column text' }),
+      } as unknown as Response)
+    })
+
+    await waitFor(() => expect(screen.getByText(/Compare column text/)).toBeInTheDocument())
+  })
+
+  it('handles left and right swipe on passage layer to trigger navigation', async () => {
     const onNext = jest.fn()
     const onPrevious = jest.fn()
 
-    const { container } = renderWithTextSize(
+    renderWithTextSize(
       <ScriptureModal
         {...defaultProps}
         hasNext={true}
@@ -239,26 +281,41 @@ describe('ScriptureModal additional behaviors', () => {
     )
 
     await waitFor(() =>
-      expect(screen.getByRole('heading', { name: /Genesis 1:1-2/ })).toBeInTheDocument()
+      expect(
+        document.querySelector('[data-tour="scripture-modal-passage-swipe"]')
+      ).toBeTruthy()
     )
 
-  // the scrollable content area uses the class 'overflow-y-auto'
-  const scrollArea = container.querySelector('.overflow-y-auto') as HTMLElement
-    expect(scrollArea).toBeTruthy()
+    const swipeLayer = document.querySelector(
+      '[data-tour="scripture-modal-passage-swipe"]'
+    ) as HTMLElement
+    Object.defineProperty(swipeLayer, 'clientWidth', {
+      configurable: true,
+      value: 300,
+    })
 
-    // Simulate left swipe (start 200 -> end 100) to trigger onNext
-    fireEvent.touchStart(scrollArea, { targetTouches: [{ clientX: 200 }] })
-    fireEvent.touchMove(scrollArea, { targetTouches: [{ clientX: 100 }] })
-    fireEvent.touchEnd(scrollArea, { changedTouches: [{ clientX: 100 }] })
+    const track = swipeLayer.querySelector('[data-phase]') as HTMLElement
+    expect(track).toBeTruthy()
 
-    expect(onNext).toHaveBeenCalled()
+    // Left swipe past 50% of passage width (300px) → onNext after exit animation
+    fireEvent.touchStart(swipeLayer, { targetTouches: [{ clientX: 280, clientY: 0 }] })
+    fireEvent.touchMove(swipeLayer, { targetTouches: [{ clientX: 100, clientY: 0 }] })
+    fireEvent.touchEnd(swipeLayer, { changedTouches: [{ clientX: 100, clientY: 0 }] })
 
-    // Simulate right swipe (start 100 -> end 200) to trigger onPrevious
-    fireEvent.touchStart(scrollArea, { targetTouches: [{ clientX: 100 }] })
-    fireEvent.touchMove(scrollArea, { targetTouches: [{ clientX: 200 }] })
-    fireEvent.touchEnd(scrollArea, { changedTouches: [{ clientX: 200 }] })
+    await waitFor(() => expect(track).toHaveAttribute('data-phase', 'exiting'))
+    fireEvent.transitionEnd(track, { propertyName: 'transform' })
 
-    expect(onPrevious).toHaveBeenCalled()
+    await waitFor(() => expect(onNext).toHaveBeenCalledTimes(1))
+
+    // Right swipe → onPrevious
+    fireEvent.touchStart(swipeLayer, { targetTouches: [{ clientX: 20, clientY: 0 }] })
+    fireEvent.touchMove(swipeLayer, { targetTouches: [{ clientX: 220, clientY: 0 }] })
+    fireEvent.touchEnd(swipeLayer, { changedTouches: [{ clientX: 220, clientY: 0 }] })
+
+    await waitFor(() => expect(track).toHaveAttribute('data-phase', 'exiting'))
+    fireEvent.transitionEnd(track, { propertyName: 'transform' })
+
+    await waitFor(() => expect(onPrevious).toHaveBeenCalledTimes(1))
   })
 
   it('chapter context highlight includes verse after publisher footnote markers like [1] (NLT)', async () => {

@@ -170,6 +170,23 @@ const sessionStorageMock = {
 }
 global.sessionStorage = sessionStorageMock
 
+// jsdom does not implement ResizeObserver (used by ScripturePassageSwipeLayer and others)
+if (typeof global.ResizeObserver === 'undefined') {
+  global.ResizeObserver = class ResizeObserver {
+    constructor(callback) {
+      this.callback = callback
+    }
+
+    observe(target) {
+      if (target && typeof target.clientWidth === 'number') {
+        this.callback([{ target }], this)
+      }
+    }
+
+    disconnect() {}
+  }
+}
+
 // Mock window.alert used by some pages when saving
 global.alert = jest.fn()
 
