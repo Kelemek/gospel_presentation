@@ -1,7 +1,10 @@
 import { readFileSync } from 'fs'
 import path from 'path'
 import { getHenryVolume } from '@/lib/henry/henryCcelManifest'
+import { normalizeGospelPresentationData } from '@/lib/scriptureReferenceNormalize'
+import { segmentPlainTextForGospelInlines } from '@/lib/injectGospelInlineMarkersInHtml'
 import {
+  chapterPassageDisplayFromSubsectionTitle,
   henrySubsectionTitleForUnit,
   normalizeHenryChapterTitle,
   parseCcelHenryVolume,
@@ -20,6 +23,16 @@ const FIRST_SAMUEL_FIXTURE = readFileSync(
 
 const PSALM_FIXTURE = readFileSync(
   path.join(__dirname, 'fixtures', 'mhc3-psalm51-snippet.xml'),
+  'utf8'
+)
+
+const ROMANS_FIXTURE = readFileSync(
+  path.join(__dirname, 'fixtures', 'mhc4-romans-ch8-snippet.xml'),
+  'utf8'
+)
+
+const GEN_VER_ONLY_FIXTURE = readFileSync(
+  path.join(__dirname, 'fixtures', 'mhc1-genesis-ver-only-snippet.xml'),
   'utf8'
 )
 
@@ -75,6 +88,46 @@ describe('parseCcelHenryVolume', () => {
     expect(sa).toBeDefined()
     expect(sa!.subsections[0].title).toBe('1 Samuel — Chapter 1')
     expect(sa!.passageKeys.some((k) => k.startsWith('1SA.1'))).toBe(true)
+  })
+
+  it('indexes Roman numeral passage attrs and chapter key for Romans 8', () => {
+    const vol = getHenryVolume('mhc6')!
+    const chunks = parseCcelHenryVolume(ROMANS_FIXTURE, vol)
+    const rom = chunks.find((c) => c.bookUsfm === 'ROM')
+    expect(rom).toBeDefined()
+    expect(rom!.subsections[0].title).toBe('Romans — Chapter 8')
+    expect(rom!.passageKeys).toContain('ROM.8')
+    expect(rom!.passageKeys.some((k) => k === 'ROM.8.28' || k.startsWith('ROM.8.28'))).toBe(true)
+  })
+
+  it('adds chapter-level passage key for Psalm 51 from subsection title', () => {
+    const vol = getHenryVolume('mhc3')!
+    const chunks = parseCcelHenryVolume(PSALM_FIXTURE, vol)
+    const psa = chunks.find((c) => c.bookUsfm === 'PSA')!
+    expect(psa.passageKeys).toContain('PSA.51')
+    expect(chapterPassageDisplayFromSubsectionTitle('Psalm 51')).toBe('Psalms 51')
+  })
+
+  it('expands scripRef inner text to recognizable scripture in stored HTML', () => {
+    const vol = getHenryVolume('mhc1')!
+    const chunks = parseCcelHenryVolume(FIXTURE, vol)
+    const gen = chunks.find((c) => c.bookUsfm === 'GEN')!
+    const { data } = normalizeGospelPresentationData([
+      { section: 'mhgen', title: 'T', subsections: gen.subsections },
+    ])
+    const plain = data[0].subsections![0].content.replace(/<[^>]+>/g, ' ')
+    const refs = segmentPlainTextForGospelInlines(plain)
+      .filter((s) => s.kind === 'scripture')
+      .map((s) => s.cleanRef)
+    expect(refs.some((r) => r.includes('Genesis') && r.includes('1'))).toBe(true)
+  })
+
+  it('includes chapter key when scripRef lacks osisRef but passage attr is present', () => {
+    const vol = getHenryVolume('mhc1')!
+    const chunks = parseCcelHenryVolume(GEN_VER_ONLY_FIXTURE, vol)
+    const gen = chunks.find((c) => c.bookUsfm === 'GEN')!
+    expect(gen.passageKeys).toContain('GEN.1')
+    expect(gen.passageKeys.some((k) => k.startsWith('GEN.1.3'))).toBe(true)
   })
 
   it('skips preface and title page div1 blocks', () => {

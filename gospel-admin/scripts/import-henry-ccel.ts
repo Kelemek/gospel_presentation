@@ -128,14 +128,27 @@ function mergeChunksByBook(chunks: ParsedHenryBookChunk[]): ParsedHenryBookChunk
 
 function logParseChunks(chunks: ParsedHenryBookChunk[], label: string) {
   console.log(`${label}: ${chunks.length} book chunk(s)`)
+  let totalSubsections = 0
+  let totalKeys = 0
   for (const c of chunks) {
+    totalSubsections += c.subsections.length
+    totalKeys += c.passageKeys.length
+    const ratio =
+      c.subsections.length > 0
+        ? (c.passageKeys.length / c.subsections.length).toFixed(1)
+        : '—'
     console.log(
-      `  ${c.bookUsfm} (${henryProfileTitleForUsfm(c.bookUsfm)}): ${c.subsections.length} subsection(s), ${c.passageKeys.length} passage key(s)`
+      `  ${c.bookUsfm} (${henryProfileTitleForUsfm(c.bookUsfm)}): ${c.subsections.length} subsection(s), ${c.passageKeys.length} passage key(s), ${ratio} keys/subsection`
     )
     if (c.subsections[0]) {
       console.log(`    first: ${c.subsections[0].title}`)
     }
   }
+  const corpusRatio =
+    totalSubsections > 0 ? (totalKeys / totalSubsections).toFixed(1) : '—'
+  console.log(
+    `  TOTAL: ${totalSubsections} subsection(s), ${totalKeys} passage key(s), ${corpusRatio} keys/subsection (chapter keys + scripRef)`
+  )
 }
 
 async function main() {

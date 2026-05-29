@@ -6,10 +6,10 @@ import { bookNameToUsfm } from '@/lib/api-bible-passage-id'
 import { normalizeCalvinBookUsfm } from '@/lib/calvin/calvinUsfmNormalize'
 import type { HenryCcelVolume } from '@/lib/henry/henryCcelManifest'
 import { henryProfileTitleForUsfm, henrySlugForUsfm } from '@/lib/henry/henrySlug'
+import { bookChapterFromCommentarySubsectionTitle } from '@/lib/studyCommentaryChapterTitleMatch'
 import {
   extractDiv1Blocks,
-  extractPassageAttributes,
-  normalizedPassageDisplayForInline,
+  passageDisplaysFromFragment,
   passageKeysFromRefs,
   unwrapScripRefTags,
 } from '@/lib/spurgeon/ccelSermonHtml'
@@ -142,41 +142,19 @@ export function henrySubsectionTitleForUnit(bookUsfm: string, chapterTitle: stri
   return `${bookName} — ${normalized}`
 }
 
-function displayBookNameForUsfm(usfm: string): string {
-  return henryProfileTitleForUsfm(usfm).replace(/^Matthew Henry on /, '')
+/** Chapter-level display ref for passage index (e.g. `Genesis 8` → `GEN.8`). */
+export function chapterPassageDisplayFromSubsectionTitle(title: string): string | null {
+  const fromTitle = bookChapterFromCommentarySubsectionTitle(title)
+  if (!fromTitle) return null
+  const bookName = henryProfileTitleForUsfm(fromTitle.usfm).replace(/^Matthew Henry on /, '')
+  return `${bookName} ${fromTitle.chapter}`
 }
 
-/** Convert CCEL `osisRef` (e.g. `Bible:Gen.1.3-Gen.1.5`) to a canonical display reference for indexing. */
-function osisRefToDisplayPassage(osisRef: string): string | null {
-  const trimmed = osisRef.trim()
-  const range = /^Bible:([A-Za-z0-9]+)\.(\d+)\.(\d+)-Bible:[A-Za-z0-9]+\.(\d+)\.(\d+)$/i.exec(trimmed)
-  if (range) {
-    const book = normalizeCalvinBookUsfm(range[1]) ?? range[1].toUpperCase()
-    const name = displayBookNameForUsfm(book)
-    return `${name} ${range[2]}:${range[3]}-${range[5]}`
-  }
-  const single = /^Bible:([A-Za-z0-9]+)\.(\d+)\.(\d+)$/i.exec(trimmed)
-  if (single) {
-    const book = normalizeCalvinBookUsfm(single[1]) ?? single[1].toUpperCase()
-    const name = displayBookNameForUsfm(book)
-    return `${name} ${single[2]}:${single[3]}`
-  }
-  return null
-}
-
-function passageDisplaysFromFragment(fragment: string): string[] {
-  const out: string[] = []
-  for (const raw of extractPassageAttributes(fragment)) {
-    const n = normalizedPassageDisplayForInline(raw)
-    if (n) out.push(n)
-  }
-  const osisRe = /\bosisRef="([^"]+)"/gi
-  let om: RegExpExecArray | null
-  while ((om = osisRe.exec(fragment)) !== null) {
-    const d = osisRefToDisplayPassage(om[1])
-    if (d) out.push(d)
-  }
-  return out
+function passageDisplaysForHenryChunk(subsections: Subsection[], fragmentPassages: string[]): string[] {
+  const chapterDisplays = subsections
+    .map((sub) => chapterPassageDisplayFromSubsectionTitle(sub.title))
+    .filter((d): d is string => d != null)
+  return [...fragmentPassages, ...chapterDisplays]
 }
 
 /**
@@ -222,7 +200,7 @@ export function parseCcelHenryVolume(xml: string, volume: HenryCcelVolume): Pars
   const chunks: ParsedHenryBookChunk[] = []
   for (const [rawBook, { subsections, passages }] of byBook) {
     const bookUsfm = normalizeCalvinBookUsfm(rawBook) ?? rawBook
-    const passageKeys = passageKeysFromRefs(passages)
+    const passageKeys = passageKeysFromRefs(passageDisplaysForHenryChunk(subsections, passages))
     chunks.push({ bookUsfm, subsections, passageKeys })
   }
   return chunks
