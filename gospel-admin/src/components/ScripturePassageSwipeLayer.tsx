@@ -104,7 +104,7 @@ export default function ScripturePassageSwipeLayer({
   const noTextSelectClass = 'select-none [&_*]:select-none'
 
   const shellClassName = [
-    'overflow-hidden touch-pan-y',
+    'overflow-hidden',
     noTextSelectClass,
     canDragNavigate && phase !== 'dragging' ? 'cursor-grab' : '',
     phase === 'dragging' ? 'cursor-grabbing' : '',
@@ -113,7 +113,7 @@ export default function ScripturePassageSwipeLayer({
     .filter(Boolean)
     .join(' ')
 
-  const { onPointerDown, onPointerMove, onPointerUp, onPointerCancel } = pointerHandlers
+  const { onPointerDown } = pointerHandlers
 
   const { onPointerDownCapture: onLongPressPointerDownCapture, onTouchStartCapture } =
     useLongPress({
@@ -135,9 +135,6 @@ export default function ScripturePassageSwipeLayer({
       className={shellClassName}
       data-tour="scripture-modal-passage-swipe"
       onPointerDownCapture={handlePointerDownCapture}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerCancel}
       {...(onLongPress ? { onTouchStartCapture } : {})}
     >
       <div className="relative w-full min-h-0 flex-1 flex flex-col">

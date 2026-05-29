@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
@@ -10,6 +11,10 @@ import {
 
 export const PASSAGE_SWIPE_COMMIT_RATIO = 0.5
 export const PASSAGE_SWIPE_DIRECTION_LOCK_PX = 12
+/** Horizontal swipe when |dx| dominates |dy| by this factor (lower = easier to start swipe). */
+export const PASSAGE_SWIPE_HORIZONTAL_RATIO = 1.2
+/** Vertical scroll when |dy| dominates |dx| by this factor (higher = harder to steal a horizontal swipe). */
+export const PASSAGE_SWIPE_VERTICAL_RATIO = 1.65
 export const PASSAGE_SWIPE_ANIMATION_MS = 280
 /** iOS-style deceleration curve (similar to Mail row animations). */
 export const PASSAGE_SWIPE_EASING = 'cubic-bezier(0.22, 0.61, 0.36, 1)'
@@ -42,6 +47,25 @@ function prefersReducedMotion(): boolean {
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
   )
+}
+
+export function resolvePassageSwipeAxis(
+  dx: number,
+  dy: number
+): 'horizontal' | 'vertical' | null {
+  const adx = Math.abs(dx)
+  const ady = Math.abs(dy)
+  if (
+    adx < PASSAGE_SWIPE_DIRECTION_LOCK_PX &&
+    ady < PASSAGE_SWIPE_DIRECTION_LOCK_PX
+  ) {
+    return null
+  }
+  const horizontal = adx >= ady * PASSAGE_SWIPE_HORIZONTAL_RATIO
+  const vertical = ady >= adx * PASSAGE_SWIPE_VERTICAL_RATIO
+  if (horizontal && !vertical) return 'horizontal'
+  if (vertical && !horizontal) return 'vertical'
+  return null
 }
 
 function applyRubberBand(
@@ -113,8 +137,32 @@ export function usePassageSwipeNav({
   const exitFallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const activePointerIdRef = useRef<number | null>(null)
   const pointerCapturedRef = useRef(false)
+  const gestureTargetRef = useRef<HTMLElement | null>(null)
+  const docListenersRef = useRef<{
+    onMove: (e: PointerEvent) => void
+    onUp: (e: PointerEvent) => void
+    onCancel: (e: PointerEvent) => void
+  } | null>(null)
+  const disabledRef = useRef(disabled)
+  const moveGestureRef = useRef<(e: ReactPointerEvent) => void>(() => {})
+  const finishGestureRef = useRef<(endPoint: { x: number; y: number } | null) => void>(() => {})
+  const releasePointerCaptureRef = useRef<(e: ReactPointerEvent) => void>(() => {})
+  const resetGestureRef = useRef<() => void>(() => {})
+  const snapToRef = useRef<
+    (
+      current: number,
+      underlay: number | null,
+      side: PassageSwipeUnderlaySide,
+      withTransition: boolean
+    ) => void
+  >(() => {})
+  const setPhaseSyncRef = useRef<(value: PassageSwipePhase) => void>(() => {})
 
   const width = Math.max(containerWidth, 1)
+
+  useLayoutEffect(() => {
+    disabledRef.current = disabled
+  }, [disabled])
 
   useEffect(() => {
     phaseRef.current = phase
@@ -151,11 +199,28 @@ export function usePassageSwipeNav({
     []
   )
 
+  const detachDocumentListeners = useCallback(() => {
+    const listeners = docListenersRef.current
+    if (!listeners) return
+    document.removeEventListener('pointermove', listeners.onMove, true)
+    document.removeEventListener('pointerup', listeners.onUp, true)
+    document.removeEventListener('pointercancel', listeners.onCancel, true)
+    docListenersRef.current = null
+  }, [])
+
   const resetGesture = useCallback(() => {
     axisRef.current = null
     activePointerIdRef.current = null
     pointerCapturedRef.current = false
-  }, [])
+    gestureTargetRef.current = null
+    detachDocumentListeners()
+  }, [detachDocumentListeners])
+
+  const abandonGestureForVerticalScroll = useCallback(() => {
+    axisRef.current = 'vertical'
+    activePointerIdRef.current = null
+    detachDocumentListeners()
+  }, [detachDocumentListeners])
 
   const acquirePointerCapture = useCallback((e: ReactPointerEvent) => {
     if (pointerCapturedRef.current) return
@@ -271,6 +336,25 @@ export function usePassageSwipeNav({
 
   useEffect(() => () => clearExitFallback(), [clearExitFallback])
 
+  useEffect(() => () => detachDocumentListeners(), [detachDocumentListeners])
+
+  const toReactPointerEvent = useCallback(
+    (e: PointerEvent): ReactPointerEvent => {
+      const currentTarget = gestureTargetRef.current ?? (e.target as HTMLElement)
+      return {
+        clientX: e.clientX,
+        clientY: e.clientY,
+        pointerId: e.pointerId,
+        pointerType: e.pointerType,
+        button: e.button,
+        buttons: e.buttons,
+        preventDefault: () => e.preventDefault(),
+        currentTarget,
+      } as unknown as ReactPointerEvent
+    },
+    []
+  )
+
   const onTransitionEnd = useCallback(
     (propertyName: string) => {
       if (propertyName && propertyName !== 'transform') return
@@ -382,17 +466,15 @@ export function usePassageSwipeNav({
       const dy = e.clientY - startRef.current.y
 
       if (axisRef.current === null) {
-        const dist = Math.sqrt(dx * dx + dy * dy)
-        if (dist < PASSAGE_SWIPE_DIRECTION_LOCK_PX) return
-        if (Math.abs(dx) > Math.abs(dy)) {
-          axisRef.current = 'horizontal'
-          acquirePointerCapture(e)
-          e.preventDefault()
-        } else {
-          axisRef.current = 'vertical'
-          activePointerIdRef.current = null
+        const axis = resolvePassageSwipeAxis(dx, dy)
+        if (axis === null) return
+        if (axis === 'vertical') {
+          abandonGestureForVerticalScroll()
           return
         }
+        axisRef.current = 'horizontal'
+        acquirePointerCapture(e)
+        e.preventDefault()
       }
 
       if (axisRef.current !== 'horizontal') return
@@ -400,7 +482,7 @@ export function usePassageSwipeNav({
       e.preventDefault()
       applyDragOffset(dx)
     },
-    [applyDragOffset, acquirePointerCapture]
+    [applyDragOffset, acquirePointerCapture, abandonGestureForVerticalScroll]
   )
 
   const finishGesture = useCallback(
@@ -417,8 +499,7 @@ export function usePassageSwipeNav({
       if (endPoint && axisRef.current === null) {
         const dx = endPoint.x - startRef.current.x
         const dy = endPoint.y - startRef.current.y
-        const dist = Math.sqrt(dx * dx + dy * dy)
-        if (dist >= PASSAGE_SWIPE_DIRECTION_LOCK_PX && Math.abs(dx) > Math.abs(dy)) {
+        if (resolvePassageSwipeAxis(dx, dy) === 'horizontal') {
           axisRef.current = 'horizontal'
           applyDragOffset(dx)
         }
@@ -470,6 +551,62 @@ export function usePassageSwipeNav({
     ]
   )
 
+  const ensureDocumentListenersAttached = useCallback(() => {
+    if (typeof document === 'undefined' || docListenersRef.current) return
+
+    const onMove = (e: PointerEvent) => {
+      if (activePointerIdRef.current !== e.pointerId) return
+      if (
+        disabledRef.current ||
+        phaseRef.current === 'exiting' ||
+        phaseRef.current === 'entering'
+      ) {
+        return
+      }
+      if (pendingNavRef.current) return
+      moveGestureRef.current(toReactPointerEvent(e))
+    }
+
+    const onUp = (e: PointerEvent) => {
+      if (activePointerIdRef.current !== e.pointerId) return
+      const reactEvent = toReactPointerEvent(e)
+      releasePointerCaptureRef.current(reactEvent)
+      finishGestureRef.current({ x: e.clientX, y: e.clientY })
+    }
+
+    const onCancel = (e: PointerEvent) => {
+      if (activePointerIdRef.current !== e.pointerId) return
+      const reactEvent = toReactPointerEvent(e)
+      releasePointerCaptureRef.current(reactEvent)
+      if (phaseRef.current === 'dragging') {
+        setPhaseSyncRef.current('idle')
+        snapToRef.current(0, null, null, true)
+      }
+      resetGestureRef.current()
+    }
+
+    docListenersRef.current = { onMove, onUp, onCancel }
+    document.addEventListener('pointermove', onMove, true)
+    document.addEventListener('pointerup', onUp, true)
+    document.addEventListener('pointercancel', onCancel, true)
+  }, [toReactPointerEvent])
+
+  useLayoutEffect(() => {
+    moveGestureRef.current = moveGesture
+    finishGestureRef.current = finishGesture
+    releasePointerCaptureRef.current = releasePointerCaptureIfHeld
+    resetGestureRef.current = resetGesture
+    snapToRef.current = snapTo
+    setPhaseSyncRef.current = setPhaseSync
+  }, [
+    moveGesture,
+    finishGesture,
+    releasePointerCaptureIfHeld,
+    resetGesture,
+    snapTo,
+    setPhaseSync,
+  ])
+
   const onPointerDown = useCallback(
     (e: ReactPointerEvent) => {
       if (disabled || phaseRef.current === 'exiting' || phaseRef.current === 'entering') {
@@ -483,10 +620,12 @@ export function usePassageSwipeNav({
         if (pendingNavRef.current) return
       }
 
+      gestureTargetRef.current = e.currentTarget as HTMLElement
       activePointerIdRef.current = e.pointerId
       beginGesture(e.clientX, e.clientY)
+      ensureDocumentListenersAttached()
     },
-    [disabled, clearStalePendingNav, beginGesture]
+    [disabled, clearStalePendingNav, beginGesture, ensureDocumentListenersAttached]
   )
 
   const onPointerMove = useCallback(

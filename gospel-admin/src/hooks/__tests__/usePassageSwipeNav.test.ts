@@ -2,6 +2,7 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 import {
   PASSAGE_SWIPE_COMMIT_RATIO,
   PASSAGE_SWIPE_DIRECTION_LOCK_PX,
+  resolvePassageSwipeAxis,
   usePassageSwipeNav,
 } from '@/hooks/usePassageSwipeNav'
 
@@ -33,6 +34,24 @@ function pointerAt(
   } as unknown as React.PointerEvent
 }
 
+describe('resolvePassageSwipeAxis', () => {
+  it('returns null until movement exceeds lock threshold', () => {
+    expect(resolvePassageSwipeAxis(5, 5)).toBeNull()
+  })
+
+  it('returns null for ambiguous diagonal movement', () => {
+    expect(resolvePassageSwipeAxis(14, 18)).toBeNull()
+  })
+
+  it('prefers horizontal when dx clearly dominates', () => {
+    expect(resolvePassageSwipeAxis(40, 18)).toBe('horizontal')
+  })
+
+  it('prefers vertical only when dy clearly dominates', () => {
+    expect(resolvePassageSwipeAxis(8, 40)).toBe('vertical')
+  })
+})
+
 describe('usePassageSwipeNav', () => {
   const width = 200
   const onNext = jest.fn()
@@ -53,6 +72,35 @@ describe('usePassageSwipeNav', () => {
 
   afterEach(() => {
     jest.useRealTimers()
+  })
+
+  it('commits horizontal swipe after an initial ambiguous diagonal move', () => {
+    const { result } = renderHook(() =>
+      usePassageSwipeNav({
+        containerWidth: width,
+        canGoNext: true,
+        canGoPrevious: true,
+        onNext,
+        onPrevious,
+        contentReady: false,
+      })
+    )
+
+    const { onPointerDown, onPointerMove, onPointerUp } = result.current.pointerHandlers
+    const commitDx = width * PASSAGE_SWIPE_COMMIT_RATIO + 5
+
+    act(() => {
+      onPointerDown(pointerAt(200, 100, captureTarget))
+      onPointerMove(pointerAt(212, 118, captureTarget))
+      onPointerMove(pointerAt(200 - commitDx, 105, captureTarget))
+      onPointerUp(pointerAt(200 - commitDx, 105, captureTarget))
+    })
+
+    expect(result.current.phase).toBe('exiting')
+    act(() => {
+      result.current.onTransitionEnd('transform')
+    })
+    expect(onNext).toHaveBeenCalledTimes(1)
   })
 
   it('ignores mostly vertical movement (direction lock)', () => {
@@ -141,6 +189,81 @@ describe('usePassageSwipeNav', () => {
       )
     })
 
+    expect(captureTarget.setPointerCapture).not.toHaveBeenCalled()
+  })
+
+  it('detaches document listeners after vertical scroll is detected', () => {
+    const removeSpy = jest.spyOn(document, 'removeEventListener')
+    const { result } = renderHook(() =>
+      usePassageSwipeNav({
+        containerWidth: width,
+        canGoNext: true,
+        canGoPrevious: true,
+        onNext,
+        onPrevious,
+      })
+    )
+
+    act(() => {
+      result.current.pointerHandlers.onPointerDown(pointerAt(100, 100, captureTarget))
+      result.current.pointerHandlers.onPointerMove(
+        pointerAt(100, 100 + PASSAGE_SWIPE_DIRECTION_LOCK_PX + 20, captureTarget)
+      )
+    })
+
+    expect(removeSpy).toHaveBeenCalledWith('pointermove', expect.any(Function), true)
+    expect(removeSpy).toHaveBeenCalledWith('pointerup', expect.any(Function), true)
+    expect(removeSpy).toHaveBeenCalledWith('pointercancel', expect.any(Function), true)
+
+    removeSpy.mockClear()
+    act(() => {
+      document.dispatchEvent(
+        new PointerEvent('pointermove', {
+          bubbles: true,
+          clientX: 200,
+          clientY: 200,
+          pointerId: POINTER_ID,
+        })
+      )
+    })
+
+    expect(result.current.currentOffsetX).toBe(0)
+    expect(removeSpy).not.toHaveBeenCalled()
+    removeSpy.mockRestore()
+  })
+
+  it('ignores document pointer moves when disabled becomes true mid-gesture', () => {
+    const { result, rerender } = renderHook(
+      ({ disabled }: { disabled: boolean }) =>
+        usePassageSwipeNav({
+          containerWidth: width,
+          canGoNext: true,
+          canGoPrevious: true,
+          onNext,
+          onPrevious,
+          disabled,
+        }),
+      { initialProps: { disabled: false } }
+    )
+
+    act(() => {
+      result.current.pointerHandlers.onPointerDown(pointerAt(200, 100, captureTarget))
+    })
+
+    rerender({ disabled: true })
+
+    act(() => {
+      document.dispatchEvent(
+        new PointerEvent('pointermove', {
+          bubbles: true,
+          clientX: 120,
+          clientY: 100,
+          pointerId: POINTER_ID,
+        })
+      )
+    })
+
+    expect(result.current.currentOffsetX).toBe(0)
     expect(captureTarget.setPointerCapture).not.toHaveBeenCalled()
   })
 

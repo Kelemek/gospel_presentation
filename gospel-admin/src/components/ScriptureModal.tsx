@@ -1372,7 +1372,7 @@ export default function ScriptureModal({
         >
           <div
             ref={scrollAreaRef}
-            className="relative flex-1 overflow-y-auto px-4 py-4 min-h-0"
+            className="relative flex-1 overflow-y-auto touch-pan-y px-4 py-4 min-h-0"
             data-tour={isComparing ? 'scripture-modal-compare-columns' : 'scripture-modal-scroll-area'}
           >
             {isComparing ? (
