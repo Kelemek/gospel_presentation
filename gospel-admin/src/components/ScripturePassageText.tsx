@@ -3,7 +3,7 @@
 import { useLongPress } from '@/hooks/useLongPress'
 
 const PASSAGE_TEXT_CLASS =
-  'text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl'
+  'text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl select-none'
 
 export interface ScripturePassageTextProps {
   html: string

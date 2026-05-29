@@ -1,10 +1,20 @@
 'use client'
 
-import { useCallback, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react'
 import {
   PASSAGE_SWIPE_ANIMATION_MS,
+  PASSAGE_SWIPE_EASING,
   usePassageSwipeNav,
 } from '@/hooks/usePassageSwipeNav'
+import { useLongPress } from '@/hooks/useLongPress'
 
 export interface ScripturePassageSwipeLayerProps {
   children: ReactNode
@@ -16,7 +26,19 @@ export interface ScripturePassageSwipeLayerProps {
   contentReady?: boolean
   contentKey?: string
   className?: string
+  /** Long-press anywhere in this pane (capture phase, same hit area as swipe). */
+  onLongPress?: () => void
 }
+
+const transformStyle = (
+  offsetX: number,
+  transitionEnabled: boolean
+): CSSProperties => ({
+  transform: `translateX(${offsetX}px)`,
+  transition: transitionEnabled
+    ? `transform ${PASSAGE_SWIPE_ANIMATION_MS}ms ${PASSAGE_SWIPE_EASING}`
+    : 'none',
+})
 
 export default function ScripturePassageSwipeLayer({
   children,
@@ -28,6 +50,7 @@ export default function ScripturePassageSwipeLayer({
   contentReady = true,
   contentKey = '',
   className,
+  onLongPress,
 }: ScripturePassageSwipeLayerProps) {
   const shellRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
@@ -47,11 +70,14 @@ export default function ScripturePassageSwipeLayer({
   }, [])
 
   const {
-    offsetX,
+    currentOffsetX,
+    underlayOffsetX,
+    underlaySide,
     phase,
     transitionEnabled,
     isSwipeActive,
-    touchHandlers,
+    canDragNavigate,
+    pointerHandlers,
     onTransitionEnd,
   } = usePassageSwipeNav({
     containerWidth,
@@ -72,35 +98,91 @@ export default function ScripturePassageSwipeLayer({
   )
 
   const showPlaceholder = !contentReady && isSwipeActive
+  const showUnderlay =
+    underlaySide !== null && underlayOffsetX !== null && (phase !== 'idle' || isSwipeActive)
+
+  const noTextSelectClass = 'select-none [&_*]:select-none'
+
+  const shellClassName = [
+    'overflow-hidden touch-pan-y',
+    noTextSelectClass,
+    canDragNavigate && phase !== 'dragging' ? 'cursor-grab' : '',
+    phase === 'dragging' ? 'cursor-grabbing' : '',
+    className ?? '',
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  const { onPointerDown, onPointerMove, onPointerUp, onPointerCancel } = pointerHandlers
+
+  const { onPointerDownCapture: onLongPressPointerDownCapture, onTouchStartCapture } =
+    useLongPress({
+      onLongPress: onLongPress ?? (() => {}),
+      disabled: !onLongPress,
+    })
+
+  const handlePointerDownCapture = useCallback(
+    (e: ReactPointerEvent) => {
+      onPointerDown(e)
+      if (onLongPress) onLongPressPointerDownCapture(e)
+    },
+    [onPointerDown, onLongPress, onLongPressPointerDownCapture]
+  )
 
   return (
     <div
       ref={shellRef}
-      className={`overflow-hidden touch-pan-y ${className ?? ''}`}
+      className={shellClassName}
       data-tour="scripture-modal-passage-swipe"
-      {...touchHandlers}
+      onPointerDownCapture={handlePointerDownCapture}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+      {...(onLongPress ? { onTouchStartCapture } : {})}
     >
-      <div
-        className="will-change-transform"
-        style={{
-          transform: `translateX(${offsetX}px)`,
-          transition: transitionEnabled
-            ? `transform ${PASSAGE_SWIPE_ANIMATION_MS}ms ease-out`
-            : 'none',
-        }}
-        onTransitionEnd={handleTransitionEnd}
-        data-phase={phase}
-      >
-        {showPlaceholder ? (
-          <div className="flex items-center justify-center py-12 min-h-[120px]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-            <span className="ml-3 text-slate-600 dark:text-slate-300 text-base md:text-lg">
-              Loading...
-            </span>
+      <div className="relative w-full min-h-0 flex-1 flex flex-col">
+        {showUnderlay ? (
+          <div
+            className="absolute inset-0 z-0 will-change-transform"
+            style={transformStyle(underlayOffsetX, transitionEnabled)}
+            aria-hidden
+          >
+            <div className="h-full min-h-[120px] bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-600 rounded-lg">
+              {showPlaceholder ? (
+                <div className="flex items-center justify-center py-12 h-full">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                  <span className="ml-3 text-slate-600 dark:text-slate-300 text-base md:text-lg">
+                    Loading...
+                  </span>
+                </div>
+              ) : null}
+            </div>
           </div>
-        ) : (
-          children
-        )}
+        ) : null}
+
+        <div
+          className="relative z-10 min-h-0 flex-1 flex flex-col will-change-transform"
+          style={transformStyle(currentOffsetX, transitionEnabled)}
+          onTransitionEnd={handleTransitionEnd}
+          data-phase={phase}
+          data-underlay={underlaySide ?? 'none'}
+        >
+          {showPlaceholder && !showUnderlay ? (
+            <div className="flex items-center justify-center py-12 min-h-[120px]">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+              <span className="ml-3 text-slate-600 dark:text-slate-300 text-base md:text-lg">
+                Loading...
+              </span>
+            </div>
+          ) : (
+            <div
+              key={contentKey}
+              className={`${noTextSelectClass} min-h-0 flex-1 flex flex-col`}
+            >
+              {children}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

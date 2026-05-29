@@ -170,6 +170,31 @@ const sessionStorageMock = {
 }
 global.sessionStorage = sessionStorageMock
 
+// jsdom only (node test environments have no MouseEvent / HTMLElement)
+if (typeof MouseEvent !== 'undefined' && typeof global.PointerEvent === 'undefined') {
+  global.PointerEvent = class PointerEvent extends MouseEvent {
+    constructor(type, params = {}) {
+      super(type, params)
+      this.pointerId = params.pointerId ?? 0
+      this.pointerType = params.pointerType ?? ''
+      this.width = params.width ?? 1
+      this.height = params.height ?? 1
+    }
+  }
+}
+
+if (typeof HTMLElement !== 'undefined') {
+  if (typeof HTMLElement.prototype.setPointerCapture === 'undefined') {
+    HTMLElement.prototype.setPointerCapture = jest.fn()
+  }
+  if (typeof HTMLElement.prototype.releasePointerCapture === 'undefined') {
+    HTMLElement.prototype.releasePointerCapture = jest.fn()
+  }
+  if (typeof HTMLElement.prototype.hasPointerCapture === 'undefined') {
+    HTMLElement.prototype.hasPointerCapture = jest.fn(() => true)
+  }
+}
+
 // jsdom does not implement ResizeObserver (used by ScripturePassageSwipeLayer and others)
 if (typeof global.ResizeObserver === 'undefined') {
   global.ResizeObserver = class ResizeObserver {

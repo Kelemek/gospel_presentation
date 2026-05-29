@@ -147,6 +147,54 @@ describe('ScriptureModalChapterListen', () => {
     expect(audio.src).toContain('3%3A16')
   })
 
+  it('calls onNext when a verse track ends and hasNext is true', async () => {
+    const onNext = jest.fn()
+    const user = userEvent.setup()
+    render(
+      <ScriptureModalChapterListen
+        passageReference="John 3:16"
+        chapterReference="John 3"
+        translation="esv"
+        enabled
+        hasNext
+        onNext={onNext}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /listen/i }))
+    await user.click(screen.getByTestId('memorize-listen-passage'))
+    const audio = document.querySelector('audio') as HTMLAudioElement
+    await act(async () => {
+      audio.dispatchEvent(new Event('ended'))
+    })
+    expect(onNext).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not call onNext when M\'Cheyne day playlist finishes', async () => {
+    const onNext = jest.fn()
+    const user = userEvent.setup()
+    render(
+      <ScriptureModalChapterListen
+        passageReference="Genesis 1"
+        chapterReference="Genesis 1"
+        translation="esv"
+        enabled
+        hasNext
+        onNext={onNext}
+        dayChapterReferences={['Genesis 1', 'Matthew 1']}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /listen to today's readings/i }))
+    await user.click(screen.getByTestId('memorize-listen-passage'))
+    const audio = document.querySelector('audio') as HTMLAudioElement
+    await act(async () => {
+      audio.dispatchEvent(new Event('ended'))
+    })
+    await act(async () => {
+      audio.dispatchEvent(new Event('ended'))
+    })
+    expect(onNext).not.toHaveBeenCalled()
+  })
+
   it('builds chapter-scoped audio URL from reference and translation', async () => {
     const user = userEvent.setup()
     render(

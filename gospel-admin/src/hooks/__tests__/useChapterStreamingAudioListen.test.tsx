@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useChapterStreamingAudioListen } from '@/hooks/useChapterStreamingAudioListen'
 import { applyMemorizeListenPlaybackRateToMediaElement } from '@/lib/memorizeListenSpeedStorage'
@@ -27,31 +27,40 @@ function Harness({
   onEnded,
   onTrackIndexChange,
   playlistStartIndex,
+  onAutoAdvanceAfterPlayback,
 }: {
   audioUrls: string[]
   enabled: boolean
   onEnded?: () => void
   onTrackIndexChange?: (index: number) => void
   playlistStartIndex?: number
+  onAutoAdvanceAfterPlayback?: () => boolean | void
 }) {
-  const api = useChapterStreamingAudioListen({
+  const {
+    passageAudioRef,
+    handlePassageAudioEnded,
+    handlePassageAudioError,
+    handlePrimaryClick,
+    readAloudDialogPrimaryLabel,
+  } = useChapterStreamingAudioListen({
     audioUrls,
     enabled,
     onTrackIndexChange,
     playlistStartIndex,
+    onAutoAdvanceAfterPlayback,
   })
   return (
     <>
       <audio
-        ref={api.passageAudioRef}
+        ref={passageAudioRef}
         data-testid="passage-audio"
-        onEnded={onEnded ?? api.handlePassageAudioEnded}
-        onError={api.handlePassageAudioError}
+        onEnded={onEnded ?? handlePassageAudioEnded}
+        onError={handlePassageAudioError}
       />
-      <button type="button" onClick={api.handlePrimaryClick}>
+      <button type="button" onClick={handlePrimaryClick}>
         primary
       </button>
-      <span data-testid="primary-label">{api.readAloudDialogPrimaryLabel}</span>
+      <span data-testid="primary-label">{readAloudDialogPrimaryLabel}</span>
     </>
   )
 }
@@ -223,5 +232,86 @@ describe('useChapterStreamingAudioListen', () => {
       el.dispatchEvent(new Event('ended'))
     })
     expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(2)
+  })
+
+  it('calls onAutoAdvanceAfterPlayback when a single track ends and auto-plays after URL change', async () => {
+    const onAutoAdvance = jest.fn(() => true)
+    const user = userEvent.setup()
+    const nextUrl = '/api/scripture/audio?reference=John%203%3A17&translation=esv'
+    const advance = () => {
+      onAutoAdvance()
+      return true
+    }
+    const { rerender } = render(
+      <Harness audioUrls={[audioUrl]} enabled onAutoAdvanceAfterPlayback={advance} />
+    )
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+    await act(async () => {
+      el.dispatchEvent(new Event('ended'))
+    })
+    expect(onAutoAdvance).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <Harness audioUrls={[nextUrl]} enabled onAutoAdvanceAfterPlayback={advance} />
+    )
+    await waitFor(() => {
+      expect(el.src).toContain('3%3A17')
+    })
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(2)
+  })
+
+  it('auto-plays after URL change when enabled was false during passage load', async () => {
+    const onAutoAdvance = jest.fn(() => true)
+    const user = userEvent.setup()
+    const nextUrl = '/api/scripture/audio?reference=John%203%3A17&translation=esv'
+    const advance = () => {
+      onAutoAdvance()
+      return true
+    }
+    const { rerender } = render(
+      <Harness audioUrls={[audioUrl]} enabled onAutoAdvanceAfterPlayback={advance} />
+    )
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+    await act(async () => {
+      el.dispatchEvent(new Event('ended'))
+    })
+    expect(onAutoAdvance).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <Harness audioUrls={[nextUrl]} enabled={false} onAutoAdvanceAfterPlayback={advance} />
+    )
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    rerender(
+      <Harness audioUrls={[nextUrl]} enabled onAutoAdvanceAfterPlayback={advance} />
+    )
+    await waitFor(() => {
+      expect(el.src).toContain('3%3A17')
+    })
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not call onAutoAdvanceAfterPlayback when the user paused before ended', async () => {
+    const onAutoAdvance = jest.fn()
+    const user = userEvent.setup()
+    render(
+      <Harness
+        audioUrls={[audioUrl]}
+        enabled
+        onAutoAdvanceAfterPlayback={onAutoAdvance}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+    Object.defineProperty(el, 'paused', { configurable: true, get: () => false })
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    await act(async () => {
+      el.dispatchEvent(new Event('ended'))
+    })
+    expect(onAutoAdvance).not.toHaveBeenCalled()
   })
 })

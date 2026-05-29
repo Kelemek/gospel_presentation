@@ -22,6 +22,9 @@ interface ScriptureModalChapterListenProps {
   dayChapterReferences?: readonly string[]
   /** When the playlist advances, switch the scripture reader to this chapter reference. */
   onPlaylistChapterChange?: (reference: string) => void
+  /** Same as scripture modal header Next — used to auto-advance audio when a track ends. */
+  hasNext?: boolean
+  onNext?: () => void
 }
 
 function scriptureAudioUrl(reference: string, translation: BibleTranslation): string {
@@ -38,8 +41,13 @@ export default function ScriptureModalChapterListen({
   enabled,
   dayChapterReferences,
   onPlaylistChapterChange,
+  hasNext = false,
+  onNext,
 }: ScriptureModalChapterListenProps) {
   const { showAlert } = useAlertModal()
+
+  const isDayPlaylist =
+    dayChapterReferences != null && dayChapterReferences.length > 1
 
   const playlistChapterRefs = useMemo((): readonly string[] => {
     if (dayChapterReferences && dayChapterReferences.length > 0) {
@@ -76,6 +84,12 @@ export default function ScriptureModalChapterListen({
     [onPlaylistChapterChange, playlistChapterRefs]
   )
 
+  const onAutoAdvanceAfterPlayback = useCallback((): boolean => {
+    if (!hasNext || !onNext) return false
+    onNext()
+    return true
+  }, [hasNext, onNext])
+
   const {
     passageAudioRef,
     controlsOpen,
@@ -91,12 +105,14 @@ export default function ScriptureModalChapterListen({
     handlePassageAudioPause,
     handlePassageAudioEnded,
     handlePassageAudioError,
+    keepAudioMounted,
   } = useChapterStreamingAudioListen({
     audioUrls,
     enabled,
     onPlaybackError,
     onTrackIndexChange,
     playlistStartIndex,
+    onAutoAdvanceAfterPlayback: isDayPlaylist ? undefined : onAutoAdvanceAfterPlayback,
   })
 
   const listenTitle =
@@ -134,7 +150,7 @@ export default function ScriptureModalChapterListen({
         </svg>
       </button>
 
-      {enabled ? (
+      {keepAudioMounted ? (
         <>
           <audio
             ref={passageAudioRef}

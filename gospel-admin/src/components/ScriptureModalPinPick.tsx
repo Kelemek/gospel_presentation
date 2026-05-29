@@ -129,7 +129,7 @@ export default function ScriptureModalPinPick({
           id={listboxId}
           role="listbox"
           aria-label="Pin color"
-          className="absolute left-0 top-full z-100 mt-1 flex min-w-13 flex-col gap-0.5 rounded-md border-2 border-slate-400 dark:border-slate-500 bg-slate-50 p-1 shadow-lg dark:bg-slate-700"
+          className="absolute left-0 top-full z-110 mt-1 flex min-w-13 flex-col gap-0.5 rounded-md border-2 border-slate-400 dark:border-slate-500 bg-slate-50 p-1 shadow-lg dark:bg-slate-700"
         >
           {available.map((id) => (
             <button

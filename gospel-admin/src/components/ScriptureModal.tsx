@@ -994,7 +994,7 @@ export default function ScriptureModal({
         {/* Fixed Header with Controls - Always Visible */}
         {/* Top safe area is on the full-screen overlay only; do not repeat here (doubles inset in Capacitor/iOS). */}
         <div
-          className="bg-slate-100 dark:bg-slate-700 px-4 pt-2 pb-2 border-b dark:border-slate-600 shrink-0 relative z-10 lg:rounded-t-lg"
+          className="bg-slate-100 dark:bg-slate-700 px-4 pt-2 pb-2 border-b dark:border-slate-600 shrink-0 relative z-20 overflow-visible lg:rounded-t-lg"
           data-tour="scripture-modal-toolbar"
         >
           {/* Navigation Controls - Always at Top */}
@@ -1096,6 +1096,8 @@ export default function ScriptureModal({
                 onPlaylistChapterChange={
                   isMcheyneDayPlaylist ? onNavigateReference : undefined
                 }
+                hasNext={hasNext}
+                onNext={onNext}
               />
               <button
                 type="button"
@@ -1138,9 +1140,9 @@ export default function ScriptureModal({
           {/* Toolbar: row1 = Compare + Translation + pin; row2 = verse/chapter toggle + Memorize (+ Study) */}
           <div
             data-scripture-modal-chrome
-            className="flex flex-wrap gap-1 justify-center items-center"
+            className="flex flex-wrap gap-1 justify-center items-center overflow-visible"
           >
-            <div className="w-full sm:w-auto flex flex-wrap gap-1 justify-center sm:justify-start items-center">
+            <div className="w-full sm:w-auto flex flex-wrap gap-1 justify-center sm:justify-start items-center overflow-visible">
               {/* Compare menu — custom listbox to match pin control styling (no native select). */}
               <ScriptureModalToolbarMenu
                 dataTour="scripture-modal-compare"
@@ -1149,6 +1151,7 @@ export default function ScriptureModal({
                 listboxAriaLabel="Compare with a translation"
                 triggerClassName={scriptureCompareMenuTriggerClassName}
                 triggerLabelClassName={scriptureToolbarControlTextClass}
+                portaledListbox
                 value={compareTranslation ?? ''}
                 options={compareMenuOptions}
                 onSelect={(val) => {
@@ -1162,6 +1165,7 @@ export default function ScriptureModal({
                 listboxAriaLabel="Bible translation"
                 triggerClassName={scriptureTranslationMenuTriggerClassName}
                 triggerLabelClassName={scriptureToolbarControlTextClass}
+                portaledListbox
                 value={translation}
                 options={translationMenuOptions}
                 onSelect={async (val) => {
@@ -1360,47 +1364,51 @@ export default function ScriptureModal({
           </div>
         )}
 
-        {/* Scrollable Content Area — data-tour scroll-area when single column so driver.js can spotlight this pane (pointer-events); compare mode uses compare-columns */}
-        <div
-          ref={scrollAreaRef}
-          className="relative flex-1 overflow-y-auto px-4 py-4 min-h-0"
-          data-tour={isComparing ? 'scripture-modal-compare-columns' : 'scripture-modal-scroll-area'}
+        {/* Scrollable content + horizontal swipe (whole pane, including attribution) */}
+        <ScripturePassageSwipeLayer
+          className="relative z-0 flex-1 min-h-0 flex flex-col"
+          onLongPress={handlePassageLongPress}
+          {...passageSwipeNavProps}
         >
-          {isComparing ? (
-            <>
-              {compareError && (
-                <div className="text-red-600 text-center py-8">
-                  <p className="mb-2 text-base md:text-lg">⚠️ {compareError}</p>
-                </div>
-              )}
-              {error && (
-                <div className="text-red-600 text-center py-8">
-                  <p className="mb-2 text-base md:text-lg">⚠️ {error}</p>
-                  <p className="text-sm md:text-base text-slate-500">
-                    ESV API may be unavailable or reference format incorrect
-                  </p>
-                </div>
-              )}
-              {chapterError && !contextLoading && (
-                <div className="text-red-600 text-center py-4 mb-4">
-                  <p className="mb-2 text-base md:text-lg">⚠️ {chapterError}</p>
-                  <p className="text-sm md:text-base text-slate-500">
-                    Chapter context could not be loaded. The verse text is still shown below.
-                  </p>
-                </div>
-              )}
-              {showInitialPassageLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <span className="ml-3 text-slate-600 dark:text-slate-300 text-base md:text-lg">
-                    {contextLoading || (showingContext && !compareChapterText)
-                      ? 'Loading chapter...'
-                      : 'Loading...'}
-                  </span>
-                </div>
-              ) : null}
-              {showPassageSwipeLayer && !compareError && !error ? (
-                <ScripturePassageSwipeLayer {...passageSwipeNavProps}>
+          <div
+            ref={scrollAreaRef}
+            className="relative flex-1 overflow-y-auto px-4 py-4 min-h-0"
+            data-tour={isComparing ? 'scripture-modal-compare-columns' : 'scripture-modal-scroll-area'}
+          >
+            {isComparing ? (
+              <>
+                {compareError && (
+                  <div className="text-red-600 text-center py-8">
+                    <p className="mb-2 text-base md:text-lg">⚠️ {compareError}</p>
+                  </div>
+                )}
+                {error && (
+                  <div className="text-red-600 text-center py-8">
+                    <p className="mb-2 text-base md:text-lg">⚠️ {error}</p>
+                    <p className="text-sm md:text-base text-slate-500">
+                      ESV API may be unavailable or reference format incorrect
+                    </p>
+                  </div>
+                )}
+                {chapterError && !contextLoading && (
+                  <div className="text-red-600 text-center py-4 mb-4">
+                    <p className="mb-2 text-base md:text-lg">⚠️ {chapterError}</p>
+                    <p className="text-sm md:text-base text-slate-500">
+                      Chapter context could not be loaded. The verse text is still shown below.
+                    </p>
+                  </div>
+                )}
+                {showInitialPassageLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-3 text-slate-600 dark:text-slate-300 text-base md:text-lg">
+                      {contextLoading || (showingContext && !compareChapterText)
+                        ? 'Loading chapter...'
+                        : 'Loading...'}
+                    </span>
+                  </div>
+                ) : null}
+                {!compareError && !error && showPassageSwipeLayer ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                     <div className="flex flex-col min-w-0">
                       {compareTranslation && (
@@ -1410,19 +1418,13 @@ export default function ScriptureModal({
                       )}
                       {!showingContext && compareText && (
                         <div className="prose max-w-none">
-                          <ScripturePassageText
-                            html={formatPassageText(compareText)}
-                            onLongPress={handlePassageLongPress}
-                          />
+                          <ScripturePassageText html={formatPassageText(compareText)} />
                         </div>
                       )}
                       {showingContext && compareChapterText && (
                         <div className="prose max-w-none">
                           {chapterContextBanner}
-                          <ScripturePassageText
-                            html={processChapterText(compareChapterText)}
-                            onLongPress={handlePassageLongPress}
-                          />
+                          <ScripturePassageText html={processChapterText(compareChapterText)} />
                         </div>
                       )}
                     </div>
@@ -1432,10 +1434,7 @@ export default function ScriptureModal({
                       </span>
                       {!showingContext && scriptureText && (
                         <div className="prose max-w-none" data-tour="scripture-modal-verse-body">
-                          <ScripturePassageText
-                            html={formatPassageText(scriptureText)}
-                            onLongPress={handlePassageLongPress}
-                          />
+                          <ScripturePassageText html={formatPassageText(scriptureText)} />
                         </div>
                       )}
                       {showingContext && chapterText && (
@@ -1445,82 +1444,77 @@ export default function ScriptureModal({
                             id="chapter-content"
                             data-tour="scripture-modal-chapter-body"
                             html={processChapterText(chapterText)}
-                            onLongPress={handlePassageLongPress}
                           />
                         </div>
                       )}
                     </div>
                   </div>
-                </ScripturePassageSwipeLayer>
-              ) : null}
-            </>
-          ) : (
-            <>
-              {chapterError && !contextLoading && (
-                <div className="text-red-600 text-center py-4 mb-4">
-                  <p className="mb-2 text-base md:text-lg">⚠️ {chapterError}</p>
-                  <p className="text-sm md:text-base text-slate-500">
-                    Chapter context could not be loaded. The verse text is still shown below.
-                  </p>
-                </div>
-              )}
-              {error && (
-                <div className="text-red-600 text-center py-8">
-                  <p className="mb-2 text-base md:text-lg">⚠️ {error}</p>
-                  <p className="text-sm md:text-base text-slate-500">
-                    ESV API may be unavailable or reference format incorrect
-                  </p>
-                </div>
-              )}
-              {showInitialPassageLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                  <span className="ml-3 text-slate-600 text-base md:text-lg">
-                    {contextLoading ? 'Loading chapter context...' : 'Loading scripture...'}
-                  </span>
-                </div>
-              ) : null}
-              {showPassageSwipeLayer && !error ? (
-                <ScripturePassageSwipeLayer {...passageSwipeNavProps}>
-                  {!showingContext && scriptureText && (
-                    <div className="prose max-w-none" data-tour="scripture-modal-verse-body">
-                      <ScripturePassageText
-                        html={formatPassageText(scriptureText)}
-                        onLongPress={handlePassageLongPress}
-                      />
-                    </div>
-                  )}
-                  {showingContext && chapterText && (
-                    <div className="prose max-w-none">
-                      {chapterContextBanner}
-                      <ScripturePassageText
-                        id="chapter-content"
-                        data-tour="scripture-modal-chapter-body"
-                        html={processChapterText(chapterText)}
-                        onLongPress={handlePassageLongPress}
-                      />
-                    </div>
-                  )}
-                </ScripturePassageSwipeLayer>
-              ) : null}
-            </>
-          )}
+                ) : null}
+              </>
+            ) : (
+              <>
+                {chapterError && !contextLoading && (
+                  <div className="text-red-600 text-center py-4 mb-4">
+                    <p className="mb-2 text-base md:text-lg">⚠️ {chapterError}</p>
+                    <p className="text-sm md:text-base text-slate-500">
+                      Chapter context could not be loaded. The verse text is still shown below.
+                    </p>
+                  </div>
+                )}
+                {error && (
+                  <div className="text-red-600 text-center py-8">
+                    <p className="mb-2 text-base md:text-lg">⚠️ {error}</p>
+                    <p className="text-sm md:text-base text-slate-500">
+                      ESV API may be unavailable or reference format incorrect
+                    </p>
+                  </div>
+                )}
+                {showInitialPassageLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-3 text-slate-600 text-base md:text-lg">
+                      {contextLoading ? 'Loading chapter context...' : 'Loading scripture...'}
+                    </span>
+                  </div>
+                ) : null}
+                {!error && showPassageSwipeLayer ? (
+                  <>
+                    {!showingContext && scriptureText && (
+                      <div className="prose max-w-none" data-tour="scripture-modal-verse-body">
+                        <ScripturePassageText html={formatPassageText(scriptureText)} />
+                      </div>
+                    )}
+                    {showingContext && chapterText && (
+                      <div className="prose max-w-none">
+                        {chapterContextBanner}
+                        <ScripturePassageText
+                          id="chapter-content"
+                          data-tour="scripture-modal-chapter-body"
+                          html={processChapterText(chapterText)}
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : null}
+              </>
+            )}
 
-          {wordStudyEnabled && wordStudyAvailable && (
-            <ScriptureWordStudyModal
-              reference={reference}
-              isOpen
-              onClose={closeWordStudy}
-              onOpenReference={onNavigateReference}
-            />
-          )}
+            {wordStudyEnabled && wordStudyAvailable && (
+              <ScriptureWordStudyModal
+                reference={reference}
+                isOpen
+                onClose={closeWordStudy}
+                onOpenReference={onNavigateReference}
+              />
+            )}
 
-          {/* Attribution - inside scrollable area; same bg as section block (bg-slate-50 dark:bg-slate-700/50) */}
-          <div className="scripture-modal-attribution space-y-2 bg-slate-50 dark:bg-slate-700/50 px-4 py-3 mt-4 border-y border-slate-200 dark:border-slate-600">
-            {renderAttribution(translation)}
-            {compareTranslation && renderAttribution(compareTranslation)}
+            {/* Attribution - inside scrollable area; same bg as section block (bg-slate-50 dark:bg-slate-700/50) */}
+            <div className="scripture-modal-attribution space-y-2 bg-slate-50 dark:bg-slate-700/50 px-4 py-3 mt-4 border-y border-slate-200 dark:border-slate-600">
+              {renderAttribution(translation)}
+              {compareTranslation && renderAttribution(compareTranslation)}
+            </div>
           </div>
-        </div>
+        </ScripturePassageSwipeLayer>
       </div>
 
     </div>

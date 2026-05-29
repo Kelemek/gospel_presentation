@@ -16,6 +16,14 @@ function renderWithTextSize(ui: ReactElement) {
   return render(<TextSizeProvider>{ui}</TextSizeProvider>)
 }
 
+function getAlertModalMocks() {
+  return (
+    globalThis as unknown as {
+      __alertModalMocks: { showConfirm: jest.Mock; showAlert: jest.Mock }
+    }
+  ).__alertModalMocks
+}
+
 // Mock fetch for scripture API calls
 const mockFetch = global.fetch as jest.MockedFunction<typeof fetch>
 
@@ -640,10 +648,8 @@ describe('ScriptureModal Component', () => {
     expect(openStudy).toHaveBeenCalledWith('John 3:16')
   })
 
-  it('long press on passage text prompts to hide verse numbers and persists preference', async () => {
-    const alertMocks = global.__alertModalMocks as {
-      showConfirm: jest.Mock
-    }
+  it('long press on attribution in scroll pane prompts to hide verse numbers and persists preference', async () => {
+    const alertMocks = getAlertModalMocks()
     alertMocks.showConfirm.mockResolvedValue(true)
 
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
@@ -670,9 +676,12 @@ describe('ScriptureModal Component', () => {
     expect(passage).toBeTruthy()
     expect(passage!.querySelector('sup.text-blue-600')).toBeTruthy()
 
+    const attribution = document.querySelector('.scripture-modal-attribution') as HTMLElement
+    expect(attribution).toBeTruthy()
+
     jest.useFakeTimers()
     act(() => {
-      fireEvent.pointerDown(passage!, { button: 0, clientX: 100, clientY: 200 })
+      fireEvent.pointerDown(attribution, { button: 0, clientX: 100, clientY: 200 })
     })
     act(() => {
       jest.advanceTimersByTime(DEFAULT_LONG_PRESS_MS)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   applyMemorizeListenPlaybackRateToMediaElement,
   readMemorizeListenSpeedFromStorage,
@@ -17,6 +17,12 @@ export interface UseChapterStreamingAudioListenOptions {
   onTrackIndexChange?: (index: number) => void
   /** Playlist: index of the chapter currently shown in the reader (Play starts here; follows manual nav). */
   playlistStartIndex?: number
+  /**
+   * When the current track ends and there is no next URL in `audioUrls`, call this (e.g. modal
+   * `onNext`) and auto-play after the URL updates. Not used for multi-track day playlists.
+   */
+  /** Return `false` when navigation did not run (e.g. no `hasNext`). */
+  onAutoAdvanceAfterPlayback?: () => boolean | void
 }
 
 function audioSrcMatchesUrl(elementSrc: string, relativeUrl: string): boolean {
@@ -34,38 +40,56 @@ export function useChapterStreamingAudioListen({
   onPlaybackError,
   onTrackIndexChange,
   playlistStartIndex = 0,
+  onAutoAdvanceAfterPlayback,
 }: UseChapterStreamingAudioListenOptions) {
   const [controlsOpen, setControlsOpen] = useState(false)
   const [listenPlaybackRate, setListenPlaybackRate] = useState<MemorizeListenSpeed>(() =>
     typeof window === 'undefined' ? 1 : readMemorizeListenSpeedFromStorage()
   )
   const [passageAudioPlaying, setPassageAudioPlaying] = useState(false)
-  const [listenUiTick, setListenUiTick] = useState(0)
-  const bumpListen = useCallback(() => setListenUiTick((n) => n + 1), [])
+  /** True while waiting for the next passage URL / `enabled` after auto-advance. */
+  const [awaitingContinuousPlay, setAwaitingContinuousPlay] = useState(false)
+  const [, bumpListenUi] = useState(0)
+  const bumpListen = useCallback(() => bumpListenUi((n) => n + 1), [])
 
   const passageAudioRef = useRef<HTMLAudioElement | null>(null)
   const listenPlaybackRateRef = useRef(listenPlaybackRate)
-  listenPlaybackRateRef.current = listenPlaybackRate
-
   const onPlaybackErrorRef = useRef(onPlaybackError)
-  onPlaybackErrorRef.current = onPlaybackError
-
   const onTrackIndexChangeRef = useRef(onTrackIndexChange)
-  onTrackIndexChangeRef.current = onTrackIndexChange
-
+  const onAutoAdvanceAfterPlaybackRef = useRef(onAutoAdvanceAfterPlayback)
+  /** User started Play; keep advancing via `onAutoAdvanceAfterPlayback` until Pause/stop. */
+  const continuousPlaybackRef = useRef(false)
+  const autoPlayAfterNavRef = useRef(false)
+  /** `audioUrlsKey` when auto-advance was scheduled; play only after the key changes. */
+  const pendingAdvanceUrlsKeyRef = useRef<string | null>(null)
   const audioUrlsRef = useRef(audioUrls)
-  audioUrlsRef.current = audioUrls
-
   const playlistIndexRef = useRef(playlistStartIndex)
   const playlistStartIndexRef = useRef(playlistStartIndex)
-  playlistStartIndexRef.current = playlistStartIndex
+
+  useLayoutEffect(() => {
+    listenPlaybackRateRef.current = listenPlaybackRate
+    onPlaybackErrorRef.current = onPlaybackError
+    onTrackIndexChangeRef.current = onTrackIndexChange
+    onAutoAdvanceAfterPlaybackRef.current = onAutoAdvanceAfterPlayback
+    audioUrlsRef.current = audioUrls
+    playlistStartIndexRef.current = playlistStartIndex
+  }, [
+    listenPlaybackRate,
+    onPlaybackError,
+    onTrackIndexChange,
+    onAutoAdvanceAfterPlayback,
+    audioUrls,
+    playlistStartIndex,
+  ])
 
   const isPlaylist = audioUrls.length > 1
 
   const audioUrlsKey = useMemo(() => audioUrls.join('\0'), [audioUrls])
 
   useEffect(() => {
-    setListenPlaybackRate(readMemorizeListenSpeedFromStorage())
+    queueMicrotask(() => {
+      setListenPlaybackRate(readMemorizeListenSpeedFromStorage())
+    })
   }, [])
 
   useEffect(() => {
@@ -74,6 +98,18 @@ export function useChapterStreamingAudioListen({
     applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRate)
     bumpListen()
   }, [bumpListen, listenPlaybackRate])
+
+  const clearPendingContinuousPlay = useCallback(() => {
+    autoPlayAfterNavRef.current = false
+    pendingAdvanceUrlsKeyRef.current = null
+    setAwaitingContinuousPlay(false)
+  }, [])
+
+  const schedulePendingContinuousPlay = useCallback(() => {
+    autoPlayAfterNavRef.current = true
+    pendingAdvanceUrlsKeyRef.current = audioUrlsKey
+    setAwaitingContinuousPlay(true)
+  }, [audioUrlsKey])
 
   const stopAudio = useCallback(() => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
@@ -86,14 +122,18 @@ export function useChapterStreamingAudioListen({
       el.load()
     }
     playlistIndexRef.current = 0
+    continuousPlaybackRef.current = false
+    clearPendingContinuousPlay()
     setPassageAudioPlaying(false)
     bumpListen()
-  }, [bumpListen])
+  }, [bumpListen, clearPendingContinuousPlay])
 
   useEffect(() => {
     if (!enabled) {
-      stopAudio()
-      setControlsOpen(false)
+      if (!autoPlayAfterNavRef.current) {
+        stopAudio()
+        setControlsOpen(false)
+      }
     }
   }, [enabled, stopAudio])
 
@@ -152,10 +192,36 @@ export function useChapterStreamingAudioListen({
     [playUrlAtIndex]
   )
 
+  const tryPendingInFlightRef = useRef(false)
+
+  const tryPendingContinuousPlay = useCallback(async () => {
+    if (tryPendingInFlightRef.current) return false
+    if (!autoPlayAfterNavRef.current || !enabled) return false
+    if (pendingAdvanceUrlsKeyRef.current === audioUrlsKey) return false
+    const urls = audioUrlsRef.current
+    if (urls.length === 0) return false
+    const startIdx = isPlaylist
+      ? Math.min(Math.max(playlistStartIndexRef.current, 0), urls.length - 1)
+      : 0
+    playlistIndexRef.current = startIdx
+    tryPendingInFlightRef.current = true
+    try {
+      const ok = await playUrlAtIndex(startIdx)
+      if (ok) {
+        clearPendingContinuousPlay()
+      }
+      return ok
+    } finally {
+      tryPendingInFlightRef.current = false
+    }
+  }, [audioUrlsKey, enabled, isPlaylist, playUrlAtIndex, clearPendingContinuousPlay])
+
   useEffect(() => {
     const urls = audioUrlsRef.current
     if (urls.length === 0) {
-      stopAudio()
+      if (!autoPlayAfterNavRef.current) {
+        stopAudio()
+      }
       return
     }
     const startIdx = isPlaylist
@@ -166,6 +232,14 @@ export function useChapterStreamingAudioListen({
     const isPlaying = Boolean(el && hasSrc && !el.paused && !el.ended)
     const expectedUrl = urls[startIdx]
 
+    if (autoPlayAfterNavRef.current) {
+      playlistIndexRef.current = startIdx
+      if (enabled) {
+        void tryPendingContinuousPlay()
+      }
+      return
+    }
+
     if (isPlaying) {
       if (expectedUrl && hasSrc && audioSrcMatchesUrl(el!.src, expectedUrl)) {
         return
@@ -175,7 +249,22 @@ export function useChapterStreamingAudioListen({
     }
     playlistIndexRef.current = startIdx
     stopAudio()
-  }, [audioUrlsKey, playlistStartIndex, isPlaylist, audioUrls.length, playUrlAtIndex, stopAudio])
+  }, [
+    audioUrlsKey,
+    playlistStartIndex,
+    isPlaylist,
+    audioUrls.length,
+    playUrlAtIndex,
+    stopAudio,
+    enabled,
+    tryPendingContinuousPlay,
+  ])
+
+  useLayoutEffect(() => {
+    if (autoPlayAfterNavRef.current && enabled) {
+      void tryPendingContinuousPlay()
+    }
+  }, [enabled, awaitingContinuousPlay, audioUrlsKey, tryPendingContinuousPlay])
 
   const handlePassageAudioPlay = useCallback(() => {
     setPassageAudioPlaying(true)
@@ -192,9 +281,21 @@ export function useChapterStreamingAudioListen({
       void playNextInPlaylist(playlistIndexRef.current + 1)
       return
     }
+    const advance = onAutoAdvanceAfterPlaybackRef.current
+    if (continuousPlaybackRef.current && advance) {
+      const scheduled = advance() !== false
+      if (scheduled) {
+        schedulePendingContinuousPlay()
+      } else {
+        continuousPlaybackRef.current = false
+        setPassageAudioPlaying(false)
+        bumpListen()
+      }
+      return
+    }
     setPassageAudioPlaying(false)
     bumpListen()
-  }, [bumpListen, playNextInPlaylist])
+  }, [bumpListen, playNextInPlaylist, schedulePendingContinuousPlay])
 
   const handlePassageAudioError = useCallback(() => {
     const urls = audioUrlsRef.current
@@ -207,23 +308,8 @@ export function useChapterStreamingAudioListen({
     onPlaybackErrorRef.current?.()
   }, [bumpListen, playNextInPlaylist])
 
-  const listenButtonLabel = useMemo(() => {
-    void listenUiTick
-    const el = passageAudioRef.current
-    if (el?.getAttribute('src')) {
-      return !el.paused && !el.ended ? 'Pause' : 'Listen'
-    }
-    return passageAudioPlaying ? 'Pause' : 'Listen'
-  }, [listenUiTick, passageAudioPlaying])
-
-  const listenAriaPressed = useMemo(() => {
-    void listenUiTick
-    const el = passageAudioRef.current
-    if (el?.getAttribute('src')) {
-      return !el.paused && !el.ended
-    }
-    return passageAudioPlaying
-  }, [listenUiTick, passageAudioPlaying])
+  const listenButtonLabel = passageAudioPlaying ? 'Pause' : 'Listen'
+  const listenAriaPressed = passageAudioPlaying
 
   const readAloudDialogPrimaryLabel = useMemo(
     () => (listenButtonLabel === 'Listen' ? 'Play' : listenButtonLabel),
@@ -238,13 +324,15 @@ export function useChapterStreamingAudioListen({
   }, [isPlaylist, listenButtonLabel])
 
   const handlePrimaryClick = useCallback(() => {
-    if (!enabled) {
+    if (!enabled && !autoPlayAfterNavRef.current) {
       return
     }
     const el = passageAudioRef.current
     if (!el) return
     if (!el.paused && el.getAttribute('src')) {
       el.pause()
+      continuousPlaybackRef.current = false
+      clearPendingContinuousPlay()
       setPassageAudioPlaying(false)
       bumpListen()
       queueMicrotask(bumpListen)
@@ -263,16 +351,25 @@ export function useChapterStreamingAudioListen({
       playlistIndexRef.current === startIdx
     ) {
       void el.play().then(() => {
+        if (onAutoAdvanceAfterPlaybackRef.current) {
+          continuousPlaybackRef.current = true
+        }
         setPassageAudioPlaying(true)
         bumpListen()
       })
       return
     }
+    if (onAutoAdvanceAfterPlaybackRef.current) {
+      continuousPlaybackRef.current = true
+    }
     void playNextInPlaylist(startIdx)
-  }, [bumpListen, enabled, isPlaylist, playNextInPlaylist])
+  }, [bumpListen, clearPendingContinuousPlay, enabled, isPlaylist, playNextInPlaylist])
+
+  const keepAudioMounted = enabled || awaitingContinuousPlay
 
   return {
     passageAudioRef,
+    keepAudioMounted,
     controlsOpen,
     openControls,
     closeControls,

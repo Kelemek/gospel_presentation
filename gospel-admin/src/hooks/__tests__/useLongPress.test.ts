@@ -10,12 +10,12 @@ describe('useLongPress', () => {
     jest.useRealTimers()
   })
 
-  it('calls onLongPress after delay when pointer is held still', () => {
+  it('calls onLongPress after delay when pointer is held still (capture)', () => {
     const onLongPress = jest.fn()
     const { result } = renderHook(() => useLongPress({ onLongPress }))
 
     act(() => {
-      result.current.onPointerDown({
+      result.current.onPointerDownCapture({
         button: 0,
         clientX: 100,
         clientY: 200,
@@ -45,6 +45,38 @@ describe('useLongPress', () => {
         clientX: 120,
         clientY: 200,
       } as unknown as React.PointerEvent)
+    })
+
+    act(() => {
+      jest.advanceTimersByTime(DEFAULT_LONG_PRESS_MS)
+    })
+
+    expect(onLongPress).not.toHaveBeenCalled()
+  })
+
+  it('cancels when pointer moves on document (e.g. parent swipe capture)', () => {
+    const onLongPress = jest.fn()
+    const { result } = renderHook(() => useLongPress({ onLongPress }))
+
+    act(() => {
+      result.current.onPointerDownCapture({
+        button: 0,
+        clientX: 100,
+        clientY: 200,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      } as unknown as React.PointerEvent)
+    })
+
+    act(() => {
+      document.dispatchEvent(
+        new PointerEvent('pointermove', {
+          bubbles: true,
+          clientX: 130,
+          clientY: 200,
+          pointerId: 1,
+        })
+      )
     })
 
     act(() => {

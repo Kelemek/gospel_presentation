@@ -266,9 +266,45 @@ describe('ScriptureModal additional behaviors', () => {
     await waitFor(() => expect(screen.getByText(/Compare column text/)).toBeInTheDocument())
   })
 
-  it('handles left and right swipe on passage layer to trigger navigation', async () => {
+  function dispatchPointer(
+    target: HTMLElement,
+    type: 'pointerdown' | 'pointermove' | 'pointerup',
+    clientX: number,
+    pointerType: 'mouse' | 'touch'
+  ) {
+    target.dispatchEvent(
+      new PointerEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        clientX,
+        clientY: 0,
+        pointerId: 1,
+        pointerType,
+        button: 0,
+        buttons: type === 'pointerup' ? 0 : 1,
+      })
+    )
+  }
+
+  async function dragPassageLayer(
+    swipeLayer: HTMLElement,
+    startX: number,
+    endX: number,
+    pointerType: 'mouse' | 'touch' = 'mouse'
+  ) {
+    const track = swipeLayer.querySelector('[data-phase]') as HTMLElement
+    await act(async () => {
+      dispatchPointer(swipeLayer, 'pointerdown', startX, pointerType)
+      dispatchPointer(swipeLayer, 'pointermove', endX, pointerType)
+      dispatchPointer(swipeLayer, 'pointerup', endX, pointerType)
+    })
+    await waitFor(() => expect(track).toHaveAttribute('data-phase', 'exiting'))
+    fireEvent.transitionEnd(track, { propertyName: 'transform' })
+    return track
+  }
+
+  it('handles left drag on passage layer to trigger onNext (mouse)', async () => {
     const onNext = jest.fn()
-    const onPrevious = jest.fn()
 
     renderWithTextSize(
       <ScriptureModal
@@ -276,6 +312,65 @@ describe('ScriptureModal additional behaviors', () => {
         hasNext={true}
         hasPrevious={true}
         onNext={onNext}
+      />
+    )
+
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-tour="scripture-modal-passage-swipe"]')
+      ).toBeTruthy()
+    )
+
+    const swipeLayer = document.querySelector(
+      '[data-tour="scripture-modal-passage-swipe"]'
+    ) as HTMLElement
+    Object.defineProperty(swipeLayer, 'clientWidth', {
+      configurable: true,
+      value: 300,
+    })
+
+    await dragPassageLayer(swipeLayer, 280, 100, 'mouse')
+    await waitFor(() => expect(onNext).toHaveBeenCalledTimes(1))
+  })
+
+  it('handles left swipe on passage layer to trigger onNext (touch)', async () => {
+    const onNext = jest.fn()
+
+    renderWithTextSize(
+      <ScriptureModal
+        {...defaultProps}
+        hasNext={true}
+        hasPrevious={true}
+        onNext={onNext}
+      />
+    )
+
+    await waitFor(() =>
+      expect(
+        document.querySelector('[data-tour="scripture-modal-passage-swipe"]')
+      ).toBeTruthy()
+    )
+
+    const swipeLayer = document.querySelector(
+      '[data-tour="scripture-modal-passage-swipe"]'
+    ) as HTMLElement
+    Object.defineProperty(swipeLayer, 'clientWidth', {
+      configurable: true,
+      value: 300,
+    })
+
+    await dragPassageLayer(swipeLayer, 280, 100, 'touch')
+    await waitFor(() => expect(onNext).toHaveBeenCalledTimes(1))
+  })
+
+  it('handles right drag on passage layer to trigger onPrevious (mouse)', async () => {
+    const onPrevious = jest.fn()
+
+    renderWithTextSize(
+      <ScriptureModal
+        {...defaultProps}
+        hasNext={true}
+        hasPrevious={true}
         onPrevious={onPrevious}
       />
     )
@@ -294,27 +389,7 @@ describe('ScriptureModal additional behaviors', () => {
       value: 300,
     })
 
-    const track = swipeLayer.querySelector('[data-phase]') as HTMLElement
-    expect(track).toBeTruthy()
-
-    // Left swipe past 50% of passage width (300px) → onNext after exit animation
-    fireEvent.touchStart(swipeLayer, { targetTouches: [{ clientX: 280, clientY: 0 }] })
-    fireEvent.touchMove(swipeLayer, { targetTouches: [{ clientX: 100, clientY: 0 }] })
-    fireEvent.touchEnd(swipeLayer, { changedTouches: [{ clientX: 100, clientY: 0 }] })
-
-    await waitFor(() => expect(track).toHaveAttribute('data-phase', 'exiting'))
-    fireEvent.transitionEnd(track, { propertyName: 'transform' })
-
-    await waitFor(() => expect(onNext).toHaveBeenCalledTimes(1))
-
-    // Right swipe → onPrevious
-    fireEvent.touchStart(swipeLayer, { targetTouches: [{ clientX: 20, clientY: 0 }] })
-    fireEvent.touchMove(swipeLayer, { targetTouches: [{ clientX: 220, clientY: 0 }] })
-    fireEvent.touchEnd(swipeLayer, { changedTouches: [{ clientX: 220, clientY: 0 }] })
-
-    await waitFor(() => expect(track).toHaveAttribute('data-phase', 'exiting'))
-    fireEvent.transitionEnd(track, { propertyName: 'transform' })
-
+    await dragPassageLayer(swipeLayer, 20, 220, 'mouse')
     await waitFor(() => expect(onPrevious).toHaveBeenCalledTimes(1))
   })
 
