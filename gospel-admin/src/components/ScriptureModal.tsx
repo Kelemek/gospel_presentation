@@ -39,6 +39,7 @@ import ScriptureModalPinPick from '@/components/ScriptureModalPinPick'
 import ScriptureModalToolbarMenu from '@/components/ScriptureModalToolbarMenu'
 import ScriptureWordStudyModal from '@/components/ScriptureWordStudyModal'
 import ScriptureModalChapterListen from '@/components/ScriptureModalChapterListen'
+import ScripturePassageText from '@/components/ScripturePassageText'
 import {
   scriptureModalHeaderCloseButtonClass,
   scriptureModalHeaderIconButtonClass,
@@ -48,6 +49,15 @@ import {
   wordStudyLanguageLabelFromReference,
 } from '@/lib/step-bible-reference'
 import type { ScriptureModalPresentationLocation } from '@/lib/presentationLocationFromAnchors'
+import {
+  formatScriptureChapterHtml,
+  formatScripturePassageHtml,
+} from '@/lib/scripturePassageHtml'
+import {
+  readScriptureShowVerseNumbersFromStorage,
+  subscribeScriptureShowVerseNumbers,
+  writeScriptureShowVerseNumbersToStorage,
+} from '@/lib/scriptureVerseNumbersPreference'
 
 export type { ScriptureModalPresentationLocation } from '@/lib/presentationLocationFromAnchors'
 
@@ -74,6 +84,26 @@ function ScriptureModalHeaderReference({
 }
 
 type SpurgeonStudyMatch = 'unset' | 'loading' | 'yes' | 'no'
+
+function getVerseNumbers(verseRef: string): number[] {
+  const match = verseRef.match(/:(\d+)(?:[-–](\d+))?/)
+  if (match) {
+    const start = parseInt(match[1])
+    const end = match[2] ? parseInt(match[2]) : start
+    const verses = []
+    for (let i = start; i <= end; i++) {
+      verses.push(i)
+    }
+    return verses
+  }
+  return []
+}
+
+/** Chapter pane scroll-to-top (M'Cheyne cards, etc.) — not when a specific verse should stay centered. */
+function shouldResetChapterPaneScrollTop(verseRef: string): boolean {
+  const verseNumbers = getVerseNumbers(verseRef)
+  return verseNumbers.length === 0 || isChapterOnlyScriptureReference(verseRef)
+}
 
 interface ScriptureModalProps {
   reference: string
@@ -125,7 +155,7 @@ export default function ScriptureModal({
   const { translation, setTranslation, enabledTranslations, enabledTranslationOptions } =
     useTranslation()
   const { textSize } = useTextSize()
-  const { showAlert } = useAlertModal()
+  const { showAlert, showConfirm } = useAlertModal()
   const [chapterView, setChapterView] = useState<{ sessionKey: string; text: string } | null>(null)
   const [chapterContextError, setChapterContextError] = useState<{
     sessionKey: string
@@ -245,6 +275,37 @@ export default function ScriptureModal({
     () => false
   )
 
+  const showVerseNumbers = useSyncExternalStore(
+    subscribeScriptureShowVerseNumbers,
+    readScriptureShowVerseNumbersFromStorage,
+    () => true
+  )
+
+  const handlePassageLongPress = useCallback(async () => {
+    const confirmed = await showConfirm(
+      showVerseNumbers
+        ? 'Hide verse numbers in the scripture reader?'
+        : 'Show verse numbers in the scripture reader?'
+    )
+    if (confirmed) {
+      writeScriptureShowVerseNumbersToStorage(!showVerseNumbers)
+    }
+  }, [showConfirm, showVerseNumbers])
+
+  const processChapterText = useCallback(
+    (text: string): string =>
+      formatScriptureChapterHtml(text, {
+        showVerseNumbers,
+        highlightVerses: getVerseNumbers(reference),
+      }),
+    [reference, showVerseNumbers]
+  )
+
+  const formatPassageText = useCallback(
+    (text: string): string => formatScripturePassageHtml(text, { showVerseNumbers }),
+    [showVerseNumbers]
+  )
+
   const loading =
     scriptureFetchKey !== null &&
     (scriptureResolved === null || scriptureResolved.key !== scriptureFetchKey)
@@ -346,28 +407,6 @@ export default function ScriptureModal({
   const passageAudioReference = scriptureReferenceForPassageQuery(
     showingContext ? getChapterReference(reference) : reference.trim()
   )
-
-  // Extract verse numbers for highlighting
-  const getVerseNumbers = (verseRef: string): number[] => {
-    // Match both regular hyphen (-) and en-dash (–) for verse ranges
-    const match = verseRef.match(/:(\d+)(?:[-–](\d+))?/)
-    if (match) {
-      const start = parseInt(match[1])
-      const end = match[2] ? parseInt(match[2]) : start
-      const verses = []
-      for (let i = start; i <= end; i++) {
-        verses.push(i)
-      }
-      return verses
-    }
-    return []
-  }
-
-  /** Chapter pane scroll-to-top (M'Cheyne cards, etc.) — not when a specific verse should stay centered. */
-  const shouldResetChapterPaneScrollTop = (verseRef: string): boolean => {
-    const verseNumbers = getVerseNumbers(verseRef)
-    return verseNumbers.length === 0 || isChapterOnlyScriptureReference(verseRef)
-  }
 
   const fetchChapterContext = useCallback(async () => {
     if (!verseViewSessionKey) return
@@ -871,52 +910,6 @@ export default function ScriptureModal({
     return null
   }
 
-  const processChapterText = (text: string): string => {
-    const verseNumbers = getVerseNumbers(reference)
-    
-    if (verseNumbers.length === 0) {
-      // No verses to highlight, just format the text
-      return text
-        .replace(/\[(\d+)\]/g, '<sup class="text-blue-600 font-medium">$1</sup>')
-        .replace(/\n\n/g, '</p><p class="mt-4">')
-    }
-    
-    const firstVerse = verseNumbers[0]
-    const lastVerse = verseNumbers[verseNumbers.length - 1]
-    const isRange = verseNumbers.length > 1
-    /** Next verse after the selection; footnotes use `[1]` etc. and must not end the highlight early. */
-    const nextVerseAfterSelection = lastVerse + 1
-
-    let processedText = text
-      .replace(/\[(\d+)\]/g, '<sup class="text-blue-600 font-medium">$1</sup>')
-      .replace(/\n\n/g, '</p><p class="mt-4">')
-    
-    if (isRange) {
-      // For a range: Find and wrap everything from first verse to end of last verse
-      const rangePattern = new RegExp(
-        `(<sup[^>]*>${firstVerse}</sup>[\\s\\S]*?<sup[^>]*>${lastVerse}</sup>[^<]*?)(?=<sup[^>]*>${nextVerseAfterSelection}</sup>|$)`,
-        'g'
-      )
-      
-      processedText = processedText.replace(
-        rangePattern,
-        `<div id="verse-range-${firstVerse}-${lastVerse}" class="bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-800 border-l-4 border-blue-500 dark:border-blue-400 px-4 py-3 my-4 rounded-r-md shadow-sm"><div class="font-semibold text-slate-900 dark:text-slate-100 text-base leading-relaxed">$1</div></div>`
-      )
-    } else {
-      // Single verse - wrap it with Tailwind classes
-      const verseNum = firstVerse
-      processedText = processedText.replace(
-        new RegExp(
-          `(<sup[^>]*>${verseNum}</sup>[\\s\\S]*?)(?=<sup[^>]*>${nextVerseAfterSelection}</sup>|$)`,
-          'g'
-        ),
-        `<div id="verse-${verseNum}" class="bg-linear-to-br from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-800 border-l-4 border-blue-500 dark:border-blue-400 px-4 py-3 my-4 rounded-r-md shadow-sm"><div class="font-semibold text-slate-900 dark:text-slate-100 text-base leading-relaxed">$1</div></div>`
-      )
-    }
-    
-    return processedText
-  }
-
   // Touch event handlers for mobile swiping
   const handleTouchStart = (e: TouchEvent) => {
     setTouchEnd(null) // Reset touchEnd when a new touch starts
@@ -1367,13 +1360,9 @@ export default function ScriptureModal({
                   <>
                     {!showingContext && compareText && (
                       <div className="prose max-w-none">
-                        <div 
-                          className="text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl"
-                          dangerouslySetInnerHTML={{
-                            __html: compareText
-                              .replace(/\[(\d+)\]/g, '<sup class="text-blue-600 font-medium">$1</sup>')
-                              .replace(/\n\n/g, '</p><p class="mt-4">')
-                          }}
+                        <ScripturePassageText
+                          html={formatPassageText(compareText)}
+                          onLongPress={handlePassageLongPress}
                         />
                       </div>
                     )}
@@ -1385,11 +1374,9 @@ export default function ScriptureModal({
                             <span className="font-medium text-slate-600 dark:text-slate-200">{getChapterReference(reference)}</span>
                           </div>
                         </div>
-                        <div
-                          className="text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl"
-                          dangerouslySetInnerHTML={{
-                            __html: processChapterText(compareChapterText)
-                          }}
+                        <ScripturePassageText
+                          html={processChapterText(compareChapterText)}
+                          onLongPress={handlePassageLongPress}
                         />
                       </div>
                     )}
@@ -1428,13 +1415,9 @@ export default function ScriptureModal({
                   <>
                     {!showingContext && scriptureText && (
                       <div className="prose max-w-none" data-tour="scripture-modal-verse-body">
-                        <div
-                          className="text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl"
-                          dangerouslySetInnerHTML={{
-                            __html: scriptureText
-                              .replace(/\[(\d+)\]/g, '<sup class="text-blue-600 font-medium">$1</sup>')
-                              .replace(/\n\n/g, '</p><p class="mt-4">')
-                          }}
+                        <ScripturePassageText
+                          html={formatPassageText(scriptureText)}
+                          onLongPress={handlePassageLongPress}
                         />
                       </div>
                     )}
@@ -1446,13 +1429,11 @@ export default function ScriptureModal({
                             <span className="font-medium text-slate-600 dark:text-slate-200">{getChapterReference(reference)}</span>
                           </div>
                         </div>
-                        <div
+                        <ScripturePassageText
                           id="chapter-content"
                           data-tour="scripture-modal-chapter-body"
-                          className="text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl"
-                          dangerouslySetInnerHTML={{
-                            __html: processChapterText(chapterText)
-                          }}
+                          html={processChapterText(chapterText)}
+                          onLongPress={handlePassageLongPress}
                         />
                       </div>
                     )}
@@ -1490,13 +1471,9 @@ export default function ScriptureModal({
                 <>
                   {!showingContext && scriptureText && (
                     <div className="prose max-w-none" data-tour="scripture-modal-verse-body">
-                      <div
-                        className="text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl"
-                        dangerouslySetInnerHTML={{
-                          __html: scriptureText
-                            .replace(/\[(\d+)\]/g, '<sup class="text-blue-600 font-medium">$1</sup>')
-                            .replace(/\n\n/g, '</p><p class="mt-4">')
-                        }}
+                      <ScripturePassageText
+                        html={formatPassageText(scriptureText)}
+                        onLongPress={handlePassageLongPress}
                       />
                     </div>
                   )}
@@ -1508,13 +1485,11 @@ export default function ScriptureModal({
                           <span className="font-medium text-slate-600 dark:text-slate-200">{getChapterReference(reference)}</span>
                         </div>
                       </div>
-                      <div
+                      <ScripturePassageText
                         id="chapter-content"
                         data-tour="scripture-modal-chapter-body"
-                        className="text-slate-700 dark:text-slate-200 leading-relaxed text-lg md:text-xl"
-                        dangerouslySetInnerHTML={{
-                          __html: processChapterText(chapterText)
-                        }}
+                        html={processChapterText(chapterText)}
+                        onLongPress={handlePassageLongPress}
                       />
                     </div>
                   )}

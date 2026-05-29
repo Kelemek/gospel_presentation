@@ -1,0 +1,57 @@
+---
+description: Lint every file changed in the session; fix all errors and warnings before finishing
+alwaysApply: true
+---
+
+# Linting
+
+## When Adding or Changing Code
+
+1. **Track session changes**: Keep a running set of every file you create or modify in this session. Before finishing, confirm the list with:
+   ```bash
+   git status --short
+   git diff --name-only
+   ```
+   Lint **all** of those paths—not only the file you edited last.
+2. **After edits**: Run the **ReadLints** tool on **every session-changed file**.
+3. **Auto-fix first**: From `gospel-admin/`, run ESLint with fix on the changed paths when possible:
+   ```bash
+   npm run lint -- --fix path/to/changed-file.ts path/to/other-changed-file.tsx
+   ```
+   If many files changed, run `npm run lint -- --fix` for the whole project after scoping with git.
+4. **Fix the rest manually**: Resolve **every remaining error and warning** in session-changed files. Do not ignore, suppress, or `@ts-ignore` new issues unless an existing file already uses the same pattern for the same rule.
+5. **Before finishing**: Re-run ReadLints and ESLint on **all session-changed files**:
+   ```bash
+   npm run lint -- path/to/changed-file.ts path/to/other-changed-file.tsx
+   ```
+   Do not finish while **any** session-changed file still has lint errors or warnings.
+
+## Scope
+
+- **Session-changed files**: Any file you add or edit in this conversation must be lint-clean when you are done.
+- **Cross-file fallout**: If your change causes lint problems in other session-changed files, fix those too.
+- **Untouched files**: Do not leave new lint debt in files you changed. When a session-changed file already had lint problems, fix **all** errors and warnings in that file before finishing—not just issues your diff introduced.
+
+## Commands (gospel-admin)
+
+| Task | Command |
+|------|---------|
+| List changed files | `git status --short` / `git diff --name-only` |
+| Lint (check) | `npm run lint` |
+| Lint changed paths | `npm run lint -- src/path/a.ts src/path/b.tsx` |
+| Lint (auto-fix) | `npm run lint -- --fix` |
+| Auto-fix changed paths | `npm run lint -- --fix src/path/a.ts src/path/b.tsx` |
+
+## Workflow
+
+```text
+edit code → note all session-changed files → ReadLints (all of them) → npm run lint -- --fix (changed paths) → manual fixes → ReadLints again (all changed files) → npm run lint (changed paths, zero issues) → finish
+```
+
+## Do not
+
+- Skip lint because tests pass.
+- Lint only the last file you edited while other session-changed files still have warnings.
+- Leave `@typescript-eslint/no-unused-vars`, `react-hooks/*`, or other warnings for “later.”
+- Disable ESLint rules in config or inline without an explicit user request.
+- Finish with a partial fix when a session-changed file still reports lint errors or warnings.

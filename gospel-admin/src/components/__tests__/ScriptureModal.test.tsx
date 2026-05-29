@@ -1,8 +1,10 @@
 import type { ReactElement } from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TextSizeProvider } from '@/contexts/TextSizeContext'
 import ScriptureModal from '../ScriptureModal'
+import { DEFAULT_LONG_PRESS_MS } from '@/hooks/useLongPress'
+import { SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY } from '@/lib/scriptureVerseNumbersPreference'
 
 const mockShareScripturePassage = jest.fn((_options?: unknown) => Promise.resolve('shared' as const))
 
@@ -32,6 +34,7 @@ describe('ScriptureModal Component', () => {
   beforeEach(() => {
     mockFetch.mockReset()
     jest.clearAllMocks()
+    localStorage.removeItem(SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY)
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = fetchUrl(input)
       if (url.includes('/api/scripture/spurgeon-links')) {
@@ -635,5 +638,57 @@ describe('ScriptureModal Component', () => {
       })
     )
     expect(openStudy).toHaveBeenCalledWith('John 3:16')
+  })
+
+  it('long press on passage text prompts to hide verse numbers and persists preference', async () => {
+    const alertMocks = global.__alertModalMocks as {
+      showConfirm: jest.Mock
+    }
+    alertMocks.showConfirm.mockResolvedValue(true)
+
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = fetchUrl(input)
+      if (url.includes('/api/scripture/spurgeon-links')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ items: [] }),
+        } as Response)
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ text: '[16] For God so loved the world.' }),
+      } as Response)
+    })
+
+    renderWithTextSize(<ScriptureModal {...defaultProps} />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/For God so loved the world/i)).toBeInTheDocument()
+    })
+
+    const passage = document.querySelector('[data-tour="scripture-modal-verse-body"] > div')
+    expect(passage).toBeTruthy()
+    expect(passage!.querySelector('sup.text-blue-600')).toBeTruthy()
+
+    jest.useFakeTimers()
+    act(() => {
+      fireEvent.pointerDown(passage!, { button: 0, clientX: 100, clientY: 200 })
+    })
+    act(() => {
+      jest.advanceTimersByTime(DEFAULT_LONG_PRESS_MS)
+    })
+    jest.useRealTimers()
+
+    await waitFor(() => {
+      expect(alertMocks.showConfirm).toHaveBeenCalledWith(
+        'Hide verse numbers in the scripture reader?'
+      )
+    })
+
+    await waitFor(() => {
+      expect(localStorage.getItem(SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY)).toBe('false')
+      expect(passage!.querySelector('sup.hidden')).toBeTruthy()
+      expect(passage!.querySelector('sup.text-blue-600')).toBeNull()
+    })
   })
 })

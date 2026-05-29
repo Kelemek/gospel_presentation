@@ -8,10 +8,6 @@ import { PROFILE_READ_ALONG_UNDERLINE_STYLE_STORAGE_KEY } from '@/lib/profileRea
 import { PRESENTATION_FIRST_VISIT_WELCOME_KEY } from '@/lib/presentationWelcomeStorage'
 import { PRESENTATION_READ_COMPLETE_STORAGE_KEY } from '@/lib/presentationReadCompleteStorage'
 import {
-  PROFILE_READ_ALONG_LAST_SESSION_KEY_PREFIX,
-  PROFILE_READ_ALONG_PROGRESS_KEY_PREFIX,
-} from '@/lib/profileReadAlongProgressStorage'
-import {
   getGospelClientStorageMemoryEntries,
   gospelStorageGet,
   gospelStorageSet,
@@ -25,6 +21,7 @@ import {
   shouldUseIndexedDb,
 } from '@/lib/gospelClientStoragePolicy'
 import { MCHEYNE_START_DATE_KEY_PREFIX } from '@/lib/mcheyne/mcheyneStartDateStorage'
+import { SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY } from '@/lib/scriptureVerseNumbersPreference'
 
 export { GOSPEL_ANSWERS_KEY_PREFIX }
 
@@ -47,6 +44,7 @@ export const GOSPEL_LOCAL_USER_DATA_FIXED_KEYS = [
   PROFILE_READ_ALONG_UNDERLINE_STYLE_STORAGE_KEY,
   PRESENTATION_FIRST_VISIT_WELCOME_KEY,
   PRESENTATION_READ_COMPLETE_STORAGE_KEY,
+  SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY,
 ] as const
 
 const KEY_PREFIXES = [
