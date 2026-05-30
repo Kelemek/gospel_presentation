@@ -8,6 +8,7 @@ export interface GitHubFeedbackFormValues {
   type: FeedbackType
   title: string
   description: string
+  email?: string | null
 }
 
 export interface GitHubFeedbackFormProps {
@@ -35,6 +36,7 @@ export default function GitHubFeedbackForm({
 }: GitHubFeedbackFormProps) {
   const [feedbackType, setFeedbackType] = useState<FeedbackType>('suggestion')
   const [title, setTitle] = useState('')
+  const [email, setEmail] = useState('')
   const [description, setDescription] = useState('')
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -44,9 +46,11 @@ export default function GitHubFeedbackForm({
       type: feedbackType,
       title: title.trim(),
       description: description.trim(),
+      email: email.trim() || null,
     })
     if (submitted) {
       setTitle('')
+      setEmail('')
       setDescription('')
       setFeedbackType('suggestion')
     }
@@ -99,6 +103,30 @@ export default function GitHubFeedbackForm({
             className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{title.length}/100</p>
+        </div>
+
+        <div>
+          <label
+            htmlFor="feedback-email"
+            className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2"
+          >
+            Email <span className="font-normal text-slate-500 dark:text-slate-400">(optional)</span>
+          </label>
+          <input
+            type="email"
+            id="feedback-email"
+            name="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            disabled={isSubmitting}
+            maxLength={254}
+            className="w-full px-3 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          />
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Include an email in case we have questions on your request.
+          </p>
         </div>
 
         <div>

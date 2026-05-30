@@ -47,6 +47,20 @@ describe('/api/feedback POST', () => {
     expect(response.status).toBe(400)
   })
 
+  it('rejects invalid email', async () => {
+    const req = new NextRequest('http://localhost/api/feedback', {
+      method: 'POST',
+      body: JSON.stringify({
+        title: 'Bug',
+        description: 'Details',
+        type: 'bug',
+        email: 'not-an-email',
+      }),
+    })
+    const response = await POST(req)
+    expect(response.status).toBe(400)
+  })
+
   it('returns 503 when feedback is disabled', async () => {
     ;(createAdminClient as jest.Mock).mockReturnValue(
       makeAdminMock({
@@ -92,5 +106,66 @@ describe('/api/feedback POST', () => {
     expect(response.status).toBe(200)
     expect(data).toEqual({ success: true, url: 'https://github.com/o/r/issues/1' })
     expect(mockCreateGitHubIssue).toHaveBeenCalled()
+  })
+
+  it('passes optional form email to GitHub issue payload', async () => {
+    ;(createAdminClient as jest.Mock).mockReturnValue(
+      makeAdminMock({
+        github_feedback_enabled: true,
+        github_token: 'ghp_test',
+        github_repo_owner: 'owner',
+        github_repo_name: 'repo',
+      })
+    )
+    mockCreateGitHubIssue.mockResolvedValue({ success: true, url: 'https://github.com/o/r/issues/2' })
+
+    const req = new NextRequest('http://localhost/api/feedback', {
+      method: 'POST',
+      body: JSON.stringify({
+        title: 'Bug',
+        description: 'Details',
+        type: 'bug',
+        email: 'Reader@Example.com',
+      }),
+    })
+    const response = await POST(req)
+
+    expect(response.status).toBe(200)
+    expect(mockCreateGitHubIssue).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        userEmail: 'reader@example.com',
+      })
+    )
+  })
+
+  it('posts Anonymous when form email is omitted', async () => {
+    ;(createAdminClient as jest.Mock).mockReturnValue(
+      makeAdminMock({
+        github_feedback_enabled: true,
+        github_token: 'ghp_test',
+        github_repo_owner: 'owner',
+        github_repo_name: 'repo',
+      })
+    )
+    mockCreateGitHubIssue.mockResolvedValue({ success: true, url: 'https://github.com/o/r/issues/3' })
+
+    const req = new NextRequest('http://localhost/api/feedback', {
+      method: 'POST',
+      body: JSON.stringify({
+        title: 'Bug',
+        description: 'Details',
+        type: 'bug',
+      }),
+    })
+    const response = await POST(req)
+
+    expect(response.status).toBe(200)
+    expect(mockCreateGitHubIssue).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        userEmail: null,
+      })
+    )
   })
 })

@@ -14,7 +14,6 @@ export interface CreateFeedbackPayload {
   description: string
   type: FeedbackType
   userEmail?: string | null
-  userName?: string | null
   pageUrl?: string | null
   profileSlug?: string | null
   profileTitle?: string | null
@@ -28,6 +27,8 @@ export interface GitHubFeedbackConfigRow {
 }
 
 const FETCH_TIMEOUT_MS = 10_000
+const MAX_FEEDBACK_EMAIL_LEN = 254
+const FEEDBACK_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const TYPE_EMOJI: Record<FeedbackType, string> = {
   bug: '🐛',
@@ -37,6 +38,17 @@ const TYPE_EMOJI: Record<FeedbackType, string> = {
 
 export function isFeedbackType(value: unknown): value is FeedbackType {
   return value === 'suggestion' || value === 'feature' || value === 'bug'
+}
+
+export function normalizeFeedbackEmail(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  return trimmed.toLowerCase()
+}
+
+export function isValidFeedbackEmail(email: string): boolean {
+  return email.length <= MAX_FEEDBACK_EMAIL_LEN && FEEDBACK_EMAIL_RE.test(email)
 }
 
 export function normalizeGitHubFeedbackConfig(row: GitHubFeedbackConfigRow | null): GitHubFeedbackConfig {
@@ -65,8 +77,7 @@ export function maskGitHubToken(token: string | null | undefined): string {
 }
 
 export function formatFeedbackIssueBody(payload: CreateFeedbackPayload): string {
-  const userLabel = payload.userName?.trim() || payload.userEmail?.trim() || 'Anonymous'
-  const emailLabel = payload.userEmail?.trim() || 'Anonymous'
+  const emailLabel = normalizeFeedbackEmail(payload.userEmail) ?? 'Anonymous'
   const contextLines: string[] = []
   if (payload.profileSlug) {
     contextLines.push(`**Profile:** ${payload.profileTitle?.trim() || payload.profileSlug} (\`/${payload.profileSlug}\`)`)
@@ -79,7 +90,6 @@ export function formatFeedbackIssueBody(payload: CreateFeedbackPayload): string 
 
   return `
 **Type:** ${payload.type}
-**User Name:** ${userLabel}
 **User Email:** ${emailLabel}
 ${contextBlock}
 ---

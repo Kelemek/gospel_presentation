@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createAdminClient, createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import {
   createGitHubIssue,
   isFeedbackType,
   isGitHubFeedbackConfigured,
+  isValidFeedbackEmail,
+  normalizeFeedbackEmail,
   normalizeGitHubFeedbackConfig,
 } from '@/lib/githubFeedback'
 import { logger } from '@/lib/logger'
@@ -17,6 +19,7 @@ export async function POST(request: NextRequest) {
       title?: unknown
       description?: unknown
       type?: unknown
+      email?: unknown
       pageUrl?: unknown
       profileSlug?: unknown
       profileTitle?: unknown
@@ -25,12 +28,16 @@ export async function POST(request: NextRequest) {
     const title = typeof body.title === 'string' ? body.title.trim() : ''
     const description = typeof body.description === 'string' ? body.description.trim() : ''
     const type = body.type
+    const formEmail = normalizeFeedbackEmail(body.email)
 
     if (!title || !description || !isFeedbackType(type)) {
       return NextResponse.json({ error: 'Invalid request data' }, { status: 400 })
     }
     if (title.length > MAX_TITLE_LEN || description.length > MAX_DESCRIPTION_LEN) {
       return NextResponse.json({ error: 'Title or description is too long' }, { status: 400 })
+    }
+    if (formEmail && !isValidFeedbackEmail(formEmail)) {
+      return NextResponse.json({ error: 'Invalid email address' }, { status: 400 })
     }
 
     const admin = createAdminClient()
@@ -50,26 +57,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Feedback is not enabled' }, { status: 503 })
     }
 
-    let userEmail: string | null = null
-    let userName: string | null = null
-    try {
-      const supabase = await createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (user) {
-        userEmail = user.email ?? null
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('username, full_name')
-          .eq('id', user.id)
-          .maybeSingle()
-        const row = profile as { username?: string | null; full_name?: string | null } | null
-        userName = row?.full_name?.trim() || row?.username?.trim() || userEmail
-      }
-    } catch {
-      // optional auth context
-    }
+    const userEmail = formEmail
 
     const pageUrl = typeof body.pageUrl === 'string' ? body.pageUrl.trim() : null
     const profileSlug = typeof body.profileSlug === 'string' ? body.profileSlug.trim() : null
@@ -80,7 +68,6 @@ export async function POST(request: NextRequest) {
       description,
       type,
       userEmail,
-      userName,
       pageUrl,
       profileSlug,
       profileTitle,

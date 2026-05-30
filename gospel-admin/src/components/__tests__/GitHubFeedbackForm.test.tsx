@@ -7,6 +7,7 @@ describe('GitHubFeedbackForm', () => {
     render(<GitHubFeedbackForm onSubmit={jest.fn().mockResolvedValue(true)} />)
     expect(screen.getByLabelText(/feedback type/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/^title$/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/^email/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/^description$/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /send feedback/i })).toBeDisabled()
   })
@@ -24,6 +25,7 @@ describe('GitHubFeedbackForm', () => {
       type: 'suggestion',
       title: 'Improve reader',
       description: 'Please add feature X',
+      email: null,
     })
   })
 
@@ -42,6 +44,25 @@ describe('GitHubFeedbackForm', () => {
       type: 'bug',
       title: 'Broken link',
       description: 'Footer link 404s',
+      email: null,
+    })
+  })
+
+  it('submits optional email when provided', async () => {
+    const onSubmit = jest.fn().mockResolvedValue(true)
+    const user = userEvent.setup()
+    render(<GitHubFeedbackForm onSubmit={onSubmit} />)
+
+    await user.type(screen.getByLabelText(/^title$/i), 'Follow up')
+    await user.type(screen.getByLabelText(/^email/i), 'reader@example.com')
+    await user.type(screen.getByLabelText(/^description$/i), 'Please reply')
+    await user.click(screen.getByRole('button', { name: /send feedback/i }))
+
+    expect(onSubmit).toHaveBeenCalledWith({
+      type: 'suggestion',
+      title: 'Follow up',
+      description: 'Please reply',
+      email: 'reader@example.com',
     })
   })
 

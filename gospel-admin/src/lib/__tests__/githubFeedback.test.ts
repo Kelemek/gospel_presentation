@@ -2,13 +2,38 @@ import {
   formatFeedbackIssueBody,
   isFeedbackType,
   isGitHubFeedbackConfigured,
+  isValidFeedbackEmail,
   maskGitHubToken,
+  normalizeFeedbackEmail,
   normalizeGitHubFeedbackConfig,
   testGitHubConnection,
   createGitHubIssue,
 } from '@/lib/githubFeedback'
 
 describe('githubFeedback', () => {
+  describe('normalizeFeedbackEmail', () => {
+    it('trims and lowercases valid input', () => {
+      expect(normalizeFeedbackEmail('  Reader@Example.COM ')).toBe('reader@example.com')
+    })
+
+    it('returns null for empty values', () => {
+      expect(normalizeFeedbackEmail('')).toBeNull()
+      expect(normalizeFeedbackEmail('   ')).toBeNull()
+      expect(normalizeFeedbackEmail(null)).toBeNull()
+    })
+  })
+
+  describe('isValidFeedbackEmail', () => {
+    it('accepts common email shapes', () => {
+      expect(isValidFeedbackEmail('reader@example.com')).toBe(true)
+    })
+
+    it('rejects invalid email shapes', () => {
+      expect(isValidFeedbackEmail('not-an-email')).toBe(false)
+      expect(isValidFeedbackEmail('a@b')).toBe(false)
+    })
+  })
+
   describe('isFeedbackType', () => {
     it('accepts valid types', () => {
       expect(isFeedbackType('suggestion')).toBe(true)
@@ -73,24 +98,34 @@ describe('githubFeedback', () => {
   })
 
   describe('formatFeedbackIssueBody', () => {
-    it('includes user and page context', () => {
+    it('includes email and page context', () => {
       const body = formatFeedbackIssueBody({
         title: 'Title',
         description: 'Details here',
         type: 'bug',
         userEmail: 'user@example.com',
-        userName: 'Test User',
         pageUrl: 'https://example.com/default',
         profileSlug: 'default',
         profileTitle: 'Default',
       })
 
       expect(body).toContain('**Type:** bug')
-      expect(body).toContain('Test User')
+      expect(body).not.toContain('User Name')
       expect(body).toContain('user@example.com')
       expect(body).toContain('**Profile:** Default')
       expect(body).toContain('https://example.com/default')
       expect(body).toContain('Details here')
+    })
+
+    it('uses Anonymous when email is empty', () => {
+      const body = formatFeedbackIssueBody({
+        title: 'Title',
+        description: 'Details here',
+        type: 'suggestion',
+        userEmail: null,
+      })
+
+      expect(body).toContain('**User Email:** Anonymous')
     })
   })
 
