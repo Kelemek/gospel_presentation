@@ -4,6 +4,7 @@
 
 import {
   getScriptureListenCaretClientRect,
+  getScriptureListenInterpolatedCaretClientRect,
   plainTextForScriptureListen,
   SCRIPTURE_LISTEN_TEXT_OPTIONS,
   visibleScriptureListenRawText,
@@ -56,5 +57,32 @@ describe('scriptureListenPlainText', () => {
     const rect = getScriptureListenCaretClientRect(scope, plain.length, 4)
     expect(rect).not.toBeNull()
     expect(rect!.width).toBe(40)
+  })
+
+  it('getScriptureListenInterpolatedCaretClientRect lerps between adjacent offsets', () => {
+    document.body.innerHTML = '<div id="scope">For God so loved the world</div>'
+    const scope = document.getElementById('scope') as HTMLElement
+    const plainLen = plainTextForScriptureListen(scope).length
+    let call = 0
+    Range.prototype.getBoundingClientRect = jest.fn(() => {
+      call += 1
+      const top = call === 1 ? 10 : 30
+      const bottom = call === 1 ? 24 : 44
+      return {
+        top,
+        bottom,
+        left: 0,
+        right: 40,
+        width: 40,
+        height: bottom - top,
+        x: 0,
+        y: top,
+        toJSON: () => ({}),
+      }
+    })
+    const rect = getScriptureListenInterpolatedCaretClientRect(scope, plainLen, 4.5)
+    expect(rect).not.toBeNull()
+    expect(rect!.top).toBe(20)
+    expect(rect!.bottom).toBe(34)
   })
 })

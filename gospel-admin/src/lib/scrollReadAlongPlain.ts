@@ -187,6 +187,10 @@ export type ScrollReadAlongInContainerOptions = {
   targetCaretFractionFromTop?: number
   /** Ignore small deltas when using `targetCaretFractionFromTop`. */
   targetDeadbandPx?: number
+  /**
+   * Listen rAF loop: track every frame (no deadband pause) so scroll drifts continuously with playback.
+   */
+  continuous?: boolean
 }
 
 /** Scripture modal ESV listen: keep the read line high in the pane (below floating Listen bar). */
@@ -196,41 +200,145 @@ export const SCRIPTURE_LISTEN_AUTOSCROLL_OPTIONS: ScrollReadAlongInContainerOpti
   targetDeadbandPx: 28,
 }
 
-export function scrollReadAlongPlainInScrollContainerIfNeeded(
+/** Same placement as {@link SCRIPTURE_LISTEN_AUTOSCROLL_OPTIONS}, tuned for rAF continuous drift. */
+export const SCRIPTURE_LISTEN_CONTINUOUS_AUTOSCROLL_OPTIONS: ScrollReadAlongInContainerOptions = {
+  ...SCRIPTURE_LISTEN_AUTOSCROLL_OPTIONS,
+  continuous: true,
+}
+
+/** When `scrollTop` is within this distance of max, auto-scroll freezes (avoids attribution hop). */
+export const SCRIPTURE_LISTEN_SCROLL_BOTTOM_EPSILON_PX = 2
+
+/** Minimum change in `scrollTop` before writing during listen lerp. */
+export const SCRIPTURE_LISTEN_SCROLL_MIN_DELTA_PX = 0.5
+
+/** Per-frame lerp factor for scripture listen auto-scroll (when motion is allowed). */
+export const SCRIPTURE_LISTEN_SCROLL_LERP_FACTOR = 0.12
+
+export function getScrollContainerMaxScrollTop(scrollContainer: HTMLElement): number {
+  return Math.max(0, scrollContainer.scrollHeight - scrollContainer.clientHeight)
+}
+
+export function isScrollContainerAtBottom(
+  scrollContainer: HTMLElement,
+  epsilon = SCRIPTURE_LISTEN_SCROLL_BOTTOM_EPSILON_PX
+): boolean {
+  const maxScrollTop = getScrollContainerMaxScrollTop(scrollContainer)
+  if (maxScrollTop <= 0) return false
+  return scrollContainer.scrollTop >= maxScrollTop - epsilon
+}
+
+/**
+ * Absolute `scrollTop` to align the caret with listen options, or `null` when no adjustment is needed
+ * (deadband, non-scrollable container, or already at the bottom of the pane).
+ */
+export function computeScriptureListenTargetScrollTop(
   scrollContainer: HTMLElement,
   caretRect: Pick<DOMRectReadOnly, 'top' | 'bottom'>,
-  behavior: ScrollBehavior = 'auto',
   options: ScrollReadAlongInContainerOptions = {}
-): void {
+): number | null {
+  const maxScrollTop = getScrollContainerMaxScrollTop(scrollContainer)
+  if (maxScrollTop > 0 && isScrollContainerAtBottom(scrollContainer)) return null
+
+  const currentScrollTop = scrollContainer.scrollTop
   const topMarginPx = options.topMarginPx ?? 56
   const bottomMarginPx = options.bottomMarginPx ?? 56
   const targetFraction = options.targetCaretFractionFromTop
   const deadbandPx = options.targetDeadbandPx ?? 24
+  const continuous = options.continuous === true
+  const minDeltaPx = continuous ? 0.01 : SCRIPTURE_LISTEN_SCROLL_MIN_DELTA_PX
 
   const containerRect = scrollContainer.getBoundingClientRect()
+
+  let delta = 0
 
   if (targetFraction !== undefined) {
     const caretMid = (caretRect.top + caretRect.bottom) / 2
     const minTargetY = containerRect.top + topMarginPx
     const idealTargetY = containerRect.top + containerRect.height * targetFraction
     const targetY = Math.max(minTargetY, idealTargetY)
-    const delta = caretMid - targetY
-    if (Math.abs(delta) <= deadbandPx) return
-    scrollContainer.scrollBy({ top: delta, behavior })
-    return
+    delta = caretMid - targetY
+    if (!continuous && Math.abs(delta) <= deadbandPx) return null
+  } else {
+    const zoneBottom = containerRect.bottom - bottomMarginPx
+    const zoneTop = containerRect.top + topMarginPx
+
+    if (caretRect.top >= zoneTop && caretRect.bottom <= zoneBottom) return null
+
+    if (caretRect.bottom > zoneBottom) {
+      delta = caretRect.bottom - zoneBottom
+    } else if (caretRect.top < zoneTop) {
+      delta = caretRect.top - zoneTop
+    }
+    if (delta === 0) return null
   }
 
-  const zoneBottom = containerRect.bottom - bottomMarginPx
-  const zoneTop = containerRect.top + topMarginPx
-
-  if (caretRect.top >= zoneTop && caretRect.bottom <= zoneBottom) return
-
-  let delta = 0
-  if (caretRect.bottom > zoneBottom) {
-    delta = caretRect.bottom - zoneBottom
-  } else if (caretRect.top < zoneTop) {
-    delta = caretRect.top - zoneTop
+  let targetScrollTop = currentScrollTop + delta
+  if (maxScrollTop > 0) {
+    targetScrollTop = Math.min(maxScrollTop, Math.max(0, targetScrollTop))
   }
-  if (delta === 0) return
+
+  if (Math.abs(targetScrollTop - currentScrollTop) < minDeltaPx) {
+    return null
+  }
+
+  return targetScrollTop
+}
+
+export function applyScriptureListenContinuousScrollTop(
+  scrollContainer: HTMLElement,
+  targetScrollTop: number
+): void {
+  if (Math.abs(targetScrollTop - scrollContainer.scrollTop) < 0.01) return
+  scrollContainer.scrollTop = targetScrollTop
+}
+
+/** Map playback progress (0–1) to absolute scroll position through the full pane (incl. attribution). */
+export function computeScriptureListenProportionalScrollTop(
+  scrollContainer: HTMLElement,
+  playbackFraction: number
+): number {
+  const maxScrollTop = getScrollContainerMaxScrollTop(scrollContainer)
+  const fraction = Math.min(1, Math.max(0, playbackFraction))
+  return fraction * maxScrollTop
+}
+
+/**
+ * Advance integrated playback time between rAF frames (independent of sparse `timeupdate` events).
+ * Stays aligned with `audioCurrentTimeSec` after seeks; never lags behind the audio clock.
+ */
+export function advanceScriptureListenIntegratedPlaybackTime(
+  integratedTimeSec: number,
+  audioCurrentTimeSec: number,
+  durationSec: number,
+  playbackRate: number,
+  deltaSec: number
+): number {
+  if (!Number.isFinite(durationSec) || durationSec <= 0) return 0
+
+  let next = integratedTimeSec + deltaSec * playbackRate
+
+  // Seek forward: follow the audio element clock
+  if (audioCurrentTimeSec > integratedTimeSec + 0.15) {
+    next = audioCurrentTimeSec
+  }
+  // Seek backward
+  else if (audioCurrentTimeSec + 0.15 < integratedTimeSec) {
+    next = audioCurrentTimeSec
+  }
+
+  return Math.min(durationSec, Math.max(0, next))
+}
+
+export function scrollReadAlongPlainInScrollContainerIfNeeded(
+  scrollContainer: HTMLElement,
+  caretRect: Pick<DOMRectReadOnly, 'top' | 'bottom'>,
+  behavior: ScrollBehavior = 'auto',
+  options: ScrollReadAlongInContainerOptions = {}
+): void {
+  const targetScrollTop = computeScriptureListenTargetScrollTop(scrollContainer, caretRect, options)
+  if (targetScrollTop === null) return
+  const delta = targetScrollTop - scrollContainer.scrollTop
+  if (Math.abs(delta) < SCRIPTURE_LISTEN_SCROLL_MIN_DELTA_PX) return
   scrollContainer.scrollBy({ top: delta, behavior })
 }

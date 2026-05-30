@@ -193,3 +193,41 @@ export function getScriptureListenCaretClientRect(
   if (rect.height === 0 && rect.width === 0) return null
   return rect
 }
+
+/** Caret viewport rect interpolated between adjacent plain offsets (smooth read-along scroll). */
+export function getScriptureListenInterpolatedCaretClientRect(
+  scope: HTMLElement,
+  plainCollapsedLen: number,
+  plainOffsetFloat: number,
+  listenTextOptions: ScriptureListenTextOptions = SCRIPTURE_LISTEN_TEXT_OPTIONS
+): Pick<DOMRectReadOnly, 'top' | 'bottom'> | null {
+  if (plainCollapsedLen <= 0) return null
+
+  const maxOffset = Math.max(0, plainCollapsedLen - 1)
+  const clamped = Math.min(maxOffset, Math.max(0, plainOffsetFloat))
+  const offset0 = Math.floor(clamped)
+  const offset1 = Math.min(maxOffset, offset0 + 1)
+  const t = offset1 === offset0 ? 0 : clamped - offset0
+
+  const rect0 = getScriptureListenCaretClientRect(
+    scope,
+    plainCollapsedLen,
+    offset0,
+    listenTextOptions
+  )
+  if (!rect0) return null
+  if (t === 0) return rect0
+
+  const rect1 = getScriptureListenCaretClientRect(
+    scope,
+    plainCollapsedLen,
+    offset1,
+    listenTextOptions
+  )
+  if (!rect1) return rect0
+
+  return {
+    top: rect0.top + (rect1.top - rect0.top) * t,
+    bottom: rect0.bottom + (rect1.bottom - rect0.bottom) * t,
+  }
+}

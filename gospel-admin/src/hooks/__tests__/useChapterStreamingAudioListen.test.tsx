@@ -17,33 +17,15 @@ jest.mock('@/lib/memorizeListenSpeedStorage', () => {
   }
 })
 
-jest.mock('@/lib/scrollReadAlongPlain', () => ({
-  prefersReducedMotionReadAlong: jest.fn(() => true),
-  scrollReadAlongPlainInScrollContainerIfNeeded: jest.fn(),
-}))
-
-jest.mock('@/lib/scriptureListenPlainText', () => {
-  const actual = jest.requireActual<typeof import('@/lib/scriptureListenPlainText')>(
-    '@/lib/scriptureListenPlainText'
+jest.mock('@/lib/scrollReadAlongPlain', () => {
+  const actual = jest.requireActual<typeof import('@/lib/scrollReadAlongPlain')>(
+    '@/lib/scrollReadAlongPlain'
   )
   return {
     ...actual,
-    getScriptureListenCaretClientRect: jest.fn(() => ({
-      top: 200,
-      bottom: 220,
-      left: 0,
-      right: 100,
-      width: 100,
-      height: 20,
-      x: 0,
-      y: 200,
-      toJSON: () => ({}),
-    })),
+    prefersReducedMotionReadAlong: jest.fn(() => true),
   }
 })
-
-import { scrollReadAlongPlainInScrollContainerIfNeeded } from '@/lib/scrollReadAlongPlain'
-import { getScriptureListenCaretClientRect } from '@/lib/scriptureListenPlainText'
 
 const mockApplyRate = applyMemorizeListenPlaybackRateToMediaElement as jest.MockedFunction<
   typeof applyMemorizeListenPlaybackRateToMediaElement
@@ -75,7 +57,7 @@ function Harness({
     handlePassageAudioEnded,
     handlePassageAudioError,
     handlePassageAudioLoadedMetadata,
-    handlePassageAudioTimeUpdate,
+    handlePassageAudioPause,
     handlePrimaryClick,
     readAloudDialogPrimaryLabel,
   } = useChapterStreamingAudioListen({
@@ -92,10 +74,10 @@ function Harness({
         ref={passageAudioRef}
         data-testid="passage-audio"
         onPlay={handlePassageAudioPlay}
+        onPause={handlePassageAudioPause}
         onEnded={onEnded ?? handlePassageAudioEnded}
         onError={handlePassageAudioError}
         onLoadedMetadata={handlePassageAudioLoadedMetadata}
-        onTimeUpdate={handlePassageAudioTimeUpdate}
       />
       <button type="button" onClick={handlePrimaryClick}>
         primary
@@ -107,6 +89,16 @@ function Harness({
 
 describe('useChapterStreamingAudioListen', () => {
   const audioUrl = '/api/scripture/audio?reference=John%203&translation=esv'
+  let rafCallbacks: FrameRequestCallback[] = []
+  let rafId = 0
+
+  function flushRaf() {
+    const pending = [...rafCallbacks]
+    rafCallbacks = []
+    for (const cb of pending) {
+      cb(performance.now())
+    }
+  }
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -114,6 +106,16 @@ describe('useChapterStreamingAudioListen', () => {
     HTMLMediaElement.prototype.play = jest.fn().mockResolvedValue(undefined)
     HTMLMediaElement.prototype.pause = jest.fn()
     HTMLMediaElement.prototype.load = jest.fn()
+    rafCallbacks = []
+    rafId = 0
+    global.requestAnimationFrame = jest.fn((cb: FrameRequestCallback) => {
+      rafCallbacks.push(cb)
+      rafId += 1
+      return rafId
+    }) as typeof requestAnimationFrame
+    global.cancelAnimationFrame = jest.fn((id: number) => {
+      rafCallbacks = rafCallbacks.filter((_, index) => index + 1 !== id)
+    }) as typeof cancelAnimationFrame
   })
 
   it('assigns audio src and plays when primary is clicked', async () => {
@@ -355,35 +357,56 @@ describe('useChapterStreamingAudioListen', () => {
     expect(onAutoAdvance).not.toHaveBeenCalled()
   })
 
-  it('scrolls the passage pane on timeupdate when autoScroll is configured', async () => {
+  it('scrolls the passage pane via rAF when autoScroll is configured', async () => {
     document.body.innerHTML = '<div id="scope">For God so loved the world</div>'
     const scope = document.getElementById('scope') as HTMLElement
     const scrollContainer = document.createElement('div')
     document.body.appendChild(scrollContainer)
-    scrollContainer.getBoundingClientRect = jest.fn(() => ({
-      top: 0,
-      bottom: 400,
-      left: 0,
-      right: 300,
-      width: 300,
-      height: 400,
-      x: 0,
-      y: 0,
-      toJSON: () => ({}),
-    }))
+    Object.defineProperty(scrollContainer, 'scrollTop', { configurable: true, writable: true, value: 0 })
+    Object.defineProperty(scrollContainer, 'scrollHeight', { configurable: true, value: 1000 })
+    Object.defineProperty(scrollContainer, 'clientHeight', { configurable: true, value: 400 })
 
-    // Below container comfort zone (400 − 56); re-applied after clearAllMocks in beforeEach.
-    ;(getScriptureListenCaretClientRect as jest.Mock).mockReturnValue({
-      top: 360,
-      bottom: 380,
-      left: 0,
-      right: 100,
-      width: 100,
-      height: 20,
-      x: 0,
-      y: 360,
-      toJSON: () => ({}),
+    const user = userEvent.setup()
+    render(
+      <Harness
+        audioUrls={[audioUrl]}
+        enabled
+        autoScroll={{ scopeRef: { current: scope }, scrollContainerRef: { current: scrollContainer } }}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+    Object.defineProperty(el, 'duration', { configurable: true, value: 10 })
+    Object.defineProperty(el, 'currentTime', { configurable: true, value: 0, writable: true })
+    Object.defineProperty(el, 'paused', { configurable: true, get: () => false })
+
+    let now = 1000
+    jest.spyOn(performance, 'now').mockImplementation(() => now)
+
+    await act(async () => {
+      el.dispatchEvent(new Event('play'))
+      flushRaf()
     })
+    expect(scrollContainer.scrollTop).toBe(0)
+
+    now += 5000
+    await act(async () => {
+      flushRaf()
+    })
+    expect(scrollContainer.scrollTop).toBe(300)
+  })
+
+  it('cancels rAF auto-scroll loop on pause', async () => {
+    document.body.innerHTML = '<div id="scope">For God so loved the world</div>'
+    const scope = document.getElementById('scope') as HTMLElement
+    const scrollContainer = document.createElement('div')
+    document.body.appendChild(scrollContainer)
+    Object.defineProperty(scrollContainer, 'scrollTop', { configurable: true, writable: true, value: 0 })
+    Object.defineProperty(scrollContainer, 'scrollHeight', { configurable: true, value: 1000 })
+    Object.defineProperty(scrollContainer, 'clientHeight', { configurable: true, value: 400 })
+
+    let now = 1000
+    jest.spyOn(performance, 'now').mockImplementation(() => now)
 
     const user = userEvent.setup()
     render(
@@ -397,76 +420,97 @@ describe('useChapterStreamingAudioListen', () => {
     const el = screen.getByTestId('passage-audio') as HTMLAudioElement
     Object.defineProperty(el, 'duration', { configurable: true, value: 10 })
     Object.defineProperty(el, 'currentTime', { configurable: true, value: 5, writable: true })
-    Object.defineProperty(el, 'paused', { configurable: true, get: () => false })
+    let paused = false
+    Object.defineProperty(el, 'paused', { configurable: true, get: () => paused })
+
     await act(async () => {
       el.dispatchEvent(new Event('play'))
-      el.dispatchEvent(new Event('loadedmetadata'))
-      el.dispatchEvent(new Event('timeupdate'))
+      flushRaf()
     })
-    expect(getScriptureListenCaretClientRect).toHaveBeenCalled()
-    expect(scrollReadAlongPlainInScrollContainerIfNeeded).toHaveBeenCalled()
+    expect(global.requestAnimationFrame).toHaveBeenCalled()
+
+    paused = true
+    await act(async () => {
+      el.dispatchEvent(new Event('pause'))
+      flushRaf()
+    })
+    expect(global.cancelAnimationFrame).toHaveBeenCalled()
+    const scrollTopAfterPause = scrollContainer.scrollTop
+    now += 1000
+    await act(async () => {
+      flushRaf()
+    })
+    expect(scrollContainer.scrollTop).toBe(scrollTopAfterPause)
   })
 
-  it('uses plain length from the current scope after passage DOM changes during playback', async () => {
-    document.body.innerHTML = `<div id="scope">${'word '.repeat(50)}</div>`
-    const scopeRef = {
-      current: document.getElementById('scope') as HTMLElement,
-    }
+  it('does not adjust scroll when the pane is already at the bottom', async () => {
+    document.body.innerHTML = '<div id="scope">For God so loved the world</div>'
+    const scope = document.getElementById('scope') as HTMLElement
     const scrollContainer = document.createElement('div')
     document.body.appendChild(scrollContainer)
-    scrollContainer.getBoundingClientRect = jest.fn(() => ({
-      top: 0,
-      bottom: 400,
-      left: 0,
-      right: 300,
-      width: 300,
-      height: 400,
-      x: 0,
-      y: 0,
-      toJSON: () => ({}),
-    }))
-
-    const plainLens: number[] = []
-    ;(getScriptureListenCaretClientRect as jest.Mock).mockImplementation(
-      (_scope: HTMLElement, plainLen: number) => {
-        plainLens.push(plainLen)
-        return {
-          top: 360,
-          bottom: 380,
-          left: 0,
-          right: 100,
-          width: 100,
-          height: 20,
-          x: 0,
-          y: 360,
-          toJSON: () => ({}),
-        }
-      }
-    )
+    Object.defineProperty(scrollContainer, 'scrollTop', { configurable: true, writable: true, value: 600 })
+    Object.defineProperty(scrollContainer, 'scrollHeight', { configurable: true, value: 1000 })
+    Object.defineProperty(scrollContainer, 'clientHeight', { configurable: true, value: 400 })
 
     const user = userEvent.setup()
     render(
       <Harness
         audioUrls={[audioUrl]}
         enabled
-        autoScroll={{ scopeRef, scrollContainerRef: { current: scrollContainer } }}
+        autoScroll={{ scopeRef: { current: scope }, scrollContainerRef: { current: scrollContainer } }}
       />
     )
     await user.click(screen.getByRole('button', { name: 'primary' }))
     const el = screen.getByTestId('passage-audio') as HTMLAudioElement
     Object.defineProperty(el, 'duration', { configurable: true, value: 10 })
-    Object.defineProperty(el, 'currentTime', { configurable: true, value: 5, writable: true })
+    Object.defineProperty(el, 'currentTime', { configurable: true, value: 9.5, writable: true })
     Object.defineProperty(el, 'paused', { configurable: true, get: () => false })
 
-    document.body.innerHTML = '<div id="scope-new">Short text</div>'
-    scopeRef.current = document.getElementById('scope-new') as HTMLElement
+    await act(async () => {
+      el.dispatchEvent(new Event('play'))
+      flushRaf()
+    })
+    expect(scrollContainer.scrollTop).toBe(600)
+  })
+
+  it('keeps scrolling on successive rAF frames while audio plays', async () => {
+    document.body.innerHTML = '<div id="scope">For God so loved the world</div>'
+    const scope = document.getElementById('scope') as HTMLElement
+    const scrollContainer = document.createElement('div')
+    document.body.appendChild(scrollContainer)
+    Object.defineProperty(scrollContainer, 'scrollTop', { configurable: true, writable: true, value: 0 })
+    Object.defineProperty(scrollContainer, 'scrollHeight', { configurable: true, value: 1000 })
+    Object.defineProperty(scrollContainer, 'clientHeight', { configurable: true, value: 400 })
+
+    let now = 0
+    jest.spyOn(performance, 'now').mockImplementation(() => now)
+
+    const user = userEvent.setup()
+    render(
+      <Harness
+        audioUrls={[audioUrl]}
+        enabled
+        autoScroll={{ scopeRef: { current: scope }, scrollContainerRef: { current: scrollContainer } }}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+    Object.defineProperty(el, 'duration', { configurable: true, value: 10 })
+    Object.defineProperty(el, 'currentTime', { configurable: true, value: 0, writable: true })
+    Object.defineProperty(el, 'paused', { configurable: true, get: () => false })
 
     await act(async () => {
-      el.dispatchEvent(new Event('timeupdate'))
+      el.dispatchEvent(new Event('play'))
+      flushRaf()
+    })
+    const afterFirst = scrollContainer.scrollTop
+
+    now += 100
+    await act(async () => {
+      flushRaf()
     })
 
-    expect(plainLens.length).toBeGreaterThan(0)
-    expect(plainLens[plainLens.length - 1]).toBe('Short text'.length)
-    expect(plainLens[plainLens.length - 1]).not.toBe('word '.repeat(50).trim().length)
+    expect(afterFirst).toBe(0)
+    expect(scrollContainer.scrollTop).toBeGreaterThan(0)
   })
 })

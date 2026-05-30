@@ -4,7 +4,10 @@
 
 import { visibleListenRawText } from '@/lib/profileResourceListenText'
 import {
+  advanceScriptureListenIntegratedPlaybackTime,
   computeReadAlongVerticalScrollDeltaForComfortZone,
+  computeScriptureListenProportionalScrollTop,
+  computeScriptureListenTargetScrollTop,
   scrollReadAlongPlainInScrollContainerIfNeeded,
   walkerOffsetForReadAlongPlainOffset,
 } from '@/lib/scrollReadAlongPlain'
@@ -76,23 +79,34 @@ describe('walkerOffsetForReadAlongPlainOffset', () => {
 })
 
 describe('scrollReadAlongPlainInScrollContainerIfNeeded', () => {
-  it('scrolls the container when caret is below the comfort zone', () => {
+  function mockScrollContainer(rect: {
+    top: number
+    bottom: number
+    height: number
+    width?: number
+  }) {
     const container = document.createElement('div')
-    container.style.height = '200px'
-    container.style.overflow = 'auto'
     document.body.appendChild(container)
+    Object.defineProperty(container, 'scrollTop', { configurable: true, writable: true, value: 0 })
+    Object.defineProperty(container, 'scrollHeight', { configurable: true, value: 1000 })
+    Object.defineProperty(container, 'clientHeight', { configurable: true, value: 400 })
     container.getBoundingClientRect = jest.fn(() => ({
-      top: 100,
-      bottom: 300,
+      top: rect.top,
+      bottom: rect.bottom,
       left: 0,
-      right: 400,
-      width: 400,
-      height: 200,
+      right: rect.width ?? 400,
+      width: rect.width ?? 400,
+      height: rect.height,
       x: 0,
-      y: 100,
+      y: rect.top,
       toJSON: () => ({}),
     }))
     container.scrollBy = jest.fn()
+    return container
+  }
+
+  it('scrolls the container when caret is below the comfort zone', () => {
+    const container = mockScrollContainer({ top: 100, bottom: 300, height: 200 })
 
     scrollReadAlongPlainInScrollContainerIfNeeded(
       container,
@@ -104,20 +118,7 @@ describe('scrollReadAlongPlainInScrollContainerIfNeeded', () => {
   })
 
   it('does not scroll when caret is inside the comfort zone', () => {
-    const container = document.createElement('div')
-    document.body.appendChild(container)
-    container.getBoundingClientRect = jest.fn(() => ({
-      top: 100,
-      bottom: 500,
-      left: 0,
-      right: 400,
-      width: 400,
-      height: 400,
-      x: 0,
-      y: 100,
-      toJSON: () => ({}),
-    }))
-    container.scrollBy = jest.fn()
+    const container = mockScrollContainer({ top: 100, bottom: 500, height: 400 })
 
     scrollReadAlongPlainInScrollContainerIfNeeded(
       container,
@@ -129,22 +130,7 @@ describe('scrollReadAlongPlainInScrollContainerIfNeeded', () => {
   })
 
   it('with targetCaretFractionFromTop, scrolls caret toward upper portion of container', () => {
-    const container = document.createElement('div')
-    document.body.appendChild(container)
-    container.getBoundingClientRect = jest.fn(() => ({
-      top: 200,
-      bottom: 800,
-      left: 0,
-      right: 400,
-      width: 400,
-      height: 600,
-      x: 0,
-      y: 200,
-      toJSON: () => ({}),
-    }))
-    container.scrollBy = jest.fn()
-
-    // target at 200 + 600*0.35 = 410; caret mid at 500 → scroll down by 90
+    const container = mockScrollContainer({ top: 200, bottom: 800, height: 600 })
     scrollReadAlongPlainInScrollContainerIfNeeded(
       container,
       { top: 490, bottom: 510 },
@@ -152,5 +138,132 @@ describe('scrollReadAlongPlainInScrollContainerIfNeeded', () => {
       { topMarginPx: 112, targetCaretFractionFromTop: 0.35, targetDeadbandPx: 8 }
     )
     expect(container.scrollBy).toHaveBeenCalledWith({ top: 90, behavior: 'auto' })
+  })
+})
+
+describe('computeScriptureListenTargetScrollTop', () => {
+  function mockContainer(opts: {
+    scrollTop?: number
+    scrollHeight?: number
+    clientHeight?: number
+    rect: { top: number; bottom: number; height: number }
+  }) {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    Object.defineProperty(container, 'scrollTop', {
+      configurable: true,
+      writable: true,
+      value: opts.scrollTop ?? 0,
+    })
+    Object.defineProperty(container, 'scrollHeight', {
+      configurable: true,
+      value: opts.scrollHeight ?? 1000,
+    })
+    Object.defineProperty(container, 'clientHeight', {
+      configurable: true,
+      value: opts.clientHeight ?? 400,
+    })
+    container.getBoundingClientRect = jest.fn(() => ({
+      top: opts.rect.top,
+      bottom: opts.rect.bottom,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: opts.rect.height,
+      x: 0,
+      y: opts.rect.top,
+      toJSON: () => ({}),
+    }))
+    return container
+  }
+
+  it('returns null when caret is within deadband', () => {
+    const container = mockContainer({
+      rect: { top: 200, bottom: 800, height: 600 },
+    })
+    // target at 200 + 600*0.35 = 410; caret mid 410 → within deadband
+    expect(
+      computeScriptureListenTargetScrollTop(
+        container,
+        { top: 400, bottom: 420 },
+        { topMarginPx: 112, targetCaretFractionFromTop: 0.35, targetDeadbandPx: 28 }
+      )
+    ).toBeNull()
+  })
+
+  it('returns clamped target scrollTop when caret is below target line', () => {
+    const container = mockContainer({
+      scrollTop: 100,
+      rect: { top: 200, bottom: 800, height: 600 },
+    })
+    // target Y = 410; caret mid 500 → delta 90 → target scrollTop 190
+    expect(
+      computeScriptureListenTargetScrollTop(
+        container,
+        { top: 490, bottom: 510 },
+        { topMarginPx: 112, targetCaretFractionFromTop: 0.35, targetDeadbandPx: 8 }
+      )
+    ).toBe(190)
+  })
+
+  it('with continuous mode, scrolls for deltas inside the deadband', () => {
+    const container = mockContainer({
+      scrollTop: 100,
+      rect: { top: 200, bottom: 800, height: 600 },
+    })
+    // caret mid 420; target Y 410 → delta 10 (inside deadband 28) but continuous still adjusts
+    expect(
+      computeScriptureListenTargetScrollTop(
+        container,
+        { top: 410, bottom: 430 },
+        {
+          topMarginPx: 112,
+          targetCaretFractionFromTop: 0.35,
+          targetDeadbandPx: 28,
+          continuous: true,
+        }
+      )
+    ).toBe(110)
+  })
+
+  it('returns null when already at max scroll even if caret is below target line', () => {
+    const container = mockContainer({
+      scrollTop: 600,
+      scrollHeight: 1000,
+      clientHeight: 400,
+      rect: { top: 200, bottom: 800, height: 600 },
+    })
+    expect(
+      computeScriptureListenTargetScrollTop(
+        container,
+        { top: 490, bottom: 510 },
+        { topMarginPx: 112, targetCaretFractionFromTop: 0.35, targetDeadbandPx: 8 }
+      )
+    ).toBeNull()
+  })
+})
+
+describe('computeScriptureListenProportionalScrollTop', () => {
+  it('maps playback fraction to scrollTop through max scroll', () => {
+    const container = document.createElement('div')
+    Object.defineProperty(container, 'scrollHeight', { configurable: true, value: 1000 })
+    Object.defineProperty(container, 'clientHeight', { configurable: true, value: 400 })
+    expect(computeScriptureListenProportionalScrollTop(container, 0.5)).toBe(300)
+    expect(computeScriptureListenProportionalScrollTop(container, 1.2)).toBe(600)
+  })
+})
+
+describe('advanceScriptureListenIntegratedPlaybackTime', () => {
+  it('advances by delta * playbackRate between rAF frames', () => {
+    expect(advanceScriptureListenIntegratedPlaybackTime(2, 2, 10, 1, 0.016)).toBeCloseTo(2.016)
+    expect(advanceScriptureListenIntegratedPlaybackTime(2, 2, 10, 1, 1)).toBe(3)
+  })
+
+  it('snaps to audio currentTime after a seek forward', () => {
+    expect(advanceScriptureListenIntegratedPlaybackTime(2, 7, 10, 1, 0.016)).toBe(7)
+  })
+
+  it('snaps to audio currentTime after a seek backward', () => {
+    expect(advanceScriptureListenIntegratedPlaybackTime(7, 2, 10, 1, 0.016)).toBe(2)
   })
 })

@@ -114,7 +114,6 @@ export default function ScriptureModalChapterListen({
     handlePassageAudioEnded,
     handlePassageAudioError,
     handlePassageAudioLoadedMetadata,
-    handlePassageAudioTimeUpdate,
     keepAudioMounted,
   } = useChapterStreamingAudioListen({
     audioUrls,
@@ -175,7 +174,6 @@ export default function ScriptureModalChapterListen({
             onEnded={handlePassageAudioEnded}
             onError={handlePassageAudioError}
             onLoadedMetadata={handlePassageAudioLoadedMetadata}
-            onTimeUpdate={handlePassageAudioTimeUpdate}
           />
 
           <MemorizeListenControlsDialog
