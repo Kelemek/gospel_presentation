@@ -183,7 +183,7 @@ export default function ScriptureModalChapterListen({
             onClose={closeControls}
             dialogId={SCRIPTURE_MODAL_LISTEN_DIALOG_ID}
             titleId={SCRIPTURE_MODAL_LISTEN_TITLE_ID}
-            presentation="modal"
+            presentation="floating"
             showRepeat={false}
             onPrimaryClick={handlePrimaryClick}
             primaryLabel={readAloudDialogPrimaryLabel}

@@ -53,6 +53,26 @@ describe('ScriptureModalChapterListen', () => {
     expect(screen.queryByTestId('memorize-listen-repeat')).not.toBeInTheDocument()
   })
 
+  it('uses floating listen controls without a dimmed backdrop', async () => {
+    const user = userEvent.setup()
+    render(
+      <ScriptureModalChapterListen
+        passageReference="John 3:16"
+        chapterReference="John 3"
+        translation="esv"
+        enabled
+        {...defaultAutoScrollProps()}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /listen/i }))
+    const dialog = screen.getByRole('dialog', { name: 'Listen' })
+    expect(dialog).toHaveAttribute('aria-modal', 'false')
+    expect(document.querySelector('.bg-black\\/50')).not.toBeInTheDocument()
+    const slot = dialog.parentElement
+    expect(slot).toHaveClass('pointer-events-auto')
+    expect(slot?.parentElement).toHaveClass('pointer-events-none')
+  })
+
   it('labels and queues all day chapters when dayChapterReferences is set', async () => {
     const user = userEvent.setup()
     render(
