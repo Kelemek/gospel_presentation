@@ -173,17 +173,53 @@ export function scrollReadAlongPlainOffsetIntoViewIfNeeded(
 }
 
 /**
- * Scrolls a scroll container (e.g. scripture modal pane) when the caret falls outside a comfort band.
+ * Scrolls a scroll container (e.g. scripture modal pane) when the caret falls outside a comfort band,
+ * or when `targetCaretFractionFromTop` is set, keeps the caret near that vertical position in the container.
  * Caret and container rects use viewport coordinates from `getBoundingClientRect`.
  */
+export type ScrollReadAlongInContainerOptions = {
+  topMarginPx?: number
+  bottomMarginPx?: number
+  /**
+   * When set (0–1), scroll so the caret midline sits near this fraction of container height from the top
+   * (e.g. `0.35` ≈ upper-center; `0.25` ≈ top quarter with most of the pane below for reading ahead).
+   */
+  targetCaretFractionFromTop?: number
+  /** Ignore small deltas when using `targetCaretFractionFromTop`. */
+  targetDeadbandPx?: number
+}
+
+/** Scripture modal ESV listen: keep the read line high in the pane (below floating Listen bar). */
+export const SCRIPTURE_LISTEN_AUTOSCROLL_OPTIONS: ScrollReadAlongInContainerOptions = {
+  topMarginPx: 112,
+  targetCaretFractionFromTop: 0.35,
+  targetDeadbandPx: 28,
+}
+
 export function scrollReadAlongPlainInScrollContainerIfNeeded(
   scrollContainer: HTMLElement,
   caretRect: Pick<DOMRectReadOnly, 'top' | 'bottom'>,
   behavior: ScrollBehavior = 'auto',
-  topMarginPx = 56,
-  bottomMarginPx = 56
+  options: ScrollReadAlongInContainerOptions = {}
 ): void {
+  const topMarginPx = options.topMarginPx ?? 56
+  const bottomMarginPx = options.bottomMarginPx ?? 56
+  const targetFraction = options.targetCaretFractionFromTop
+  const deadbandPx = options.targetDeadbandPx ?? 24
+
   const containerRect = scrollContainer.getBoundingClientRect()
+
+  if (targetFraction !== undefined) {
+    const caretMid = (caretRect.top + caretRect.bottom) / 2
+    const minTargetY = containerRect.top + topMarginPx
+    const idealTargetY = containerRect.top + containerRect.height * targetFraction
+    const targetY = Math.max(minTargetY, idealTargetY)
+    const delta = caretMid - targetY
+    if (Math.abs(delta) <= deadbandPx) return
+    scrollContainer.scrollBy({ top: delta, behavior })
+    return
+  }
+
   const zoneBottom = containerRect.bottom - bottomMarginPx
   const zoneTop = containerRect.top + topMarginPx
 

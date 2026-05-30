@@ -15,6 +15,7 @@ import {
 import {
   prefersReducedMotionReadAlong,
   scrollReadAlongPlainInScrollContainerIfNeeded,
+  SCRIPTURE_LISTEN_AUTOSCROLL_OPTIONS,
 } from '@/lib/scrollReadAlongPlain'
 
 export interface ScriptureAudioAutoScrollConfig {
@@ -170,7 +171,12 @@ export function useChapterStreamingAudioListen({
     if (!rect) return
 
     const behavior: ScrollBehavior = prefersReducedMotionReadAlong() ? 'auto' : 'smooth'
-    scrollReadAlongPlainInScrollContainerIfNeeded(scrollContainer, rect, behavior)
+    scrollReadAlongPlainInScrollContainerIfNeeded(
+      scrollContainer,
+      rect,
+      behavior,
+      SCRIPTURE_LISTEN_AUTOSCROLL_OPTIONS
+    )
   }, [])
 
   const stopAudio = useCallback(() => {

@@ -94,7 +94,12 @@ describe('scrollReadAlongPlainInScrollContainerIfNeeded', () => {
     }))
     container.scrollBy = jest.fn()
 
-    scrollReadAlongPlainInScrollContainerIfNeeded(container, { top: 280, bottom: 296 }, 'auto', 56, 56)
+    scrollReadAlongPlainInScrollContainerIfNeeded(
+      container,
+      { top: 280, bottom: 296 },
+      'auto',
+      { topMarginPx: 56, bottomMarginPx: 56 }
+    )
     expect(container.scrollBy).toHaveBeenCalledWith({ top: expect.any(Number), behavior: 'auto' })
   })
 
@@ -114,7 +119,38 @@ describe('scrollReadAlongPlainInScrollContainerIfNeeded', () => {
     }))
     container.scrollBy = jest.fn()
 
-    scrollReadAlongPlainInScrollContainerIfNeeded(container, { top: 200, bottom: 220 }, 'auto', 56, 56)
+    scrollReadAlongPlainInScrollContainerIfNeeded(
+      container,
+      { top: 200, bottom: 220 },
+      'auto',
+      { topMarginPx: 56, bottomMarginPx: 56 }
+    )
     expect(container.scrollBy).not.toHaveBeenCalled()
+  })
+
+  it('with targetCaretFractionFromTop, scrolls caret toward upper portion of container', () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    container.getBoundingClientRect = jest.fn(() => ({
+      top: 200,
+      bottom: 800,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 600,
+      x: 0,
+      y: 200,
+      toJSON: () => ({}),
+    }))
+    container.scrollBy = jest.fn()
+
+    // target at 200 + 600*0.35 = 410; caret mid at 500 → scroll down by 90
+    scrollReadAlongPlainInScrollContainerIfNeeded(
+      container,
+      { top: 490, bottom: 510 },
+      'auto',
+      { topMarginPx: 112, targetCaretFractionFromTop: 0.35, targetDeadbandPx: 8 }
+    )
+    expect(container.scrollBy).toHaveBeenCalledWith({ top: 90, behavior: 'auto' })
   })
 })
