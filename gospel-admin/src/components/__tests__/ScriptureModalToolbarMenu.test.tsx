@@ -64,6 +64,47 @@ describe('ScriptureModalToolbarMenu', () => {
     expect(onSelect).not.toHaveBeenCalled()
   })
 
+  it('triggerVariant form applies form-field styling on the trigger', () => {
+    render(
+      <ScriptureModalToolbarMenu
+        ariaLabel="Feedback type"
+        listboxAriaLabel="Feedback type options"
+        value="suggestion"
+        triggerVariant="form"
+        options={[
+          { value: 'suggestion', label: 'Suggestion' },
+          { value: 'bug', label: 'Bug' },
+        ]}
+        onSelect={jest.fn()}
+      />
+    )
+    const trigger = screen.getByRole('button', { name: /Feedback type/i })
+    expect(trigger).toHaveClass('min-h-[42px]', 'rounded-lg', 'border-slate-200', 'bg-white')
+    expect(trigger.querySelector('svg')).toHaveClass('h-5', 'w-5')
+  })
+
+  it('triggerVariant form applies form-field styling on the listbox', async () => {
+    const user = userEvent.setup()
+    render(
+      <ScriptureModalToolbarMenu
+        ariaLabel="Feedback type"
+        listboxAriaLabel="Feedback type options"
+        value="suggestion"
+        triggerVariant="form"
+        portaledListbox
+        options={[
+          { value: 'suggestion', label: 'Suggestion' },
+          { value: 'bug', label: 'Bug' },
+        ]}
+        onSelect={jest.fn()}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /Feedback type/i }))
+    const listbox = await screen.findByRole('listbox', { name: 'Feedback type options' })
+    expect(listbox).toHaveClass('rounded-lg', 'border-slate-200', 'bg-white')
+    expect(listbox).not.toHaveClass('border-2', 'border-slate-400', 'bg-slate-50')
+  })
+
   it('with portaledListbox, opens listbox in a portal and still calls onSelect', async () => {
     const user = userEvent.setup()
     const onSelect = jest.fn().mockResolvedValue(undefined)

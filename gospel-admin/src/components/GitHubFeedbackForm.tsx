@@ -78,7 +78,7 @@ export default function GitHubFeedbackForm({
             onSelect={(value) => setFeedbackType(value as FeedbackType)}
             disabled={isSubmitting}
             portaledListbox
-            triggerClassName="w-full"
+            triggerVariant="form"
             ariaLabel={`Feedback type, currently ${feedbackTypeLabel(feedbackType)}`}
             listboxAriaLabel="Feedback type options"
           />

@@ -11,11 +11,34 @@ const triggerButtonClass =
 
 const triggerButtonInteractiveClass = `${triggerButtonClass} cursor-pointer disabled:cursor-not-allowed`
 
+const formTriggerButtonClass =
+  'inline-flex items-center gap-1 rounded-lg border box-border transition-colors w-full ' +
+  'px-3 py-2 min-h-[42px] ' +
+  'border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 ' +
+  'text-slate-900 dark:text-slate-100 ' +
+  'hover:bg-white dark:hover:bg-slate-800 ' +
+  'focus:outline-none focus:ring-2 focus:ring-blue-500 ' +
+  'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-slate-800'
+
+const formTriggerButtonInteractiveClass = `${formTriggerButtonClass} cursor-pointer disabled:cursor-not-allowed`
+
 const optionButtonClass =
   'flex items-center justify-start rounded px-2 py-2 min-h-[38px] w-full gap-2 text-sm font-medium ' +
   'text-slate-800 dark:text-slate-200 ' +
   'hover:bg-slate-200 dark:hover:bg-slate-600 aria-selected:bg-slate-300/80 dark:aria-selected:bg-slate-600/80 ' +
   'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-500'
+
+const formOptionButtonClass =
+  'flex items-center justify-start rounded-md px-3 py-2 min-h-[38px] w-full gap-2 text-sm ' +
+  'text-slate-900 dark:text-slate-100 ' +
+  'hover:bg-slate-100 dark:hover:bg-slate-700 aria-selected:bg-slate-100 dark:aria-selected:bg-slate-700 ' +
+  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-500'
+
+const toolbarListboxClass =
+  'flex min-w-0 flex-col gap-0.5 rounded-md border-2 border-slate-400 p-1 shadow-lg dark:border-slate-500 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
+
+const formListboxClass =
+  'flex min-w-0 flex-col gap-0.5 rounded-lg border border-slate-200 dark:border-slate-600 p-1 shadow-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100'
 
 const VIEWPORT_PAD_PX = 8
 const LISTBOX_GAP_PX = 4
@@ -93,6 +116,8 @@ export interface ScriptureModalToolbarMenuProps {
   listboxAriaLabel: string
   /** Extra classes on the trigger (e.g. min width). */
   triggerClassName?: string
+  /** Toolbar chip (default) or form field styling to match text inputs. */
+  triggerVariant?: 'toolbar' | 'form'
   /** Classes for the visible label inside the trigger (default `text-sm font-medium`). */
   triggerLabelClassName?: string
   /**
@@ -111,10 +136,13 @@ export default function ScriptureModalToolbarMenu({
   listboxDataTour,
   ariaLabel,
   listboxAriaLabel,
-  triggerClassName = 'w-[6.5rem]',
+  triggerClassName,
+  triggerVariant = 'toolbar',
   triggerLabelClassName = 'text-sm font-medium',
   portaledListbox = false,
 }: ScriptureModalToolbarMenuProps) {
+  const extraTriggerClassName =
+    triggerClassName ?? (triggerVariant === 'toolbar' ? 'w-[6.5rem]' : '')
   const wrapRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const listboxPortalRef = useRef<HTMLDivElement>(null)
@@ -208,9 +236,13 @@ export default function ScriptureModalToolbarMenu({
     })()
   }
 
+  const listboxSurfaceClass = triggerVariant === 'form' ? formListboxClass : toolbarListboxClass
+  const optionInteractiveClass =
+    triggerVariant === 'form' ? formOptionButtonClass : optionButtonClass
+
   const listboxClassName = portaledListbox
-    ? 'fixed z-[105] flex min-w-0 flex-col gap-0.5 rounded-md border-2 border-slate-400 p-1 shadow-lg dark:border-slate-500 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-200 max-h-[min(50vh,22rem)] overflow-y-auto overscroll-y-contain'
-    : 'absolute left-0 top-full z-100 mt-1 flex min-w-full flex-col gap-0.5 rounded-md border-2 border-slate-400 p-1 shadow-lg dark:border-slate-500 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
+    ? `fixed z-[105] ${listboxSurfaceClass} max-h-[min(50vh,22rem)] overflow-y-auto overscroll-y-contain`
+    : `absolute left-0 top-full z-100 mt-1 min-w-full ${listboxSurfaceClass}`
 
   const listboxNode =
     open && canOpen && (!portaledListbox || portalPlacement !== null) ? (
@@ -240,7 +272,7 @@ export default function ScriptureModalToolbarMenu({
             type="button"
             role="option"
             aria-selected={opt.value === value}
-            className={`${optionButtonClass} cursor-pointer`}
+            className={`${optionInteractiveClass} cursor-pointer`}
             onClick={() => choose(opt.value)}
           >
             {opt.label}
@@ -249,8 +281,20 @@ export default function ScriptureModalToolbarMenu({
       </div>
     ) : null
 
+  const triggerInteractiveClass =
+    triggerVariant === 'form' ? formTriggerButtonInteractiveClass : triggerButtonInteractiveClass
+  const wrapClassName = triggerVariant === 'form' ? 'relative w-full' : 'relative shrink-0 self-center'
+  const labelTextClassName =
+    triggerVariant === 'form'
+      ? 'text-slate-900 dark:text-slate-100'
+      : 'text-slate-800 dark:text-slate-200'
+  const chevronClassName =
+    triggerVariant === 'form'
+      ? 'h-5 w-5 shrink-0 text-slate-500 dark:text-slate-400 transition-transform'
+      : 'h-3 w-3 shrink-0 text-slate-500 dark:text-slate-400 mt-px transition-transform'
+
   return (
-    <div ref={wrapRef} className="relative shrink-0 self-center">
+    <div ref={wrapRef} className={wrapClassName}>
       <button
         ref={triggerRef}
         type="button"
@@ -261,18 +305,18 @@ export default function ScriptureModalToolbarMenu({
         aria-controls={canOpen && open ? listboxId : undefined}
         aria-label={ariaLabel}
         title={canOpen ? `${ariaLabel}. Tap to open.` : ariaLabel}
-        className={`${triggerButtonInteractiveClass} ${triggerClassName} justify-between`}
+        className={`${triggerInteractiveClass} ${extraTriggerClassName} justify-between`}
         onClick={() => !disabled && canOpen && setOpen((o) => !o)}
       >
         <span
-          className={`truncate text-left leading-none text-slate-800 dark:text-slate-200 ${triggerLabelClassName}`}
+          className={`truncate text-left leading-none ${labelTextClassName} ${triggerLabelClassName}`}
         >
           {selected?.label ?? ''}
         </span>
         {canOpen && (
           <svg
             aria-hidden
-            className={`h-3 w-3 shrink-0 text-slate-500 dark:text-slate-400 mt-px transition-transform ${open ? 'rotate-180' : ''}`}
+            className={`${chevronClassName} ${open ? 'rotate-180' : ''}`}
             fill="none"
             viewBox="0 0 20 20"
           >
