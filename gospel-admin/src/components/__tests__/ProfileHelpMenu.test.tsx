@@ -117,6 +117,10 @@ describe('buildProfileTutorialMenuItems', () => {
 describe('ProfileHelpMenu', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ enabled: false }),
+    })
   })
 
   it('opens tutorials menu from help button', async () => {
@@ -334,6 +338,32 @@ describe('ProfileHelpMenu', () => {
     await waitFor(() => {
       expect(runShareResourceFeatureTour).toHaveBeenCalledTimes(1)
     })
+  })
+
+  it('shows Send feedback when enabled and opens modal', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ enabled: true }),
+    })
+    const user = userEvent.setup()
+    render(<ProfileHelpMenu profileSlug="default" profileTitle="Default" />)
+
+    await user.click(screen.getByRole('button', { name: /help and tutorials/i }))
+    expect(await screen.findByRole('menuitem', { name: /send feedback/i })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('menuitem', { name: /send feedback/i }))
+    expect(screen.queryByRole('menu', { name: /tutorials/i })).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+  })
+
+  it('hides Send feedback when disabled', async () => {
+    const user = userEvent.setup()
+    render(<ProfileHelpMenu />)
+
+    await user.click(screen.getByRole('button', { name: /help and tutorials/i }))
+    expect(screen.queryByRole('menuitem', { name: /send feedback/i })).not.toBeInTheDocument()
   })
 
   it('starts listen tutorial when chosen on non-Android UA', async () => {

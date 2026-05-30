@@ -85,4 +85,14 @@ describe("AdminSettingsPage", () => {
     });
     expect(screen.queryByRole("link", { name: /manage users/i })).not.toBeInTheDocument();
   });
+
+  it("shows GitHub Feedback Settings section for admins", async () => {
+    mockCreateClient.mockImplementation(() => makeSupabaseClient("admin"));
+
+    render(<AdminSettingsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /github feedback settings/i })).toBeInTheDocument();
+    });
+  });
 });

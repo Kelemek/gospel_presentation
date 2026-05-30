@@ -23,6 +23,7 @@ import {
   runTextSizeFeatureTour,
   runThemeFeatureTour,
 } from '@/lib/profileHelpTours'
+import GitHubFeedbackModal from '@/components/GitHubFeedbackModal'
 import { isProfileResourceListenControlAvailable } from '@/lib/memorizationViewportPlatform'
 
 const TRIGGER_CLASS =
@@ -170,9 +171,16 @@ export function buildProfileTutorialMenuItems(): TutorialItem[] {
   ]
 }
 
-export default function ProfileHelpMenu() {
+export interface ProfileHelpMenuProps {
+  profileSlug?: string
+  profileTitle?: string
+}
+
+export default function ProfileHelpMenu({ profileSlug, profileTitle }: ProfileHelpMenuProps) {
   const tutorials = useMemo(() => buildProfileTutorialMenuItems(), [])
   const [open, setOpen] = useState(false)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [feedbackEnabled, setFeedbackEnabled] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const [panelStyle, setPanelStyle] = useState<CSSProperties>({})
@@ -198,6 +206,22 @@ export default function ProfileHelpMenu() {
 
   useEffect(() => {
     if (!open) return
+    let cancelled = false
+    void fetch('/api/feedback/status', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data: { enabled?: boolean }) => {
+        if (!cancelled) setFeedbackEnabled(data.enabled === true)
+      })
+      .catch(() => {
+        if (!cancelled) setFeedbackEnabled(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node
       if (panelRef.current?.contains(t) || triggerRef.current?.contains(t)) return
@@ -211,6 +235,13 @@ export default function ProfileHelpMenu() {
     setOpen(false)
     window.requestAnimationFrame(() => {
       item.run()
+    })
+  }
+
+  const openFeedback = () => {
+    setOpen(false)
+    window.requestAnimationFrame(() => {
+      setFeedbackOpen(true)
     })
   }
 
@@ -260,11 +291,31 @@ export default function ProfileHelpMenu() {
               role="menu"
               aria-label="Tutorials"
             >
+              {feedbackEnabled ? (
+                <>
+                  <div className="shrink-0 border-b border-slate-200 dark:border-slate-600 px-3 py-2">
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Support</p>
+                  </div>
+                  <div className="shrink-0 border-b border-slate-200 dark:border-slate-600 p-2">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      data-tour="profile-help-send-feedback"
+                      className="w-full text-left rounded-lg px-3 py-3 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 dark:focus-visible:ring-slate-500 cursor-pointer"
+                      onClick={openFeedback}
+                    >
+                      <span className="block text-sm font-medium text-slate-800 dark:text-slate-100">
+                        Send feedback
+                      </span>
+                      <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Suggestions, bug reports, and feature requests
+                      </span>
+                    </button>
+                  </div>
+                </>
+              ) : null}
               <div className="shrink-0 border-b border-slate-200 dark:border-slate-600 px-3 py-2">
                 <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Tutorials</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Step-by-step guides for this site
-                </p>
               </div>
               <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
                 <ul className="space-y-1">
@@ -291,6 +342,13 @@ export default function ProfileHelpMenu() {
           </>,
           document.body
         )}
+
+      <GitHubFeedbackModal
+        isOpen={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        profileSlug={profileSlug}
+        profileTitle={profileTitle}
+      />
     </div>
   )
 }

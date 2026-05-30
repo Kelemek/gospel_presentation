@@ -37,6 +37,7 @@ import {
 import type { ResourceOrderCategoryChild } from "@/lib/types";
 import { restoreNewProfileFromBackupFile } from "@/lib/createProfileFromBackup";
 import { useAlertModal } from "@/contexts/AlertModalContext";
+import GitHubFeedbackSettings from "@/components/GitHubFeedbackSettings";
 
 // ============================================================================
 // Types & Interfaces
@@ -702,6 +703,8 @@ export default function AdminSettingsPage() {
               </button>
             </div>
           </div>
+
+          <GitHubFeedbackSettings />
 
           {/* Resources dropdown order */}
           <div className="bg-white rounded-xl shadow-md border border-slate-100 overflow-hidden">

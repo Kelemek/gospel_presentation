@@ -1355,7 +1355,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
                     </Link>
                   </>
                 )}
-                <ProfileHelpMenu />
+                <ProfileHelpMenu profileSlug={profileInfo.slug} profileTitle={profileInfo.title} />
                 <ProfileResourceReadAloud sections={sections} profileSlug={profileInfo.slug} />
                 <HighlightsDropdown
                   profileSlug={profileInfo.slug}

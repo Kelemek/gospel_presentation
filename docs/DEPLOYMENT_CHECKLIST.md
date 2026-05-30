@@ -15,6 +15,13 @@ Use this checklist to ensure all components are properly deployed and configured
   - `verification_code_length`
   - `verification_code_expiry_minutes`
   - `enable_verification_code_login`
+- [ ] Run migration: `20260529_github_feedback.sql`
+- [ ] Verify `admin_settings` has GitHub feedback columns:
+  - `github_feedback_enabled`
+  - `github_token`
+  - `github_repo_owner`
+  - `github_repo_name`
+- [ ] In **Admin → Settings → GitHub Feedback Settings**: set repo owner/name, PAT (`repo` + issues scopes), enable feedback, **Test Connection**, **Save Settings**
 - [ ] Test cleanup function: `SELECT cleanup_expired_verification_codes();`
 
 ### Azure AD / Microsoft Graph API
