@@ -171,3 +171,30 @@ export function scrollReadAlongPlainOffsetIntoViewIfNeeded(
   if (delta === 0) return
   win.scrollBy({ top: delta, behavior })
 }
+
+/**
+ * Scrolls a scroll container (e.g. scripture modal pane) when the caret falls outside a comfort band.
+ * Caret and container rects use viewport coordinates from `getBoundingClientRect`.
+ */
+export function scrollReadAlongPlainInScrollContainerIfNeeded(
+  scrollContainer: HTMLElement,
+  caretRect: Pick<DOMRectReadOnly, 'top' | 'bottom'>,
+  behavior: ScrollBehavior = 'auto',
+  topMarginPx = 56,
+  bottomMarginPx = 56
+): void {
+  const containerRect = scrollContainer.getBoundingClientRect()
+  const zoneBottom = containerRect.bottom - bottomMarginPx
+  const zoneTop = containerRect.top + topMarginPx
+
+  if (caretRect.top >= zoneTop && caretRect.bottom <= zoneBottom) return
+
+  let delta = 0
+  if (caretRect.bottom > zoneBottom) {
+    delta = caretRect.bottom - zoneBottom
+  } else if (caretRect.top < zoneTop) {
+    delta = caretRect.top - zoneTop
+  }
+  if (delta === 0) return
+  scrollContainer.scrollBy({ top: delta, behavior })
+}

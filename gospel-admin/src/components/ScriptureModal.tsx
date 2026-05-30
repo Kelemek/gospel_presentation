@@ -164,6 +164,7 @@ export default function ScriptureModal({
   } | null>(null)
   const [contextLoading, setContextLoading] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const passageScopeRef = useRef<HTMLDivElement>(null)
   const verseTabButtonRef = useRef<HTMLButtonElement>(null)
   const initialChapterViewFetchedRef = useRef(false)
   const scriptureModalTitleId = useId()
@@ -1098,6 +1099,9 @@ export default function ScriptureModal({
                 }
                 hasNext={hasNext}
                 onNext={onNext}
+                passageScopeRef={passageScopeRef}
+                scrollContainerRef={scrollAreaRef}
+                passageScopeKey={passageSwipeContentKey}
               />
               <button
                 type="button"
@@ -1434,7 +1438,10 @@ export default function ScriptureModal({
                       </span>
                       {!showingContext && scriptureText && (
                         <div className="prose max-w-none" data-tour="scripture-modal-verse-body">
-                          <ScripturePassageText html={formatPassageText(scriptureText)} />
+                          <ScripturePassageText
+                            html={formatPassageText(scriptureText)}
+                            innerRef={passageScopeRef}
+                          />
                         </div>
                       )}
                       {showingContext && chapterText && (
@@ -1444,6 +1451,7 @@ export default function ScriptureModal({
                             id="chapter-content"
                             data-tour="scripture-modal-chapter-body"
                             html={processChapterText(chapterText)}
+                            innerRef={passageScopeRef}
                           />
                         </div>
                       )}
@@ -1481,7 +1489,10 @@ export default function ScriptureModal({
                   <>
                     {!showingContext && scriptureText && (
                       <div className="prose max-w-none" data-tour="scripture-modal-verse-body">
-                        <ScripturePassageText html={formatPassageText(scriptureText)} />
+                        <ScripturePassageText
+                          html={formatPassageText(scriptureText)}
+                          innerRef={passageScopeRef}
+                        />
                       </div>
                     )}
                     {showingContext && chapterText && (
@@ -1491,6 +1502,7 @@ export default function ScriptureModal({
                           id="chapter-content"
                           data-tour="scripture-modal-chapter-body"
                           html={processChapterText(chapterText)}
+                          innerRef={passageScopeRef}
                         />
                       </div>
                     )}

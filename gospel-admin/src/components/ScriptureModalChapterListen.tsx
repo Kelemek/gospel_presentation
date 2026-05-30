@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, type RefObject } from 'react'
 import { MemorizeListenControlsDialog } from '@/components/MemorizeListenControlsDialog'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import { useChapterStreamingAudioListen } from '@/hooks/useChapterStreamingAudioListen'
@@ -25,6 +25,11 @@ interface ScriptureModalChapterListenProps {
   /** Same as scripture modal header Next — used to auto-advance audio when a track ends. */
   hasNext?: boolean
   onNext?: () => void
+  /** Primary-column passage root for listen auto-scroll. */
+  passageScopeRef: RefObject<HTMLElement | null>
+  scrollContainerRef: RefObject<HTMLElement | null>
+  /** Invalidates auto-scroll when visible passage DOM changes without audio URL change. */
+  passageScopeKey?: string
 }
 
 function scriptureAudioUrl(reference: string, translation: BibleTranslation): string {
@@ -43,6 +48,9 @@ export default function ScriptureModalChapterListen({
   onPlaylistChapterChange,
   hasNext = false,
   onNext,
+  passageScopeRef,
+  scrollContainerRef,
+  passageScopeKey,
 }: ScriptureModalChapterListenProps) {
   const { showAlert } = useAlertModal()
 
@@ -105,6 +113,8 @@ export default function ScriptureModalChapterListen({
     handlePassageAudioPause,
     handlePassageAudioEnded,
     handlePassageAudioError,
+    handlePassageAudioLoadedMetadata,
+    handlePassageAudioTimeUpdate,
     keepAudioMounted,
   } = useChapterStreamingAudioListen({
     audioUrls,
@@ -113,6 +123,9 @@ export default function ScriptureModalChapterListen({
     onTrackIndexChange,
     playlistStartIndex,
     onAutoAdvanceAfterPlayback: isDayPlaylist ? undefined : onAutoAdvanceAfterPlayback,
+    autoScroll: enabled
+      ? { scopeRef: passageScopeRef, scrollContainerRef, passageScopeKey }
+      : undefined,
   })
 
   const listenTitle =
@@ -161,6 +174,8 @@ export default function ScriptureModalChapterListen({
             onPause={handlePassageAudioPause}
             onEnded={handlePassageAudioEnded}
             onError={handlePassageAudioError}
+            onLoadedMetadata={handlePassageAudioLoadedMetadata}
+            onTimeUpdate={handlePassageAudioTimeUpdate}
           />
 
           <MemorizeListenControlsDialog

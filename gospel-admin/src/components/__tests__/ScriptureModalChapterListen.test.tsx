@@ -4,7 +4,15 @@
 
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { createRef } from 'react'
 import ScriptureModalChapterListen from '@/components/ScriptureModalChapterListen'
+
+function defaultAutoScrollProps() {
+  return {
+    passageScopeRef: createRef<HTMLDivElement>(),
+    scrollContainerRef: createRef<HTMLDivElement>(),
+  }
+}
 
 describe('ScriptureModalChapterListen', () => {
   beforeEach(() => {
@@ -20,6 +28,7 @@ describe('ScriptureModalChapterListen', () => {
         chapterReference="John 3"
         translation="esv"
         enabled={false}
+        {...defaultAutoScrollProps()}
       />
     )
     expect(screen.getByRole('button', { name: /listen/i })).toBeDisabled()
@@ -34,6 +43,7 @@ describe('ScriptureModalChapterListen', () => {
         chapterReference="John 3"
         translation="esv"
         enabled
+        {...defaultAutoScrollProps()}
       />
     )
     await user.click(screen.getByRole('button', { name: /listen/i }))
@@ -51,6 +61,7 @@ describe('ScriptureModalChapterListen', () => {
         chapterReference="Genesis 1"
         translation="esv"
         enabled
+        {...defaultAutoScrollProps()}
         dayChapterReferences={['Genesis 1', 'Matthew 1', 'Ezra 1', 'Acts 1']}
       />
     )
@@ -71,6 +82,7 @@ describe('ScriptureModalChapterListen', () => {
         chapterReference="Matthew 1"
         translation="esv"
         enabled
+        {...defaultAutoScrollProps()}
         dayChapterReferences={['Genesis 1', 'Matthew 1', 'Ezra 1', 'Acts 1']}
       />
     )
@@ -89,6 +101,7 @@ describe('ScriptureModalChapterListen', () => {
         chapterReference="Genesis 1"
         translation="esv"
         enabled
+        {...defaultAutoScrollProps()}
         dayChapterReferences={dayRefs}
       />
     )
@@ -99,6 +112,7 @@ describe('ScriptureModalChapterListen', () => {
         chapterReference="Matthew 1"
         translation="esv"
         enabled
+        {...defaultAutoScrollProps()}
         dayChapterReferences={dayRefs}
       />
     )
@@ -115,6 +129,7 @@ describe('ScriptureModalChapterListen', () => {
         chapterReference="Genesis 1"
         translation="esv"
         enabled
+        {...defaultAutoScrollProps()}
         dayChapterReferences={['Genesis 1', 'Matthew 1']}
         onPlaylistChapterChange={onPlaylistChapterChange}
       />
@@ -138,6 +153,7 @@ describe('ScriptureModalChapterListen', () => {
         chapterReference="John 3"
         translation="esv"
         enabled
+        {...defaultAutoScrollProps()}
       />
     )
     await user.click(screen.getByRole('button', { name: /listen/i }))
@@ -156,6 +172,7 @@ describe('ScriptureModalChapterListen', () => {
         chapterReference="John 3"
         translation="esv"
         enabled
+        {...defaultAutoScrollProps()}
         hasNext
         onNext={onNext}
       />
@@ -178,6 +195,7 @@ describe('ScriptureModalChapterListen', () => {
         chapterReference="Genesis 1"
         translation="esv"
         enabled
+        {...defaultAutoScrollProps()}
         hasNext
         onNext={onNext}
         dayChapterReferences={['Genesis 1', 'Matthew 1']}
@@ -203,6 +221,7 @@ describe('ScriptureModalChapterListen', () => {
         chapterReference="Genesis 1"
         translation="kjv"
         enabled
+        {...defaultAutoScrollProps()}
       />
     )
     await user.click(screen.getByRole('button', { name: /listen/i }))

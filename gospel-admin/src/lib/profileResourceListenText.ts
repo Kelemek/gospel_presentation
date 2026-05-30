@@ -120,7 +120,7 @@ function listenHasBrOrHrBetween(prevText: Text, curText: Text): boolean {
   }
 }
 
-function listenNeedsImplicitBreak(prevText: Text, curText: Text, scope: HTMLElement): boolean {
+export function listenNeedsImplicitBreak(prevText: Text, curText: Text, scope: HTMLElement): boolean {
   const pb = listenBlockAncestor(prevText.parentElement, scope)
   const cb = listenBlockAncestor(curText.parentElement, scope)
   if (pb !== cb) return true

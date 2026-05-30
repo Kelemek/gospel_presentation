@@ -17,6 +17,34 @@ jest.mock('@/lib/memorizeListenSpeedStorage', () => {
   }
 })
 
+jest.mock('@/lib/scrollReadAlongPlain', () => ({
+  prefersReducedMotionReadAlong: jest.fn(() => true),
+  scrollReadAlongPlainInScrollContainerIfNeeded: jest.fn(),
+}))
+
+jest.mock('@/lib/scriptureListenPlainText', () => {
+  const actual = jest.requireActual<typeof import('@/lib/scriptureListenPlainText')>(
+    '@/lib/scriptureListenPlainText'
+  )
+  return {
+    ...actual,
+    getScriptureListenCaretClientRect: jest.fn(() => ({
+      top: 200,
+      bottom: 220,
+      left: 0,
+      right: 100,
+      width: 100,
+      height: 20,
+      x: 0,
+      y: 200,
+      toJSON: () => ({}),
+    })),
+  }
+})
+
+import { scrollReadAlongPlainInScrollContainerIfNeeded } from '@/lib/scrollReadAlongPlain'
+import { getScriptureListenCaretClientRect } from '@/lib/scriptureListenPlainText'
+
 const mockApplyRate = applyMemorizeListenPlaybackRateToMediaElement as jest.MockedFunction<
   typeof applyMemorizeListenPlaybackRateToMediaElement
 >
@@ -28,6 +56,7 @@ function Harness({
   onTrackIndexChange,
   playlistStartIndex,
   onAutoAdvanceAfterPlayback,
+  autoScroll,
 }: {
   audioUrls: string[]
   enabled: boolean
@@ -35,11 +64,18 @@ function Harness({
   onTrackIndexChange?: (index: number) => void
   playlistStartIndex?: number
   onAutoAdvanceAfterPlayback?: () => boolean | void
+  autoScroll?: {
+    scopeRef: { current: HTMLElement | null }
+    scrollContainerRef: { current: HTMLElement | null }
+  }
 }) {
   const {
     passageAudioRef,
+    handlePassageAudioPlay,
     handlePassageAudioEnded,
     handlePassageAudioError,
+    handlePassageAudioLoadedMetadata,
+    handlePassageAudioTimeUpdate,
     handlePrimaryClick,
     readAloudDialogPrimaryLabel,
   } = useChapterStreamingAudioListen({
@@ -48,14 +84,18 @@ function Harness({
     onTrackIndexChange,
     playlistStartIndex,
     onAutoAdvanceAfterPlayback,
+    autoScroll,
   })
   return (
     <>
       <audio
         ref={passageAudioRef}
         data-testid="passage-audio"
+        onPlay={handlePassageAudioPlay}
         onEnded={onEnded ?? handlePassageAudioEnded}
         onError={handlePassageAudioError}
+        onLoadedMetadata={handlePassageAudioLoadedMetadata}
+        onTimeUpdate={handlePassageAudioTimeUpdate}
       />
       <button type="button" onClick={handlePrimaryClick}>
         primary
@@ -313,5 +353,120 @@ describe('useChapterStreamingAudioListen', () => {
       el.dispatchEvent(new Event('ended'))
     })
     expect(onAutoAdvance).not.toHaveBeenCalled()
+  })
+
+  it('scrolls the passage pane on timeupdate when autoScroll is configured', async () => {
+    document.body.innerHTML = '<div id="scope">For God so loved the world</div>'
+    const scope = document.getElementById('scope') as HTMLElement
+    const scrollContainer = document.createElement('div')
+    document.body.appendChild(scrollContainer)
+    scrollContainer.getBoundingClientRect = jest.fn(() => ({
+      top: 0,
+      bottom: 400,
+      left: 0,
+      right: 300,
+      width: 300,
+      height: 400,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    }))
+
+    // Below container comfort zone (400 − 56); re-applied after clearAllMocks in beforeEach.
+    ;(getScriptureListenCaretClientRect as jest.Mock).mockReturnValue({
+      top: 360,
+      bottom: 380,
+      left: 0,
+      right: 100,
+      width: 100,
+      height: 20,
+      x: 0,
+      y: 360,
+      toJSON: () => ({}),
+    })
+
+    const user = userEvent.setup()
+    render(
+      <Harness
+        audioUrls={[audioUrl]}
+        enabled
+        autoScroll={{ scopeRef: { current: scope }, scrollContainerRef: { current: scrollContainer } }}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+    Object.defineProperty(el, 'duration', { configurable: true, value: 10 })
+    Object.defineProperty(el, 'currentTime', { configurable: true, value: 5, writable: true })
+    Object.defineProperty(el, 'paused', { configurable: true, get: () => false })
+    await act(async () => {
+      el.dispatchEvent(new Event('play'))
+      el.dispatchEvent(new Event('loadedmetadata'))
+      el.dispatchEvent(new Event('timeupdate'))
+    })
+    expect(getScriptureListenCaretClientRect).toHaveBeenCalled()
+    expect(scrollReadAlongPlainInScrollContainerIfNeeded).toHaveBeenCalled()
+  })
+
+  it('uses plain length from the current scope after passage DOM changes during playback', async () => {
+    document.body.innerHTML = `<div id="scope">${'word '.repeat(50)}</div>`
+    const scopeRef = {
+      current: document.getElementById('scope') as HTMLElement,
+    }
+    const scrollContainer = document.createElement('div')
+    document.body.appendChild(scrollContainer)
+    scrollContainer.getBoundingClientRect = jest.fn(() => ({
+      top: 0,
+      bottom: 400,
+      left: 0,
+      right: 300,
+      width: 300,
+      height: 400,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    }))
+
+    const plainLens: number[] = []
+    ;(getScriptureListenCaretClientRect as jest.Mock).mockImplementation(
+      (_scope: HTMLElement, plainLen: number) => {
+        plainLens.push(plainLen)
+        return {
+          top: 360,
+          bottom: 380,
+          left: 0,
+          right: 100,
+          width: 100,
+          height: 20,
+          x: 0,
+          y: 360,
+          toJSON: () => ({}),
+        }
+      }
+    )
+
+    const user = userEvent.setup()
+    render(
+      <Harness
+        audioUrls={[audioUrl]}
+        enabled
+        autoScroll={{ scopeRef, scrollContainerRef: { current: scrollContainer } }}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+    Object.defineProperty(el, 'duration', { configurable: true, value: 10 })
+    Object.defineProperty(el, 'currentTime', { configurable: true, value: 5, writable: true })
+    Object.defineProperty(el, 'paused', { configurable: true, get: () => false })
+
+    document.body.innerHTML = '<div id="scope-new">Short text</div>'
+    scopeRef.current = document.getElementById('scope-new') as HTMLElement
+
+    await act(async () => {
+      el.dispatchEvent(new Event('timeupdate'))
+    })
+
+    expect(plainLens.length).toBeGreaterThan(0)
+    expect(plainLens[plainLens.length - 1]).toBe('Short text'.length)
+    expect(plainLens[plainLens.length - 1]).not.toBe('word '.repeat(50).trim().length)
   })
 })

@@ -1,12 +1,28 @@
 'use client'
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import {
   applyMemorizeListenPlaybackRateToMediaElement,
   readMemorizeListenSpeedFromStorage,
   writeMemorizeListenSpeedToStorage,
   type MemorizeListenSpeed,
 } from '@/lib/memorizeListenSpeedStorage'
+import {
+  getScriptureListenCaretClientRect,
+  plainTextForScriptureListen,
+  SCRIPTURE_LISTEN_TEXT_OPTIONS,
+} from '@/lib/scriptureListenPlainText'
+import {
+  prefersReducedMotionReadAlong,
+  scrollReadAlongPlainInScrollContainerIfNeeded,
+} from '@/lib/scrollReadAlongPlain'
+
+export interface ScriptureAudioAutoScrollConfig {
+  scopeRef: RefObject<HTMLElement | null>
+  scrollContainerRef: RefObject<HTMLElement | null>
+  /** When passage DOM may change without `audioUrls` changing (nav, verse/chapter, compare). */
+  passageScopeKey?: string
+}
 
 export interface UseChapterStreamingAudioListenOptions {
   /** One or more `/api/scripture/audio` URLs; when length > 1, plays in order then stops. */
@@ -23,6 +39,8 @@ export interface UseChapterStreamingAudioListenOptions {
    */
   /** Return `false` when navigation did not run (e.g. no `hasNext`). */
   onAutoAdvanceAfterPlayback?: () => boolean | void
+  /** Scroll the passage pane to keep approximate read position visible during playback. */
+  autoScroll?: ScriptureAudioAutoScrollConfig
 }
 
 function audioSrcMatchesUrl(elementSrc: string, relativeUrl: string): boolean {
@@ -41,6 +59,7 @@ export function useChapterStreamingAudioListen({
   onTrackIndexChange,
   playlistStartIndex = 0,
   onAutoAdvanceAfterPlayback,
+  autoScroll,
 }: UseChapterStreamingAudioListenOptions) {
   const [controlsOpen, setControlsOpen] = useState(false)
   const [listenPlaybackRate, setListenPlaybackRate] = useState<MemorizeListenSpeed>(() =>
@@ -57,6 +76,10 @@ export function useChapterStreamingAudioListen({
   const onPlaybackErrorRef = useRef(onPlaybackError)
   const onTrackIndexChangeRef = useRef(onTrackIndexChange)
   const onAutoAdvanceAfterPlaybackRef = useRef(onAutoAdvanceAfterPlayback)
+  const autoScrollRef = useRef(autoScroll)
+  const autoScrollScopeRef = useRef<HTMLElement | null>(null)
+  const autoScrollPlainLenRef = useRef(0)
+  const lastAutoScrollPlainOffsetRef = useRef(-1)
   /** User started Play; keep advancing via `onAutoAdvanceAfterPlayback` until Pause/stop. */
   const continuousPlaybackRef = useRef(false)
   const autoPlayAfterNavRef = useRef(false)
@@ -73,6 +96,7 @@ export function useChapterStreamingAudioListen({
     onAutoAdvanceAfterPlaybackRef.current = onAutoAdvanceAfterPlayback
     audioUrlsRef.current = audioUrls
     playlistStartIndexRef.current = playlistStartIndex
+    autoScrollRef.current = autoScroll
   }, [
     listenPlaybackRate,
     onPlaybackError,
@@ -80,6 +104,7 @@ export function useChapterStreamingAudioListen({
     onAutoAdvanceAfterPlayback,
     audioUrls,
     playlistStartIndex,
+    autoScroll,
   ])
 
   const isPlaylist = audioUrls.length > 1
@@ -111,6 +136,43 @@ export function useChapterStreamingAudioListen({
     setAwaitingContinuousPlay(true)
   }, [audioUrlsKey])
 
+  const invalidateAutoScrollTracking = useCallback(() => {
+    autoScrollScopeRef.current = null
+    autoScrollPlainLenRef.current = 0
+    lastAutoScrollPlainOffsetRef.current = -1
+  }, [])
+
+  const syncAutoScrollToCurrentTime = useCallback(() => {
+    const cfg = autoScrollRef.current
+    const el = passageAudioRef.current
+    if (!cfg || !el || el.paused) return
+
+    const scope = cfg.scopeRef.current
+    const scrollContainer = cfg.scrollContainerRef.current
+    if (!scope || !scrollContainer) return
+
+    const plainLen = plainTextForScriptureListen(scope, SCRIPTURE_LISTEN_TEXT_OPTIONS).length
+    const duration = el.duration
+    if (plainLen <= 0 || !Number.isFinite(duration) || duration <= 0) return
+
+    if (scope !== autoScrollScopeRef.current || plainLen !== autoScrollPlainLenRef.current) {
+      autoScrollScopeRef.current = scope
+      autoScrollPlainLenRef.current = plainLen
+      lastAutoScrollPlainOffsetRef.current = -1
+    }
+
+    const fraction = Math.min(1, Math.max(0, el.currentTime / duration))
+    const plainOffset = Math.min(plainLen - 1, Math.floor(fraction * plainLen))
+    if (plainOffset === lastAutoScrollPlainOffsetRef.current) return
+    lastAutoScrollPlainOffsetRef.current = plainOffset
+
+    const rect = getScriptureListenCaretClientRect(scope, plainLen, plainOffset)
+    if (!rect) return
+
+    const behavior: ScrollBehavior = prefersReducedMotionReadAlong() ? 'auto' : 'smooth'
+    scrollReadAlongPlainInScrollContainerIfNeeded(scrollContainer, rect, behavior)
+  }, [])
+
   const stopAudio = useCallback(() => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel()
@@ -125,6 +187,9 @@ export function useChapterStreamingAudioListen({
     continuousPlaybackRef.current = false
     clearPendingContinuousPlay()
     setPassageAudioPlaying(false)
+    autoScrollPlainLenRef.current = 0
+    lastAutoScrollPlainOffsetRef.current = -1
+    autoScrollScopeRef.current = null
     bumpListen()
   }, [bumpListen, clearPendingContinuousPlay])
 
@@ -268,12 +333,23 @@ export function useChapterStreamingAudioListen({
 
   const handlePassageAudioPlay = useCallback(() => {
     setPassageAudioPlaying(true)
-  }, [])
+    invalidateAutoScrollTracking()
+    syncAutoScrollToCurrentTime()
+  }, [invalidateAutoScrollTracking, syncAutoScrollToCurrentTime])
 
   const handlePassageAudioPause = useCallback(() => {
     setPassageAudioPlaying(false)
     bumpListen()
   }, [bumpListen])
+
+  const handlePassageAudioLoadedMetadata = useCallback(() => {
+    invalidateAutoScrollTracking()
+    syncAutoScrollToCurrentTime()
+  }, [invalidateAutoScrollTracking, syncAutoScrollToCurrentTime])
+
+  const handlePassageAudioTimeUpdate = useCallback(() => {
+    syncAutoScrollToCurrentTime()
+  }, [syncAutoScrollToCurrentTime])
 
   const handlePassageAudioEnded = useCallback(() => {
     const urls = audioUrlsRef.current
@@ -367,6 +443,13 @@ export function useChapterStreamingAudioListen({
 
   const keepAudioMounted = enabled || awaitingContinuousPlay
 
+  const passageScopeKey = autoScroll?.passageScopeKey
+
+  useLayoutEffect(() => {
+    if (!autoScroll) return
+    invalidateAutoScrollTracking()
+  }, [autoScroll, audioUrlsKey, passageScopeKey, invalidateAutoScrollTracking])
+
   return {
     passageAudioRef,
     keepAudioMounted,
@@ -384,5 +467,7 @@ export function useChapterStreamingAudioListen({
     handlePassageAudioPause,
     handlePassageAudioEnded,
     handlePassageAudioError,
+    handlePassageAudioLoadedMetadata,
+    handlePassageAudioTimeUpdate,
   }
 }

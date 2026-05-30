@@ -5,6 +5,7 @@
 import { visibleListenRawText } from '@/lib/profileResourceListenText'
 import {
   computeReadAlongVerticalScrollDeltaForComfortZone,
+  scrollReadAlongPlainInScrollContainerIfNeeded,
   walkerOffsetForReadAlongPlainOffset,
 } from '@/lib/scrollReadAlongPlain'
 
@@ -71,5 +72,49 @@ describe('walkerOffsetForReadAlongPlainOffset', () => {
     document.body.innerHTML = '<div id="scope">ab</div>'
     const scope = document.getElementById('scope') as HTMLElement
     expect(walkerOffsetForReadAlongPlainOffset(scope, 2, 999)).toBe(2)
+  })
+})
+
+describe('scrollReadAlongPlainInScrollContainerIfNeeded', () => {
+  it('scrolls the container when caret is below the comfort zone', () => {
+    const container = document.createElement('div')
+    container.style.height = '200px'
+    container.style.overflow = 'auto'
+    document.body.appendChild(container)
+    container.getBoundingClientRect = jest.fn(() => ({
+      top: 100,
+      bottom: 300,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 200,
+      x: 0,
+      y: 100,
+      toJSON: () => ({}),
+    }))
+    container.scrollBy = jest.fn()
+
+    scrollReadAlongPlainInScrollContainerIfNeeded(container, { top: 280, bottom: 296 }, 'auto', 56, 56)
+    expect(container.scrollBy).toHaveBeenCalledWith({ top: expect.any(Number), behavior: 'auto' })
+  })
+
+  it('does not scroll when caret is inside the comfort zone', () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    container.getBoundingClientRect = jest.fn(() => ({
+      top: 100,
+      bottom: 500,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 400,
+      x: 0,
+      y: 100,
+      toJSON: () => ({}),
+    }))
+    container.scrollBy = jest.fn()
+
+    scrollReadAlongPlainInScrollContainerIfNeeded(container, { top: 200, bottom: 220 }, 'auto', 56, 56)
+    expect(container.scrollBy).not.toHaveBeenCalled()
   })
 })
