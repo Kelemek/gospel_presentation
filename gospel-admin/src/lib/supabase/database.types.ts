@@ -15,6 +15,48 @@ export type UserRole = 'admin' | 'counselor' | 'counselee'
 export interface Database {
   public: {
     Tables: {
+      admin_settings: {
+        Row: {
+          id: number
+          created_at: string
+          updated_at: string
+          verification_code_length: number | null
+          verification_code_expiry_minutes: number | null
+          enable_verification_code_login: boolean | null
+          public_template_order: Json | null
+          github_feedback_enabled: boolean
+          github_token: string | null
+          github_repo_owner: string | null
+          github_repo_name: string | null
+        }
+        Insert: {
+          id?: number
+          created_at?: string
+          updated_at?: string
+          verification_code_length?: number | null
+          verification_code_expiry_minutes?: number | null
+          enable_verification_code_login?: boolean | null
+          public_template_order?: Json | null
+          github_feedback_enabled?: boolean
+          github_token?: string | null
+          github_repo_owner?: string | null
+          github_repo_name?: string | null
+        }
+        Update: {
+          id?: number
+          created_at?: string
+          updated_at?: string
+          verification_code_length?: number | null
+          verification_code_expiry_minutes?: number | null
+          enable_verification_code_login?: boolean | null
+          public_template_order?: Json | null
+          github_feedback_enabled?: boolean
+          github_token?: string | null
+          github_repo_owner?: string | null
+          github_repo_name?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           id: string

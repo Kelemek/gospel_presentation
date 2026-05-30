@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAdminUser } from '@/lib/adminAuth'
 import { createAdminClient } from '@/lib/supabase/server'
+import type { Database } from '@/lib/supabase/database.types'
 import { maskGitHubToken, normalizeGitHubFeedbackConfig } from '@/lib/githubFeedback'
 import { logger } from '@/lib/logger'
+
+type AdminSettingsUpdate = Database['public']['Tables']['admin_settings']['Update']
 
 const GITHUB_FEEDBACK_COLUMNS =
   'github_feedback_enabled, github_token, github_repo_owner, github_repo_name'
@@ -78,21 +81,15 @@ export async function PUT(request: NextRequest) {
     }
 
     const current = normalizeGitHubFeedbackConfig(existing)
-    const updatePayload: Record<string, unknown> = {
+    const updatePayload: AdminSettingsUpdate = {
       github_feedback_enabled: body.github_feedback_enabled,
       github_repo_owner,
       github_repo_name,
       updated_at: new Date().toISOString(),
+      github_token: github_token || current.github_token,
     }
 
-    if (github_token) {
-      updatePayload.github_token = github_token
-    } else {
-      updatePayload.github_token = current.github_token
-    }
-
-    const { error: updateError } = await admin
-      .from('admin_settings')
+    const { error: updateError } = await (admin.from('admin_settings') as any)
       .update(updatePayload)
       .eq('id', 1)
 
@@ -101,7 +98,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to save GitHub feedback settings' }, { status: 500 })
     }
 
-    const savedToken = (updatePayload.github_token as string | null) ?? null
+    const savedToken = updatePayload.github_token ?? null
     return NextResponse.json({
       success: true,
       github_feedback_enabled: body.github_feedback_enabled,
