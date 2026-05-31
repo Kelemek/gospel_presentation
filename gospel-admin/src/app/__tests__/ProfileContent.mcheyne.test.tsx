@@ -3,7 +3,8 @@
  */
 
 import React, { type ReactElement } from 'react'
-import { render, waitFor } from '@testing-library/react'
+import { render, waitFor, fireEvent, screen } from '@testing-library/react'
+import { mcheyneCalendarShortTitleForPlanDay } from '@/lib/mcheyne/mcheyneCalendar'
 import { TextSizeProvider } from '@/contexts/TextSizeContext'
 import { assignYellowLastViewed, versePinStorageKey } from '@/lib/versePinStorage'
 import { resetGospelClientStorageForTests } from '@/lib/gospelClientStorage'
@@ -107,6 +108,15 @@ const mchySections = [
 
 beforeEach(() => {
   jest.clearAllMocks()
+  const actualVersePinStorage = jest.requireActual<typeof import('@/lib/versePinStorage')>(
+    '@/lib/versePinStorage'
+  )
+  const { hydrateVersePinsFromStorage } = jest.requireMock<typeof import('@/lib/versePinStorage')>(
+    '@/lib/versePinStorage'
+  )
+  jest
+    .mocked(hydrateVersePinsFromStorage)
+    .mockImplementation(async (slug: string) => actualVersePinStorage.loadVersePins(slug))
   profileSearchParams = new URLSearchParams()
   syncProfileNavigationTestGlobals()
   resetGospelClientStorageForTests()
@@ -225,6 +235,154 @@ describe('ProfileContent M\'Cheyne navigation', () => {
         'section-jan-1',
         expect.objectContaining({ behavior: 'auto', preferSubsectionTitle: true })
       )
+    })
+  })
+
+  test('scrolls to resume pin after hydrate when yellow pin is not in sync cache yet', async () => {
+    profileSearchParams = new URLSearchParams('resumePin=1')
+    syncProfileNavigationTestGlobals()
+
+    const actual = jest.requireActual<typeof import('@/lib/versePinStorage')>('@/lib/versePinStorage')
+    const { hydrateVersePinsFromStorage } = await import('@/lib/versePinStorage')
+    jest.mocked(hydrateVersePinsFromStorage).mockImplementation(async (slug: string) => {
+      actual.assignYellowLastViewed(slug, {
+        reference: 'Genesis 1',
+        sectionId: 'section-jan',
+        subsectionId: 'section-jan-1',
+      })
+      return actual.loadVersePins(slug)
+    })
+
+    const { ProfileContent } = await import('../[slug]/ProfileContent')
+    renderWithTextSize(
+      <ProfileContent
+        sections={mchySections as any}
+        profileInfo={{ title: "M'Cheyne", slug: 'mchy', favoriteScriptures: [] }}
+      />
+    )
+
+    await waitFor(() => {
+      expect(scrollToTocAnchorWhenReady).toHaveBeenCalledWith(
+        'section-jan-1',
+        expect.objectContaining({ behavior: 'auto', preferSubsectionTitle: true })
+      )
+    })
+  })
+
+  test('does not cancel resume scroll when effect re-runs while scroll is in flight', async () => {
+    profileSearchParams = new URLSearchParams('resumePin=1')
+    syncProfileNavigationTestGlobals()
+    assignYellowLastViewed('mchy', {
+      reference: 'Genesis 1',
+      sectionId: 'section-jan',
+      subsectionId: 'section-jan-1',
+    })
+
+    const cancelScroll = jest.fn()
+    jest.mocked(scrollToTocAnchorWhenReady).mockImplementation(() => cancelScroll)
+
+    const { ProfileContent } = await import('../[slug]/ProfileContent')
+    const view = renderWithTextSize(
+      <ProfileContent
+        sections={mchySections as any}
+        profileInfo={{ title: "M'Cheyne", slug: 'mchy', favoriteScriptures: [] }}
+      />
+    )
+
+    await waitFor(() => {
+      expect(scrollToTocAnchorWhenReady).toHaveBeenCalled()
+    })
+
+    view.rerender(
+      <TextSizeProvider>
+        <ProfileContent
+          sections={mchySections as any}
+          profileInfo={{ title: "M'Cheyne", slug: 'mchy', favoriteScriptures: [] }}
+        />
+      </TextSizeProvider>
+    )
+    expect(cancelScroll).not.toHaveBeenCalled()
+  })
+
+  test('does not start resume scroll after effect cleans up during hydrate', async () => {
+    profileSearchParams = new URLSearchParams('resumePin=1')
+    syncProfileNavigationTestGlobals()
+
+    const actual = jest.requireActual<typeof import('@/lib/versePinStorage')>('@/lib/versePinStorage')
+    const { hydrateVersePinsFromStorage } = await import('@/lib/versePinStorage')
+    let resolveHydrate: () => void = () => {}
+    jest.mocked(hydrateVersePinsFromStorage).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveHydrate = () => {
+            actual.assignYellowLastViewed('mchy', {
+              reference: 'Genesis 1',
+              sectionId: 'section-jan',
+              subsectionId: 'section-jan-1',
+            })
+            resolve(actual.loadVersePins('mchy'))
+          }
+        })
+    )
+    jest.mocked(scrollToTocAnchorWhenReady).mockImplementation(() => jest.fn())
+
+    const { ProfileContent } = await import('../[slug]/ProfileContent')
+    const view = renderWithTextSize(
+      <ProfileContent
+        sections={mchySections as any}
+        profileInfo={{ title: "M'Cheyne", slug: 'mchy', favoriteScriptures: [] }}
+      />
+    )
+
+    view.unmount()
+    resolveHydrate()
+
+    await waitFor(() => {
+      expect(hydrateVersePinsFromStorage).toHaveBeenCalled()
+    })
+    expect(scrollToTocAnchorWhenReady).not.toHaveBeenCalled()
+  })
+
+  test('resume from a non-mchy profile navigates to /mchy when pin is on mchy', async () => {
+    assignYellowLastViewed('mchy', {
+      reference: 'Genesis 1',
+      sectionId: 'section-jan',
+      subsectionId: 'section-jan-1',
+    })
+
+    const push = (globalThis as typeof globalThis & { __mockNextPush?: jest.Mock }).__mockNextPush
+    push?.mockClear()
+
+    const { loadMcheyneYellowPinForResume } = await import('@/lib/mcheyne/mcheyneResumeYellowPin')
+    const { setPendingMcheyneResumePin } = await import('@/lib/mcheyne/mcheynePendingNavigation')
+    const { default: McheyneReadingPlanModal } = await import('@/components/McheyneReadingPlanModal')
+
+    const navigateMcheyneLatest = () => {
+      void (async () => {
+        const yellow = await loadMcheyneYellowPinForResume()
+        if (!yellow) return
+        setPendingMcheyneResumePin()
+        push?.('/mchy?resumePin=1', { scroll: false })
+      })()
+    }
+
+    renderWithTextSize(
+      <McheyneReadingPlanModal
+        isOpen
+        onClose={jest.fn()}
+        onNavigateToPlanDay={jest.fn()}
+        onNavigateToLatest={navigateMcheyneLatest}
+      />
+    )
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: `Resume — ${mcheyneCalendarShortTitleForPlanDay(1)}, your last pinned passage`,
+      })
+    )
+
+    await waitFor(() => {
+      expect(push).toHaveBeenCalledWith('/mchy?resumePin=1', { scroll: false })
     })
   })
 

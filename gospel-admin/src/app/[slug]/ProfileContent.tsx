@@ -78,6 +78,12 @@ import {
   setPendingMcheynePlanDay,
   setPendingMcheyneResumePin,
 } from '@/lib/mcheyne/mcheynePendingNavigation'
+import { loadMcheyneYellowPinForResume } from '@/lib/mcheyne/mcheyneResumeYellowPin'
+import {
+  cancelMcheyneResumeScroll,
+  finishMcheyneResumeScrollSession,
+  startMcheyneResumeScroll,
+} from '@/lib/mcheyne/mcheyneResumeScrollSession'
 import { findFirstScriptureCardAnchors } from '@/lib/findFirstScriptureCardAnchors'
 import {
   adjacentPickerPassage,
@@ -172,6 +178,8 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const mcheynePlanDayScrollRef = useRef<number | null>(null)
   /** Avoid duplicate resume-pin scroll when the nav effect re-runs before query params clear. */
   const mcheyneResumePinScrollRef = useRef(false)
+  /** Cancel function for the active resume-pin scroll RAF loop (effect or Resume button). */
+  const mcheyneResumeScrollCancelRef = useRef<(() => void) | null>(null)
 
   const [currentReferenceIndex, setCurrentReferenceIndex] = useState(0)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -336,12 +344,33 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     return scrollToTocAnchorWhenReady(anchor.subsectionId, { behavior: 'auto' })
   }, [isHydrated, sectionCount, profileSlug, studyRefParam, sections])
 
-  const mcheyneYellowPin = versePinMap.yellow
-
   const clearMcheyneNavQueryParams = useCallback(() => {
     const hash = typeof window !== 'undefined' ? window.location.hash : ''
     router.replace(`${pathname}${hash}`, { scroll: false })
   }, [router, pathname])
+
+  const finishMcheyneResumeScroll = useCallback(() => {
+    finishMcheyneResumeScrollSession(mcheyneResumeScrollCancelRef)
+    clearMcheyneNavQueryParams()
+  }, [clearMcheyneNavQueryParams])
+
+  const startMcheyneResumeScrollToYellowPin = useCallback(
+    (subsectionId: string): void => {
+      const daySubsectionId = mcheyneDaySubsectionIdFromAnchor(subsectionId)
+      mcheyneResumePinScrollRef.current = true
+      startMcheyneResumeScroll(
+        mcheyneResumeScrollCancelRef,
+        scrollToTocAnchorWhenReady(daySubsectionId, {
+          behavior: 'auto',
+          maxFrames: 180,
+          preferSubsectionTitle: true,
+          onDone: finishMcheyneResumeScroll,
+          onGiveUp: finishMcheyneResumeScroll,
+        })
+      )
+    },
+    [finishMcheyneResumeScroll]
+  )
 
   const scrollToMcheynePlanDay = useCallback(
     (planDay: number, sectionList: GospelSectionType[]) => {
@@ -362,6 +391,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     (planDay: number) => {
       const onMchy = Boolean(profileSlug && isMcheyneProfileSlug(profileSlug))
       mcheynePlanDayScrollRef.current = null
+      cancelMcheyneResumeScroll(mcheyneResumeScrollCancelRef)
       mcheyneResumePinScrollRef.current = false
       setPendingMcheynePlanDay(planDay)
       if (onMchy) {
@@ -374,24 +404,25 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   )
 
   const navigateMcheyneLatest = useCallback(() => {
-    if (profileSlug && isMcheyneProfileSlug(profileSlug) && mcheyneYellowPin?.subsectionId) {
-      const daySubsectionId = mcheyneDaySubsectionIdFromAnchor(mcheyneYellowPin.subsectionId)
-      window.requestAnimationFrame(() => {
-        scrollToTocAnchorWhenReady(daySubsectionId, {
-          behavior: 'auto',
-          maxFrames: 180,
-          preferSubsectionTitle: true,
-          onDone: clearMcheyneNavQueryParams,
-          onGiveUp: clearMcheyneNavQueryParams,
-        })
-      })
-      return
-    }
     mcheynePlanDayScrollRef.current = null
+    cancelMcheyneResumeScroll(mcheyneResumeScrollCancelRef)
     mcheyneResumePinScrollRef.current = false
-    setPendingMcheyneResumePin()
-    router.push('/mchy?resumePin=1', { scroll: false })
-  }, [profileSlug, mcheyneYellowPin, router, clearMcheyneNavQueryParams])
+
+    void (async () => {
+      if (!profileSlug) return
+      const yellow = await loadMcheyneYellowPinForResume()
+      if (!yellow) return
+
+      if (isMcheyneProfileSlug(profileSlug)) {
+        bumpVersePins()
+        startMcheyneResumeScrollToYellowPin(yellow.subsectionId)
+        return
+      }
+
+      setPendingMcheyneResumePin()
+      router.push('/mchy?resumePin=1', { scroll: false })
+    })()
+  }, [profileSlug, bumpVersePins, router, startMcheyneResumeScrollToYellowPin])
 
   // M'Cheyne: ?planDay=N or ?resumePin=1 from Resources calendar modal (not on every open)
   useEffect(() => {
@@ -404,24 +435,38 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
 
     const wantsResumePin = resolveMcheyneResumePinFromNavigation(mcheyneResumePinParam)
     if (wantsResumePin) {
-      if (!mcheyneYellowPin?.subsectionId) {
-        mcheyneResumePinScrollRef.current = false
-        clearMcheyneNavQueryParams()
-        return
-      }
       if (mcheyneResumePinScrollRef.current) return
       mcheyneResumePinScrollRef.current = true
-      const daySubsectionId = mcheyneDaySubsectionIdFromAnchor(mcheyneYellowPin.subsectionId)
-      const cancelScroll = scrollToTocAnchorWhenReady(daySubsectionId, {
-        behavior: 'auto',
-        maxFrames: 180,
-        preferSubsectionTitle: true,
-        onDone: clearMcheyneNavQueryParams,
-        onGiveUp: clearMcheyneNavQueryParams,
-      })
+      let cancelled = false
+      let scrollStarted = false
+
+      void (async () => {
+        const yellow = await loadMcheyneYellowPinForResume()
+        if (cancelled) {
+          mcheyneResumePinScrollRef.current = false
+          return
+        }
+        bumpVersePins()
+        if (!yellow) {
+          mcheyneResumePinScrollRef.current = false
+          clearMcheyneNavQueryParams()
+          return
+        }
+        startMcheyneResumeScrollToYellowPin(yellow.subsectionId)
+        scrollStarted = true
+        if (cancelled) {
+          cancelMcheyneResumeScroll(mcheyneResumeScrollCancelRef)
+          scrollStarted = false
+          mcheyneResumePinScrollRef.current = false
+        }
+      })()
+
       return () => {
-        if (mcheyneResumePinScrollRef.current) return
-        cancelScroll()
+        cancelled = true
+        // Same intent as plan-day scroll: do not cancel when the effect re-runs while
+        // resume scroll is in flight (deps flicker / Strict Mode remount).
+        if (scrollStarted) return
+        mcheyneResumePinScrollRef.current = false
       }
     }
 
@@ -455,9 +500,10 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     sections,
     mcheynePlanDayParam,
     mcheyneResumePinParam,
-    mcheyneYellowPin,
+    bumpVersePins,
     clearMcheyneNavQueryParams,
     scrollToMcheynePlanDay,
+    startMcheyneResumeScrollToYellowPin,
   ])
 
   useEffect(() => {
