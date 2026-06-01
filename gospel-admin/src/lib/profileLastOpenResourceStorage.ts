@@ -16,6 +16,9 @@ export const PROFILE_RECENT_RESOURCES_MAX = PROFILE_RECENT_MENU_MAX
 
 export const GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT = 'gospel-profile-last-open-changed' as const
 
+/** Set after the first launch-time route decision so we do not override intentional navigation. */
+export const PROFILE_APP_LAUNCH_RESUME_SESSION_KEY = 'gospel-profile-app-launch-resume:v1'
+
 export type ProfileRecentResourceEntry = {
   slug: string
   title: string
@@ -110,7 +113,27 @@ export function loadProfileRecentResourcesForMenu(
   return filtered.slice(0, PROFILE_RECENT_MENU_MAX)
 }
 
-/** @deprecated Use loadProfileRecentResources or loadProfileRecentResourcesForMenu */
+/** Most recently opened profile slug (touch-recency list head), or null. */
+export function loadProfileLastActiveSlug(): string | null {
+  return loadProfileRecentResources()[0]?.slug ?? null
+}
+
+/** Paths that open the generic gospel entry instead of a saved profile. */
+export function isProfileAppLaunchEntryPath(pathname: string): boolean {
+  const normalized = pathname.replace(/\/$/, '') || '/'
+  return normalized === '/' || normalized === '/default'
+}
+
+/** Do not auto-route from admin, auth, or static marketing pages. */
+export function shouldSkipProfileAppLaunchResume(pathname: string): boolean {
+  const normalized = pathname.replace(/\/$/, '') || '/'
+  if (normalized.startsWith('/admin')) return true
+  if (normalized.startsWith('/login')) return true
+  if (normalized === '/info' || normalized === '/privacy') return true
+  return false
+}
+
+/** @deprecated Use loadProfileLastActiveSlug or loadProfileRecentResources */
 export function loadProfileLastOpenResource(): ProfileRecentResourceEntry | null {
   return loadProfileRecentResources()[0] ?? null
 }

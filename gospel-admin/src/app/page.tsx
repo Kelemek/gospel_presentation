@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
-
+/**
+ * Root route shows a brief loading state only. Launch resume (`ProfileAppLaunchResume`
+ * in the root layout) routes `/` to the last active profile or `/default` after hydration.
+ */
 export default function GospelPresentation() {
-  useEffect(() => {
-    window.location.href = "/default";
-  }, []);
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
       <div className="text-center">

@@ -1,9 +1,12 @@
 import { gospelStorageGetSync, gospelStorageSetSync } from '@/lib/gospelClientStorage'
 import { installTestLocalStorage, resetGospelStorageTestState } from '@/lib/testing/testLocalStorage'
 import {
+  isProfileAppLaunchEntryPath,
+  loadProfileLastActiveSlug,
   loadProfileLastOpenResource,
   loadProfileRecentResources,
   loadProfileRecentResourcesForMenu,
+  shouldSkipProfileAppLaunchResume,
   PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY,
   PROFILE_RECENT_MENU_MAX,
   PROFILE_RECENT_RESOURCES_STORED_MAX,
@@ -103,5 +106,21 @@ describe('profileLastOpenResourceStorage', () => {
     recordProfileLastOpenOnEnter('first', 'First')
     recordProfileLastOpenOnEnter('second', 'Second')
     expect(loadProfileLastOpenResource()).toEqual({ slug: 'second', title: 'Second' })
+  })
+
+  it('loadProfileLastActiveSlug returns most recent slug', () => {
+    recordProfileLastOpenOnEnter('a', 'A')
+    recordProfileLastOpenOnEnter('b', 'B')
+    expect(loadProfileLastActiveSlug()).toBe('b')
+  })
+
+  it('classifies launch entry and skip paths', () => {
+    expect(isProfileAppLaunchEntryPath('/')).toBe(true)
+    expect(isProfileAppLaunchEntryPath('/default')).toBe(true)
+    expect(isProfileAppLaunchEntryPath('/default/')).toBe(true)
+    expect(isProfileAppLaunchEntryPath('/other')).toBe(false)
+    expect(shouldSkipProfileAppLaunchResume('/admin')).toBe(true)
+    expect(shouldSkipProfileAppLaunchResume('/login')).toBe(true)
+    expect(shouldSkipProfileAppLaunchResume('/spurgeon01')).toBe(false)
   })
 })

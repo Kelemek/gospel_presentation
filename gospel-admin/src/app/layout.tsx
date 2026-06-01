@@ -7,6 +7,7 @@ import { ApplyTheme } from "@/components/ApplyTheme";
 import { CapacitorKeepLinksInApp } from "@/components/CapacitorKeepLinksInApp";
 import { CapacitorProfileHelpTourNavigation } from "@/components/CapacitorProfileHelpTourNavigation";
 import { GospelClientStorageHydration } from "@/components/GospelClientStorageHydration";
+import { ProfileAppLaunchResume } from "@/components/ProfileAppLaunchResume";
 import { SplashScreenController } from "@/components/SplashScreenController";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { TextSizeProvider } from "@/contexts/TextSizeContext";
@@ -79,6 +80,7 @@ export default function RootLayout({
               <ApplyTextSize />
               <CapacitorKeepLinksInApp />
               <GospelClientStorageHydration />
+              <ProfileAppLaunchResume />
               <CapacitorProfileHelpTourNavigation />
               <SplashScreenController />
               <Suspense fallback={null}>
