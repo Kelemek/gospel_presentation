@@ -1,16 +1,21 @@
 import { gospelStorageGetSync, gospelStorageSetSync } from '@/lib/gospelClientStorage'
 import { installTestLocalStorage, resetGospelStorageTestState } from '@/lib/testing/testLocalStorage'
 import {
+  buildProfileRecentScriptureHref,
   isProfileAppLaunchEntryPath,
   loadProfileLastActiveSlug,
   loadProfileLastOpenResource,
   loadProfileRecentResources,
   loadProfileRecentResourcesForMenu,
+  loadProfileRecentScriptures,
+  loadProfileRecentScripturesForMenu,
   shouldSkipProfileAppLaunchResume,
   PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY,
   PROFILE_RECENT_MENU_MAX,
   PROFILE_RECENT_RESOURCES_STORED_MAX,
+  PROFILE_RECENT_SCRIPTURES_STORED_MAX,
   recordProfileLastOpenOnEnter,
+  recordScriptureLastOpen,
   resetProfileLastOpenNavigationRefsForTests,
 } from '../profileLastOpenResourceStorage'
 
@@ -82,13 +87,132 @@ describe('profileLastOpenResourceStorage', () => {
     expect(loadProfileRecentResources()).toEqual([{ slug: 'legacy', title: 'Legacy Title' }])
   })
 
-  it('persists v2 shape on write', () => {
+  it('persists v3 shape on profile write', () => {
     recordProfileLastOpenOnEnter('x', 'X')
     const raw = gospelStorageGetSync(PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY)
     expect(JSON.parse(raw!)).toEqual({
-      v: 2,
+      v: 3,
       resources: [{ slug: 'x', title: 'X' }],
+      scriptures: [],
     })
+  })
+
+  it('migrates v2 payload and preserves empty scriptures', () => {
+    gospelStorageSetSync(
+      PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY,
+      JSON.stringify({
+        v: 2,
+        resources: [{ slug: 'old', title: 'Old' }],
+      })
+    )
+    expect(loadProfileRecentResources()).toEqual([{ slug: 'old', title: 'Old' }])
+    expect(loadProfileRecentScriptures()).toEqual([])
+  })
+
+  it('records scriptures with dedupe and cap', () => {
+    for (let i = 0; i < 7; i += 1) {
+      recordScriptureLastOpen({
+        slug: 'default',
+        profileTitle: 'Gospel',
+        reference: `Ref ${i}`,
+        sectionId: 'section-1',
+        subsectionId: 'section-1-0',
+      })
+    }
+    expect(loadProfileRecentScriptures()).toHaveLength(PROFILE_RECENT_SCRIPTURES_STORED_MAX)
+    expect(loadProfileRecentScriptures()[0]?.reference).toBe('Ref 6')
+
+    recordScriptureLastOpen({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'Ref 2',
+      sectionId: 'section-1',
+      subsectionId: 'section-1-0',
+      chapterView: true,
+    })
+    expect(loadProfileRecentScriptures()[0]).toMatchObject({
+      reference: 'Ref 2',
+      chapterView: true,
+    })
+    expect(loadProfileRecentScriptures().filter((s) => s.reference === 'Ref 2')).toHaveLength(1)
+  })
+
+  it('dedupes same reference on one profile when anchors differ', () => {
+    recordScriptureLastOpen({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'John 3:16',
+      sectionId: 'section-1',
+      subsectionId: 'section-1-0',
+    })
+    recordScriptureLastOpen({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'John 3:16',
+      sectionId: 'modal-view',
+      subsectionId: 'modal-view',
+      chapterView: true,
+    })
+    const list = loadProfileRecentScriptures()
+    expect(list).toHaveLength(1)
+    expect(list[0]).toMatchObject({
+      reference: 'John 3:16',
+      sectionId: 'modal-view',
+      subsectionId: 'modal-view',
+      chapterView: true,
+    })
+  })
+
+  it('profile enter preserves scriptures list', () => {
+    recordScriptureLastOpen({
+      slug: 'sg',
+      profileTitle: 'Spurgeon',
+      reference: 'John 3:16',
+      sectionId: 'section-1',
+      subsectionId: 'section-1-0',
+    })
+    recordProfileLastOpenOnEnter('default', 'Gospel')
+    expect(loadProfileRecentScriptures()[0]?.reference).toBe('John 3:16')
+    expect(loadProfileRecentResources()[0]?.slug).toBe('default')
+  })
+
+  it('loadProfileRecentScripturesForMenu returns up to PROFILE_RECENT_MENU_MAX', () => {
+    for (let i = 0; i < 6; i += 1) {
+      recordScriptureLastOpen({
+        slug: 'default',
+        profileTitle: 'Gospel',
+        reference: `R${i}`,
+        sectionId: 'section-1',
+        subsectionId: 'section-1-0',
+      })
+    }
+    expect(loadProfileRecentScriptures()).toHaveLength(PROFILE_RECENT_SCRIPTURES_STORED_MAX)
+    expect(loadProfileRecentScripturesForMenu()).toHaveLength(PROFILE_RECENT_MENU_MAX)
+  })
+
+  it('buildProfileRecentScriptureHref includes scriptureRef and optional chapter view', () => {
+    expect(
+      buildProfileRecentScriptureHref({
+        slug: 'default',
+        profileTitle: 'Gospel',
+        reference: 'John 3:16',
+        sectionId: 'section-1',
+        subsectionId: 'section-1-0',
+        openedAt: 1,
+      })
+    ).toBe('/default?scriptureRef=John+3%3A16')
+
+    expect(
+      buildProfileRecentScriptureHref({
+        slug: 'sg',
+        profileTitle: 'Spurgeon',
+        reference: 'Romans 8:1',
+        sectionId: 'section-2',
+        subsectionId: 'section-2-0',
+        chapterView: true,
+        openedAt: 2,
+      })
+    ).toBe('/sg?scriptureRef=Romans+8%3A1&scriptureView=chapter')
   })
 
   it('loadProfileRecentResourcesForMenu excludes current slug', () => {

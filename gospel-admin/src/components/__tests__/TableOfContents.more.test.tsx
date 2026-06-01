@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { TextSizeProvider } from '@/contexts/TextSizeContext'
 import SidebarAuthNav from '@/components/SidebarAuthNav'
 import { gospelStorageSetSync } from '@/lib/gospelClientStorage'
@@ -131,6 +131,79 @@ describe('TableOfContents additional behaviors', () => {
     expect(gospelLink).toHaveAttribute('href', '/default')
     fireEvent.click(gospelLink)
     expect(onNavigate).toHaveBeenCalled()
+  })
+
+  it('shows Last Open with Scriptures section when only scriptures are stored', async () => {
+    mockLoggedOutResourcesFetch()
+    gospelStorageSetSync(
+      PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY,
+      JSON.stringify({
+        v: 3,
+        resources: [{ slug: 'default', title: 'The Gospel Presentation' }],
+        scriptures: [
+          {
+            slug: 'default',
+            profileTitle: 'The Gospel Presentation',
+            reference: 'John 3:16',
+            sectionId: 'section-1',
+            subsectionId: 'section-1-0',
+            openedAt: 1,
+          },
+        ],
+      })
+    )
+
+    const TableOfContents = require('../TableOfContents').default
+    renderToc(<TableOfContents sections={[]} currentProfileSlug="default" />)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Last Open$/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /^Last Open$/i }))
+
+    const panel = screen.getByRole('list')
+    expect(within(panel).getByText('Scriptures')).toBeInTheDocument()
+    expect(within(panel).queryByText('Resources')).not.toBeInTheDocument()
+    const scriptureLink = within(panel).getByRole('link', { name: /John 3:16/i })
+    expect(scriptureLink).toHaveAttribute('href', '/default?scriptureRef=John+3%3A16')
+  })
+
+  it('renders Resources and Scriptures sections with scripture chapter href', async () => {
+    mockLoggedOutResourcesFetch()
+    gospelStorageSetSync(
+      PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY,
+      JSON.stringify({
+        v: 3,
+        resources: [
+          { slug: 'current', title: 'Current' },
+          { slug: 'sg', title: 'Spurgeon' },
+        ],
+        scriptures: [
+          {
+            slug: 'sg',
+            profileTitle: 'Spurgeon',
+            reference: 'Romans 8:1',
+            sectionId: 'section-2',
+            subsectionId: 'section-2-0',
+            chapterView: true,
+            openedAt: 2,
+          },
+        ],
+      })
+    )
+
+    const TableOfContents = require('../TableOfContents').default
+    renderToc(<TableOfContents sections={[]} currentProfileSlug="current" />)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Last Open$/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /^Last Open$/i }))
+
+    const panel = screen.getByRole('list')
+    expect(within(panel).getByText('Resources')).toBeInTheDocument()
+    expect(within(panel).getByText('Scriptures')).toBeInTheDocument()
+    expect(within(panel).getByRole('link', { name: 'Spurgeon' })).toHaveAttribute('href', '/sg')
+    expect(within(panel).getByRole('link', { name: /Romans 8:1/i })).toHaveAttribute(
+      'href',
+      '/sg?scriptureRef=Romans+8%3A1&scriptureView=chapter'
+    )
   })
 
   it('calls window.print when Print Version is clicked', async () => {

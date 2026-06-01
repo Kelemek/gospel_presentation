@@ -1,15 +1,18 @@
-/** Recent profile resources for TOC "Last Open" dropdown (device-only). */
+/** Recent profile resources and scriptures for TOC "Last Open" dropdown (device-only). */
 
 import { gospelStorageGetSync, gospelStorageSetSync } from '@/lib/gospelClientStorage'
 import { stripHtmlTags } from '@/lib/stripHtmlTags'
 
 export const PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY = 'gospel-profile-last-open-resource:v1'
 
-/** Rows shown in the Last Open dropdown (current profile excluded). */
+/** Rows shown per section in the Last Open dropdown. */
 export const PROFILE_RECENT_MENU_MAX = 5
 
-/** Stored history length (includes current profile for touch-recency). */
+/** Stored profile history (includes current profile for touch-recency / launch resume). */
 export const PROFILE_RECENT_RESOURCES_STORED_MAX = PROFILE_RECENT_MENU_MAX + 1
+
+/** Stored scripture history for the Scriptures section. */
+export const PROFILE_RECENT_SCRIPTURES_STORED_MAX = PROFILE_RECENT_MENU_MAX
 
 /** @deprecated Use PROFILE_RECENT_MENU_MAX or PROFILE_RECENT_RESOURCES_STORED_MAX */
 export const PROFILE_RECENT_RESOURCES_MAX = PROFILE_RECENT_MENU_MAX
@@ -24,9 +27,20 @@ export type ProfileRecentResourceEntry = {
   title: string
 }
 
-type ProfileRecentResourcesV2 = {
-  v: 2
+export type ProfileRecentScriptureEntry = {
+  slug: string
+  profileTitle: string
+  reference: string
+  sectionId: string
+  subsectionId: string
+  chapterView?: boolean
+  openedAt: number
+}
+
+type ProfileRecentResourcesV3 = {
+  v: 3
   resources: ProfileRecentResourceEntry[]
+  scriptures: ProfileRecentScriptureEntry[]
 }
 
 /** @deprecated Use ProfileRecentResourceEntry */
@@ -37,7 +51,7 @@ function emitProfileLastOpenChanged(): void {
   window.dispatchEvent(new CustomEvent(GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT))
 }
 
-function normalizeEntry(raw: unknown): ProfileRecentResourceEntry | null {
+function normalizeResourceEntry(raw: unknown): ProfileRecentResourceEntry | null {
   if (!raw || typeof raw !== 'object') return null
   const o = raw as Record<string, unknown>
   if (typeof o.slug !== 'string') return null
@@ -47,35 +61,95 @@ function normalizeEntry(raw: unknown): ProfileRecentResourceEntry | null {
   return { slug, title: title || slug }
 }
 
-function parseStoredResources(raw: string | null): ProfileRecentResourceEntry[] {
-  if (!raw) return []
+function normalizeScriptureEntry(raw: unknown): ProfileRecentScriptureEntry | null {
+  if (!raw || typeof raw !== 'object') return null
+  const o = raw as Record<string, unknown>
+  if (typeof o.slug !== 'string' || typeof o.reference !== 'string') return null
+  const slug = o.slug.trim()
+  const reference = o.reference.trim().replace(/–/g, '-')
+  if (!slug || !reference) return null
+  const profileTitle =
+    typeof o.profileTitle === 'string' ? stripHtmlTags(o.profileTitle).trim() : ''
+  const sectionId = typeof o.sectionId === 'string' ? o.sectionId.trim() : ''
+  const subsectionId = typeof o.subsectionId === 'string' ? o.subsectionId.trim() : ''
+  if (!sectionId || !subsectionId) return null
+  const openedAt = typeof o.openedAt === 'number' && Number.isFinite(o.openedAt) ? o.openedAt : 0
+  const chapterView = o.chapterView === true ? true : undefined
+  return {
+    slug,
+    profileTitle: profileTitle || slug,
+    reference,
+    sectionId,
+    subsectionId,
+    ...(chapterView ? { chapterView } : {}),
+    openedAt,
+  }
+}
+
+/** One row per profile + reference (anchors may change between opens). */
+function scriptureDedupeKey(entry: Pick<ProfileRecentScriptureEntry, 'slug' | 'reference'>): string {
+  const slug = entry.slug.trim()
+  const reference = entry.reference.trim().replace(/–/g, '-')
+  return `${slug}|${reference}`
+}
+
+function parseStoredPayload(raw: string | null): ProfileRecentResourcesV3 {
+  const empty: ProfileRecentResourcesV3 = { v: 3, resources: [], scriptures: [] }
+  if (!raw) return empty
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>
-    if (parsed?.v === 2 && Array.isArray(parsed.resources)) {
-      const out: ProfileRecentResourceEntry[] = []
-      for (const item of parsed.resources) {
-        const entry = normalizeEntry(item)
-        if (!entry) continue
-        if (out.some((r) => r.slug === entry.slug)) continue
-        out.push(entry)
-        if (out.length >= PROFILE_RECENT_RESOURCES_STORED_MAX) break
+    if (parsed?.v === 3) {
+      const resources: ProfileRecentResourceEntry[] = []
+      if (Array.isArray(parsed.resources)) {
+        for (const item of parsed.resources) {
+          const entry = normalizeResourceEntry(item)
+          if (!entry) continue
+          if (resources.some((r) => r.slug === entry.slug)) continue
+          resources.push(entry)
+          if (resources.length >= PROFILE_RECENT_RESOURCES_STORED_MAX) break
+        }
       }
-      return out
+      const scriptures: ProfileRecentScriptureEntry[] = []
+      if (Array.isArray(parsed.scriptures)) {
+        for (const item of parsed.scriptures) {
+          const entry = normalizeScriptureEntry(item)
+          if (!entry) continue
+          if (scriptures.some((s) => scriptureDedupeKey(s) === scriptureDedupeKey(entry))) continue
+          scriptures.push(entry)
+          if (scriptures.length >= PROFILE_RECENT_SCRIPTURES_STORED_MAX) break
+        }
+      }
+      return { v: 3, resources, scriptures }
+    }
+    if (parsed?.v === 2 && Array.isArray(parsed.resources)) {
+      const resources: ProfileRecentResourceEntry[] = []
+      for (const item of parsed.resources) {
+        const entry = normalizeResourceEntry(item)
+        if (!entry) continue
+        if (resources.some((r) => r.slug === entry.slug)) continue
+        resources.push(entry)
+        if (resources.length >= PROFILE_RECENT_RESOURCES_STORED_MAX) break
+      }
+      return { v: 3, resources, scriptures: [] }
     }
     if (parsed?.v === 1 && typeof parsed.slug === 'string') {
-      const entry = normalizeEntry(parsed)
-      return entry ? [entry] : []
+      const entry = normalizeResourceEntry(parsed)
+      return { v: 3, resources: entry ? [entry] : [], scriptures: [] }
     }
   } catch {
     /* invalid JSON */
   }
-  return []
+  return empty
 }
 
-function saveProfileRecentResources(resources: ProfileRecentResourceEntry[]): void {
+function saveStoredPayload(resources: ProfileRecentResourceEntry[], scriptures: ProfileRecentScriptureEntry[]): void {
   if (typeof window === 'undefined') return
   try {
-    const payload: ProfileRecentResourcesV2 = { v: 2, resources }
+    const payload: ProfileRecentResourcesV3 = {
+      v: 3,
+      resources: resources.slice(0, PROFILE_RECENT_RESOURCES_STORED_MAX),
+      scriptures: scriptures.slice(0, PROFILE_RECENT_SCRIPTURES_STORED_MAX),
+    }
     gospelStorageSetSync(PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY, JSON.stringify(payload))
     emitProfileLastOpenChanged()
   } catch {
@@ -83,9 +157,19 @@ function saveProfileRecentResources(resources: ProfileRecentResourceEntry[]): vo
   }
 }
 
+function loadStoredPayload(): ProfileRecentResourcesV3 {
+  if (typeof window === 'undefined') {
+    return { v: 3, resources: [], scriptures: [] }
+  }
+  return parseStoredPayload(gospelStorageGetSync(PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY))
+}
+
 export function loadProfileRecentResources(): ProfileRecentResourceEntry[] {
-  if (typeof window === 'undefined') return []
-  return parseStoredResources(gospelStorageGetSync(PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY))
+  return loadStoredPayload().resources
+}
+
+export function loadProfileRecentScriptures(): ProfileRecentScriptureEntry[] {
+  return loadStoredPayload().scriptures
 }
 
 /**
@@ -98,9 +182,47 @@ export function recordProfileLastOpenOnEnter(profileSlug: string, profileTitle: 
   if (!slug) return
 
   const title = stripHtmlTags(profileTitle ?? '').trim() || slug
+  const { scriptures } = loadStoredPayload()
   const withoutCurrent = loadProfileRecentResources().filter((r) => r.slug !== slug)
-  const next = [{ slug, title }, ...withoutCurrent].slice(0, PROFILE_RECENT_RESOURCES_STORED_MAX)
-  saveProfileRecentResources(next)
+  const nextResources = [{ slug, title }, ...withoutCurrent].slice(0, PROFILE_RECENT_RESOURCES_STORED_MAX)
+  saveStoredPayload(nextResources, scriptures)
+}
+
+export type RecordScriptureLastOpenInput = {
+  slug: string
+  profileTitle: string
+  reference: string
+  sectionId: string
+  subsectionId: string
+  chapterView?: boolean
+}
+
+/** Call when a passage is shown in ScriptureModal (open or in-modal navigation). */
+export function recordScriptureLastOpen(input: RecordScriptureLastOpenInput): void {
+  if (typeof window === 'undefined') return
+
+  const slug = input.slug.trim()
+  const reference = input.reference.trim().replace(/–/g, '-')
+  const sectionId = input.sectionId.trim() || 'modal-view'
+  const subsectionId = input.subsectionId.trim() || 'modal-view'
+  if (!slug || !reference) return
+
+  const profileTitle = stripHtmlTags(input.profileTitle ?? '').trim() || slug
+  const entry: ProfileRecentScriptureEntry = {
+    slug,
+    profileTitle,
+    reference,
+    sectionId,
+    subsectionId,
+    ...(input.chapterView ? { chapterView: true } : {}),
+    openedAt: Date.now(),
+  }
+
+  const { resources } = loadStoredPayload()
+  const key = scriptureDedupeKey(entry)
+  const withoutDup = loadProfileRecentScriptures().filter((s) => scriptureDedupeKey(s) !== key)
+  const nextScriptures = [entry, ...withoutDup].slice(0, PROFILE_RECENT_SCRIPTURES_STORED_MAX)
+  saveStoredPayload(resources, nextScriptures)
 }
 
 /** Entries for the menu, excluding the profile currently open (up to {@link PROFILE_RECENT_MENU_MAX}). */
@@ -111,6 +233,21 @@ export function loadProfileRecentResourcesForMenu(
   const current = currentProfileSlug?.trim() ?? ''
   const filtered = current ? list.filter((r) => r.slug !== current) : list
   return filtered.slice(0, PROFILE_RECENT_MENU_MAX)
+}
+
+/** Scriptures section for Last Open (up to {@link PROFILE_RECENT_MENU_MAX}). */
+export function loadProfileRecentScripturesForMenu(): ProfileRecentScriptureEntry[] {
+  return loadProfileRecentScriptures().slice(0, PROFILE_RECENT_MENU_MAX)
+}
+
+/** Profile URL with query params to reopen ScriptureModal at the saved passage. */
+export function buildProfileRecentScriptureHref(entry: ProfileRecentScriptureEntry): string {
+  const params = new URLSearchParams()
+  params.set('scriptureRef', entry.reference)
+  if (entry.chapterView) {
+    params.set('scriptureView', 'chapter')
+  }
+  return `/${entry.slug}?${params.toString()}`
 }
 
 /** Most recently opened profile slug (touch-recency list head), or null. */

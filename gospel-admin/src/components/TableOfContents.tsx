@@ -23,10 +23,13 @@ import { OpenBookIcon } from '@/components/OpenBookIcon'
 import SunMoonAnimatedIcon from '@/components/SunMoonAnimatedIcon'
 import type { MemorizedVerse } from '@/lib/verseMemorizationStorage'
 import {
+  buildProfileRecentScriptureHref,
   GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT,
   loadProfileRecentResources,
+  loadProfileRecentScriptures,
   PROFILE_RECENT_MENU_MAX,
   type ProfileRecentResourceEntry,
+  type ProfileRecentScriptureEntry,
 } from '@/lib/profileLastOpenResourceStorage'
 
 interface TableOfContentsProps {
@@ -143,6 +146,9 @@ export default function TableOfContents({
   const [allRecentResources, setAllRecentResources] = useState<ProfileRecentResourceEntry[]>(() =>
     loadProfileRecentResources()
   )
+  const [allRecentScriptures, setAllRecentScriptures] = useState<ProfileRecentScriptureEntry[]>(() =>
+    loadProfileRecentScriptures()
+  )
   const [resourceItems, setResourceItems] = useState<PublicResourceItem[]>([])
   const [resourcesRequestDone, setResourcesRequestDone] = useState(false)
   const [isLastOpenOpen, setIsLastOpenOpen] = useState(false)
@@ -169,16 +175,22 @@ export default function TableOfContents({
     return filtered.slice(0, PROFILE_RECENT_MENU_MAX)
   }, [allRecentResources, currentProfileSlug])
 
-  const refreshRecentResources = useCallback(() => {
+  const recentScriptures = useMemo(
+    () => allRecentScriptures.slice(0, PROFILE_RECENT_MENU_MAX),
+    [allRecentScriptures]
+  )
+
+  const refreshRecentLastOpen = useCallback(() => {
     setAllRecentResources(loadProfileRecentResources())
+    setAllRecentScriptures(loadProfileRecentScriptures())
   }, [])
 
   useEffect(() => {
-    window.addEventListener(GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT, refreshRecentResources)
+    window.addEventListener(GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT, refreshRecentLastOpen)
     return () => {
-      window.removeEventListener(GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT, refreshRecentResources)
+      window.removeEventListener(GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT, refreshRecentLastOpen)
     }
-  }, [refreshRecentResources])
+  }, [refreshRecentLastOpen])
 
   useEffect(() => {
     const onStatus = (e: Event) => {
@@ -257,10 +269,13 @@ export default function TableOfContents({
 
   const isNative = Capacitor.isNativePlatform()
 
-  const showLastOpenDropdown = recentResources.length > 0
+  const showLastOpenDropdown = recentResources.length > 0 || recentScriptures.length > 0
 
   const resourcesRowClassName =
     'inline-flex items-center w-full px-4 py-3 text-base md:text-lg font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500 border border-slate-300 dark:border-slate-600 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px] cursor-pointer'
+
+  const lastOpenSectionLabelClassName =
+    'px-4 py-2 text-xs font-bold uppercase tracking-wide text-slate-600 dark:text-slate-300 bg-slate-100/80 dark:bg-slate-700/80 border-b border-slate-200 dark:border-slate-600'
 
   return (
     <div className="space-y-4 md:space-y-3">
@@ -307,19 +322,42 @@ export default function TableOfContents({
               className="mt-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-sm overflow-hidden"
               role="list"
             >
-              {recentResources.map((entry) => (
-                <Link
-                  key={entry.slug}
-                  href={`/${entry.slug}`}
-                  data-recent-resource-slug={entry.slug}
-                  onClick={() => onNavigate?.()}
-                  className="flex items-center gap-2 px-4 py-3 text-sm font-normal text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors min-w-0"
-                >
-                  <span className="min-w-0 flex-1 truncate" title={entry.title}>
-                    {entry.title}
-                  </span>
-                </Link>
-              ))}
+              {recentResources.length > 0 ? (
+                <>
+                  <p className={lastOpenSectionLabelClassName}>Resources</p>
+                  {recentResources.map((entry) => (
+                    <Link
+                      key={entry.slug}
+                      href={`/${entry.slug}`}
+                      data-recent-resource-slug={entry.slug}
+                      onClick={() => onNavigate?.()}
+                      className="flex items-center gap-2 px-4 py-3 text-sm font-normal text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors min-w-0"
+                    >
+                      <span className="min-w-0 flex-1 truncate" title={entry.title}>
+                        {entry.title}
+                      </span>
+                    </Link>
+                  ))}
+                </>
+              ) : null}
+              {recentScriptures.length > 0 ? (
+                <>
+                  <p className={lastOpenSectionLabelClassName}>Scriptures</p>
+                  {recentScriptures.map((entry) => (
+                    <Link
+                      key={`${entry.slug}|${entry.reference}`}
+                      href={buildProfileRecentScriptureHref(entry)}
+                      data-recent-scripture-ref={entry.reference}
+                      onClick={() => onNavigate?.()}
+                      className="flex items-center gap-2 px-4 py-3 text-sm font-normal text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors min-w-0"
+                    >
+                      <span className="min-w-0 flex-1 truncate" title={entry.reference}>
+                        {entry.reference}
+                      </span>
+                    </Link>
+                  ))}
+                </>
+              ) : null}
             </div>
           )}
         </div>

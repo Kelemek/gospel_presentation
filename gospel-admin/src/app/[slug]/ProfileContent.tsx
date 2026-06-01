@@ -80,7 +80,10 @@ import {
   loadProfileReadingResume,
   saveProfileReadingResume,
 } from '@/lib/profileReadingResumeStorage'
-import { recordProfileLastOpenOnEnter } from '@/lib/profileLastOpenResourceStorage'
+import {
+  recordProfileLastOpenOnEnter,
+  recordScriptureLastOpen,
+} from '@/lib/profileLastOpenResourceStorage'
 import { mcheyneDayChapterReferencesForAnchor } from '@/lib/mcheyne/mcheyneReadingDay'
 import { isMcheyneProfileSlug } from '@/lib/mcheyne/mcheyneSlug'
 import {
@@ -1129,6 +1132,50 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     modalOpenAnchors,
     scriptureFromDeepLink,
     deepLinkModalAnchors,
+  ])
+
+  useEffect(() => {
+    if (!profileSlug || !activeScripture.isOpen) return
+    const reference = activeScripture.reference.trim()
+    if (!reference) return
+
+    const anchorsMatch =
+      effectiveModalOpenAnchors?.reference.trim() === reference
+    let sectionId = anchorsMatch ? (effectiveModalOpenAnchors?.sectionId?.trim() ?? '') : ''
+    let subsectionId = anchorsMatch
+      ? (effectiveModalOpenAnchors?.subsectionId?.trim() ?? '')
+      : ''
+    if (!sectionId || !subsectionId) {
+      const found = sections ? findFirstScriptureCardAnchors(sections, reference) : null
+      if (found) {
+        sectionId = found.sectionId
+        subsectionId = found.subsectionId
+      } else {
+        sectionId = 'modal-view'
+        subsectionId = 'modal-view'
+      }
+    }
+
+    const chapterView =
+      activeScripture.initialChapterView === true ||
+      isChapterOnlyScriptureReference(reference)
+
+    recordScriptureLastOpen({
+      slug: profileSlug,
+      profileTitle: profileInfo?.title ?? profileSlug,
+      reference,
+      sectionId,
+      subsectionId,
+      ...(chapterView ? { chapterView: true } : {}),
+    })
+  }, [
+    activeScripture.isOpen,
+    activeScripture.reference,
+    activeScripture.initialChapterView,
+    profileSlug,
+    profileInfo?.title,
+    effectiveModalOpenAnchors,
+    sections,
   ])
 
   const mcheyneDayListenSubsectionId = effectiveModalOpenAnchors?.subsectionId?.trim() || ''
