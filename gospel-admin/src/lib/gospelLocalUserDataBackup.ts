@@ -7,6 +7,7 @@ import { MEMORIZE_LISTEN_SPEED_STORAGE_KEY } from '@/lib/memorizeListenSpeedStor
 import { PROFILE_READ_ALONG_UNDERLINE_STYLE_STORAGE_KEY } from '@/lib/profileReadAlongUnderlineStyleStorage'
 import { PRESENTATION_FIRST_VISIT_WELCOME_KEY } from '@/lib/presentationWelcomeStorage'
 import { PRESENTATION_READ_COMPLETE_STORAGE_KEY } from '@/lib/presentationReadCompleteStorage'
+import { PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY } from '@/lib/profileLastOpenResourceStorage'
 import {
   getGospelClientStorageMemoryEntries,
   gospelStorageGet,
@@ -44,6 +45,7 @@ export const GOSPEL_LOCAL_USER_DATA_FIXED_KEYS = [
   PROFILE_READ_ALONG_UNDERLINE_STYLE_STORAGE_KEY,
   PRESENTATION_FIRST_VISIT_WELCOME_KEY,
   PRESENTATION_READ_COMPLETE_STORAGE_KEY,
+  PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY,
   SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY,
 ] as const
 

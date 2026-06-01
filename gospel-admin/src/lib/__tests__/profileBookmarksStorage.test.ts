@@ -49,6 +49,63 @@ describe('profileBookmarksStorage', () => {
     expect(loadBookmarks()).toHaveLength(1)
   })
 
+  it('allows precise bookmark at offset 0 when legacy bookmark exists at same anchor', () => {
+    addBookmark({
+      slug: 'abc',
+      resourceTitle: 'R',
+      anchorId: 'section-1-0',
+      locationLabel: 'L',
+    })
+    const ok = addBookmark({
+      slug: 'abc',
+      resourceTitle: 'R',
+      anchorId: 'section-1-0',
+      locationLabel: 'L',
+      plainOffset: 0,
+      fingerprint: 'fp',
+    })
+    expect(ok).toBe(true)
+    expect(loadBookmarks()).toHaveLength(2)
+  })
+
+  it('rejects duplicate legacy bookmark at same slug+anchor', () => {
+    addBookmark({
+      slug: 'abc',
+      resourceTitle: 'R',
+      anchorId: 'section-1-0',
+      locationLabel: 'L',
+    })
+    const ok = addBookmark({
+      slug: 'abc',
+      resourceTitle: 'R2',
+      anchorId: 'section-1-0',
+      locationLabel: 'L2',
+    })
+    expect(ok).toBe(false)
+    expect(loadBookmarks()).toHaveLength(1)
+  })
+
+  it('rejects duplicate precise bookmark at offset 0', () => {
+    addBookmark({
+      slug: 'abc',
+      resourceTitle: 'R',
+      anchorId: 'section-1-0',
+      locationLabel: 'L',
+      plainOffset: 0,
+      fingerprint: 'fp',
+    })
+    const ok = addBookmark({
+      slug: 'abc',
+      resourceTitle: 'R2',
+      anchorId: 'section-1-0',
+      locationLabel: 'L2',
+      plainOffset: 0,
+      fingerprint: 'fp',
+    })
+    expect(ok).toBe(false)
+    expect(loadBookmarks()).toHaveLength(1)
+  })
+
   it('allows two bookmarks in same section at different offsets', () => {
     addBookmark({
       slug: 'abc',

@@ -5,6 +5,7 @@ import {
   PROFILE_READ_ALONG_LAST_SESSION_KEY_PREFIX,
   PROFILE_READ_ALONG_PROGRESS_KEY_PREFIX,
 } from '@/lib/profileReadAlongProgressStorage'
+import { PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY } from '@/lib/profileLastOpenResourceStorage'
 import { PROFILE_READING_RESUME_KEY_PREFIX } from '@/lib/profileReadingResumeStorage'
 import { PRESENTATION_READ_COMPLETE_STORAGE_KEY } from '@/lib/presentationReadCompleteStorage'
 
@@ -24,6 +25,7 @@ const SMALL_LOCAL_STORAGE_KEYS = new Set([
   'gospel-admin:memorize-listen-speed',
   'gospel-admin:profile-read-along-underline-style',
   'gospel-presentation-first-visit-welcome-v1',
+  'gospel-profile-last-open-resource:v1',
 ])
 
 const ALLOWED_GOSPEL_PROFILE_SUFFIXES = new Set([
@@ -60,6 +62,7 @@ export function isProfileReadAlongPersistenceKey(key: string): boolean {
 /** Offline profile JSON blobs (`gospel-profile-{slug}`), not bookmarks/highlights/theme. */
 export function isProfileOfflineCacheKey(key: string): boolean {
   if (isProfileReadAlongPersistenceKey(key)) return false
+  if (key === PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY) return false
   if (!key.startsWith(PROFILE_OFFLINE_CACHE_KEY_PREFIX)) return false
   const rest = key.slice(PROFILE_OFFLINE_CACHE_KEY_PREFIX.length)
   return !ALLOWED_GOSPEL_PROFILE_SUFFIXES.has(rest)

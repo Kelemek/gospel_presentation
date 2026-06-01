@@ -2,6 +2,12 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { TextSizeProvider } from '@/contexts/TextSizeContext'
 import SidebarAuthNav from '@/components/SidebarAuthNav'
+import { gospelStorageSetSync } from '@/lib/gospelClientStorage'
+import {
+  PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY,
+  resetProfileLastOpenNavigationRefsForTests,
+} from '@/lib/profileLastOpenResourceStorage'
+import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
 
 function renderToc(ui: React.ReactElement) {
   return render(<TextSizeProvider>{ui}</TextSizeProvider>)
@@ -30,6 +36,101 @@ jest.mock('@capgo/capacitor-printer', () => ({
 describe('TableOfContents additional behaviors', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    installTestLocalStorage()
+    resetProfileLastOpenNavigationRefsForTests()
+  })
+
+  function mockLoggedOutResourcesFetch() {
+    const clientMod = require('@/lib/supabase/client')
+    jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({
+      auth: { getUser: async () => ({ data: { user: null } }) },
+    }))
+    global.fetch = jest.fn(async (input: RequestInfo | URL): Promise<Response> => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.href
+            : (input as Request).url
+      if (String(url).includes('/api/profiles/public-templates')) {
+        return {
+          ok: true,
+          json: async () => ({ items: [] }),
+        } as Response
+      }
+      return { ok: false } as Response
+    }) as jest.MockedFunction<typeof fetch>
+  }
+
+  it('shows Last Open dropdown above Resources when other recent resources exist', async () => {
+    mockLoggedOutResourcesFetch()
+    gospelStorageSetSync(
+      PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY,
+      JSON.stringify({
+        v: 2,
+        resources: [
+          { slug: 'other', title: 'Current' },
+          { slug: 'default', title: 'The Gospel Presentation' },
+        ],
+      })
+    )
+
+    const TableOfContents = require('../TableOfContents').default
+    renderToc(<TableOfContents sections={[]} currentProfileSlug="other" />)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument())
+    expect(screen.getByRole('button', { name: /^Last Open$/i })).toBeInTheDocument()
+  })
+
+  it('hides Last Open when only the current profile is in recent list', async () => {
+    mockLoggedOutResourcesFetch()
+    gospelStorageSetSync(
+      PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY,
+      JSON.stringify({
+        v: 2,
+        resources: [{ slug: 'default', title: 'The Gospel Presentation' }],
+      })
+    )
+
+    const TableOfContents = require('../TableOfContents').default
+    renderToc(<TableOfContents sections={[]} currentProfileSlug="default" />)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument())
+    expect(screen.queryByRole('button', { name: /^Last Open$/i })).not.toBeInTheDocument()
+  })
+
+  it('lists up to five recent resources and navigates on row click', async () => {
+    mockLoggedOutResourcesFetch()
+    gospelStorageSetSync(
+      PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY,
+      JSON.stringify({
+        v: 2,
+        resources: [
+          { slug: 'current', title: 'Current' },
+          { slug: 'r1', title: 'Resource One' },
+          { slug: 'r2', title: 'Resource Two' },
+          { slug: 'default', title: 'The Gospel' },
+        ],
+      })
+    )
+    const onNavigate = jest.fn()
+
+    const TableOfContents = require('../TableOfContents').default
+    renderToc(
+      <TableOfContents sections={[]} currentProfileSlug="current" onNavigate={onNavigate} />
+    )
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /^Last Open$/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /^Last Open$/i }))
+
+    expect(screen.getByRole('link', { name: 'Resource One' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'The Gospel' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Current' })).not.toBeInTheDocument()
+
+    const gospelLink = screen.getByRole('link', { name: 'The Gospel' })
+    expect(gospelLink).toHaveAttribute('href', '/default')
+    fireEvent.click(gospelLink)
+    expect(onNavigate).toHaveBeenCalled()
   })
 
   it('calls window.print when Print Version is clicked', async () => {
@@ -214,7 +315,9 @@ describe('TableOfContents additional behaviors', () => {
     jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({
       auth: { getUser: async () => ({ data: { user: null } }) }
     }))
-    global.fetch = jest.fn().mockResolvedValue({ ok: false }) as typeof fetch
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue({ ok: false } as Response) as jest.MockedFunction<typeof fetch>
 
     const TableOfContents = require('../TableOfContents').default
     localStorage.removeItem('gospel-profile-text-size')

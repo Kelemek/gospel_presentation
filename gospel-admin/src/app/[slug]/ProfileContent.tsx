@@ -81,6 +81,7 @@ import {
   loadProfileReadingResume,
   saveProfileReadingResume,
 } from '@/lib/profileReadingResumeStorage'
+import { recordProfileLastOpenOnEnter } from '@/lib/profileLastOpenResourceStorage'
 import { mcheyneDayChapterReferencesForAnchor } from '@/lib/mcheyne/mcheyneReadingDay'
 import { isMcheyneProfileSlug } from '@/lib/mcheyne/mcheyneSlug'
 import {
@@ -325,6 +326,11 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       cancelled = true
     }
   }, [profileSlug, bumpVersePins])
+
+  useEffect(() => {
+    if (!profileSlug) return
+    recordProfileLastOpenOnEnter(profileSlug, profileInfo?.title ?? '')
+  }, [profileSlug, profileInfo?.title])
 
   const highlightsByScopeId = useMemo(() => {
     const out: Record<string, Array<{ id: string; startOffset: number; endOffset: number }>> = {}

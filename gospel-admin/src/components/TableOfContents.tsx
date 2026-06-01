@@ -3,7 +3,7 @@
 import { GospelSection } from '@/lib/types'
 import type { PublicResourceItem } from '@/lib/supabase-data-service'
 import Link from 'next/link'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import {
   GOSPEL_PRESENTATION_READ_STATUS_CHANGED_EVENT,
   loadPresentationReadCompleteSlugs,
@@ -22,6 +22,12 @@ import MemorizeDropdown from '@/components/MemorizeDropdown'
 import { OpenBookIcon } from '@/components/OpenBookIcon'
 import SunMoonAnimatedIcon from '@/components/SunMoonAnimatedIcon'
 import type { MemorizedVerse } from '@/lib/verseMemorizationStorage'
+import {
+  GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT,
+  loadProfileRecentResources,
+  PROFILE_RECENT_MENU_MAX,
+  type ProfileRecentResourceEntry,
+} from '@/lib/profileLastOpenResourceStorage'
 
 interface TableOfContentsProps {
   sections: GospelSection[]
@@ -122,6 +128,7 @@ function ResourceTemplateMenuLink({
 
 export default function TableOfContents({
   sections,
+  currentProfileSlug,
   onNavigate,
   onMemorizationPracticeStart,
   onOpenSpurgeonLibrary,
@@ -133,8 +140,12 @@ export default function TableOfContents({
   onOpenBibleReader,
 }: TableOfContentsProps) {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [allRecentResources, setAllRecentResources] = useState<ProfileRecentResourceEntry[]>(() =>
+    loadProfileRecentResources()
+  )
   const [resourceItems, setResourceItems] = useState<PublicResourceItem[]>([])
   const [resourcesRequestDone, setResourcesRequestDone] = useState(false)
+  const [isLastOpenOpen, setIsLastOpenOpen] = useState(false)
   const [isResourcesOpen, setIsResourcesOpen] = useState(false)
   const [isTextSizeOpen, setIsTextSizeOpen] = useState(false)
   const [isTranslationOpen, setIsTranslationOpen] = useState(false)
@@ -149,6 +160,25 @@ export default function TableOfContents({
   const refreshReadCompleteSlugs = useCallback(() => {
     setReadCompleteSlugs(new Set(loadPresentationReadCompleteSlugs()))
   }, [])
+
+  const recentResources = useMemo(() => {
+    const current = currentProfileSlug?.trim() ?? ''
+    const filtered = current
+      ? allRecentResources.filter((r) => r.slug !== current)
+      : allRecentResources
+    return filtered.slice(0, PROFILE_RECENT_MENU_MAX)
+  }, [allRecentResources, currentProfileSlug])
+
+  const refreshRecentResources = useCallback(() => {
+    setAllRecentResources(loadProfileRecentResources())
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener(GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT, refreshRecentResources)
+    return () => {
+      window.removeEventListener(GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT, refreshRecentResources)
+    }
+  }, [refreshRecentResources])
 
   useEffect(() => {
     const onStatus = (e: Event) => {
@@ -227,16 +257,82 @@ export default function TableOfContents({
 
   const isNative = Capacitor.isNativePlatform()
 
+  const showLastOpenDropdown = recentResources.length > 0
+
+  const resourcesRowClassName =
+    'inline-flex items-center w-full px-4 py-3 text-base md:text-lg font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500 border border-slate-300 dark:border-slate-600 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px] cursor-pointer'
+
   return (
     <div className="space-y-4 md:space-y-3">
-      {/* Resources dropdown - on web always; on native only when not logged in */}
+      {/* Last Open (recent resources) — on web always; on native only when not logged in */}
+      {(!isNative || !isLoggedIn) && showLastOpenDropdown ? (
+        <div>
+          <button
+            type="button"
+            data-tour="toc-last-open-toggle"
+            onClick={() => setIsLastOpenOpen(!isLastOpenOpen)}
+            className={resourcesRowClassName}
+            aria-expanded={isLastOpenOpen}
+            aria-haspopup="listbox"
+          >
+            <svg
+              className="w-5 h-5 mr-2 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            Last Open
+            <span className={`ml-auto transition-transform ${isLastOpenOpen ? 'rotate-180' : ''}`}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </span>
+          </button>
+          {isLastOpenOpen && (
+            <div
+              data-tour="toc-last-open-panel"
+              className="mt-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-sm overflow-hidden"
+              role="list"
+            >
+              {recentResources.map((entry) => (
+                <Link
+                  key={entry.slug}
+                  href={`/${entry.slug}`}
+                  data-recent-resource-slug={entry.slug}
+                  onClick={() => onNavigate?.()}
+                  className="flex items-center gap-2 px-4 py-3 text-sm font-normal text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors min-w-0"
+                >
+                  <span className="min-w-0 flex-1 truncate" title={entry.title}>
+                    {entry.title}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {/* Resources dropdown — on web always; on native only when not logged in */}
       {(!isNative || !isLoggedIn) && (
         <div>
           <button
             type="button"
             data-tour="toc-resources-toggle"
             onClick={() => setIsResourcesOpen(!isResourcesOpen)}
-            className="inline-flex items-center w-full px-4 py-3 text-base md:text-lg font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500 border border-slate-300 dark:border-slate-600 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px] cursor-pointer"
+            className={resourcesRowClassName}
             aria-expanded={isResourcesOpen}
             aria-haspopup="listbox"
           >

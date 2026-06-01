@@ -74,8 +74,11 @@ function persist(bookmarks: ProfileBookmark[]): void {
 }
 
 function bookmarkPositionKey(b: Pick<ProfileBookmark, 'slug' | 'anchorId' | 'plainOffset'>): string {
-  const offset = typeof b.plainOffset === 'number' && Number.isFinite(b.plainOffset) ? b.plainOffset : 0
-  return `${b.slug}\0${b.anchorId}\0${offset}`
+  const offsetPart =
+    typeof b.plainOffset === 'number' && Number.isFinite(b.plainOffset)
+      ? String(b.plainOffset)
+      : 'legacy'
+  return `${b.slug}\0${b.anchorId}\0${offsetPart}`
 }
 
 /** Returns false if duplicate slug+anchor+offset or storage failed. */
