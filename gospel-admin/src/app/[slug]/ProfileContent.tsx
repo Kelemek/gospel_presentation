@@ -202,6 +202,8 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     abortUserIntent: AbortController
   } | null>(null)
   const readingResumeSaveTimerRef = useRef<number | null>(null)
+  const readingResumeSaveIdleRef = useRef<number | null>(null)
+  const readingResumeSaveUsesIdleCallbackRef = useRef(false)
 
   const [currentReferenceIndex, setCurrentReferenceIndex] = useState(0)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -381,25 +383,49 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
 
   const READING_RESUME_SAVE_DEBOUNCE_MS = 1500
 
+  const cancelPendingReadingResumeSave = useCallback(() => {
+    if (readingResumeSaveTimerRef.current != null) {
+      window.clearTimeout(readingResumeSaveTimerRef.current)
+      readingResumeSaveTimerRef.current = null
+    }
+    const idleId = readingResumeSaveIdleRef.current
+    if (idleId == null) return
+    readingResumeSaveIdleRef.current = null
+    if (readingResumeSaveUsesIdleCallbackRef.current && typeof cancelIdleCallback === 'function') {
+      cancelIdleCallback(idleId)
+    } else {
+      window.cancelAnimationFrame(idleId)
+    }
+  }, [])
+
+  const scheduleFlushReadingResumeSave = useCallback(() => {
+    const run = () => {
+      readingResumeSaveIdleRef.current = null
+      flushReadingResumeSave()
+    }
+    if (typeof requestIdleCallback === 'function') {
+      readingResumeSaveUsesIdleCallbackRef.current = true
+      readingResumeSaveIdleRef.current = requestIdleCallback(run, { timeout: 3000 })
+      return
+    }
+    readingResumeSaveUsesIdleCallbackRef.current = false
+    readingResumeSaveIdleRef.current = window.requestAnimationFrame(run)
+  }, [flushReadingResumeSave])
+
   useEffect(() => {
     if (!isHydrated || !profileSlug || sectionCount === 0) return
 
     const scheduleSave = () => {
-      if (readingResumeSaveTimerRef.current != null) {
-        window.clearTimeout(readingResumeSaveTimerRef.current)
-      }
+      cancelPendingReadingResumeSave()
       readingResumeSaveTimerRef.current = window.setTimeout(() => {
         readingResumeSaveTimerRef.current = null
-        flushReadingResumeSave()
+        scheduleFlushReadingResumeSave()
       }, READING_RESUME_SAVE_DEBOUNCE_MS)
     }
 
     window.addEventListener('scroll', scheduleSave, { passive: true })
     const onHide = () => {
-      if (readingResumeSaveTimerRef.current != null) {
-        window.clearTimeout(readingResumeSaveTimerRef.current)
-        readingResumeSaveTimerRef.current = null
-      }
+      cancelPendingReadingResumeSave()
       flushReadingResumeSave()
     }
     document.addEventListener('visibilitychange', onHide)
@@ -409,11 +435,16 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       window.removeEventListener('scroll', scheduleSave)
       document.removeEventListener('visibilitychange', onHide)
       window.removeEventListener('pagehide', onHide)
-      if (readingResumeSaveTimerRef.current != null) {
-        window.clearTimeout(readingResumeSaveTimerRef.current)
-      }
+      cancelPendingReadingResumeSave()
     }
-  }, [isHydrated, profileSlug, sectionCount, flushReadingResumeSave])
+  }, [
+    isHydrated,
+    profileSlug,
+    sectionCount,
+    flushReadingResumeSave,
+    cancelPendingReadingResumeSave,
+    scheduleFlushReadingResumeSave,
+  ])
 
   useEffect(() => {
     if (profileReadingNavSlugRef.current !== profileSlug) {

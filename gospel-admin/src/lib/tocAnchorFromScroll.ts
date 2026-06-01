@@ -33,24 +33,70 @@ export function buildOrderedTocAnchorIds(sections: GospelSection[]): string[] {
   return ids
 }
 
+const orderedTocAnchorIdsCache = new WeakMap<GospelSection[], string[]>()
+
+/** Cached TOC anchor ids (document order) for scrollspy and reading-position capture. */
+export function getOrderedTocAnchorIds(sections: GospelSection[]): string[] {
+  let cached = orderedTocAnchorIdsCache.get(sections)
+  if (!cached) {
+    cached = buildOrderedTocAnchorIds(sections)
+    orderedTocAnchorIdsCache.set(sections, cached)
+  }
+  return cached
+}
+
+function tocAnchorViewportTop(id: string): number | null {
+  const el = document.getElementById(id)
+  if (!el) return null
+  return el.getBoundingClientRect().top
+}
+
+function findCurrentTocAnchorIndexLinear(orderedIds: string[], threshold: number): number {
+  let activeIndex = -1
+  for (let i = 0; i < orderedIds.length; i += 1) {
+    const top = tocAnchorViewportTop(orderedIds[i]!)
+    if (top === null) continue
+    if (activeIndex < 0) activeIndex = i
+    if (top <= threshold) activeIndex = i
+  }
+  return activeIndex
+}
+
+/** O(log n) scrollspy when anchor tops increase with document order (typical profile layout). */
+function findCurrentTocAnchorIndexByBinarySearch(orderedIds: string[], threshold: number): number {
+  let lo = 0
+  let hi = orderedIds.length - 1
+  let best = -1
+
+  while (lo <= hi) {
+    const mid = Math.floor((lo + hi) / 2)
+    const top = tocAnchorViewportTop(orderedIds[mid]!)
+    if (top === null) return -1
+    if (top <= threshold) {
+      best = mid
+      lo = mid + 1
+    } else {
+      hi = mid - 1
+    }
+  }
+
+  return best
+}
+
 /**
  * Best-guess TOC anchor for current scroll position (scrollspy-style).
  */
 export function getCurrentTocAnchorId(sections: GospelSection[]): string | null {
   if (typeof window === 'undefined' || sections.length === 0) return null
-  const orderedIds = buildOrderedTocAnchorIds(sections)
+  const orderedIds = getOrderedTocAnchorIds(sections)
   const threshold = getProfileHeaderScrollOffset() + 24
 
-  let activeId: string | null = null
-  for (const id of orderedIds) {
-    const el = document.getElementById(id)
-    if (!el) continue
-    if (activeId === null) activeId = id
-    if (el.getBoundingClientRect().top <= threshold) {
-      activeId = id
-    }
+  let index = findCurrentTocAnchorIndexByBinarySearch(orderedIds, threshold)
+  if (index < 0) {
+    index = findCurrentTocAnchorIndexLinear(orderedIds, threshold)
   }
-  return activeId
+  if (index < 0) return null
+  return orderedIds[index] ?? null
 }
 
 /**

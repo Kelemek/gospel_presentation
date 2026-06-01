@@ -3,7 +3,7 @@
  */
 
 import type { GospelSection } from '@/lib/types'
-import { buildOrderedTocAnchorIds, getCurrentTocAnchorId } from '@/lib/tocAnchorFromScroll'
+import { getCurrentTocAnchorId, getOrderedTocAnchorIds } from '@/lib/tocAnchorFromScroll'
 import { readAlongTextFingerprint } from '@/lib/profileReadAlongProgressStorage'
 import type { ProfileListenTextOptions } from '@/lib/profileHighlightVisibleText'
 import { isListenPlainTextNodeExcluded } from '@/lib/profileHighlightVisibleText'
@@ -191,19 +191,37 @@ function isNodeContainedInScope(node: Node, scope: HTMLElement): boolean {
   return el != null && scope.contains(el)
 }
 
-function binarySearchPlainOffsetAtViewportLine(
+/** Above this length, narrow binary search around a layout-based estimate (long CCEL sections). */
+const PLAIN_LEN_APPROXIMATE_THRESHOLD = 12_000
+const PLAIN_OFFSET_BINARY_SEARCH_MAX_ITER = 18
+const PLAIN_OFFSET_REFINE_WINDOW_FRACTION = 1 / 24
+const PLAIN_OFFSET_REFINE_WINDOW_MIN = 256
+
+function approximatePlainOffsetAtViewportLine(scope: HTMLElement, plainLen: number): number {
+  const targetY = profileReadingLineViewportY()
+  const rect = scope.getBoundingClientRect()
+  if (rect.height <= 0) return 0
+  const fraction = (targetY - rect.top) / rect.height
+  return Math.max(0, Math.min(plainLen, Math.round(fraction * plainLen)))
+}
+
+function binarySearchPlainOffsetInRange(
   scope: HTMLElement,
   plainLen: number,
+  rangeLo: number,
+  rangeHi: number,
   opts?: ProfileListenTextOptions
 ): number {
   if (plainLen <= 0) return 0
   const targetY = profileReadingLineViewportY()
 
-  let lo = 0
-  let hi = plainLen - 1
-  let best = 0
+  let lo = Math.max(0, rangeLo)
+  let hi = Math.min(plainLen - 1, rangeHi)
+  let best = lo
+  let steps = 0
 
-  while (lo <= hi) {
+  while (lo <= hi && steps < PLAIN_OFFSET_BINARY_SEARCH_MAX_ITER) {
+    steps += 1
     const mid = Math.floor((lo + hi) / 2)
     const rect = getCaretClientRectForReadAlongPlainOffset(scope, plainLen, mid, opts)
     if (!rect) {
@@ -218,6 +236,14 @@ function binarySearchPlainOffsetAtViewportLine(
   }
 
   return Math.min(best, plainLen)
+}
+
+function binarySearchPlainOffsetAtViewportLine(
+  scope: HTMLElement,
+  plainLen: number,
+  opts?: ProfileListenTextOptions
+): number {
+  return binarySearchPlainOffsetInRange(scope, plainLen, 0, plainLen - 1, opts)
 }
 
 /**
@@ -240,6 +266,17 @@ export function getPlainOffsetAtViewportReadLine(
       opts
     )
     return Math.max(0, Math.min(off, plainLen))
+  }
+
+  if (plainLen > PLAIN_LEN_APPROXIMATE_THRESHOLD) {
+    const approx = approximatePlainOffsetAtViewportLine(scope, plainLen)
+    const window = Math.max(
+      PLAIN_OFFSET_REFINE_WINDOW_MIN,
+      Math.floor(plainLen * PLAIN_OFFSET_REFINE_WINDOW_FRACTION)
+    )
+    const lo = Math.max(0, approx - window)
+    const hi = Math.min(plainLen - 1, approx + window)
+    return binarySearchPlainOffsetInRange(scope, plainLen, lo, hi, opts)
   }
 
   return binarySearchPlainOffsetAtViewportLine(scope, plainLen, opts)
@@ -279,7 +316,7 @@ export function captureReadingPositionAtViewport(
   if (!plain) return null
 
   const fingerprint = readAlongTextFingerprint(plain)
-  const firstAnchorId = buildOrderedTocAnchorIds(sections)[0]
+  const firstAnchorId = getOrderedTocAnchorIds(sections)[0]
   if (
     window.scrollY <= READING_CAPTURE_DOCUMENT_TOP_SCROLL_Y_PX &&
     firstAnchorId &&

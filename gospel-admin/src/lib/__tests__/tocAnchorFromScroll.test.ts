@@ -1,6 +1,7 @@
 import type { GospelSection } from '@/lib/types'
 import {
   buildOrderedTocAnchorIds,
+  getCurrentTocAnchorId,
   getLocationLabel,
 } from '../tocAnchorFromScroll'
 
@@ -53,5 +54,55 @@ describe('tocAnchorFromScroll', () => {
     expect(getLocationLabel(sampleSections, 'section-1-0-0')).toBe(
       'First / Sub A / Nested'
     )
+  })
+
+  it('getCurrentTocAnchorId uses binary search on many anchors', () => {
+    const manySubsections: GospelSection[] = [
+      {
+        section: '1',
+        title: 'Book',
+        subsections: Array.from({ length: 40 }, (_, i) => ({
+          title: `Sub ${i}`,
+          content: 'x',
+          nestedSubsections: [],
+        })),
+      },
+    ]
+    document.body.innerHTML = ''
+    const tops: number[] = []
+    manySubsections[0]!.subsections.forEach((_, index) => {
+      const el = document.createElement('div')
+      el.id = `section-1-${index}`
+      const top = 100 + index * 80
+      tops.push(top)
+      document.body.appendChild(el)
+      jest.spyOn(el, 'getBoundingClientRect').mockReturnValue({
+        top,
+        left: 0,
+        right: 0,
+        bottom: top + 40,
+        width: 0,
+        height: 40,
+        x: 0,
+        y: top,
+        toJSON: () => ({}),
+      })
+    })
+
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true })
+    jest.spyOn(document, 'querySelector').mockImplementation((selector) => {
+      if (selector === '[data-profile-sticky-header]') return null
+      return null
+    })
+
+    const threshold = 80 + 24
+    let expectIndex = 0
+    for (let i = 0; i < tops.length; i += 1) {
+      if (tops[i]! <= threshold) expectIndex = i
+    }
+    expect(getCurrentTocAnchorId(manySubsections)).toBe(`section-1-${expectIndex}`)
+
+    document.body.innerHTML = ''
+    jest.restoreAllMocks()
   })
 })
