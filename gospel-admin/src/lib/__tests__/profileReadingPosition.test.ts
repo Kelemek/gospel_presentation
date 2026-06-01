@@ -1,6 +1,8 @@
 /** @jest-environment jsdom */
 
+import type { GospelSection } from '@/lib/types'
 import {
+  captureReadingPositionAtViewport,
   collapsedPlainOffsetBeforeListenBoundary,
   collapsedPlainOffsetFromRawListenOffset,
   excerptAroundPlainOffset,
@@ -63,6 +65,28 @@ describe('profileReadingPosition', () => {
     )
   })
 
+  it('captureReadingPositionAtViewport uses offset 0 at document top without binary search', () => {
+    const sections = [
+      {
+        section: 1,
+        title: 'One',
+        subsections: [{ title: 'Sub', scriptureReferences: [], nestedSubsections: [] }],
+      },
+    ] as GospelSection[]
+
+    const scope = document.createElement('div')
+    scope.id = 'section-1'
+    scope.innerHTML = '<p>' + 'word '.repeat(2000) + '</p>'
+    document.body.appendChild(scope)
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true })
+
+    const captured = captureReadingPositionAtViewport(sections, 'default')
+    expect(captured?.anchorId).toBe('section-1')
+    expect(captured?.plainOffset).toBe(0)
+
+    document.body.removeChild(scope)
+  })
+
   it('excerptAroundPlainOffset trims and adds ellipses', () => {
     const text = 'abcdefghijklmnopqrstuvwxyz'.repeat(4)
     const excerpt = excerptAroundPlainOffset(text, 60)
@@ -85,7 +109,7 @@ describe('profileReadingPosition', () => {
       )
     })
 
-    it('aligns plainOffset 0 at the viewport read line', () => {
+    it('does not fine-align plainOffset 0 (subsection start is enough)', () => {
       const scope = document.createElement('div')
       scope.id = 'section-1'
       scope.innerHTML = '<p>Start of section text</p>'
@@ -96,10 +120,26 @@ describe('profileReadingPosition', () => {
 
       restoreReadingPosition('section-1', 0, fingerprint, 'default')
 
+      expect(mockScrollPlainOffsetToViewportY).not.toHaveBeenCalled()
+
+      document.body.removeChild(scope)
+    })
+
+    it('aligns mid-section plainOffset at the viewport read line', () => {
+      const scope = document.createElement('div')
+      scope.id = 'section-1'
+      scope.innerHTML = '<p>Start of section text with more words</p>'
+      document.body.appendChild(scope)
+
+      const plain = plainTextForProfileResourceListen(scope)
+      const fingerprint = readAlongTextFingerprint(plain)
+
+      restoreReadingPosition('section-1', 8, fingerprint, 'default')
+
       expect(mockScrollPlainOffsetToViewportY).toHaveBeenCalledWith(
         scope,
         plain.length,
-        0,
+        8,
         profileReadingLineViewportY(),
         'auto',
         expect.objectContaining({ omitHeadingText: expect.any(Boolean) })

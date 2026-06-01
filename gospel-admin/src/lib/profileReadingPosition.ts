@@ -3,7 +3,7 @@
  */
 
 import type { GospelSection } from '@/lib/types'
-import { getCurrentTocAnchorId } from '@/lib/tocAnchorFromScroll'
+import { buildOrderedTocAnchorIds, getCurrentTocAnchorId } from '@/lib/tocAnchorFromScroll'
 import { readAlongTextFingerprint } from '@/lib/profileReadAlongProgressStorage'
 import type { ProfileListenTextOptions } from '@/lib/profileHighlightVisibleText'
 import { isListenPlainTextNodeExcluded } from '@/lib/profileHighlightVisibleText'
@@ -260,6 +260,9 @@ export function excerptAroundPlainOffset(plain: string, plainOffset: number): st
   return slice
 }
 
+/** Near document top, avoid expensive caret/binary-search work on long sections. */
+const READING_CAPTURE_DOCUMENT_TOP_SCROLL_Y_PX = 8
+
 export function captureReadingPositionAtViewport(
   sections: GospelSection[],
   profileSlug: string
@@ -275,8 +278,22 @@ export function captureReadingPositionAtViewport(
   const plain = plainTextForProfileResourceListen(scope, opts)
   if (!plain) return null
 
-  const plainOffset = getPlainOffsetAtViewportReadLine(scope, opts)
   const fingerprint = readAlongTextFingerprint(plain)
+  const firstAnchorId = buildOrderedTocAnchorIds(sections)[0]
+  if (
+    window.scrollY <= READING_CAPTURE_DOCUMENT_TOP_SCROLL_Y_PX &&
+    firstAnchorId &&
+    anchorId === firstAnchorId
+  ) {
+    return {
+      anchorId,
+      plainOffset: 0,
+      fingerprint,
+      excerpt: excerptAroundPlainOffset(plain, 0),
+    }
+  }
+
+  const plainOffset = getPlainOffsetAtViewportReadLine(scope, opts)
   const excerpt = excerptAroundPlainOffset(plain, plainOffset)
 
   return { anchorId, plainOffset, fingerprint, excerpt }
@@ -331,6 +348,12 @@ export function restoreReadingPosition(
       const plain = plainTextForProfileResourceListen(scope, opts)
       const plainLen = plain.length
       if (plainLen === 0 || !Number.isFinite(plainOffset) || plainOffset < 0) {
+        options?.onDone?.()
+        return
+      }
+      // Offset 0 is the subsection start; scrollToTocAnchor already placed the anchor.
+      // Fine alignment scrolls down from the document top and fights manual scroll-up.
+      if (plainOffset === 0) {
         options?.onDone?.()
         return
       }

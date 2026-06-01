@@ -66,6 +66,7 @@ import {
   removePresentationReadCompleteSlug,
 } from '@/lib/presentationReadCompleteStorage'
 import { scrollToTocAnchor, scrollToTocAnchorWhenReady } from '@/lib/scrollToTocAnchor'
+import { hydrateGospelClientStorage } from '@/lib/gospelClientStorage'
 import { consumePendingBookmarkResume } from '@/lib/profileBookmarkResumeSession'
 import {
   captureReadingPositionAtViewport,
@@ -196,6 +197,10 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const mcheyneResumeScrollCancelRef = useRef<(() => void) | null>(null)
   const profileReadingNavAppliedRef = useRef(false)
   const profileReadingNavSlugRef = useRef<string | null>(null)
+  const readingResumeRestoreSessionRef = useRef<{
+    cancelScroll: () => void
+    abortUserIntent: AbortController
+  } | null>(null)
   const readingResumeSaveTimerRef = useRef<number | null>(null)
 
   const [currentReferenceIndex, setCurrentReferenceIndex] = useState(0)
@@ -417,49 +422,99 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     }
   }, [profileSlug])
 
+  const cancelReadingResumeRestore = useCallback(() => {
+    const session = readingResumeRestoreSessionRef.current
+    if (!session) return
+    session.abortUserIntent.abort()
+    session.cancelScroll()
+    readingResumeRestoreSessionRef.current = null
+  }, [])
+
+  const startReadingResumeRestore = useCallback(
+    (anchorId: string, plainOffset: number, fingerprint: string) => {
+      cancelReadingResumeRestore()
+      const abortUserIntent = new AbortController()
+      const cancelScroll = restoreReadingPosition(anchorId, plainOffset, fingerprint, profileSlug)
+      readingResumeRestoreSessionRef.current = { cancelScroll, abortUserIntent }
+
+      const stopOnUserIntent = () => {
+        if (readingResumeRestoreSessionRef.current?.abortUserIntent !== abortUserIntent) return
+        cancelReadingResumeRestore()
+      }
+      const intentOpts = { passive: true, signal: abortUserIntent.signal } as const
+      window.addEventListener('wheel', stopOnUserIntent, intentOpts)
+      window.addEventListener('touchstart', stopOnUserIntent, intentOpts)
+    },
+    [cancelReadingResumeRestore, profileSlug]
+  )
+
   // Precise bookmark resume (session) or automatic reading position when no competing deep link
   useEffect(() => {
     if (!isHydrated || sectionCount === 0 || !profileSlug) return
 
+    let cancelled = false
+
     const timer = window.setTimeout(() => {
-      if (profileReadingNavAppliedRef.current) return
-      if (studyRefParam) return
+      void (async () => {
+        await hydrateGospelClientStorage()
+        if (cancelled || profileReadingNavAppliedRef.current) return
+        if (studyRefParam) {
+          profileReadingNavAppliedRef.current = true
+          return
+        }
 
-      const rawHash = typeof window !== 'undefined' ? window.location.hash.slice(1) : ''
-      if (rawHash && rawHash.startsWith('section-')) return
+        const rawHash = typeof window !== 'undefined' ? window.location.hash.slice(1) : ''
+        if (rawHash && rawHash.startsWith('section-')) {
+          profileReadingNavAppliedRef.current = true
+          return
+        }
 
-      if (isMcheyneProfileSlug(profileSlug)) {
-        if (resolveMcheynePlanDayFromNavigation(mcheynePlanDayParam) != null) return
-        if (resolveMcheyneResumePinFromNavigation(mcheyneResumePinParam)) return
-      }
+        if (isMcheyneProfileSlug(profileSlug)) {
+          if (resolveMcheynePlanDayFromNavigation(mcheynePlanDayParam) != null) {
+            profileReadingNavAppliedRef.current = true
+            return
+          }
+          if (resolveMcheyneResumePinFromNavigation(mcheyneResumePinParam)) {
+            profileReadingNavAppliedRef.current = true
+            return
+          }
+        }
 
-      const pending = consumePendingBookmarkResume()
-      if (pending) {
+        const pending = consumePendingBookmarkResume()
+        if (pending) {
+          profileReadingNavAppliedRef.current = true
+          startReadingResumeRestore(
+            pending.anchorId,
+            pending.plainOffset,
+            pending.fingerprint
+          )
+          return
+        }
+
+        const saved = loadProfileReadingResume(profileSlug)
+        if (!saved) {
+          profileReadingNavAppliedRef.current = true
+          return
+        }
+
+        const scope = resolveReadingScope(saved.anchorId)
+        const listenOpts = listenTextOptionsForProfileSlug(profileSlug)
+        if (scope && !isReadingPositionFingerprintValid(scope, saved.fingerprint, listenOpts)) {
+          clearProfileReadingResume(profileSlug)
+          profileReadingNavAppliedRef.current = true
+          return
+        }
+
         profileReadingNavAppliedRef.current = true
-        restoreReadingPosition(
-          pending.anchorId,
-          pending.plainOffset,
-          pending.fingerprint,
-          profileSlug
-        )
-        return
-      }
-
-      const saved = loadProfileReadingResume(profileSlug)
-      if (!saved) return
-
-      const scope = resolveReadingScope(saved.anchorId)
-      const listenOpts = listenTextOptionsForProfileSlug(profileSlug)
-      if (!scope || !isReadingPositionFingerprintValid(scope, saved.fingerprint, listenOpts)) {
-        clearProfileReadingResume(profileSlug)
-        return
-      }
-
-      profileReadingNavAppliedRef.current = true
-      restoreReadingPosition(saved.anchorId, saved.plainOffset, saved.fingerprint, profileSlug)
+        startReadingResumeRestore(saved.anchorId, saved.plainOffset, saved.fingerprint)
+      })()
     }, 120)
 
-    return () => window.clearTimeout(timer)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+      cancelReadingResumeRestore()
+    }
   }, [
     isHydrated,
     sectionCount,
@@ -467,7 +522,8 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     studyRefParam,
     mcheynePlanDayParam,
     mcheyneResumePinParam,
-    sections,
+    startReadingResumeRestore,
+    cancelReadingResumeRestore,
   ])
 
   // Study library By scripture: scroll to first subsection matching ?studyRef=
