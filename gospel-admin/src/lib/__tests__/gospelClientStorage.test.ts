@@ -2,6 +2,7 @@
  * @jest-environment jsdom
  */
 
+import { PROFILE_BOOKMARKS_STORAGE_KEY } from '@/lib/profileBookmarksStorage'
 import { GOSPEL_ANSWERS_KEY_PREFIX, VERSE_MEMORIZATION_STORAGE_KEY } from '@/lib/gospelClientStoragePolicy'
 import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
 import * as gospelClientKvStore from '@/lib/gospelClientKvStore'
@@ -91,6 +92,27 @@ describe('gospelClientStorage', () => {
     expect(stored).toBeTruthy()
     const ids = (JSON.parse(stored!) as Array<{ questionId: string }>).map((r) => r.questionId).sort()
     expect(ids).toEqual(['q-a', 'q-b'])
+  })
+
+  it('hydrate loads IndexedDB-only keys into sync read cache', async () => {
+    const payload = JSON.stringify({
+      v: 2,
+      bookmarks: [
+        {
+          id: 'b1',
+          slug: 'default',
+          resourceTitle: 'Gospel',
+          anchorId: 'section-1-0',
+          locationLabel: '1',
+          createdAt: 1,
+        },
+      ],
+    })
+    await gospelStorageSet(PROFILE_BOOKMARKS_STORAGE_KEY, payload)
+    resetGospelClientStorageForTests()
+
+    await hydrateGospelClientStorage()
+    expect(gospelStorageGetSync(PROFILE_BOOKMARKS_STORAGE_KEY)).toBe(payload)
   })
 
   it('hydrateMemorizedVersesStorage is an alias for hydrateGospelClientStorage', async () => {

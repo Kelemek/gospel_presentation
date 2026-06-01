@@ -6,11 +6,27 @@ import { visibleListenRawText } from '@/lib/profileResourceListenText'
 import {
   advanceScriptureListenIntegratedPlaybackTime,
   computeReadAlongVerticalScrollDeltaForComfortZone,
+  computeScrollDeltaToAlignCaretTopToViewportY,
   computeScriptureListenProportionalScrollTop,
   computeScriptureListenTargetScrollTop,
   scrollReadAlongPlainInScrollContainerIfNeeded,
   walkerOffsetForReadAlongPlainOffset,
 } from '@/lib/scrollReadAlongPlain'
+
+describe('computeScrollDeltaToAlignCaretTopToViewportY', () => {
+  it('returns 0 inside deadband', () => {
+    expect(computeScrollDeltaToAlignCaretTopToViewportY(104, 104)).toBe(0)
+    expect(computeScrollDeltaToAlignCaretTopToViewportY(106, 104, 3)).toBe(0)
+  })
+
+  it('returns delta when caret is below target', () => {
+    expect(computeScrollDeltaToAlignCaretTopToViewportY(200, 104)).toBe(96)
+  })
+
+  it('returns negative delta when caret is above target', () => {
+    expect(computeScrollDeltaToAlignCaretTopToViewportY(50, 104)).toBe(-54)
+  })
+})
 
 describe('computeReadAlongVerticalScrollDeltaForComfortZone', () => {
   const topM = 100

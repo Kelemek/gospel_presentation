@@ -66,9 +66,14 @@ export interface GospelLocalUserDataPayload {
 }
 
 /** Offline profile HTML blobs stay out of backup; user-owned `gospel-profile-*` keys are allowlisted or matched above. */
+export function isProfileReadingResumePersistenceKey(key: string): boolean {
+  return key.startsWith('gospel-profile-reading-resume:')
+}
+
 export function isGospelLocalUserDataImportKey(key: string): boolean {
   if (BLOCKED_EXACT_KEYS.has(key)) return false
   if (isProfileReadAlongPersistenceKey(key)) return true
+  if (isProfileReadingResumePersistenceKey(key)) return true
   if (isProfileOfflineCacheKey(key)) return false
   if ((GOSPEL_LOCAL_USER_DATA_FIXED_KEYS as readonly string[]).includes(key)) return true
   return KEY_PREFIXES.some((p) => key.startsWith(p))

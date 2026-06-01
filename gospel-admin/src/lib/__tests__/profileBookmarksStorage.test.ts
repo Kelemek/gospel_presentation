@@ -28,21 +28,68 @@ describe('profileBookmarksStorage', () => {
     expect(list[0].anchorId).toBe('section-1-0')
   })
 
-  it('rejects duplicate slug+anchor', () => {
+  it('rejects duplicate slug+anchor+offset', () => {
     addBookmark({
       slug: 'abc',
       resourceTitle: 'R',
       anchorId: 'section-1-0',
       locationLabel: 'L',
+      plainOffset: 10,
+      fingerprint: 'fp',
     })
     const ok = addBookmark({
       slug: 'abc',
       resourceTitle: 'R2',
       anchorId: 'section-1-0',
       locationLabel: 'L2',
+      plainOffset: 10,
+      fingerprint: 'fp',
     })
     expect(ok).toBe(false)
     expect(loadBookmarks()).toHaveLength(1)
+  })
+
+  it('allows two bookmarks in same section at different offsets', () => {
+    addBookmark({
+      slug: 'abc',
+      resourceTitle: 'R',
+      anchorId: 'section-1-0',
+      locationLabel: 'L',
+      plainOffset: 10,
+      fingerprint: 'fp',
+    })
+    const ok = addBookmark({
+      slug: 'abc',
+      resourceTitle: 'R',
+      anchorId: 'section-1-0',
+      locationLabel: 'L',
+      plainOffset: 200,
+      fingerprint: 'fp',
+    })
+    expect(ok).toBe(true)
+    expect(loadBookmarks()).toHaveLength(2)
+  })
+
+  it('loads v1 bookmarks without offset fields', () => {
+    gospelStorageSetSync(
+      PROFILE_BOOKMARKS_STORAGE_KEY,
+      JSON.stringify({
+        v: 1,
+        bookmarks: [
+          {
+            id: 'legacy',
+            slug: 's',
+            resourceTitle: 'T',
+            anchorId: 'section-1',
+            locationLabel: 'Loc',
+            createdAt: 1,
+          },
+        ],
+      })
+    )
+    const list = loadBookmarks()
+    expect(list).toHaveLength(1)
+    expect(list[0].plainOffset).toBeUndefined()
   })
 
   it('removeBookmark removes by id', () => {

@@ -1,4 +1,4 @@
-import { idbGetItem, idbRemoveItem, idbSetItem } from '@/lib/gospelClientKvStore'
+import { idbGetItem, idbListKeys, idbRemoveItem, idbSetItem } from '@/lib/gospelClientKvStore'
 import { shouldUseIndexedDb } from '@/lib/gospelClientStoragePolicy'
 import { emitGospelClientStorageHydrated } from '@/lib/gospelClientStorageEvents'
 
@@ -81,6 +81,20 @@ export async function hydrateGospelClientStorage(): Promise<void> {
       } catch {
         memoryCache.set(key, lsValue)
       }
+    }
+
+    try {
+      const idbKeys = await idbListKeys()
+      for (const key of idbKeys) {
+        if (!shouldUseIndexedDb(key)) continue
+        if (memoryCache.has(key)) continue
+        const idbValue = await idbGetItem(key)
+        if (idbValue != null) {
+          memoryCache.set(key, idbValue)
+        }
+      }
+    } catch {
+      /* IndexedDB unavailable; localStorage migration may still have warmed the cache */
     }
 
     hydrated = true

@@ -78,6 +78,7 @@ describe('gospelLocalUserDataBackup', () => {
       'gospel-preferred-translation': 'esv',
       'gospel-profile-read-along:slug:section-1': '{"v":1,"plainOffset":0,"fingerprint":"x"}',
       'gospel-profile-read-along-last:slug': '{"v":1,"anchorId":"section-1","plainOffset":0,"fingerprint":"x"}',
+      'gospel-profile-reading-resume:slug': '{"v":1,"anchorId":"section-1","plainOffset":5,"fingerprint":"x"}',
       [PROFILE_READ_ALONG_UNDERLINE_STYLE_STORAGE_KEY]: 'line',
       [PRESENTATION_READ_COMPLETE_STORAGE_KEY]: '{"v":1,"slugs":["done-slug"]}',
     })
@@ -91,6 +92,9 @@ describe('gospelLocalUserDataBackup', () => {
     expect(map['gospel-preferred-translation']).toBe('esv')
     expect(map['gospel-profile-read-along:slug:section-1']).toBe('{"v":1,"plainOffset":0,"fingerprint":"x"}')
     expect(map['gospel-profile-read-along-last:slug']).toBe('{"v":1,"anchorId":"section-1","plainOffset":0,"fingerprint":"x"}')
+    expect(map['gospel-profile-reading-resume:slug']).toBe(
+      '{"v":1,"anchorId":"section-1","plainOffset":5,"fingerprint":"x"}'
+    )
     expect(map[PROFILE_READ_ALONG_UNDERLINE_STYLE_STORAGE_KEY]).toBe('line')
     expect(map[PRESENTATION_READ_COMPLETE_STORAGE_KEY]).toBe('{"v":1,"slugs":["done-slug"]}')
   })

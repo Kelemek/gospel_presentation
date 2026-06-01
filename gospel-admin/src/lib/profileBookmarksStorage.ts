@@ -1,7 +1,7 @@
 import { gospelStorageGetSync, gospelStorageSetSync } from '@/lib/gospelClientStorage'
 
 export const PROFILE_BOOKMARKS_STORAGE_KEY = 'gospel-profile-bookmarks'
-export const PROFILE_BOOKMARKS_SCHEMA_VERSION = 1
+export const PROFILE_BOOKMARKS_SCHEMA_VERSION = 2
 
 export interface ProfileBookmark {
   id: string
@@ -10,11 +10,35 @@ export interface ProfileBookmark {
   anchorId: string
   locationLabel: string
   createdAt: number
+  /** Collapsed plain-text offset inside anchor (Listen model). Omitted in legacy bookmarks. */
+  plainOffset?: number
+  fingerprint?: string
+  /** Short preview for the bookmarks list. */
+  excerpt?: string
 }
 
 interface StoredShape {
   v: number
   bookmarks: ProfileBookmark[]
+}
+
+function isValidBookmark(b: unknown): b is ProfileBookmark {
+  if (!b || typeof b !== 'object') return false
+  const x = b as Record<string, unknown>
+  if (
+    typeof x.id !== 'string' ||
+    typeof x.slug !== 'string' ||
+    typeof x.anchorId !== 'string' ||
+    typeof x.resourceTitle !== 'string' ||
+    typeof x.locationLabel !== 'string' ||
+    typeof x.createdAt !== 'number'
+  ) {
+    return false
+  }
+  if (x.plainOffset !== undefined && typeof x.plainOffset !== 'number') return false
+  if (x.fingerprint !== undefined && typeof x.fingerprint !== 'string') return false
+  if (x.excerpt !== undefined && typeof x.excerpt !== 'string') return false
+  return true
 }
 
 export function loadBookmarks(): ProfileBookmark[] {
@@ -23,19 +47,14 @@ export function loadBookmarks(): ProfileBookmark[] {
     const raw = gospelStorageGetSync(PROFILE_BOOKMARKS_STORAGE_KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw) as StoredShape
-    if (!parsed || parsed.v !== PROFILE_BOOKMARKS_SCHEMA_VERSION || !Array.isArray(parsed.bookmarks)) {
+    if (
+      !parsed ||
+      (parsed.v !== 1 && parsed.v !== PROFILE_BOOKMARKS_SCHEMA_VERSION) ||
+      !Array.isArray(parsed.bookmarks)
+    ) {
       return []
     }
-    return parsed.bookmarks.filter(
-      (b) =>
-        b &&
-        typeof b.id === 'string' &&
-        typeof b.slug === 'string' &&
-        typeof b.anchorId === 'string' &&
-        typeof b.resourceTitle === 'string' &&
-        typeof b.locationLabel === 'string' &&
-        typeof b.createdAt === 'number'
-    )
+    return parsed.bookmarks.filter(isValidBookmark)
   } catch {
     return []
   }
@@ -54,10 +73,16 @@ function persist(bookmarks: ProfileBookmark[]): void {
   }
 }
 
-/** Returns false if duplicate slug+anchor or storage failed. */
+function bookmarkPositionKey(b: Pick<ProfileBookmark, 'slug' | 'anchorId' | 'plainOffset'>): string {
+  const offset = typeof b.plainOffset === 'number' && Number.isFinite(b.plainOffset) ? b.plainOffset : 0
+  return `${b.slug}\0${b.anchorId}\0${offset}`
+}
+
+/** Returns false if duplicate slug+anchor+offset or storage failed. */
 export function addBookmark(entry: Omit<ProfileBookmark, 'id' | 'createdAt'>): boolean {
   const list = loadBookmarks()
-  const dup = list.some((b) => b.slug === entry.slug && b.anchorId === entry.anchorId)
+  const key = bookmarkPositionKey(entry)
+  const dup = list.some((b) => bookmarkPositionKey(b) === key)
   if (dup) return false
   const next: ProfileBookmark = {
     ...entry,

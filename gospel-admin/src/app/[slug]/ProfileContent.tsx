@@ -66,6 +66,21 @@ import {
   removePresentationReadCompleteSlug,
 } from '@/lib/presentationReadCompleteStorage'
 import { scrollToTocAnchor, scrollToTocAnchorWhenReady } from '@/lib/scrollToTocAnchor'
+import { consumePendingBookmarkResume } from '@/lib/profileBookmarkResumeSession'
+import {
+  captureReadingPositionAtViewport,
+  isReadingPositionFingerprintValid,
+  listenTextOptionsForProfileSlug,
+  restoreReadingPosition,
+  resolveReadingScope,
+} from '@/lib/profileReadingPosition'
+import {
+  clearProfileReadingResume,
+  dismissReadingResumeToastForSession,
+  isReadingResumeToastDismissedForSession,
+  loadProfileReadingResume,
+  saveProfileReadingResume,
+} from '@/lib/profileReadingResumeStorage'
 import { mcheyneDayChapterReferencesForAnchor } from '@/lib/mcheyne/mcheyneReadingDay'
 import { isMcheyneProfileSlug } from '@/lib/mcheyne/mcheyneSlug'
 import {
@@ -180,8 +195,12 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const mcheyneResumePinScrollRef = useRef(false)
   /** Cancel function for the active resume-pin scroll RAF loop (effect or Resume button). */
   const mcheyneResumeScrollCancelRef = useRef<(() => void) | null>(null)
+  const profileReadingNavAppliedRef = useRef(false)
+  const profileReadingNavSlugRef = useRef<string | null>(null)
+  const readingResumeSaveTimerRef = useRef<number | null>(null)
 
   const [currentReferenceIndex, setCurrentReferenceIndex] = useState(0)
+  const [readingResumeNotice, setReadingResumeNotice] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isSharingResource, setIsSharingResource] = useState(false)
   const [isSpurgeonLibraryOpen, setIsSpurgeonLibraryOpen] = useState(false)
@@ -333,6 +352,126 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       window.removeEventListener('hashchange', scrollIfHash)
     }
   }, [isHydrated, sectionCount, profileInfo?.slug])
+
+  const flushReadingResumeSave = useCallback(() => {
+    if (!profileSlug || sectionCount === 0) return
+    if (selectedScripture.isOpen) return
+    if (typeof document !== 'undefined' && document.querySelector('.profile-help-tour-popover')) {
+      return
+    }
+
+    const captured = captureReadingPositionAtViewport(sections, profileSlug)
+    if (!captured) return
+
+    saveProfileReadingResume(
+      profileSlug,
+      captured.anchorId,
+      captured.plainOffset,
+      captured.fingerprint
+    )
+  }, [profileSlug, sectionCount, sections, selectedScripture.isOpen])
+
+  const READING_RESUME_SAVE_DEBOUNCE_MS = 1500
+
+  useEffect(() => {
+    if (!isHydrated || !profileSlug || sectionCount === 0) return
+
+    const scheduleSave = () => {
+      if (readingResumeSaveTimerRef.current != null) {
+        window.clearTimeout(readingResumeSaveTimerRef.current)
+      }
+      readingResumeSaveTimerRef.current = window.setTimeout(() => {
+        readingResumeSaveTimerRef.current = null
+        flushReadingResumeSave()
+      }, READING_RESUME_SAVE_DEBOUNCE_MS)
+    }
+
+    window.addEventListener('scroll', scheduleSave, { passive: true })
+    const onHide = () => {
+      if (readingResumeSaveTimerRef.current != null) {
+        window.clearTimeout(readingResumeSaveTimerRef.current)
+        readingResumeSaveTimerRef.current = null
+      }
+      flushReadingResumeSave()
+    }
+    document.addEventListener('visibilitychange', onHide)
+    window.addEventListener('pagehide', onHide)
+
+    return () => {
+      window.removeEventListener('scroll', scheduleSave)
+      document.removeEventListener('visibilitychange', onHide)
+      window.removeEventListener('pagehide', onHide)
+      if (readingResumeSaveTimerRef.current != null) {
+        window.clearTimeout(readingResumeSaveTimerRef.current)
+      }
+    }
+  }, [isHydrated, profileSlug, sectionCount, flushReadingResumeSave])
+
+  useEffect(() => {
+    if (profileReadingNavSlugRef.current !== profileSlug) {
+      profileReadingNavSlugRef.current = profileSlug
+      profileReadingNavAppliedRef.current = false
+    }
+  }, [profileSlug])
+
+  // Precise bookmark resume (session) or automatic reading position when no competing deep link
+  useEffect(() => {
+    if (!isHydrated || sectionCount === 0 || !profileSlug) return
+
+    const timer = window.setTimeout(() => {
+      if (profileReadingNavAppliedRef.current) return
+      if (studyRefParam) return
+
+      const rawHash = typeof window !== 'undefined' ? window.location.hash.slice(1) : ''
+      if (rawHash && rawHash.startsWith('section-')) return
+
+      if (isMcheyneProfileSlug(profileSlug)) {
+        if (resolveMcheynePlanDayFromNavigation(mcheynePlanDayParam) != null) return
+        if (resolveMcheyneResumePinFromNavigation(mcheyneResumePinParam)) return
+      }
+
+      const pending = consumePendingBookmarkResume()
+      if (pending) {
+        profileReadingNavAppliedRef.current = true
+        restoreReadingPosition(
+          pending.anchorId,
+          pending.plainOffset,
+          pending.fingerprint,
+          profileSlug
+        )
+        return
+      }
+
+      const saved = loadProfileReadingResume(profileSlug)
+      if (!saved) return
+
+      const scope = resolveReadingScope(saved.anchorId)
+      const listenOpts = listenTextOptionsForProfileSlug(profileSlug)
+      if (!scope || !isReadingPositionFingerprintValid(scope, saved.fingerprint, listenOpts)) {
+        clearProfileReadingResume(profileSlug)
+        return
+      }
+
+      profileReadingNavAppliedRef.current = true
+      restoreReadingPosition(saved.anchorId, saved.plainOffset, saved.fingerprint, profileSlug, {
+        onDone: () => {
+          if (!isReadingResumeToastDismissedForSession()) {
+            setReadingResumeNotice(true)
+          }
+        },
+      })
+    }, 120)
+
+    return () => window.clearTimeout(timer)
+  }, [
+    isHydrated,
+    sectionCount,
+    profileSlug,
+    studyRefParam,
+    mcheynePlanDayParam,
+    mcheyneResumePinParam,
+    sections,
+  ])
 
   // Study library By scripture: scroll to first subsection matching ?studyRef=
   useEffect(() => {
@@ -1338,6 +1477,28 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   return (
     <>
       <PresentationFirstVisitWelcome />
+      {readingResumeNotice && (
+        <div
+          role="status"
+          className="fixed bottom-4 left-1/2 z-50 max-w-md -translate-x-1/2 print-hide rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-lg dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+          style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        >
+          <div className="flex items-start gap-3">
+            <p className="flex-1">Resumed where you left off</p>
+            <button
+              type="button"
+              className="shrink-0 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 cursor-pointer"
+              aria-label="Dismiss"
+              onClick={() => {
+                dismissReadingResumeToastForSession()
+                setReadingResumeNotice(false)
+              }}
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
       {/* Print-only header - appears at top of first page */}
       <div className="print-header" style={{ display: 'none' }}>
         <h1 className="print-title">The Gospel Presentation</h1>

@@ -10,6 +10,8 @@ import {
   getCurrentTocAnchorId,
   getLocationLabel,
 } from '@/lib/tocAnchorFromScroll'
+import { setPendingBookmarkResume } from '@/lib/profileBookmarkResumeSession'
+import { captureReadingPositionAtViewport, restoreReadingPosition } from '@/lib/profileReadingPosition'
 import {
   addBookmark,
   loadBookmarks,
@@ -17,14 +19,52 @@ import {
   type ProfileBookmark,
 } from '@/lib/profileBookmarksStorage'
 import { GOSPEL_CLOSE_BOOKMARKS_PANEL_EVENT } from '@/lib/bookmarksPanelCloseEvent'
+import { GOSPEL_CLIENT_STORAGE_HYDRATED_EVENT } from '@/lib/gospelClientStorageEvents'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 
 const BOOKMARK_SEARCH_DEBOUNCE_MS = 250
 
 function bookmarkMatchesSearch(b: ProfileBookmark, trimmedLowerNeedle: string): boolean {
   if (!trimmedLowerNeedle) return true
-  const parts = [b.resourceTitle, b.locationLabel, b.slug, b.anchorId]
+  const parts = [b.resourceTitle, b.locationLabel, b.slug, b.anchorId, b.excerpt ?? '']
   return parts.some((t) => t.toLowerCase().includes(trimmedLowerNeedle))
+}
+
+function bookmarkHasPrecisePosition(b: ProfileBookmark): boolean {
+  return (
+    typeof b.plainOffset === 'number' &&
+    Number.isFinite(b.plainOffset) &&
+    b.plainOffset >= 0 &&
+    typeof b.fingerprint === 'string' &&
+    b.fingerprint.length > 0
+  )
+}
+
+export function openProfileBookmark(
+  b: ProfileBookmark,
+  currentProfileSlug: string,
+  router: { push: (href: string) => void }
+): void {
+  const precise = bookmarkHasPrecisePosition(b)
+
+  if (b.slug !== currentProfileSlug) {
+    if (precise) {
+      setPendingBookmarkResume({
+        anchorId: b.anchorId,
+        plainOffset: b.plainOffset!,
+        fingerprint: b.fingerprint!,
+      })
+    }
+    router.push(`/${b.slug}#${encodeURIComponent(b.anchorId)}`)
+    return
+  }
+
+  if (precise) {
+    restoreReadingPosition(b.anchorId, b.plainOffset!, b.fingerprint!, b.slug)
+    return
+  }
+
+  scrollToTocAnchor(b.anchorId)
 }
 
 const TRIGGER_CLASS =
@@ -78,6 +118,108 @@ interface BookmarksDropdownProps {
   profileSlug: string
 }
 
+function BookmarkExcerptChevron({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      aria-hidden
+      className={`h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
+      fill="none"
+      viewBox="0 0 20 20"
+    >
+      <path
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="m6 8 4 4 4-4"
+      />
+    </svg>
+  )
+}
+
+function BookmarkListItem({
+  bookmark,
+  expanded,
+  onToggleExpand,
+  onOpen,
+  onRemove,
+}: {
+  bookmark: ProfileBookmark
+  expanded: boolean
+  onToggleExpand: () => void
+  onOpen: () => void
+  onRemove: (e: React.MouseEvent) => void
+}) {
+  const excerpt = bookmark.excerpt?.trim()
+  const hasExcerpt = Boolean(excerpt)
+
+  return (
+    <div
+      role="listitem"
+      data-tour="bookmarks-row"
+      data-bookmark-id={bookmark.id}
+      className="flex border-b border-slate-100 dark:border-slate-600 last:border-b-0 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors"
+    >
+      <button
+        type="button"
+        onClick={onOpen}
+        className="min-w-0 flex-1 cursor-pointer text-left px-3 py-2 text-sm text-slate-700 dark:text-slate-200"
+      >
+        <span className="font-medium line-clamp-1 block leading-tight pr-1">
+          {bookmark.resourceTitle}
+        </span>
+        <span className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1 block leading-tight pr-1">
+          {bookmark.locationLabel}
+        </span>
+        {hasExcerpt && expanded ? (
+          <span className="text-xs text-slate-500 dark:text-slate-400 mt-1 block italic leading-snug pr-1">
+            {excerpt}
+          </span>
+        ) : null}
+      </button>
+      <div className="shrink-0 flex flex-col w-9 self-stretch">
+        <button
+          type="button"
+          data-tour="bookmarks-remove"
+          data-bookmark-id={bookmark.id}
+          onClick={onRemove}
+          className={`flex flex-1 min-h-[20px] items-center justify-center text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 cursor-pointer ${hasExcerpt ? '' : 'py-2'}`}
+          aria-label="Remove bookmark"
+          title="Remove"
+        >
+          <svg
+            className="w-5 h-5"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            aria-hidden
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+            />
+          </svg>
+        </button>
+        {hasExcerpt ? (
+          <button
+            type="button"
+            onClick={onToggleExpand}
+            aria-expanded={expanded}
+            aria-label={expanded ? 'Hide excerpt' : 'Show excerpt'}
+            title={expanded ? 'Hide excerpt' : 'Show excerpt'}
+            className="flex flex-1 min-h-[20px] items-center justify-center text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700/80 cursor-pointer"
+          >
+            <BookmarkExcerptChevron expanded={expanded} />
+          </button>
+        ) : null}
+      </div>
+    </div>
+  )
+}
+
 export default function BookmarksDropdown({
   sections,
   profileTitle,
@@ -90,6 +232,7 @@ export default function BookmarksDropdown({
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [addHint, setAddHint] = useState<string | null>(null)
+  const [expandedBookmarkIds, setExpandedBookmarkIds] = useState<Set<string>>(() => new Set())
   const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const [panelStyle, setPanelStyle] = useState<CSSProperties>({})
@@ -98,6 +241,12 @@ export default function BookmarksDropdown({
     setBookmarks(loadBookmarks())
   }, [])
 
+  useEffect(() => {
+    const onHydrated = () => refreshList()
+    window.addEventListener(GOSPEL_CLIENT_STORAGE_HYDRATED_EVENT, onHydrated)
+    return () => window.removeEventListener(GOSPEL_CLIENT_STORAGE_HYDRATED_EVENT, onHydrated)
+  }, [refreshList])
+
   const resetSearch = useCallback(() => {
     setSearchInput('')
     setDebouncedSearch('')
@@ -105,8 +254,18 @@ export default function BookmarksDropdown({
 
   const closeDropdown = useCallback(() => {
     resetSearch()
+    setExpandedBookmarkIds(new Set())
     setOpen(false)
   }, [resetSearch])
+
+  const toggleBookmarkExpanded = useCallback((id: string) => {
+    setExpandedBookmarkIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
 
   const positionPanel = useCallback(() => {
     if (!open || !triggerRef.current) return
@@ -164,7 +323,8 @@ export default function BookmarksDropdown({
     : bookmarks
 
   const handleAdd = () => {
-    const anchorId = getCurrentTocAnchorId(sections)
+    const captured = captureReadingPositionAtViewport(sections, profileSlug)
+    const anchorId = captured?.anchorId ?? getCurrentTocAnchorId(sections)
     if (!anchorId) {
       setAddHint('Could not detect position')
       return
@@ -175,6 +335,13 @@ export default function BookmarksDropdown({
       resourceTitle: profileTitle,
       anchorId,
       locationLabel,
+      ...(captured
+        ? {
+            plainOffset: captured.plainOffset,
+            fingerprint: captured.fingerprint,
+            excerpt: captured.excerpt,
+          }
+        : {}),
     })
     if (!ok) {
       setAddHint('Already saved')
@@ -195,11 +362,7 @@ export default function BookmarksDropdown({
 
   const handleOpenBookmark = (b: ProfileBookmark) => {
     closeDropdown()
-    if (b.slug === profileSlug) {
-      scrollToTocAnchor(b.anchorId)
-      return
-    }
-    router.push(`/${b.slug}#${encodeURIComponent(b.anchorId)}`)
+    openProfileBookmark(b, profileSlug, router)
   }
 
   return (
@@ -302,51 +465,14 @@ export default function BookmarksDropdown({
                     <div className="mt-1 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-sm overflow-hidden">
                       <div role="list">
                         {filteredBookmarks.map((b) => (
-                          <div
+                          <BookmarkListItem
                             key={b.id}
-                            role="listitem"
-                            data-tour="bookmarks-row"
-                            data-bookmark-id={b.id}
-                            className="flex border-b border-slate-100 dark:border-slate-600 last:border-b-0"
-                          >
-                            <button
-                              type="button"
-                              onClick={() => handleOpenBookmark(b)}
-                              className="min-w-0 flex-1 cursor-pointer text-left px-4 py-3 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80 transition-colors"
-                            >
-                              <span className="font-medium line-clamp-2 block">
-                                {b.resourceTitle}
-                              </span>
-                              <span className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5 block">
-                                {b.locationLabel}
-                              </span>
-                            </button>
-                            <button
-                              type="button"
-                              data-tour="bookmarks-remove"
-                              data-bookmark-id={b.id}
-                              onClick={(e) => handleRemove(e, b.id)}
-                              className="shrink-0 flex cursor-pointer items-center justify-center px-3 min-h-[48px] text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 hover:bg-slate-50 dark:hover:bg-slate-700/80"
-                              aria-label="Remove bookmark"
-                              title="Remove"
-                            >
-                              <svg
-                                className="w-5 h-5"
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth={1.5}
-                                stroke="currentColor"
-                                aria-hidden
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-                                />
-                              </svg>
-                            </button>
-                          </div>
+                            bookmark={b}
+                            expanded={expandedBookmarkIds.has(b.id)}
+                            onToggleExpand={() => toggleBookmarkExpanded(b.id)}
+                            onOpen={() => handleOpenBookmark(b)}
+                            onRemove={(e) => handleRemove(e, b.id)}
+                          />
                         ))}
                       </div>
                     </div>

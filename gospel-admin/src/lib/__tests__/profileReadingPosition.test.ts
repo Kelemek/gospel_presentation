@@ -1,0 +1,127 @@
+/** @jest-environment jsdom */
+
+import {
+  collapsedPlainOffsetBeforeListenBoundary,
+  collapsedPlainOffsetFromRawListenOffset,
+  excerptAroundPlainOffset,
+  profileReadingLineViewportY,
+  READING_POSITION_VIEWPORT_LINE_GAP_PX,
+  restoreReadingPosition,
+} from '../profileReadingPosition'
+import { getProfileHeaderScrollOffset, scrollToTocAnchorWhenReady } from '../scrollToTocAnchor'
+import { plainTextForProfileResourceListen } from '../profileResourceListenText'
+import { readAlongTextFingerprint } from '../profileReadAlongProgressStorage'
+import { scrollPlainOffsetToViewportY } from '../scrollReadAlongPlain'
+
+jest.mock('../scrollToTocAnchor', () => {
+  const actual = jest.requireActual('../scrollToTocAnchor')
+  return {
+    ...actual,
+    scrollToTocAnchorWhenReady: jest.fn(),
+  }
+})
+
+jest.mock('../scrollReadAlongPlain', () => ({
+  scrollPlainOffsetToViewportY: jest.fn(),
+  getCaretClientRectForReadAlongPlainOffset: jest.fn(),
+}))
+
+describe('profileReadingPosition', () => {
+  it('maps DOM boundary to collapsed plain offset', () => {
+    const scope = document.createElement('div')
+    scope.innerHTML = '<p>Hello world</p><p>Second block</p>'
+    document.body.appendChild(scope)
+
+    const p = scope.querySelector('p')!
+    const textNode = p.firstChild as Text
+    const offset = collapsedPlainOffsetBeforeListenBoundary(scope, textNode, 6)
+    const plain = plainTextForProfileResourceListen(scope)
+    expect(plain).toBe('Hello world Second block')
+    expect(offset).toBe(6)
+    expect(plain.slice(Math.max(0, offset - 2), offset + 2)).toContain(' w')
+
+    document.body.removeChild(scope)
+  })
+
+  it('collapsedPlainOffsetFromRawListenOffset matches forward walk budget', () => {
+    const scope = document.createElement('div')
+    scope.textContent = 'Alpha\n\nBeta'
+    document.body.appendChild(scope)
+
+    const plain = plainTextForProfileResourceListen(scope)
+    expect(plain).toBe('Alpha Beta')
+    const mid = collapsedPlainOffsetFromRawListenOffset(scope, 8, undefined)
+    expect(mid).toBeGreaterThan(0)
+    expect(mid).toBeLessThan(plain.length)
+
+    document.body.removeChild(scope)
+  })
+
+  it('profileReadingLineViewportY matches header offset plus gap', () => {
+    expect(profileReadingLineViewportY()).toBe(
+      getProfileHeaderScrollOffset() + READING_POSITION_VIEWPORT_LINE_GAP_PX
+    )
+  })
+
+  it('excerptAroundPlainOffset trims and adds ellipses', () => {
+    const text = 'abcdefghijklmnopqrstuvwxyz'.repeat(4)
+    const excerpt = excerptAroundPlainOffset(text, 60)
+    expect(excerpt.startsWith('…') || excerpt.length <= 96).toBe(true)
+    expect(excerpt.length).toBeLessThanOrEqual(96)
+  })
+
+  describe('restoreReadingPosition', () => {
+    const mockScrollToTocAnchorWhenReady = scrollToTocAnchorWhenReady as jest.Mock
+    const mockScrollPlainOffsetToViewportY = scrollPlainOffsetToViewportY as jest.Mock
+
+    beforeEach(() => {
+      mockScrollToTocAnchorWhenReady.mockReset()
+      mockScrollPlainOffsetToViewportY.mockReset()
+      mockScrollToTocAnchorWhenReady.mockImplementation(
+        (_anchorId: string, opts: { onDone?: () => void }) => {
+          opts?.onDone?.()
+          return () => {}
+        }
+      )
+    })
+
+    it('aligns plainOffset 0 at the viewport read line', () => {
+      const scope = document.createElement('div')
+      scope.id = 'section-1'
+      scope.innerHTML = '<p>Start of section text</p>'
+      document.body.appendChild(scope)
+
+      const plain = plainTextForProfileResourceListen(scope)
+      const fingerprint = readAlongTextFingerprint(plain)
+
+      restoreReadingPosition('section-1', 0, fingerprint, 'default')
+
+      expect(mockScrollPlainOffsetToViewportY).toHaveBeenCalledWith(
+        scope,
+        plain.length,
+        0,
+        profileReadingLineViewportY(),
+        'auto',
+        expect.objectContaining({ omitHeadingText: expect.any(Boolean) })
+      )
+
+      document.body.removeChild(scope)
+    })
+
+    it('skips read-line alignment for negative plainOffset', () => {
+      const scope = document.createElement('div')
+      scope.id = 'section-2'
+      scope.innerHTML = '<p>Body</p>'
+      document.body.appendChild(scope)
+
+      const plain = plainTextForProfileResourceListen(scope)
+      const fingerprint = readAlongTextFingerprint(plain)
+
+      restoreReadingPosition('section-2', -1, fingerprint, 'default')
+
+      expect(mockScrollPlainOffsetToViewportY).not.toHaveBeenCalled()
+
+      document.body.removeChild(scope)
+    })
+  })
+})

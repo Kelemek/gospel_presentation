@@ -5,6 +5,7 @@ import {
   PROFILE_READ_ALONG_LAST_SESSION_KEY_PREFIX,
   PROFILE_READ_ALONG_PROGRESS_KEY_PREFIX,
 } from '@/lib/profileReadAlongProgressStorage'
+import { PROFILE_READING_RESUME_KEY_PREFIX } from '@/lib/profileReadingResumeStorage'
 import { PRESENTATION_READ_COMPLETE_STORAGE_KEY } from '@/lib/presentationReadCompleteStorage'
 
 /** Keep in sync with `verseMemorizationStorage.ts`. */
@@ -38,6 +39,7 @@ const IDB_KEY_PREFIXES = [
   GOSPEL_ANSWERS_KEY_PREFIX,
   PROFILE_READ_ALONG_PROGRESS_KEY_PREFIX,
   PROFILE_READ_ALONG_LAST_SESSION_KEY_PREFIX,
+  PROFILE_READING_RESUME_KEY_PREFIX,
 ] as const
 
 const IDB_EXACT_KEYS = new Set<string>([

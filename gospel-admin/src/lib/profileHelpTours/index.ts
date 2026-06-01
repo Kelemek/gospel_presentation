@@ -1113,7 +1113,7 @@ export function runBookmarksFeatureTour(options?: ProfileFeatureTourOptions): vo
         popover: {
           title: 'Reading position',
           description:
-            '<strong>Where you are</strong> on the page matters: bookmarks use your place in the presentation to pick the best <strong>section</strong> for the list. Use <strong>Next</strong> to continue.',
+            '<strong>Where you scroll</strong> on the page matters: bookmarks save your place inside the current section—not only the section heading—so you can jump back to the same paragraph on long resources. Use <strong>Next</strong> to continue.',
           side: 'bottom',
           align: 'start',
           onNextClick: (_element, _step, { driver: drv }) => {
@@ -1148,7 +1148,7 @@ export function runBookmarksFeatureTour(options?: ProfileFeatureTourOptions): vo
         popover: {
           title: 'Add bookmark',
           description:
-            'This panel lists your saved places. Use <strong>Add bookmark</strong> to capture this profile and your current section—or use <strong>Next</strong> and this tour will add one for you. Open a row to jump there, or another profile. The next steps show your bookmark in the list and how to remove it. If this spot was already saved, you will still see the row and removal steps.',
+            'This panel lists your saved places. Use <strong>Add bookmark</strong> to capture this profile and your current reading line—or use <strong>Next</strong> and this tour will add one for you. Open a row to jump there, or another profile. The next steps show your bookmark in the list and how to remove it. If this spot was already saved, you will still see the row and removal steps.',
           side: 'left',
           align: 'start',
           onNextClick: (_element, _step, { driver: drv }) => {
@@ -1188,7 +1188,7 @@ export function runBookmarksFeatureTour(options?: ProfileFeatureTourOptions): vo
         popover: {
           title: 'Your bookmark',
           description:
-            'This row is your saved place for this profile and section—tap it to jump back here. If you already had a bookmark for this spot, it is the same row. Use <strong>Next</strong> to see how to remove it with the trash icon.',
+            'This row is your saved place for this profile—tap it to jump back to the same reading line. If you already had a bookmark for this spot, it is the same row. Use <strong>Next</strong> to see how to remove it with the trash icon.',
           side: 'left',
           align: 'start',
           onNextClick: (_element, _step, { driver: drv }) => {

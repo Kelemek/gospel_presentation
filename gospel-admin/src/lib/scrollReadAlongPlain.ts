@@ -110,7 +110,7 @@ export function computeReadAlongVerticalScrollDeltaForComfortZone(
   return 0
 }
 
-function getCaretClientRectForReadAlongPlainOffset(
+export function getCaretClientRectForReadAlongPlainOffset(
   scope: HTMLElement,
   plainCollapsedLen: number,
   plainOffset: number,
@@ -168,6 +168,47 @@ export function scrollReadAlongPlainOffsetIntoViewIfNeeded(
   const topM = readAlongComfortTopMarginPx(win)
   const botM = readAlongComfortBottomMarginPx(win)
   const delta = computeReadAlongVerticalScrollDeltaForComfortZone(rect, vpH, topM, botM)
+  if (delta === 0) return
+  win.scrollBy({ top: delta, behavior })
+}
+
+/** Pixel delta to align a caret's top edge to a viewport Y (e.g. profile reading line under the header). */
+export function computeScrollDeltaToAlignCaretTopToViewportY(
+  caretTop: number,
+  targetTopPx: number,
+  deadbandPx = 3
+): number {
+  const delta = caretTop - targetTopPx
+  if (Math.abs(delta) <= deadbandPx) return 0
+  return delta
+}
+
+/**
+ * Scrolls the window so the plain-text caret sits on the same viewport line used when saving
+ * reading position ({@link profileReadingPosition}), not the wide Listen read-along comfort band.
+ */
+export function scrollPlainOffsetToViewportY(
+  scope: HTMLElement,
+  plainCollapsedLen: number,
+  plainOffset: number,
+  targetTopPx: number,
+  behavior: ScrollBehavior = 'auto',
+  listenTextOptions?: ProfileListenTextOptions,
+  deadbandPx = 3
+): void {
+  if (typeof window === 'undefined') return
+  const win = scope.ownerDocument?.defaultView
+  if (!win) return
+
+  const rect = getCaretClientRectForReadAlongPlainOffset(
+    scope,
+    plainCollapsedLen,
+    plainOffset,
+    listenTextOptions
+  )
+  if (!rect) return
+
+  const delta = computeScrollDeltaToAlignCaretTopToViewportY(rect.top, targetTopPx, deadbandPx)
   if (delta === 0) return
   win.scrollBy({ top: delta, behavior })
 }
