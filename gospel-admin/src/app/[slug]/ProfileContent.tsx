@@ -76,8 +76,6 @@ import {
 } from '@/lib/profileReadingPosition'
 import {
   clearProfileReadingResume,
-  dismissReadingResumeToastForSession,
-  isReadingResumeToastDismissedForSession,
   loadProfileReadingResume,
   saveProfileReadingResume,
 } from '@/lib/profileReadingResumeStorage'
@@ -201,7 +199,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const readingResumeSaveTimerRef = useRef<number | null>(null)
 
   const [currentReferenceIndex, setCurrentReferenceIndex] = useState(0)
-  const [readingResumeNotice, setReadingResumeNotice] = useState(false)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isSharingResource, setIsSharingResource] = useState(false)
   const [isSpurgeonLibraryOpen, setIsSpurgeonLibraryOpen] = useState(false)
@@ -459,13 +456,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       }
 
       profileReadingNavAppliedRef.current = true
-      restoreReadingPosition(saved.anchorId, saved.plainOffset, saved.fingerprint, profileSlug, {
-        onDone: () => {
-          if (!isReadingResumeToastDismissedForSession()) {
-            setReadingResumeNotice(true)
-          }
-        },
-      })
+      restoreReadingPosition(saved.anchorId, saved.plainOffset, saved.fingerprint, profileSlug)
     }, 120)
 
     return () => window.clearTimeout(timer)
@@ -1483,28 +1474,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   return (
     <>
       <PresentationFirstVisitWelcome />
-      {readingResumeNotice && (
-        <div
-          role="status"
-          className="fixed bottom-4 left-1/2 z-50 max-w-md -translate-x-1/2 print-hide rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-lg dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-          style={{ marginBottom: 'env(safe-area-inset-bottom, 0px)' }}
-        >
-          <div className="flex items-start gap-3">
-            <p className="flex-1">Resumed where you left off</p>
-            <button
-              type="button"
-              className="shrink-0 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 cursor-pointer"
-              aria-label="Dismiss"
-              onClick={() => {
-                dismissReadingResumeToastForSession()
-                setReadingResumeNotice(false)
-              }}
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      )}
       {/* Print-only header - appears at top of first page */}
       <div className="print-header" style={{ display: 'none' }}>
         <h1 className="print-title">The Gospel Presentation</h1>

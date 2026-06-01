@@ -8,8 +8,6 @@ import {
 
 export const PROFILE_READING_RESUME_KEY_PREFIX = 'gospel-profile-reading-resume:'
 
-export const PROFILE_READING_RESUME_DISMISSED_SESSION_KEY = 'gospel-profile-reading-resume-dismissed:v1'
-
 export type ProfileReadingResumeV1 = {
   v: 1
   anchorId: string
@@ -70,24 +68,6 @@ export function clearProfileReadingResume(profileSlug: string): void {
   if (typeof window === 'undefined') return
   try {
     gospelStorageRemoveSync(profileReadingResumeStorageKey(profileSlug))
-  } catch {
-    /* ignore */
-  }
-}
-
-export function isReadingResumeToastDismissedForSession(): boolean {
-  if (typeof window === 'undefined') return true
-  try {
-    return sessionStorage.getItem(PROFILE_READING_RESUME_DISMISSED_SESSION_KEY) === '1'
-  } catch {
-    return true
-  }
-}
-
-export function dismissReadingResumeToastForSession(): void {
-  if (typeof window === 'undefined') return
-  try {
-    sessionStorage.setItem(PROFILE_READING_RESUME_DISMISSED_SESSION_KEY, '1')
   } catch {
     /* ignore */
   }
