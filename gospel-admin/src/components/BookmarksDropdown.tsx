@@ -446,7 +446,7 @@ export default function BookmarksDropdown({
                     placeholder="Search…"
                     autoComplete="off"
                     spellCheck={false}
-                    className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/40 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
+                    className="w-full rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-base text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/40 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500"
                     aria-controls="bookmarks-panel-filtered-rows"
                   />
                 </div>
