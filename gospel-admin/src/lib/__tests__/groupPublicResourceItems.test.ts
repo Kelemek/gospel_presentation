@@ -1,4 +1,8 @@
-import { groupPublicResourceItems } from '@/lib/groupPublicResourceItems'
+import {
+  groupPublicResourceItems,
+  publicResourceItemsForResourcesMenu,
+  resolveBibleReaderMenuTitle,
+} from '@/lib/groupPublicResourceItems'
 import type { PublicResourceItem } from '@/lib/supabase-data-service'
 
 function tpl(slug: string, title: string): Extract<PublicResourceItem, { type: 'template' }> {
@@ -61,10 +65,41 @@ describe('groupPublicResourceItems', () => {
     ])
   })
 
-  it('emits bibleReaderLibrary row', () => {
+  it('does not emit a group for bibleReader (main menu control)', () => {
     const items: PublicResourceItem[] = [{ type: 'bibleReader', title: 'Read the Bible' }]
-    expect(groupPublicResourceItems(items)).toEqual([
-      { kind: 'bibleReaderLibrary', title: 'Read the Bible' },
+    expect(groupPublicResourceItems(items)).toEqual([])
+  })
+})
+
+describe('resolveBibleReaderMenuTitle', () => {
+  it('reads top-level bibleReader title', () => {
+    expect(
+      resolveBibleReaderMenuTitle([{ type: 'bibleReader', title: 'Read the Bible' }])
+    ).toBe('Read the Bible')
+  })
+
+  it('reads bibleReader nested in a category', () => {
+    expect(
+      resolveBibleReaderMenuTitle([
+        cat('books', 'Books', [{ type: 'bibleReader', title: 'Open Bible' }]),
+      ])
+    ).toBe('Open Bible')
+  })
+})
+
+describe('publicResourceItemsForResourcesMenu', () => {
+  it('removes bibleReader from top level and category children', () => {
+    const items: PublicResourceItem[] = [
+      { type: 'bibleReader', title: 'Bible Reader' },
+      cat('c1', 'Mixed', [
+        { type: 'bibleReader', title: 'Nested reader' },
+        tpl('t1', 'Template One'),
+      ]),
+      tpl('t2', 'Template Two'),
+    ]
+    expect(publicResourceItemsForResourcesMenu(items)).toEqual([
+      cat('c1', 'Mixed', [tpl('t1', 'Template One')]),
+      tpl('t2', 'Template Two'),
     ])
   })
 })

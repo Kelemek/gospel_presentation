@@ -12,6 +12,7 @@ import {
 import { createPortal } from 'react-dom'
 import BiblePassagePickerModal from '@/components/BiblePassagePickerModal'
 import { useTranslation, type BibleTranslation } from '@/contexts/TranslationContext'
+import { isBibleTranslation } from '@/lib/bible-translations'
 import { useTextSize } from '@/contexts/TextSizeContext'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import {
@@ -35,6 +36,7 @@ import {
 } from '@/lib/verseMemorizationStorage'
 import type { VerseBookmarkColorId, VersePinColorId } from '@/lib/versePinStorage'
 import ScriptureModalPinPick from '@/components/ScriptureModalPinPick'
+import ScriptureModalTabs from '@/components/ScriptureModalTabs'
 import ScriptureModalToolbarMenu from '@/components/ScriptureModalToolbarMenu'
 import ScriptureWordStudyModal from '@/components/ScriptureWordStudyModal'
 import ScriptureModalChapterListen from '@/components/ScriptureModalChapterListen'
@@ -59,8 +61,21 @@ import {
   subscribeScriptureShowVerseNumbers,
   writeScriptureShowVerseNumbersToStorage,
 } from '@/lib/scriptureVerseNumbersPreference'
+import {
+  GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT,
+  getScriptureModalTabEntry,
+  loadScriptureModalTabs,
+  recordScriptureModalTab,
+  removeScriptureModalTab,
+  resolveScriptureTabNavigationAfterClose,
+  scriptureModalTabKey,
+  type ProfileRecentScriptureEntry,
+  type RecordScriptureLastOpenInput,
+} from '@/lib/profileLastOpenResourceStorage'
 
 export type { ScriptureModalPresentationLocation } from '@/lib/presentationLocationFromAnchors'
+
+const EMPTY_SCRIPTURE_MODAL_TABS: ProfileRecentScriptureEntry[] = []
 
 /** Same 36px row height as prev/next (`scriptureModalHeaderIconButtonClass`). */
 const scriptureModalHeaderTitleClass =
@@ -133,6 +148,14 @@ interface ScriptureModalProps {
   initialChapterView?: boolean
   /** Profile slug for share deep links (current resource). Omit to share passage text only. */
   profileSlug?: string
+  /** Profile title for Scripture modal tab storage. */
+  profileTitle?: string
+  /** Section anchors for the open passage (modal tab bar). */
+  scriptureTabAnchors?: { sectionId: string; subsectionId: string }
+  /** Switch to another open passage tab (may navigate to another profile). */
+  onScriptureTabActivate?: (entry: ProfileRecentScriptureEntry) => void
+  /** After closing the active tab, open `next` or close the modal when null. */
+  onScriptureTabCloseActive?: (next: ProfileRecentScriptureEntry | null) => void
   /** M'Cheyne: four chapter refs for the open day (Family + Secret); Listen plays all in order. */
   mcheyneDayChapterReferences?: readonly string[]
 }
@@ -151,6 +174,10 @@ export default function ScriptureModal({
   onNavigateReference,
   initialChapterView = false,
   profileSlug,
+  profileTitle,
+  scriptureTabAnchors,
+  onScriptureTabActivate,
+  onScriptureTabCloseActive,
   mcheyneDayChapterReferences,
 }: ScriptureModalProps) {
   const { translation, setTranslation, enabledTranslations, enabledTranslationOptions } =
@@ -169,8 +196,45 @@ export default function ScriptureModal({
   const initialChapterViewFetchedRef = useRef(false)
   const scriptureModalTitleId = useId()
 
-  // Compare translation (second column)
-  const [compareTranslation, setCompareTranslation] = useState<string | null>(null)
+  const scriptureTabUiKey = useMemo(() => {
+    const slug = profileSlug?.trim()
+    const ref = reference.trim()
+    if (!slug || !ref) return null
+    return scriptureModalTabKey({ slug, reference: ref })
+  }, [profileSlug, reference])
+
+  const storedTabCompareTranslation = useMemo((): string | null => {
+    if (!onScriptureTabActivate || !profileSlug?.trim()) return null
+    const stored = getScriptureModalTabEntry(profileSlug.trim(), reference)
+    const storedCompare = stored?.compareTranslation
+    if (
+      storedCompare &&
+      isBibleTranslation(storedCompare) &&
+      storedCompare !== translation &&
+      enabledTranslations.includes(storedCompare)
+    ) {
+      return storedCompare
+    }
+    return null
+  }, [onScriptureTabActivate, profileSlug, reference, translation, enabledTranslations])
+
+  // Compare translation (second column); in-memory override per tab, else restored from tab storage.
+  const [compareByTabKey, setCompareByTabKey] = useState<{
+    tabKey: string | null
+    value: string | null
+  }>({ tabKey: null, value: null })
+
+  const compareTranslation =
+    scriptureTabUiKey === null || compareByTabKey.tabKey === scriptureTabUiKey
+      ? compareByTabKey.value
+      : storedTabCompareTranslation
+
+  const setCompareTranslation = useCallback(
+    (value: string | null) => {
+      setCompareByTabKey({ tabKey: scriptureTabUiKey, value })
+    },
+    [scriptureTabUiKey]
+  )
   const [wordStudyEnabled, setWordStudyEnabled] = useState(false)
   const [memorizeInFlight, setMemorizeInFlight] = useState(false)
   const [shareInFlight, setShareInFlight] = useState(false)
@@ -251,10 +315,12 @@ export default function ScriptureModal({
 
   const scriptureFetchKey = verseViewSessionKey
 
-  const activeCompareTranslation = useMemo(() => {
+  const activeCompareTranslation = useMemo((): BibleTranslation | null => {
     if (!compareTranslation || compareTranslation === translation) return null
+    if (!isBibleTranslation(compareTranslation)) return null
+    if (!enabledTranslations.includes(compareTranslation)) return null
     return compareTranslation
-  }, [compareTranslation, translation])
+  }, [compareTranslation, translation, enabledTranslations])
 
   const compareVerseFetchKey = useMemo(() => {
     if (!scriptureFetchKey || !activeCompareTranslation) return null
@@ -327,6 +393,97 @@ export default function ScriptureModal({
     chapterView.text.length > 0
 
   const chapterText = showingContext ? chapterView.text : ''
+
+  const scriptureTabInput = useMemo((): RecordScriptureLastOpenInput | undefined => {
+    const slug = profileSlug?.trim()
+    if (!slug || !reference.trim()) return undefined
+    return {
+      slug,
+      profileTitle: profileTitle ?? slug,
+      reference,
+      sectionId: scriptureTabAnchors?.sectionId ?? 'modal-view',
+      subsectionId: scriptureTabAnchors?.subsectionId ?? 'modal-view',
+      chapterView: showingContext,
+      translation,
+      compareTranslation: activeCompareTranslation ?? null,
+    }
+  }, [
+    profileSlug,
+    profileTitle,
+    reference,
+    scriptureTabAnchors?.sectionId,
+    scriptureTabAnchors?.subsectionId,
+    showingContext,
+    translation,
+    activeCompareTranslation,
+  ])
+
+  const [scriptureTabsRevision, setScriptureTabsRevision] = useState(0)
+
+  useEffect(() => {
+    if (!isOpen || !onScriptureTabActivate) return
+    const bump = () => setScriptureTabsRevision((n) => n + 1)
+    window.addEventListener(GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT, bump)
+    return () => {
+      window.removeEventListener(GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT, bump)
+    }
+  }, [isOpen, onScriptureTabActivate])
+
+  const scriptureModalTabs = useMemo(() => {
+    void scriptureTabsRevision
+    if (!isOpen || !onScriptureTabActivate) return EMPTY_SCRIPTURE_MODAL_TABS
+    return loadScriptureModalTabs(scriptureTabInput)
+  }, [isOpen, onScriptureTabActivate, scriptureTabInput, scriptureTabsRevision])
+
+  useEffect(() => {
+    if (!isOpen || !scriptureTabInput) return
+    recordScriptureModalTab(scriptureTabInput)
+  }, [isOpen, scriptureTabInput])
+
+  const prevScriptureTabUiKeyRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!isOpen || !onScriptureTabActivate || !scriptureTabUiKey) return
+    if (prevScriptureTabUiKeyRef.current === scriptureTabUiKey) return
+    prevScriptureTabUiKeyRef.current = scriptureTabUiKey
+
+    setChapterView(null)
+    setChapterContextError(null)
+    setCompareVerseResolved(null)
+    setCompareChapterResolved(null)
+    initialChapterViewFetchedRef.current = false
+  }, [isOpen, onScriptureTabActivate, scriptureTabUiKey])
+
+  useEffect(() => {
+    if (!isOpen) {
+      prevScriptureTabUiKeyRef.current = null
+    }
+  }, [isOpen])
+
+  const handleScriptureTabClose = useCallback(
+    (entry: ProfileRecentScriptureEntry) => {
+      const slug = profileSlug?.trim() ?? ''
+      const isActive =
+        scriptureModalTabKey(entry) === scriptureModalTabKey({ slug, reference })
+      const next = isActive
+        ? resolveScriptureTabNavigationAfterClose(entry.slug, entry.reference)
+        : null
+      removeScriptureModalTab(entry.slug, entry.reference)
+      if (isActive) {
+        onScriptureTabCloseActive?.(next)
+      }
+    },
+    [profileSlug, reference, onScriptureTabCloseActive]
+  )
+
+  const handleScriptureTabSelect = useCallback(
+    (entry: ProfileRecentScriptureEntry) => {
+      if (scriptureTabInput) {
+        recordScriptureModalTab(scriptureTabInput)
+      }
+      onScriptureTabActivate?.(entry)
+    },
+    [scriptureTabInput, onScriptureTabActivate]
+  )
 
   const isMcheyneDayPlaylist =
     translation === 'esv' &&
@@ -961,17 +1118,6 @@ export default function ScriptureModal({
     contentKey: passageSwipeContentKey,
   }
 
-  const chapterContextBanner = (
-    <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg text-slate-700 dark:text-slate-200 text-base md:text-lg">
-      <div className="flex items-center gap-2">
-        <strong className="text-slate-800 dark:text-slate-100">Chapter Context:</strong>
-        <span className="font-medium text-slate-600 dark:text-slate-200">
-          {getChapterReference(reference)}
-        </span>
-      </div>
-    </div>
-  )
-
   return (
     <>
     <div
@@ -1345,6 +1491,16 @@ export default function ScriptureModal({
           </div>
         </div>
 
+        {profileSlug?.trim() && onScriptureTabActivate ? (
+          <ScriptureModalTabs
+            tabs={scriptureModalTabs}
+            activeSlug={profileSlug.trim()}
+            activeReference={reference}
+            onSelectTab={handleScriptureTabSelect}
+            onCloseTab={handleScriptureTabClose}
+          />
+        ) : null}
+
         {presentationLocation && (
           <div
             className="px-4 py-2 bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-600 shrink-0 min-w-0"
@@ -1427,7 +1583,6 @@ export default function ScriptureModal({
                       )}
                       {showingContext && compareChapterText && (
                         <div className="prose max-w-none">
-                          {chapterContextBanner}
                           <ScripturePassageText html={processChapterText(compareChapterText)} />
                         </div>
                       )}
@@ -1446,7 +1601,6 @@ export default function ScriptureModal({
                       )}
                       {showingContext && chapterText && (
                         <div className="prose max-w-none">
-                          {chapterContextBanner}
                           <ScripturePassageText
                             id="chapter-content"
                             data-tour="scripture-modal-chapter-body"
@@ -1497,7 +1651,6 @@ export default function ScriptureModal({
                     )}
                     {showingContext && chapterText && (
                       <div className="prose max-w-none">
-                        {chapterContextBanner}
                         <ScripturePassageText
                           id="chapter-content"
                           data-tour="scripture-modal-chapter-body"

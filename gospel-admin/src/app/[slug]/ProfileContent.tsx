@@ -16,6 +16,7 @@ import GospelSection from '@/components/GospelSection'
 import ScriptureModal from '@/components/ScriptureModal'
 import MemorizationPracticeSession from '@/components/MemorizationPracticeSession'
 import TableOfContents from '@/components/TableOfContents'
+import ProfileResourceTabs from '@/components/ProfileResourceTabs'
 import SpurgeonSermonsModal, {
   STUDY_MODAL_DEFAULT_TITLE,
   type StudyLibraryFocus,
@@ -81,8 +82,14 @@ import {
   saveProfileReadingResume,
 } from '@/lib/profileReadingResumeStorage'
 import {
+  GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT,
+  loadProfileRecentResourcesForTabs,
   recordProfileLastOpenOnEnter,
   recordScriptureLastOpen,
+  buildProfileRecentScriptureHref,
+  removeProfileResourceTab,
+  resolveProfileTabNavigationAfterClose,
+  type ProfileRecentScriptureEntry,
 } from '@/lib/profileLastOpenResourceStorage'
 import { mcheyneDayChapterReferencesForAnchor } from '@/lib/mcheyne/mcheyneReadingDay'
 import { isMcheyneProfileSlug } from '@/lib/mcheyne/mcheyneSlug'
@@ -232,7 +239,8 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null)
   const activeHighlightTimerRef = useRef<number | null>(null)
   const { showConfirm, showAlert } = useAlertModal()
-  const { enabledTranslations, isLoading: translationsLoading, setTranslation } = useTranslation()
+  const { translation, enabledTranslations, isLoading: translationsLoading, setTranslation } =
+    useTranslation()
   const footerAttributionEnabledCodes = translationsLoading ? null : enabledTranslations
   /** Matches `ProfileResourceReadAloud` (Listen hidden on Android Web hosts). */
   const profileHeaderAndroidHost = useMemo(() => isMemorizeAndroidWebHost(), [])
@@ -338,6 +346,44 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     if (!profileSlug) return
     recordProfileLastOpenOnEnter(profileSlug, profileInfo?.title ?? '')
   }, [profileSlug, profileInfo?.title])
+
+  const [resourceTabs, setResourceTabs] = useState(() =>
+    loadProfileRecentResourcesForTabs(profileSlug, profileInfo?.title)
+  )
+
+  const refreshResourceTabs = useCallback(() => {
+    setResourceTabs(loadProfileRecentResourcesForTabs(profileSlug, profileInfo?.title))
+  }, [profileSlug, profileInfo?.title])
+
+  useEffect(() => {
+    window.addEventListener(GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT, refreshResourceTabs)
+    return () => {
+      window.removeEventListener(GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT, refreshResourceTabs)
+    }
+  }, [refreshResourceTabs])
+
+  const handleSelectResourceTab = useCallback(
+    (slug: string) => {
+      const trimmed = slug.trim()
+      if (!trimmed || trimmed === profileSlug.trim()) return
+      router.push(`/${trimmed}`)
+    },
+    [profileSlug, router]
+  )
+
+  const handleCloseResourceTab = useCallback(
+    (slug: string) => {
+      const trimmed = slug.trim()
+      if (!trimmed) return
+      const isActive = trimmed === profileSlug.trim()
+      const nextSlug = isActive ? resolveProfileTabNavigationAfterClose(trimmed) : null
+      removeProfileResourceTab(trimmed)
+      if (isActive) {
+        router.push(nextSlug ? `/${nextSlug}` : '/default')
+      }
+    },
+    [profileSlug, router]
+  )
 
   const highlightsByScopeId = useMemo(() => {
     const out: Record<string, Array<{ id: string; startOffset: number; endOffset: number }>> = {}
@@ -1167,6 +1213,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       sectionId,
       subsectionId,
       ...(chapterView ? { chapterView: true } : {}),
+      translation,
     })
   }, [
     activeScripture.isOpen,
@@ -1176,6 +1223,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     profileInfo?.title,
     effectiveModalOpenAnchors,
     sections,
+    translation,
   ])
 
   const mcheyneDayListenSubsectionId = effectiveModalOpenAnchors?.subsectionId?.trim() || ''
@@ -1499,6 +1547,42 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     setSelectedScripture({ reference: '', isOpen: false })
   }
 
+  const openScriptureFromTabEntry = useCallback(
+    (entry: ProfileRecentScriptureEntry) => {
+      // Do not await setTranslation: state updates synchronously, but await waits on API
+      // sync while the passage reference is still the previous tab — recordScriptureModalTab
+      // would persist the wrong translation on the tab being left.
+      if (
+        entry.translation &&
+        isBibleTranslation(entry.translation) &&
+        enabledTranslations.includes(entry.translation)
+      ) {
+        void setTranslation(entry.translation)
+      }
+      if (entry.slug.trim() !== profileSlug.trim()) {
+        router.push(buildProfileRecentScriptureHref(entry))
+        return
+      }
+      const wantChapterView =
+        entry.chapterView === true || isChapterOnlyScriptureReference(entry.reference)
+      syncNavIndexForReference(entry.reference, {
+        sectionId: entry.sectionId,
+        subsectionId: entry.subsectionId,
+      })
+      setModalOpenAnchors({
+        reference: entry.reference,
+        sectionId: entry.sectionId,
+        subsectionId: entry.subsectionId,
+      })
+      setSelectedScripture({
+        reference: entry.reference,
+        isOpen: true,
+        initialChapterView: wantChapterView,
+      })
+    },
+    [profileSlug, router, enabledTranslations, setTranslation, syncNavIndexForReference]
+  )
+
   const scripturePinCommitOnUnmountRef = useRef<{
     isOpen: boolean
     reference: string
@@ -1711,6 +1795,12 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
               </div>
             </div>
           </div>
+          <ProfileResourceTabs
+            tabs={resourceTabs}
+            activeSlug={profileSlug}
+            onSelectTab={handleSelectResourceTab}
+            onCloseTab={handleCloseResourceTab}
+          />
         </div>
 
         {/* Desktop: Hover trigger area on left edge */}
@@ -1928,9 +2018,28 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
         reference={activeScripture.reference}
         isOpen={activeScripture.isOpen}
         profileSlug={profileSlug}
+        profileTitle={profileInfo?.title ?? profileSlug}
+        scriptureTabAnchors={
+          effectiveModalOpenAnchors
+            ? {
+                sectionId: effectiveModalOpenAnchors.sectionId,
+                subsectionId: effectiveModalOpenAnchors.subsectionId,
+              }
+            : undefined
+        }
         mcheyneDayChapterReferences={mcheyneDayListenReferences}
         initialChapterView={activeScripture.initialChapterView ?? false}
         onClose={closeModal}
+        onScriptureTabActivate={(entry) => {
+          void openScriptureFromTabEntry(entry)
+        }}
+        onScriptureTabCloseActive={(next) => {
+          if (!next) {
+            closeModal()
+            return
+          }
+          void openScriptureFromTabEntry(next)
+        }}
         onNavigateReference={(ref, meta) => {
           const chapterView =
             meta?.initialChapterView === true ||

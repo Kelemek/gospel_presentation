@@ -16,12 +16,18 @@ import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
 import { stripHtmlTags } from '@/lib/stripHtmlTags'
 import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
-import { groupPublicResourceItems } from '@/lib/groupPublicResourceItems'
+import {
+  groupPublicResourceItems,
+  publicResourceItemsForResourcesMenu,
+  resolveBibleReaderMenuTitle,
+} from '@/lib/groupPublicResourceItems'
 import { isMcheyneProfileSlug } from '@/lib/mcheyne/mcheyneSlug'
 import MemorizeDropdown from '@/components/MemorizeDropdown'
 import { OpenBookIcon } from '@/components/OpenBookIcon'
 import SunMoonAnimatedIcon from '@/components/SunMoonAnimatedIcon'
 import type { MemorizedVerse } from '@/lib/verseMemorizationStorage'
+import LastOpenScriptureRowLabel from '@/components/LastOpenScriptureRowLabel'
+import { lastOpenScriptureMenuTitle } from '@/lib/lastOpenScriptureLabel'
 import {
   buildProfileRecentScriptureHref,
   GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT,
@@ -51,7 +57,7 @@ interface TableOfContentsProps {
   onOpenHenryLibrary?: (menuTitle?: string) => void
   /** Opens the unified study library modal (Resources row type edwardsLibrary). */
   onOpenEdwardsLibrary?: (menuTitle?: string) => void
-  /** Opens the Bible passage picker (Resources → Bible Reader). */
+  /** Opens the Bible passage picker (main menu, under Resources). */
   onOpenBibleReader?: () => void
 }
 
@@ -271,6 +277,16 @@ export default function TableOfContents({
 
   const showLastOpenDropdown = recentResources.length > 0 || recentScriptures.length > 0
 
+  const bibleReaderMenuTitle = useMemo(
+    () => resolveBibleReaderMenuTitle(resourceItems),
+    [resourceItems]
+  )
+
+  const resourceItemsForMenu = useMemo(
+    () => publicResourceItemsForResourcesMenu(resourceItems),
+    [resourceItems]
+  )
+
   const resourcesRowClassName =
     'inline-flex items-center w-full px-4 py-3 text-base md:text-lg font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500 border border-slate-300 dark:border-slate-600 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px] cursor-pointer'
 
@@ -348,12 +364,14 @@ export default function TableOfContents({
                       key={`${entry.slug}|${entry.reference}`}
                       href={buildProfileRecentScriptureHref(entry)}
                       data-recent-scripture-ref={entry.reference}
+                      aria-label={lastOpenScriptureMenuTitle(entry.reference, entry.translation)}
                       onClick={() => onNavigate?.()}
                       className="flex items-center gap-2 px-4 py-3 text-sm font-normal text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors min-w-0"
                     >
-                      <span className="min-w-0 flex-1 truncate" title={entry.reference}>
-                        {entry.reference}
-                      </span>
+                      <LastOpenScriptureRowLabel
+                        reference={entry.reference}
+                        translation={entry.translation}
+                      />
                     </Link>
                   ))}
                 </>
@@ -365,6 +383,7 @@ export default function TableOfContents({
 
       {/* Resources dropdown — on web always; on native only when not logged in */}
       {(!isNative || !isLoggedIn) && (
+        <>
         <div>
           <button
             type="button"
@@ -391,12 +410,12 @@ export default function TableOfContents({
               className="mt-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-sm overflow-hidden"
               role="list"
             >
-              {resourceItems.length === 0 ? (
+              {resourceItemsForMenu.length === 0 ? (
                 <div className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
                   No resources available
                 </div>
               ) : (
-                groupPublicResourceItems(resourceItems).map((group, groupIndex) =>
+                groupPublicResourceItems(resourceItemsForMenu).map((group, groupIndex) =>
                   group.kind === 'templates' ? (
                     <div
                       key={`resource-templates-${groupIndex}`}
@@ -413,33 +432,6 @@ export default function TableOfContents({
                           onNavigate={onNavigate}
                         />
                       ))}
-                    </div>
-                  ) : group.kind === 'bibleReaderLibrary' ? (
-                    <div
-                      key={`resource-bible-reader-${groupIndex}`}
-                      className="border-b border-slate-100 dark:border-slate-600 last:border-b-0"
-                    >
-                      <button
-                        type="button"
-                        data-resource-bible-reader
-                        data-tour="resource-bible-reader"
-                        disabled={!onOpenBibleReader}
-                        onClick={() => {
-                          onOpenBibleReader?.()
-                          onNavigate?.()
-                        }}
-                        className="flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                          />
-                        </svg>
-                        <span className="min-w-0">{group.title}</span>
-                      </button>
                     </div>
                   ) : group.kind === 'spurgeonLibrary' ? (
                     <div
@@ -569,7 +561,7 @@ export default function TableOfContents({
                         <span className="min-w-0">{group.title}</span>
                       </button>
                     </div>
-                  ) : (
+                  ) : group.kind === 'category' ? (
                     <div
                       key={group.item.id}
                       data-resource-category-id={group.item.id}
@@ -603,20 +595,6 @@ export default function TableOfContents({
                                 onOpenMcheynePlan={onOpenMcheynePlan}
                                 onNavigate={onNavigate}
                               />
-                            ) : child.type === 'bibleReader' ? (
-                              <button
-                                key={`${group.item.id}-br-${childIdx}`}
-                                type="button"
-                                data-resource-bible-reader
-                                disabled={!onOpenBibleReader}
-                                onClick={() => {
-                                  onOpenBibleReader?.()
-                                  onNavigate?.()
-                                }}
-                                className="flex w-full cursor-pointer items-center gap-2 py-2 pl-8 pr-4 text-left text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                {child.title}
-                              </button>
                             ) : child.type === 'spurgeonLibrary' ? (
                               <button
                                 key={`${group.item.id}-sg-${childIdx}`}
@@ -692,12 +670,36 @@ export default function TableOfContents({
                         </div>
                       )}
                     </div>
-                  )
+                  ) : null
                 )
               )}
             </div>
           )}
         </div>
+        {bibleReaderMenuTitle ? (
+          <button
+            type="button"
+            data-tour="toc-bible-reader"
+            data-resource-bible-reader
+            disabled={!onOpenBibleReader}
+            onClick={() => {
+              onOpenBibleReader?.()
+              onNavigate?.()
+            }}
+            className={resourcesRowClassName}
+          >
+            <svg className="w-5 h-5 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+              />
+            </svg>
+            <span className="min-w-0 truncate text-left">{bibleReaderMenuTitle}</span>
+          </button>
+        ) : null}
+        </>
       )}
 
       {/* Text size dropdown — same design as Resources */}

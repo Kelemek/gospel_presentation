@@ -2,7 +2,11 @@ import { driver, type Alignment, type Config, type DriveStep, type Driver, type 
 import 'driver.js/dist/driver.css'
 import { Capacitor } from '@capacitor/core'
 import type { PublicResourceItem } from '@/lib/supabase-data-service'
-import { groupPublicResourceItems } from '@/lib/groupPublicResourceItems'
+import {
+  groupPublicResourceItems,
+  publicResourceItemsForResourcesMenu,
+  resolveBibleReaderMenuTitle,
+} from '@/lib/groupPublicResourceItems'
 import { loadBookmarks } from '@/lib/profileBookmarksStorage'
 import {
   applyThemePersistenceSnapshot,
@@ -36,6 +40,7 @@ const PROFILE_SHARE_RESOURCE = '[data-tour="profile-share-resource"]'
 const PROFILE_MENU_BUTTON = '[data-tour="profile-menu-button"]'
 const PROFILE_SLIDEOUT_MENU = '[data-tour="profile-slideout-menu"]'
 const TOC_RESOURCES_TOGGLE = '[data-tour="toc-resources-toggle"]'
+const TOC_BIBLE_READER = '[data-tour="toc-bible-reader"]'
 const TOC_TEXT_SIZE_TOGGLE = '[data-tour="toc-text-size-toggle"]'
 const TEXT_SIZE_PANEL = '[data-tour="text-size-panel"]'
 const TOC_PRINT_VERSION = '[data-tour="toc-print-version"]'
@@ -892,23 +897,27 @@ async function fetchPublicResourceItemsForTour(): Promise<PublicResourceItem[]> 
 }
 
 function resourcesListOverviewCopy(items: PublicResourceItem[]): string {
-  const hasFolderLike = items.some(
+  const bibleReaderTitle = resolveBibleReaderMenuTitle(items)
+  const menuItems = publicResourceItemsForResourcesMenu(items)
+  const hasFolderLike = menuItems.some(
     (i) =>
       i.type === 'category' ||
-      i.type === 'bibleReader' ||
       i.type === 'spurgeonLibrary' ||
       i.type === 'morningEveningLibrary' ||
       i.type === 'calvinLibrary' ||
       i.type === 'henryLibrary' ||
       i.type === 'edwardsLibrary'
   )
-  if (items.length === 0) {
+  const bibleReaderNote = bibleReaderTitle
+    ? ` <strong>${escapeForPopoverText(bibleReaderTitle)}</strong> is its own button directly under <strong>Resources</strong> in this menu (not inside the list).`
+    : ''
+  if (menuItems.length === 0 && !bibleReaderTitle) {
     return 'Nothing is listed yet. When your church adds shared profiles or categories in admin, they will appear here.'
   }
-  if (!hasFolderLike) {
-    return 'The next steps highlight each group of top-level links and explain what those presentations are for—tap a link when you want to open one.'
+  if (!hasFolderLike && menuItems.length > 0) {
+    return `The next steps highlight each group of top-level links and explain what those presentations are for—tap a link when you want to open one.${bibleReaderNote}`
   }
-  return 'The next steps highlight each section: groups of top-level links, library rows (Spurgeon sermons, Morning & Evening, Calvin commentaries, Edwards sermons) when present, and each category folder. Each step lists what is inside and what those resources are for. Folders expand automatically when highlighted—tap any link when you want to open a presentation.'
+  return `The next steps highlight each section: groups of top-level links, library rows (Spurgeon sermons, Morning & Evening, Calvin commentaries, Edwards sermons) when present, and each category folder. Each step lists what is inside and what those resources are for. Folders expand automatically when highlighted—tap any link when you want to open a presentation.${bibleReaderNote}`
 }
 
 function resourceTemplatesBlockTitle(count: number): string {
@@ -3233,7 +3242,9 @@ export function runResourcesFeatureTour(options?: ProfileFeatureTourOptions): vo
 
 async function runResourcesFeatureTourAsync(options?: ProfileFeatureTourOptions): Promise<void> {
   const items = await fetchPublicResourceItemsForTour()
-  const groups = groupPublicResourceItems(items)
+  const menuItems = publicResourceItemsForResourcesMenu(items)
+  const groups = groupPublicResourceItems(menuItems)
+  const bibleReaderTitle = resolveBibleReaderMenuTitle(items)
 
   const steps: DriveStep[] = [
     {
@@ -3287,6 +3298,20 @@ async function runResourcesFeatureTourAsync(options?: ProfileFeatureTourOptions)
         },
       },
     },
+    ...(bibleReaderTitle
+      ? [
+          {
+            element: TOC_BIBLE_READER,
+            popover: {
+              title: escapeForPopoverText(bibleReaderTitle),
+              description:
+                '<p>This button opens the <strong>Bible Reader</strong>: pick a book, chapter, and optional verses, then read in the scripture modal on the current profile.</p><p class="mt-2">Tap it when you want to read any passage without leaving this presentation.</p>',
+              side: 'right' as Side,
+              align: 'start' as Alignment,
+            },
+          } satisfies DriveStep,
+        ]
+      : []),
     {
       element: RESOURCES_LIST_PANEL,
       popover: {
@@ -3316,24 +3341,6 @@ async function runResourcesFeatureTourAsync(options?: ProfileFeatureTourOptions)
         popover: {
           title: resourceTemplatesBlockTitle(g.items.length),
           description: resourceTemplatesBlockDescription(g.items),
-          side: 'right',
-          align: 'start',
-        },
-      })
-      continue
-    }
-
-    if (g.kind === 'bibleReaderLibrary') {
-      const safeTitle = escapeForPopoverText(g.title.trim() || 'Bible Reader')
-      steps.push({
-        element: () =>
-          document.querySelector(
-            `${RESOURCES_LIST_PANEL} [data-resource-bible-reader]`
-          ) ?? document.querySelector(RESOURCES_LIST_PANEL)!,
-        popover: {
-          title: safeTitle,
-          description:
-            '<p>This row opens the <strong>Bible Reader</strong>: pick a book, chapter, and optional verses, then read in the scripture modal on the current profile.</p><p class="mt-2">Tap it when you want to read any passage without leaving this presentation.</p>',
           side: 'right',
           align: 'start',
         },

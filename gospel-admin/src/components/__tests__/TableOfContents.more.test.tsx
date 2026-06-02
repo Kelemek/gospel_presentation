@@ -147,6 +147,7 @@ describe('TableOfContents additional behaviors', () => {
             reference: 'John 3:16',
             sectionId: 'section-1',
             subsectionId: 'section-1-0',
+            translation: 'esv',
             openedAt: 1,
           },
         ],
@@ -162,8 +163,8 @@ describe('TableOfContents additional behaviors', () => {
     const panel = screen.getByRole('list')
     expect(within(panel).getByText('Scriptures')).toBeInTheDocument()
     expect(within(panel).queryByText('Resources')).not.toBeInTheDocument()
-    const scriptureLink = within(panel).getByRole('link', { name: /John 3:16/i })
-    expect(scriptureLink).toHaveAttribute('href', '/default?scriptureRef=John+3%3A16')
+    const scriptureLink = within(panel).getByRole('link', { name: /John 3:16 · ESV/i })
+    expect(scriptureLink).toHaveAttribute('href', '/default?scriptureRef=John+3%3A16&translation=esv')
   })
 
   it('renders Resources and Scriptures sections with scripture chapter href', async () => {
@@ -447,7 +448,7 @@ describe('TableOfContents additional behaviors', () => {
     expect(plainLink.querySelector('svg[aria-hidden="true"]')).not.toBeInTheDocument()
   })
 
-  it('shows Bible Reader Resources row from order and calls onOpenBibleReader', async () => {
+  it('shows Bible Reader main menu button from order and calls onOpenBibleReader', async () => {
     const fetchSpy = jest.fn((input: RequestInfo | URL) => {
       const url =
         typeof input === 'string'
@@ -471,10 +472,8 @@ describe('TableOfContents additional behaviors', () => {
     const TableOfContents = require('../TableOfContents').default
     renderToc(<TableOfContents sections={[]} onOpenBibleReader={onOpenBibleReader} />)
 
-    await waitFor(() => expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: /Resources/i }))
-
     const bibleReader = await screen.findByRole('button', { name: /Bible Reader/i })
+    expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument()
     fireEvent.click(bibleReader)
     expect(onOpenBibleReader).toHaveBeenCalledTimes(1)
   })

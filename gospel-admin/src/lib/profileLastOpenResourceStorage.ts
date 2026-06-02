@@ -1,5 +1,6 @@
 /** Recent profile resources and scriptures for TOC "Last Open" dropdown (device-only). */
 
+import { isBibleTranslation, type BibleTranslation } from '@/lib/bible-translations'
 import { gospelStorageGetSync, gospelStorageSetSync } from '@/lib/gospelClientStorage'
 import { stripHtmlTags } from '@/lib/stripHtmlTags'
 
@@ -34,6 +35,10 @@ export type ProfileRecentScriptureEntry = {
   sectionId: string
   subsectionId: string
   chapterView?: boolean
+  /** Bible translation when the passage was opened (Scripture modal tabs). */
+  translation?: BibleTranslation
+  /** Compare column translation for this tab (Scripture modal tabs only). */
+  compareTranslation?: BibleTranslation
   openedAt: number
 }
 
@@ -41,6 +46,10 @@ type ProfileRecentResourcesV3 = {
   v: 3
   resources: ProfileRecentResourceEntry[]
   scriptures: ProfileRecentScriptureEntry[]
+  /** Left-to-right tab bar (stable order; titles match Resources / Last Open). */
+  resourceTabs?: ProfileRecentResourceEntry[]
+  /** Left-to-right Scripture modal tab bar (stable order; separate from Last Open scriptures). */
+  scriptureTabs?: ProfileRecentScriptureEntry[]
 }
 
 /** @deprecated Use ProfileRecentResourceEntry */
@@ -57,7 +66,8 @@ function normalizeResourceEntry(raw: unknown): ProfileRecentResourceEntry | null
   if (typeof o.slug !== 'string') return null
   const slug = o.slug.trim()
   if (!slug) return null
-  const title = typeof o.title === 'string' ? o.title.trim() : ''
+  const title =
+    typeof o.title === 'string' ? stripHtmlTags(o.title).trim() : ''
   return { slug, title: title || slug }
 }
 
@@ -75,6 +85,11 @@ function normalizeScriptureEntry(raw: unknown): ProfileRecentScriptureEntry | nu
   if (!sectionId || !subsectionId) return null
   const openedAt = typeof o.openedAt === 'number' && Number.isFinite(o.openedAt) ? o.openedAt : 0
   const chapterView = o.chapterView === true ? true : undefined
+  const translationRaw = typeof o.translation === 'string' ? o.translation.trim().toLowerCase() : ''
+  const translation = isBibleTranslation(translationRaw) ? translationRaw : undefined
+  const compareRaw =
+    typeof o.compareTranslation === 'string' ? o.compareTranslation.trim().toLowerCase() : ''
+  const compareTranslation = isBibleTranslation(compareRaw) ? compareRaw : undefined
   return {
     slug,
     profileTitle: profileTitle || slug,
@@ -82,6 +97,8 @@ function normalizeScriptureEntry(raw: unknown): ProfileRecentScriptureEntry | nu
     sectionId,
     subsectionId,
     ...(chapterView ? { chapterView } : {}),
+    ...(translation ? { translation } : {}),
+    ...(compareTranslation ? { compareTranslation } : {}),
     openedAt,
   }
 }
@@ -91,6 +108,13 @@ function scriptureDedupeKey(entry: Pick<ProfileRecentScriptureEntry, 'slug' | 'r
   const slug = entry.slug.trim()
   const reference = entry.reference.trim().replace(/–/g, '-')
   return `${slug}|${reference}`
+}
+
+/** Stable id for Scripture modal tabs (same key as Last Open dedupe). */
+export function scriptureModalTabKey(
+  entry: Pick<ProfileRecentScriptureEntry, 'slug' | 'reference'>
+): string {
+  return scriptureDedupeKey(entry)
 }
 
 function parseStoredPayload(raw: string | null): ProfileRecentResourcesV3 {
@@ -119,7 +143,9 @@ function parseStoredPayload(raw: string | null): ProfileRecentResourcesV3 {
           if (scriptures.length >= PROFILE_RECENT_SCRIPTURES_STORED_MAX) break
         }
       }
-      return { v: 3, resources, scriptures }
+      const resourceTabs = normalizeResourceTabs(parsed, resources)
+      const scriptureTabs = normalizeScriptureTabs(parsed, scriptures)
+      return { v: 3, resources, scriptures, resourceTabs, scriptureTabs }
     }
     if (parsed?.v === 2 && Array.isArray(parsed.resources)) {
       const resources: ProfileRecentResourceEntry[] = []
@@ -130,11 +156,14 @@ function parseStoredPayload(raw: string | null): ProfileRecentResourcesV3 {
         resources.push(entry)
         if (resources.length >= PROFILE_RECENT_RESOURCES_STORED_MAX) break
       }
-      return { v: 3, resources, scriptures: [] }
+      const resourceTabs = normalizeResourceTabs(undefined, resources)
+      return { v: 3, resources, scriptures: [], resourceTabs, scriptureTabs: [] }
     }
     if (parsed?.v === 1 && typeof parsed.slug === 'string') {
       const entry = normalizeResourceEntry(parsed)
-      return { v: 3, resources: entry ? [entry] : [], scriptures: [] }
+      const resources = entry ? [entry] : []
+      const resourceTabs = normalizeResourceTabs(undefined, resources)
+      return { v: 3, resources, scriptures: [], resourceTabs, scriptureTabs: [] }
     }
   } catch {
     /* invalid JSON */
@@ -142,13 +171,195 @@ function parseStoredPayload(raw: string | null): ProfileRecentResourcesV3 {
   return empty
 }
 
-function saveStoredPayload(resources: ProfileRecentResourceEntry[], scriptures: ProfileRecentScriptureEntry[]): void {
+function deriveResourceTabsFromResources(
+  resources: ProfileRecentResourceEntry[]
+): ProfileRecentResourceEntry[] {
+  return [...resources].reverse().slice(0, PROFILE_RECENT_MENU_MAX)
+}
+
+function resourceTabsFromLegacySlugs(
+  raw: unknown,
+  resources: ProfileRecentResourceEntry[]
+): ProfileRecentResourceEntry[] {
+  if (!Array.isArray(raw)) return []
+  const bySlug = new Map(resources.map((r) => [r.slug, r]))
+  const out: ProfileRecentResourceEntry[] = []
+  for (const item of raw) {
+    if (typeof item !== 'string') continue
+    const slug = item.trim()
+    if (!slug || out.some((t) => t.slug === slug)) continue
+    out.push(bySlug.get(slug) ?? { slug, title: slug })
+    if (out.length >= PROFILE_RECENT_MENU_MAX) break
+  }
+  return out
+}
+
+function mergeTabTitlesFromResources(
+  tabs: ProfileRecentResourceEntry[],
+  resources: ProfileRecentResourceEntry[]
+): ProfileRecentResourceEntry[] {
+  const bySlug = new Map(resources.map((r) => [r.slug, r]))
+  return tabs.map((tab) => {
+    const fromResources = bySlug.get(tab.slug)
+    return fromResources
+      ? { slug: tab.slug, title: fromResources.title || tab.title }
+      : tab
+  })
+}
+
+function normalizeResourceTabs(
+  raw: unknown,
+  resources: ProfileRecentResourceEntry[]
+): ProfileRecentResourceEntry[] {
+  const parsed = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : null
+  const out: ProfileRecentResourceEntry[] = []
+
+  const pushEntry = (entry: ProfileRecentResourceEntry | null) => {
+    if (!entry || out.some((t) => t.slug === entry.slug)) return
+    out.push(entry)
+  }
+
+  if (parsed && Array.isArray(parsed.resourceTabs)) {
+    for (const item of parsed.resourceTabs) {
+      pushEntry(normalizeResourceEntry(item))
+      if (out.length >= PROFILE_RECENT_MENU_MAX) break
+    }
+  }
+
+  if (out.length === 0 && parsed && Array.isArray(parsed.resourceTabSlugs)) {
+    for (const entry of resourceTabsFromLegacySlugs(parsed.resourceTabSlugs, resources)) {
+      pushEntry(entry)
+      if (out.length >= PROFILE_RECENT_MENU_MAX) break
+    }
+  }
+
+  if (out.length === 0) return deriveResourceTabsFromResources(resources)
+  return mergeTabTitlesFromResources(out, resources).slice(0, PROFILE_RECENT_MENU_MAX)
+}
+
+function touchResourceTab(
+  tabs: ProfileRecentResourceEntry[],
+  entry: ProfileRecentResourceEntry
+): ProfileRecentResourceEntry[] {
+  const idx = tabs.findIndex((t) => t.slug === entry.slug)
+  if (idx >= 0) {
+    const next = [...tabs]
+    next[idx] = entry
+    return next
+  }
+  const next = [...tabs, entry]
+  if (next.length <= PROFILE_RECENT_MENU_MAX) return next
+  return next.slice(-PROFILE_RECENT_MENU_MAX)
+}
+
+function deriveScriptureTabsFromScriptures(
+  scriptures: ProfileRecentScriptureEntry[]
+): ProfileRecentScriptureEntry[] {
+  return [...scriptures].reverse().slice(0, PROFILE_RECENT_MENU_MAX)
+}
+
+function mergeScriptureTabFieldsFromMru(
+  tabs: ProfileRecentScriptureEntry[],
+  scriptures: ProfileRecentScriptureEntry[]
+): ProfileRecentScriptureEntry[] {
+  const byKey = new Map(scriptures.map((s) => [scriptureDedupeKey(s), s]))
+  return tabs.map((tab) => {
+    const fromMru = byKey.get(scriptureDedupeKey(tab))
+    if (!fromMru) return tab
+    return {
+      ...tab,
+      profileTitle: fromMru.profileTitle || tab.profileTitle,
+      sectionId: fromMru.sectionId || tab.sectionId,
+      subsectionId: fromMru.subsectionId || tab.subsectionId,
+      translation: tab.translation,
+      chapterView: tab.chapterView,
+      compareTranslation: tab.compareTranslation,
+    }
+  })
+}
+
+function normalizeScriptureTabs(
+  raw: unknown,
+  scriptures: ProfileRecentScriptureEntry[]
+): ProfileRecentScriptureEntry[] {
+  const parsed = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : null
+  const out: ProfileRecentScriptureEntry[] = []
+
+  const pushEntry = (entry: ProfileRecentScriptureEntry | null) => {
+    if (!entry || out.some((t) => scriptureDedupeKey(t) === scriptureDedupeKey(entry))) return
+    out.push(entry)
+  }
+
+  if (parsed && Array.isArray(parsed.scriptureTabs)) {
+    for (const item of parsed.scriptureTabs) {
+      pushEntry(normalizeScriptureEntry(item))
+      if (out.length >= PROFILE_RECENT_MENU_MAX) break
+    }
+  }
+
+  if (out.length === 0) return deriveScriptureTabsFromScriptures(scriptures)
+  return mergeScriptureTabFieldsFromMru(out, scriptures).slice(0, PROFILE_RECENT_MENU_MAX)
+}
+
+function normalizeScriptureTabsOnSave(
+  tabs: ProfileRecentScriptureEntry[],
+  scriptures: ProfileRecentScriptureEntry[]
+): ProfileRecentScriptureEntry[] {
+  if (tabs.length === 0) return []
+  return mergeScriptureTabFieldsFromMru(tabs, scriptures).slice(0, PROFILE_RECENT_MENU_MAX)
+}
+
+/** Merge tab row fields; omit optional keys on entry to leave stored values unchanged. */
+function mergeScriptureTabEntryFields(
+  prev: ProfileRecentScriptureEntry | undefined,
+  entry: ProfileRecentScriptureEntry
+): ProfileRecentScriptureEntry {
+  const chapterView = 'chapterView' in entry ? entry.chapterView : prev?.chapterView
+  const compareTranslation = 'compareTranslation' in entry
+    ? entry.compareTranslation
+    : prev?.compareTranslation
+  return {
+    ...prev,
+    ...entry,
+    openedAt: prev?.openedAt ?? entry.openedAt,
+    translation: entry.translation ?? prev?.translation,
+    chapterView,
+    compareTranslation,
+  }
+}
+
+function touchScriptureTab(
+  tabs: ProfileRecentScriptureEntry[],
+  entry: ProfileRecentScriptureEntry
+): ProfileRecentScriptureEntry[] {
+  const key = scriptureDedupeKey(entry)
+  const idx = tabs.findIndex((t) => scriptureDedupeKey(t) === key)
+  if (idx >= 0) {
+    const next = [...tabs]
+    next[idx] = mergeScriptureTabEntryFields(next[idx], entry)
+    return next
+  }
+  const next = [...tabs, entry]
+  if (next.length <= PROFILE_RECENT_MENU_MAX) return next
+  return next.slice(-PROFILE_RECENT_MENU_MAX)
+}
+
+function saveStoredPayload(
+  resources: ProfileRecentResourceEntry[],
+  scriptures: ProfileRecentScriptureEntry[],
+  resourceTabs: ProfileRecentResourceEntry[],
+  scriptureTabs: ProfileRecentScriptureEntry[]
+): void {
   if (typeof window === 'undefined') return
   try {
+    const trimmedResources = resources.slice(0, PROFILE_RECENT_RESOURCES_STORED_MAX)
+    const trimmedScriptures = scriptures.slice(0, PROFILE_RECENT_SCRIPTURES_STORED_MAX)
     const payload: ProfileRecentResourcesV3 = {
       v: 3,
-      resources: resources.slice(0, PROFILE_RECENT_RESOURCES_STORED_MAX),
-      scriptures: scriptures.slice(0, PROFILE_RECENT_SCRIPTURES_STORED_MAX),
+      resources: trimmedResources,
+      scriptures: trimmedScriptures,
+      resourceTabs: normalizeResourceTabs({ resourceTabs }, trimmedResources),
+      scriptureTabs: normalizeScriptureTabsOnSave(scriptureTabs, trimmedScriptures),
     }
     gospelStorageSetSync(PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY, JSON.stringify(payload))
     emitProfileLastOpenChanged()
@@ -182,10 +393,16 @@ export function recordProfileLastOpenOnEnter(profileSlug: string, profileTitle: 
   if (!slug) return
 
   const title = stripHtmlTags(profileTitle ?? '').trim() || slug
-  const { scriptures } = loadStoredPayload()
+  const { scriptures, scriptureTabs } = loadStoredPayload()
   const withoutCurrent = loadProfileRecentResources().filter((r) => r.slug !== slug)
   const nextResources = [{ slug, title }, ...withoutCurrent].slice(0, PROFILE_RECENT_RESOURCES_STORED_MAX)
-  saveStoredPayload(nextResources, scriptures)
+  const { resourceTabs: existingTabs } = loadStoredPayload()
+  const tabBase =
+    existingTabs && existingTabs.length > 0
+      ? existingTabs
+      : deriveResourceTabsFromResources(nextResources)
+  const nextTabs = touchResourceTab(tabBase, { slug, title })
+  saveStoredPayload(nextResources, scriptures, nextTabs, scriptureTabs ?? [])
 }
 
 export type RecordScriptureLastOpenInput = {
@@ -194,7 +411,12 @@ export type RecordScriptureLastOpenInput = {
   reference: string
   sectionId: string
   subsectionId: string
+  /** Verse pane when false/omitted; chapter pane when true (modal tab persistence). */
   chapterView?: boolean
+  /** Bible translation when the passage was opened (modal tabs and Last Open). */
+  translation?: BibleTranslation
+  /** Compare column for modal tabs; null/omit when compare is off. */
+  compareTranslation?: BibleTranslation | null
 }
 
 /** Call when a passage is shown in ScriptureModal (open or in-modal navigation). */
@@ -215,14 +437,210 @@ export function recordScriptureLastOpen(input: RecordScriptureLastOpenInput): vo
     sectionId,
     subsectionId,
     ...(input.chapterView ? { chapterView: true } : {}),
+    ...(input.translation ? { translation: input.translation } : {}),
     openedAt: Date.now(),
   }
 
-  const { resources } = loadStoredPayload()
+  const { resources, scriptureTabs } = loadStoredPayload()
   const key = scriptureDedupeKey(entry)
   const withoutDup = loadProfileRecentScriptures().filter((s) => scriptureDedupeKey(s) !== key)
   const nextScriptures = [entry, ...withoutDup].slice(0, PROFILE_RECENT_SCRIPTURES_STORED_MAX)
-  saveStoredPayload(resources, nextScriptures)
+  const tabs = loadStoredPayload().resourceTabs ?? deriveResourceTabsFromResources(resources)
+  saveStoredPayload(resources, nextScriptures, tabs, scriptureTabs ?? [])
+}
+
+function compareTranslationForTabEntry(
+  input: RecordScriptureLastOpenInput
+): BibleTranslation | undefined {
+  const primary = input.translation
+  const compare = input.compareTranslation
+  if (!compare || !isBibleTranslation(compare)) return undefined
+  if (primary && compare === primary) return undefined
+  return compare
+}
+
+function buildScriptureModalTabEntry(input: RecordScriptureLastOpenInput): ProfileRecentScriptureEntry | null {
+  const slug = input.slug.trim()
+  const reference = input.reference.trim().replace(/–/g, '-')
+  const sectionId = input.sectionId.trim() || 'modal-view'
+  const subsectionId = input.subsectionId.trim() || 'modal-view'
+  if (!slug || !reference) return null
+
+  const profileTitle = stripHtmlTags(input.profileTitle ?? '').trim() || slug
+  const base: ProfileRecentScriptureEntry = {
+    slug,
+    profileTitle,
+    reference,
+    sectionId,
+    subsectionId,
+    ...(input.translation ? { translation: input.translation } : {}),
+    openedAt: Date.now(),
+  }
+  let entry: ProfileRecentScriptureEntry = base
+  if (input.chapterView !== undefined) {
+    entry =
+      input.chapterView === true
+        ? { ...entry, chapterView: true }
+        : { ...entry, chapterView: undefined }
+  }
+  if (input.compareTranslation === undefined) {
+    return entry
+  }
+  const compareTranslation = compareTranslationForTabEntry(input)
+  if (compareTranslation) {
+    return { ...entry, compareTranslation }
+  }
+  return { ...entry, compareTranslation: undefined }
+}
+
+/** Add or refresh a passage in the Scripture modal tab bar (does not change Last Open scriptures). */
+export function recordScriptureModalTab(input: RecordScriptureLastOpenInput): void {
+  if (typeof window === 'undefined') return
+
+  const entry = buildScriptureModalTabEntry(input)
+  if (!entry) return
+
+  const { resources, scriptures, resourceTabs, scriptureTabs: existingTabs } = loadStoredPayload()
+  const tabBase = existingTabs && existingTabs.length > 0 ? existingTabs : []
+  const nextScriptureTabs = touchScriptureTab(tabBase, entry)
+  saveStoredPayload(resources, scriptures, resourceTabs ?? [], nextScriptureTabs)
+}
+
+function ensureScriptureTabsIncludeCurrent(
+  tabs: ProfileRecentScriptureEntry[],
+  current?: RecordScriptureLastOpenInput
+): ProfileRecentScriptureEntry[] {
+  const entry = current ? buildScriptureModalTabEntry(current) : null
+  if (!entry) return tabs
+  const key = scriptureDedupeKey(entry)
+  const idx = tabs.findIndex((t) => scriptureDedupeKey(t) === key)
+  if (idx >= 0) {
+    const next = [...tabs]
+    next[idx] = mergeScriptureTabEntryFields(next[idx], entry)
+    return next
+  }
+  const next = [...tabs, entry]
+  if (next.length <= PROFILE_RECENT_MENU_MAX) return next
+  return next.slice(-PROFILE_RECENT_MENU_MAX)
+}
+
+/** Stored modal tab row for a profile + reference (undefined when not in the tab bar). */
+export function getScriptureModalTabEntry(
+  slug: string,
+  reference: string
+): ProfileRecentScriptureEntry | undefined {
+  const trimmedSlug = slug.trim()
+  const trimmedRef = reference.trim().replace(/–/g, '-')
+  if (!trimmedSlug || !trimmedRef) return undefined
+  const key = scriptureDedupeKey({ slug: trimmedSlug, reference: trimmedRef })
+  const { scriptureTabs } = loadStoredPayload()
+  if (!scriptureTabs?.length) return undefined
+  return scriptureTabs.find((t) => scriptureDedupeKey(t) === key)
+}
+
+/** Entries for the Scripture modal tab bar (stable left-to-right order; up to {@link PROFILE_RECENT_MENU_MAX}). */
+export function loadScriptureModalTabs(
+  current?: RecordScriptureLastOpenInput
+): ProfileRecentScriptureEntry[] {
+  const { scriptures, scriptureTabs } = loadStoredPayload()
+  const baseTabs =
+    scriptureTabs && scriptureTabs.length > 0
+      ? scriptureTabs
+      : deriveScriptureTabsFromScriptures(scriptures)
+  return ensureScriptureTabsIncludeCurrent(
+    mergeScriptureTabFieldsFromMru(baseTabs, scriptures),
+    current
+  )
+}
+
+/** Tab to open after closing the active Scripture modal tab. Call before {@link removeScriptureModalTab}. */
+export function resolveScriptureTabNavigationAfterClose(
+  closedSlug: string,
+  closedReference: string
+): ProfileRecentScriptureEntry | null {
+  const slug = closedSlug.trim()
+  const reference = closedReference.trim().replace(/–/g, '-')
+  if (!slug || !reference) return null
+  const key = scriptureDedupeKey({ slug, reference })
+  const tabs = loadScriptureModalTabs()
+  const idx = tabs.findIndex((t) => scriptureDedupeKey(t) === key)
+  if (idx < 0) return tabs[0] ?? null
+  return tabs[idx + 1] ?? tabs[idx - 1] ?? null
+}
+
+/** Remove a passage from the Scripture modal tab bar only; Last Open scriptures are unchanged. */
+export function removeScriptureModalTab(closedSlug: string, closedReference: string): void {
+  if (typeof window === 'undefined') return
+
+  const slug = closedSlug.trim()
+  const reference = closedReference.trim().replace(/–/g, '-')
+  if (!slug || !reference) return
+
+  const key = scriptureDedupeKey({ slug, reference })
+  const { resources, scriptures, resourceTabs } = loadStoredPayload()
+  const nextScriptureTabs = (loadStoredPayload().scriptureTabs ?? []).filter(
+    (t) => scriptureDedupeKey(t) !== key
+  )
+  saveStoredPayload(resources, scriptures, resourceTabs ?? [], nextScriptureTabs)
+}
+
+function ensureResourceTabsIncludeCurrent(
+  tabs: ProfileRecentResourceEntry[],
+  currentProfileSlug: string | undefined,
+  currentProfileTitle: string | undefined
+): ProfileRecentResourceEntry[] {
+  const current = currentProfileSlug?.trim()
+  if (!current) return tabs
+  const title = stripHtmlTags(currentProfileTitle ?? '').trim() || current
+  const idx = tabs.findIndex((t) => t.slug === current)
+  if (idx >= 0) {
+    if (tabs[idx]?.title === title) return tabs
+    const next = [...tabs]
+    next[idx] = { slug: current, title }
+    return next
+  }
+  const next = [...tabs, { slug: current, title }]
+  if (next.length <= PROFILE_RECENT_MENU_MAX) return next
+  return next.slice(-PROFILE_RECENT_MENU_MAX)
+}
+
+/** Entries for the profile tab bar (stable left-to-right order; up to {@link PROFILE_RECENT_MENU_MAX}). */
+export function loadProfileRecentResourcesForTabs(
+  currentProfileSlug?: string,
+  currentProfileTitle?: string
+): ProfileRecentResourceEntry[] {
+  const { resources, resourceTabs } = loadStoredPayload()
+  const baseTabs =
+    resourceTabs && resourceTabs.length > 0
+      ? resourceTabs
+      : deriveResourceTabsFromResources(resources)
+  return ensureResourceTabsIncludeCurrent(
+    mergeTabTitlesFromResources(baseTabs, resources),
+    currentProfileSlug,
+    currentProfileTitle
+  )
+}
+
+/** Tab to open after closing `closedSlug` (prefer right, then left). Call before {@link removeProfileResourceTab}. */
+export function resolveProfileTabNavigationAfterClose(closedSlug: string): string | null {
+  const slug = closedSlug.trim()
+  if (!slug) return null
+  const tabs = loadProfileRecentResourcesForTabs()
+  const idx = tabs.findIndex((t) => t.slug === slug)
+  if (idx < 0) return loadProfileRecentResources()[0]?.slug ?? null
+  return tabs[idx + 1]?.slug ?? tabs[idx - 1]?.slug ?? null
+}
+
+/** Remove a profile from the open tab bar only; Last Open MRU `resources` and scriptures are unchanged. */
+export function removeProfileResourceTab(profileSlug: string): void {
+  if (typeof window === 'undefined') return
+
+  const slug = profileSlug.trim()
+  if (!slug) return
+
+  const { resources, scriptures, scriptureTabs } = loadStoredPayload()
+  const nextTabs = (loadStoredPayload().resourceTabs ?? []).filter((t) => t.slug !== slug)
+  saveStoredPayload(resources, scriptures, nextTabs, scriptureTabs ?? [])
 }
 
 /** Entries for the menu, excluding the profile currently open (up to {@link PROFILE_RECENT_MENU_MAX}). */
@@ -246,6 +664,9 @@ export function buildProfileRecentScriptureHref(entry: ProfileRecentScriptureEnt
   params.set('scriptureRef', entry.reference)
   if (entry.chapterView) {
     params.set('scriptureView', 'chapter')
+  }
+  if (entry.translation) {
+    params.set('translation', entry.translation)
   }
   return `/${entry.slug}?${params.toString()}`
 }

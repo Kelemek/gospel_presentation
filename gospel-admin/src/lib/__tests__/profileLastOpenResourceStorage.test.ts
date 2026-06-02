@@ -7,8 +7,17 @@ import {
   loadProfileLastOpenResource,
   loadProfileRecentResources,
   loadProfileRecentResourcesForMenu,
+  loadProfileRecentResourcesForTabs,
   loadProfileRecentScriptures,
   loadProfileRecentScripturesForMenu,
+  getScriptureModalTabEntry,
+  loadScriptureModalTabs,
+  recordScriptureModalTab,
+  removeProfileResourceTab,
+  removeScriptureModalTab,
+  resolveProfileTabNavigationAfterClose,
+  resolveScriptureTabNavigationAfterClose,
+  scriptureModalTabKey,
   shouldSkipProfileAppLaunchResume,
   PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY,
   PROFILE_RECENT_MENU_MAX,
@@ -94,6 +103,8 @@ describe('profileLastOpenResourceStorage', () => {
       v: 3,
       resources: [{ slug: 'x', title: 'X' }],
       scriptures: [],
+      resourceTabs: [{ slug: 'x', title: 'X' }],
+      scriptureTabs: [],
     })
   })
 
@@ -107,6 +118,21 @@ describe('profileLastOpenResourceStorage', () => {
     )
     expect(loadProfileRecentResources()).toEqual([{ slug: 'old', title: 'Old' }])
     expect(loadProfileRecentScriptures()).toEqual([])
+  })
+
+  it('recordScriptureLastOpen stores translation on MRU scriptures', () => {
+    recordScriptureLastOpen({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'John 3:16',
+      sectionId: 's1',
+      subsectionId: 's1-0',
+      translation: 'nasb',
+    })
+    expect(loadProfileRecentScriptures()[0]?.translation).toBe('nasb')
+    expect(buildProfileRecentScriptureHref(loadProfileRecentScriptures()[0]!)).toContain(
+      'translation=nasb'
+    )
   })
 
   it('records scriptures with dedupe and cap', () => {
@@ -213,6 +239,332 @@ describe('profileLastOpenResourceStorage', () => {
         openedAt: 2,
       })
     ).toBe('/sg?scriptureRef=Romans+8%3A1&scriptureView=chapter')
+  })
+
+  it('loadProfileRecentResourcesForTabs includes current profile when missing from stored tabs', () => {
+    recordProfileLastOpenOnEnter('a', 'A')
+    recordProfileLastOpenOnEnter('b', 'B')
+    gospelStorageSetSync(
+      PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY,
+      JSON.stringify({
+        v: 3,
+        resources: [
+          { slug: 'c', title: 'C' },
+          { slug: 'b', title: 'B' },
+          { slug: 'a', title: 'A' },
+        ],
+        scriptures: [],
+        resourceTabs: [
+          { slug: 'a', title: 'A' },
+          { slug: 'b', title: 'B' },
+        ],
+      })
+    )
+    expect(loadProfileRecentResourcesForTabs('c', 'Current C').map((r) => r.slug)).toEqual([
+      'a',
+      'b',
+      'c',
+    ])
+    expect(loadProfileRecentResourcesForTabs('c', 'Current C')[2]?.title).toBe('Current C')
+  })
+
+  it('loadProfileRecentResourcesForTabs keeps stored titles when slug is not in MRU resources', () => {
+    gospelStorageSetSync(
+      PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY,
+      JSON.stringify({
+        v: 3,
+        resources: [{ slug: 'b', title: 'B' }],
+        scriptures: [],
+        resourceTabs: [
+          { slug: 'a', title: 'Marriage Seminar' },
+          { slug: 'b', title: 'B' },
+        ],
+      })
+    )
+    expect(loadProfileRecentResourcesForTabs().map((r) => r.title)).toEqual([
+      'Marriage Seminar',
+      'B',
+    ])
+  })
+
+  it('loadProfileRecentResourcesForTabs keeps stable left-to-right order when revisiting', () => {
+    recordProfileLastOpenOnEnter('a', 'A')
+    recordProfileLastOpenOnEnter('b', 'B')
+    recordProfileLastOpenOnEnter('c', 'C')
+    expect(loadProfileRecentResourcesForTabs().map((r) => r.slug)).toEqual(['a', 'b', 'c'])
+
+    recordProfileLastOpenOnEnter('a', 'A again')
+    expect(loadProfileRecentResources().map((r) => r.slug)).toEqual(['a', 'c', 'b'])
+    expect(loadProfileRecentResourcesForTabs().map((r) => r.slug)).toEqual(['a', 'b', 'c'])
+    expect(loadProfileRecentResourcesForTabs()[0]?.title).toBe('A again')
+  })
+
+  it('loadProfileRecentResourcesForTabs caps at PROFILE_RECENT_MENU_MAX and drops oldest tab', () => {
+    for (let i = 0; i < 6; i += 1) {
+      recordProfileLastOpenOnEnter(`r${i}`, `Resource ${i}`)
+    }
+    expect(loadProfileRecentResources()).toHaveLength(PROFILE_RECENT_RESOURCES_STORED_MAX)
+    expect(loadProfileRecentResourcesForTabs()).toHaveLength(PROFILE_RECENT_MENU_MAX)
+    expect(loadProfileRecentResourcesForTabs().map((r) => r.slug)).toEqual([
+      'r1',
+      'r2',
+      'r3',
+      'r4',
+      'r5',
+    ])
+  })
+
+  it('resolveProfileTabNavigationAfterClose prefers tab to the right', () => {
+    recordProfileLastOpenOnEnter('a', 'A')
+    recordProfileLastOpenOnEnter('b', 'B')
+    recordProfileLastOpenOnEnter('c', 'C')
+    expect(resolveProfileTabNavigationAfterClose('b')).toBe('c')
+    expect(resolveProfileTabNavigationAfterClose('c')).toBe('b')
+  })
+
+  it('recordScriptureModalTab stores compare and chapter view per tab', () => {
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'John 3:16',
+      sectionId: 's1',
+      subsectionId: 's1-0',
+      translation: 'esv',
+      chapterView: true,
+      compareTranslation: 'nasb',
+    })
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'Romans 8:1',
+      sectionId: 's2',
+      subsectionId: 's2-0',
+      translation: 'esv',
+      chapterView: false,
+      compareTranslation: null,
+    })
+    const john = getScriptureModalTabEntry('default', 'John 3:16')
+    const romans = getScriptureModalTabEntry('default', 'Romans 8:1')
+    expect(john?.chapterView).toBe(true)
+    expect(john?.compareTranslation).toBe('nasb')
+    expect(romans?.chapterView).toBeUndefined()
+    expect(romans?.compareTranslation).toBeUndefined()
+  })
+
+  it('recordScriptureModalTab preserves compareTranslation when update omits compareTranslation', () => {
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'John 3:16',
+      sectionId: 's1',
+      subsectionId: 's1-0',
+      translation: 'esv',
+      compareTranslation: 'nasb',
+    })
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'John 3:16',
+      sectionId: 's1',
+      subsectionId: 's1-0',
+      translation: 'kjv',
+    })
+    expect(getScriptureModalTabEntry('default', 'John 3:16')?.compareTranslation).toBe('nasb')
+    expect(getScriptureModalTabEntry('default', 'John 3:16')?.translation).toBe('kjv')
+  })
+
+  it('recordScriptureModalTab clears compareTranslation when compareTranslation is null', () => {
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'John 3:16',
+      sectionId: 's1',
+      subsectionId: 's1-0',
+      compareTranslation: 'nasb',
+    })
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'John 3:16',
+      sectionId: 's1',
+      subsectionId: 's1-0',
+      compareTranslation: null,
+    })
+    expect(getScriptureModalTabEntry('default', 'John 3:16')?.compareTranslation).toBeUndefined()
+  })
+
+  it('recordScriptureModalTab preserves chapterView when update omits chapterView', () => {
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'John 3:16',
+      sectionId: 's1',
+      subsectionId: 's1-0',
+      translation: 'esv',
+      chapterView: true,
+    })
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'John 3:16',
+      sectionId: 's1',
+      subsectionId: 's1-0',
+      translation: 'kjv',
+    })
+    expect(getScriptureModalTabEntry('default', 'John 3:16')?.chapterView).toBe(true)
+    expect(getScriptureModalTabEntry('default', 'John 3:16')?.translation).toBe('kjv')
+  })
+
+  it('recordScriptureModalTab clears chapterView when chapterView is false', () => {
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'John 3:16',
+      sectionId: 's1',
+      subsectionId: 's1-0',
+      chapterView: true,
+    })
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'John 3:16',
+      sectionId: 's1',
+      subsectionId: 's1-0',
+      chapterView: false,
+    })
+    expect(getScriptureModalTabEntry('default', 'John 3:16')?.chapterView).toBeUndefined()
+  })
+
+  it('recordScriptureModalTab stores translation per tab', () => {
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'John 3:16',
+      sectionId: 's1',
+      subsectionId: 's1-0',
+      translation: 'kjv',
+    })
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'Romans 8:1',
+      sectionId: 's2',
+      subsectionId: 's2-0',
+      translation: 'nasb',
+    })
+    const tabs = loadScriptureModalTabs()
+    expect(tabs.find((t) => t.reference === 'John 3:16')?.translation).toBe('kjv')
+    expect(tabs.find((t) => t.reference === 'Romans 8:1')?.translation).toBe('nasb')
+    expect(buildProfileRecentScriptureHref(tabs[0]!)).toContain('translation=kjv')
+  })
+
+  it('recordScriptureModalTab updates scriptureTabs without changing Last Open scriptures', () => {
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'John 3:16',
+      sectionId: 's1',
+      subsectionId: 's1-0',
+      translation: 'esv',
+    })
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'Romans 8:1',
+      sectionId: 's2',
+      subsectionId: 's2-0',
+    })
+    recordScriptureLastOpen({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'John 3:16',
+      sectionId: 's1',
+      subsectionId: 's1-0',
+    })
+    recordScriptureLastOpen({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'Romans 8:1',
+      sectionId: 's2',
+      subsectionId: 's2-0',
+    })
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'Galatians 2:16',
+      sectionId: 's3',
+      subsectionId: 's3-0',
+    })
+    expect(loadProfileRecentScriptures().map((s) => s.reference)).toEqual(['Romans 8:1', 'John 3:16'])
+    expect(loadScriptureModalTabs().map((s) => s.reference)).toEqual([
+      'John 3:16',
+      'Romans 8:1',
+      'Galatians 2:16',
+    ])
+  })
+
+  it('removeScriptureModalTab removes passage from tabs only and preserves Last Open scriptures', () => {
+    recordScriptureLastOpen({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'John 3:16',
+      sectionId: 's1',
+      subsectionId: 's1-0',
+    })
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'Romans 8:1',
+      sectionId: 's2',
+      subsectionId: 's2-0',
+    })
+    removeScriptureModalTab('default', 'John 3:16')
+    expect(loadProfileRecentScriptures().map((s) => s.reference)).toEqual(['John 3:16'])
+    expect(loadScriptureModalTabs().map((s) => s.reference)).toEqual(['Romans 8:1'])
+  })
+
+  it('resolveScriptureTabNavigationAfterClose prefers tab to the right', () => {
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'Romans 1:1',
+      sectionId: 'a',
+      subsectionId: 'a-0',
+    })
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'Romans 1:2',
+      sectionId: 'b',
+      subsectionId: 'b-0',
+    })
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'Romans 1:3',
+      sectionId: 'c',
+      subsectionId: 'c-0',
+    })
+    expect(resolveScriptureTabNavigationAfterClose('default', 'Romans 1:2')?.reference).toBe('Romans 1:3')
+    expect(scriptureModalTabKey(resolveScriptureTabNavigationAfterClose('default', 'Romans 1:3')!)).toBe(
+      scriptureModalTabKey({ slug: 'default', reference: 'Romans 1:2' })
+    )
+  })
+
+  it('removeProfileResourceTab removes slug from tabs only and preserves MRU resources and scriptures', () => {
+    recordScriptureLastOpen({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'John 3:16',
+      sectionId: 'section-1',
+      subsectionId: 'section-1-0',
+    })
+    recordProfileLastOpenOnEnter('a', 'A')
+    recordProfileLastOpenOnEnter('b', 'B')
+    removeProfileResourceTab('a')
+    expect(loadProfileRecentResources().map((r) => r.slug)).toEqual(['b', 'a'])
+    expect(loadProfileRecentResourcesForTabs().map((r) => r.slug)).toEqual(['b'])
+    expect(loadProfileRecentScriptures()[0]?.reference).toBe('John 3:16')
   })
 
   it('loadProfileRecentResourcesForMenu excludes current slug', () => {
