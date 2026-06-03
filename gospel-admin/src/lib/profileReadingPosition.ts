@@ -199,7 +199,9 @@ const PLAIN_OFFSET_REFINE_WINDOW_MIN = 256
 
 function approximatePlainOffsetAtViewportLine(scope: HTMLElement, plainLen: number): number {
   const targetY = profileReadingLineViewportY()
-  const rect = scope.getBoundingClientRect()
+  const getRect = scope.getBoundingClientRect
+  if (typeof getRect !== 'function') return 0
+  const rect = getRect.call(scope)
   if (rect.height <= 0) return 0
   const fraction = (targetY - rect.top) / rect.height
   return Math.max(0, Math.min(plainLen, Math.round(fraction * plainLen)))

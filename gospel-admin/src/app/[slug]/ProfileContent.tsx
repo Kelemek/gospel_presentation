@@ -413,7 +413,12 @@ function ProfileContent({ sections, profileInfo, onReadingResumeSettled }: Profi
         return
       }
 
-      const captured = captureReadingPositionAtViewport(sections, profileSlug)
+      let captured
+      try {
+        captured = captureReadingPositionAtViewport(sections, profileSlug)
+      } catch {
+        return
+      }
       if (!captured) return
 
       if (
@@ -1220,6 +1225,8 @@ function ProfileContent({ sections, profileInfo, onReadingResumeSettled }: Profi
       anchorSubsectionId?: string,
       options?: { initialChapterView?: boolean; pickerNavigation?: boolean }
     ) => {
+      persistReadingResumeBeforeLeave('scripture-open')
+
       let sectionId = anchorSectionId?.trim() ?? ''
       let subsectionId = anchorSubsectionId?.trim() ?? ''
       if (!sectionId || !subsectionId) {
@@ -1271,7 +1278,7 @@ function ProfileContent({ sections, profileInfo, onReadingResumeSettled }: Profi
         ...(options?.pickerNavigation ? { pickerNavigation: true as const } : {}),
       })
     },
-    [sections, allScriptureRefs, favoriteReferences]
+    [sections, allScriptureRefs, favoriteReferences, persistReadingResumeBeforeLeave]
   )
 
   const deepLinkTranslation = useMemo((): BibleTranslation | null => {

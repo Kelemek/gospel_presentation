@@ -243,6 +243,12 @@ afterEach(async () => {
   } catch {
     // ignore if storage modules are unavailable in a narrow test run
   }
+  try {
+    const { resetDocumentScrollLockForTests } = require('@/lib/documentScrollLock')
+    resetDocumentScrollLockForTests()
+  } catch {
+    // ignore if scroll lock module is unavailable in a narrow test run
+  }
   localStorage.clear()
   sessionStorage.clear()
 })

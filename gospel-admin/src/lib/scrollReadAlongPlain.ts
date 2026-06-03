@@ -135,7 +135,9 @@ export function getCaretClientRectForReadAlongPlainOffset(
     return null
   }
 
-  const rect = r.getBoundingClientRect()
+  const getRect = r.getBoundingClientRect
+  if (typeof getRect !== 'function') return null
+  const rect = getRect.call(r)
   if (rect.height === 0 && rect.width === 0) return null
   return rect
 }

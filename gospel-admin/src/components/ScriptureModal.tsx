@@ -4,6 +4,7 @@ import {
   useId,
   useState,
   useEffect,
+  useLayoutEffect,
   useRef,
   useMemo,
   useCallback,
@@ -27,6 +28,7 @@ import {
 } from '@/lib/memorizationAddVersePrefs'
 import { memorizationSaveFailureMessage } from '@/lib/memorizationSaveFailureMessage'
 import { logger } from '@/lib/logger'
+import { lockDocumentScroll } from '@/lib/documentScrollLock'
 import { buildScriptureModalShareUrl } from '@/lib/scriptureModalShareUrl'
 import { shareScripturePassage } from '@/lib/shareScripturePassage'
 import {
@@ -721,21 +723,10 @@ export default function ScriptureModal({
     }
   }, [spurgeonStudyLookupRef])
 
-  // Prevent body scrolling when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden'
-      document.documentElement.style.overflow = 'hidden'
-    } else {
-      document.body.style.overflow = 'unset'
-      document.documentElement.style.overflow = 'unset'
-    }
-    
-    // Cleanup on unmount
-    return () => {
-      document.body.style.overflow = 'unset'
-      document.documentElement.style.overflow = 'unset'
-    }
+  // Lock document scroll without jumping the profile page to the top (overflow-only locks do).
+  useLayoutEffect(() => {
+    if (!isOpen) return
+    return lockDocumentScroll()
   }, [isOpen])
 
   // Auto-scroll to highlighted verse when chapter context is displayed (scroll the modal pane, not the window)

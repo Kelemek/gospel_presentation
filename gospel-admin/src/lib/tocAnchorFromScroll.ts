@@ -47,7 +47,7 @@ export function getOrderedTocAnchorIds(sections: GospelSection[]): string[] {
 
 function tocAnchorViewportTop(id: string): number | null {
   const el = document.getElementById(id)
-  if (!el) return null
+  if (!el || typeof el.getBoundingClientRect !== 'function') return null
   return el.getBoundingClientRect().top
 }
 

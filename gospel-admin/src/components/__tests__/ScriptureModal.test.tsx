@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TextSizeProvider } from '@/contexts/TextSizeContext'
 import ScriptureModal from '../ScriptureModal'
+import { resetDocumentScrollLockForTests } from '@/lib/documentScrollLock'
 import { DEFAULT_LONG_PRESS_MS } from '@/hooks/useLongPress'
 import { SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY } from '@/lib/scriptureVerseNumbersPreference'
 
@@ -42,6 +43,7 @@ describe('ScriptureModal Component', () => {
   beforeEach(() => {
     mockFetch.mockReset()
     jest.clearAllMocks()
+    resetDocumentScrollLockForTests()
     localStorage.removeItem(SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY)
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = fetchUrl(input)
@@ -66,6 +68,20 @@ describe('ScriptureModal Component', () => {
       expect(screen.getByRole('heading', { name: 'John 3:16' })).toBeInTheDocument()
       expect(screen.getByLabelText('Close modal')).toBeInTheDocument()
     })
+  })
+
+  it('locks document scroll without jumping the page to the top', () => {
+    Object.defineProperty(window, 'scrollY', { value: 180, configurable: true, writable: true })
+    const scrollToSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => {})
+
+    const { unmount } = renderWithTextSize(<ScriptureModal {...defaultProps} />)
+    expect(document.body.style.position).toBe('fixed')
+    expect(document.body.style.top).toBe('-180px')
+
+    unmount()
+    expect(scrollToSpy).toHaveBeenCalledWith(0, 180)
+
+    scrollToSpy.mockRestore()
   })
 
   it('opens passage picker when header reference is clicked and onNavigateReference is set', async () => {
