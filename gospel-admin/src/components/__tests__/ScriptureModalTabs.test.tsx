@@ -55,7 +55,7 @@ describe('ScriptureModalTabs', () => {
     expect(onCloseTab).toHaveBeenCalledWith(tabs[1])
   })
 
-  it('splits book and chapter:verse so suffix does not use end-truncation', () => {
+  it('splits book and chapter:verse on separate nodes for scripture tabs', () => {
     render(
       <ScriptureModalTabs
         tabs={tabs}

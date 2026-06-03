@@ -46,6 +46,7 @@ describe('OpenItemTabBar', () => {
       />
     )
     const tablist = screen.getByRole('tablist', { name: 'Open resources' })
+    expect(tablist).toHaveClass('overflow-x-auto')
     expect(tablist.closest('[data-tour="resource-tabs"]')).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'The Gospel', selected: true })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Spurgeon Sermons', selected: false })).toBeInTheDocument()
@@ -82,6 +83,24 @@ describe('OpenItemTabBar', () => {
     )
     expect(screen.getByRole('tab', { name: 'Full title for screen readers' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Close Full title for screen readers' })).toBeInTheDocument()
+  })
+
+  it('shows full tab titles without truncating in the tab row', () => {
+    render(
+      <OpenItemTabBar
+        tabs={[
+          { id: 'a', title: 'Love: A Biblical Perspective' },
+          { id: 'b', title: 'The Gospel Presentation' },
+        ]}
+        activeId="a"
+        onSelectTab={jest.fn()}
+        onCloseTab={jest.fn()}
+        tablistAriaLabel="Open resources"
+      />
+    )
+    expect(screen.getByRole('tab', { name: 'Love: A Biblical Perspective' })).toHaveTextContent(
+      'Love: A Biblical Perspective'
+    )
   })
 
   it('renders titleParts with book and suffix on separate nodes', () => {

@@ -1,6 +1,7 @@
 import { gospelStorageGetSync, gospelStorageSetSync } from '@/lib/gospelClientStorage'
+import { PROFILE_BOOKMARKS_STORAGE_KEY } from '@/lib/gospelClientStoragePolicy'
 
-export const PROFILE_BOOKMARKS_STORAGE_KEY = 'gospel-profile-bookmarks'
+export { PROFILE_BOOKMARKS_STORAGE_KEY }
 export const PROFILE_BOOKMARKS_SCHEMA_VERSION = 2
 
 export interface ProfileBookmark {

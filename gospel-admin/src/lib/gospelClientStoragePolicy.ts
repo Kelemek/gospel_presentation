@@ -1,5 +1,3 @@
-import { PROFILE_BOOKMARKS_STORAGE_KEY } from '@/lib/profileBookmarksStorage'
-import { PROFILE_HIGHLIGHTS_STORAGE_KEY } from '@/lib/profileHighlightsStorage'
 import { VERSE_PIN_STORAGE_KEY_PREFIX, LEGACY_SCRIPTURE_PROGRESS_KEY_PREFIX } from '@/lib/versePinStorage'
 import {
   PROFILE_READ_ALONG_LAST_SESSION_KEY_PREFIX,
@@ -7,7 +5,15 @@ import {
 } from '@/lib/profileReadAlongProgressStorage'
 import { PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY } from '@/lib/profileLastOpenResourceStorage'
 import { PROFILE_READING_RESUME_KEY_PREFIX } from '@/lib/profileReadingResumeStorage'
-import { PRESENTATION_READ_COMPLETE_STORAGE_KEY } from '@/lib/presentationReadCompleteStorage'
+
+/** Keep in sync with `profileBookmarksStorage.ts` (do not import — breaks policy ↔ gospelClientStorage cycle). */
+export const PROFILE_BOOKMARKS_STORAGE_KEY = 'gospel-profile-bookmarks'
+
+/** Keep in sync with `profileHighlightsStorage.ts`. */
+export const PROFILE_HIGHLIGHTS_STORAGE_KEY = 'gospel-profile-highlights'
+
+/** Keep in sync with `presentationReadCompleteStorage.ts`. */
+export const PRESENTATION_READ_COMPLETE_STORAGE_KEY = 'gospel-presentation-read-complete:v1'
 
 /** Keep in sync with `verseMemorizationStorage.ts`. */
 export const VERSE_MEMORIZATION_STORAGE_KEY = 'gospel-memorization-verses'

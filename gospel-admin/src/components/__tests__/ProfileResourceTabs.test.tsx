@@ -7,22 +7,7 @@ const tabs = [
   { slug: 'sg', title: 'Spurgeon' },
 ]
 
-function mockMatchMedia(matches = false) {
-  Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    value: jest.fn().mockImplementation((query: string) => ({
-      matches: query.includes('max-width') ? matches : false,
-      media: query,
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-    })),
-  })
-}
-
 describe('ProfileResourceTabs', () => {
-  beforeEach(() => {
-    mockMatchMedia(false)
-  })
   it('renders nothing when tabs are empty or only one resource is open', () => {
     const { container: empty } = render(
       <ProfileResourceTabs
@@ -54,24 +39,33 @@ describe('ProfileResourceTabs', () => {
         onCloseTab={jest.fn()}
       />
     )
-    expect(screen.getByRole('tablist', { name: /open resources/i })).toBeInTheDocument()
+    const tablist = screen.getByRole('tablist', { name: /open resources/i })
+    expect(tablist).toBeInTheDocument()
+    expect(tablist).toHaveClass('overflow-x-auto')
     const activeTab = screen.getByRole('tab', { name: 'The Gospel', selected: true })
     expect(activeTab).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Spurgeon', selected: false })).toBeInTheDocument()
   })
 
-  it('shows full active resource title below tabs on mobile', () => {
+  it('shows full tab titles without truncating in the tab row', () => {
+    const longTabs = [
+      { slug: 'a', title: 'Love: A Biblical Perspective' },
+      { slug: 'b', title: 'The Gospel Presentation' },
+    ]
     render(
       <ProfileResourceTabs
-        tabs={tabs}
-        activeSlug="default"
+        tabs={longTabs}
+        activeSlug="a"
         onSelectTab={jest.fn()}
         onCloseTab={jest.fn()}
       />
     )
-    const activeTitle = screen.getByTestId('profile-resource-tabs-active-title')
-    expect(activeTitle).toHaveTextContent('The Gospel')
-    expect(activeTitle).toHaveClass('sm:hidden')
+    expect(screen.getByRole('tab', { name: 'Love: A Biblical Perspective' })).toHaveTextContent(
+      'Love: A Biblical Perspective'
+    )
+    expect(screen.getByRole('tab', { name: 'The Gospel Presentation' })).toHaveTextContent(
+      'The Gospel Presentation'
+    )
   })
 
   it('calls onSelectTab when a tab is clicked', () => {
@@ -86,43 +80,6 @@ describe('ProfileResourceTabs', () => {
     )
     fireEvent.click(screen.getByRole('tab', { name: 'Spurgeon' }))
     expect(onSelectTab).toHaveBeenCalledWith('sg')
-  })
-
-  it('shows a flyover layer on mobile when the active tab changes', () => {
-    mockMatchMedia(true)
-    const rect = {
-      x: 0,
-      y: 0,
-      width: 120,
-      height: 24,
-      top: 0,
-      left: 0,
-      right: 120,
-      bottom: 24,
-      toJSON: () => ({}),
-    }
-    jest.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue(rect)
-
-    const { rerender } = render(
-      <ProfileResourceTabs
-        tabs={tabs}
-        activeSlug="default"
-        onSelectTab={jest.fn()}
-        onCloseTab={jest.fn()}
-      />
-    )
-
-    rerender(
-      <ProfileResourceTabs
-        tabs={tabs}
-        activeSlug="sg"
-        onSelectTab={jest.fn()}
-        onCloseTab={jest.fn()}
-      />
-    )
-
-    expect(screen.getByTestId('profile-resource-tabs-title-flyover')).toHaveTextContent('Spurgeon')
-    jest.restoreAllMocks()
   })
 
   it('calls onCloseTab when close is clicked', () => {

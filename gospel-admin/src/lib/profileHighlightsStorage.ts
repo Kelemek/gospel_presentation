@@ -1,6 +1,7 @@
 import { gospelStorageGetSync, gospelStorageSetSync } from '@/lib/gospelClientStorage'
+import { PROFILE_HIGHLIGHTS_STORAGE_KEY } from '@/lib/gospelClientStoragePolicy'
 
-export const PROFILE_HIGHLIGHTS_STORAGE_KEY = 'gospel-profile-highlights'
+export { PROFILE_HIGHLIGHTS_STORAGE_KEY }
 export const PROFILE_HIGHLIGHTS_SCHEMA_VERSION = 1
 
 export interface ProfileHighlight {

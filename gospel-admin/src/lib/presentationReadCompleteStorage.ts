@@ -1,7 +1,7 @@
 import { gospelStorageGetSync, gospelStorageSetSync } from '@/lib/gospelClientStorage'
+import { PRESENTATION_READ_COMPLETE_STORAGE_KEY } from '@/lib/gospelClientStoragePolicy'
 
-/** Slugs the user has read to the end (Listen through last anchor or scrolled to bottom). Device-only. */
-export const PRESENTATION_READ_COMPLETE_STORAGE_KEY = 'gospel-presentation-read-complete:v1'
+export { PRESENTATION_READ_COMPLETE_STORAGE_KEY }
 
 export const GOSPEL_PRESENTATION_READ_STATUS_CHANGED_EVENT = 'gospel-presentation-read-status-changed' as const
 
