@@ -295,7 +295,7 @@ export default function TableOfContents({
 
   return (
     <div className="space-y-4 md:space-y-3">
-      {/* Last Open (recent resources) — on web always; on native only when not logged in */}
+      {/* History (recent resources) — on web always; on native only when not logged in */}
       {(!isNative || !isLoggedIn) && showLastOpenDropdown ? (
         <div>
           <button
@@ -320,7 +320,7 @@ export default function TableOfContents({
                 d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            Last Open
+            History
             <span className={`ml-auto transition-transform ${isLastOpenOpen ? 'rotate-180' : ''}`}>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path

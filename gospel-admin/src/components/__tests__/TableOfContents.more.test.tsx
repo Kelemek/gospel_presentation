@@ -79,7 +79,7 @@ describe('TableOfContents additional behaviors', () => {
     renderToc(<TableOfContents sections={[]} currentProfileSlug="other" />)
 
     await waitFor(() => expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument())
-    expect(screen.getByRole('button', { name: /^Last Open$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^History$/i })).toBeInTheDocument()
   })
 
   it('hides Last Open when only the current profile is in recent list', async () => {
@@ -96,7 +96,7 @@ describe('TableOfContents additional behaviors', () => {
     renderToc(<TableOfContents sections={[]} currentProfileSlug="default" />)
 
     await waitFor(() => expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument())
-    expect(screen.queryByRole('button', { name: /^Last Open$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^History$/i })).not.toBeInTheDocument()
   })
 
   it('lists up to five recent resources and navigates on row click', async () => {
@@ -120,8 +120,8 @@ describe('TableOfContents additional behaviors', () => {
       <TableOfContents sections={[]} currentProfileSlug="current" onNavigate={onNavigate} />
     )
 
-    await waitFor(() => expect(screen.getByRole('button', { name: /^Last Open$/i })).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: /^Last Open$/i }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /^History$/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /^History$/i }))
 
     expect(screen.getByRole('link', { name: 'Resource One' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'The Gospel' })).toBeInTheDocument()
@@ -157,8 +157,8 @@ describe('TableOfContents additional behaviors', () => {
     const TableOfContents = require('../TableOfContents').default
     renderToc(<TableOfContents sections={[]} currentProfileSlug="default" />)
 
-    await waitFor(() => expect(screen.getByRole('button', { name: /^Last Open$/i })).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: /^Last Open$/i }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /^History$/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /^History$/i }))
 
     const panel = screen.getByRole('list')
     expect(within(panel).getByText('Scriptures')).toBeInTheDocument()
@@ -194,8 +194,8 @@ describe('TableOfContents additional behaviors', () => {
     const TableOfContents = require('../TableOfContents').default
     renderToc(<TableOfContents sections={[]} currentProfileSlug="current" />)
 
-    await waitFor(() => expect(screen.getByRole('button', { name: /^Last Open$/i })).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: /^Last Open$/i }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /^History$/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /^History$/i }))
 
     const panel = screen.getByRole('list')
     expect(within(panel).getByText('Resources')).toBeInTheDocument()
