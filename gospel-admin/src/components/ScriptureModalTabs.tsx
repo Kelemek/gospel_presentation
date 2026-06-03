@@ -2,6 +2,7 @@
 
 import OpenItemTabBar from '@/components/OpenItemTabBar'
 import { lastOpenScriptureDisplayParts } from '@/lib/lastOpenScriptureLabel'
+import { SCRIPTURE_MODAL_TAB_BAR_SCROLL_KEY } from '@/lib/openItemTabBarScrollStorage'
 import type { ProfileRecentScriptureEntry } from '@/lib/profileLastOpenResourceStorage'
 import { scriptureModalTabKey } from '@/lib/profileLastOpenResourceStorage'
 
@@ -45,6 +46,7 @@ export default function ScriptureModalTabs({
         const entry = tabs.find((t) => scriptureModalTabKey(t) === id)
         if (entry) onCloseTab(entry)
       }}
+      persistScrollKey={SCRIPTURE_MODAL_TAB_BAR_SCROLL_KEY}
     />
   )
 }

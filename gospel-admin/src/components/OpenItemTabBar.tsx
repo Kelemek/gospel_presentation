@@ -1,11 +1,13 @@
 'use client'
 
-import { useCallback, useLayoutEffect, useRef } from 'react'
-
-function prefersReducedMotion(): boolean {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
-}
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import {
+  captureOpenItemTabBarScroll,
+  loadOpenItemTabBarScrollLeft,
+  persistOpenItemTabBarScrollOnRelease,
+  restoreOpenItemTabBarScrollPosition,
+  saveOpenItemTabBarScrollLeft,
+} from '@/lib/openItemTabBarScrollStorage'
 
 const TABLIST_SCROLL_CLASS =
   'bg-slate-100/80 dark:bg-slate-700/80 overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden'
@@ -47,6 +49,8 @@ export type OpenItemTabBarProps = {
   tablistAriaLabel: string
   dataTour?: string
   className?: string
+  /** When set, horizontal scroll position is restored after remount (e.g. resource tab navigation). */
+  persistScrollKey?: string
 }
 
 export default function OpenItemTabBar({
@@ -57,27 +61,56 @@ export default function OpenItemTabBar({
   tablistAriaLabel,
   dataTour,
   className = '',
+  persistScrollKey,
 }: OpenItemTabBarProps) {
   const active = activeId.trim()
-
-  const tabLabelRefs = useRef<Map<string, HTMLSpanElement>>(new Map())
   const tablistScrollRef = useRef<HTMLDivElement>(null)
 
-  useLayoutEffect(() => {
-    const labelEl = tabLabelRefs.current.get(active)
-    const scrollEl = tablistScrollRef.current
-    if (!labelEl || !scrollEl) return
-    labelEl.scrollIntoView({
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-      block: 'nearest',
-      inline: 'nearest',
-    })
-  }, [active, tabs])
+  const captureTabBarScroll = useCallback(() => {
+    if (!persistScrollKey) return
+    captureOpenItemTabBarScroll(persistScrollKey, tablistScrollRef.current)
+  }, [persistScrollKey])
 
-  const setTabLabelRef = useCallback((id: string, node: HTMLSpanElement | null) => {
-    if (node) tabLabelRefs.current.set(id, node)
-    else tabLabelRefs.current.delete(id)
-  }, [])
+  useLayoutEffect(() => {
+    if (!persistScrollKey) return
+    const saved = loadOpenItemTabBarScrollLeft(persistScrollKey)
+    if (saved == null) return
+
+    let cancelled = false
+    let attempts = 0
+    const maxAttempts = 8
+
+    const apply = () => {
+      if (cancelled) return
+      const el = tablistScrollRef.current
+      if (!el) return
+      const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth)
+      if (maxScroll <= 0 && saved > 0 && attempts < maxAttempts) {
+        attempts += 1
+        window.requestAnimationFrame(apply)
+        return
+      }
+      restoreOpenItemTabBarScrollPosition(el, persistScrollKey)
+    }
+
+    apply()
+    return () => {
+      cancelled = true
+    }
+  }, [persistScrollKey, tabs.length])
+
+  useEffect(() => {
+    if (!persistScrollKey) return
+    const el = tablistScrollRef.current
+    if (!el) return
+
+    const saveOnScroll = () => saveOpenItemTabBarScrollLeft(persistScrollKey, el.scrollLeft)
+    el.addEventListener('scroll', saveOnScroll, { passive: true })
+    return () => {
+      persistOpenItemTabBarScrollOnRelease(persistScrollKey, el)
+      el.removeEventListener('scroll', saveOnScroll)
+    }
+  }, [persistScrollKey])
 
   if (tabs.length <= 1) return null
 
@@ -112,6 +145,7 @@ export default function OpenItemTabBar({
                   aria-selected={isActive}
                   aria-label={label}
                   title={label}
+                  onPointerDown={captureTabBarScroll}
                   onClick={() => onSelectTab(entry.id)}
                   className={`${TAB_SELECT_BUTTON_CLASS} ${
                     isActive
@@ -119,10 +153,7 @@ export default function OpenItemTabBar({
                       : 'text-slate-600 dark:text-slate-300'
                   }`}
                 >
-                  <span
-                    ref={(node) => setTabLabelRef(entry.id, node)}
-                    className="inline-flex min-w-0"
-                  >
+                  <span className="inline-flex min-w-0">
                     {entry.titleParts ? (
                       <TabScriptureStyleTitle
                         book={entry.titleParts.book}
@@ -137,8 +168,10 @@ export default function OpenItemTabBar({
                   type="button"
                   aria-label={`Close ${label}`}
                   title={`Close ${label}`}
+                  onPointerDown={captureTabBarScroll}
                   onClick={(e) => {
                     e.stopPropagation()
+                    captureTabBarScroll()
                     onCloseTab(entry.id)
                   }}
                   className={TAB_CLOSE_BUTTON_CLASS}

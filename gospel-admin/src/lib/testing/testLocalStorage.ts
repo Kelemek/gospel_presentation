@@ -7,8 +7,8 @@ export async function resetGospelStorageTestState(): Promise<void> {
   await deleteGospelIdbForTests()
 }
 
-/** Real in-memory Storage for tests (Jest setup mocks `global.localStorage` with jest.fn()). */
-export function createTestLocalStorage(initial: Record<string, string> = {}): Storage {
+/** In-memory Storage for tests (Jest setup mocks `localStorage` / `sessionStorage` with jest.fn()). */
+export function createTestStorage(initial: Record<string, string> = {}): Storage {
   const data = new Map<string, string>(Object.entries(initial))
   return {
     get length() {
@@ -32,8 +32,43 @@ export function createTestLocalStorage(initial: Record<string, string> = {}): St
   } as Storage
 }
 
-export function installTestLocalStorage(initial?: Record<string, string>): Storage {
-  const storage = createTestLocalStorage(initial)
-  Object.defineProperty(global, 'localStorage', { value: storage, configurable: true, writable: true })
+/** @deprecated Prefer `createTestStorage` — name kept for existing imports. */
+export const createTestLocalStorage = createTestStorage
+
+function installStorageOnGlobal(
+  storage: Storage,
+  property: 'localStorage' | 'sessionStorage'
+): Storage {
+  Object.defineProperty(global, property, {
+    value: storage,
+    configurable: true,
+    writable: true,
+  })
+  if (typeof window !== 'undefined') {
+    Object.defineProperty(window, property, {
+      value: storage,
+      configurable: true,
+      writable: true,
+    })
+  }
   return storage
+}
+
+export function installTestLocalStorage(initial?: Record<string, string>): Storage {
+  return installStorageOnGlobal(createTestStorage(initial), 'localStorage')
+}
+
+export function installTestSessionStorage(initial?: Record<string, string>): Storage {
+  return installStorageOnGlobal(createTestStorage(initial), 'sessionStorage')
+}
+
+/** Replace both Jest storage mocks with in-memory implementations. */
+export function installTestBrowserStorage(initial?: {
+  local?: Record<string, string>
+  session?: Record<string, string>
+}): { localStorage: Storage; sessionStorage: Storage } {
+  return {
+    localStorage: installTestLocalStorage(initial?.local),
+    sessionStorage: installTestSessionStorage(initial?.session),
+  }
 }

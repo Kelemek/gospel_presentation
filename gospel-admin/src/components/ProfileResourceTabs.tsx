@@ -1,6 +1,7 @@
 'use client'
 
 import OpenItemTabBar from '@/components/OpenItemTabBar'
+import { PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY } from '@/lib/openItemTabBarScrollStorage'
 import type { ProfileRecentResourceEntry } from '@/lib/profileLastOpenResourceStorage'
 
 export type ProfileResourceTabsProps = {
@@ -28,6 +29,7 @@ export default function ProfileResourceTabs({
       activeId={activeSlug.trim()}
       onSelectTab={onSelectTab}
       onCloseTab={onCloseTab}
+      persistScrollKey={PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY}
     />
   )
 }

@@ -1,6 +1,12 @@
 import React from 'react'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import OpenItemTabBar, { type OpenItemTab } from '../OpenItemTabBar'
+import {
+  loadOpenItemTabBarScrollLeft,
+  PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY,
+  saveOpenItemTabBarScrollLeft,
+} from '@/lib/openItemTabBarScrollStorage'
+import { installTestSessionStorage } from '@/lib/testing/testLocalStorage'
 
 const resourceTabs: OpenItemTab[] = [
   { id: 'default', title: 'The Gospel' },
@@ -21,6 +27,50 @@ const scriptureTabs: OpenItemTab[] = [
 ]
 
 describe('OpenItemTabBar', () => {
+  beforeEach(() => {
+    installTestSessionStorage()
+    window.sessionStorage.clear()
+  })
+
+  it('captures horizontal scroll on tab pointerdown before navigation unmount', () => {
+    const props = {
+      tabs: resourceTabs,
+      activeId: 'default',
+      onSelectTab: jest.fn(),
+      onCloseTab: jest.fn(),
+      tablistAriaLabel: 'Open resources',
+      persistScrollKey: PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY,
+    }
+
+    saveOpenItemTabBarScrollLeft(PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY, 0)
+
+    render(<OpenItemTabBar {...props} />)
+    const tablist = screen.getByRole('tablist', { name: 'Open resources' })
+    Object.defineProperty(tablist, 'scrollLeft', { value: 150, writable: true, configurable: true })
+
+    fireEvent.pointerDown(screen.getByRole('tab', { name: 'Spurgeon Sermons' }))
+    expect(loadOpenItemTabBarScrollLeft(PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY)).toBe(150)
+  })
+
+  it('does not overwrite saved scroll with 0 on unmount after DOM reset', () => {
+    const props = {
+      tabs: resourceTabs,
+      activeId: 'default',
+      onSelectTab: jest.fn(),
+      onCloseTab: jest.fn(),
+      tablistAriaLabel: 'Open resources',
+      persistScrollKey: PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY,
+    }
+
+    saveOpenItemTabBarScrollLeft(PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY, 150)
+    const { unmount } = render(<OpenItemTabBar {...props} />)
+    const tablist = screen.getByRole('tablist', { name: 'Open resources' })
+    Object.defineProperty(tablist, 'scrollLeft', { value: 0, writable: true, configurable: true })
+    unmount()
+
+    expect(loadOpenItemTabBarScrollLeft(PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY)).toBe(150)
+  })
+
   it('renders nothing when only one tab is open', () => {
     const { container } = render(
       <OpenItemTabBar
