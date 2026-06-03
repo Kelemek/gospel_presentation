@@ -2033,7 +2033,7 @@ function ProfileContent({ sections, profileInfo, onReadingResumeSettled }: Profi
           {/* Menu Panel */}
           <div 
             data-tour="profile-slideout-menu"
-            className="fixed top-[env(safe-area-inset-top,0px)] bottom-0 left-0 z-50 bg-white dark:bg-slate-800 w-80 shadow-2xl overflow-y-auto border-r border-gray-200 dark:border-slate-600 transform transition-transform duration-300 ease-in-out print-hide"
+            className="fixed top-[env(safe-area-inset-top,0px)] bottom-0 left-0 z-50 bg-white dark:bg-slate-800 w-80 shadow-2xl overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] scrollbar-none border-r border-gray-200 dark:border-slate-600 transform transition-transform duration-300 ease-in-out print-hide"
             onMouseLeave={() => {
               // Keep menu open during driver.js tours so the slide-out stays mounted on desktop hover-close
               if (typeof document !== 'undefined' && document.body.classList.contains('driver-active')) {
