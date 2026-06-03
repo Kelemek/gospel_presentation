@@ -17,6 +17,7 @@ import { Printer } from '@capgo/capacitor-printer'
 import { stripHtmlTags } from '@/lib/stripHtmlTags'
 import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
 import {
+  BIBLE_READER_DEFAULT_MENU_TITLE,
   groupPublicResourceItems,
   publicResourceItemsForResourcesMenu,
   resolveBibleReaderMenuTitle,
@@ -57,7 +58,7 @@ interface TableOfContentsProps {
   onOpenHenryLibrary?: (menuTitle?: string) => void
   /** Opens the unified study library modal (Resources row type edwardsLibrary). */
   onOpenEdwardsLibrary?: (menuTitle?: string) => void
-  /** Opens the Bible passage picker (main menu, under Resources). */
+  /** Opens the Bible passage picker (main menu, same row style as Text size / Print). */
   onOpenBibleReader?: () => void
 }
 
@@ -277,10 +278,18 @@ export default function TableOfContents({
 
   const showLastOpenDropdown = recentResources.length > 0 || recentScriptures.length > 0
 
-  const bibleReaderMenuTitle = useMemo(
+  const resolvedBibleReaderTitle = useMemo(
     () => resolveBibleReaderMenuTitle(resourceItems),
     [resourceItems]
   )
+
+  /** Show on first paint; hide after public-templates fetch if admin removed Bible Reader from order. */
+  const showBibleReaderButton =
+    Boolean(onOpenBibleReader) &&
+    (!resourcesRequestDone || resolvedBibleReaderTitle !== null)
+
+  const bibleReaderButtonLabel =
+    resolvedBibleReaderTitle ?? BIBLE_READER_DEFAULT_MENU_TITLE
 
   const resourceItemsForMenu = useMemo(
     () => publicResourceItemsForResourcesMenu(resourceItems),
@@ -676,31 +685,31 @@ export default function TableOfContents({
             </div>
           )}
         </div>
-        {bibleReaderMenuTitle ? (
-          <button
-            type="button"
-            data-tour="toc-bible-reader"
-            data-resource-bible-reader
-            disabled={!onOpenBibleReader}
-            onClick={() => {
-              onOpenBibleReader?.()
-              onNavigate?.()
-            }}
-            className={resourcesRowClassName}
-          >
-            <svg className="w-5 h-5 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-              />
-            </svg>
-            <span className="min-w-0 truncate text-left">{bibleReaderMenuTitle}</span>
-          </button>
-        ) : null}
         </>
       )}
+
+      {showBibleReaderButton ? (
+        <button
+          type="button"
+          data-tour="toc-bible-reader"
+          data-resource-bible-reader
+          onClick={() => {
+            onOpenBibleReader?.()
+            onNavigate?.()
+          }}
+          className={resourcesRowClassName}
+        >
+          <svg className="w-5 h-5 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+            />
+          </svg>
+          <span className="min-w-0 truncate text-left">{bibleReaderButtonLabel}</span>
+        </button>
+      ) : null}
 
       {/* Text size dropdown — same design as Resources */}
       <div>

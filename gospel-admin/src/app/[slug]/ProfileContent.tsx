@@ -3,6 +3,7 @@
 import {
   useState,
   useEffect,
+  useLayoutEffect,
   useCallback,
   useMemo,
   useRef,
@@ -80,6 +81,7 @@ import {
   clearProfileReadingResume,
   loadProfileReadingResume,
   saveProfileReadingResume,
+  type ProfileReadingResumeV1,
 } from '@/lib/profileReadingResumeStorage'
 import {
   GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT,
@@ -91,6 +93,11 @@ import {
   resolveProfileTabNavigationAfterClose,
   type ProfileRecentScriptureEntry,
 } from '@/lib/profileLastOpenResourceStorage'
+import {
+  clearProfileResourceTabNavigationStaging,
+  markProfileResourceTabNavigation,
+  peekProfileResourceTabNavigation,
+} from '@/lib/profileResourceTabNavigation'
 import { mcheyneDayChapterReferencesForAnchor } from '@/lib/mcheyne/mcheyneReadingDay'
 import { isMcheyneProfileSlug } from '@/lib/mcheyne/mcheyneSlug'
 import {
@@ -149,6 +156,8 @@ interface ProfileContentProps {
   sections: GospelSectionType[]
   profileInfo: ProfileInfo
   profile?: GospelProfile | null  // Full profile for scripture progress tracking
+  /** Called when automatic reading resume finishes or is skipped (e.g. reveal site header after tab switch). */
+  onReadingResumeSettled?: () => void
 }
 
 /** One scripture card in profile order (for modal prev/next without collapsing duplicate references). */
@@ -189,7 +198,7 @@ type ScriptureModalState = {
   pickerNavigation?: boolean
 }
 
-function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
+function ProfileContent({ sections, profileInfo, onReadingResumeSettled }: ProfileContentProps) {
   const [selectedScripture, setSelectedScripture] = useState<ScriptureModalState>({
     reference: '',
     isOpen: false,
@@ -214,6 +223,13 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const readingResumeSaveTimerRef = useRef<number | null>(null)
   const readingResumeSaveIdleRef = useRef<number | null>(null)
   const readingResumeSaveUsesIdleCallbackRef = useRef(false)
+  const flushReadingResumeSaveRef = useRef<(reason?: string) => void>(() => {})
+  type TabNavStagingRef =
+    | { status: 'unset' }
+    | { status: 'not-tab-nav' }
+    | { status: 'ready'; resume: ProfileReadingResumeV1 | null }
+  const tabNavStagingRef = useRef<TabNavStagingRef>({ status: 'unset' })
+  const tabNavLayoutSlugRef = useRef<string | null>(null)
 
   const [currentReferenceIndex, setCurrentReferenceIndex] = useState(0)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -362,29 +378,6 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     }
   }, [refreshResourceTabs])
 
-  const handleSelectResourceTab = useCallback(
-    (slug: string) => {
-      const trimmed = slug.trim()
-      if (!trimmed || trimmed === profileSlug.trim()) return
-      router.push(`/${trimmed}`)
-    },
-    [profileSlug, router]
-  )
-
-  const handleCloseResourceTab = useCallback(
-    (slug: string) => {
-      const trimmed = slug.trim()
-      if (!trimmed) return
-      const isActive = trimmed === profileSlug.trim()
-      const nextSlug = isActive ? resolveProfileTabNavigationAfterClose(trimmed) : null
-      removeProfileResourceTab(trimmed)
-      if (isActive) {
-        router.push(nextSlug ? `/${nextSlug}` : '/default')
-      }
-    },
-    [profileSlug, router]
-  )
-
   const highlightsByScopeId = useMemo(() => {
     const out: Record<string, Array<{ id: string; startOffset: number; endOffset: number }>> = {}
     profileHighlights.forEach((h) => {
@@ -412,23 +405,47 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     }
   }, [isHydrated, sectionCount, profileInfo?.slug])
 
-  const flushReadingResumeSave = useCallback(() => {
-    if (!profileSlug || sectionCount === 0) return
-    if (selectedScripture.isOpen) return
-    if (typeof document !== 'undefined' && document.querySelector('.profile-help-tour-popover')) {
-      return
-    }
+  const flushReadingResumeSave = useCallback(
+    (flushReason?: string) => {
+      if (!profileSlug || sectionCount === 0) return
+      if (selectedScripture.isOpen) return
+      if (typeof document !== 'undefined' && document.querySelector('.profile-help-tour-popover')) {
+        return
+      }
 
-    const captured = captureReadingPositionAtViewport(sections, profileSlug)
-    if (!captured) return
+      const captured = captureReadingPositionAtViewport(sections, profileSlug)
+      if (!captured) return
 
-    saveProfileReadingResume(
-      profileSlug,
-      captured.anchorId,
-      captured.plainOffset,
-      captured.fingerprint
-    )
-  }, [profileSlug, sectionCount, sections, selectedScripture.isOpen])
+      if (
+        (flushReason === 'tab-select-leave' || flushReason === 'visibility-hide') &&
+        typeof window !== 'undefined' &&
+        window.scrollY <= 8
+      ) {
+        const existing = loadProfileReadingResume(profileSlug)
+        // Only block regress within the same section (route scroll reset at top). A different
+        // anchor means the reader moved sections and we should persist that navigation.
+        if (
+          existing &&
+          existing.anchorId === captured.anchorId &&
+          existing.plainOffset > captured.plainOffset
+        ) {
+          return
+        }
+      }
+
+      saveProfileReadingResume(
+        profileSlug,
+        captured.anchorId,
+        captured.plainOffset,
+        captured.fingerprint
+      )
+    },
+    [profileSlug, sectionCount, sections, selectedScripture.isOpen]
+  )
+
+  useEffect(() => {
+    flushReadingResumeSaveRef.current = flushReadingResumeSave
+  }, [flushReadingResumeSave])
 
   const READING_RESUME_SAVE_DEBOUNCE_MS = 1500
 
@@ -450,7 +467,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   const scheduleFlushReadingResumeSave = useCallback(() => {
     const run = () => {
       readingResumeSaveIdleRef.current = null
-      flushReadingResumeSave()
+      flushReadingResumeSaveRef.current()
     }
     if (typeof requestIdleCallback === 'function') {
       readingResumeSaveUsesIdleCallbackRef.current = true
@@ -459,7 +476,48 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     }
     readingResumeSaveUsesIdleCallbackRef.current = false
     readingResumeSaveIdleRef.current = window.requestAnimationFrame(run)
-  }, [flushReadingResumeSave])
+  }, [])
+
+  const persistReadingResumeBeforeLeave = useCallback(
+    (persistReason?: string) => {
+      cancelPendingReadingResumeSave()
+      flushReadingResumeSaveRef.current(persistReason)
+    },
+    [cancelPendingReadingResumeSave]
+  )
+
+  const handleSelectResourceTab = useCallback(
+    (slug: string) => {
+      const trimmed = slug.trim()
+      if (!trimmed || trimmed === profileSlug.trim()) return
+      persistReadingResumeBeforeLeave('tab-select-leave')
+      const saved = loadProfileReadingResume(trimmed)
+      markProfileResourceTabNavigation(trimmed, saved)
+      router.push(`/${trimmed}`, { scroll: false })
+    },
+    [profileSlug, router, persistReadingResumeBeforeLeave]
+  )
+
+  const handleCloseResourceTab = useCallback(
+    (slug: string) => {
+      const trimmed = slug.trim()
+      if (!trimmed) return
+      const isActive = trimmed === profileSlug.trim()
+      const nextSlug = isActive ? resolveProfileTabNavigationAfterClose(trimmed) : null
+      removeProfileResourceTab(trimmed)
+      if (isActive) {
+        persistReadingResumeBeforeLeave()
+        if (nextSlug) {
+          const saved = loadProfileReadingResume(nextSlug)
+          markProfileResourceTabNavigation(nextSlug, saved)
+          router.push(`/${nextSlug}`, { scroll: false })
+        } else {
+          router.push('/default')
+        }
+      }
+    },
+    [profileSlug, router, persistReadingResumeBeforeLeave]
+  )
 
   useEffect(() => {
     if (!isHydrated || !profileSlug || sectionCount === 0) return
@@ -474,8 +532,7 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
 
     window.addEventListener('scroll', scheduleSave, { passive: true })
     const onHide = () => {
-      cancelPendingReadingResumeSave()
-      flushReadingResumeSave()
+      persistReadingResumeBeforeLeave('visibility-hide')
     }
     document.addEventListener('visibilitychange', onHide)
     window.addEventListener('pagehide', onHide)
@@ -484,21 +541,27 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
       window.removeEventListener('scroll', scheduleSave)
       document.removeEventListener('visibilitychange', onHide)
       window.removeEventListener('pagehide', onHide)
+      // Do not persist on effect cleanup: scrollY is often 0 during route/tab transitions
+      // and would overwrite a valid resume saved in tab-select-leave.
       cancelPendingReadingResumeSave()
     }
   }, [
     isHydrated,
     profileSlug,
     sectionCount,
-    flushReadingResumeSave,
     cancelPendingReadingResumeSave,
+    persistReadingResumeBeforeLeave,
     scheduleFlushReadingResumeSave,
   ])
 
   useEffect(() => {
     if (profileReadingNavSlugRef.current !== profileSlug) {
+      const hadPreviousSlug = profileReadingNavSlugRef.current != null
       profileReadingNavSlugRef.current = profileSlug
-      profileReadingNavAppliedRef.current = false
+      // Fresh mount (ref null): tab-nav useLayoutEffect may have set applied; do not clear.
+      if (hadPreviousSlug) {
+        profileReadingNavAppliedRef.current = false
+      }
     }
   }, [profileSlug])
 
@@ -511,10 +574,24 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
   }, [])
 
   const startReadingResumeRestore = useCallback(
-    (anchorId: string, plainOffset: number, fingerprint: string) => {
+    (
+      anchorId: string,
+      plainOffset: number,
+      fingerprint: string,
+      onSettled?: () => void
+    ) => {
       cancelReadingResumeRestore()
       const abortUserIntent = new AbortController()
-      const cancelScroll = restoreReadingPosition(anchorId, plainOffset, fingerprint, profileSlug)
+      const cancelScroll = restoreReadingPosition(
+        anchorId,
+        plainOffset,
+        fingerprint,
+        profileSlug,
+        {
+          onDone: () => onSettled?.(),
+          onGiveUp: () => onSettled?.(),
+        }
+      )
       readingResumeRestoreSessionRef.current = { cancelScroll, abortUserIntent }
 
       const stopOnUserIntent = () => {
@@ -527,6 +604,89 @@ function ProfileContent({ sections, profileInfo }: ProfileContentProps) {
     },
     [cancelReadingResumeRestore, profileSlug]
   )
+
+  const startReadingResumeRestoreRef = useRef(startReadingResumeRestore)
+  const onReadingResumeSettledRef = useRef(onReadingResumeSettled)
+
+  useEffect(() => {
+    startReadingResumeRestoreRef.current = startReadingResumeRestore
+    onReadingResumeSettledRef.current = onReadingResumeSettled
+  }, [startReadingResumeRestore, onReadingResumeSettled])
+
+  useEffect(() => {
+    const slugOnMount = profileSlug
+    return () => {
+      cancelReadingResumeRestore()
+      // Abandon in-flight tab-nav restore (layout effect only cancels rAF); clear staging so
+      // a later visit to this profile does not peek stale session/memory from an unfinished switch.
+      clearProfileResourceTabNavigationStaging(slugOnMount)
+    }
+  }, [profileSlug, cancelReadingResumeRestore])
+
+  useLayoutEffect(() => {
+    if (!isHydrated || sectionCount === 0 || !profileSlug) return
+
+    if (tabNavLayoutSlugRef.current !== profileSlug) {
+      tabNavLayoutSlugRef.current = profileSlug
+      tabNavStagingRef.current = { status: 'unset' }
+    }
+
+    if (tabNavStagingRef.current.status === 'unset') {
+      const peeked = peekProfileResourceTabNavigation(profileSlug)
+      if (peeked === undefined) {
+        tabNavStagingRef.current = { status: 'not-tab-nav' }
+        return
+      }
+      tabNavStagingRef.current = { status: 'ready', resume: peeked }
+    }
+
+    if (tabNavStagingRef.current.status === 'not-tab-nav') return
+
+    const tabNavResume = tabNavStagingRef.current.resume
+
+    profileReadingNavAppliedRef.current = true
+    const settle = () => {
+      clearProfileResourceTabNavigationStaging(profileSlug)
+      onReadingResumeSettledRef.current?.()
+    }
+
+    if (tabNavResume === null) {
+      settle()
+      return
+    }
+
+    const TAB_NAV_RESTORE_MAX_FRAMES = 30
+    let cancelled = false
+
+    const runTabNavRestore = (frame: number) => {
+      if (cancelled) return
+
+      const scope = resolveReadingScope(tabNavResume.anchorId)
+      const listenOpts = listenTextOptionsForProfileSlug(profileSlug)
+      const fingerprintValid =
+        !scope || isReadingPositionFingerprintValid(scope, tabNavResume.fingerprint, listenOpts)
+
+      if (!fingerprintValid && frame < TAB_NAV_RESTORE_MAX_FRAMES) {
+        requestAnimationFrame(() => runTabNavRestore(frame + 1))
+        return
+      }
+
+      startReadingResumeRestoreRef.current(
+        tabNavResume.anchorId,
+        tabNavResume.plainOffset,
+        tabNavResume.fingerprint,
+        () => {
+          settle()
+        }
+      )
+    }
+
+    requestAnimationFrame(() => runTabNavRestore(0))
+
+    return () => {
+      cancelled = true
+    }
+  }, [isHydrated, sectionCount, profileSlug])
 
   // Precise bookmark resume (session) or automatic reading position when no competing deep link
   useEffect(() => {

@@ -448,7 +448,7 @@ describe('TableOfContents additional behaviors', () => {
     expect(plainLink.querySelector('svg[aria-hidden="true"]')).not.toBeInTheDocument()
   })
 
-  it('shows Bible Reader main menu button from order and calls onOpenBibleReader', async () => {
+  it('shows Bible Reader main menu button immediately and calls onOpenBibleReader', async () => {
     const fetchSpy = jest.fn((input: RequestInfo | URL) => {
       const url =
         typeof input === 'string'
@@ -472,10 +472,39 @@ describe('TableOfContents additional behaviors', () => {
     const TableOfContents = require('../TableOfContents').default
     renderToc(<TableOfContents sections={[]} onOpenBibleReader={onOpenBibleReader} />)
 
-    const bibleReader = await screen.findByRole('button', { name: /Bible Reader/i })
+    const bibleReader = screen.getByRole('button', { name: /Bible Reader/i })
     expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument()
     fireEvent.click(bibleReader)
     expect(onOpenBibleReader).toHaveBeenCalledTimes(1)
+  })
+
+  it('hides Bible Reader after public-templates fetch when not in admin order', async () => {
+    const fetchSpy = jest.fn((input: RequestInfo | URL) => {
+      const url =
+        typeof input === 'string'
+          ? input
+          : input instanceof URL
+            ? input.href
+            : (input as Request).url
+      if (String(url).includes('/api/profiles/public-templates')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            items: [{ type: 'template', slug: 't1', title: 'Template One' }],
+          }),
+        }) as any
+      }
+      return Promise.resolve({ ok: false }) as any
+    })
+    global.fetch = fetchSpy as typeof fetch
+
+    const TableOfContents = require('../TableOfContents').default
+    renderToc(<TableOfContents sections={[]} onOpenBibleReader={jest.fn()} />)
+
+    expect(screen.getByRole('button', { name: /Bible Reader/i })).toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /Bible Reader/i })).not.toBeInTheDocument()
+    )
   })
 
   it('Bible translation list opens and setTranslation is called when an option is chosen', () => {

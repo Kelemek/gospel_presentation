@@ -10,6 +10,15 @@ function prefersReducedMotion(): boolean {
 const TABLIST_SCROLL_CLASS =
   'bg-slate-100/80 dark:bg-slate-700/80 overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden'
 
+/** ~44px min touch height on small screens; compact on md+ */
+const TAB_SELECT_BUTTON_CLASS =
+  'flex shrink-0 touch-pan-x items-center pl-4 pr-2 py-3 min-h-11 text-sm font-medium transition-colors cursor-pointer md:pl-3 md:pr-1.5 md:py-2 md:min-h-0'
+
+const TAB_CLOSE_BUTTON_CLASS =
+  'flex shrink-0 touch-pan-x items-center justify-center min-h-11 min-w-11 w-11 pr-1 text-slate-500 hover:text-slate-800 hover:bg-slate-200/80 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-600 transition-colors cursor-pointer md:min-h-0 md:min-w-0 md:w-7 md:pr-0.5'
+
+const TAB_CLOSE_ICON_CLASS = 'h-5 w-5 md:h-4 md:w-4'
+
 export type OpenItemTab = {
   id: string
   title: string
@@ -104,7 +113,7 @@ export default function OpenItemTabBar({
                   aria-label={label}
                   title={label}
                   onClick={() => onSelectTab(entry.id)}
-                  className={`flex shrink-0 touch-pan-x items-center px-3 py-2 text-sm font-medium transition-colors cursor-pointer ${
+                  className={`${TAB_SELECT_BUTTON_CLASS} ${
                     isActive
                       ? 'text-slate-900 dark:text-slate-100'
                       : 'text-slate-600 dark:text-slate-300'
@@ -132,10 +141,10 @@ export default function OpenItemTabBar({
                     e.stopPropagation()
                     onCloseTab(entry.id)
                   }}
-                  className="flex w-7 shrink-0 touch-pan-x items-center justify-center pr-0.5 text-slate-500 hover:text-slate-800 hover:bg-slate-200/80 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-600 transition-colors cursor-pointer"
+                  className={TAB_CLOSE_BUTTON_CLASS}
                 >
                   <svg
-                    className="h-4 w-4"
+                    className={TAB_CLOSE_ICON_CLASS}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"

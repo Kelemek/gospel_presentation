@@ -1,10 +1,12 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useRouter, notFound } from 'next/navigation'
 import ProfileContent from './ProfileContent'
 import { useProfileWithCache } from '@/lib/useProfileWithCache'
 import { createClient } from '@/lib/supabase/client'
+import type { GospelProfile } from '@/lib/types'
+import { isProfileResourceTabNavigationPending } from '@/lib/profileResourceTabNavigation'
 import {
   tryStartMarriageSeminarTourAfterNavigation,
   tryStartMemorizeTourAfterNavigation,
@@ -31,6 +33,57 @@ function extractFavoriteScriptures(gospelData: any[]): string[] {
     })
   })
   return favorites
+}
+
+type ProfilePageBodyProps = {
+  slug: string
+  profile: GospelProfile
+}
+
+function ProfilePageBody({ slug, profile }: ProfilePageBodyProps) {
+  const hideSiteHeaderForTabNav = isProfileResourceTabNavigationPending(slug)
+  const [readingResumeRevealed, setReadingResumeRevealed] = useState(!hideSiteHeaderForTabNav)
+  const siteHeaderHidden = hideSiteHeaderForTabNav && !readingResumeRevealed
+
+  const handleReadingResumeSettled = useCallback(() => {
+    setReadingResumeRevealed(true)
+  }, [])
+
+  useEffect(() => {
+    if (!hideSiteHeaderForTabNav || readingResumeRevealed) return
+    const timeoutId = window.setTimeout(() => setReadingResumeRevealed(true), 2500)
+    return () => window.clearTimeout(timeoutId)
+  }, [hideSiteHeaderForTabNav, readingResumeRevealed, slug])
+
+  const { gospelData } = profile
+  const favoriteScriptures = extractFavoriteScriptures(gospelData || [])
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {!siteHeaderHidden ? (
+        <header className="bg-linear-to-br from-slate-700 to-slate-800 text-white text-center py-5 shadow-lg">
+          <div className="container mx-auto px-5">
+            <h1 className="text-4xl md:text-5xl font-bold mb-1">
+              The Gospel Presentation
+            </h1>
+          </div>
+        </header>
+      ) : null}
+
+      <ProfileContent
+        sections={gospelData || []}
+        profileInfo={{
+          title: profile.title,
+          description: profile.description,
+          slug,
+          favoriteScriptures,
+          savedAnswers: profile.savedAnswers,
+        }}
+        profile={profile}
+        onReadingResumeSettled={handleReadingResumeSettled}
+      />
+    </div>
+  )
 }
 
 export default function ProfilePageClient({ slug }: ProfilePageClientProps) {
@@ -75,30 +128,5 @@ export default function ProfilePageClient({ slug }: ProfilePageClientProps) {
     return null // Redirect effect will run
   }
 
-  const { gospelData } = profile
-  const favoriteScriptures = extractFavoriteScriptures(gospelData || [])
-
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <header className="bg-linear-to-br from-slate-700 to-slate-800 text-white text-center py-5 shadow-lg">
-        <div className="container mx-auto px-5">
-          <h1 className="text-4xl md:text-5xl font-bold mb-1">
-            The Gospel Presentation
-          </h1>
-        </div>
-      </header>
-
-      <ProfileContent
-        sections={gospelData || []}
-        profileInfo={{
-          title: profile.title,
-          description: profile.description,
-          slug,
-          favoriteScriptures,
-          savedAnswers: profile.savedAnswers
-        }}
-        profile={profile}
-      />
-    </div>
-  )
+  return <ProfilePageBody key={slug} slug={slug} profile={profile} />
 }

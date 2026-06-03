@@ -31,6 +31,7 @@ jest.mock('@/lib/scrollToTocAnchor', () => ({
     opts?.onDone?.()
     return () => {}
   }),
+  getProfileHeaderScrollOffset: jest.fn(() => 0),
 }))
 
 jest.mock('@/lib/versePinStorage', () => {
