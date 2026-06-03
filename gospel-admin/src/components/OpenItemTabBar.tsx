@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import { attachOpenItemTabBarDragScroll } from '@/lib/openItemTabBarDragScroll'
 import {
   captureOpenItemTabBarScroll,
   loadOpenItemTabBarScrollLeft,
@@ -11,7 +12,25 @@ import {
 } from '@/lib/openItemTabBarScrollStorage'
 
 const TABLIST_SCROLL_CLASS =
-  'bg-slate-100/80 dark:bg-slate-700/80 overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden'
+  'bg-slate-100/80 dark:bg-slate-700/80 overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden cursor-grab data-[tab-bar-dragging=true]:cursor-grabbing data-[tab-bar-dragging=true]:select-none'
+
+/** Wheel delta to apply as horizontal scroll (vertical wheel, Shift+wheel, or trackpad pan). */
+export function wheelDeltaForOpenItemTabBarScroll(event: WheelEvent): number {
+  const { deltaX, deltaY } = event
+  if (deltaY !== 0 && Math.abs(deltaY) >= Math.abs(deltaX)) return deltaY
+  if (deltaX !== 0) return deltaX
+  return 0
+}
+
+/** Map wheel to horizontal scroll when the tab row overflows (desktop mice / trackpads). */
+export function applyOpenItemTabBarWheelScroll(el: HTMLDivElement, event: WheelEvent): boolean {
+  if (el.scrollWidth <= el.clientWidth) return false
+  const delta = wheelDeltaForOpenItemTabBarScroll(event)
+  if (delta === 0) return false
+  event.preventDefault()
+  el.scrollLeft += delta
+  return true
+}
 
 /** ~44px min touch height on small screens; compact on md+ */
 const TAB_SELECT_BUTTON_CLASS =
@@ -68,11 +87,51 @@ export default function OpenItemTabBar({
   revealTabId,
 }: OpenItemTabBarProps) {
   const active = activeId.trim()
-  const tablistScrollRef = useRef<HTMLDivElement>(null)
+  const tablistScrollElRef = useRef<HTMLDivElement | null>(null)
+  const scrollInteractionCleanupRef = useRef<(() => void) | null>(null)
+
+  const teardownScrollInteraction = useCallback(() => {
+    scrollInteractionCleanupRef.current?.()
+    scrollInteractionCleanupRef.current = null
+  }, [])
+
+  const setupScrollInteraction = useCallback(
+    (el: HTMLDivElement) => {
+      teardownScrollInteraction()
+      const onWheel = (event: WheelEvent) => {
+        applyOpenItemTabBarWheelScroll(el, event)
+      }
+      el.addEventListener('wheel', onWheel, { passive: false })
+      const detachDrag = attachOpenItemTabBarDragScroll(el, {
+        onDragScroll: persistScrollKey
+          ? (scrollLeft) => saveOpenItemTabBarScrollLeft(persistScrollKey, scrollLeft)
+          : undefined,
+      })
+      scrollInteractionCleanupRef.current = () => {
+        el.removeEventListener('wheel', onWheel)
+        detachDrag()
+      }
+    },
+    [persistScrollKey, teardownScrollInteraction]
+  )
+
+  const tablistScrollRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      tablistScrollElRef.current = node
+      if (!node) {
+        teardownScrollInteraction()
+        return
+      }
+      setupScrollInteraction(node)
+    },
+    [setupScrollInteraction, teardownScrollInteraction]
+  )
+
+  useEffect(() => () => teardownScrollInteraction(), [teardownScrollInteraction])
 
   const captureTabBarScroll = useCallback(() => {
     if (!persistScrollKey) return
-    captureOpenItemTabBarScroll(persistScrollKey, tablistScrollRef.current)
+    captureOpenItemTabBarScroll(persistScrollKey, tablistScrollElRef.current)
   }, [persistScrollKey])
 
   useLayoutEffect(() => {
@@ -84,7 +143,7 @@ export default function OpenItemTabBar({
 
       const applyReveal = () => {
         if (cancelled) return
-        const el = tablistScrollRef.current
+        const el = tablistScrollElRef.current
         if (!el) return
         const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth)
         if (maxScroll <= 0 && attempts < maxAttempts) {
@@ -111,7 +170,7 @@ export default function OpenItemTabBar({
 
     const applyRestore = () => {
       if (cancelled) return
-      const el = tablistScrollRef.current
+      const el = tablistScrollElRef.current
       if (!el) return
       const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth)
       if (maxScroll <= 0 && saved > 0 && attempts < maxAttempts) {
@@ -130,7 +189,7 @@ export default function OpenItemTabBar({
 
   useEffect(() => {
     if (!persistScrollKey) return
-    const el = tablistScrollRef.current
+    const el = tablistScrollElRef.current
     if (!el) return
 
     const saveOnScroll = () => saveOpenItemTabBarScrollLeft(persistScrollKey, el.scrollLeft)

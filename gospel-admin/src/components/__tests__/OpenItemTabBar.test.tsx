@@ -1,6 +1,10 @@
 import React from 'react'
 import { render, screen, fireEvent, within } from '@testing-library/react'
-import OpenItemTabBar, { type OpenItemTab } from '../OpenItemTabBar'
+import OpenItemTabBar, {
+  applyOpenItemTabBarWheelScroll,
+  wheelDeltaForOpenItemTabBarScroll,
+  type OpenItemTab,
+} from '../OpenItemTabBar'
 import {
   loadOpenItemTabBarScrollLeft,
   PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY,
@@ -17,7 +21,21 @@ jest.mock('@/lib/openItemTabBarScrollStorage', () => {
     scrollOpenItemTabIntoView: jest.fn(actual.scrollOpenItemTabIntoView),
   }
 })
+
+jest.mock('@/lib/openItemTabBarDragScroll', () => {
+  const actual = jest.requireActual<typeof import('@/lib/openItemTabBarDragScroll')>(
+    '@/lib/openItemTabBarDragScroll'
+  )
+  return {
+    ...actual,
+    attachOpenItemTabBarDragScroll: jest.fn(actual.attachOpenItemTabBarDragScroll),
+  }
+})
+
+import { attachOpenItemTabBarDragScroll } from '@/lib/openItemTabBarDragScroll'
 import { installTestSessionStorage } from '@/lib/testing/testLocalStorage'
+
+const attachDragScrollMock = jest.mocked(attachOpenItemTabBarDragScroll)
 
 const resourceTabs: OpenItemTab[] = [
   { id: 'default', title: 'The Gospel' },
@@ -41,6 +59,26 @@ describe('OpenItemTabBar', () => {
   beforeEach(() => {
     installTestSessionStorage()
     window.sessionStorage.clear()
+    attachDragScrollMock.mockClear()
+  })
+
+  it('does not reattach wheel/drag listeners when tab count changes', () => {
+    const baseProps = {
+      activeId: 'default',
+      onSelectTab: jest.fn(),
+      onCloseTab: jest.fn(),
+      tablistAriaLabel: 'Open resources',
+    }
+    const { rerender } = render(<OpenItemTabBar {...baseProps} tabs={resourceTabs} />)
+    expect(attachDragScrollMock).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <OpenItemTabBar
+        {...baseProps}
+        tabs={[...resourceTabs, { id: 'new-resource', title: 'New Resource' }]}
+      />
+    )
+    expect(attachDragScrollMock).toHaveBeenCalledTimes(1)
   })
 
   it('captures horizontal scroll on tab pointerdown before navigation unmount', () => {
@@ -191,6 +229,131 @@ describe('OpenItemTabBar', () => {
     } finally {
       rafSpy.mockRestore()
     }
+  })
+
+  it('maps vertical wheel to horizontal scroll when the tab row overflows', () => {
+    render(
+      <OpenItemTabBar
+        tabs={resourceTabs}
+        activeId="default"
+        onSelectTab={jest.fn()}
+        onCloseTab={jest.fn()}
+        tablistAriaLabel="Open resources"
+      />
+    )
+    const tablist = screen.getByRole('tablist', { name: 'Open resources' })
+    Object.defineProperty(tablist, 'scrollWidth', { value: 500, configurable: true })
+    Object.defineProperty(tablist, 'clientWidth', { value: 200, configurable: true })
+    let scrollLeft = 10
+    Object.defineProperty(tablist, 'scrollLeft', {
+      get: () => scrollLeft,
+      set: (value: number) => {
+        scrollLeft = value
+      },
+      configurable: true,
+    })
+
+    const event = new WheelEvent('wheel', { deltaY: 24, deltaX: 0, cancelable: true })
+    tablist.dispatchEvent(event)
+    expect(scrollLeft).toBe(34)
+    expect(event.defaultPrevented).toBe(true)
+  })
+
+  it('drag-scrolls the tab row without firing tab click when movement exceeds threshold', () => {
+    const onSelectTab = jest.fn()
+    render(
+      <OpenItemTabBar
+        tabs={resourceTabs}
+        activeId="default"
+        onSelectTab={onSelectTab}
+        onCloseTab={jest.fn()}
+        tablistAriaLabel="Open resources"
+      />
+    )
+    const tablist = screen.getByRole('tablist', { name: 'Open resources' })
+    const tab = screen.getByRole('tab', { name: 'Spurgeon Sermons' })
+    Object.defineProperty(tablist, 'scrollWidth', { value: 500, configurable: true })
+    Object.defineProperty(tablist, 'clientWidth', { value: 200, configurable: true })
+    let scrollLeft = 0
+    Object.defineProperty(tablist, 'scrollLeft', {
+      get: () => scrollLeft,
+      set: (value: number) => {
+        scrollLeft = value
+      },
+      configurable: true,
+    })
+
+    fireEvent.pointerDown(tab, { clientX: 100, pointerId: 1, pointerType: 'mouse', button: 0 })
+    fireEvent.pointerMove(window, { clientX: 150, pointerId: 1, pointerType: 'mouse' })
+    fireEvent.pointerUp(window, { clientX: 150, pointerId: 1, pointerType: 'mouse' })
+    fireEvent.click(tab)
+    expect(scrollLeft).toBe(50)
+    expect(onSelectTab).not.toHaveBeenCalled()
+  })
+
+  it('still selects tab on click when pointer movement is below drag threshold', () => {
+    const onSelectTab = jest.fn()
+    render(
+      <OpenItemTabBar
+        tabs={resourceTabs}
+        activeId="default"
+        onSelectTab={onSelectTab}
+        onCloseTab={jest.fn()}
+        tablistAriaLabel="Open resources"
+      />
+    )
+    const tablist = screen.getByRole('tablist', { name: 'Open resources' })
+    const tab = screen.getByRole('tab', { name: 'Spurgeon Sermons' })
+    Object.defineProperty(tablist, 'scrollWidth', { value: 500, configurable: true })
+    Object.defineProperty(tablist, 'clientWidth', { value: 200, configurable: true })
+
+    fireEvent.pointerDown(tab, { clientX: 100, pointerId: 2, pointerType: 'mouse', button: 0 })
+    fireEvent.pointerMove(window, { clientX: 102, pointerId: 2, pointerType: 'mouse' })
+    fireEvent.pointerUp(window, { clientX: 102, pointerId: 2, pointerType: 'mouse' })
+    fireEvent.click(tab)
+    expect(onSelectTab).toHaveBeenCalledWith('sg')
+  })
+
+  it('applyOpenItemTabBarWheelScroll ignores wheel when row does not overflow', () => {
+    const el = document.createElement('div')
+    Object.defineProperty(el, 'scrollWidth', { value: 100, configurable: true })
+    Object.defineProperty(el, 'clientWidth', { value: 100, configurable: true })
+    const event = new WheelEvent('wheel', { deltaY: 24, deltaX: 0, cancelable: true })
+    expect(applyOpenItemTabBarWheelScroll(el, event)).toBe(false)
+    expect(event.defaultPrevented).toBe(false)
+  })
+
+  it('wheelDeltaForOpenItemTabBarScroll uses deltaX when Shift remaps vertical wheel', () => {
+    const shiftWheel = new WheelEvent('wheel', { deltaY: 0, deltaX: 18, cancelable: true })
+    expect(wheelDeltaForOpenItemTabBarScroll(shiftWheel)).toBe(18)
+  })
+
+  it('maps Shift+wheel (deltaX only) to horizontal scroll when the tab row overflows', () => {
+    render(
+      <OpenItemTabBar
+        tabs={resourceTabs}
+        activeId="default"
+        onSelectTab={jest.fn()}
+        onCloseTab={jest.fn()}
+        tablistAriaLabel="Open resources"
+      />
+    )
+    const tablist = screen.getByRole('tablist', { name: 'Open resources' })
+    Object.defineProperty(tablist, 'scrollWidth', { value: 500, configurable: true })
+    Object.defineProperty(tablist, 'clientWidth', { value: 200, configurable: true })
+    let scrollLeft = 5
+    Object.defineProperty(tablist, 'scrollLeft', {
+      get: () => scrollLeft,
+      set: (value: number) => {
+        scrollLeft = value
+      },
+      configurable: true,
+    })
+
+    const event = new WheelEvent('wheel', { deltaY: 0, deltaX: 20, cancelable: true })
+    tablist.dispatchEvent(event)
+    expect(scrollLeft).toBe(25)
+    expect(event.defaultPrevented).toBe(true)
   })
 
   it('renders titleParts with book and suffix on separate nodes', () => {
