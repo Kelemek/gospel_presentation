@@ -1,10 +1,14 @@
 'use client'
 
+import { useMemo } from 'react'
 import OpenItemTabBar from '@/components/OpenItemTabBar'
 import { lastOpenScriptureDisplayParts } from '@/lib/lastOpenScriptureLabel'
 import { SCRIPTURE_MODAL_TAB_BAR_SCROLL_KEY } from '@/lib/openItemTabBarScrollStorage'
-import type { ProfileRecentScriptureEntry } from '@/lib/profileLastOpenResourceStorage'
-import { scriptureModalTabKey } from '@/lib/profileLastOpenResourceStorage'
+import {
+  consumeRevealScriptureTabKey,
+  scriptureModalTabKey,
+  type ProfileRecentScriptureEntry,
+} from '@/lib/profileLastOpenResourceStorage'
 
 export type ScriptureModalTabsProps = {
   tabs: ProfileRecentScriptureEntry[]
@@ -22,6 +26,11 @@ export default function ScriptureModalTabs({
   onCloseTab,
 }: ScriptureModalTabsProps) {
   const activeId = scriptureModalTabKey({ slug: activeSlug, reference: activeReference })
+  const revealTabId = useMemo(() => {
+    void tabs
+    return consumeRevealScriptureTabKey()
+  }, [tabs])
+
   const openTabs = tabs.map((entry) => {
     const { book, referenceSuffix } = lastOpenScriptureDisplayParts(entry.reference)
     return {
@@ -47,6 +56,7 @@ export default function ScriptureModalTabs({
         if (entry) onCloseTab(entry)
       }}
       persistScrollKey={SCRIPTURE_MODAL_TAB_BAR_SCROLL_KEY}
+      revealTabId={revealTabId}
     />
   )
 }

@@ -69,3 +69,22 @@ export function restoreOpenItemTabBarScrollPosition(
   scrollEl.scrollLeft = clampTabBarScrollLeft(scrollEl, saved)
   return true
 }
+
+/** Scroll a tab row (label + close) fully into the horizontal tab list viewport. */
+export function scrollOpenItemTabIntoView(
+  scrollEl: HTMLElement,
+  tabId: string,
+  storageKey?: string
+): boolean {
+  const trimmed = tabId.trim()
+  if (!trimmed) return false
+  const tab = scrollEl.querySelector<HTMLElement>(
+    `[data-open-item-tab-id="${CSS.escape(trimmed)}"]`
+  )
+  if (!tab) return false
+  tab.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  if (storageKey) {
+    saveOpenItemTabBarScrollLeft(storageKey, scrollEl.scrollLeft)
+  }
+  return true
+}

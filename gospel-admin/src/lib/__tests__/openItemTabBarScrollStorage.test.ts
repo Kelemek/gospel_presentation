@@ -5,6 +5,7 @@ import {
   PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY,
   restoreOpenItemTabBarScrollPosition,
   saveOpenItemTabBarScrollLeft,
+  scrollOpenItemTabIntoView,
 } from '@/lib/openItemTabBarScrollStorage'
 import { installTestSessionStorage } from '@/lib/testing/testLocalStorage'
 
@@ -42,5 +43,22 @@ describe('openItemTabBarScrollStorage', () => {
     Object.defineProperty(el, 'clientWidth', { value: 200, configurable: true })
     expect(clampTabBarScrollLeft(el, 999)).toBe(200)
     expect(clampTabBarScrollLeft(el, -5)).toBe(0)
+  })
+
+  it('scrollOpenItemTabIntoView scrolls the tab row and saves scrollLeft', () => {
+    const scrollEl = document.createElement('div')
+    const tab = document.createElement('div')
+    tab.setAttribute('data-open-item-tab-id', 'new-tab')
+    tab.scrollIntoView = jest.fn()
+    scrollEl.appendChild(tab)
+    Object.defineProperty(scrollEl, 'scrollWidth', { value: 400, configurable: true })
+    Object.defineProperty(scrollEl, 'clientWidth', { value: 200, configurable: true })
+    Object.defineProperty(scrollEl, 'scrollLeft', { value: 88, writable: true, configurable: true })
+
+    expect(scrollOpenItemTabIntoView(scrollEl, 'new-tab', PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY)).toBe(
+      true
+    )
+    expect(tab.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', inline: 'nearest' })
+    expect(loadOpenItemTabBarScrollLeft(PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY)).toBe(88)
   })
 })

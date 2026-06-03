@@ -507,9 +507,9 @@ function ProfileContent({ sections, profileInfo, onReadingResumeSettled }: Profi
   const persistReadingResumeBeforeLeave = useCallback(
     (persistReason?: string) => {
       cancelPendingReadingResumeSave()
-      flushReadingResumeSaveRef.current(persistReason)
+      flushReadingResumeSave(persistReason)
     },
-    [cancelPendingReadingResumeSave]
+    [cancelPendingReadingResumeSave, flushReadingResumeSave]
   )
 
   const handleSelectResourceTab = useCallback(
@@ -2244,6 +2244,7 @@ function ProfileContent({ sections, profileInfo, onReadingResumeSettled }: Profi
           setSelectedScripture((prev) => ({
             ...prev,
             reference: ref,
+            isOpen: true,
             ...(chapterView ? { initialChapterView: true as const } : { initialChapterView: undefined }),
             ...(meta?.fromPassagePicker
               ? { pickerNavigation: true as const }

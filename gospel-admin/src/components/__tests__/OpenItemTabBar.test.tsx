@@ -5,7 +5,18 @@ import {
   loadOpenItemTabBarScrollLeft,
   PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY,
   saveOpenItemTabBarScrollLeft,
+  scrollOpenItemTabIntoView,
 } from '@/lib/openItemTabBarScrollStorage'
+
+jest.mock('@/lib/openItemTabBarScrollStorage', () => {
+  const actual = jest.requireActual<typeof import('@/lib/openItemTabBarScrollStorage')>(
+    '@/lib/openItemTabBarScrollStorage'
+  )
+  return {
+    ...actual,
+    scrollOpenItemTabIntoView: jest.fn(actual.scrollOpenItemTabIntoView),
+  }
+})
 import { installTestSessionStorage } from '@/lib/testing/testLocalStorage'
 
 const resourceTabs: OpenItemTab[] = [
@@ -151,6 +162,35 @@ describe('OpenItemTabBar', () => {
     expect(screen.getByRole('tab', { name: 'Love: A Biblical Perspective' })).toHaveTextContent(
       'Love: A Biblical Perspective'
     )
+  })
+
+  it('scrolls a newly opened tab into view when revealTabId matches active tab', () => {
+    const scrollMock = jest.mocked(scrollOpenItemTabIntoView)
+    scrollMock.mockClear()
+
+    // Jest/jsdom does not flush real rAF; the reveal effect retries via rAF until layout is measurable.
+    const rafSpy = jest.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+      cb(0)
+      return 1
+    })
+
+    try {
+      render(
+        <OpenItemTabBar
+          tabs={[...resourceTabs, { id: 'new-resource', title: 'New Resource' }]}
+          activeId="new-resource"
+          onSelectTab={jest.fn()}
+          onCloseTab={jest.fn()}
+          tablistAriaLabel="Open resources"
+          revealTabId="new-resource"
+        />
+      )
+
+      const tablist = screen.getByRole('tablist', { name: 'Open resources' })
+      expect(scrollMock).toHaveBeenCalledWith(tablist, 'new-resource', undefined)
+    } finally {
+      rafSpy.mockRestore()
+    }
   })
 
   it('renders titleParts with book and suffix on separate nodes', () => {

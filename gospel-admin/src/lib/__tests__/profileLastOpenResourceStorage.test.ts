@@ -1,7 +1,13 @@
 import { gospelStorageGetSync, gospelStorageSetSync } from '@/lib/gospelClientStorage'
-import { installTestLocalStorage, resetGospelStorageTestState } from '@/lib/testing/testLocalStorage'
+import {
+  installTestLocalStorage,
+  installTestSessionStorage,
+  resetGospelStorageTestState,
+} from '@/lib/testing/testLocalStorage'
 import {
   buildProfileRecentScriptureHref,
+  consumeRevealResourceTabSlug,
+  consumeRevealScriptureTabKey,
   isProfileAppLaunchEntryPath,
   loadProfileLastActiveSlug,
   loadProfileLastOpenResource,
@@ -32,6 +38,8 @@ describe('profileLastOpenResourceStorage', () => {
   beforeEach(async () => {
     await resetGospelStorageTestState()
     installTestLocalStorage()
+    installTestSessionStorage()
+    window.sessionStorage.clear()
     resetProfileLastOpenNavigationRefsForTests()
   })
 
@@ -320,6 +328,48 @@ describe('profileLastOpenResourceStorage', () => {
     recordProfileLastOpenOnEnter('c', 'C')
     expect(resolveProfileTabNavigationAfterClose('b')).toBe('c')
     expect(resolveProfileTabNavigationAfterClose('c')).toBe('b')
+  })
+
+  it('marks reveal slug when a new resource tab is opened and consume clears it once', () => {
+    recordProfileLastOpenOnEnter('a', 'A')
+    expect(consumeRevealResourceTabSlug()).toBeNull()
+
+    recordProfileLastOpenOnEnter('b', 'B')
+    expect(consumeRevealResourceTabSlug()).toBe('b')
+    expect(consumeRevealResourceTabSlug()).toBeNull()
+
+    recordProfileLastOpenOnEnter('a', 'A again')
+    expect(consumeRevealResourceTabSlug()).toBeNull()
+  })
+
+  it('marks reveal key when a new scripture tab is opened and consume clears it once', () => {
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'John 3:16',
+      sectionId: 's1',
+      subsectionId: 's1-0',
+    })
+    expect(consumeRevealScriptureTabKey()).toBe('default|John 3:16')
+
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'Romans 8:1',
+      sectionId: 's1',
+      subsectionId: 's1-0',
+    })
+    expect(consumeRevealScriptureTabKey()).toBe('default|Romans 8:1')
+    expect(consumeRevealScriptureTabKey()).toBeNull()
+
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'John 3:16',
+      sectionId: 's1',
+      subsectionId: 's1-0',
+    })
+    expect(consumeRevealScriptureTabKey()).toBeNull()
   })
 
   it('recordScriptureModalTab stores compare and chapter view per tab', () => {

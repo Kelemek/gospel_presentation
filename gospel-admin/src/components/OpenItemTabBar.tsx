@@ -7,6 +7,7 @@ import {
   persistOpenItemTabBarScrollOnRelease,
   restoreOpenItemTabBarScrollPosition,
   saveOpenItemTabBarScrollLeft,
+  scrollOpenItemTabIntoView,
 } from '@/lib/openItemTabBarScrollStorage'
 
 const TABLIST_SCROLL_CLASS =
@@ -51,6 +52,8 @@ export type OpenItemTabBarProps = {
   className?: string
   /** When set, horizontal scroll position is restored after remount (e.g. resource tab navigation). */
   persistScrollKey?: string
+  /** When set (once per new tab), scroll this tab fully into view including its close control. */
+  revealTabId?: string | null
 }
 
 export default function OpenItemTabBar({
@@ -62,6 +65,7 @@ export default function OpenItemTabBar({
   dataTour,
   className = '',
   persistScrollKey,
+  revealTabId,
 }: OpenItemTabBarProps) {
   const active = activeId.trim()
   const tablistScrollRef = useRef<HTMLDivElement>(null)
@@ -72,6 +76,31 @@ export default function OpenItemTabBar({
   }, [persistScrollKey])
 
   useLayoutEffect(() => {
+    const revealId = revealTabId?.trim()
+    if (revealId && revealId === active) {
+      let cancelled = false
+      let attempts = 0
+      const maxAttempts = 8
+
+      const applyReveal = () => {
+        if (cancelled) return
+        const el = tablistScrollRef.current
+        if (!el) return
+        const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth)
+        if (maxScroll <= 0 && attempts < maxAttempts) {
+          attempts += 1
+          window.requestAnimationFrame(applyReveal)
+          return
+        }
+        scrollOpenItemTabIntoView(el, revealId, persistScrollKey)
+      }
+
+      applyReveal()
+      return () => {
+        cancelled = true
+      }
+    }
+
     if (!persistScrollKey) return
     const saved = loadOpenItemTabBarScrollLeft(persistScrollKey)
     if (saved == null) return
@@ -80,24 +109,24 @@ export default function OpenItemTabBar({
     let attempts = 0
     const maxAttempts = 8
 
-    const apply = () => {
+    const applyRestore = () => {
       if (cancelled) return
       const el = tablistScrollRef.current
       if (!el) return
       const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth)
       if (maxScroll <= 0 && saved > 0 && attempts < maxAttempts) {
         attempts += 1
-        window.requestAnimationFrame(apply)
+        window.requestAnimationFrame(applyRestore)
         return
       }
       restoreOpenItemTabBarScrollPosition(el, persistScrollKey)
     }
 
-    apply()
+    applyRestore()
     return () => {
       cancelled = true
     }
-  }, [persistScrollKey, tabs.length])
+  }, [persistScrollKey, revealTabId, active, tabs.length])
 
   useEffect(() => {
     if (!persistScrollKey) return
@@ -133,6 +162,7 @@ export default function OpenItemTabBar({
               <div
                 key={entry.id}
                 role="presentation"
+                data-open-item-tab-id={entry.id}
                 className={`flex shrink-0 items-stretch rounded-t-md border-r border-slate-200 dark:border-slate-600 last:border-r-0 ${
                   isActive
                     ? 'bg-white dark:bg-slate-800 shadow-sm'

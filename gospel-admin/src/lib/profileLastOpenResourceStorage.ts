@@ -23,6 +23,12 @@ export const GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT = 'gospel-profile-last-open-
 /** Set after the first launch-time route decision so we do not override intentional navigation. */
 export const PROFILE_APP_LAUNCH_RESUME_SESSION_KEY = 'gospel-profile-app-launch-resume:v1'
 
+/** One-shot: scroll this resource tab into view after it is added to the tab bar. */
+export const REVEAL_RESOURCE_TAB_SESSION_KEY = 'gospel-profile-reveal-resource-tab:v1'
+
+/** One-shot: scroll this scripture tab into view after it is added to the modal tab bar. */
+export const REVEAL_SCRIPTURE_TAB_SESSION_KEY = 'gospel-scripture-reveal-tab:v1'
+
 export type ProfileRecentResourceEntry = {
   slug: string
   title: string
@@ -58,6 +64,54 @@ export type ProfileLastOpenResourceV1 = ProfileRecentResourceEntry & { v?: 1 }
 function emitProfileLastOpenChanged(): void {
   if (typeof window === 'undefined') return
   window.dispatchEvent(new CustomEvent(GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT))
+}
+
+function markRevealResourceTabSlug(slug: string): void {
+  if (typeof window === 'undefined') return
+  const trimmed = slug.trim()
+  if (!trimmed) return
+  try {
+    window.sessionStorage.setItem(REVEAL_RESOURCE_TAB_SESSION_KEY, trimmed)
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+function markRevealScriptureTabKey(tabKey: string): void {
+  if (typeof window === 'undefined') return
+  const trimmed = tabKey.trim()
+  if (!trimmed) return
+  try {
+    window.sessionStorage.setItem(REVEAL_SCRIPTURE_TAB_SESSION_KEY, trimmed)
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+/** Read and clear the resource tab id that should be scrolled into view (if any). */
+export function consumeRevealResourceTabSlug(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.sessionStorage.getItem(REVEAL_RESOURCE_TAB_SESSION_KEY)
+    window.sessionStorage.removeItem(REVEAL_RESOURCE_TAB_SESSION_KEY)
+    const slug = raw?.trim()
+    return slug || null
+  } catch {
+    return null
+  }
+}
+
+/** Read and clear the scripture tab id that should be scrolled into view (if any). */
+export function consumeRevealScriptureTabKey(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.sessionStorage.getItem(REVEAL_SCRIPTURE_TAB_SESSION_KEY)
+    window.sessionStorage.removeItem(REVEAL_SCRIPTURE_TAB_SESSION_KEY)
+    const key = raw?.trim()
+    return key || null
+  } catch {
+    return null
+  }
 }
 
 function normalizeResourceEntry(raw: unknown): ProfileRecentResourceEntry | null {
@@ -247,6 +301,7 @@ function touchResourceTab(
     next[idx] = entry
     return next
   }
+  markRevealResourceTabSlug(entry.slug)
   const next = [...tabs, entry]
   if (next.length <= PROFILE_RECENT_MENU_MAX) return next
   return next.slice(-PROFILE_RECENT_MENU_MAX)
@@ -339,6 +394,7 @@ function touchScriptureTab(
     next[idx] = mergeScriptureTabEntryFields(next[idx], entry)
     return next
   }
+  markRevealScriptureTabKey(scriptureModalTabKey(entry))
   const next = [...tabs, entry]
   if (next.length <= PROFILE_RECENT_MENU_MAX) return next
   return next.slice(-PROFILE_RECENT_MENU_MAX)
@@ -519,6 +575,7 @@ function ensureScriptureTabsIncludeCurrent(
     next[idx] = mergeScriptureTabEntryFields(next[idx], entry)
     return next
   }
+  markRevealScriptureTabKey(key)
   const next = [...tabs, entry]
   if (next.length <= PROFILE_RECENT_MENU_MAX) return next
   return next.slice(-PROFILE_RECENT_MENU_MAX)
@@ -599,6 +656,7 @@ function ensureResourceTabsIncludeCurrent(
     next[idx] = { slug: current, title }
     return next
   }
+  markRevealResourceTabSlug(current)
   const next = [...tabs, { slug: current, title }]
   if (next.length <= PROFILE_RECENT_MENU_MAX) return next
   return next.slice(-PROFILE_RECENT_MENU_MAX)

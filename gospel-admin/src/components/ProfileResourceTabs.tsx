@@ -1,8 +1,12 @@
 'use client'
 
+import { useMemo } from 'react'
 import OpenItemTabBar from '@/components/OpenItemTabBar'
 import { PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY } from '@/lib/openItemTabBarScrollStorage'
-import type { ProfileRecentResourceEntry } from '@/lib/profileLastOpenResourceStorage'
+import {
+  consumeRevealResourceTabSlug,
+  type ProfileRecentResourceEntry,
+} from '@/lib/profileLastOpenResourceStorage'
 
 export type ProfileResourceTabsProps = {
   tabs: ProfileRecentResourceEntry[]
@@ -17,6 +21,11 @@ export default function ProfileResourceTabs({
   onSelectTab,
   onCloseTab,
 }: ProfileResourceTabsProps) {
+  const revealTabId = useMemo(() => {
+    void tabs
+    return consumeRevealResourceTabSlug()
+  }, [tabs])
+
   return (
     <OpenItemTabBar
       dataTour="profile-resource-tabs"
@@ -30,6 +39,7 @@ export default function ProfileResourceTabs({
       onSelectTab={onSelectTab}
       onCloseTab={onCloseTab}
       persistScrollKey={PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY}
+      revealTabId={revealTabId}
     />
   )
 }
