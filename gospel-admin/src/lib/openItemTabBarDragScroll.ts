@@ -26,7 +26,8 @@ export function scrollLeftForOpenItemTabBarDrag(
   session: OpenItemTabBarDragSession,
   clientX: number
 ): number {
-  return session.startScrollLeft + (clientX - session.startClientX)
+  // Content follows the pointer (drag right → scrollLeft decreases).
+  return session.startScrollLeft - (clientX - session.startClientX)
 }
 
 export function clampOpenItemTabBarScrollLeft(el: HTMLDivElement, scrollLeft: number): number {

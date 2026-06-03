@@ -274,7 +274,7 @@ describe('OpenItemTabBar', () => {
     const tab = screen.getByRole('tab', { name: 'Spurgeon Sermons' })
     Object.defineProperty(tablist, 'scrollWidth', { value: 500, configurable: true })
     Object.defineProperty(tablist, 'clientWidth', { value: 200, configurable: true })
-    let scrollLeft = 0
+    let scrollLeft = 100
     Object.defineProperty(tablist, 'scrollLeft', {
       get: () => scrollLeft,
       set: (value: number) => {

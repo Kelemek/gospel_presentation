@@ -38,8 +38,8 @@ describe('openItemTabBarDragScroll', () => {
       startScrollLeft: 50,
       dragging: true,
     }
-    // Dragging right (+20px) increases scrollLeft: 50 + (120 - 100) = 70
-    expect(scrollLeftForOpenItemTabBarDrag(session, 120)).toBe(70)
+    // Dragging right (+20px) decreases scrollLeft: 50 - (120 - 100) = 30
+    expect(scrollLeftForOpenItemTabBarDrag(session, 120)).toBe(30)
     expect(clampOpenItemTabBarScrollLeft(el, 999)).toBe(200)
     expect(clampOpenItemTabBarScrollLeft(el, -5)).toBe(0)
   })
@@ -48,7 +48,7 @@ describe('openItemTabBarDragScroll', () => {
     const el = document.createElement('div')
     Object.defineProperty(el, 'scrollWidth', { value: 500, configurable: true })
     Object.defineProperty(el, 'clientWidth', { value: 200, configurable: true })
-    let scrollLeft = 0
+    let scrollLeft = 80
     Object.defineProperty(el, 'scrollLeft', {
       get: () => scrollLeft,
       set: (value: number) => {
@@ -103,7 +103,7 @@ describe('openItemTabBarDragScroll', () => {
       expect(scrollLeft).toBe(40)
 
       onClick.mockClear()
-      scrollLeft = 0
+      scrollLeft = 80
 
       el.dispatchEvent(
         new PointerEvent('pointerdown', {
