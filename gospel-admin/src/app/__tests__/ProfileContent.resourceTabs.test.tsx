@@ -102,6 +102,7 @@ describe('ProfileContent resource tabs reading resume', () => {
     resetGospelClientStorageForTests()
     installTestLocalStorage()
     seedOpenResourceTabs()
+    Object.defineProperty(window, 'scrollY', { value: 200, configurable: true })
     ;(global as any).fetch = jest.fn(() =>
       Promise.resolve({ ok: true, json: async () => ({}) })
     ) as any
@@ -121,6 +122,13 @@ describe('ProfileContent resource tabs reading resume', () => {
 
     const otherTab = await screen.findByRole('tab', { name: 'Profile Two' })
     await user.click(otherTab)
+
+    await waitFor(() => {
+      expect(captureReadingPositionAtViewport).toHaveBeenCalledWith(
+        sectionsPayload,
+        'p1'
+      )
+    })
 
     await waitFor(() => {
       expect(loadProfileReadingResume('p1')).toEqual({

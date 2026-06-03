@@ -7,7 +7,12 @@ import {
   PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY,
   resetProfileLastOpenNavigationRefsForTests,
 } from '@/lib/profileLastOpenResourceStorage'
-import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
+import { installTestLocalStorage, installTestSessionStorage } from '@/lib/testing/testLocalStorage'
+import {
+  PUBLIC_RESOURCES_MENU_CACHE_KEY,
+  resetPublicResourcesMenuClientForTests,
+  writePublicResourcesMenuCache,
+} from '@/lib/publicResourcesMenuClient'
 
 function renderToc(ui: React.ReactElement) {
   return render(<TextSizeProvider>{ui}</TextSizeProvider>)
@@ -37,6 +42,9 @@ describe('TableOfContents additional behaviors', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     installTestLocalStorage()
+    installTestSessionStorage()
+    sessionStorage.removeItem(PUBLIC_RESOURCES_MENU_CACHE_KEY)
+    resetPublicResourcesMenuClientForTests()
     resetProfileLastOpenNavigationRefsForTests()
   })
 
@@ -253,6 +261,74 @@ describe('TableOfContents additional behaviors', () => {
 
     await waitFor(() => expect(screen.getByText(/Resources/i)).toBeInTheDocument())
     expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument()
+  })
+
+  it('shows Loading resources while public-templates fetch is pending', async () => {
+    const clientMod = require('@/lib/supabase/client')
+    jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({
+      auth: { getUser: async () => ({ data: { user: null } }) },
+    }))
+
+    let resolveFetch!: (value: Response) => void
+    const fetchPromise = new Promise<Response>((resolve) => {
+      resolveFetch = resolve
+    })
+    global.fetch = jest.fn(() => fetchPromise) as typeof fetch
+
+    const TableOfContents = require('../TableOfContents').default
+    renderToc(<TableOfContents sections={[]} />)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /Resources/i }))
+
+    expect(screen.getByText(/Loading resources/i)).toBeInTheDocument()
+    expect(screen.queryByText('No resources available')).not.toBeInTheDocument()
+
+    resolveFetch({
+      ok: true,
+      json: async () => ({
+        items: [{ type: 'template', slug: 'warm', title: 'Warm Template' }],
+      }),
+    } as Response)
+
+    await waitFor(() => expect(screen.getByRole('link', { name: /Warm Template/i })).toBeInTheDocument())
+    expect(screen.queryByText(/Loading resources/i)).not.toBeInTheDocument()
+  })
+
+  it('shows cached resources immediately when session cache is primed', async () => {
+    writePublicResourcesMenuCache([
+      { type: 'template', slug: 'cached', title: 'Cached Template' },
+    ])
+
+    const clientMod = require('@/lib/supabase/client')
+    jest.spyOn(clientMod, 'createClient').mockImplementation(() => ({
+      auth: { getUser: async () => ({ data: { user: null } }) },
+    }))
+
+    let fetchResolved = false
+    global.fetch = jest.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          setTimeout(() => {
+            fetchResolved = true
+            resolve({
+              ok: true,
+              json: async () => ({ items: [] }),
+            } as Response)
+          }, 200)
+        })
+    ) as typeof fetch
+
+    const TableOfContents = require('../TableOfContents').default
+    renderToc(<TableOfContents sections={[]} />)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /Resources/i })).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: /Resources/i }))
+
+    expect(screen.getByRole('link', { name: /Cached Template/i })).toBeInTheDocument()
+    expect(screen.queryByText(/Loading resources/i)).not.toBeInTheDocument()
+    expect(screen.queryByText('No resources available')).not.toBeInTheDocument()
+    expect(fetchResolved).toBe(false)
   })
 
   it('shows category in Resources and expands to show template links', async () => {

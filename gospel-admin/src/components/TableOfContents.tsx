@@ -38,6 +38,11 @@ import {
   type ProfileRecentResourceEntry,
   type ProfileRecentScriptureEntry,
 } from '@/lib/profileLastOpenResourceStorage'
+import {
+  loadPublicResourcesMenuItems,
+  readPublicResourcesMenuCache,
+  shouldLoadPublicResourcesMenu,
+} from '@/lib/publicResourcesMenuClient'
 
 interface TableOfContentsProps {
   sections: GospelSection[]
@@ -156,8 +161,12 @@ export default function TableOfContents({
   const [allRecentScriptures, setAllRecentScriptures] = useState<ProfileRecentScriptureEntry[]>(() =>
     loadProfileRecentScriptures()
   )
-  const [resourceItems, setResourceItems] = useState<PublicResourceItem[]>([])
-  const [resourcesRequestDone, setResourcesRequestDone] = useState(false)
+  const [resourceItems, setResourceItems] = useState<PublicResourceItem[]>(() => {
+    return readPublicResourcesMenuCache() ?? []
+  })
+  const [resourcesRequestDone, setResourcesRequestDone] = useState(
+    () => readPublicResourcesMenuCache() != null
+  )
   const [isLastOpenOpen, setIsLastOpenOpen] = useState(false)
   const [isResourcesOpen, setIsResourcesOpen] = useState(false)
   const [isTextSizeOpen, setIsTextSizeOpen] = useState(false)
@@ -240,22 +249,18 @@ export default function TableOfContents({
   }, [])
 
   useEffect(() => {
-    if (isLoggedIn && Capacitor.isNativePlatform()) return
+    if (!shouldLoadPublicResourcesMenu(isLoggedIn)) return
     let cancelled = false
-    const fetchResources = async () => {
-      try {
-        const res = await fetch('/api/profiles/public-templates')
-        if (!cancelled && res.ok) {
-          const data = await res.json()
-          setResourceItems(data.items || [])
-        }
-      } catch {
+    void loadPublicResourcesMenuItems()
+      .then((items) => {
+        if (!cancelled) setResourceItems(items)
+      })
+      .catch(() => {
         if (!cancelled) setResourceItems([])
-      } finally {
+      })
+      .finally(() => {
         if (!cancelled) setResourcesRequestDone(true)
-      }
-    }
-    fetchResources()
+      })
     return () => {
       cancelled = true
     }
@@ -419,7 +424,11 @@ export default function TableOfContents({
               className="mt-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-sm overflow-hidden"
               role="list"
             >
-              {resourceItemsForMenu.length === 0 ? (
+              {!resourcesRequestDone ? (
+                <div className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
+                  Loading resources…
+                </div>
+              ) : resourceItemsForMenu.length === 0 ? (
                 <div className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
                   No resources available
                 </div>

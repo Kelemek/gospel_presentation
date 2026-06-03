@@ -2,6 +2,7 @@ import { driver, type Alignment, type Config, type DriveStep, type Driver, type 
 import 'driver.js/dist/driver.css'
 import { Capacitor } from '@capacitor/core'
 import type { PublicResourceItem } from '@/lib/supabase-data-service'
+import { loadPublicResourcesMenuItems } from '@/lib/publicResourcesMenuClient'
 import {
   groupPublicResourceItems,
   publicResourceItemsForResourcesMenu,
@@ -884,13 +885,7 @@ function resourcesListPanelReady(panel: Element): boolean {
 
 async function fetchPublicResourceItemsForTour(): Promise<PublicResourceItem[]> {
   try {
-    const res = await fetch('/api/profiles/public-templates')
-    if (!res.ok) return []
-    const data: unknown = await res.json()
-    if (!data || typeof data !== 'object' || !('items' in data)) return []
-    const { items } = data as { items: unknown }
-    if (!Array.isArray(items)) return []
-    return items as PublicResourceItem[]
+    return await loadPublicResourcesMenuItems()
   } catch {
     return []
   }

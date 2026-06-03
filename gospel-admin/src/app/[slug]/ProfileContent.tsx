@@ -69,6 +69,10 @@ import {
 } from '@/lib/presentationReadCompleteStorage'
 import { scrollToTocAnchor, scrollToTocAnchorWhenReady } from '@/lib/scrollToTocAnchor'
 import { hydrateGospelClientStorage } from '@/lib/gospelClientStorage'
+import {
+  prefetchPublicResourcesMenu,
+  shouldLoadPublicResourcesMenu,
+} from '@/lib/publicResourcesMenuClient'
 import { consumePendingBookmarkResume } from '@/lib/profileBookmarkResumeSession'
 import {
   captureReadingPositionAtViewport,
@@ -323,6 +327,23 @@ function ProfileContent({ sections, profileInfo, onReadingResumeSettled }: Profi
     checkAuth()
   }, [isHydrated])
 
+  // Warm Resources menu list before the slide-out mounts (session cache + deduped fetch).
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (cancelled || !shouldLoadPublicResourcesMenu(!!user)) return
+      prefetchPublicResourcesMenu()
+    }
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const sectionCount = sections?.length ?? 0
   const profileSlug = profileInfo?.slug ?? ''
 
@@ -448,7 +469,7 @@ function ProfileContent({ sections, profileInfo, onReadingResumeSettled }: Profi
     [profileSlug, sectionCount, sections, selectedScripture.isOpen]
   )
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     flushReadingResumeSaveRef.current = flushReadingResumeSave
   }, [flushReadingResumeSave])
 
