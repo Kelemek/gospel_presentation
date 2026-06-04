@@ -35,7 +35,13 @@ import ProfileHelpMenu from '@/components/ProfileHelpMenu'
 import PresentationFirstVisitWelcome from '@/components/PresentationFirstVisitWelcome'
 import { ScriptureFooterAttributionParagraphs } from '@/components/ScriptureFooterAttributionParagraphs'
 import { GospelSection as GospelSectionType, GospelProfile, SavedAnswer } from '@/lib/types'
-import type { VersePinAnchoredEntry, VersePinColorId, VersePinsStoredState, VersePinSlotEntry } from '@/lib/versePinStorage'
+import type {
+  VersePinAnchoredEntry,
+  VersePinColorId,
+  VersePinsStoredState,
+  VersePinSlotEntry,
+  VerseBookmarkColorId,
+} from '@/lib/versePinStorage'
 import {
   assignVersePin,
   assignYellowLastViewed,
@@ -189,6 +195,26 @@ function closestElement(node: Node | null, selector: string): HTMLElement | null
 
 function isInsideHighlightIgnoredMount(node: Node | null): boolean {
   return !!closestElement(node, '[data-gospel-mount]')
+}
+
+function versePinSlotEntryFromModalPinKey(pinKey: string): VersePinSlotEntry | null {
+  const sep = pinKey.indexOf('|')
+  if (sep < 0) return null
+  const reference = pinKey.slice(0, sep).trim()
+  const rest = pinKey.slice(sep + 1)
+  const sep2 = rest.indexOf('|')
+  if (sep2 < 0 || !reference) return null
+  const sectionId = rest.slice(0, sep2)
+  const subsectionId = rest.slice(sep2 + 1)
+  return {
+    reference,
+    sectionId: sectionId || 'modal-view',
+    subsectionId: subsectionId || 'modal-view',
+  }
+}
+
+function isVerseBookmarkColorId(color: VersePinColorId): color is VerseBookmarkColorId {
+  return color !== 'yellow'
 }
 
 function textOffsetWithinScope(scopeEl: HTMLElement, node: Node, nodeOffset: number): number {
@@ -1038,7 +1064,7 @@ function ProfileContent({
 
   const [modalPinUserOverride, setModalPinUserOverride] = useState<{
     key: string
-    color: VersePinColorId
+    color: VerseBookmarkColorId
   } | null>(null)
 
   /** Anchors for navigation + pin commit (matches the passage row in the modal). */
@@ -1692,7 +1718,7 @@ function ProfileContent({
     effectiveModalOpenAnchors,
   ])
 
-  const commitVersePinForClosedScripture = useCallback(
+  const persistVersePinForModalPassage = useCallback(
     (refTxt: string) => {
       if (!refTxt || !profileInfo?.slug) return
       const snap = effectiveModalOpenAnchors
@@ -1710,15 +1736,17 @@ function ProfileContent({
         sectionId: sectionId || 'modal-view',
         subsectionId: subsectionId || 'modal-view',
       }
-      const unchanged = modalPinDraftColor === defaultModalPinColor
+      const bookmarkTint =
+        isVerseBookmarkColorId(modalPinDraftColor) &&
+        modalPinDraftColor !== defaultModalPinColor
+          ? modalPinDraftColor
+          : null
 
-      if (unchanged) {
-        if (shouldAdvanceYellowLastViewed(versePinMap, entry)) {
-          assignYellowLastViewed(profileInfo.slug, entry)
-          bumpVersePins()
-        }
-      } else {
-        assignVersePin(profileInfo.slug, modalPinDraftColor, entry)
+      if (bookmarkTint) {
+        assignVersePin(profileInfo.slug, bookmarkTint, entry)
+        bumpVersePins()
+      } else if (shouldAdvanceYellowLastViewed(versePinMap, entry)) {
+        assignYellowLastViewed(profileInfo.slug, entry)
         bumpVersePins()
       }
     },
@@ -1733,8 +1761,67 @@ function ProfileContent({
     ]
   )
 
+  const lastPersistedModalPinKeyRef = useRef<string | null>(null)
+  /** Bookmark tint chosen in the picker but not yet written — flushed when leaving that passage. */
+  const pendingBookmarkOverrideByPinKeyRef = useRef<Map<string, VerseBookmarkColorId>>(new Map())
+
+  const flushPendingBookmarkOverrideForPinKey = useCallback(
+    (pinKey: string) => {
+      if (!profileInfo?.slug) return
+      const color = pendingBookmarkOverrideByPinKeyRef.current.get(pinKey)
+      if (!color) return
+      const entry = versePinSlotEntryFromModalPinKey(pinKey)
+      if (!entry) return
+      assignVersePin(profileInfo.slug, color, entry)
+      pendingBookmarkOverrideByPinKeyRef.current.delete(pinKey)
+      bumpVersePins()
+    },
+    [profileInfo, bumpVersePins]
+  )
+
+  useEffect(() => {
+    if (!modalPinSyncedKey || !modalPinUserOverride) return
+    if (modalPinUserOverride.key !== modalPinSyncedKey) return
+    if (
+      !isVerseBookmarkColorId(modalPinUserOverride.color) ||
+      modalPinUserOverride.color === defaultModalPinColor
+    ) {
+      pendingBookmarkOverrideByPinKeyRef.current.delete(modalPinSyncedKey)
+      return
+    }
+    pendingBookmarkOverrideByPinKeyRef.current.set(
+      modalPinSyncedKey,
+      modalPinUserOverride.color
+    )
+  }, [modalPinUserOverride, modalPinSyncedKey, defaultModalPinColor])
+
+  /** Pin yellow (or chosen tint) as soon as the open passage changes — not only on modal close. */
+  useEffect(() => {
+    if (!activeScripture.isOpen) {
+      lastPersistedModalPinKeyRef.current = null
+      pendingBookmarkOverrideByPinKeyRef.current.clear()
+      return
+    }
+    const anchors = modalPassageAnchorsForPins
+    if (!anchors?.reference.trim()) return
+    const pinKey = `${anchors.reference}|${anchors.sectionId}|${anchors.subsectionId}`
+    if (lastPersistedModalPinKeyRef.current === pinKey) return
+    const previousPinKey = lastPersistedModalPinKeyRef.current
+    if (previousPinKey) {
+      flushPendingBookmarkOverrideForPinKey(previousPinKey)
+    }
+    lastPersistedModalPinKeyRef.current = pinKey
+    persistVersePinForModalPassage(anchors.reference.trim())
+  }, [
+    activeScripture.isOpen,
+    modalPassageAnchorsForPins,
+    persistVersePinForModalPassage,
+    flushPendingBookmarkOverrideForPinKey,
+  ])
+
   const closeModal = () => {
-    commitVersePinForClosedScripture(activeScripture.reference.trim())
+    persistVersePinForModalPassage(activeScripture.reference.trim())
+    pendingBookmarkOverrideByPinKeyRef.current.clear()
     setModalPinUserOverride(null)
     setModalOpenAnchors(null)
     if (scriptureFromDeepLink && scriptureRefParam) {
@@ -1793,9 +1880,9 @@ function ProfileContent({
     scripturePinCommitOnUnmountRef.current = {
       isOpen: activeScripture.isOpen,
       reference: activeScripture.reference,
-      commit: commitVersePinForClosedScripture,
+      commit: persistVersePinForModalPassage,
     }
-  }, [activeScripture.isOpen, activeScripture.reference, commitVersePinForClosedScripture])
+  }, [activeScripture.isOpen, activeScripture.reference, persistVersePinForModalPassage])
 
   useEffect(() => {
     return () => {
@@ -2269,7 +2356,7 @@ function ProfileContent({
         versePinControl={{
           draftColor: modalPinDraftColor,
           onDraftColorChange: (color) => {
-            if (modalPinSyncedKey) {
+            if (modalPinSyncedKey && isVerseBookmarkColorId(color)) {
               setModalPinUserOverride({ key: modalPinSyncedKey, color })
             }
           },

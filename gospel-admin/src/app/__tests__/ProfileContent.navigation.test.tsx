@@ -6,7 +6,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TextSizeProvider } from '@/contexts/TextSizeContext'
 import { gospelStorageGetSync, gospelStorageSetSync, resetGospelClientStorageForTests } from '@/lib/gospelClientStorage'
-import { versePinStorageKey } from '@/lib/versePinStorage'
+import { loadVersePins, versePinStorageKey } from '@/lib/versePinStorage'
 import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
 
 function renderWithTextSize(ui: ReactElement) {
@@ -87,6 +87,43 @@ describe('ProfileContent navigation & pins', () => {
         screen.getByRole('button', { name: /john 3:16\. choose another passage/i })
       ).toBeInTheDocument()
     )
+  })
+
+  test('persists bookmark color for prior passage when navigating next without closing modal', async () => {
+    const user = userEvent.setup()
+    const profile = { id: 'p', isDefault: false }
+
+    renderWithTextSize(<ProfileContent sections={sectionsPayload as any} profileInfo={profileInfo as any} profile={profile as any} />)
+
+    await user.click(await screen.findByRole('button', { name: /^John 3:16$/i }))
+    await user.click(await screen.findByRole('button', { name: /^Pin color:/i }))
+    await user.click(screen.getByRole('option', { name: /^Red pin$/i }))
+    await user.click(screen.getByRole('button', { name: /next scripture/i }))
+
+    await waitFor(() => {
+      const pins = loadVersePins('p1')
+      expect(pins.bookmarks.some((b) => b.colorId === 'red' && b.reference === 'John 3:16')).toBe(true)
+      expect(pins.yellow?.reference).toBe('John 4:1')
+    })
+  })
+
+  test('advances yellow pin when navigating to next scripture without closing modal', async () => {
+    const user = userEvent.setup()
+    const profile = { id: 'p', isDefault: false }
+
+    renderWithTextSize(<ProfileContent sections={sectionsPayload as any} profileInfo={profileInfo as any} profile={profile as any} />)
+
+    await user.click(await screen.findByRole('button', { name: /^John 3:16$/i }))
+    await screen.findByRole('button', { name: /next scripture/i })
+
+    await user.click(screen.getByRole('button', { name: /next scripture/i }))
+
+    await waitFor(() => {
+      const yellow = loadVersePins('p1').yellow
+      expect(yellow?.reference).toBe('John 4:1')
+      expect(yellow?.sectionId).toBe('section-1')
+      expect(yellow?.subsectionId).toBe('section-1-0')
+    })
   })
 
   test('removing verse pin invokes onRemove handler', async () => {

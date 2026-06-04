@@ -111,6 +111,23 @@ describe('versePinStorage', () => {
     expect(m.yellow).toBeNull()
   })
 
+  test('assignVersePin with yellow delegates to assignYellowLastViewed and does not clear row bookmarks', () => {
+    const slug = 'pyellow'
+    assignVersePin(slug, 'red', {
+      reference: 'Jn 3:16',
+      sectionId: 's1',
+      subsectionId: 'ss1',
+    })
+    assignVersePin(slug, 'yellow', {
+      reference: 'Jn 3:16',
+      sectionId: 's1',
+      subsectionId: 'ss1',
+    })
+    const m = loadVersePins(slug)
+    expect(m.bookmarks.some((b) => b.colorId === 'red' && b.reference === 'Jn 3:16')).toBe(true)
+    expect(m.yellow).toBeNull()
+  })
+
   test('assignYellowLastViewed advances yellow when no bookmark on that row', () => {
     const slug = 'py'
     const row = { reference: 'Ps 23:1', sectionId: 's1', subsectionId: 'a' }

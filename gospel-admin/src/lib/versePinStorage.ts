@@ -129,7 +129,7 @@ export function hasNonYellowBookmarkForRow(
 }
 
 /**
- * When closing the scripture modal unchanged, advance yellow (“last verse viewed”) only if
+ * When persisting yellow (“last verse viewed”) for a passage, advance only if
  * nothing else bookmarks this passage.
  */
 export function shouldAdvanceYellowLastViewed(
@@ -405,14 +405,12 @@ export function assignVersePin(
   colorId: VersePinColorId,
   entry: VersePinSlotEntry
 ): VersePinsStoredState {
+  if (colorId === 'yellow') {
+    return assignYellowLastViewed(profileSlug, entry)
+  }
+
   const state = loadVersePins(profileSlug)
   clearRowConflictsMutable(state, entry)
-
-  if (colorId === 'yellow') {
-    state.yellow = { ...entry }
-    savePins(profileSlug, state)
-    return state
-  }
 
   state.bookmarks.push({
     id: newVerseBookmarkId(),
