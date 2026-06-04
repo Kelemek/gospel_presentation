@@ -5,6 +5,7 @@ jest.mock('@/lib/supabase/server', () => ({
   createAdminClient: jest.fn(),
 }))
 
+import { mockSupabasePublicProfilesChain } from '@/lib/testHelpers/mockSupabasePublicProfilesChain'
 import { createAdminClient } from '@/lib/supabase/server'
 
 const mockCreateAdminClient = createAdminClient as jest.MockedFunction<typeof createAdminClient>
@@ -31,17 +32,7 @@ describe('GET /api/scripture/spurgeon-links', () => {
         }
       }
       if (table === 'profiles') {
-        return {
-          select: jest.fn().mockReturnThis(),
-          in: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockReturnThis(),
-          like: jest.fn((_col: string, pattern: string) =>
-            Promise.resolve({
-              data: pattern === 'sg%' ? [{ slug: 'sg00001', title: 'Sermon' }] : [],
-              error: null,
-            })
-          ),
-        }
+        return mockSupabasePublicProfilesChain([{ slug: 'sg00001', title: 'Sermon' }])
       }
       return {}
     })
@@ -54,10 +45,7 @@ describe('GET /api/scripture/spurgeon-links', () => {
     const body = await res.json()
     expect(body.items).toEqual([{ slug: 'sg00001', title: 'Sermon', kind: 'sermon' }])
     expect(body.sermonCount).toBe(1)
-    expect(body.edwardsCount).toBe(0)
-    expect(body.morneveCount).toBe(0)
-    expect(body.calvinCount).toBe(0)
-    expect(body.henryCount).toBe(0)
+    expect(body.bookCount).toBe(0)
   })
 
   it('includes Edwards hits after Spurgeon in combined items', async () => {
@@ -74,23 +62,10 @@ describe('GET /api/scripture/spurgeon-links', () => {
         }
       }
       if (table === 'profiles') {
-        return {
-          select: jest.fn().mockReturnThis(),
-          in: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockReturnThis(),
-          like: jest.fn((_col: string, pattern: string) => {
-            if (pattern === 'sg%') {
-              return Promise.resolve({ data: [{ slug: 'sg00001', title: 'Sermon' }], error: null })
-            }
-            if (pattern === 'je%') {
-              return Promise.resolve({
-                data: [{ slug: 'je01', title: 'Sinners in the Hands of an Angry God' }],
-                error: null,
-              })
-            }
-            return Promise.resolve({ data: [], error: null })
-          }),
-        }
+        return mockSupabasePublicProfilesChain([
+          { slug: 'sg00001', title: 'Sermon' },
+          { slug: 'je01', title: 'Sinners in the Hands of an Angry God' },
+        ])
       }
       return {}
     })
@@ -103,7 +78,6 @@ describe('GET /api/scripture/spurgeon-links', () => {
     const body = await res.json()
     expect(body.items.map((x: { kind: string }) => x.kind)).toEqual(['sermon', 'edwards'])
     expect(body.edwardsCount).toBe(1)
-    expect(body.henryCount).toBe(0)
   })
 
   it('includes Matthew Henry hits after Calvin in combined items', async () => {
@@ -120,20 +94,7 @@ describe('GET /api/scripture/spurgeon-links', () => {
         }
       }
       if (table === 'profiles') {
-        return {
-          select: jest.fn().mockReturnThis(),
-          in: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockReturnThis(),
-          like: jest.fn((_col: string, pattern: string) => {
-            if (pattern === 'mh%') {
-              return Promise.resolve({
-                data: [{ slug: 'mhgen', title: 'Matthew Henry on Genesis' }],
-                error: null,
-              })
-            }
-            return Promise.resolve({ data: [], error: null })
-          }),
-        }
+        return mockSupabasePublicProfilesChain([{ slug: 'mhgen', title: 'Matthew Henry on Genesis' }])
       }
       return {}
     })
@@ -150,6 +111,40 @@ describe('GET /api/scripture/spurgeon-links', () => {
     expect(body.henryCount).toBe(1)
   })
 
+  it('includes indexed book templates after library corpora', async () => {
+    const from = jest.fn((table: string) => {
+      if (table === 'spurgeon_passage_index') {
+        return {
+          select: jest.fn(() => ({
+            eq: jest.fn().mockResolvedValue({
+              data: [{ profile_id: 'pLbst' }],
+              error: null,
+            }),
+            or: jest.fn().mockResolvedValue({ data: [], error: null }),
+          })),
+        }
+      }
+      if (table === 'profiles') {
+        return mockSupabasePublicProfilesChain([
+          { slug: 'lbst', title: 'Systematic Theology (Louis Berkhof)' },
+        ])
+      }
+      return {}
+    })
+    mockCreateAdminClient.mockReturnValue({ from } as never)
+
+    const res = await GET(
+      new NextRequest('http://localhost/api/scripture/spurgeon-links?reference=Romans%203:23')
+    )
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.items).toEqual([
+      { slug: 'lbst', title: 'Systematic Theology (Louis Berkhof)', kind: 'book' },
+    ])
+    expect(body.bookCount).toBe(1)
+    expect(body.sermonCount).toBe(0)
+  })
+
   it('falls back to same-chapter range index rows when exact verse key misses', async () => {
     const from = jest.fn((table: string) => {
       if (table === 'spurgeon_passage_index') {
@@ -164,17 +159,7 @@ describe('GET /api/scripture/spurgeon-links', () => {
         }
       }
       if (table === 'profiles') {
-        return {
-          select: jest.fn().mockReturnThis(),
-          in: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockReturnThis(),
-          like: jest.fn((_col: string, pattern: string) =>
-            Promise.resolve({
-              data: pattern === 'sg%' ? [{ slug: 'sg00001', title: 'Sermon' }] : [],
-              error: null,
-            })
-          ),
-        }
+        return mockSupabasePublicProfilesChain([{ slug: 'sg00001', title: 'Sermon' }])
       }
       return {}
     })
@@ -187,10 +172,6 @@ describe('GET /api/scripture/spurgeon-links', () => {
     const body = await res.json()
     expect(body.items).toEqual([{ slug: 'sg00001', title: 'Sermon', kind: 'sermon' }])
     expect(body.sermonCount).toBe(1)
-    expect(body.edwardsCount).toBe(0)
-    expect(body.morneveCount).toBe(0)
-    expect(body.calvinCount).toBe(0)
-    expect(body.henryCount).toBe(0)
   })
 
   it('falls back when modal range overlaps a single verse in the index', async () => {
@@ -207,17 +188,7 @@ describe('GET /api/scripture/spurgeon-links', () => {
         }
       }
       if (table === 'profiles') {
-        return {
-          select: jest.fn().mockReturnThis(),
-          in: jest.fn().mockReturnThis(),
-          eq: jest.fn().mockReturnThis(),
-          like: jest.fn((_col: string, pattern: string) =>
-            Promise.resolve({
-              data: pattern === 'sg%' ? [{ slug: 'sg00001', title: 'Sermon' }] : [],
-              error: null,
-            })
-          ),
-        }
+        return mockSupabasePublicProfilesChain([{ slug: 'sg00001', title: 'Sermon' }])
       }
       return {}
     })
@@ -230,8 +201,5 @@ describe('GET /api/scripture/spurgeon-links', () => {
     const body = await res.json()
     expect(body.items).toEqual([{ slug: 'sg00001', title: 'Sermon', kind: 'sermon' }])
     expect(body.sermonCount).toBe(1)
-    expect(body.morneveCount).toBe(0)
-    expect(body.calvinCount).toBe(0)
-    expect(body.henryCount).toBe(0)
   })
 })

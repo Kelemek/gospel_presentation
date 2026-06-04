@@ -2,22 +2,27 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { canonicalScriptureCacheReference } from '@/lib/api-bible-passage-id'
 import { logger } from '@/lib/logger'
-import { sortCalvinBooksByCanonOrder } from '@/lib/calvin/calvinSlug'
-import { sortHenryBooksByCanonOrder } from '@/lib/henry/henrySlug'
+import { isCalvinCommentaryProfileSlug, sortCalvinBooksByCanonOrder } from '@/lib/calvin/calvinSlug'
+import { isHenryCommentaryProfileSlug, sortHenryBooksByCanonOrder } from '@/lib/henry/henrySlug'
 import { sortMorneveRowsByCalendar } from '@/lib/spurgeon/morneveSlug'
+import { isMorneveProfileSlug } from '@/lib/spurgeon/morneveSlug'
 import { sortEdwardsSermonsByDisplayTitleAZ } from '@/lib/edwards/edwardsSlug'
+import { isEdwardsSermonProfileSlug } from '@/lib/edwards/edwardsSlug'
 import { sortSpurgeonSermonsByDisplayTitleAZ } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
-import {
-  profileIdsFromPassageIndexLookup,
-  publicProfilesByIdsAndSlugPrefix,
-} from '@/lib/spurgeon/spurgeonPassageIndexLookup'
+import { isSpurgeonSermonProfileSlug } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
+import { sortIndexedBooksByTitleAZ } from '@/lib/study/sortIndexedBooksByTitle'
+import { isStudyLibraryCorpusProfileSlug } from '@/lib/study/studyLibraryCorpusSlug'
+import { profileIdsFromPassageIndexLookup } from '@/lib/spurgeon/spurgeonPassageIndexLookup'
 
 const MAX_ITEMS = 8
 
+type StudyLinkKind = 'sermon' | 'edwards' | 'morneve' | 'calvin' | 'henry' | 'book'
+
 /**
  * GET /api/scripture/spurgeon-links?reference=...
- * Indexed Spurgeon sermons, Edwards sermons, Morning & Evening, Calvin, and Matthew Henry commentaries for scripture modal Study (max 8 combined).
- * Item order: Spurgeon, then Edwards, then morneve, then Calvin, then Henry (Protestant canon order).
+ * Indexed Spurgeon sermons, Edwards sermons, Morning & Evening, Calvin, Matthew Henry, and book templates
+ * for scripture modal Study (max 8 combined preview items).
+ * Item order: Spurgeon, Edwards, morneve, Calvin, Henry, then books (A–Z).
  */
 export async function GET(request: NextRequest) {
   try {
@@ -28,61 +33,41 @@ export async function GET(request: NextRequest) {
 
     const passageKey = canonicalScriptureCacheReference(ref)
     if (!passageKey) {
-      return NextResponse.json({
-        items: [],
-        sermonCount: 0,
-        edwardsCount: 0,
-        morneveCount: 0,
-        calvinCount: 0,
-        henryCount: 0,
-      })
+      return NextResponse.json(emptyStudyLinksResponse())
     }
 
     const admin = createAdminClient()
-    const [idsSg, idsJe, idsMe, idsCv, idsMh] = await Promise.all([
-      profileIdsFromPassageIndexLookup(admin, ref),
-      profileIdsFromPassageIndexLookup(admin, ref, { slugPrefix: 'je' }),
-      profileIdsFromPassageIndexLookup(admin, ref, { slugPrefix: 'me' }),
-      profileIdsFromPassageIndexLookup(admin, ref, { slugPrefix: 'cv' }),
-      profileIdsFromPassageIndexLookup(admin, ref, { slugPrefix: 'mh' }),
-    ])
-    if (
-      idsSg.length === 0 &&
-      idsJe.length === 0 &&
-      idsMe.length === 0 &&
-      idsCv.length === 0 &&
-      idsMh.length === 0
-    ) {
-      return NextResponse.json({
-        items: [],
-        sermonCount: 0,
-        edwardsCount: 0,
-        morneveCount: 0,
-        calvinCount: 0,
-        henryCount: 0,
-      })
+    const idsAll = await profileIdsFromPassageIndexLookup(admin, ref)
+    if (idsAll.length === 0) {
+      return NextResponse.json(emptyStudyLinksResponse())
     }
 
-    const [sermonProfiles, edwardsProfiles, morneveProfiles, calvinProfiles, henryProfiles] =
-      await Promise.all([
-        publicProfilesByIdsAndSlugPrefix(admin, idsSg, 'sg'),
-        publicProfilesByIdsAndSlugPrefix(admin, idsJe, 'je'),
-        publicProfilesByIdsAndSlugPrefix(admin, idsMe, 'me'),
-        publicProfilesByIdsAndSlugPrefix(admin, idsCv, 'cv'),
-        publicProfilesByIdsAndSlugPrefix(admin, idsMh, 'mh'),
-      ])
+    const { data: profileRows, error: profErr } = await admin
+      .from('profiles')
+      .select('slug,title')
+      .in('id', idsAll)
+      .eq('is_public', true)
+      .eq('is_template', true)
+
+    if (profErr) throw profErr
+
+    const profiles = (profileRows || []) as { slug: string; title: string }[]
+    const sermonProfiles = profiles.filter((p) => isSpurgeonSermonProfileSlug(p.slug))
+    const edwardsProfiles = profiles.filter((p) => isEdwardsSermonProfileSlug(p.slug))
+    const morneveProfiles = profiles.filter((p) => isMorneveProfileSlug(p.slug))
+    const calvinProfiles = profiles.filter((p) => isCalvinCommentaryProfileSlug(p.slug))
+    const henryProfiles = profiles.filter((p) => isHenryCommentaryProfileSlug(p.slug))
 
     const sermonSorted = sortSpurgeonSermonsByDisplayTitleAZ(sermonProfiles)
     const edwardsSorted = sortEdwardsSermonsByDisplayTitleAZ(edwardsProfiles)
     const morneveSorted = sortMorneveRowsByCalendar(morneveProfiles)
     const calvinSorted = sortCalvinBooksByCanonOrder(calvinProfiles)
     const henrySorted = sortHenryBooksByCanonOrder(henryProfiles)
+    const bookSorted = sortIndexedBooksByTitleAZ(
+      profiles.filter((p) => !isStudyLibraryCorpusProfileSlug(p.slug))
+    )
 
-    const items: {
-      slug: string
-      title: string
-      kind: 'sermon' | 'edwards' | 'morneve' | 'calvin' | 'henry'
-    }[] = []
+    const items: { slug: string; title: string; kind: StudyLinkKind }[] = []
     for (const p of sermonSorted) {
       if (items.length >= MAX_ITEMS) break
       items.push({ slug: p.slug, title: p.title || p.slug, kind: 'sermon' })
@@ -103,6 +88,10 @@ export async function GET(request: NextRequest) {
       if (items.length >= MAX_ITEMS) break
       items.push({ slug: p.slug, title: p.title || p.slug, kind: 'henry' })
     }
+    for (const p of bookSorted) {
+      if (items.length >= MAX_ITEMS) break
+      items.push({ slug: p.slug, title: p.title || p.slug, kind: 'book' })
+    }
 
     return NextResponse.json({
       items,
@@ -111,9 +100,22 @@ export async function GET(request: NextRequest) {
       morneveCount: morneveSorted.length,
       calvinCount: calvinSorted.length,
       henryCount: henrySorted.length,
+      bookCount: bookSorted.length,
     })
   } catch (e) {
     logger.error('[API] GET /api/scripture/spurgeon-links', e)
     return NextResponse.json({ error: 'Lookup failed' }, { status: 500 })
+  }
+}
+
+function emptyStudyLinksResponse() {
+  return {
+    items: [],
+    sermonCount: 0,
+    edwardsCount: 0,
+    morneveCount: 0,
+    calvinCount: 0,
+    henryCount: 0,
+    bookCount: 0,
   }
 }

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ThML>
+<ThML.body xml:space="preserve">
+    <div1 id="iii" title="Part One: The Doctrine of God">
+<h2>PART ONE</h2>
+      <div2 id="iii.i" title="The Being of God">
+<h2>THE BEING OF GOD</h2>
+        <div3 id="iii.i.i" title="I. The Existence of God">
+<h2>I. The Existence of God</h2>
+<p id="iii.i.i-p1">Without faith it is impossible to please God,
+<scripRef id="iii.i.i-p5.1" osisRef="Bible:Heb.11.6" parsed="|Heb|11|6|0|0" passage="Heb. 11:6">Heb. 11:6</scripRef>.</p>
+<p id="iii.i.i-p2">And <scripRef passage="Rom 8:28" parsed="|Rom|8|28|0|0">Rom 8:28</scripRef> speaks of providence.</p>
+<p id="iii.i.i-p7" shownumber="no"> 1. ABSOLUTE DENIAL OF THE EXISTENCE OF GOD.</p>
+<p id="iii.i.i-p11" shownumber="no">a.<span class="ital" id="iii.i.i-p11.1"> An immanent and impersonal God.</span></p>
+<p id="iii.i.i-p15" shownumber="no">1. THE ONTOLOGICAL ARGUMENT.</p>
+        </div3>
+      </div2>
+    </div1>
+    <div1 id="iv" title="Part Two: The Doctrine of Man and Angels">
+<h2>PART TWO</h2>
+      <div2 id="iv.i" title="Man in the State of Original Integrity">
+<p id="iv.i-p1">Created in God's image.</p>
+      </div2>
+    </div1>
+    <div1 id="v" title="Part Three: The Doctrine of the Person and Work of Christ">
+      <div2 id="v.i" title="The Person of Christ">
+<p>Christology.</p>
+      </div2>
+    </div1>
+    <div1 id="vi" title="Part Four: The Doctrine of the Application of the Work of Redemption">
+      <div2 id="vi.i" title="Faith">
+<p>Application.</p>
+      </div2>
+    </div1>
+    <div1 id="vii" title="Part Five: The Doctrine of the Church and the Means of Grace">
+      <div2 id="vii.i" title="The Nature of the Church">
+<p>Church.</p>
+      </div2>
+    </div1>
+    <div1 id="viii" title="Part Six: The Doctrine of the Last Things">
+      <div2 id="viii.i" title="Physical Death">
+<p>Eschatology.</p>
+      </div2>
+    </div1>
+</ThML.body>
+</ThML>

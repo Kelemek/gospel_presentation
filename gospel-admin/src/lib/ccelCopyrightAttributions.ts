@@ -13,6 +13,11 @@ export type CcelCopyrightAttribution = {
 /** CCEL corpora imported via `npm run import-*` (keep in sync with docs/03-FEATURES.md). */
 export const CCEL_COPYRIGHT_ATTRIBUTIONS: readonly CcelCopyrightAttribution[] = [
   {
+    title: 'Louis Berkhof, Systematic Theology',
+    body: 'The underlying work is in the public domain. Text in this app was imported from the ThML edition',
+    sourceHref: 'https://www.ccel.org/ccel/berkhof/systematictheology.html',
+  },
+  {
     title: "John Bunyan, The Pilgrim's Progress",
     body: 'The underlying work is in the public domain. Text in this app was imported from the ThML edition',
     sourceHref: 'https://www.ccel.org/ccel/bunyan/pilgrim.html',

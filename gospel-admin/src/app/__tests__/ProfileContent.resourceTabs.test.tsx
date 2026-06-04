@@ -2,7 +2,7 @@
  * Resource tab bar: persist reading position before switching profiles.
  */
 import React, { type ReactElement } from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TextSizeProvider } from '@/contexts/TextSizeContext'
 import { gospelStorageSetSync, resetGospelClientStorageForTests } from '@/lib/gospelClientStorage'
@@ -11,13 +11,17 @@ import {
   loadProfileReadingResume,
   saveProfileReadingResume,
 } from '@/lib/profileReadingResumeStorage'
-import { captureReadingPositionAtViewport } from '@/lib/profileReadingPosition'
+import {
+  captureReadingPositionAtViewport,
+  isReadingPositionFingerprintValid,
+} from '@/lib/profileReadingPosition'
 import {
   isProfileResourceTabNavigationPending,
   markProfileResourceTabNavigation,
   peekProfileResourceTabNavigation,
+  resetProfileResourceTabNavigationForTests,
 } from '@/lib/profileResourceTabNavigation'
-import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
+import { installTestBrowserStorage } from '@/lib/testing/testLocalStorage'
 
 const mockPush = jest.fn()
 
@@ -35,8 +39,27 @@ jest.mock('@/lib/profileReadingPosition', () => {
       anchorId: 'section-1-0',
       plainOffset: 120,
       fingerprint: 'fp-tab-test',
+      excerpt: '',
     })),
     restoreReadingPosition: jest.fn(() => () => {}),
+    // Mount effect (120ms) clears resume when fingerprint fails against minimal test DOM.
+    isReadingPositionFingerprintValid: jest.fn(() => true),
+  }
+})
+
+jest.mock('@/lib/publicResourcesMenuClient', () => {
+  const actual = jest.requireActual('@/lib/publicResourcesMenuClient')
+  return {
+    ...actual,
+    prefetchPublicResourcesMenu: jest.fn(),
+  }
+})
+
+jest.mock('@/lib/gospelClientStorage', () => {
+  const actual = jest.requireActual('@/lib/gospelClientStorage')
+  return {
+    ...actual,
+    hydrateGospelClientStorage: jest.fn().mockResolvedValue(undefined),
   }
 })
 
@@ -96,13 +119,37 @@ function seedOpenResourceTabs() {
   )
 }
 
+const defaultCapture = {
+  anchorId: 'section-1-0',
+  plainOffset: 120,
+  fingerprint: 'fp-tab-test',
+} as const
+
+/** ProfileContent defers automatic resume restore by 120ms on mount. */
+async function flushMountReadingResumeTimer(): Promise<void> {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 150))
+  })
+}
+
+function stubReadingPositionMocks(): void {
+  jest.mocked(captureReadingPositionAtViewport).mockImplementation(() => ({
+    ...defaultCapture,
+    excerpt: '',
+  }))
+  // clearAllMocks() wipes jest.fn implementations; without this the mount effect clears resume.
+  jest.mocked(isReadingPositionFingerprintValid).mockReturnValue(true)
+}
+
 describe('ProfileContent resource tabs reading resume', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    mockPush.mockClear()
     resetGospelClientStorageForTests()
-    installTestLocalStorage()
+    resetProfileResourceTabNavigationForTests()
+    installTestBrowserStorage()
     seedOpenResourceTabs()
-    Object.defineProperty(window, 'scrollY', { value: 200, configurable: true })
+    Object.defineProperty(window, 'scrollY', { value: 200, configurable: true, writable: true })
+    stubReadingPositionMocks()
     ;(global as any).fetch = jest.fn(() =>
       Promise.resolve({ ok: true, json: async () => ({}) })
     ) as any
@@ -119,23 +166,21 @@ describe('ProfileContent resource tabs reading resume', () => {
         profile={profile as any}
       />
     )
+    await flushMountReadingResumeTimer()
 
     const otherTab = await screen.findByRole('tab', { name: 'Profile Two' })
-    await user.click(otherTab)
+    await act(async () => {
+      await user.click(otherTab)
+    })
 
     await waitFor(() => {
       expect(captureReadingPositionAtViewport).toHaveBeenCalledWith(
         sectionsPayload,
         'p1'
       )
-    })
-
-    await waitFor(() => {
       expect(loadProfileReadingResume('p1')).toEqual({
         v: 1,
-        anchorId: 'section-1-0',
-        plainOffset: 120,
-        fingerprint: 'fp-tab-test',
+        ...defaultCapture,
       })
     })
 
@@ -151,6 +196,7 @@ describe('ProfileContent resource tabs reading resume', () => {
       anchorId: 'section-2-0',
       plainOffset: 0,
       fingerprint: 'fp-new-section',
+      excerpt: '',
     })
 
     const user = userEvent.setup()
@@ -161,14 +207,19 @@ describe('ProfileContent resource tabs reading resume', () => {
         profile={{ id: 'p', isDefault: false } as any}
       />
     )
+    await flushMountReadingResumeTimer()
 
-    await user.click(await screen.findByRole('tab', { name: 'Profile Two' }))
+    await act(async () => {
+      await user.click(await screen.findByRole('tab', { name: 'Profile Two' }))
+    })
 
-    expect(loadProfileReadingResume('p1')).toEqual({
-      v: 1,
-      anchorId: 'section-2-0',
-      plainOffset: 0,
-      fingerprint: 'fp-new-section',
+    await waitFor(() => {
+      expect(loadProfileReadingResume('p1')).toEqual({
+        v: 1,
+        anchorId: 'section-2-0',
+        plainOffset: 0,
+        fingerprint: 'fp-new-section',
+      })
     })
   })
 
@@ -181,6 +232,7 @@ describe('ProfileContent resource tabs reading resume', () => {
       anchorId: 'section-1-0',
       plainOffset: 0,
       fingerprint: 'fp-shallow',
+      excerpt: '',
     })
 
     const user = userEvent.setup()
@@ -191,14 +243,19 @@ describe('ProfileContent resource tabs reading resume', () => {
         profile={{ id: 'p', isDefault: false } as any}
       />
     )
+    await flushMountReadingResumeTimer()
 
-    await user.click(await screen.findByRole('tab', { name: 'Profile Two' }))
+    await act(async () => {
+      await user.click(await screen.findByRole('tab', { name: 'Profile Two' }))
+    })
 
-    expect(loadProfileReadingResume('p1')).toEqual({
-      v: 1,
-      anchorId: 'section-1-0',
-      plainOffset: 500,
-      fingerprint: 'fp-deep',
+    await waitFor(() => {
+      expect(loadProfileReadingResume('p1')).toEqual({
+        v: 1,
+        anchorId: 'section-1-0',
+        plainOffset: 500,
+        fingerprint: 'fp-deep',
+      })
     })
   })
 

@@ -1,5 +1,7 @@
 import {
   auditScriptureReferencesInText,
+  expandCommaBetweenDistinctScriptureRefs,
+  expandSameChapterCommaVerseOrSeparate,
   expandSemicolonInheritedBookRefs,
   isGospelCanonicalScriptureRef,
   normalizeGospelPresentationData,
@@ -70,6 +72,18 @@ describe('scriptureReferenceNormalize', () => {
     expect(spans).toEqual([
       { start: 0, end: 'R Revelation 4:4'.length, raw: 'R Revelation 4:4', cleanRef: 'Revelation 4:4' },
     ])
+  })
+
+  it('expandCommaBetweenDistinctScriptureRefs splits CCEL chained scripRef commas', () => {
+    expect(
+      expandCommaBetweenDistinctScriptureRefs('1 Corinthians 1:20,1 Corinthians 1:21')
+    ).toBe('1 Corinthians 1:20; 1 Corinthians 1:21')
+    expect(expandCommaBetweenDistinctScriptureRefs('Romans 7:18,24')).toBe('Romans 7:18,24')
+  })
+
+  it('expandSameChapterCommaVerseOrSeparate ranges or semicolons verse tails', () => {
+    expect(expandSameChapterCommaVerseOrSeparate('Colossians 2:14,15')).toBe('Colossians 2:14-15')
+    expect(expandSameChapterCommaVerseOrSeparate('2 Peter 2:4,9')).toBe('2 Peter 2:4; 2 Peter 2:9')
   })
 
   it('expandSemicolonInheritedBookRefs reuses book for bare chapter:verse after semicolon', () => {

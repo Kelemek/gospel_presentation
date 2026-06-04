@@ -302,6 +302,7 @@ export default function MemorizationPracticeSession({
           morneveCount?: number
           calvinCount?: number
           henryCount?: number
+          bookCount?: number
         }
         const sermonCount =
           typeof payload.sermonCount === 'number'
@@ -313,8 +314,11 @@ export default function MemorizationPracticeSession({
         const morneveCount = typeof payload.morneveCount === 'number' ? payload.morneveCount : 0
         const calvinCount = typeof payload.calvinCount === 'number' ? payload.calvinCount : 0
         const henryCount = typeof payload.henryCount === 'number' ? payload.henryCount : 0
+        const bookCount = typeof payload.bookCount === 'number' ? payload.bookCount : 0
         setSpurgeonStudyMatch(
-          sermonCount + edwardsCount + morneveCount + calvinCount + henryCount > 0 ? 'yes' : 'no'
+          sermonCount + edwardsCount + morneveCount + calvinCount + henryCount + bookCount > 0
+            ? 'yes'
+            : 'no'
         )
       })
       .catch(() => {

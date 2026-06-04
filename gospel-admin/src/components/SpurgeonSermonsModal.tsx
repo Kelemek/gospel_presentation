@@ -91,6 +91,7 @@ export default function SpurgeonSermonsModal({
   const showEdwards = libraryFocus === 'all' || libraryFocus === 'edwards'
   const showCalvin = libraryFocus === 'all' || libraryFocus === 'calvin'
   const showHenry = libraryFocus === 'all' || libraryFocus === 'henry'
+  const showBooks = libraryFocus === 'all'
   const showReadTab = showSpurgeon || showEdwards
   const [tab, setTab] = useState<Tab>('search')
   /** When read tab is hidden (e.g. Calvin-only library), treat stale `read` selection as search. */
@@ -105,6 +106,7 @@ export default function SpurgeonSermonsModal({
   const [morneveRefItems, setMorneveRefItems] = useState<SermonRow[]>([])
   const [calvinRefItems, setCalvinRefItems] = useState<SermonRow[]>([])
   const [henryRefItems, setHenryRefItems] = useState<SermonRow[]>([])
+  const [bookRefItems, setBookRefItems] = useState<SermonRow[]>([])
   const [edwardsSearchItems, setEdwardsSearchItems] = useState<SermonRow[]>([])
   const [edwardsSearchTotal, setEdwardsSearchTotal] = useState(0)
   const [calvinSearchItems, setCalvinSearchItems] = useState<SermonRow[]>([])
@@ -319,6 +321,7 @@ export default function SpurgeonSermonsModal({
       setMorneveRefItems([])
       setCalvinRefItems([])
       setHenryRefItems([])
+      setBookRefItems([])
       setRefError('')
       setRefLoading(false)
       return
@@ -341,6 +344,9 @@ export default function SpurgeonSermonsModal({
       if (showHenry) {
         fetches.push(fetch(`/api/henry/by-reference?reference=${q}`, { cache: 'no-store' }))
       }
+      if (showBooks) {
+        fetches.push(fetch(`/api/books/by-reference?reference=${q}`, { cache: 'no-store' }))
+      }
 
       const results = await Promise.all(fetches)
       let ri = 0
@@ -349,18 +355,21 @@ export default function SpurgeonSermonsModal({
       const edwardsRes = showEdwards ? results[ri++] : null
       const calvinRes = showCalvin ? results[ri++] : null
       const henryRes = showHenry ? results[ri++] : null
+      const booksRes = showBooks ? results[ri++] : null
 
       const sermonData = sermonRes ? await sermonRes.json() : {}
       const morneveData = morneveRes ? await morneveRes.json() : {}
       const edwardsData = edwardsRes ? await edwardsRes.json() : {}
       const calvinData = calvinRes ? await calvinRes.json() : {}
       const henryData = henryRes ? await henryRes.json() : {}
+      const booksData = booksRes ? await booksRes.json() : {}
 
       const spurgeonAnyOk =
         !showSpurgeon || Boolean(sermonRes?.ok) || Boolean(morneveRes?.ok)
       const edwardsLookupFailed = showEdwards && edwardsRes && !edwardsRes.ok
       const calvinLookupFailed = showCalvin && calvinRes && !calvinRes.ok
       const henryLookupFailed = showHenry && henryRes && !henryRes.ok
+      const booksLookupFailed = showBooks && booksRes && !booksRes.ok
       const scriptureFailureSources = [
         {
           active: showSpurgeon,
@@ -375,6 +384,7 @@ export default function SpurgeonSermonsModal({
         },
         { active: showCalvin, failed: calvinLookupFailed, payload: calvinData },
         { active: showHenry, failed: henryLookupFailed, payload: henryData },
+        { active: showBooks, failed: booksLookupFailed, payload: booksData },
       ] as const
       if (seq !== scriptureLookupSeqRef.current) return
 
@@ -385,6 +395,7 @@ export default function SpurgeonSermonsModal({
         setMorneveRefItems([])
         setCalvinRefItems([])
         setHenryRefItems([])
+        setBookRefItems([])
         return
       }
 
@@ -413,6 +424,11 @@ export default function SpurgeonSermonsModal({
       } else {
         setHenryRefItems(Array.isArray(henryData.items) ? henryData.items : [])
       }
+      if (!showBooks || !booksRes?.ok) {
+        setBookRefItems([])
+      } else {
+        setBookRefItems(Array.isArray(booksData.items) ? booksData.items : [])
+      }
       setRefError('')
     } catch {
       if (seq !== scriptureLookupSeqRef.current) return
@@ -422,12 +438,13 @@ export default function SpurgeonSermonsModal({
       setMorneveRefItems([])
       setCalvinRefItems([])
       setHenryRefItems([])
+      setBookRefItems([])
     } finally {
       if (seq === scriptureLookupSeqRef.current) {
         setRefLoading(false)
       }
     }
-  }, [showSpurgeon, showEdwards, showCalvin, showHenry])
+  }, [showSpurgeon, showEdwards, showCalvin, showHenry, showBooks])
 
   useEffect(() => {
     if (!isOpen) {
@@ -445,6 +462,7 @@ export default function SpurgeonSermonsModal({
         setMorneveRefItems([])
         setCalvinRefItems([])
         setHenryRefItems([])
+        setBookRefItems([])
         setEdwardsSearchItems([])
         setEdwardsSearchTotal(0)
         setCalvinSearchItems([])
@@ -949,6 +967,7 @@ export default function SpurgeonSermonsModal({
                   (showEdwards ? edwardsRefItems.length === 0 : true) &&
                   (showCalvin ? calvinRefItems.length === 0 : true) &&
                   (showHenry ? henryRefItems.length === 0 : true) &&
+                  (showBooks ? bookRefItems.length === 0 : true) &&
                   debouncedScriptureQuery &&
                   !refError && (
                     <p className="text-sm text-slate-500 dark:text-slate-400">{scriptureEmptyMessage}</p>
@@ -1060,6 +1079,31 @@ export default function SpurgeonSermonsModal({
                     </h3>
                     <ul className="space-y-1">
                       {henryRefItems.map((row) => (
+                        <li key={row.slug}>
+                          <Link
+                            href={profileHref(row.slug)}
+                            scroll={false}
+                            onClick={followResourceLink}
+                            className={`block rounded-md px-2 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700/80 ${
+                              readCompleteSlugs.has(row.slug)
+                                ? 'font-extrabold text-blue-900 dark:text-blue-200'
+                                : 'font-normal text-blue-700 dark:text-blue-300'
+                            }`}
+                          >
+                            {row.title}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {showBooks && bookRefItems.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
+                      Books
+                    </h3>
+                    <ul className="space-y-1">
+                      {bookRefItems.map((row) => (
                         <li key={row.slug}>
                           <Link
                             href={profileHref(row.slug)}

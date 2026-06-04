@@ -4,6 +4,7 @@ describe('CCEL_COPYRIGHT_ATTRIBUTIONS', () => {
   it('lists every imported CCEL corpus with unique titles', () => {
     const titles = CCEL_COPYRIGHT_ATTRIBUTIONS.map((a) => a.title)
     expect(titles).toEqual([
+      'Louis Berkhof, Systematic Theology',
       "John Bunyan, The Pilgrim's Progress",
       'John Calvin, Commentaries',
       'Jonathan Edwards, Select Sermons',

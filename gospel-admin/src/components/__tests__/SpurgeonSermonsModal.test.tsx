@@ -35,10 +35,17 @@ const mockFetch = global.fetch as jest.MockedFunction<typeof fetch>
 function mockByReferenceFetch(
   items: { slug: string; title: string }[],
   morneveItems: { slug: string; title: string }[] = [],
-  calvinItems: { slug: string; title: string }[] = []
+  calvinItems: { slug: string; title: string }[] = [],
+  bookItems: { slug: string; title: string }[] = []
 ) {
   return (input: string | URL | Request) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
+    if (url.includes('/api/books/by-reference')) {
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ items: bookItems }),
+      } as Response)
+    }
     if (url.includes('/api/morneve/by-reference')) {
       return Promise.resolve({
         ok: true,
@@ -236,6 +243,23 @@ describe('SpurgeonSermonsModal', () => {
       'href',
       '/sg00002?studyRef=Romans%208%3A28'
     )
+  })
+
+  it('shows Books section on By scripture when books by-reference returns hits', async () => {
+    const user = userEvent.setup()
+    mockFetch.mockImplementation(
+      mockByReferenceFetch([], [], [], [{ slug: 'lbst', title: 'Systematic Theology (Louis Berkhof)' }])
+    )
+
+    render(<SpurgeonSermonsModal isOpen onClose={jest.fn()} />)
+
+    await user.click(screen.getByRole('button', { name: /By scripture/i }))
+    await user.type(screen.getByLabelText(/Scripture reference/i), 'Romans 3:23')
+
+    expect(await screen.findByRole('heading', { name: /^Books$/i })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('link', { name: /Systematic Theology \(Louis Berkhof\)/i })
+    ).toHaveAttribute('href', '/lbst?studyRef=Romans%203%3A23')
   })
 
   it('shows Calvin commentaries section on By scripture when calvin by-reference returns hits', async () => {

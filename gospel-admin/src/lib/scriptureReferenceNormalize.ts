@@ -251,13 +251,47 @@ export function expandSemicolonInheritedBookRefs(text: string): string {
   return s
 }
 
+/**
+ * CCEL chained `scripRef` tags (common in Berkhof) expand to `Book 1:20,Book 1:21`.
+ * Comma before another book token is not a same-chapter verse list — use semicolon.
+ */
+export function expandCommaBetweenDistinctScriptureRefs(text: string): string {
+  return text.replace(/(\d+:\d+(?:-\d+)?),\s*(?=(?:\d+\s+)?[A-Za-z])/g, '$1; ')
+}
+
+/**
+ * CCEL chained scripRef with verse-only tail (`2 Peter 2:4,9`) — range if contiguous, else semicolon.
+ */
+export function expandSameChapterCommaVerseOrSeparate(text: string): string {
+  return text.replace(
+    /(\b(?:\d+\s+)?(?:[A-Za-z]+(?:\s+(?:of\s+)?[A-Za-z]+)*)\s+\d+:\d+),(\d+)\b/g,
+    (full, head, verseStr) => {
+      const normHead = normalizeScriptureReferenceString(String(head))
+      const ranged = commaVerseTailToRange(normHead, `,${verseStr}`)
+      if (ranged) return ranged
+      if (!isGospelCanonicalScriptureRef(normHead)) return full
+      const parsed = parseReference(normHead)
+      if (!parsed) return full
+      const bookLabel = normHead.replace(/\s+\d+:\d+(?:-\d+)?$/, '').trim()
+      return `${normHead}; ${bookLabel} ${parsed.chapter}:${verseStr}`
+    }
+  )
+}
+
 /** Unicode dashes → ASCII hyphen so verse ranges match in HTML and plain text. */
 export function preprocessScriptureHtmlForNormalize(html: string): string {
-  return html
-    .replace(/\u2013/g, '-')
-    .replace(/\u2014/g, '-')
-    /** CCEL Pilgrim typo: `Isaiah 6:2; Isaiah 1 Thessalonians 4:16` → `1 Thessalonians 4:16`. */
-    .replace(/\bIsaiah\s+1\s+Thessalonians\b/gi, '1 Thessalonians')
+  return expandSameChapterCommaVerseOrSeparate(
+    expandCommaBetweenDistinctScriptureRefs(
+      html
+        .replace(/\u2013/g, '-')
+        .replace(/\u2014/g, '-')
+        /** CCEL Pilgrim typo: `Isaiah 6:2; Isaiah 1 Thessalonians 4:16` → `1 Thessalonians 4:16`. */
+        .replace(/\bIsaiah\s+1\s+Thessalonians\b/gi, '1 Thessalonians')
+        /** CCEL Berkhof typo: `11 Thess. 1:6` → `1 Thess. 1:6`. */
+        .replace(/\b11\s+Thess\b/gi, '1 Thess')
+        .replace(/\bSong of Sol\./gi, 'Song of Songs')
+    )
+  )
 }
 
 function gospelBookNamePrefixesCanonicalRef(norm: string): boolean {
@@ -390,6 +424,17 @@ export type ScriptureAuditIssue = {
 /** Skip prose false positives like `fulfilment of Psalms 22:14` (book group ate a leading phrase). */
 function looksLikeIntentionalScriptureMatch(match: string): boolean {
   const head = match.replace(/\s+\d+:\d+[\s\S]*$/, '').trim()
+  if (/\bMacc\./i.test(match)) return false
+  if (/\bpp\.\s*\d/i.test(match)) return false
+  if (/\bINTERPRETATION\s+OF\b/i.test(match)) return false
+  if (/\bMilligan\b/i.test(match)) return false
+  if (/\bArt\.\s*\d/i.test(match)) return false
+  if (/\bArticles\s+\d/i.test(match)) return false
+  if (/\bQuestion\s+\d/i.test(match)) return false
+  if (/\bJDT\b/i.test(match)) return false
+  if (/^IV\.\s+\d/i.test(match.trim())) return false
+  if (/^\d+\s+to\s+\d+$/i.test(match.trim())) return false
+  if (/^\d+\s+and\s+\d+$/i.test(match.trim())) return false
   if (/^\d+\s+[A-Za-z]/.test(head)) return true
   if (/^I{1,3}\s+[A-Za-z]/i.test(head)) return true
   if (/[A-Z][a-z]*\./.test(head)) return true

@@ -146,6 +146,7 @@ const THML_BOOK_ABBREV_TO_BOOK_ALIAS: Record<string, string> = {
   num: 'numbers',
   cant: 'song of songs',
   canticles: 'song of songs',
+  sol: 'song of songs',
   song: 'song of songs',
   songs: 'song of songs',
   deut: 'deuteronomy',

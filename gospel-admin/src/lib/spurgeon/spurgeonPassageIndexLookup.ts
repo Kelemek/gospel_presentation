@@ -8,6 +8,11 @@ import {
   spurgeonPassageIndexBroadOrFilter,
   spurgeonPassageKeySpansOverlap,
 } from '@/lib/spurgeon/spurgeonPassageKeyMatch'
+import { isStudyLibraryCorpusProfileSlug } from '@/lib/study/studyLibraryCorpusSlug'
+import {
+  sortIndexedBooksByTitleAZ,
+  type IndexedBookProfileRow,
+} from '@/lib/study/sortIndexedBooksByTitle'
 
 const BOOK_PREFIX_INDEX_ROW_CAP = 4000
 /** Max public template profile ids to pass into `.in('profile_id', …)` for book-prefix scans. */
@@ -127,4 +132,25 @@ export async function publicProfilesByIdsAndSlugPrefix(
 
   if (profErr) throw profErr
   return (profiles || []) as { slug: string; title: string }[]
+}
+
+/** Public template books indexed on a passage (excludes Spurgeon/Edwards/Morneve/Calvin/Henry corpora). */
+export async function publicIndexedBookProfilesByIds(
+  admin: SupabaseClient,
+  profileIds: string[]
+): Promise<IndexedBookProfileRow[]> {
+  if (profileIds.length === 0) return []
+
+  const { data: profiles, error: profErr } = await admin
+    .from('profiles')
+    .select('slug,title')
+    .in('id', profileIds)
+    .eq('is_public', true)
+    .eq('is_template', true)
+
+  if (profErr) throw profErr
+  const books = ((profiles || []) as IndexedBookProfileRow[]).filter(
+    (p) => !isStudyLibraryCorpusProfileSlug(p.slug)
+  )
+  return sortIndexedBooksByTitleAZ(books)
 }

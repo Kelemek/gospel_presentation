@@ -11,7 +11,11 @@ function isReimportableCorpusProfileSlug(slug: string): boolean {
     /^mh([a-z0-9]+)$/i.test(s) ||
     /^je\d+$/i.test(s) ||
     /^lgal$/i.test(s) ||
-    /^luthergal$/i.test(s)
+    /^luthergal$/i.test(s) ||
+    /^ppgr$/i.test(s) ||
+    /^aogr$/i.test(s) ||
+    /^lbst$/i.test(s) ||
+    /^tw(cm|bt|bd|dc|lp|tc)$/i.test(s)
   );
 }
 

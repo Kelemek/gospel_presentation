@@ -652,13 +652,13 @@ describe('ScriptureModal Component', () => {
     await waitFor(() =>
       expect(
         screen.getByRole('button', {
-          name: /Study: indexed Spurgeon, devotions, Calvin, and Matthew Henry commentaries for this passage/i,
+          name: /Study: indexed Spurgeon, devotions, Calvin, Matthew Henry, and books for this passage/i,
         })
       ).toBeInTheDocument()
     )
     await user.click(
       screen.getByRole('button', {
-        name: /Study: indexed Spurgeon, devotions, Calvin, and Matthew Henry commentaries for this passage/i,
+        name: /Study: indexed Spurgeon, devotions, Calvin, Matthew Henry, and books for this passage/i,
       })
     )
     expect(openStudy).toHaveBeenCalledWith('John 3:16')
