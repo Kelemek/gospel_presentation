@@ -64,7 +64,7 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
 
   return (
     <ErrorBoundary>
-      <ProfilePageClient slug={slug} />
+      <ProfilePageClient key={slug} slug={slug} />
     </ErrorBoundary>
   )
 }

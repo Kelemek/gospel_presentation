@@ -51,6 +51,7 @@ describe('ProfilePageClient', () => {
       profile: defaultProfile,
       isLoading: false,
       error: null,
+      profileLoadSettled: true,
       refresh: mockRefresh
     })
     ;(createClient as jest.Mock).mockReturnValue({
@@ -71,6 +72,22 @@ describe('ProfilePageClient', () => {
       profile: null,
       isLoading: true,
       error: null,
+      profileLoadSettled: true,
+      refresh: mockRefresh
+    })
+
+    render(<ProfilePageClient slug="test" />)
+
+    expect(screen.getByText(/Loading\.\.\./i)).toBeInTheDocument()
+    expect(screen.queryByTestId('profile-content')).not.toBeInTheDocument()
+  })
+
+  it('shows loading state while profile cache validation is in progress', () => {
+    ;(useProfileWithCache as jest.Mock).mockReturnValue({
+      profile: defaultProfile,
+      isLoading: false,
+      error: null,
+      profileLoadSettled: false,
       refresh: mockRefresh
     })
 
@@ -85,6 +102,7 @@ describe('ProfilePageClient', () => {
       profile: null,
       isLoading: false,
       error: 'Something went wrong',
+      profileLoadSettled: true,
       refresh: mockRefresh
     })
 
@@ -101,6 +119,7 @@ describe('ProfilePageClient', () => {
       profile: null,
       isLoading: false,
       error: null,
+      profileLoadSettled: true,
       refresh: mockRefresh
     })
     ;(createClient as jest.Mock).mockReturnValue({
@@ -119,6 +138,7 @@ describe('ProfilePageClient', () => {
       profile: null,
       isLoading: false,
       error: null,
+      profileLoadSettled: true,
       refresh: mockRefresh
     })
     ;(createClient as jest.Mock).mockReturnValue({
@@ -161,6 +181,7 @@ describe('ProfilePageClient', () => {
       profile: { ...defaultProfile, gospelData },
       isLoading: false,
       error: null,
+      profileLoadSettled: true,
       refresh: mockRefresh
     })
 
@@ -177,6 +198,7 @@ describe('ProfilePageClient', () => {
       profile: { ...defaultProfile, gospelData: undefined },
       isLoading: false,
       error: null,
+      profileLoadSettled: true,
       refresh: mockRefresh
     })
 

@@ -5,7 +5,9 @@ import * as gospelClientStorage from '@/lib/gospelClientStorage'
 import { gospelStorageSetSync } from '@/lib/gospelClientStorage'
 import { profileOfflineCacheKey } from '@/lib/gospelClientStoragePolicy'
 import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
-import { useProfileWithCache } from '../useProfileWithCache'
+import { clearProfileSessionCacheForTests, useProfileWithCache } from '../useProfileWithCache'
+
+jest.spyOn(gospelClientStorage, 'hydrateGospelClientStorage').mockResolvedValue(undefined)
 
 function TestHarness({ slug }: { slug: string }) {
   const { profile, isLoading, error, refresh } = useProfileWithCache(slug)
@@ -25,7 +27,9 @@ describe('useProfileWithCache', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    clearProfileSessionCacheForTests()
     installTestLocalStorage()
+    jest.spyOn(gospelClientStorage, 'hydrateGospelClientStorage').mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -229,6 +233,41 @@ describe('useProfileWithCache', () => {
     render(<TestHarness slug="stale" />)
     await waitFor(() => expect(screen.getByTestId('profile')).toHaveTextContent('Fresh From Server'))
     expect(profileFetchCount).toBeGreaterThanOrEqual(1)
+  })
+
+  it('does not refetch full profile when server updatedAt is only slightly newer (visit bump)', async () => {
+    const cachedAt = '2025-05-31T12:00:00.000Z'
+    const serverAt = '2025-05-31T12:00:01.000Z'
+    const cached = {
+      profile: {
+        id: 'p1',
+        slug: 'bump',
+        title: 'Berkhof',
+        gospelData: [],
+        isDefault: false,
+        isTemplate: true,
+        visitCount: 0,
+        createdAt: cachedAt,
+        updatedAt: cachedAt,
+      },
+      updatedAt: cachedAt,
+    }
+    seedOfflineCache('bump', cached)
+    let profileFetchCount = 0
+    ;(global as any).fetch = jest.fn((url: string) => {
+      if (url.includes('/modified')) {
+        return Promise.resolve({ ok: true, json: async () => ({ updatedAt: serverAt }) })
+      }
+      if (url.includes('/api/profiles/bump') && !url.includes('/modified')) {
+        profileFetchCount++
+        return Promise.resolve({ ok: true, json: async () => ({ profile: cached.profile }) })
+      }
+      return Promise.resolve({ ok: false })
+    })
+    render(<TestHarness slug="bump" />)
+    await waitFor(() => expect(screen.getByTestId('profile')).toHaveTextContent('Berkhof'))
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('idle'))
+    expect(profileFetchCount).toBe(0)
   })
 
   it('keeps cache when modified check throws', async () => {

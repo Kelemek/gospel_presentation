@@ -40,7 +40,11 @@ type ProfilePageBodyProps = {
   profile: GospelProfile
 }
 
-function ProfilePageBody({ slug, profile }: ProfilePageBodyProps) {
+function ProfilePageBody({
+  slug,
+  profile,
+  profileLoadSettled,
+}: ProfilePageBodyProps & { profileLoadSettled: boolean }) {
   const hideSiteHeaderForTabNav = isProfileResourceTabNavigationPending(slug)
   const [readingResumeRevealed, setReadingResumeRevealed] = useState(!hideSiteHeaderForTabNav)
   const siteHeaderHidden = hideSiteHeaderForTabNav && !readingResumeRevealed
@@ -80,6 +84,7 @@ function ProfilePageBody({ slug, profile }: ProfilePageBodyProps) {
           savedAnswers: profile.savedAnswers,
         }}
         profile={profile}
+        allowVisitTracking={profileLoadSettled}
         onReadingResumeSettled={handleReadingResumeSettled}
       />
     </div>
@@ -88,11 +93,13 @@ function ProfilePageBody({ slug, profile }: ProfilePageBodyProps) {
 
 export default function ProfilePageClient({ slug }: ProfilePageClientProps) {
   const router = useRouter()
-  const { profile, isLoading, error } = useProfileWithCache(slug)
+  const { profile, isLoading, error, profileLoadSettled } = useProfileWithCache(slug)
 
   // When profile is null after loading, check auth and redirect or 404
+  const showLoadingSpinner = isLoading || !profileLoadSettled
+
   useEffect(() => {
-    if (isLoading || profile) return
+    if (isLoading || !profileLoadSettled || profile) return
     const run = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
@@ -103,7 +110,7 @@ export default function ProfilePageClient({ slug }: ProfilePageClientProps) {
       }
     }
     run()
-  }, [profile, isLoading, slug, router])
+  }, [profile, isLoading, profileLoadSettled, slug, router])
 
   useEffect(() => {
     if (!profile) return
@@ -113,7 +120,7 @@ export default function ProfilePageClient({ slug }: ProfilePageClientProps) {
     tryStartMarriageSeminarTourAfterNavigation(slug)
   }, [profile, slug])
 
-  if (isLoading) {
+  if (showLoadingSpinner) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
@@ -128,5 +135,12 @@ export default function ProfilePageClient({ slug }: ProfilePageClientProps) {
     return null // Redirect effect will run
   }
 
-  return <ProfilePageBody key={slug} slug={slug} profile={profile} />
+  return (
+    <ProfilePageBody
+      key={slug}
+      slug={slug}
+      profile={profile}
+      profileLoadSettled={profileLoadSettled}
+    />
+  )
 }

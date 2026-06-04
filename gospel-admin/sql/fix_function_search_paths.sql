@@ -162,11 +162,10 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  UPDATE profiles 
-  SET 
+  UPDATE profiles
+  SET
     visit_count = visit_count + 1,
-    last_visited = NOW(),
-    updated_at = NOW()
+    last_visited = NOW()
   WHERE slug = profile_slug;
 END;
 $$;

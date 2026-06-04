@@ -162,6 +162,8 @@ interface ProfileContentProps {
   profile?: GospelProfile | null  // Full profile for scripture progress tracking
   /** Called when automatic reading resume finishes or is skipped (e.g. reveal site header after tab switch). */
   onReadingResumeSettled?: () => void
+  /** When false, defer POST /visit until profile cache validation finishes (avoids racing /modified). */
+  allowVisitTracking?: boolean
 }
 
 /** One scripture card in profile order (for modal prev/next without collapsing duplicate references). */
@@ -202,7 +204,12 @@ type ScriptureModalState = {
   pickerNavigation?: boolean
 }
 
-function ProfileContent({ sections, profileInfo, onReadingResumeSettled }: ProfileContentProps) {
+function ProfileContent({
+  sections,
+  profileInfo,
+  onReadingResumeSettled,
+  allowVisitTracking = true,
+}: ProfileContentProps) {
   const [selectedScripture, setSelectedScripture] = useState<ScriptureModalState>({
     reference: '',
     isOpen: false,
@@ -1160,11 +1167,12 @@ function ProfileContent({ sections, profileInfo, onReadingResumeSettled }: Profi
       }
     }
 
+    if (!allowVisitTracking) return
     // Only track visits for actual profile slugs (not admin pages)
     if (profileInfo && profileInfo.slug && profileInfo.slug !== 'admin') {
       trackVisit()
     }
-  }, [profileInfo])
+  }, [profileInfo, allowVisitTracking])
 
   // All scripture *cards* in profile order, with DOM anchors (duplicate references = separate entries).
   const allScriptureRefs: ScriptureRefNav[] = useMemo(
