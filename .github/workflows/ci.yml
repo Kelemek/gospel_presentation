@@ -19,11 +19,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Use Node.js 22
+      - name: Use Node.js from .nvmrc
         uses: actions/setup-node@v5
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version-file: gospel-admin/.nvmrc
+          cache: npm
           cache-dependency-path: gospel-admin/package-lock.json
 
       - name: Install dependencies

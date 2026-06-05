@@ -8,9 +8,9 @@ Single-product repo: a **Next.js 16** app in `gospel-admin/` for biblical counse
 
 ### Node version
 
-The project requires **Node.js 20.9.0** (pinned in `gospel-admin/.nvmrc`). The VM uses nvm; activate with:
+The project requires **Node.js 22** (pinned in `gospel-admin/.nvmrc`). The VM uses nvm; activate with:
 ```bash
-source /home/ubuntu/.nvm/nvm.sh && nvm use 20.9.0
+source /home/ubuntu/.nvm/nvm.sh && cd gospel-admin && nvm use
 ```
 
 ### Key commands (all from `gospel-admin/`)
@@ -25,6 +25,7 @@ source /home/ubuntu/.nvm/nvm.sh && nvm use 20.9.0
 | Tests (CI) | `npm run test:ci` |
 | Build | `npm run build` |
 | Unused code (Knip) | `npm run knip` (uses `knip.json`; optional CI check) |
+| ACBC link sync | `npm run sync-acbc-links` (`--reconcile`, `--dry-run`); `npm run add-acbc-sections` (add topic sections + reconcile). Weekly schedule: GitHub Actions `sync-acbc-external-links.yml` (secrets `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`). |
 
 ### Caveats
 

@@ -46,10 +46,6 @@
             ],
             "externalResourceLinks": [
               {
-                "url": "https://biblicalcounseling.com/resource-library/topic-index/anger/",
-                "label": "ACBC: Anger (topic index)"
-              },
-              {
                 "url": "https://biblicalcounseling.com/resource-library/articles/a-lesson-on-gods-control-of-nature-from-jonah/",
                 "label": "A Lesson on God’s Control of Nature from Jonah"
               },
@@ -131,10 +127,6 @@
               }
             ],
             "externalResourceLinks": [
-              {
-                "url": "https://biblicalcounseling.com/resource-library/topic-index/anxiety/",
-                "label": "ACBC: Anxiety (topic index)"
-              },
               {
                 "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/counseling-those-with-panic-attacks/",
                 "label": "Counseling Those with Panic Attacks"
@@ -230,10 +222,6 @@
             ],
             "externalResourceLinks": [
               {
-                "url": "https://biblicalcounseling.com/resource-library/topic-index/depression-despair/",
-                "label": "ACBC: Depression & Despair (topic index)"
-              },
-              {
                 "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/models-of-lament/",
                 "label": "Models of Lament"
               },
@@ -321,6 +309,120 @@
                 "favorite": false,
                 "reference": "1 John 4:18"
               }
+            ],
+            "externalResourceLinks": [
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/counseling-those-with-panic-attacks/",
+                "label": "Counseling Those with Panic Attacks"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/biblical-reasons-not-to-worry/",
+                "label": "Biblical Reasons Not to Worry"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/biblical-anchors-for-anxious-young-hearts/",
+                "label": "Biblical Anchors for Anxious Young Hearts"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/youre-not-overthinking-youre-underthinking/",
+                "label": "You're Not Overthinking—You’re Underthinking"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/dont-let-fear-call-the-shots/",
+                "label": "When You Want to Let Fear Call the Shots"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/is-worry-sinful/",
+                "label": "Is Worry Sinful?"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/anxiety-and-heavenly-treasure/",
+                "label": "Trace Your Anxieties Back to Your Treasure"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/in-a-night-of-anxiety/",
+                "label": "In a Night of Anxiety"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/biblical-wisdom-for-anxiety/",
+                "label": "Biblical Wisdom for Anxiety"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/biblical-help-for-those-with-anxious-spouses/",
+                "label": "Biblical Help for Those with Anxious Spouses"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/counseling-fearful-women/",
+                "label": "Counseling Fearful Women"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/be-anxious-for-nothing/",
+                "label": "Be Anxious for Nothing"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/casting-our-cares/",
+                "label": "Casting Our Cares"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/letting-psalm-46-guide-our-thinking%e2%80%af/",
+                "label": "Letting Psalm 46 Guide our Thinking"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/triggers-biblical-construct-1/",
+                "label": "Triggers: Proposing a More Biblical Construct–Part 1"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/complex-trauma/",
+                "label": "Complex Trauma"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/gods-grace-through-ptsd/",
+                "label": "God's Grace Through PTSD"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/gods-redemptive-use-of-trauma-part-2/",
+                "label": "God's Redemptive Use of Trauma (Part 2)"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/gods-redemptive-use-of-trauma-part-1/",
+                "label": "God's Redemptive Use of Trauma (Part 1)"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/counseling-those-who-served/",
+                "label": "Counseling Those Who Served"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/til-180-helping-your-family-through-post-traumatic-stress/",
+                "label": "Helping Your Family Through Post Traumatic Stress"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/gospel-hope-without-shared-trials/",
+                "label": "Counselors, You Can Offer Gospel Hope Without Shared Trials"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/ministering-amidst-catastrophic-suffering/",
+                "label": "Ministering Amidst Catastrophic Suffering"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/biblically-informed-trauma-care/",
+                "label": "Biblically Informed Trauma Care"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/these-present-sufferings/",
+                "label": "These Present Sufferings"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/til-244-counseling-those-impacted-by-trauma-feat-john-babler/",
+                "label": "Counseling Those Impacted by Trauma"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/crisis-ministry-thoughts-about-sutherland-springs/",
+                "label": "Crisis Ministry"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/recommended-books/biblical-crisis-counseling-not-if-but-when/",
+                "label": "Biblical Crisis Counseling"
+              }
             ]
           }
         ]
@@ -355,10 +457,6 @@
               }
             ],
             "externalResourceLinks": [
-              {
-                "url": "https://biblicalcounseling.com/resource-library/topic-index/guilt-shame/",
-                "label": "ACBC: Guilt & Shame (topic index)"
-              },
               {
                 "url": "https://biblicalcounseling.com/resource-library/articles/not-too-late-to-run-pressing-on-toward-the-goal-god-has-set/",
                 "label": "Not Too Late to Run: Pressing on Toward the Goal God Has Set"
@@ -433,10 +531,6 @@
               }
             ],
             "externalResourceLinks": [
-              {
-                "url": "https://biblicalcounseling.com/resource-library/topic-index/marriage/",
-                "label": "ACBC: Marriage (topic index)"
-              },
               {
                 "url": "https://biblicalcounseling.com/resource-library/conference-messages/reviving-a-broken-or-stagnant-marriage/",
                 "label": "Reviving a Broken or Stagnant Marriage"
@@ -531,10 +625,6 @@
               }
             ],
             "externalResourceLinks": [
-              {
-                "url": "https://biblicalcounseling.com/resource-library/topic-index/parenting/",
-                "label": "ACBC: Parenting (topic index)"
-              },
               {
                 "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/spiritual-warfare-in-the-family/",
                 "label": "Spiritual Warfare in the Family"
@@ -634,10 +724,6 @@
             ],
             "externalResourceLinks": [
               {
-                "url": "https://biblicalcounseling.com/resource-library/topic-index/suffering/",
-                "label": "ACBC: Suffering (topic index)"
-              },
-              {
                 "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/when-my-past-is-full-of-darkness/",
                 "label": "When My Past Is Full of Darkness"
               },
@@ -720,10 +806,6 @@
             ],
             "externalResourceLinks": [
               {
-                "url": "https://biblicalcounseling.com/resource-library/topic-index/addiction-bondage/",
-                "label": "ACBC: Addiction & Bondage (topic index)"
-              },
-              {
                 "url": "https://biblicalcounseling.com/resource-library/articles/help-with-ocd/",
                 "label": "I Need Help with OCD!"
               },
@@ -766,10 +848,6 @@
               {
                 "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/til-006-a-journey-out-of-anorexia-feat-rebecca-maketansky/",
                 "label": "A Journey Out Of Anorexia"
-              },
-              {
-                "url": "https://biblicalcounseling.com/resource-library/topic-index/temptation/",
-                "label": "ACBC: Temptation (topic index)"
               },
               {
                 "url": "https://biblicalcounseling.com/resource-library/articles/do-you-want-to-be-set-free-from-sin/",
@@ -845,10 +923,6 @@
               }
             ],
             "externalResourceLinks": [
-              {
-                "url": "https://biblicalcounseling.com/resource-library/topic-index/forgiveness/",
-                "label": "ACBC: Forgiveness (topic index)"
-              },
               {
                 "url": "https://biblicalcounseling.com/resource-library/articles/redeeming-your-marriage-when-marriage-hits-a-wall/",
                 "label": "Redeeming Your Marriage: When Marriage Hits a Wall"
@@ -936,10 +1010,6 @@
             ],
             "externalResourceLinks": [
               {
-                "url": "https://biblicalcounseling.com/resource-library/topic-index/grief/",
-                "label": "ACBC: Grief (topic index)"
-              },
-              {
                 "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/memory-trauma-and-biblical-counseling/",
                 "label": "Memory, Trauma, and Biblical Counseling"
               },
@@ -1019,6 +1089,104 @@
                 "favorite": false,
                 "reference": "Romans 12:4–5"
               }
+            ],
+            "externalResourceLinks": [
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/bible-speak-to-narcissism/",
+                "label": "Does the Bible Speak to Narcissism?"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/boundaries-in-counseling/",
+                "label": "Boundaries in Counseling"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/the-sin-of-partiality/",
+                "label": "The Sin of Partiality"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/preparing-for-success-in-relational-conflict/",
+                "label": "Preparing for Success in Relational Conflict"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/grace-relations/",
+                "label": "Grace Relations"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/counseling-during-covid/",
+                "label": "Counseling During COVID"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/flourishing-friendship/",
+                "label": "Flourishing Friendship"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/conference-messages/pursuing-purity-before-marriage/",
+                "label": "Pursuing Purity Before Marriage"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/facing-manipulation/",
+                "label": "Facing Manipulation"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/reconciling-friendships-after-conflict/",
+                "label": "Reconciling Friendships After Conflict"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/conference-messages/love-is-a-choice-and-an-action-and-an-affection/",
+                "label": "Love is a Choice and an Action and an Affection"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/one-anothering-in-quarantine/",
+                "label": "One Anothering in Quarantine"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/the-christian-school-fertile-ground-for-biblical-counseling-to-flourish/",
+                "label": "The Christian School: Fertile Ground for Biblical Counseling to Flourish"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/redeeming-your-marriage-when-marriage-hits-a-wall/",
+                "label": "Redeeming Your Marriage: When Marriage Hits a Wall"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/counseling-foster-families-with-wisdom-and-compassion/",
+                "label": "Counseling Foster Families with Wisdom and Compassion"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/the-polyvagal-theory/",
+                "label": "The Polyvagal Theory"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/conference-messages/practical-help-for-the-family-from-proverbs/",
+                "label": "Practical Help for the Family from Proverbs"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/christmas-traditions-with-jacob-elwart/",
+                "label": "Christmas Traditions with Jacob Elwart"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/biblical-anchors-for-anxious-young-hearts/",
+                "label": "Biblical Anchors for Anxious Young Hearts"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/in-law-relationships/",
+                "label": "In-Law Relationships"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/conference-messages/biblical-counseling-and-marital-separations/",
+                "label": "Biblical Counseling and Marital Separations"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/practices-of-gentle-parenting/",
+                "label": "Practices of Gentle Parenting"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/what-is-gentle-parenting/",
+                "label": "What is Gentle Parenting?"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/the-greenhouse-effect-of-sanctification-in-marriage/",
+                "label": "The Greenhouse Effect of Sanctification: You Are Not Your Spouse’s Holy Spirit"
+              }
             ]
           }
         ]
@@ -1055,6 +1223,112 @@
                 "favorite": false,
                 "reference": "Philippians 2:3–8"
               }
+            ],
+            "externalResourceLinks": [
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/actions-cultivate-affections/",
+                "label": "Actions Cultivate Affections"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/redeeming-your-marriage-when-marriage-hits-a-wall/",
+                "label": "Redeeming Your Marriage: When Marriage Hits a Wall"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/the-practice-of-biblical-contenment/",
+                "label": "The Practice of Biblical Contentment"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/not-too-late-to-run-pressing-on-toward-the-goal-god-has-set/",
+                "label": "Not Too Late to Run: Pressing on Toward the Goal God Has Set"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/our-senses-are-not-the-problem/",
+                "label": "Our Senses Are Not the Problem"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/suffering-school-of-sanctification/",
+                "label": "Suffering is God’s School of Sanctification"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/god-uses-seasons-of-change/",
+                "label": "How God uses Seasons of Change"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/helping-our-counselees-learn-to-endure/",
+                "label": "Helping Our Counselees Learn to Endure"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/god-glorifying-change/",
+                "label": "God Glorifying Change"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/holy-spirits-role-in-change/",
+                "label": "The Holy Spirit's Role in the Process of Change"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/union-with-christ-our-hope/",
+                "label": "Union with Christ: Our Hope for Sanctification"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/endurance-in-faith/",
+                "label": "Running the Race of Faith with Endurance"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/conference-messages/the-effect-of-sin-on-our-thinking/",
+                "label": "The Effect of Sin on Our Thinking"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/what-is-sin/",
+                "label": "What is Sin?"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/a-theology-of-exposure-nothing-is-hidden/",
+                "label": "A Theology of Exposure"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/do-you-want-to-be-set-free-from-sin/",
+                "label": "Do You Want to Be Set Free from Sin?"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/a-lesson-on-gods-control-of-nature-from-jonah/",
+                "label": "A Lesson on God’s Control of Nature from Jonah"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/remind-your-angry-heart-youre-not-god/",
+                "label": "Remind Your Angry Heart: You're Not God"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/bible-speak-to-narcissism/",
+                "label": "Does the Bible Speak to Narcissism?"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/preventing-and-purging-sexual-sin/",
+                "label": "Preventing and Purging Sexual Sin"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/categories-of-suffering-in-counseling/",
+                "label": "Applying the Four Categories of Suffering in Counseling"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/five-things-we-forget-about-god-when-we-complain/",
+                "label": "Five Things We Forget About God When We Complain"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/spiritualizing-sin-with-biblical-language/",
+                "label": "Spiritualizing Sin with Biblical Language"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/the-sin-of-comparison-2/",
+                "label": "The Sin of Comparison"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/desire-for-mans-approval-blinds-us-to-sin/",
+                "label": "How Our Lust for Man’s Approval Blinds Us to Sin"
+              },
+              {
+                "url": "https://biblicalcounseling.com/resource-library/articles/biblical-strategies-for-fighting-sin/",
+                "label": "Biblical Strategies for Fighting Sin"
+              }
             ]
           }
         ]
@@ -1089,10 +1363,6 @@
               }
             ],
             "externalResourceLinks": [
-              {
-                "url": "https://biblicalcounseling.com/resource-library/topic-index/conflict/",
-                "label": "ACBC: Conflict (topic index)"
-              },
               {
                 "url": "https://biblicalcounseling.com/resource-library/podcast-episodes/shepherding-divisive-opinions/",
                 "label": "Shepherding Divisive Opinions"

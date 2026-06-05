@@ -88,7 +88,7 @@ backups/                  # Profile backup storage
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 18+ and npm
+- Node.js 22 and npm (see `gospel-admin/.nvmrc`)
 - Supabase account (free tier available)
 - ESV API key (free for non-commercial use)
 

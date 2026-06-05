@@ -47,7 +47,9 @@
     "import-edwards-religious-affections": "tsx scripts/import-edwards-religious-affections-ccel.ts",
     "import-stepbible": "node scripts/import-stepbible-data.js",
     "import-stepbible:fixtures": "node scripts/import-stepbible-data.js --fixtures-only",
-    "reimport-stepbible": "FORCE_STEPBIBLE_REIMPORT=1 node scripts/ensure-stepbible-data.js"
+    "reimport-stepbible": "FORCE_STEPBIBLE_REIMPORT=1 node scripts/ensure-stepbible-data.js",
+    "sync-acbc-links": "tsx scripts/sync-acbc-external-links.ts",
+    "add-acbc-sections": "tsx scripts/add-acbc-missing-sections.ts"
   },
   "dependencies": {
     "@capacitor/android": "8.1.0",

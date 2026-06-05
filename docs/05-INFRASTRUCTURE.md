@@ -128,6 +128,15 @@ Full-database restore from monolithic JSON is not a supported CLI path. Use **`r
 ### Reclaiming backup storage (Free tier)
 After deploying corpus-exclusion backups, purge legacy shards: `npm run purge-db-backups -- --dry-run` then `npm run purge-db-backups` (requires `SUPABASE_SERVICE_KEY`; may take a while for ~100k+ objects). Deploy Edge functions, run one full `backup-to-storage` (`POST {}`), and `VACUUM FULL storage.objects;` in SQL Editor if database size stays high.
 
+### Scheduled ACBC external link sync
+
+Keeps the Biblical Counseling profile (default slug `26b974ef`) `externalResourceLinks` aligned with ACBC topic-index pages (adds new resources, removes stale URLs when run with reconcile).
+
+| Mechanism | Setup |
+|-----------|--------|
+| **GitHub Actions** | [`.github/workflows/sync-acbc-external-links.yml`](../.github/workflows/sync-acbc-external-links.yml) — weekly Sunday 06:00 UTC runs `npm run sync-acbc-links -- --reconcile` on profile **`26b974ef`** (default in sync scripts). Repo secrets: **`SUPABASE_URL`**, **`SUPABASE_SERVICE_KEY`** (same as verification-code cleanup). Manual run: Actions → *Sync ACBC external links* → *reconcile* or *add-sections*. |
+| **Manual** | `cd gospel-admin && npm run sync-acbc-links -- --reconcile` or `npm run add-acbc-sections` |
+
 ## Testing
 
 **Status**: 476 tests passing, 28 skipped, 0 failures
