@@ -421,6 +421,21 @@ export type ScriptureAuditIssue = {
   normalized: string
 }
 
+const MONTH_NAMES =
+  'January|February|March|April|May|June|July|August|September|October|November|December'
+
+/** Calendar dates and section headings matched as `Book chapter` by the plain-text regex. */
+function looksLikeCalendarOrSectionHeadingFalsePositive(match: string): boolean {
+  const t = match.trim()
+  if (/^CHAPTER\s+\d+$/i.test(t)) return true
+  if (/^SECTION\s+\d+$/i.test(t)) return true
+  if (/^PART\s+(?:[IVXLCDM]+|\d+)$/i.test(t)) return true
+  if (/^ARTICLE\s+[IVXLCDM]+$/i.test(t)) return true
+  if (new RegExp(`^(?:${MONTH_NAMES})\\s+\\d{1,2}(?:,|\\s|$)`, 'i').test(t)) return true
+  if (new RegExp(`^\\d{1,2}\\s+(?:${MONTH_NAMES})\\s+\\d{4}$`, 'i').test(t)) return true
+  return false
+}
+
 /** Skip prose false positives like `fulfilment of Psalms 22:14` (book group ate a leading phrase). */
 function looksLikeIntentionalScriptureMatch(match: string): boolean {
   const head = match.replace(/\s+\d+:\d+[\s\S]*$/, '').trim()
@@ -475,6 +490,7 @@ export function auditScriptureReferencesInText(text: string, field: string): Scr
     }
 
     if (isGospelCanonicalScriptureRef(normalized)) continue
+    if (looksLikeCalendarOrSectionHeadingFalsePositive(match)) continue
     if (!looksLikeIntentionalScriptureMatch(match)) continue
     issues.push({ field, match, reason: 'unresolved_abbrev', normalized })
   }

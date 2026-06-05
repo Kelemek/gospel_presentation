@@ -114,6 +114,15 @@ describe('scriptureReferenceNormalize', () => {
     expect(issues.some((i) => i.reason === 'unresolved_abbrev')).toBe(true)
   })
 
+  it('auditScriptureReferencesInText skips calendar dates and CHAPTER headings', () => {
+    const prose =
+      'Worcester, December 4, 1655 and 12 March 1829; signed 15 April 1656.'
+    expect(auditScriptureReferencesInText(prose, 'content')).toEqual([])
+    expect(auditScriptureReferencesInText('CHAPTER 1', 'title')).toEqual([])
+    expect(auditScriptureReferencesInText('SECTION 1', 'content')).toEqual([])
+    expect(auditScriptureReferencesInText('PART I', 'content')).toEqual([])
+  })
+
   it('leaves unrecognized references unchanged', () => {
     expect(normalizeScriptureReferenceString('Not A Verse 99:99')).toBe('Not A Verse 99:99')
   })

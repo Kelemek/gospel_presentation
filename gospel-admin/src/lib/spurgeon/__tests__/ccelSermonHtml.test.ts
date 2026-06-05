@@ -77,6 +77,12 @@ describe('ccelSermonHtml', () => {
     expect(unwrapScripRefTags(s)).toBe('1 Kings 3:10')
   })
 
+  it('expandScripRefsToInlinePlain prefers osis range over non-contiguous comma inner text', () => {
+    const s =
+      '<scripRef passage="2 Thessalonians 3.6-14" osisRef="Bible:2Thess.3.6-2Thess.3.14">2 Thessalonians 3.6, 11, 12, 14</scripRef>'
+    expect(unwrapScripRefTags(s)).toBe('2 Thessalonians 3:6-14')
+  })
+
   it('extractPassageAttributes collects passage attributes', () => {
     const s = '<scripCom passage="Rom 8:28"/> and <scripRef passage="Psalm 23:1">Ps 23:1</scripRef>'
     expect(extractPassageAttributes(s)).toEqual(['Rom 8:28', 'Psalm 23:1'])

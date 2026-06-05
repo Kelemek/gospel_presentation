@@ -14,6 +14,7 @@ function isReimportableCorpusProfileSlug(slug: string): boolean {
     /^luthergal$/i.test(s) ||
     /^ppgr$/i.test(s) ||
     /^aogr$/i.test(s) ||
+    /^bxrp$/i.test(s) ||
     /^lbst$/i.test(s) ||
     /^tw(cm|bt|bd|dc|lp|tc)$/i.test(s)
   );

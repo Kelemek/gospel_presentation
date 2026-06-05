@@ -362,10 +362,34 @@ function hasUnnormalizedThmlRef(text: string): boolean {
   return /\b[ivxlcdm]+\.\s*\d/i.test(text) || /^verse\b/i.test(text.trim())
 }
 
+function scripRefDisplayFromAttrs(attrStr: string): string | null {
+  const om = /\bosisRef="([^"]+)"/i.exec(attrStr)
+  if (om?.[1]) {
+    const fromOsis = osisRefToDisplayPassage(om[1])
+    if (fromOsis) return fromOsis
+  }
+  const pm = /\bpassage="([^"]+)"/i.exec(attrStr)
+  if (pm?.[1]) {
+    const fromPassage = parseableNormalizedRef(pm[1])
+    if (fromPassage) return fromPassage
+    const fromInline = normalizedPassageDisplayForInline(pm[1])
+    if (fromInline && isGospelCanonicalScriptureRef(fromInline)) return fromInline
+  }
+  return null
+}
+
+function innerScripRefHasNonContiguousCommaList(fromInner: string): boolean {
+  const commaTail = fromInner.match(COMMA_VERSE_TAIL_RE)
+  if (!commaTail) return false
+  const headNorm = parseableNormalizedRef(commaTail[1]) ?? commaTail[1]
+  return isGospelCanonicalScriptureRef(headNorm) && !commaVerseTailToRange(headNorm, commaTail[2])
+}
+
 /**
  * Expand each `scripRef` to canonical inline reference text.
  * When CCEL provides visible text inside the tag (e.g. `Ecclesiastes 10:7`), prefer that over
  * abbreviated `passage="Ec 10:7"` attributes. Falls back to `osisRef` for Roman-numeral Watson refs.
+ * When inner text is a non-contiguous comma verse list but `passage`/`osisRef` give a range, prefer attrs.
  */
 export function expandScripRefsToInlinePlain(innerXml: string): string {
   return innerXml.replace(SCRIPREF_BLOCK_RE, (_full, attrs, inner) => {
@@ -374,21 +398,17 @@ export function expandScripRefsToInlinePlain(innerXml: string): string {
 
     if (plain && !hasUnnormalizedThmlRef(plain)) {
       const fromInner = parseableNormalizedRef(plain)
-      if (fromInner) return fromInner
+      if (fromInner) {
+        if (innerScripRefHasNonContiguousCommaList(fromInner)) {
+          const fromAttrs = scripRefDisplayFromAttrs(attrStr)
+          if (fromAttrs) return fromAttrs
+        }
+        return fromInner
+      }
     }
 
-    const om = /\bosisRef="([^"]+)"/i.exec(attrStr)
-    if (om?.[1]) {
-      const fromOsis = osisRefToDisplayPassage(om[1])
-      if (fromOsis) return fromOsis
-    }
-
-    const pm = /\bpassage="([^"]+)"/i.exec(attrStr)
-    if (pm?.[1]) {
-      const fromPassage = parseableNormalizedRef(pm[1])
-      if (fromPassage) return fromPassage
-      return normalizedPassageDisplayForInline(pm[1])
-    }
+    const fromAttrs = scripRefDisplayFromAttrs(attrStr)
+    if (fromAttrs) return fromAttrs
 
     return plain
   })
