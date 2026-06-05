@@ -120,7 +120,7 @@ describe('OpenItemTabBar', () => {
     expect(loadOpenItemTabBarScrollLeft(PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY)).toBe(150)
   })
 
-  it('renders nothing when only one tab is open', () => {
+  it('renders nothing when only one tab is open (default hideWhenSingleTab)', () => {
     const { container } = render(
       <OpenItemTabBar
         tabs={[resourceTabs[0]!]}
@@ -131,6 +131,45 @@ describe('OpenItemTabBar', () => {
       />
     )
     expect(container).toBeEmptyDOMElement()
+  })
+
+  it('shows single tab when hideWhenSingleTab is false with expandSingleTab full width', () => {
+    render(
+      <OpenItemTabBar
+        tabs={[resourceTabs[0]!]}
+        activeId="default"
+        onSelectTab={jest.fn()}
+        onCloseTab={jest.fn()}
+        tablistAriaLabel="Open resources"
+        hideWhenSingleTab={false}
+        expandSingleTab
+        onToggleSearch={jest.fn()}
+      />
+    )
+    const tab = screen.getByRole('tab', { name: 'The Gospel' })
+    expect(tab).toHaveClass('flex-1', 'justify-start')
+    expect(tab.closest('[data-open-item-tab-id="default"]')).toHaveClass('w-full', 'flex-1')
+  })
+
+  it('shows spyglass only on the active tab when onToggleSearch is set', () => {
+    const onToggleSearch = jest.fn()
+    render(
+      <OpenItemTabBar
+        tabs={resourceTabs}
+        activeId="default"
+        onSelectTab={jest.fn()}
+        onCloseTab={jest.fn()}
+        tablistAriaLabel="Open resources"
+        onToggleSearch={onToggleSearch}
+        searchOpen
+      />
+    )
+    const searchButtons = screen.getAllByRole('button', { name: 'Search in resource' })
+    expect(searchButtons).toHaveLength(1)
+    fireEvent.click(searchButtons[0]!)
+    expect(onToggleSearch).toHaveBeenCalledTimes(1)
+    expect(searchButtons[0]).toHaveAttribute('aria-pressed', 'true')
+    expect(searchButtons[0]).toHaveAttribute('data-tour', 'profile-resource-search')
   })
 
   it('renders tablist, active state, and data-tour', () => {

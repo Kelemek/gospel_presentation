@@ -1,0 +1,239 @@
+import {
+  applyProfileResourceSearchMarks,
+  buildProfileResourceSearchPlainText,
+  clearProfileResourceSearchMarks,
+  findProfileResourceSearchMatches,
+  RESOURCE_SEARCH_ACTIVE_ATTR,
+  RESOURCE_SEARCH_MATCH_ATTR,
+  runProfileResourceSearch,
+  setProfileResourceSearchActiveIndex,
+} from '@/lib/profileResourceInPageSearch'
+
+function mountScope(html: string): HTMLElement {
+  const scope = document.createElement('main')
+  scope.innerHTML = html
+  document.body.appendChild(scope)
+  return scope
+}
+
+describe('profileResourceInPageSearch', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('buildProfileResourceSearchPlainText excludes gospel mounts', () => {
+    const scope = mountScope(
+      '<p>Hello <span data-gospel-mount="scripture">John 3:16</span> world</p>'
+    )
+    expect(buildProfileResourceSearchPlainText(scope)).toBe('Hello  world')
+  })
+
+  it('findProfileResourceSearchMatches is case-insensitive', () => {
+    expect(findProfileResourceSearchMatches('Hello World hello', 'HEL')).toEqual([
+      { start: 0, end: 3 },
+      { start: 12, end: 15 },
+    ])
+  })
+
+  it('wraps the active match and clears marks', () => {
+    const scope = mountScope('<p>Alpha beta alpha</p>')
+    const ranges = findProfileResourceSearchMatches(
+      buildProfileResourceSearchPlainText(scope),
+      'alpha'
+    )
+    const marks = applyProfileResourceSearchMarks(scope, ranges, 1)
+    expect(marks).toHaveLength(1)
+    expect(scope.querySelectorAll(`mark[${RESOURCE_SEARCH_MATCH_ATTR}]`)).toHaveLength(1)
+    expect(marks[0]?.getAttribute(RESOURCE_SEARCH_ACTIVE_ATTR)).toBe('true')
+    expect(marks[0]?.textContent?.toLowerCase()).toBe('alpha')
+
+    clearProfileResourceSearchMarks(scope)
+    expect(scope.querySelectorAll(`mark[${RESOURCE_SEARCH_MATCH_ATTR}]`)).toHaveLength(0)
+    expect(scope.textContent).toBe('Alpha beta alpha')
+  })
+
+  it('setProfileResourceSearchActiveIndex updates active mark', () => {
+    const mark = document.createElement('mark')
+    const marks = [mark]
+    setProfileResourceSearchActiveIndex(marks, 0)
+    expect(mark.getAttribute(RESOURCE_SEARCH_ACTIVE_ATTR)).toBe('true')
+  })
+
+  it('runProfileResourceSearch returns count and scrollToIndex', () => {
+    const scope = mountScope('<p>find me find</p>')
+    const scrollSpy = jest.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(() => {})
+
+    const result = runProfileResourceSearch(scope, 'find', { activeIndex: 0 })
+    expect(result.count).toBe(2)
+    expect(scope.querySelectorAll(`mark[${RESOURCE_SEARCH_MATCH_ATTR}]`)).toHaveLength(1)
+    expect(scrollSpy).toHaveBeenCalled()
+
+    result.scrollToIndex(1)
+    const marks = Array.from(
+      scope.querySelectorAll<HTMLElement>(`mark[${RESOURCE_SEARCH_MATCH_ATTR}]`)
+    )
+    expect(marks).toHaveLength(1)
+    expect(marks[0]?.getAttribute(RESOURCE_SEARCH_ACTIVE_ATTR)).toBe('true')
+
+    result.clear()
+    expect(scope.querySelectorAll(`mark[${RESOURCE_SEARCH_MATCH_ATTR}]`)).toHaveLength(0)
+
+    scrollSpy.mockRestore()
+  })
+
+  it.each(['abus', 'abuse'])(
+    'wraps full and partial heading title matches without block edge marks (%s)',
+    (query) => {
+      const scope = mountScope(`
+      <section>
+        <h3><div class="contents">Abuse</div></h3>
+        <p>Resources on Abuse and more.</p>
+      </section>
+    `)
+      runProfileResourceSearch(scope, query, { activeIndex: 0 })
+      const marks = Array.from(
+        scope.querySelectorAll<HTMLElement>(`mark[${RESOURCE_SEARCH_MATCH_ATTR}]`)
+      )
+      expect(marks.every((m) => (m.textContent ?? '').trim().length > 0)).toBe(true)
+      expect(marks.every((m) => !m.querySelector('h3, p, div.contents'))).toBe(true)
+      const headingMark = scope.querySelector(
+        `h3 mark[${RESOURCE_SEARCH_MATCH_ATTR}]`
+      )
+      expect(headingMark).toBeTruthy()
+      expect(headingMark?.textContent?.toLowerCase()).toBe(query)
+    }
+  )
+
+  it('searching for (prefix of fear) highlights in links without corrupting labels', () => {
+    const scope = mountScope(`
+      <section><h3><div class="contents">Abuse</div></h3>
+        <div><a data-tour="external-resource-card" class="inline-flex"><span>A Fight For Life</span></a></div>
+      </section>
+    `)
+    const result = runProfileResourceSearch(scope, 'for')
+    const link = scope.querySelector('[data-tour="external-resource-card"]')
+    expect(link?.textContent?.trim()).toBe('A Fight For Life')
+    expect(result.count).toBeGreaterThan(0)
+    expect(link?.querySelector('mark')?.textContent?.toLowerCase()).toBe('for')
+  })
+
+  it('skips phantom matches that span adjacent blocks (Life + Abuse → fea)', () => {
+    const scope = mountScope(`
+      <p>Culture of Life</p>
+      <h3><div class="contents">Abuse</div></h3>
+    `)
+    runProfileResourceSearch(scope, 'fea')
+    expect([...scope.querySelectorAll('h3')].map((h) => h.textContent)).toEqual(['Abuse'])
+    expect(scope.querySelectorAll(`mark[${RESOURCE_SEARCH_MATCH_ATTR}]`)).toHaveLength(0)
+  })
+
+  it('searches external resource link labels without corrupting link text', () => {
+    const scope = mountScope(`
+      <section><h3><div class="contents">Fear</div></h3>
+        <div><a data-tour="external-resource-card" class="inline-flex"><span>Overcoming Fear</span></a></div>
+      </section>
+    `)
+    const result = runProfileResourceSearch(scope, 'fear')
+    expect(result.count).toBe(2)
+    expect(scope.querySelectorAll(`mark[${RESOURCE_SEARCH_MATCH_ATTR}]`)).toHaveLength(1)
+    expect(scope.querySelector('[data-tour="external-resource-card"]')?.textContent?.trim()).toBe(
+      'Overcoming Fear'
+    )
+  })
+
+  it('searching fea does not split Life link text into Abuse heading (phantom cross-block match)', () => {
+    const scope = mountScope(`
+      <section><h3><div class="contents">Abortion</div></h3>
+        <div><a data-tour="external-resource-card" class="inline-flex"><span>Creating a Culture of Life in the Local Church</span></a></div>
+      </section>
+      <section><h3><div class="contents">Abuse</div></h3>
+        <div>
+          <a data-tour="external-resource-card" class="inline-flex"><span>A Fight For Life</span></a>
+          <a data-tour="external-resource-card" class="inline-flex"><span>Sword Words</span></a>
+        </div>
+      </section>
+      <section><h3><div class="contents">Fear</div></h3>
+        <p>Counseling for fear and anxiety.</p>
+        <div><a data-tour="external-resource-card" class="inline-flex"><span>Overcoming Fear</span></a></div>
+      </section>
+    `)
+    runProfileResourceSearch(scope, 'fea')
+    expect([...scope.querySelectorAll('h3')].map((h) => h.textContent)).toEqual([
+      'Abortion',
+      'Abuse',
+      'Fear',
+    ])
+    expect(
+      [...scope.querySelectorAll('[data-tour="external-resource-card"]')].map((a) =>
+        a.textContent?.trim()
+      )
+    ).toEqual([
+      'Creating a Culture of Life in the Local Church',
+      'A Fight For Life',
+      'Sword Words',
+      'Overcoming Fear',
+    ])
+  })
+
+  it('searching fear does not break section headings or external link labels', () => {
+    const scope = mountScope(`
+      <section><h3><div class="contents">Abortion</div></h3>
+        <div><a data-tour="external-resource-card" class="inline-flex"><span>Creating a Culture of Life in the Local Church</span></a></div>
+      </section>
+      <section><h3><div class="contents">Abuse</div></h3>
+        <div>
+          <a data-tour="external-resource-card" class="inline-flex"><span>A Fight For Life</span></a>
+          <a data-tour="external-resource-card" class="inline-flex"><span>Sword Words</span></a>
+        </div>
+      </section>
+      <section><h3><div class="contents">Fear</div></h3>
+        <p>Counseling for fear and anxiety.</p>
+        <div><a data-tour="external-resource-card" class="inline-flex"><span>Overcoming Fear</span></a></div>
+      </section>
+    `)
+    const result = runProfileResourceSearch(scope, 'fear')
+    expect([...scope.querySelectorAll('h3')].map((h) => h.textContent)).toEqual([
+      'Abortion',
+      'Abuse',
+      'Fear',
+    ])
+    expect(
+      [...scope.querySelectorAll('[data-tour="external-resource-card"]')].map((a) =>
+        a.textContent?.trim()
+      )
+    ).toEqual([
+      'Creating a Culture of Life in the Local Church',
+      'A Fight For Life',
+      'Sword Words',
+      'Overcoming Fear',
+    ])
+    expect(result.count).toBeGreaterThanOrEqual(3)
+    expect(scope.querySelectorAll(`mark[${RESOURCE_SEARCH_MATCH_ATTR}]`)).toHaveLength(1)
+    result.scrollToIndex(2)
+    expect(scope.querySelector(`mark[${RESOURCE_SEARCH_MATCH_ATTR}]`)).toBeTruthy()
+  })
+
+  it('highlights only the active match when many results exist', () => {
+    const links = Array.from(
+      { length: 300 },
+      (_, i) =>
+        `<a data-tour="external-resource-card"><span>since counsel ${i}</span></a>`
+    ).join('')
+    const scope = mountScope(`<div>${links}</div>`)
+    const result = runProfileResourceSearch(scope, 'sin')
+    expect(result.count).toBe(300)
+    expect(scope.querySelectorAll(`mark[${RESOURCE_SEARCH_MATCH_ATTR}]`)).toHaveLength(1)
+    result.scrollToIndex(50)
+    expect(scope.querySelectorAll(`mark[${RESOURCE_SEARCH_MATCH_ATTR}]`)).toHaveLength(1)
+  })
+
+  it('runProfileResourceSearch with empty query clears highlights', () => {
+    const scope = mountScope('<p>test test</p>')
+    runProfileResourceSearch(scope, 'test')
+    expect(scope.querySelectorAll(`mark[${RESOURCE_SEARCH_MATCH_ATTR}]`)).toHaveLength(1)
+
+    const empty = runProfileResourceSearch(scope, '   ')
+    expect(empty.count).toBe(0)
+    expect(scope.querySelectorAll(`mark[${RESOURCE_SEARCH_MATCH_ATTR}]`)).toHaveLength(0)
+  })
+})

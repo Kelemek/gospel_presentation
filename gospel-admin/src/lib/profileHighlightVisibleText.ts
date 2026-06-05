@@ -373,6 +373,21 @@ export function preferLaterEquivalentListenTextBoundary(
   return cur
 }
 
+function previousEligibleTextNodeBefore(scope: HTMLElement, next: Text): Text | null {
+  const doc = scope.ownerDocument
+  if (!doc) return null
+
+  let last: Text | null = null
+  const walker = doc.createTreeWalker(scope, NodeFilter.SHOW_TEXT)
+  let step: Node | null
+  while ((step = walker.nextNode())) {
+    if (!(step instanceof Text) || isWithinGospelMount(step, scope)) continue
+    if (step === next) return last
+    last = step
+  }
+  return null
+}
+
 function nextEligibleTextNodeAfter(scope: HTMLElement, prev: Text): Text | null {
   const doc = scope.ownerDocument
   if (!doc) return null
@@ -407,6 +422,31 @@ export function preferLaterEquivalentTextBoundary(
     if (!nx) break
     if (visibleTextLengthBeforeBoundary(scope, nx, 0) !== vbGoal) break
     cur = { node: nx, offset: 0 }
+  }
+
+  return cur
+}
+
+/**
+ * Mirror of {@link preferLaterEquivalentTextBoundary} for range **end** points: when several
+ * collapsed boundaries share the same stream index (often `Abuse|next paragraph`), pick **earlier**
+ * DOM order so wraps stay inside the matched text node instead of spanning into the next block.
+ */
+export function preferEarlierEquivalentTextBoundary(
+  scope: HTMLElement,
+  point: { node: Text; offset: number }
+): { node: Text; offset: number } {
+  let cur = point
+  const vbGoal = visibleTextLengthBeforeBoundary(scope, cur.node, cur.offset)
+
+  let guard = 0
+  while (guard++ < 512) {
+    if (cur.offset !== 0) break
+    const prev = previousEligibleTextNodeBefore(scope, cur.node)
+    if (!prev) break
+    const prevEnd = prev.length
+    if (visibleTextLengthBeforeBoundary(scope, prev, prevEnd) !== vbGoal) break
+    cur = { node: prev, offset: prevEnd }
   }
 
   return cur

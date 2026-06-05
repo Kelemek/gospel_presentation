@@ -122,6 +122,11 @@ export function sectionTitleExists(gospelData: GospelSection[], title: string): 
   return gospelData.some((s) => (s.title || '').trim().toLowerCase() === lower)
 }
 
+/** ACBC link-hub sections show scripture + external link cards only (no intro paragraph). */
+export function clearAcbcLinkSectionBody(subsection: { content?: string }): void {
+  subsection.content = ''
+}
+
 export function createSectionForAcbcTopic(title: string): GospelSection {
   return {
     section: '0',
@@ -129,7 +134,7 @@ export function createSectionForAcbcTopic(title: string): GospelSection {
     subsections: [
       {
         title: '',
-        content: `<p>Biblical counseling resources from the Association of Certified Biblical Counselors (ACBC) on <strong>${title}</strong>. Add key scripture passages in the admin editor as needed.</p>`,
+        content: '',
         scriptureReferences: [],
         externalResourceLinks: [],
       },
@@ -196,6 +201,8 @@ export async function syncAcbcExternalLinksOnGospelData(
       summary.push({ title, status: 'skipped (no subsection)', count: 0 })
       continue
     }
+
+    clearAcbcLinkSectionBody(sub)
 
     const existing = sub.externalResourceLinks ?? []
     const existingCount = existing.length

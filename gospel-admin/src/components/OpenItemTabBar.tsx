@@ -39,7 +39,11 @@ const TAB_SELECT_BUTTON_CLASS =
 const TAB_CLOSE_BUTTON_CLASS =
   'flex shrink-0 touch-pan-x items-center justify-center min-h-11 min-w-11 w-11 pr-1 text-slate-500 hover:text-slate-800 hover:bg-slate-200/80 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-600 transition-colors cursor-pointer md:min-h-0 md:min-w-0 md:w-7 md:pr-0.5'
 
+const TAB_SEARCH_BUTTON_CLASS =
+  'flex shrink-0 touch-pan-x items-center justify-center min-h-11 min-w-11 w-11 text-slate-500 hover:text-slate-800 hover:bg-slate-200/80 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-600 transition-colors cursor-pointer md:min-h-0 md:min-w-0 md:w-7'
+
 const TAB_CLOSE_ICON_CLASS = 'h-5 w-5 md:h-4 md:w-4'
+const TAB_SEARCH_ICON_CLASS = 'h-5 w-5 md:h-4 md:w-4'
 
 export type OpenItemTab = {
   id: string
@@ -73,6 +77,12 @@ export type OpenItemTabBarProps = {
   persistScrollKey?: string
   /** When set (once per new tab), scroll this tab fully into view including its close control. */
   revealTabId?: string | null
+  /** When false, a single open tab still renders the bar (resource tabs). Default true (scripture modal). */
+  hideWhenSingleTab?: boolean
+  /** When true with one tab, the sole tab spans the full tab bar width (resource tabs). */
+  expandSingleTab?: boolean
+  searchOpen?: boolean
+  onToggleSearch?: () => void
 }
 
 export default function OpenItemTabBar({
@@ -85,8 +95,13 @@ export default function OpenItemTabBar({
   className = '',
   persistScrollKey,
   revealTabId,
+  hideWhenSingleTab = true,
+  expandSingleTab = false,
+  searchOpen = false,
+  onToggleSearch,
 }: OpenItemTabBarProps) {
   const active = activeId.trim()
+  const isSingleExpandedTab = expandSingleTab && tabs.length === 1
   const tablistScrollElRef = useRef<HTMLDivElement | null>(null)
   const scrollInteractionCleanupRef = useRef<(() => void) | null>(null)
 
@@ -200,7 +215,7 @@ export default function OpenItemTabBar({
     }
   }, [persistScrollKey])
 
-  if (tabs.length <= 1) return null
+  if (tabs.length === 0 || (hideWhenSingleTab && tabs.length <= 1)) return null
 
   return (
     <div
@@ -213,16 +228,21 @@ export default function OpenItemTabBar({
         aria-label={tablistAriaLabel}
         className={TABLIST_SCROLL_CLASS}
       >
-        <div className="flex w-max min-w-full flex-nowrap">
+        <div
+          className={`flex min-w-full flex-nowrap ${isSingleExpandedTab ? 'w-full' : 'w-max'}`}
+        >
           {tabs.map((entry) => {
             const isActive = entry.id === active
             const label = entry.ariaLabel ?? entry.title
+            const showSearchToggle = isActive && onToggleSearch
             return (
               <div
                 key={entry.id}
                 role="presentation"
                 data-open-item-tab-id={entry.id}
-                className={`flex shrink-0 items-stretch rounded-t-md border-r border-slate-200 dark:border-slate-600 last:border-r-0 ${
+                className={`flex items-stretch rounded-t-md border-r border-slate-200 dark:border-slate-600 last:border-r-0 ${
+                  isSingleExpandedTab ? 'min-w-0 w-full flex-1' : 'shrink-0'
+                } ${
                   isActive
                     ? 'bg-white dark:bg-slate-800 shadow-sm'
                     : 'bg-transparent hover:bg-slate-50/80 dark:hover:bg-slate-600/50'
@@ -237,6 +257,8 @@ export default function OpenItemTabBar({
                   onPointerDown={captureTabBarScroll}
                   onClick={() => onSelectTab(entry.id)}
                   className={`${TAB_SELECT_BUTTON_CLASS} ${
+                    isSingleExpandedTab ? 'min-w-0 flex-1 justify-start' : ''
+                  } ${
                     isActive
                       ? 'text-slate-900 dark:text-slate-100'
                       : 'text-slate-600 dark:text-slate-300'
@@ -253,6 +275,36 @@ export default function OpenItemTabBar({
                     )}
                   </span>
                 </button>
+                {showSearchToggle ? (
+                  <button
+                    type="button"
+                    aria-label="Search in resource"
+                    title="Search in resource"
+                    aria-pressed={searchOpen}
+                    data-tour="profile-resource-search"
+                    onPointerDown={captureTabBarScroll}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onToggleSearch?.()
+                    }}
+                    className={TAB_SEARCH_BUTTON_CLASS}
+                  >
+                    <svg
+                      className={TAB_SEARCH_ICON_CLASS}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+                      />
+                    </svg>
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   aria-label={`Close ${label}`}

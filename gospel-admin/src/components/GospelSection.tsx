@@ -142,6 +142,20 @@ interface SubsectionReferenceCardsProps {
 const EXTERNAL_LINK_CARD_CLASSES =
   'inline-flex items-center gap-1 px-4 py-2 text-base md:text-lg rounded-md transition-colors print-compact min-h-[44px] bg-teal-100 dark:bg-teal-900/40 hover:bg-teal-200 dark:hover:bg-teal-900/60 text-teal-900 dark:text-teal-100 border border-teal-200 dark:border-teal-700 hover:border-teal-300 dark:hover:border-teal-600'
 
+/** SVG arrow (not Unicode ↗) so iOS/Android match desktop WebView rendering. */
+function ExternalLinkArrowIcon({ className = 'h-[1em] w-[1em] shrink-0' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M7 17 17 7m0 0H9m8 0v8"
+      />
+    </svg>
+  )
+}
+
 interface SubsectionProps {
   subsection: Subsection
   sectionId: string
@@ -241,7 +255,7 @@ function SubsectionReferenceCards({
             className={EXTERNAL_LINK_CARD_CLASSES}
           >
             <span>{link.label}</span>
-            <span aria-hidden="true">↗</span>
+            <ExternalLinkArrowIcon />
           </a>
         ))}
       </div>

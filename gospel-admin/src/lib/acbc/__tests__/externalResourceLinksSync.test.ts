@@ -4,6 +4,8 @@ import {
   reconcileExternalResourceLinks,
   addMissingAcbcSections,
   sectionTitleExists,
+  createSectionForAcbcTopic,
+  clearAcbcLinkSectionBody,
 } from '@/lib/acbc/externalResourceLinksSync'
 import type { GospelSection } from '@/lib/types'
 
@@ -42,6 +44,17 @@ describe('externalResourceLinksSync', () => {
     expect(links[0].label).toBe('Keep updated')
     expect(added).toBe(1)
     expect(removed).toBe(1)
+  })
+
+  it('createSectionForAcbcTopic has no placeholder body text', () => {
+    const section = createSectionForAcbcTopic('Abuse')
+    expect(section.subsections[0]?.content).toBe('')
+  })
+
+  it('clearAcbcLinkSectionBody removes intro paragraphs from link-hub subsections', () => {
+    const sub = { content: '<p>Passages on casting care on God and peace.</p>' }
+    clearAcbcLinkSectionBody(sub)
+    expect(sub.content).toBe('')
   })
 
   it('addMissingAcbcSections skips existing titles and renumbers', () => {

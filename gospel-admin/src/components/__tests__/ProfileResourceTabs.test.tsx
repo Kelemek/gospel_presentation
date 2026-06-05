@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { createRef } from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import ProfileResourceTabs from '../ProfileResourceTabs'
 
@@ -7,38 +7,46 @@ const tabs = [
   { slug: 'sg', title: 'Spurgeon' },
 ]
 
-describe('ProfileResourceTabs', () => {
-  it('renders nothing when tabs are empty or only one resource is open', () => {
-    const { container: empty } = render(
-      <ProfileResourceTabs
-        tabs={[]}
-        activeSlug="default"
-        onSelectTab={jest.fn()}
-        onCloseTab={jest.fn()}
-      />
-    )
-    expect(empty).toBeEmptyDOMElement()
+function defaultProps(overrides: Partial<React.ComponentProps<typeof ProfileResourceTabs>> = {}) {
+  const contentRootRef = createRef<HTMLElement>()
+  contentRootRef.current = document.createElement('main')
+  return {
+    tabs,
+    activeSlug: 'default',
+    onSelectTab: jest.fn(),
+    onCloseTab: jest.fn(),
+    contentRootRef,
+    ...overrides,
+  }
+}
 
-    const { container: single } = render(
+describe('ProfileResourceTabs', () => {
+  it('renders nothing when tabs are empty', () => {
+    const { container } = render(
       <ProfileResourceTabs
-        tabs={[{ slug: 'default', title: 'The Gospel' }]}
-        activeSlug="default"
-        onSelectTab={jest.fn()}
-        onCloseTab={jest.fn()}
+        {...defaultProps({ tabs: [] })}
       />
     )
-    expect(single).toBeEmptyDOMElement()
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it('renders a full-width single tab with search toggle', () => {
+    render(
+      <ProfileResourceTabs
+        {...defaultProps({
+          tabs: [{ slug: 'default', title: 'The Gospel' }],
+          onToggleSearch: jest.fn(),
+        })}
+      />
+    )
+    const tab = screen.getByRole('tab', { name: 'The Gospel' })
+    expect(tab).toBeInTheDocument()
+    expect(tab).toHaveClass('flex-1')
+    expect(screen.getByRole('button', { name: 'Search in resource' })).toBeInTheDocument()
   })
 
   it('renders tabs with active selection', () => {
-    render(
-      <ProfileResourceTabs
-        tabs={tabs}
-        activeSlug="default"
-        onSelectTab={jest.fn()}
-        onCloseTab={jest.fn()}
-      />
-    )
+    render(<ProfileResourceTabs {...defaultProps()} />)
     const tablist = screen.getByRole('tablist', { name: /open resources/i })
     expect(tablist).toBeInTheDocument()
     expect(tablist).toHaveClass('overflow-x-auto')
@@ -54,10 +62,7 @@ describe('ProfileResourceTabs', () => {
     ]
     render(
       <ProfileResourceTabs
-        tabs={longTabs}
-        activeSlug="a"
-        onSelectTab={jest.fn()}
-        onCloseTab={jest.fn()}
+        {...defaultProps({ tabs: longTabs, activeSlug: 'a' })}
       />
     )
     expect(screen.getByRole('tab', { name: 'Love: A Biblical Perspective' })).toHaveTextContent(
@@ -72,10 +77,7 @@ describe('ProfileResourceTabs', () => {
     const onSelectTab = jest.fn()
     render(
       <ProfileResourceTabs
-        tabs={tabs}
-        activeSlug="default"
-        onSelectTab={onSelectTab}
-        onCloseTab={jest.fn()}
+        {...defaultProps({ onSelectTab })}
       />
     )
     fireEvent.click(screen.getByRole('tab', { name: 'Spurgeon' }))
@@ -86,10 +88,7 @@ describe('ProfileResourceTabs', () => {
     const onCloseTab = jest.fn()
     render(
       <ProfileResourceTabs
-        tabs={tabs}
-        activeSlug="default"
-        onSelectTab={jest.fn()}
-        onCloseTab={onCloseTab}
+        {...defaultProps({ onCloseTab })}
       />
     )
     fireEvent.click(screen.getByRole('button', { name: 'Close Spurgeon' }))

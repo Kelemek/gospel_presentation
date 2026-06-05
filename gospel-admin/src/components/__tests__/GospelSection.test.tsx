@@ -81,6 +81,7 @@ describe('GospelSection TextWithComaButtons', () => {
     expect(external).toHaveAttribute('target', '_blank')
     expect(external).toHaveAttribute('rel', 'noopener noreferrer')
     expect(external).toHaveAttribute('data-tour', 'external-resource-card')
+    expect(external.querySelector('svg')).toBeInTheDocument()
 
     const container = scripture.parentElement?.parentElement?.parentElement
     expect(container).toContainElement(scripture)

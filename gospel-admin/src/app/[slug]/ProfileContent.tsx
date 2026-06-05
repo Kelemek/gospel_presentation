@@ -18,6 +18,7 @@ import ScriptureModal from '@/components/ScriptureModal'
 import MemorizationPracticeSession from '@/components/MemorizationPracticeSession'
 import TableOfContents from '@/components/TableOfContents'
 import ProfileResourceTabs from '@/components/ProfileResourceTabs'
+import { clearProfileResourceSearchMarks } from '@/lib/profileResourceInPageSearch'
 import SpurgeonSermonsModal, {
   STUDY_MODAL_DEFAULT_TITLE,
   type StudyLibraryFocus,
@@ -420,6 +421,24 @@ function ProfileContent({
   const [resourceTabs, setResourceTabs] = useState(() =>
     loadProfileRecentResourcesForTabs(profileSlug, profileInfo?.title)
   )
+  const mainContentRef = useRef<HTMLElement>(null)
+  const [resourceSearchBySlug, setResourceSearchBySlug] = useState<{
+    slug: string
+    open: boolean
+  } | null>(null)
+  const resourceSearchOpen =
+    resourceSearchBySlug?.slug === profileSlug && resourceSearchBySlug.open
+
+  const handleToggleResourceSearch = useCallback(() => {
+    setResourceSearchBySlug((prev) => {
+      if (prev?.slug === profileSlug) return { slug: profileSlug, open: !prev.open }
+      return { slug: profileSlug, open: true }
+    })
+  }, [profileSlug])
+
+  useEffect(() => {
+    clearProfileResourceSearchMarks(mainContentRef.current)
+  }, [profileSlug])
 
   const refreshResourceTabs = useCallback(() => {
     setResourceTabs(loadProfileRecentResourcesForTabs(profileSlug, profileInfo?.title))
@@ -549,6 +568,7 @@ function ProfileContent({
     (slug: string) => {
       const trimmed = slug.trim()
       if (!trimmed || trimmed === profileSlug.trim()) return
+      setResourceSearchBySlug(null)
       persistReadingResumeBeforeLeave('tab-select-leave')
       const saved = loadProfileReadingResume(trimmed)
       markProfileResourceTabNavigation(trimmed, saved)
@@ -565,6 +585,7 @@ function ProfileContent({
       const nextSlug = isActive ? resolveProfileTabNavigationAfterClose(trimmed) : null
       removeProfileResourceTab(trimmed)
       if (isActive) {
+        setResourceSearchBySlug(null)
         persistReadingResumeBeforeLeave()
         if (nextSlug) {
           const saved = loadProfileReadingResume(nextSlug)
@@ -2083,6 +2104,10 @@ function ProfileContent({
             activeSlug={profileSlug}
             onSelectTab={handleSelectResourceTab}
             onCloseTab={handleCloseResourceTab}
+            searchOpen={resourceSearchOpen}
+            onToggleSearch={handleToggleResourceSearch}
+            contentRootRef={mainContentRef}
+            searchPaused={selectedScripture.isOpen}
           />
         </div>
 
@@ -2097,7 +2122,7 @@ function ProfileContent({
           className="flex-1 bg-gray-50 dark:bg-gray-900"
           onClick={isMenuOpen ? closeMenu : undefined}
         >
-          <main className="container mx-auto px-5 py-10">
+          <main ref={mainContentRef} className="container mx-auto px-5 py-10">
             <div className="space-y-12">
               {sections.map((section) => (
                 <div key={section.section} className="print-section">
