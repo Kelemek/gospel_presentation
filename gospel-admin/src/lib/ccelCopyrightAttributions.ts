@@ -43,6 +43,11 @@ export const CCEL_COPYRIGHT_ATTRIBUTIONS: readonly CcelCopyrightAttribution[] = 
     sourceHref: 'https://www.ccel.org/ccel/luther/galatians.html',
   },
   {
+    title: 'J.C. Ryle, Holiness',
+    body: 'The underlying work is in the public domain. Text in this app was imported from the ThML edition',
+    sourceHref: 'https://www.ccel.org/ccel/ryle/holiness.html',
+  },
+  {
     title: 'Richard Baxter, The Reformed Pastor',
     body: 'The underlying work is in the public domain. Text in this app was imported from the ThML edition',
     sourceHref: 'https://www.ccel.org/ccel/baxter/pastor.html',

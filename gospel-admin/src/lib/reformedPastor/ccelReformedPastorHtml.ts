@@ -6,6 +6,9 @@ import {
   formatCalvinParagraphBody,
   formatCalvinSubsectionHtml,
 } from '@/lib/calvin/calvinHtmlFormatting'
+import { decodeThmlTitle, normalizeThmlHeadingsForImport } from '@/lib/ccelThmlHeadings'
+
+export { normalizeThmlHeadingsForImport }
 import {
   extractDiv1Blocks,
   extractPassageAttributes,
@@ -30,16 +33,6 @@ function attrFromTag(tag: string, name: string): string | null {
   return re.exec(tag)?.[1]?.trim() ?? null
 }
 
-function decodeThmlTitle(title: string): string {
-  return title
-    .trim()
-    .replace(/&quot;/gi, '"')
-    .replace(/&apos;/gi, "'")
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-}
-
 function shouldSkipDiv1Title(title: string): boolean {
   const t = title.trim()
   return /^title page$/i.test(t) || /^indexes$/i.test(t)
@@ -50,31 +43,6 @@ function div1InnerFromBlock(block: string): string {
   return innerMatch
     ? innerMatch[1]
     : block.replace(/^<div1\b[^>]*>/i, '').replace(/<\/div1>\s*$/i, '')
-}
-
-function stripTagsToPlain(html: string): string {
-  return html
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-function escapeHtmlText(text: string): string {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-}
-
-/**
- * CCEL Baxter ThML uses h2/h3 for section titles; CHAPTER 3 also has malformed h3 nodes that
- * wrap entire `<p class="Body">` blocks. Unwrap those so prose is kept; turn short headings into
- * bold lead paragraphs so the reader matches the CCEL outline.
- */
-export function normalizeThmlHeadingsForImport(inner: string): string {
-  return inner.replace(/<h([23])\b[^>]*>([\s\S]*?)<\/h\1>/gi, (_full, _level, body: string) => {
-    if (/<p\b/i.test(body)) return body
-    const plain = decodeThmlTitle(stripTagsToPlain(body))
-    if (!plain) return ''
-    return `<p><strong>${escapeHtmlText(plain)}</strong></p>`
-  })
 }
 
 /** Strip ThML chrome that should not appear in stored subsection HTML. */

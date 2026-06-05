@@ -36,6 +36,7 @@
     "import-pilgrim": "tsx scripts/import-pilgrim-ccel.ts",
     "import-all-of-grace": "tsx scripts/import-all-of-grace-ccel.ts",
     "import-reformed-pastor": "tsx scripts/import-reformed-pastor-ccel.ts",
+    "import-ryle-holiness": "tsx scripts/import-ryle-holiness-ccel.ts",
     "import-berkhof": "tsx scripts/import-berkhof-ccel.ts",
     "import-mcheyne": "tsx scripts/import-mcheyne.ts",
     "import-watson": "tsx scripts/import-watson-ccel.ts",

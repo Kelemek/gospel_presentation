@@ -1,0 +1,23 @@
+<div1 title="Title Page" id="i">
+<p id="i-p1">Title page only</p>
+</div1>
+<div1 title="Prefatory Material" id="ii">
+<div2 title="Introduction" id="ii.i">
+<p id="ii.i-p1">Preface text with <scripRef passage="John 3:3" osisRef="Bible:John.3.3">John 3.3</scripRef>.</p>
+<note id="ii.i-n1">Footnote should be stripped.</note>
+</div2>
+<div2 title="Contents" id="ii.ii">
+<p id="ii.ii-p1">Table of contents</p>
+</div2>
+</div1>
+<div1 title="Holiness" id="iii">
+<div2 title="I. Sin" id="iii.i">
+<h3 id="iii.i-p0.1">I. Sin</h3>
+<p id="iii.i-p1">Sin is the root. <scripRef passage="Romans 3:23" osisRef="Bible:Rom.3.23">Rom. 3.23</scripRef></p>
+<h3 id="iii.i-p0.2">Short section head</h3>
+<p id="iii.i-p2">More prose.</p>
+</div2>
+</div1>
+<div1 title="Indexes" id="iv">
+<p id="iv-p1">Index only</p>
+</div1>

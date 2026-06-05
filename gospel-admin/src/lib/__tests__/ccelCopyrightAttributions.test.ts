@@ -10,6 +10,7 @@ describe('CCEL_COPYRIGHT_ATTRIBUTIONS', () => {
       'Jonathan Edwards, Select Sermons',
       "Matthew Henry's Commentary on the Whole Bible",
       'Martin Luther, Commentary on Galatians',
+      'J.C. Ryle, Holiness',
       'Richard Baxter, The Reformed Pastor',
       'Charles H. Spurgeon, All of Grace',
       'Charles H. Spurgeon, Morning and Evening',

@@ -433,7 +433,15 @@ function looksLikeCalendarOrSectionHeadingFalsePositive(match: string): boolean 
   if (/^ARTICLE\s+[IVXLCDM]+$/i.test(t)) return true
   if (new RegExp(`^(?:${MONTH_NAMES})\\s+\\d{1,2}(?:,|\\s|$)`, 'i').test(t)) return true
   if (new RegExp(`^\\d{1,2}\\s+(?:${MONTH_NAMES})\\s+\\d{4}$`, 'i').test(t)) return true
+  // Prose like "After 4,000 years" (regex stops at the thousands comma).
+  if (/^After\s+\d+$/i.test(t)) return true
   return false
+}
+
+/** `Book chapter` match immediately before `,000` (thousands separator), not a verse list. */
+function looksLikeThousandsCommaFalsePositive(plain: string, matchStart: number, match: string): boolean {
+  const tail = plain.slice(matchStart + match.length)
+  return /^,\d{3}\b/.test(tail)
 }
 
 /** Skip prose false positives like `fulfilment of Psalms 22:14` (book group ate a leading phrase). */
@@ -491,6 +499,7 @@ export function auditScriptureReferencesInText(text: string, field: string): Scr
 
     if (isGospelCanonicalScriptureRef(normalized)) continue
     if (looksLikeCalendarOrSectionHeadingFalsePositive(match)) continue
+    if (looksLikeThousandsCommaFalsePositive(plain, m.index, match)) continue
     if (!looksLikeIntentionalScriptureMatch(match)) continue
     issues.push({ field, match, reason: 'unresolved_abbrev', normalized })
   }

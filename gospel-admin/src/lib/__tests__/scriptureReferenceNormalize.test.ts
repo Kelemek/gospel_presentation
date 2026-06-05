@@ -121,6 +121,9 @@ describe('scriptureReferenceNormalize', () => {
     expect(auditScriptureReferencesInText('CHAPTER 1', 'title')).toEqual([])
     expect(auditScriptureReferencesInText('SECTION 1', 'content')).toEqual([])
     expect(auditScriptureReferencesInText('PART I', 'content')).toEqual([])
+    expect(
+      auditScriptureReferencesInText('After 4,000 years the nations appeared ignorant.', 'content')
+    ).toEqual([])
   })
 
   it('leaves unrecognized references unchanged', () => {
