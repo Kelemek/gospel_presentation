@@ -435,6 +435,29 @@ function looksLikeCalendarOrSectionHeadingFalsePositive(match: string): boolean 
   if (new RegExp(`^\\d{1,2}\\s+(?:${MONTH_NAMES})\\s+\\d{4}$`, 'i').test(t)) return true
   // Prose like "After 4,000 years" (regex stops at the thousands comma).
   if (/^After\s+\d+$/i.test(t)) return true
+  return looksLikeEdwardsCitationFalsePositive(t)
+}
+
+/** Edwards ThML footnotes: abbreviated verse/chapter/corollary labels, not full book refs. */
+function looksLikeEdwardsCitationFalsePositive(match: string): boolean {
+  const t = match.trim().replace(/\s+/g, ' ')
+  if (/^Ver\.?\s*\d+$/i.test(t)) return true
+  if (/^Verse\s*\d+$/i.test(t)) return true
+  if (/^Verses\s+\d+$/i.test(t)) return true
+  if (/^Chap\.?\s+[\d:. \-]+$/i.test(t)) return true
+  if (/^Corol\.?\s*\d+$/i.test(t)) return true
+  if (/^Corol\s+\d+$/i.test(t)) return true
+  if (/^Inference\s+\d+$/i.test(t)) return true
+  if (/^And\s+\d+([:.]\d+)?(-\d+)?$/i.test(t)) return true
+  if (/^Epistle\s+\d+:\d+$/i.test(t)) return true
+  if (/^Love\.\s*\d+$/i.test(t)) return true
+  if (/^notion of Liberty\.\s*\d+$/i.test(t)) return true
+  if (/^Sam\.\s+\d+:\d+$/i.test(t)) return true
+  if (/^Kings\s+\d+:\d+$/i.test(t)) return true
+  if (/^Peter\s+\d+:\d+$/i.test(t)) return true
+  if (/^Timothy\s+\d+:\d+$/i.test(t)) return true
+  // CCEL comma after verse range (e.g. "1 Timothy 2:3-4,6").
+  if (/\d+:\d+-\d+,\d+/.test(t)) return true
   return false
 }
 
@@ -487,12 +510,16 @@ export function auditScriptureReferencesInText(text: string, field: string): Scr
       const headNorm = normalizeScriptureReferenceString(commaTail[1])
       const head = headNorm !== commaTail[1] ? headNorm : commaTail[1]
       if (isGospelCanonicalScriptureRef(head) && !commaVerseTailToRange(head, commaTail[2])) {
-        issues.push({
-          field,
-          match,
-          reason: 'non_contiguous_comma_list',
-          normalized,
-        })
+        // Same-chapter comma verse lists (e.g. "1 Peter 2:4, 7") are valid in Edwards/CCEL prose.
+        const tail = commaTail[2].replace(/^,\s*/, '').trim()
+        if (!/^\d+(?:\s*,\s*\d+)*$/.test(tail)) {
+          issues.push({
+            field,
+            match,
+            reason: 'non_contiguous_comma_list',
+            normalized,
+          })
+        }
       }
       continue
     }

@@ -15,6 +15,7 @@ import {
   isResourceOrderItemHenryLibrary,
   isResourceOrderItemEdwardsLibrary,
 } from "@/lib/types";
+import { EDWARDS_SERMON_SLUG_POSTGREST_MATCH } from "@/lib/edwards/edwardsSlug";
 import {
   isResourcesMenuPickableTemplateSlug,
   resourcesMenuTemplatePickerLabel,
@@ -123,7 +124,7 @@ export default function AdminSettingsPage() {
         setExpiryMinutes(row.verification_code_expiry_minutes || 15);
       }
 
-      // Pickable templates only (exclude sg/me/cv corpora). No row cap — Supabase default 1000
+      // Pickable templates only (exclude sg/me/cv + Edwards sermons, not je* books). No row cap —
       // would omit profiles like lgal when thousands of sermon templates exist.
       const { data: templatesData, error: templatesError } = await supabase
         .from("profiles")
@@ -133,7 +134,7 @@ export default function AdminSettingsPage() {
         .not("slug", "ilike", "sg%")
         .not("slug", "ilike", "me%")
         .not("slug", "ilike", "cv%")
-        .not("slug", "ilike", "je%")
+        .not("slug", "match", EDWARDS_SERMON_SLUG_POSTGREST_MATCH)
         .order("title", { ascending: true });
 
       if (templatesError) {

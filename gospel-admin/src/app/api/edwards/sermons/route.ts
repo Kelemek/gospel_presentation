@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { logger } from '@/lib/logger'
-import { sortEdwardsSermonsByDisplayTitleAZ } from '@/lib/edwards/edwardsSlug'
+import {
+  EDWARDS_SERMON_SLUG_POSTGREST_MATCH,
+  sortEdwardsSermonsByDisplayTitleAZ,
+} from '@/lib/edwards/edwardsSlug'
 
 /**
  * GET /api/edwards/sermons?q=&page=&pageSize=
- * Public Edwards sermon templates (`je%` slugs), A–Z by title.
+ * Public Edwards sermon templates (`je` + digits slugs), A–Z by title.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -20,7 +23,7 @@ export async function GET(request: NextRequest) {
       .select('slug,title', { count: 'exact' })
       .eq('is_template', true)
       .eq('is_public', true)
-      .like('slug', 'je%')
+      .filter('slug', 'match', EDWARDS_SERMON_SLUG_POSTGREST_MATCH)
 
     if (q.length > 0) {
       const pattern = `%${q.replace(/%/g, '').replace(/_/g, '')}%`

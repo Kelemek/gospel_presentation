@@ -13,6 +13,12 @@ export function isEdwardsSermonProfileSlug(slug: string): boolean {
   return /^je\d+$/i.test(slug.trim())
 }
 
+/**
+ * PostgREST `match` / `not.match` pattern for sermon slugs only.
+ * Use instead of `je%` so treatise books (`jefow`, `jerea`, `jetog`) stay in template pickers.
+ */
+export const EDWARDS_SERMON_SLUG_POSTGREST_MATCH = '^je[0-9]+$'
+
 export function edwardsSermonNumberFromSlug(slug: string): number {
   const m = /^je(\d+)$/i.exec(slug.trim())
   if (!m) return Number.MAX_SAFE_INTEGER

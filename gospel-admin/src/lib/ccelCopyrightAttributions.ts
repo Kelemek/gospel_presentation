@@ -33,6 +33,21 @@ export const CCEL_COPYRIGHT_ATTRIBUTIONS: readonly CcelCopyrightAttribution[] = 
     sourceHref: 'https://www.ccel.org/ccel/edwards/sermons.html',
   },
   {
+    title: 'Jonathan Edwards, Freedom of the Will',
+    body: 'The underlying work is in the public domain. Text in this app was imported from the ThML edition',
+    sourceHref: 'https://www.ccel.org/ccel/edwards/will.html',
+  },
+  {
+    title: 'Jonathan Edwards, Religious Affections',
+    body: 'The underlying work is in the public domain. Text in this app was imported from the ThML edition',
+    sourceHref: 'https://www.ccel.org/ccel/edwards/affections.html',
+  },
+  {
+    title: 'Jonathan Edwards, Treatise on Grace',
+    body: 'The underlying work is in the public domain. Text in this app was imported from the ThML edition',
+    sourceHref: 'https://www.ccel.org/ccel/edwards/treatiseongrace.html',
+  },
+  {
     title: "Matthew Henry's Commentary on the Whole Bible",
     body: 'The underlying commentary is in the public domain. Text in this app was imported from the six-volume ThML edition',
     sourceHref: 'https://www.ccel.org/ccel/henry/mhc.html',

@@ -124,6 +124,11 @@ describe('scriptureReferenceNormalize', () => {
     expect(
       auditScriptureReferencesInText('After 4,000 years the nations appeared ignorant.', 'content')
     ).toEqual([])
+    expect(auditScriptureReferencesInText('See Ver. 19 and Corol. 2.', 'content')).toEqual([])
+    expect(auditScriptureReferencesInText('Chap. 5:1-2 in the margin.', 'content')).toEqual([])
+    expect(
+      auditScriptureReferencesInText('<p>1 Peter 2:4, 7 and Rom 8:28.</p>', 'content')
+    ).toEqual([])
   })
 
   it('leaves unrecognized references unchanged', () => {

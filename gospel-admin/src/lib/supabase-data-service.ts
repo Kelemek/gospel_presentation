@@ -5,6 +5,7 @@
 import { createClient, createAdminClient } from './supabase/server'
 import type { GospelProfile, CreateProfileRequest, GospelPresentationData } from './types'
 import { parseResourceOrder, templateSlugsInResourceOrder } from './resourceOrderCategory'
+import { EDWARDS_SERMON_SLUG_POSTGREST_MATCH } from './edwards/edwardsSlug'
 import { isResourcesMenuPickableTemplateSlug } from './resourcesMenuPickableTemplates'
 import { morneveLibraryMenuTitle } from './spurgeon/morneveSlug'
 import { logger } from './logger'
@@ -161,7 +162,7 @@ export async function getPublicResourcesStructure(): Promise<PublicResourceItem[
         .not('slug', 'ilike', 'me%')
         .not('slug', 'ilike', 'cv%')
         .not('slug', 'ilike', 'mh%')
-        .not('slug', 'ilike', 'je%'),
+        .not('slug', 'match', EDWARDS_SERMON_SLUG_POSTGREST_MATCH),
       supabase
         .from('admin_settings')
         .select('public_template_order')

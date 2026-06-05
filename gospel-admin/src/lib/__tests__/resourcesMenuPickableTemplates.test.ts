@@ -19,6 +19,15 @@ describe('resourcesMenuPickableTemplates', () => {
     expect(isResourcesMenuPickableTemplateSlug('sg00001')).toBe(false)
   })
 
+  it('allows Edwards treatise and other book templates (not je sermon slugs)', () => {
+    expect(isResourcesMenuPickableTemplateSlug('jefow')).toBe(true)
+    expect(isResourcesMenuPickableTemplateSlug('jerea')).toBe(true)
+    expect(isResourcesMenuPickableTemplateSlug('jetog')).toBe(true)
+    expect(isResourcesMenuPickableTemplateSlug('jryh')).toBe(true)
+    expect(isResourcesMenuPickableTemplateSlug('bxrp')).toBe(true)
+    expect(isResourcesMenuPickableTemplateSlug('je01')).toBe(false)
+  })
+
   it('hides deprecated duplicate Luther slug', () => {
     expect(isResourcesMenuPickableTemplateSlug('luthergal')).toBe(false)
   })

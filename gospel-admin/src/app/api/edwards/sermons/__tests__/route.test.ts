@@ -18,7 +18,7 @@ describe('GET /api/edwards/sermons', () => {
     const from = jest.fn(() => ({
       select: jest.fn().mockReturnThis(),
       eq: jest.fn().mockReturnThis(),
-      like: jest.fn().mockResolvedValue({
+      filter: jest.fn().mockResolvedValue({
         data: [
           { slug: 'je02', title: 'B Sermon' },
           { slug: 'je01', title: 'A Sermon' },
