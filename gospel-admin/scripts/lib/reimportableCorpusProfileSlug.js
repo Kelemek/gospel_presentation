@@ -10,6 +10,7 @@ const CALVIN = /^cv([a-z0-9]+)$/i
 const HENRY = /^mh([a-z0-9]+)$/i
 const EDWARDS = /^je\d+$/i
 const LUTHER_GALATIANS = /^lgal$/i
+const LUTHER_BONDAGE = /^ltbw$/i
 const DEPRECATED_LUTHER = /^luthergal$/i
 const PILGRIM = /^ppgr$/i
 const ALL_OF_GRACE = /^aogr$/i
@@ -28,6 +29,7 @@ function isReimportableCorpusProfileSlug(slug) {
     HENRY.test(s) ||
     EDWARDS.test(s) ||
     LUTHER_GALATIANS.test(s) ||
+    LUTHER_BONDAGE.test(s) ||
     DEPRECATED_LUTHER.test(s) ||
     PILGRIM.test(s) ||
     ALL_OF_GRACE.test(s) ||

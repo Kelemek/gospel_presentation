@@ -25,6 +25,7 @@ describe('resourcesMenuPickableTemplates', () => {
     expect(isResourcesMenuPickableTemplateSlug('jetog')).toBe(true)
     expect(isResourcesMenuPickableTemplateSlug('jryh')).toBe(true)
     expect(isResourcesMenuPickableTemplateSlug('bxrp')).toBe(true)
+    expect(isResourcesMenuPickableTemplateSlug('ltbw')).toBe(true)
     expect(isResourcesMenuPickableTemplateSlug('je01')).toBe(false)
   })
 

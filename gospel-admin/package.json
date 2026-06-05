@@ -33,6 +33,7 @@
     "import-calvin": "tsx scripts/import-calvin-ccel.ts",
     "import-henry": "tsx scripts/import-henry-ccel.ts",
     "import-luther-galatians": "tsx scripts/import-luther-galatians-ccel.ts",
+    "import-luther-bondage": "tsx scripts/import-luther-bondage-ccel.ts",
     "import-pilgrim": "tsx scripts/import-pilgrim-ccel.ts",
     "import-all-of-grace": "tsx scripts/import-all-of-grace-ccel.ts",
     "import-reformed-pastor": "tsx scripts/import-reformed-pastor-ccel.ts",

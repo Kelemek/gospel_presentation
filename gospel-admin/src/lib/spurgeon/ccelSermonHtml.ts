@@ -233,6 +233,18 @@ export function normalizeThmlRomanChapterVerse(passage: string): string {
       return `${bookSpaceRoman[1].trim()} ${ch}:${vs}`
     }
   }
+  /** Luther *Bondage of the Will* CCEL: `Acts vii 51`, `John iii 6` (roman chapter, space before verse). */
+  const bookSpaceRomanSpaceVerse =
+    /^((?:\d+\s+)?[A-Za-z]+(?:\s+[A-Za-z]+)?)\s+([ivxlcdm]+)\s+(\d+(?:\s*-\s*\d+)?(?:\s*,\s*\d+(?:\s*-\s*\d+)?)*)\s*$/i.exec(
+      passage
+    )
+  if (bookSpaceRomanSpaceVerse) {
+    const ch = romanNumeralToArabic(bookSpaceRomanSpaceVerse[2])
+    if (ch != null) {
+      const vs = bookSpaceRomanSpaceVerse[3].replace(/\s*-\s*/g, '-').replace(/\s*,\s*/g, ', ')
+      return `${bookSpaceRomanSpaceVerse[1].trim()} ${ch}:${vs}`
+    }
+  }
   return passage
 }
 

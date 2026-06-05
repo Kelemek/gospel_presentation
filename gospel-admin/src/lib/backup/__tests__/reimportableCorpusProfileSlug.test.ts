@@ -8,6 +8,7 @@ describe('isReimportableCorpusProfileSlug', () => {
     expect(isReimportableCorpusProfileSlug('mhgen')).toBe(true)
     expect(isReimportableCorpusProfileSlug('je01')).toBe(true)
     expect(isReimportableCorpusProfileSlug('lgal')).toBe(true)
+    expect(isReimportableCorpusProfileSlug('ltbw')).toBe(true)
     expect(isReimportableCorpusProfileSlug('aogr')).toBe(true)
     expect(isReimportableCorpusProfileSlug('bxrp')).toBe(true)
     expect(isReimportableCorpusProfileSlug('jryh')).toBe(true)

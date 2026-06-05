@@ -13,6 +13,7 @@ describe('CCEL_COPYRIGHT_ATTRIBUTIONS', () => {
       'Jonathan Edwards, Treatise on Grace',
       "Matthew Henry's Commentary on the Whole Bible",
       'Martin Luther, Commentary on Galatians',
+      'Martin Luther, The Bondage of the Will',
       'J.C. Ryle, Holiness',
       'Richard Baxter, The Reformed Pastor',
       'Charles H. Spurgeon, All of Grace',

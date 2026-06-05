@@ -6,6 +6,7 @@ import {
   isDeprecatedLutherGalatiansSlug,
   isLutherGalatiansProfileSlug,
 } from '@/lib/luther/lutherSlug'
+import { isLutherBondageProfileSlug } from '@/lib/lutherBondage/lutherBondageSlug'
 import { isAllOfGraceProfileSlug } from '@/lib/allOfGrace/allOfGraceSlug'
 import { isReformedPastorProfileSlug } from '@/lib/reformedPastor/reformedPastorSlug'
 import { isRyleHolinessProfileSlug } from '@/lib/ryleHoliness/ryleHolinessSlug'
@@ -30,6 +31,7 @@ export function isReimportableCorpusProfileSlug(slug: string): boolean {
     isEdwardsSermonProfileSlug(s) ||
     isEdwardsBookProfileSlug(s) ||
     isLutherGalatiansProfileSlug(s) ||
+    isLutherBondageProfileSlug(s) ||
     isDeprecatedLutherGalatiansSlug(s) ||
     isPilgrimProgressProfileSlug(s) ||
     isAllOfGraceProfileSlug(s) ||

@@ -36,6 +36,8 @@ describe('ccelSermonHtml', () => {
     expect(normalizedPassageDisplayForInline('Es. 3. 1')).toBe('Esther 3:1')
     expect(normalizedPassageDisplayForInline('Thess. v. 18')).toBe('1 Thessalonians 5:18')
     expect(normalizedPassageDisplayForInline('1 Peter:18, 19')).toBe('1 Peter 1:18-19')
+    expect(normalizedPassageDisplayForInline('Acts vii 51')).toBe('Acts 7:51')
+    expect(normalizedPassageDisplayForInline('John iii 6')).toBe('John 3:6')
   })
 
   it('osisRefToDisplayPassage handles CCEL Watson range and numbered-book OSIS codes', () => {
@@ -43,6 +45,14 @@ describe('ccelSermonHtml', () => {
     expect(osisRefToDisplayPassage('Bible:1Cor.12.5-1Cor.12.6')).toBe('1 Corinthians 12:5-6')
     expect(osisRefToDisplayPassage('Bible:Ps.116.12-Ps.116.13')).toBe('Psalms 116:12-13')
     expect(osisRefToDisplayPassage('Bible:Acts.12.5-Acts.12.7')).toBe('Acts 12:5-7')
+  })
+
+  it('unwrapScripRefTags normalizes Luther Bondage roman chapter refs', () => {
+    expect(
+      unwrapScripRefTags(
+        '<scripRef passage="Acts vii 51" osisRef="Bible:Acts.7.51">Acts vii 51</scripRef>'
+      )
+    ).toBe('Acts 7:51')
   })
 
   it('unwrapScripRefTags resolves Esther osisRef to canonical display', () => {
