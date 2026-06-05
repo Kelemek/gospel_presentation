@@ -10,6 +10,8 @@ import InlineRichTextEditor, { stripParagraphTags } from '@/components/InlineRic
 import RichTextEditor from '@/components/RichTextEditor'
 import { createClient } from '@/lib/supabase/client'
 import { useAlertModal } from '@/contexts/AlertModalContext'
+import ExternalLinksEditorBlock from './ExternalLinksEditorBlock'
+import type { ExternalResourceLink } from '@/lib/types'
 
 export interface ContentEditPageProps {
   slug: string
@@ -72,19 +74,16 @@ export function ContentEditPage({ slug }: ContentEditPageProps) {
   
   // Check authentication on mount
   useEffect(() => {
-    checkAuth()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const checkAuth = async () => {
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    setIsAuth(!!user)
-    if (!user) {
-      router.push('/login')
-    }
-    setIsLoading(false)
-  }
+    void (async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      setIsAuth(!!user)
+      if (!user) {
+        router.push('/login')
+      }
+      setIsLoading(false)
+    })()
+  }, [router])
 
   // Bible book abbreviations mapping
   const bibleBookAbbreviations: { [key: string]: string } = {
@@ -174,29 +173,25 @@ export function ContentEditPage({ slug }: ContentEditPageProps) {
   }
 
   useEffect(() => {
-    if (slug && isAuth) {
-      fetchProfile()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug, isAuth])
-
-  const fetchProfile = async () => {
-    try {
-      const response = await fetch(`/api/profiles/${slug}`)
-      if (response.ok) {
-        const data = await response.json()
-        setProfile(data.profile)
-      } else if (response.status === 404) {
-        setError('Profile not found')
-      } else {
+    if (!slug || !isAuth) return
+    void (async () => {
+      try {
+        const response = await fetch(`/api/profiles/${slug}`)
+        if (response.ok) {
+          const data = await response.json()
+          setProfile(data.profile)
+        } else if (response.status === 404) {
+          setError('Profile not found')
+        } else {
+          setError('Failed to load profile')
+        }
+      } catch {
         setError('Failed to load profile')
+      } finally {
+        setIsLoading(false)
       }
-    } catch {
-      setError('Failed to load profile')
-    } finally {
-      setIsLoading(false)
-    }
-  }
+    })()
+  }, [slug, isAuth])
 
   const handleSaveContent = async () => {
     if (!profile) return
@@ -1535,6 +1530,19 @@ export function ContentEditPage({ slug }: ContentEditPageProps) {
                     </p>
                   </div>
 
+                  <ExternalLinksEditorBlock
+                    locationId={`${sectionIndex}-${subsectionIndex}`}
+                    links={subsection.externalResourceLinks ?? []}
+                    onLinksChange={(links: ExternalResourceLink[]) => {
+                      updateSubsection(
+                        sectionIndex,
+                        subsectionIndex,
+                        'externalResourceLinks',
+                        links.length > 0 ? links : undefined
+                      )
+                    }}
+                  />
+
                   {/* Questions & Answers */}
                   <div className="mt-6">
                     <div className="flex items-center justify-between mb-3 pr-2 flex-wrap gap-2">
@@ -1870,6 +1878,21 @@ export function ContentEditPage({ slug }: ContentEditPageProps) {
                           <p className="text-slate-400 text-xs italic">No scripture references yet.</p>
                         )}
                       </div>
+
+                      <ExternalLinksEditorBlock
+                        locationId={`${sectionIndex}-${subsectionIndex}-${nestedIndex}`}
+                        links={nested.externalResourceLinks ?? []}
+                        compact
+                        onLinksChange={(links: ExternalResourceLink[]) => {
+                          updateNestedSubsection(
+                            sectionIndex,
+                            subsectionIndex,
+                            nestedIndex,
+                            'externalResourceLinks',
+                            links.length > 0 ? links : undefined
+                          )
+                        }}
+                      />
 
                       {/* Nested Questions & Answers */}
                       <div className="mt-4">

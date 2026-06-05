@@ -6,6 +6,11 @@ export interface ScriptureReference {
   favorite?: boolean
 }
 
+export interface ExternalResourceLink {
+  label: string
+  url: string
+}
+
 export interface QuestionAnswer {
   id: string
   question: string
@@ -19,6 +24,7 @@ export interface NestedSubsection {
   title: string
   content: string
   scriptureReferences?: ScriptureReference[]
+  externalResourceLinks?: ExternalResourceLink[]
   questions?: QuestionAnswer[]
 }
 
@@ -26,6 +32,7 @@ export interface Subsection {
   title: string
   content: string
   scriptureReferences?: ScriptureReference[]
+  externalResourceLinks?: ExternalResourceLink[]
   nestedSubsections?: NestedSubsection[]
   questions?: QuestionAnswer[]
 }

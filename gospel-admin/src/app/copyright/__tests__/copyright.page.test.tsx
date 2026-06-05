@@ -50,6 +50,13 @@ describe('Copyright page', () => {
     expect(screen.getByText(/Martin Luther, Commentary on Galatians/i)).toBeInTheDocument()
     expect(screen.getByText(/John Bunyan, The Pilgrim's Progress/i)).toBeInTheDocument()
     expect(screen.getByText(/Robert Murray M'Cheyne, Bible Reading Plan/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Association of Certified Biblical Counselors \(ACBC\) — outbound links/i)
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'biblicalcounseling.com' })).toHaveAttribute(
+      'href',
+      'https://biblicalcounseling.com/'
+    )
     expect(screen.getByRole('link', { name: 'mcheyne-api' })).toHaveAttribute(
       'href',
       'https://github.com/speric/mcheyne-api/blob/master/plan.json'

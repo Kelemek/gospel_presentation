@@ -53,4 +53,37 @@ describe('GospelSection TextWithComaButtons', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Four Rules of Communication' })).toBeInTheDocument())
     expect(screen.getByText('Rule One - Be Honest')).toBeInTheDocument()
   })
+
+  it('renders external resource link cards after scripture cards in document order', () => {
+    const section = {
+      section: 1,
+      title: 'Counseling',
+      subsections: [
+        {
+          title: 'Anxiety',
+          content: 'Body text.',
+          scriptureReferences: [{ reference: 'Philippians 4:6-7' }],
+          externalResourceLinks: [
+            {
+              label: 'ACBC: Anxiety',
+              url: 'https://biblicalcounseling.com/topic/anxiety/',
+            },
+          ],
+        },
+      ],
+    }
+
+    render(<GospelSection section={section as any} onScriptureClick={() => {}} profileSlug="test" />)
+
+    const scripture = screen.getByRole('button', { name: 'Philippians 4:6-7' })
+    const external = screen.getByRole('link', { name: /ACBC: Anxiety/i })
+    expect(external).toHaveAttribute('href', 'https://biblicalcounseling.com/topic/anxiety/')
+    expect(external).toHaveAttribute('target', '_blank')
+    expect(external).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(external).toHaveAttribute('data-tour', 'external-resource-card')
+
+    const container = scripture.parentElement?.parentElement?.parentElement
+    expect(container).toContainElement(scripture)
+    expect(container).toContainElement(external)
+  })
 })

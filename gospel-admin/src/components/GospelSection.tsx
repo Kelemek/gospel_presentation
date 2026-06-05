@@ -1,6 +1,6 @@
 'use client'
 
-import { GospelSection as GospelSectionType, Subsection, NestedSubsection, ScriptureReference, QuestionAnswer, PROFILE_VALIDATION, SavedAnswer } from '@/lib/types'
+import { GospelSection as GospelSectionType, Subsection, NestedSubsection, ScriptureReference, ExternalResourceLink, QuestionAnswer, PROFILE_VALIDATION, SavedAnswer } from '@/lib/types'
 import ScriptureHoverModal from './ScriptureHoverModal'
 import ComaModal from './ComaModal'
 import FourRulesModal from './FourRulesModal'
@@ -129,14 +129,18 @@ interface GospelSectionProps {
   onHighlightMarkClick?: (highlightId: string) => void
 }
 
-interface ScriptureReferencesProps {
-  references: ScriptureReference[]
+interface SubsectionReferenceCardsProps {
+  scriptureReferences?: ScriptureReference[]
+  externalResourceLinks?: ExternalResourceLink[]
   onScriptureClick: ScriptureClickHandler
   anchorSectionId: string
   anchorSubsectionId: string
   versePins?: VersePinAnchoredEntry[]
   onRemoveVersePin?: VersePinRemoveHandler
 }
+
+const EXTERNAL_LINK_CARD_CLASSES =
+  'inline-flex items-center gap-1 px-4 py-2 text-base md:text-lg rounded-md transition-colors print-compact min-h-[44px] bg-teal-100 dark:bg-teal-900/40 hover:bg-teal-200 dark:hover:bg-teal-900/60 text-teal-900 dark:text-teal-100 border border-teal-200 dark:border-teal-700 hover:border-teal-300 dark:hover:border-teal-600'
 
 interface SubsectionProps {
   subsection: Subsection
@@ -166,15 +170,18 @@ interface NestedSubsectionProps {
   onHighlightMarkClick?: (highlightId: string) => void
 }
 
-function ScriptureReferences({
-  references,
+function SubsectionReferenceCards({
+  scriptureReferences,
+  externalResourceLinks,
   onScriptureClick,
   anchorSectionId,
   anchorSubsectionId,
   versePins,
   onRemoveVersePin,
-}: ScriptureReferencesProps) {
-  if (!references || references.length === 0) return null
+}: SubsectionReferenceCardsProps) {
+  const references = scriptureReferences ?? []
+  const links = externalResourceLinks ?? []
+  if (references.length === 0 && links.length === 0) return null
 
   return (
     <div className="mt-3 print-scripture">
@@ -224,6 +231,19 @@ function ScriptureReferences({
             </div>
           )
         })}
+        {links.map((link, index) => (
+          <a
+            key={`external-${index}-${link.url}`}
+            href={link.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-tour="external-resource-card"
+            className={EXTERNAL_LINK_CARD_CLASSES}
+          >
+            <span>{link.label}</span>
+            <span aria-hidden="true">↗</span>
+          </a>
+        ))}
       </div>
     </div>
   )
@@ -267,8 +287,10 @@ function Questions({ questions, profileSlug, savedAnswers = [], onScriptureClick
         })
       }
 
-      setAnswers(loadedAnswers)
-      setIsInitialized(true)
+      queueMicrotask(() => {
+        setAnswers(loadedAnswers)
+        setIsInitialized(true)
+      })
     }
   }, [isInitialized, questions, savedAnswers, storageKey])
 
@@ -564,16 +586,15 @@ function NestedSubsectionComponent({
             onHighlightMarkClick={onHighlightMarkClick}
           />
         </div>
-        {nestedSubsection.scriptureReferences && (
-          <ScriptureReferences 
-            references={nestedSubsection.scriptureReferences} 
-            onScriptureClick={onScriptureClick} 
-            anchorSectionId={sectionAnchorId}
-            anchorSubsectionId={nestedId}
-            versePins={versePins}
-            onRemoveVersePin={onRemoveVersePin}
-          />
-        )}
+        <SubsectionReferenceCards
+          scriptureReferences={nestedSubsection.scriptureReferences}
+          externalResourceLinks={nestedSubsection.externalResourceLinks}
+          onScriptureClick={onScriptureClick}
+          anchorSectionId={sectionAnchorId}
+          anchorSubsectionId={nestedId}
+          versePins={versePins}
+          onRemoveVersePin={onRemoveVersePin}
+        />
         {nestedSubsection.questions && (
           <Questions
             questions={nestedSubsection.questions}
@@ -648,16 +669,15 @@ function SubsectionComponent({
           </div>
         )}
       
-        {subsection.scriptureReferences && (
-          <ScriptureReferences 
-            references={subsection.scriptureReferences} 
-            onScriptureClick={onScriptureClick} 
-            anchorSectionId={sectionId}
-            anchorSubsectionId={subsectionId}
-            versePins={versePins}
-            onRemoveVersePin={onRemoveVersePin}
-          />
-        )}
+        <SubsectionReferenceCards
+          scriptureReferences={subsection.scriptureReferences}
+          externalResourceLinks={subsection.externalResourceLinks}
+          onScriptureClick={onScriptureClick}
+          anchorSectionId={sectionId}
+          anchorSubsectionId={subsectionId}
+          versePins={versePins}
+          onRemoveVersePin={onRemoveVersePin}
+        />
       
       {subsection.questions && (
         <Questions

@@ -36,6 +36,30 @@ describe('passageKeysFromGospelData', () => {
     expect(raw).toEqual(expect.arrayContaining(['Romans 8:28', 'John 3:16', 'Psalm 23:1', 'Ephesians 2:8']))
   })
 
+  it('ignores externalResourceLinks (not scripture index keys)', () => {
+    const data: GospelPresentationData = [
+      {
+        section: 'counsel',
+        title: 'Counseling',
+        subsections: [
+          {
+            title: 'Topic',
+            content: '<p>No inline refs.</p>',
+            externalResourceLinks: [
+              {
+                label: 'ACBC topic',
+                url: 'https://biblicalcounseling.com/topic/worry/',
+              },
+            ],
+          },
+        ],
+      },
+    ]
+    const raw = collectReferenceStringsFromGospelData(data)
+    expect(raw).toEqual([])
+    expect(passageKeysFromGospelPresentationData(data)).toEqual([])
+  })
+
   it('passageKeysFromGospelPresentationData returns canonical USFM keys', () => {
     const data: GospelPresentationData = [
       {
