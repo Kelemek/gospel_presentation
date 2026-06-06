@@ -1,8 +1,37 @@
 import {
+  applyStickyHeaderVisualViewportTop,
   getSafeAreaInsetsPx,
   scrollToTocAnchor,
   scrollToTocAnchorWhenReady,
+  STICKY_HEADER_KEYBOARD_OFFSET_VAR,
 } from '../scrollToTocAnchor'
+
+describe('applyStickyHeaderVisualViewportTop', () => {
+  const offsetVar = STICKY_HEADER_KEYBOARD_OFFSET_VAR
+
+  it('pins the header to the rounded visual viewport offset (keyboard open on iOS)', () => {
+    const header = document.createElement('div')
+    const applied = applyStickyHeaderVisualViewportTop(header, { offsetTop: 137.6 })
+    expect(applied).toBe(138)
+    expect(header.style.getPropertyValue(offsetVar)).toBe('138px')
+  })
+
+  it('falls back to zero offset when there is no offset or viewport', () => {
+    const header = document.createElement('div')
+    expect(applyStickyHeaderVisualViewportTop(header, { offsetTop: 0 })).toBe(0)
+    expect(header.style.getPropertyValue(offsetVar)).toBe('0px')
+
+    const header2 = document.createElement('div')
+    expect(applyStickyHeaderVisualViewportTop(header2, null)).toBe(0)
+    expect(header2.style.getPropertyValue(offsetVar)).toBe('0px')
+  })
+
+  it('clamps negative offsets to zero (rubber-band overscroll)', () => {
+    const header = document.createElement('div')
+    expect(applyStickyHeaderVisualViewportTop(header, { offsetTop: -42 })).toBe(0)
+    expect(header.style.getPropertyValue(offsetVar)).toBe('0px')
+  })
+})
 
 describe('scrollToTocAnchor', () => {
   beforeEach(() => {

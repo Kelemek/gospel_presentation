@@ -51,6 +51,25 @@ export function getSafeAreaInsetTop(): number {
   return getSafeAreaInsetsPx().top
 }
 
+/** CSS custom property the sticky header's `top: calc(...)` adds on top of the safe-area inset. */
+export const STICKY_HEADER_KEYBOARD_OFFSET_VAR = '--profile-sticky-kbd-offset'
+
+/**
+ * iOS-only sticky-header pin: `position: sticky` anchors to the *layout* viewport, which desyncs
+ * from the *visual* viewport when the on-screen keyboard opens (the header slides above the visible
+ * area). Write `visualViewport.offsetTop` into the header's keyboard-offset CSS variable so its
+ * `top: calc(env(safe-area-inset-top) + var(...))` keeps it at the top of the visible area. Returns
+ * the applied offset (px). Safe with a null/partial viewport.
+ */
+export function applyStickyHeaderVisualViewportTop(
+  header: HTMLElement,
+  viewport: { offsetTop: number } | null | undefined
+): number {
+  const offsetTop = Math.max(0, Math.round(viewport?.offsetTop ?? 0))
+  header.style.setProperty(STICKY_HEADER_KEYBOARD_OFFSET_VAR, `${offsetTop}px`)
+  return offsetTop
+}
+
 /** Pixel offset from top of viewport for scroll targets (sticky header + safe area). */
 export function getProfileHeaderScrollOffset(): number {
   if (typeof document === 'undefined') return FALLBACK_HEADER_OFFSET
