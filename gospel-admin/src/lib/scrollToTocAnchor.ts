@@ -60,23 +60,68 @@ export const SAFE_AREA_BAR_OFFSET_VAR = '--profile-safe-area-bar-offset'
 /** Set when the profile sticky header is pinned at its sticky `top` (site title scrolled away). */
 export const STICKY_HEADER_GAP_FILL_ATTR = 'data-sticky-header-gap-fill'
 
+/** iOS search keyboard: header uses fixed positioning instead of sticky (avoids sticky + top fighting). */
+export const STICKY_HEADER_KEYBOARD_FIXED_ATTR = 'data-sticky-header-keyboard-fixed'
+
+export const STICKY_HEADER_SPACER_ATTR = 'data-profile-sticky-header-spacer'
+
 /** Tracks last applied keyboard offset so we skip redundant style writes (reduces iOS scroll jitter). */
 const STICKY_HEADER_APPLIED_OFFSET_ATTR = 'data-profile-sticky-kbd-offset-applied'
 
-const GAP_FILL_PIN_THRESHOLD_PX = 4
-const GAP_FILL_UNPIN_THRESHOLD_PX = 12
+function ensureIosKeyboardHeaderSpacer(header: HTMLElement): HTMLDivElement {
+  const prev = header.previousElementSibling
+  if (prev instanceof HTMLElement && prev.hasAttribute(STICKY_HEADER_SPACER_ATTR)) {
+    return prev
+  }
+  const spacer = document.createElement('div')
+  spacer.setAttribute(STICKY_HEADER_SPACER_ATTR, '')
+  spacer.setAttribute('aria-hidden', 'true')
+  header.parentElement?.insertBefore(spacer, header)
+  return spacer
+}
+
+function updateIosKeyboardHeaderSpacer(header: HTMLElement): void {
+  const spacer = ensureIosKeyboardHeaderSpacer(header)
+  spacer.style.height = `${header.offsetHeight}px`
+}
+
+/** Sticky + live `top` updates fight on iOS when the keyboard is open; use fixed for search instead. */
+function ensureIosKeyboardHeaderFixed(header: HTMLElement): void {
+  if (header.hasAttribute(STICKY_HEADER_KEYBOARD_FIXED_ATTR)) return
+  updateIosKeyboardHeaderSpacer(header)
+  header.setAttribute(STICKY_HEADER_KEYBOARD_FIXED_ATTR, '')
+  header.style.position = 'fixed'
+  header.style.left = '0'
+  header.style.right = '0'
+  header.style.width = '100%'
+}
+
+function releaseIosKeyboardHeaderFixed(header: HTMLElement): void {
+  if (!header.hasAttribute(STICKY_HEADER_KEYBOARD_FIXED_ATTR)) return
+  header.removeAttribute(STICKY_HEADER_KEYBOARD_FIXED_ATTR)
+  header.style.removeProperty('position')
+  header.style.removeProperty('left')
+  header.style.removeProperty('right')
+  header.style.removeProperty('width')
+  const prev = header.previousElementSibling
+  if (prev instanceof HTMLElement && prev.hasAttribute(STICKY_HEADER_SPACER_ATTR)) {
+    prev.remove()
+  }
+}
 
 /**
- * iOS-only sticky-header pin: `position: sticky` anchors to the *layout* viewport, which desyncs
- * from the *visual* viewport when the on-screen keyboard opens (the header slides above the visible
- * area). Write `visualViewport.offsetTop` into CSS variables so the sticky header and the fixed
- * safe-area bar track the visible top. Returns the applied offset (px).
+ * iOS-only search keyboard pin: switch the profile header to `position: fixed` and track
+ * `visualViewport.offsetTop` so it stays at the top of the visible area above the keyboard.
  */
 export function applyStickyHeaderVisualViewportTop(
   header: HTMLElement,
   viewport: { offsetTop: number } | null | undefined
 ): number {
   const offsetTop = Math.max(0, Math.round(viewport?.offsetTop ?? 0))
+
+  ensureIosKeyboardHeaderFixed(header)
+  updateIosKeyboardHeaderSpacer(header)
+
   const previous = header.getAttribute(STICKY_HEADER_APPLIED_OFFSET_ATTR)
   if (previous === String(offsetTop)) {
     return offsetTop
@@ -84,23 +129,12 @@ export function applyStickyHeaderVisualViewportTop(
   header.setAttribute(STICKY_HEADER_APPLIED_OFFSET_ATTR, String(offsetTop))
 
   header.style.setProperty(STICKY_HEADER_KEYBOARD_OFFSET_VAR, `${offsetTop}px`)
-  // Inline `top` on iOS only (see syncProfileIosVisualViewportChrome). Do not bake the keyboard
-  // offset into the shared Tailwind class — `calc` + CSS variables in `position: sticky` breaks
-  // stickiness on desktop and Android.
   header.style.top = `calc(env(safe-area-inset-top, 0px) + ${offsetTop}px)`
   document.body?.style.setProperty(SAFE_AREA_BAR_OFFSET_VAR, `${offsetTop}px`)
 
-  if (offsetTop <= 0) {
-    header.removeAttribute(STICKY_HEADER_GAP_FILL_ATTR)
-    return offsetTop
-  }
-
-  const expectedTop = getSafeAreaInsetTop() + offsetTop
-  const delta = Math.abs(header.getBoundingClientRect().top - expectedTop)
-  const hasGapFill = header.hasAttribute(STICKY_HEADER_GAP_FILL_ATTR)
-  if (!hasGapFill && delta <= GAP_FILL_PIN_THRESHOLD_PX) {
+  if (offsetTop > 0) {
     header.setAttribute(STICKY_HEADER_GAP_FILL_ATTR, '')
-  } else if (hasGapFill && delta > GAP_FILL_UNPIN_THRESHOLD_PX) {
+  } else {
     header.removeAttribute(STICKY_HEADER_GAP_FILL_ATTR)
   }
 
@@ -110,6 +144,7 @@ export function applyStickyHeaderVisualViewportTop(
 /** Clears iOS visual-viewport chrome offsets (ProfileContent effect cleanup). */
 export function clearProfileIosVisualViewportChrome(header: HTMLElement | null | undefined): void {
   if (header) {
+    releaseIosKeyboardHeaderFixed(header)
     header.style.removeProperty(STICKY_HEADER_KEYBOARD_OFFSET_VAR)
     header.style.removeProperty('top')
     header.removeAttribute(STICKY_HEADER_GAP_FILL_ATTR)

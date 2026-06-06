@@ -6,7 +6,9 @@ import {
   scrollToTocAnchorWhenReady,
   SAFE_AREA_BAR_OFFSET_VAR,
   STICKY_HEADER_GAP_FILL_ATTR,
+  STICKY_HEADER_KEYBOARD_FIXED_ATTR,
   STICKY_HEADER_KEYBOARD_OFFSET_VAR,
+  STICKY_HEADER_SPACER_ATTR,
   syncProfileIosVisualViewportChrome,
 } from '../scrollToTocAnchor'
 
@@ -20,30 +22,28 @@ describe('applyStickyHeaderVisualViewportTop', () => {
 
   it('pins the header to the rounded visual viewport offset (keyboard open on iOS)', () => {
     const header = document.createElement('div')
+    document.body.appendChild(header)
     const applied = applyStickyHeaderVisualViewportTop(header, { offsetTop: 137.6 })
     expect(applied).toBe(138)
     expect(header.style.getPropertyValue(offsetVar)).toBe('138px')
     expect(header.style.top).toContain('138px')
     expect(document.body.style.getPropertyValue(SAFE_AREA_BAR_OFFSET_VAR)).toBe('138px')
-    expect(header.hasAttribute(STICKY_HEADER_GAP_FILL_ATTR)).toBe(false)
+    expect(header.hasAttribute(STICKY_HEADER_GAP_FILL_ATTR)).toBe(true)
+    expect(header.hasAttribute(STICKY_HEADER_KEYBOARD_FIXED_ATTR)).toBe(true)
   })
 
-  it('enables gap fill only when the header is pinned and the keyboard offset is nonzero', () => {
+  it('enables gap fill when the keyboard offset is nonzero (fixed header mode)', () => {
     const header = document.createElement('div')
-    jest.spyOn(header, 'getBoundingClientRect').mockReturnValue({
-      top: 138,
-      left: 0,
-      right: 0,
-      bottom: 200,
-      width: 0,
-      height: 62,
-      x: 0,
-      y: 138,
-      toJSON: () => ({}),
-    })
+    document.body.appendChild(header)
 
     applyStickyHeaderVisualViewportTop(header, { offsetTop: 138 })
+
+    expect(header.hasAttribute(STICKY_HEADER_KEYBOARD_FIXED_ATTR)).toBe(true)
+    expect(header.style.position).toBe('fixed')
     expect(header.hasAttribute(STICKY_HEADER_GAP_FILL_ATTR)).toBe(true)
+    const spacer = header.previousElementSibling
+    expect(spacer).toBeInstanceOf(HTMLElement)
+    expect(spacer?.getAttribute(STICKY_HEADER_SPACER_ATTR)).toBe('')
 
     applyStickyHeaderVisualViewportTop(header, { offsetTop: 0 })
     expect(header.hasAttribute(STICKY_HEADER_GAP_FILL_ATTR)).toBe(false)
@@ -51,26 +51,27 @@ describe('applyStickyHeaderVisualViewportTop', () => {
 
   it('applyStickyHeaderVisualViewportTop skips redundant style writes when offset is unchanged', () => {
     const header = document.createElement('div')
-    const rectSpy = jest.spyOn(header, 'getBoundingClientRect').mockReturnValue({
-      top: 88,
-      left: 0,
-      right: 0,
-      bottom: 150,
-      width: 0,
-      height: 62,
-      x: 0,
-      y: 88,
-      toJSON: () => ({}),
-    })
+    document.body.appendChild(header)
+    Object.defineProperty(header, 'offsetHeight', { configurable: true, value: 120 })
 
     applyStickyHeaderVisualViewportTop(header, { offsetTop: 88 })
-    rectSpy.mockClear()
     header.style.setProperty = jest.fn(header.style.setProperty.bind(header.style))
 
     applyStickyHeaderVisualViewportTop(header, { offsetTop: 88 })
 
-    expect(rectSpy).not.toHaveBeenCalled()
     expect(header.style.setProperty).not.toHaveBeenCalled()
+  })
+
+  it('clearProfileIosVisualViewportChrome releases fixed header mode and spacer', () => {
+    const header = document.createElement('div')
+    document.body.appendChild(header)
+    applyStickyHeaderVisualViewportTop(header, { offsetTop: 50 })
+
+    clearProfileIosVisualViewportChrome(header)
+
+    expect(header.hasAttribute(STICKY_HEADER_KEYBOARD_FIXED_ATTR)).toBe(false)
+    expect(header.style.position).toBe('')
+    expect(header.previousElementSibling).toBeNull()
   })
 
   it('falls back to zero offset when there is no offset or viewport', () => {

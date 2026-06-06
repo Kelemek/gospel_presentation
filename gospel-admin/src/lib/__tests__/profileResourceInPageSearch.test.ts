@@ -153,9 +153,9 @@ describe('profileResourceInPageSearch', () => {
 
     scrollProfileResourceSearchToMark(mark)
 
-    // iOS uses scrollIntoView + scroll-margin-top (keeps position:sticky pinned with keyboard open),
-    // never window.scrollTo, and never blurs the input (keyboard stays for search-as-you-type).
-    expect(scrollIntoViewSpy).toHaveBeenCalledWith({ block: 'start', behavior: 'smooth' })
+    // iOS uses scrollIntoView + scroll-margin-top; instant scroll while keyboard is open (smooth +
+    // visualViewport tracking caused jitter). Never window.scrollTo; never blurs the input.
+    expect(scrollIntoViewSpy).toHaveBeenCalledWith({ block: 'start', behavior: 'auto' })
     expect(mark.style.scrollMarginTop).toBe(`${120 + RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX}px`)
     expect(scrollSpy).not.toHaveBeenCalled()
     expect(blurSpy).not.toHaveBeenCalled()
