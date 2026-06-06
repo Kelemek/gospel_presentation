@@ -10,7 +10,7 @@
 import { gunzipSync } from 'zlib'
 
 import dotenv from 'dotenv'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 import { normalizeAcbcSectionTitleKey } from '../src/lib/acbc/acbcCuratedScriptureRefs'
 import { mergeScriptureReferenceLists } from '../src/lib/acbc/acbcScriptureIndexSync'
@@ -30,10 +30,7 @@ const BACKUP_SECTION_TITLE_ALIASES: Record<string, string> = {
 
 const BUCKET = 'db-backups'
 
-async function downloadText(
-  sb: ReturnType<typeof createClient>,
-  objectPath: string
-): Promise<string> {
+async function downloadText(sb: SupabaseClient, objectPath: string): Promise<string> {
   const { data, error } = await sb.storage.from(BUCKET).download(objectPath)
   if (error || !data) throw new Error(`download ${objectPath}: ${error?.message ?? 'unknown'}`)
   const buf = Buffer.from(await data.arrayBuffer())
@@ -41,7 +38,7 @@ async function downloadText(
 }
 
 async function loadProfileFromLatestFullBackup(
-  sb: ReturnType<typeof createClient>,
+  sb: SupabaseClient,
   slug: string
 ): Promise<{ gospelData: GospelSection[]; manifestPath: string }> {
   const pointer = JSON.parse(await downloadText(sb, 'latest/latest-backup.json')) as {
