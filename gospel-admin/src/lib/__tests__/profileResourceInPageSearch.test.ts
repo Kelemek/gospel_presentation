@@ -121,7 +121,7 @@ describe('profileResourceInPageSearch', () => {
     scrollSpy.mockRestore()
   })
 
-  it('scrollProfileResourceSearchToMark uses scrollIntoView on iOS so the sticky header stays pinned', () => {
+  it('scrollProfileResourceSearchToMark uses window.scrollTo on iOS (same path as Android/desktop)', () => {
     mockIsMemorizeIosWebHost.mockReturnValue(true)
     mockStickyHeaderBottom(120)
 
@@ -129,7 +129,6 @@ describe('profileResourceInPageSearch', () => {
     input.setAttribute('aria-label', 'Search in resource')
     document.body.appendChild(input)
     input.focus()
-    const blurSpy = jest.spyOn(input, 'blur')
 
     const mark = document.createElement('mark')
     document.body.appendChild(mark)
@@ -144,6 +143,7 @@ describe('profileResourceInPageSearch', () => {
       y: 600,
       toJSON: () => ({}),
     })
+    Object.defineProperty(window, 'scrollY', { value: 100, configurable: true, writable: true })
     Object.defineProperty(window, 'visualViewport', {
       configurable: true,
       value: { offsetTop: 0, height: 500, width: 390, scale: 1 },
@@ -153,16 +153,16 @@ describe('profileResourceInPageSearch', () => {
 
     scrollProfileResourceSearchToMark(mark)
 
-    // iOS uses scrollIntoView + scroll-margin-top; instant scroll while keyboard is open (smooth +
-    // visualViewport tracking caused jitter). Never window.scrollTo; never blurs the input.
-    expect(scrollIntoViewSpy).toHaveBeenCalledWith({ block: 'start', behavior: 'auto' })
-    expect(mark.style.scrollMarginTop).toBe(`${120 + RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX}px`)
-    expect(scrollSpy).not.toHaveBeenCalled()
-    expect(blurSpy).not.toHaveBeenCalled()
+    expect(scrollSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        top: 100 + 600 - (120 + RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX),
+        behavior: 'smooth',
+      })
+    )
+    expect(scrollIntoViewSpy).not.toHaveBeenCalled()
 
     scrollIntoViewSpy.mockRestore()
     scrollSpy.mockRestore()
-    blurSpy.mockRestore()
   })
 
   it('scrollProfileResourceSearchToMark skips scroll on iOS when the match is already visible', () => {

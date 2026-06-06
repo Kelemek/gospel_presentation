@@ -1,6 +1,5 @@
 import { coerceHighlightMarkBlockChildren } from '@/lib/coerceHighlightMarkBlockChildren'
 import { isWithinButton, isWithinGospelMount } from '@/lib/profileHighlightVisibleText'
-import { isMemorizeIosWebHost } from '@/lib/memorizationViewportPlatform'
 import { getProfileHeaderScrollOffset } from '@/lib/scrollToTocAnchor'
 
 export const RESOURCE_SEARCH_MATCH_ATTR = 'data-resource-search-match'
@@ -348,14 +347,6 @@ function scrollProfileResourceSearchMarkIntoView(
   offset: number,
   behavior: ScrollBehavior
 ): void {
-  if (isMemorizeIosWebHost()) {
-    // iOS Safari / WKWebView: `scrollIntoView` + `scroll-margin-top` keeps `position: sticky` pinned
-    // even while the keyboard is open. `window.scrollTo` detaches the sticky header on iOS until the
-    // next manual scroll (the "menu scrolls off, then comes back" bug). Android/desktop use scrollTo.
-    mark.style.scrollMarginTop = `${offset}px`
-    mark.scrollIntoView({ block: 'start', behavior })
-    return
-  }
   const top = Math.max(0, mark.getBoundingClientRect().top + window.scrollY - offset)
   window.scrollTo({ top, behavior })
 }
@@ -367,11 +358,7 @@ export function scrollProfileResourceSearchToMark(mark: HTMLElement | null | und
   // Already visible below the header and above the keyboard: don't scroll (avoids per-keystroke jitter).
   if (isProfileResourceSearchMarkInComfortZone(mark, offset)) return
 
-  const behavior =
-    prefersReducedMotionResourceSearch() ||
-    (isMemorizeIosWebHost() && isProfileResourceSearchInputFocused())
-      ? 'auto'
-      : 'smooth'
+  const behavior = prefersReducedMotionResourceSearch() ? 'auto' : 'smooth'
   scrollProfileResourceSearchMarkIntoView(mark, offset, behavior)
 }
 

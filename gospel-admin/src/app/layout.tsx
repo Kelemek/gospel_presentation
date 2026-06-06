@@ -30,6 +30,9 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover", // Enables safe-area-inset-* for Capacitor/iOS notch
+  // Resize the layout viewport when the virtual keyboard opens (same as Android Chrome).
+  // iOS default overlays the keyboard, which desyncs `position: sticky` from the visible area.
+  interactiveWidget: "resizes-content",
 };
 
 export const metadata: Metadata = {
