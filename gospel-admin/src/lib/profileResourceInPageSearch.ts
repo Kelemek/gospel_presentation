@@ -315,15 +315,42 @@ export function prefersReducedMotionResourceSearch(): boolean {
 
 const RESOURCE_SEARCH_INPUT_LABEL = 'Search in resource'
 
-function dismissIosSearchKeyboardForScroll(): void {
-  if (!isMemorizeIosWebHost()) return
+function isIosResourceSearchInputFocused(): boolean {
+  if (!isMemorizeIosWebHost()) return false
   const active = document.activeElement
-  if (
+  return (
     active instanceof HTMLInputElement &&
     active.getAttribute('aria-label') === RESOURCE_SEARCH_INPUT_LABEL
-  ) {
-    active.blur()
-  }
+  )
+}
+
+function dismissIosSearchKeyboardForScroll(): void {
+  if (!isIosResourceSearchInputFocused()) return
+  ;(document.activeElement as HTMLInputElement).blur()
+}
+
+/** True when the mark sits below the sticky header and above the keyboard (iOS visual viewport). */
+export function isProfileResourceSearchMarkInComfortZone(
+  mark: HTMLElement,
+  headerOffsetPx: number
+): boolean {
+  const rect = mark.getBoundingClientRect()
+  const vv = typeof window !== 'undefined' ? window.visualViewport : null
+  const viewBottom = vv
+    ? vv.offsetTop + vv.height - RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX
+    : typeof window !== 'undefined'
+      ? window.innerHeight
+      : 0
+  return rect.top >= headerOffsetPx && rect.bottom <= viewBottom
+}
+
+function scrollMarkBelowProfileHeaderWithWindowScroll(
+  mark: HTMLElement,
+  offset: number,
+  behavior: ScrollBehavior
+): void {
+  const top = Math.max(0, mark.getBoundingClientRect().top + window.scrollY - offset)
+  window.scrollTo({ top, behavior })
 }
 
 function scrollProfileResourceSearchMarkIntoView(
@@ -331,14 +358,14 @@ function scrollProfileResourceSearchMarkIntoView(
   offset: number,
   behavior: ScrollBehavior
 ): void {
-  if (isMemorizeIosWebHost()) {
-    // WebKit: scroll-margin + scrollIntoView keeps sticky chrome pinned more reliably than window.scrollTo.
+  if (isMemorizeIosWebHost() && !isIosResourceSearchInputFocused()) {
+    // Keyboard down: scroll-margin + scrollIntoView keeps sticky chrome pinned on WebKit.
     mark.style.scrollMarginTop = `${offset}px`
     mark.scrollIntoView({ block: 'start', behavior })
     return
   }
-  const top = Math.max(0, mark.getBoundingClientRect().top + window.scrollY - offset)
-  window.scrollTo({ top, behavior })
+  // Android, desktop, and iOS while typing: scrollIntoView fights sticky + IME (see memorization scroll).
+  scrollMarkBelowProfileHeaderWithWindowScroll(mark, offset, behavior)
 }
 
 export type ScrollProfileResourceSearchToMarkOptions = {
@@ -355,7 +382,11 @@ export function scrollProfileResourceSearchToMark(
   const behavior =
     prefersReducedMotionResourceSearch() || isMemorizeIosWebHost() ? 'auto' : 'smooth'
 
-  const performScroll = () => scrollProfileResourceSearchMarkIntoView(mark, offset, behavior)
+  const needsScroll = !isProfileResourceSearchMarkInComfortZone(mark, offset)
+  const performScroll = () => {
+    if (!needsScroll) return
+    scrollProfileResourceSearchMarkIntoView(mark, offset, behavior)
+  }
 
   if (isMemorizeIosWebHost() && options?.dismissKeyboard) {
     dismissIosSearchKeyboardForScroll()
@@ -364,6 +395,8 @@ export function scrollProfileResourceSearchToMark(
     })
     return
   }
+
+  if (!needsScroll) return
 
   performScroll()
 }
