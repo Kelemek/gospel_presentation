@@ -121,7 +121,7 @@ describe('profileResourceInPageSearch', () => {
     scrollSpy.mockRestore()
   })
 
-  it('scrollProfileResourceSearchToMark uses window.scrollTo on iOS (same path as Android/desktop)', () => {
+  it('scrollProfileResourceSearchToMark uses instant window.scrollTo on iOS when search input is focused', () => {
     mockIsMemorizeIosWebHost.mockReturnValue(true)
     mockStickyHeaderBottom(120)
 
@@ -156,7 +156,7 @@ describe('profileResourceInPageSearch', () => {
     expect(scrollSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         top: 100 + 600 - (120 + RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX),
-        behavior: 'smooth',
+        behavior: 'auto',
       })
     )
     expect(scrollIntoViewSpy).not.toHaveBeenCalled()

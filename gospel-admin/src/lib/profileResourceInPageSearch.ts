@@ -1,5 +1,6 @@
 import { coerceHighlightMarkBlockChildren } from '@/lib/coerceHighlightMarkBlockChildren'
 import { isWithinButton, isWithinGospelMount } from '@/lib/profileHighlightVisibleText'
+import { isMemorizeIosWebHost } from '@/lib/memorizationViewportPlatform'
 import { getProfileHeaderScrollOffset } from '@/lib/scrollToTocAnchor'
 
 export const RESOURCE_SEARCH_MATCH_ATTR = 'data-resource-search-match'
@@ -358,7 +359,12 @@ export function scrollProfileResourceSearchToMark(mark: HTMLElement | null | und
   // Already visible below the header and above the keyboard: don't scroll (avoids per-keystroke jitter).
   if (isProfileResourceSearchMarkInComfortZone(mark, offset)) return
 
-  const behavior = prefersReducedMotionResourceSearch() ? 'auto' : 'smooth'
+  // Instant scroll on iOS while the keyboard is open: smooth scroll + visualViewport sync caused jitter.
+  const behavior =
+    prefersReducedMotionResourceSearch() ||
+    (isMemorizeIosWebHost() && isProfileResourceSearchInputFocused())
+      ? 'auto'
+      : 'smooth'
   scrollProfileResourceSearchMarkIntoView(mark, offset, behavior)
 }
 
