@@ -1,13 +1,26 @@
 import fs from 'fs'
 import path from 'path'
 
-import type { ExternalResourceLink, GospelSection } from '@/lib/types'
+import type { ExternalResourceLink, GospelSection, ScriptureReference } from '@/lib/types'
 
 import { renumberGospelSections } from '@/lib/gospelDataSections'
 
 import {
+  curatedScriptureRefsForSectionTitle,
+  loadCuratedAcbcScriptureRefsBySection,
+} from './acbcCuratedScriptureRefs'
+import {
+  buildAcbcArticleScriptureIndexFromScriptureIndex,
+  mergeAcbcArticleScriptureIndexMaps,
+  mergeScriptureReferenceLists,
+  parseAcbcResourceCardScriptureRefsFromHtml,
+  scriptureReferencesForAcbcExternalLinks,
+} from './acbcScriptureIndexSync'
+import {
   ACBC_TOPICS_TO_ADD_AS_SECTIONS,
   findAcbcSlugsForSectionTitle,
+  isAcbcExcludedSectionTitle,
+  removeExcludedAcbcSections,
   sectionTitleForAcbcTopic,
 } from './acbcTopicCatalog'
 
@@ -17,6 +30,7 @@ export type AcbcSyncSectionResult = {
   title: string
   status: string
   count: number
+  scriptureCount?: number
   added?: number
   removed?: number
 }
@@ -28,6 +42,15 @@ export type AcbcSyncOptions = {
   missingOnly?: boolean
   onlySections?: string[] | null
   curatedElectionPath?: string
+  /** When true (default), populate scripture cards from ACBC scripture index + topic card subtitles. */
+  syncScriptureRefs?: boolean
+  /** Pre-built article URL → refs map (tests); built from scripture index when omitted. */
+  articleScriptureIndex?: Map<string, string[]>
+  /** Section title → curated key passages (tests); loaded from admin backup when omitted. */
+  curatedScriptureRefsBySection?: Map<string, ScriptureReference[]>
+  curatedScriptureRefsPath?: string
+  /** When false, skip fetching ACBC article bodies for scripture-index book matches. Default true. */
+  scrapeAcbcArticleBodies?: boolean
 }
 
 const DEFAULT_CURATED_ELECTION_PATH = path.join(
@@ -98,11 +121,19 @@ export async function fetchAcbcTopicPageHtml(slug: string): Promise<string> {
   return res.text()
 }
 
-export async function fetchAcbcLinksForSlugs(slugs: string[]): Promise<ExternalResourceLink[]> {
+export type AcbcTopicLinksFetchResult = {
+  links: ExternalResourceLink[]
+  topicPageScriptureRefs: Map<string, string[]>
+}
+
+export async function fetchAcbcLinksForSlugs(slugs: string[]): Promise<AcbcTopicLinksFetchResult> {
   const seen = new Set<string>()
   const merged: ExternalResourceLink[] = []
+  const topicPageScriptureRefs: Map<string, string[]>[] = []
+
   for (const slug of slugs) {
     const html = await fetchAcbcTopicPageHtml(slug)
+    topicPageScriptureRefs.push(parseAcbcResourceCardScriptureRefsFromHtml(html))
     for (const link of parseAcbcResourceLinksFromHtml(html)) {
       const url = normalizeAcbcResourceUrl(link.url)
       if (seen.has(url)) continue
@@ -110,7 +141,11 @@ export async function fetchAcbcLinksForSlugs(slugs: string[]): Promise<ExternalR
       merged.push(link)
     }
   }
-  return merged
+
+  return {
+    links: merged,
+    topicPageScriptureRefs: mergeAcbcArticleScriptureIndexMaps(...topicPageScriptureRefs),
+  }
 }
 
 export function loadCuratedElectionLinks(filePath: string = DEFAULT_CURATED_ELECTION_PATH): ExternalResourceLink[] {
@@ -154,6 +189,7 @@ export function addMissingAcbcSections(gospelData: GospelSection[]): AddMissingS
 
   for (const topic of ACBC_TOPICS_TO_ADD_AS_SECTIONS) {
     const title = sectionTitleForAcbcTopic(topic)
+    if (isAcbcExcludedSectionTitle(title)) continue
     if (sectionTitleExists(gospelData, title)) {
       skipped.push(title)
       continue
@@ -177,9 +213,27 @@ export async function syncAcbcExternalLinksOnGospelData(
     missingOnly = false,
     onlySections = null,
     curatedElectionPath = DEFAULT_CURATED_ELECTION_PATH,
+    syncScriptureRefs = true,
+    articleScriptureIndex: providedArticleScriptureIndex,
+    curatedScriptureRefsBySection: providedCuratedScriptureRefsBySection,
+    curatedScriptureRefsPath,
+    scrapeAcbcArticleBodies = true,
   } = options
 
   const summary: AcbcSyncSectionResult[] = []
+  let articleScriptureIndex = providedArticleScriptureIndex
+  if (syncScriptureRefs && !articleScriptureIndex) {
+    articleScriptureIndex = await buildAcbcArticleScriptureIndexFromScriptureIndex({
+      scrapeArticleBodies: scrapeAcbcArticleBodies,
+    })
+  }
+  const curatedScriptureRefsBySection =
+    providedCuratedScriptureRefsBySection ??
+    (syncScriptureRefs
+      ? loadCuratedAcbcScriptureRefsBySection(curatedScriptureRefsPath)
+      : new Map())
+
+  removeExcludedAcbcSections(gospelData)
 
   for (const section of gospelData) {
     const title = (section.title || '').trim()
@@ -229,10 +283,14 @@ export async function syncAcbcExternalLinksOnGospelData(
     let added = 0
     let removed = 0
 
+    let topicPageScriptureRefs = new Map<string, string[]>()
+
     if (mapping === 'curated') {
       links = loadCuratedElectionLinks(curatedElectionPath)
     } else {
-      links = await fetchAcbcLinksForSlugs(mapping)
+      const fetched = await fetchAcbcLinksForSlugs(mapping)
+      topicPageScriptureRefs = fetched.topicPageScriptureRefs
+      links = fetched.links
       if (reconcile || missingOnly) {
         const diff = reconcileExternalResourceLinks(existing, links)
         links = diff.links
@@ -241,11 +299,29 @@ export async function syncAcbcExternalLinksOnGospelData(
       }
     }
 
+    const existingScriptureRefs = sub.scriptureReferences
     sub.externalResourceLinks = links
+
+    if (syncScriptureRefs && articleScriptureIndex) {
+      const mergedIndex = mergeAcbcArticleScriptureIndexMaps(
+        articleScriptureIndex,
+        topicPageScriptureRefs
+      )
+      const acbcDerived = scriptureReferencesForAcbcExternalLinks(links, mergedIndex)
+      const curated = curatedScriptureRefsForSectionTitle(curatedScriptureRefsBySection, title)
+      // Keep all existing scripture cards when links reconcile away; ACBC-derived refs only add.
+      sub.scriptureReferences = mergeScriptureReferenceLists(
+        curated,
+        existingScriptureRefs,
+        acbcDerived
+      )
+    }
+
     summary.push({
       title,
       status: reconcile && mapping !== 'curated' ? 'reconciled' : 'updated',
       count: links.length,
+      scriptureCount: syncScriptureRefs ? (sub.scriptureReferences?.length ?? 0) : undefined,
       added: mapping !== 'curated' ? added : undefined,
       removed: mapping !== 'curated' ? removed : undefined,
     })

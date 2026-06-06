@@ -8,6 +8,7 @@
  *   npm run sync-acbc-links -- --slug 26b974ef --dry-run
  *   npm run sync-acbc-links -- --missing-only
  *   npm run sync-acbc-links -- --only "Abuse,Church"
+ *   npm run sync-acbc-links -- --skip-scripture
  */
 import dotenv from 'dotenv'
 import { createClient } from '@supabase/supabase-js'
@@ -25,6 +26,7 @@ const PROFILE_SLUG = args.includes('--slug') ? args[args.indexOf('--slug') + 1] 
 const DRY_RUN = args.includes('--dry-run')
 const RECONCILE = args.includes('--reconcile') || args.includes('--force')
 const MISSING_ONLY = args.includes('--missing-only')
+const SKIP_SCRIPTURE = args.includes('--skip-scripture')
 const ONLY_SECTIONS = args.includes('--only')
   ? args[args.indexOf('--only') + 1].split(',').map((s) => s.trim())
   : null
@@ -57,6 +59,7 @@ async function main() {
     reconcile: RECONCILE,
     missingOnly: MISSING_ONLY,
     onlySections: ONLY_SECTIONS,
+    syncScriptureRefs: !SKIP_SCRIPTURE,
   })
 
   if (!DRY_RUN) {
@@ -82,7 +85,9 @@ function printSummary(summary: AcbcSyncSectionResult[]) {
       row.added !== undefined || row.removed !== undefined
         ? ` (+${row.added ?? 0} / -${row.removed ?? 0})`
         : ''
-    console.log(`  ${row.title}: ${row.count} links${delta}`)
+    const scripture =
+      row.scriptureCount !== undefined ? `, ${row.scriptureCount} scripture cards` : ''
+    console.log(`  ${row.title}: ${row.count} links${scripture}${delta}`)
   }
 
   const noMapping = summary.filter((r) => r.status === 'skipped (no mapping)')

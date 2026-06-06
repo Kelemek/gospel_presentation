@@ -4,6 +4,7 @@ import {
   ACBC_EXTERNAL_RESOURCE_LINKS_ATTRIBUTION,
   ACBC_HOME_URL,
   ACBC_RESOURCE_LIBRARY_URL,
+  ACBC_SCRIPTURE_INDEX_URL,
   ACBC_TOPIC_INDEX_URL,
 } from '@/lib/acbcExternalLinksCopyrightAttribution'
 
@@ -19,6 +20,7 @@ describe('acbcExternalLinksCopyrightAttribution', () => {
     expect(ACBC_HOME_URL).toBe('https://biblicalcounseling.com/')
     expect(ACBC_RESOURCE_LIBRARY_URL).toMatch(/resource-library/)
     expect(ACBC_TOPIC_INDEX_URL).toMatch(/topic-index/)
+    expect(ACBC_SCRIPTURE_INDEX_URL).toMatch(/scripture-index/)
   })
 
   it('names ACBC in attribution title', () => {

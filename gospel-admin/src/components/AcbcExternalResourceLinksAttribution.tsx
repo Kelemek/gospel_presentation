@@ -20,6 +20,8 @@ export function AcbcExternalResourceLinksAttribution({ className = '' }: Props) 
     resourceLibraryHref,
     topicIndexLabel,
     topicIndexHref,
+    scriptureIndexLabel,
+    scriptureIndexHref,
     closing,
   } = ACBC_EXTERNAL_RESOURCE_LINKS_ATTRIBUTION
 
@@ -37,9 +39,13 @@ export function AcbcExternalResourceLinksAttribution({ className = '' }: Props) 
         <a href={resourceLibraryHref} target="_blank" rel="noopener noreferrer" className={linkClass}>
           {resourceLibraryLabel}
         </a>
-        , and{' '}
+        ,{' '}
         <a href={topicIndexHref} target="_blank" rel="noopener noreferrer" className={linkClass}>
           {topicIndexLabel}
+        </a>
+        , and{' '}
+        <a href={scriptureIndexHref} target="_blank" rel="noopener noreferrer" className={linkClass}>
+          {scriptureIndexLabel}
         </a>
         . {closing}
       </p>

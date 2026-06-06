@@ -1,3 +1,6 @@
+import { renumberGospelSections } from '@/lib/gospelDataSections'
+import type { GospelSection } from '@/lib/types'
+
 /** ACBC topic-index entry (slug on biblicalcounseling.com). */
 export type AcbcTopic = {
   slug: string
@@ -32,16 +35,12 @@ export const SECTION_TO_ACBC_SLUGS: Record<string, string[]> = {
   Church: ['church'],
   Communication: ['communication'],
   'Counseling methodology': ['counseling-methodology'],
-  'Counseling practice': ['counseling-practice'],
   Dating: ['dating'],
   'Death and dying': ['death-and-dying'],
   Discipleship: ['discipleship'],
   Emotions: ['emotions'],
   'Gender roles': ['gender-roles'],
-  'How to begin a counseling center': ['how-to-begin-a-counseling-center'],
   Illness: ['illness'],
-  Laziness: ['laziness'],
-  'Legal issues in counseling': ['legal-issues-in-counseling'],
   'Medical issues': ['medical-issues'],
   'Mental health': ['mental-health'],
   'Pastoral care': ['pastoral-care'],
@@ -57,6 +56,14 @@ export const SECTION_TO_ACBC_SLUGS: Record<string, string[]> = {
   Theology: ['theology'],
   'Typical issues': ['typical-issues'],
 }
+
+/** Profile sections omitted from ACBC sync and add-missing-sections (admin choice). */
+export const ACBC_EXCLUDED_SECTION_TITLES = [
+  'Laziness',
+  'Legal issues in counseling',
+  'How to begin a counseling center',
+  'Counseling practice',
+] as const
 
 /** Slugs already covered by an existing primary section (do not add a duplicate section). */
 export const ACBC_SLUGS_IN_COMPOSITE_SECTIONS_ONLY = new Set([
@@ -85,16 +92,12 @@ export const ACBC_TOPICS_TO_ADD_AS_SECTIONS: AcbcTopic[] = [
   { slug: 'church', label: 'Church' },
   { slug: 'communication', label: 'Communication' },
   { slug: 'counseling-methodology', label: 'Counseling methodology' },
-  { slug: 'counseling-practice', label: 'Counseling practice' },
   { slug: 'dating', label: 'Dating' },
   { slug: 'death-and-dying', label: 'Death and dying' },
   { slug: 'discipleship', label: 'Discipleship' },
   { slug: 'emotions', label: 'Emotions' },
   { slug: 'gender-roles', label: 'Gender roles' },
-  { slug: 'how-to-begin-a-counseling-center', label: 'How to begin a counseling center' },
   { slug: 'illness', label: 'Illness' },
-  { slug: 'laziness', label: 'Laziness' },
-  { slug: 'legal-issues-in-counseling', label: 'Legal issues in counseling' },
   { slug: 'medical-issues', label: 'Medical issues' },
   { slug: 'mental-health', label: 'Mental health' },
   { slug: 'pastoral-care', label: 'Pastoral care' },
@@ -122,9 +125,29 @@ export function sectionTitleForAcbcTopic(topic: AcbcTopic): string {
     .trim()
 }
 
+export function isAcbcExcludedSectionTitle(sectionTitle: string): boolean {
+  const lower = (sectionTitle || '').trim().toLowerCase()
+  if (!lower) return false
+  return ACBC_EXCLUDED_SECTION_TITLES.some((title) => title.toLowerCase() === lower)
+}
+
+/** Drop excluded sections from gospel_data (mutates array) and renumber when needed. */
+export function removeExcludedAcbcSections(gospelData: GospelSection[]): string[] {
+  const removed: string[] = []
+  for (let i = gospelData.length - 1; i >= 0; i--) {
+    const title = (gospelData[i].title || '').trim()
+    if (!isAcbcExcludedSectionTitle(title)) continue
+    removed.push(title)
+    gospelData.splice(i, 1)
+  }
+  if (removed.length > 0) renumberGospelSections(gospelData)
+  return [...removed].reverse()
+}
+
 export function findAcbcSlugsForSectionTitle(sectionTitle: string): string[] | 'curated' | null {
   const trimmed = (sectionTitle || '').trim()
   if (!trimmed) return null
+  if (isAcbcExcludedSectionTitle(trimmed)) return null
   if (trimmed.toLowerCase() === 'election') return 'curated'
 
   const exact = SECTION_TO_ACBC_SLUGS[trimmed]
