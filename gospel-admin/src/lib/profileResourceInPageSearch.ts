@@ -352,8 +352,7 @@ export function scrollProfileResourceSearchToMark(mark: HTMLElement | null | und
   // Already visible below the header and above the keyboard: don't scroll (avoids per-keystroke jitter).
   if (isProfileResourceSearchMarkInComfortZone(mark, offset)) return
 
-  const behavior =
-    prefersReducedMotionResourceSearch() || isMemorizeIosWebHost() ? 'auto' : 'smooth'
+  const behavior = prefersReducedMotionResourceSearch() ? 'auto' : 'smooth'
   scrollProfileResourceSearchMarkIntoView(mark, offset, behavior)
 }
 
