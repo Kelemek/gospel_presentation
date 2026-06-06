@@ -48,8 +48,18 @@ describe('scrollToTocAnchor', () => {
 
     const header = document.createElement('div')
     header.setAttribute('data-profile-sticky-header', '')
-    Object.defineProperty(header, 'offsetHeight', { value: 64, configurable: true })
     document.body.appendChild(header)
+    jest.spyOn(header, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      bottom: 64,
+      left: 0,
+      right: 0,
+      width: 0,
+      height: 64,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
 
     const result = scrollToTocAnchor('section-1-0', { behavior: 'auto', preferSubsectionTitle: true })
     expect(result).toBe(true)
@@ -78,8 +88,18 @@ describe('scrollToTocAnchor', () => {
 
     const header = document.createElement('div')
     header.setAttribute('data-profile-sticky-header', '')
-    Object.defineProperty(header, 'offsetHeight', { value: 64, configurable: true })
     document.body.appendChild(header)
+    jest.spyOn(header, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      bottom: 64,
+      left: 0,
+      right: 0,
+      width: 0,
+      height: 64,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })
 
     const result = scrollToTocAnchor('section-1-0', { behavior: 'auto' })
     expect(result).toBe(true)

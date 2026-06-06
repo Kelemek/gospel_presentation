@@ -1,5 +1,6 @@
 import { coerceHighlightMarkBlockChildren } from '@/lib/coerceHighlightMarkBlockChildren'
 import { isWithinButton, isWithinGospelMount } from '@/lib/profileHighlightVisibleText'
+import { isMemorizeIosWebHost } from '@/lib/memorizationViewportPlatform'
 import { getProfileHeaderScrollOffset } from '@/lib/scrollToTocAnchor'
 
 export const RESOURCE_SEARCH_MATCH_ATTR = 'data-resource-search-match'
@@ -312,12 +313,51 @@ export function prefersReducedMotionResourceSearch(): boolean {
   }
 }
 
+const RESOURCE_SEARCH_INPUT_LABEL = 'Search in resource'
+
+function dismissIosSearchKeyboardForScroll(): void {
+  if (!isMemorizeIosWebHost()) return
+  const active = document.activeElement
+  if (
+    active instanceof HTMLInputElement &&
+    active.getAttribute('aria-label') === RESOURCE_SEARCH_INPUT_LABEL
+  ) {
+    active.blur()
+  }
+}
+
+function scrollProfileResourceSearchMarkIntoView(
+  mark: HTMLElement,
+  offset: number,
+  behavior: ScrollBehavior
+): void {
+  if (isMemorizeIosWebHost()) {
+    // WebKit: scroll-margin + scrollIntoView keeps sticky chrome pinned more reliably than window.scrollTo.
+    mark.style.scrollMarginTop = `${offset}px`
+    mark.scrollIntoView({ block: 'start', behavior })
+    return
+  }
+  const top = Math.max(0, mark.getBoundingClientRect().top + window.scrollY - offset)
+  window.scrollTo({ top, behavior })
+}
+
 export function scrollProfileResourceSearchToMark(mark: HTMLElement | null | undefined): void {
   if (!mark || typeof window === 'undefined') return
   const offset = getProfileHeaderScrollOffset() + RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX
-  const behavior = prefersReducedMotionResourceSearch() ? 'auto' : 'smooth'
-  const top = Math.max(0, mark.getBoundingClientRect().top + window.scrollY - offset)
-  window.scrollTo({ top, behavior })
+  const behavior =
+    prefersReducedMotionResourceSearch() || isMemorizeIosWebHost() ? 'auto' : 'smooth'
+
+  const performScroll = () => scrollProfileResourceSearchMarkIntoView(mark, offset, behavior)
+
+  if (!isMemorizeIosWebHost()) {
+    performScroll()
+    return
+  }
+
+  dismissIosSearchKeyboardForScroll()
+  window.requestAnimationFrame(() => {
+    window.requestAnimationFrame(performScroll)
+  })
 }
 
 function resolveSearchRangeDomBounds(

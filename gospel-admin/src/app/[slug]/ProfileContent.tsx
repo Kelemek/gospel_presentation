@@ -2006,7 +2006,7 @@ function ProfileContent({
         {/* Header with hamburger menu and optional edit button */}
         <div
           data-profile-sticky-header
-          className="sticky top-[env(safe-area-inset-top,0px)] z-40 bg-white shadow-md dark:bg-slate-800 print-hide supports-backdrop-filter:md:bg-white/90 supports-backdrop-filter:md:dark:bg-slate-800/95 supports-backdrop-filter:md:backdrop-blur-sm"
+          className="sticky top-[env(safe-area-inset-top,0px)] z-40 bg-white shadow-md dark:bg-slate-800 print-hide"
         >
           <div className="w-full min-w-0 px-5 py-3">
             <div className="flex min-w-0 justify-between items-center gap-3">

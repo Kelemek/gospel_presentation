@@ -55,13 +55,16 @@ export function getSafeAreaInsetTop(): number {
 export function getProfileHeaderScrollOffset(): number {
   if (typeof document === 'undefined') return FALLBACK_HEADER_OFFSET
   const header = document.querySelector('[data-profile-sticky-header]')
-  let offset = FALLBACK_HEADER_OFFSET
   if (header instanceof HTMLElement) {
-    const headerHeight = header.offsetHeight
+    const { bottom } = header.getBoundingClientRect()
+    if (bottom > 0) {
+      // Live layout (menu + tabs + open search, site header above when at page top).
+      return Math.ceil(bottom)
+    }
     const safeAreaTop = getSafeAreaInsetTop()
-    offset = headerHeight + safeAreaTop + (safeAreaTop > 0 ? 8 : 0)
+    return header.offsetHeight + safeAreaTop + (safeAreaTop > 0 ? 8 : 0)
   }
-  return offset
+  return FALLBACK_HEADER_OFFSET
 }
 
 const SMOOTH_SCROLL_ON_DONE_FALLBACK_MS = 900

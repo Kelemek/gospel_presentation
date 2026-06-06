@@ -10,7 +10,34 @@ import {
   scrollProfileResourceSearchToMark,
   setProfileResourceSearchActiveIndex,
 } from '@/lib/profileResourceInPageSearch'
+import { isMemorizeIosWebHost } from '@/lib/memorizationViewportPlatform'
 import { FALLBACK_HEADER_OFFSET } from '@/lib/scrollToTocAnchor'
+
+jest.mock('@/lib/memorizationViewportPlatform', () => ({
+  ...jest.requireActual('@/lib/memorizationViewportPlatform'),
+  isMemorizeIosWebHost: jest.fn(() => false),
+}))
+
+const mockIsMemorizeIosWebHost = isMemorizeIosWebHost as jest.MockedFunction<
+  typeof isMemorizeIosWebHost
+>
+
+function mockStickyHeaderBottom(bottom: number): void {
+  const header = document.createElement('div')
+  header.setAttribute('data-profile-sticky-header', '')
+  document.body.appendChild(header)
+  jest.spyOn(header, 'getBoundingClientRect').mockReturnValue({
+    top: 0,
+    bottom,
+    left: 0,
+    right: 0,
+    width: 0,
+    height: bottom,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  })
+}
 
 function mountScope(html: string): HTMLElement {
   const scope = document.createElement('main')
@@ -22,6 +49,7 @@ function mountScope(html: string): HTMLElement {
 describe('profileResourceInPageSearch', () => {
   afterEach(() => {
     document.body.innerHTML = ''
+    mockIsMemorizeIosWebHost.mockReturnValue(false)
   })
 
   it('buildProfileResourceSearchPlainText excludes gospel mounts', () => {
@@ -63,10 +91,7 @@ describe('profileResourceInPageSearch', () => {
   })
 
   it('scrollProfileResourceSearchToMark scrolls below sticky profile header', () => {
-    const header = document.createElement('div')
-    header.setAttribute('data-profile-sticky-header', '')
-    Object.defineProperty(header, 'offsetHeight', { value: 96, configurable: true })
-    document.body.appendChild(header)
+    mockStickyHeaderBottom(96)
 
     const mark = document.createElement('mark')
     document.body.appendChild(mark)
@@ -93,6 +118,32 @@ describe('profileResourceInPageSearch', () => {
     )
 
     scrollSpy.mockRestore()
+  })
+
+  it('scrollProfileResourceSearchToMark uses scrollIntoView on iOS WebKit', () => {
+    mockIsMemorizeIosWebHost.mockReturnValue(true)
+    mockStickyHeaderBottom(120)
+
+    const mark = document.createElement('mark')
+    document.body.appendChild(mark)
+    const scrollIntoViewSpy = jest.spyOn(mark, 'scrollIntoView').mockImplementation(() => {})
+    const rafSpy = jest
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((cb: FrameRequestCallback) => {
+        cb(0)
+        return 1
+      })
+
+    scrollProfileResourceSearchToMark(mark)
+
+    expect(scrollIntoViewSpy).toHaveBeenCalledWith({
+      block: 'start',
+      behavior: 'auto',
+    })
+    expect(mark.style.scrollMarginTop).toBe(`${120 + RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX}px`)
+
+    scrollIntoViewSpy.mockRestore()
+    rafSpy.mockRestore()
   })
 
   it('scrollProfileResourceSearchToMark uses fallback header offset when chrome is missing', () => {
