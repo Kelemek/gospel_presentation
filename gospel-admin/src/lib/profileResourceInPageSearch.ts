@@ -358,13 +358,8 @@ function scrollProfileResourceSearchMarkIntoView(
   offset: number,
   behavior: ScrollBehavior
 ): void {
-  if (isMemorizeIosWebHost() && !isIosResourceSearchInputFocused()) {
-    // Keyboard down: scroll-margin + scrollIntoView keeps sticky chrome pinned on WebKit.
-    mark.style.scrollMarginTop = `${offset}px`
-    mark.scrollIntoView({ block: 'start', behavior })
-    return
-  }
-  // Android, desktop, and iOS while typing: scrollIntoView fights sticky + IME (see memorization scroll).
+  // Use one robust path across Android + iOS + desktop:
+  // explicit top offset under sticky header via window scroll.
   scrollMarkBelowProfileHeaderWithWindowScroll(mark, offset, behavior)
 }
 
