@@ -63,20 +63,6 @@ describe('applyStickyHeaderVisualViewportTop', () => {
     expect(header.style.setProperty).not.toHaveBeenCalled()
   })
 
-  it('applyStickyHeaderVisualViewportTop ignores sub-threshold offset changes unless forced', () => {
-    const header = document.createElement('div')
-    document.body.appendChild(header)
-
-    applyStickyHeaderVisualViewportTop(header, { offsetTop: 120 })
-    expect(header.style.getPropertyValue(offsetVar)).toBe('120px')
-
-    applyStickyHeaderVisualViewportTop(header, { offsetTop: 128 })
-    expect(header.style.getPropertyValue(offsetVar)).toBe('120px')
-
-    applyStickyHeaderVisualViewportTop(header, { offsetTop: 128 }, { force: true })
-    expect(header.style.getPropertyValue(offsetVar)).toBe('128px')
-  })
-
   it('clearProfileIosVisualViewportChrome releases fixed header mode and spacer', () => {
     const header = document.createElement('div')
     document.body.appendChild(header)

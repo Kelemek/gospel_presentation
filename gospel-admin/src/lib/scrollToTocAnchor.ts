@@ -118,9 +118,6 @@ const IOS_VV_SCROLL_DEBOUNCE_MS = 80
 /** Window scroll treated as active until this long after the last scroll event (ms). */
 const IOS_WINDOW_SCROLL_IDLE_MS = 150
 
-/** Ignore sub-threshold visualViewport.offsetTop changes (iOS oscillation on scroll reversal). */
-const IOS_STICKY_HEADER_OFFSET_THRESHOLD_PX = 10
-
 /**
  * iOS-only search keyboard pin: switch the profile header to `position: fixed` and track
  * `visualViewport.offsetTop` so it stays at the top of the visible area above the keyboard.
@@ -128,8 +125,7 @@ const IOS_STICKY_HEADER_OFFSET_THRESHOLD_PX = 10
  */
 export function applyStickyHeaderVisualViewportTop(
   header: HTMLElement,
-  viewport: { offsetTop: number } | null | undefined,
-  options?: { force?: boolean }
+  viewport: { offsetTop: number } | null | undefined
 ): number {
   const offsetTop = Math.max(0, Math.round(viewport?.offsetTop ?? 0))
 
@@ -138,12 +134,6 @@ export function applyStickyHeaderVisualViewportTop(
   const previous = header.getAttribute(STICKY_HEADER_APPLIED_OFFSET_ATTR)
   if (previous === String(offsetTop)) {
     return offsetTop
-  }
-  if (!options?.force && previous !== null) {
-    const previousPx = Number(previous)
-    if (Math.abs(offsetTop - previousPx) < IOS_STICKY_HEADER_OFFSET_THRESHOLD_PX) {
-      return previousPx
-    }
   }
   header.setAttribute(STICKY_HEADER_APPLIED_OFFSET_ATTR, String(offsetTop))
 
@@ -181,11 +171,10 @@ export function clearProfileIosVisualViewportChrome(header: HTMLElement | null |
 export function syncProfileIosVisualViewportChrome(
   header: HTMLElement,
   viewport: { offsetTop: number } | null | undefined,
-  searchInputFocused: boolean,
-  options?: { force?: boolean }
+  searchInputFocused: boolean
 ): void {
   if (searchInputFocused) {
-    applyStickyHeaderVisualViewportTop(header, viewport, options)
+    applyStickyHeaderVisualViewportTop(header, viewport)
   } else {
     clearProfileIosVisualViewportChrome(header)
   }
@@ -201,7 +190,6 @@ type VisualViewportLike = {
  * iOS in-page search keyboard: sync profile header to visualViewport with scroll gating.
  * During window scroll momentum (including direction reversals), visualViewport.offsetTop
  * oscillates briefly — skip vv.scroll/resize updates until scroll settles, then snap once.
- * Sub-threshold offset changes are ignored unless scroll has settled (force sync).
  */
 export function bindProfileIosKeyboardHeaderSync(options: {
   header: HTMLElement
@@ -214,17 +202,17 @@ export function bindProfileIosKeyboardHeaderSync(options: {
   let windowScrollIdleTimer = 0
   let windowScrolling = false
 
-  const syncNow = (force = false) => {
+  const syncNow = () => {
     cancelAnimationFrame(rafId)
     rafId = requestAnimationFrame(() => {
-      syncProfileIosVisualViewportChrome(header, vv, isSearchFocused(), { force })
+      syncProfileIosVisualViewportChrome(header, vv, isSearchFocused())
     })
   }
 
   const onWindowScrollEnd = () => {
     windowScrolling = false
     window.clearTimeout(windowScrollIdleTimer)
-    syncNow(true)
+    syncNow()
   }
 
   const onWindowScroll = () => {
