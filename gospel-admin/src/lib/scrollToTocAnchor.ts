@@ -54,12 +54,17 @@ export function getSafeAreaInsetTop(): number {
 /** CSS custom property the sticky header's `top: calc(...)` adds on top of the safe-area inset. */
 export const STICKY_HEADER_KEYBOARD_OFFSET_VAR = '--profile-sticky-kbd-offset'
 
+/** Moves the fixed notch/safe-area gradient bar with the iOS visual viewport (keyboard open). */
+export const SAFE_AREA_BAR_OFFSET_VAR = '--profile-safe-area-bar-offset'
+
+/** Set when the profile sticky header is pinned at its sticky `top` (site title scrolled away). */
+export const STICKY_HEADER_GAP_FILL_ATTR = 'data-sticky-header-gap-fill'
+
 /**
  * iOS-only sticky-header pin: `position: sticky` anchors to the *layout* viewport, which desyncs
  * from the *visual* viewport when the on-screen keyboard opens (the header slides above the visible
- * area). Write `visualViewport.offsetTop` into the header's keyboard-offset CSS variable so its
- * `top: calc(env(safe-area-inset-top) + var(...))` keeps it at the top of the visible area. Returns
- * the applied offset (px). Safe with a null/partial viewport.
+ * area). Write `visualViewport.offsetTop` into CSS variables so the sticky header and the fixed
+ * safe-area bar track the visible top. Returns the applied offset (px).
  */
 export function applyStickyHeaderVisualViewportTop(
   header: HTMLElement,
@@ -67,7 +72,48 @@ export function applyStickyHeaderVisualViewportTop(
 ): number {
   const offsetTop = Math.max(0, Math.round(viewport?.offsetTop ?? 0))
   header.style.setProperty(STICKY_HEADER_KEYBOARD_OFFSET_VAR, `${offsetTop}px`)
+  // Inline `top` on iOS only (see syncProfileIosVisualViewportChrome). Do not bake the keyboard
+  // offset into the shared Tailwind class — `calc` + CSS variables in `position: sticky` breaks
+  // stickiness on desktop and Android.
+  header.style.top = `calc(env(safe-area-inset-top, 0px) + ${offsetTop}px)`
+  document.body?.style.setProperty(SAFE_AREA_BAR_OFFSET_VAR, `${offsetTop}px`)
+
+  const expectedTop = getSafeAreaInsetTop() + offsetTop
+  const pinned = Math.abs(header.getBoundingClientRect().top - expectedTop) <= 2
+  if (pinned && offsetTop > 0) {
+    header.setAttribute(STICKY_HEADER_GAP_FILL_ATTR, '')
+  } else {
+    header.removeAttribute(STICKY_HEADER_GAP_FILL_ATTR)
+  }
+
   return offsetTop
+}
+
+/** Clears iOS visual-viewport chrome offsets (ProfileContent effect cleanup). */
+export function clearProfileIosVisualViewportChrome(header: HTMLElement | null | undefined): void {
+  if (header) {
+    header.style.removeProperty(STICKY_HEADER_KEYBOARD_OFFSET_VAR)
+    header.style.removeProperty('top')
+    header.removeAttribute(STICKY_HEADER_GAP_FILL_ATTR)
+  }
+  document.body?.style.removeProperty(SAFE_AREA_BAR_OFFSET_VAR)
+}
+
+/**
+ * Apply or clear iOS visual-viewport chrome. Only active while the in-page search input is focused
+ * (keyboard open); otherwise sticky `top` stays at the safe-area inset so the site title scrolls
+ * away and the menu sticks normally.
+ */
+export function syncProfileIosVisualViewportChrome(
+  header: HTMLElement,
+  viewport: { offsetTop: number } | null | undefined,
+  searchInputFocused: boolean
+): void {
+  if (searchInputFocused) {
+    applyStickyHeaderVisualViewportTop(header, viewport)
+  } else {
+    clearProfileIosVisualViewportChrome(header)
+  }
 }
 
 /** Pixel offset from top of viewport for scroll targets (sticky header + safe area). */

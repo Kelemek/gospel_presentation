@@ -313,6 +313,18 @@ export function prefersReducedMotionResourceSearch(): boolean {
   }
 }
 
+export const RESOURCE_SEARCH_INPUT_ARIA_LABEL = 'Search in resource'
+
+/** True when the in-page resource search field has focus (keyboard open on mobile). */
+export function isProfileResourceSearchInputFocused(): boolean {
+  if (typeof document === 'undefined') return false
+  const active = document.activeElement
+  return (
+    active instanceof HTMLInputElement &&
+    active.getAttribute('aria-label') === RESOURCE_SEARCH_INPUT_ARIA_LABEL
+  )
+}
+
 /** True when the mark sits below the sticky header and above the keyboard (iOS visual viewport). */
 export function isProfileResourceSearchMarkInComfortZone(
   mark: HTMLElement,

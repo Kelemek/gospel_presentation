@@ -25,16 +25,17 @@ html.text-size-largest [data-scripture-modal-chrome] {
   zoom: 0.8;
 }
 
-/* iOS in-page search: when the keyboard pins the header via --profile-sticky-kbd-offset, scrolling
-   content can show through the notch / status-bar band above the header. Extend the header's solid
-   background upward (safe area + keyboard offset) so that band stays opaque. */
-[data-profile-sticky-header]::before {
+/* iOS in-page search: when the keyboard pins the profile sticky header, fill the slit above it
+   (keyboard offset only — not the notch band) so scrolling body text does not show through. Only
+   when the site title has scrolled away (`data-sticky-header-gap-fill`); otherwise this would
+   cover "The Gospel Presentation" header. The notch band uses `body::before` + --profile-safe-area-bar-offset. */
+[data-profile-sticky-header][data-sticky-header-gap-fill]::before {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
   bottom: 100%;
-  height: calc(env(safe-area-inset-top, 0px) + var(--profile-sticky-kbd-offset, 0px));
+  height: var(--profile-sticky-kbd-offset, 0px);
   background: inherit;
   pointer-events: none;
 }
@@ -53,7 +54,7 @@ body {
 body::before {
   content: "";
   position: fixed;
-  top: 0;
+  top: var(--profile-safe-area-bar-offset, 0px);
   left: 0;
   right: 0;
   height: env(safe-area-inset-top, 0);

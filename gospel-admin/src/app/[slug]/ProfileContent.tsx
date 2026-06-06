@@ -75,11 +75,12 @@ import {
   removePresentationReadCompleteSlug,
 } from '@/lib/presentationReadCompleteStorage'
 import {
-  applyStickyHeaderVisualViewportTop,
+  clearProfileIosVisualViewportChrome,
   scrollToTocAnchor,
   scrollToTocAnchorWhenReady,
-  STICKY_HEADER_KEYBOARD_OFFSET_VAR,
+  syncProfileIosVisualViewportChrome,
 } from '@/lib/scrollToTocAnchor'
+import { isProfileResourceSearchInputFocused } from '@/lib/profileResourceInPageSearch'
 import { hydrateGospelClientStorage } from '@/lib/gospelClientStorage'
 import {
   prefetchPublicResourcesMenu,
@@ -366,30 +367,6 @@ function ProfileContent({
     checkAuth()
   }, [isHydrated])
 
-  // iOS sticky header vs. the on-screen keyboard.
-  // On iOS Safari / WKWebView, `position: sticky` pins to the *layout* viewport. When the keyboard
-  // opens (e.g. typing in the in-page resource search) the layout viewport stays full height while
-  // the *visual* viewport shrinks/offsets, so the sticky menu+tabs+search slide above the visible
-  // area and only return after a manual scroll. Android resizes the layout viewport instead, so it
-  // never desyncs. Pin the header to `visualViewport.offsetTop` on iOS so it stays at the top of the
-  // visible area while typing/scrolling. No-op on Android/desktop.
-  useEffect(() => {
-    if (!isHydrated || !isMemorizeIosWebHost()) return
-    const vv = typeof window !== 'undefined' ? window.visualViewport : null
-    if (!vv) return
-    const header = document.querySelector<HTMLElement>('[data-profile-sticky-header]')
-    if (!header) return
-    const sync = () => applyStickyHeaderVisualViewportTop(header, vv)
-    sync()
-    vv.addEventListener('resize', sync)
-    vv.addEventListener('scroll', sync)
-    return () => {
-      vv.removeEventListener('resize', sync)
-      vv.removeEventListener('scroll', sync)
-      header.style.removeProperty(STICKY_HEADER_KEYBOARD_OFFSET_VAR)
-    }
-  }, [isHydrated, sections, profileInfo])
-
   // Warm Resources menu list before the slide-out mounts (session cache + deduped fetch).
   useEffect(() => {
     let cancelled = false
@@ -464,6 +441,35 @@ function ProfileContent({
       return { slug: profileSlug, open: true }
     })
   }, [profileSlug])
+
+  // iOS sticky header vs. the on-screen keyboard (in-page search only).
+  // Normal scroll: site title scrolls away, menu sticks at safe-area inset. When the search input
+  // is focused, pin the menu to visualViewport.offsetTop so it stays visible above the keyboard.
+  useEffect(() => {
+    if (!isHydrated || !isMemorizeIosWebHost()) return
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null
+    if (!vv) return
+    const header = document.querySelector<HTMLElement>('[data-profile-sticky-header]')
+    if (!header) return
+
+    const sync = () => {
+      syncProfileIosVisualViewportChrome(header, vv, isProfileResourceSearchInputFocused())
+    }
+
+    sync()
+    vv.addEventListener('resize', sync)
+    vv.addEventListener('scroll', sync)
+    document.addEventListener('focusin', sync)
+    document.addEventListener('focusout', sync)
+
+    return () => {
+      vv.removeEventListener('resize', sync)
+      vv.removeEventListener('scroll', sync)
+      document.removeEventListener('focusin', sync)
+      document.removeEventListener('focusout', sync)
+      clearProfileIosVisualViewportChrome(header)
+    }
+  }, [isHydrated, sections, profileInfo, resourceSearchOpen])
 
   useEffect(() => {
     clearProfileResourceSearchMarks(mainContentRef.current)
@@ -2035,7 +2041,7 @@ function ProfileContent({
         {/* Header with hamburger menu and optional edit button */}
         <div
           data-profile-sticky-header
-          className="sticky top-[calc(env(safe-area-inset-top,0)+var(--profile-sticky-kbd-offset,0))] z-40 bg-white shadow-md dark:bg-slate-800 print-hide"
+          className="sticky top-[env(safe-area-inset-top,0px)] z-40 bg-white shadow-md dark:bg-slate-800 print-hide"
         >
           <div className="w-full min-w-0 px-5 py-3">
             <div className="flex min-w-0 justify-between items-center gap-3">

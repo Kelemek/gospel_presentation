@@ -1,25 +1,59 @@
 import {
   applyStickyHeaderVisualViewportTop,
+  clearProfileIosVisualViewportChrome,
   getSafeAreaInsetsPx,
   scrollToTocAnchor,
   scrollToTocAnchorWhenReady,
+  SAFE_AREA_BAR_OFFSET_VAR,
+  STICKY_HEADER_GAP_FILL_ATTR,
   STICKY_HEADER_KEYBOARD_OFFSET_VAR,
+  syncProfileIosVisualViewportChrome,
 } from '../scrollToTocAnchor'
 
 describe('applyStickyHeaderVisualViewportTop', () => {
   const offsetVar = STICKY_HEADER_KEYBOARD_OFFSET_VAR
+
+  beforeEach(() => {
+    document.body.innerHTML = ''
+    document.body.style.removeProperty(SAFE_AREA_BAR_OFFSET_VAR)
+  })
 
   it('pins the header to the rounded visual viewport offset (keyboard open on iOS)', () => {
     const header = document.createElement('div')
     const applied = applyStickyHeaderVisualViewportTop(header, { offsetTop: 137.6 })
     expect(applied).toBe(138)
     expect(header.style.getPropertyValue(offsetVar)).toBe('138px')
+    expect(header.style.top).toContain('138px')
+    expect(document.body.style.getPropertyValue(SAFE_AREA_BAR_OFFSET_VAR)).toBe('138px')
+    expect(header.hasAttribute(STICKY_HEADER_GAP_FILL_ATTR)).toBe(false)
+  })
+
+  it('enables gap fill only when the header is pinned and the keyboard offset is nonzero', () => {
+    const header = document.createElement('div')
+    jest.spyOn(header, 'getBoundingClientRect').mockReturnValue({
+      top: 138,
+      left: 0,
+      right: 0,
+      bottom: 200,
+      width: 0,
+      height: 62,
+      x: 0,
+      y: 138,
+      toJSON: () => ({}),
+    })
+
+    applyStickyHeaderVisualViewportTop(header, { offsetTop: 138 })
+    expect(header.hasAttribute(STICKY_HEADER_GAP_FILL_ATTR)).toBe(true)
+
+    applyStickyHeaderVisualViewportTop(header, { offsetTop: 0 })
+    expect(header.hasAttribute(STICKY_HEADER_GAP_FILL_ATTR)).toBe(false)
   })
 
   it('falls back to zero offset when there is no offset or viewport', () => {
     const header = document.createElement('div')
     expect(applyStickyHeaderVisualViewportTop(header, { offsetTop: 0 })).toBe(0)
     expect(header.style.getPropertyValue(offsetVar)).toBe('0px')
+    expect(document.body.style.getPropertyValue(SAFE_AREA_BAR_OFFSET_VAR)).toBe('0px')
 
     const header2 = document.createElement('div')
     expect(applyStickyHeaderVisualViewportTop(header2, null)).toBe(0)
@@ -30,6 +64,37 @@ describe('applyStickyHeaderVisualViewportTop', () => {
     const header = document.createElement('div')
     expect(applyStickyHeaderVisualViewportTop(header, { offsetTop: -42 })).toBe(0)
     expect(header.style.getPropertyValue(offsetVar)).toBe('0px')
+  })
+
+  it('clearProfileIosVisualViewportChrome removes header and body offsets', () => {
+    const header = document.createElement('div')
+    applyStickyHeaderVisualViewportTop(header, { offsetTop: 80 })
+    header.setAttribute(STICKY_HEADER_GAP_FILL_ATTR, '')
+
+    clearProfileIosVisualViewportChrome(header)
+
+    expect(header.style.getPropertyValue(offsetVar)).toBe('')
+    expect(header.style.top).toBe('')
+    expect(document.body.style.getPropertyValue(SAFE_AREA_BAR_OFFSET_VAR)).toBe('')
+    expect(header.hasAttribute(STICKY_HEADER_GAP_FILL_ATTR)).toBe(false)
+  })
+
+  it('syncProfileIosVisualViewportChrome clears offsets when search input is not focused', () => {
+    const header = document.createElement('div')
+    applyStickyHeaderVisualViewportTop(header, { offsetTop: 120 })
+
+    syncProfileIosVisualViewportChrome(header, { offsetTop: 120 }, false)
+
+    expect(header.style.getPropertyValue(offsetVar)).toBe('')
+    expect(header.style.top).toBe('')
+    expect(document.body.style.getPropertyValue(SAFE_AREA_BAR_OFFSET_VAR)).toBe('')
+  })
+
+  it('syncProfileIosVisualViewportChrome applies offsets when search input is focused', () => {
+    const header = document.createElement('div')
+    syncProfileIosVisualViewportChrome(header, { offsetTop: 88 }, true)
+    expect(header.style.getPropertyValue(offsetVar)).toBe('88px')
+    expect(document.body.style.getPropertyValue(SAFE_AREA_BAR_OFFSET_VAR)).toBe('88px')
   })
 })
 
