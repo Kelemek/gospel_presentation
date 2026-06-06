@@ -152,7 +152,7 @@ describe('profileResourceInPageSearch', () => {
     scrollSpy.mockRestore()
   })
 
-  it('scrollProfileResourceSearchToMark uses window.scrollTo on iOS while search input is focused', () => {
+  it('scrollProfileResourceSearchToMark skips auto-scroll on iOS while search input is focused', () => {
     mockIsMemorizeIosWebHost.mockReturnValue(true)
     mockStickyHeaderBottom(96)
 
@@ -179,11 +179,7 @@ describe('profileResourceInPageSearch', () => {
 
     scrollProfileResourceSearchToMark(mark)
 
-    expect(scrollSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        top: 300 + 20 - (96 + RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX),
-      })
-    )
+    expect(scrollSpy).not.toHaveBeenCalled()
     scrollSpy.mockRestore()
   })
 

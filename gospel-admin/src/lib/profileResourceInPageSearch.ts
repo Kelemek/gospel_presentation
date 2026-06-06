@@ -383,11 +383,19 @@ export function scrollProfileResourceSearchToMark(
     scrollProfileResourceSearchMarkIntoView(mark, offset, behavior)
   }
 
+  const iosSearchInputFocused = isIosResourceSearchInputFocused()
+
   if (isMemorizeIosWebHost() && options?.dismissKeyboard) {
     dismissIosSearchKeyboardForScroll()
     window.requestAnimationFrame(() => {
       window.requestAnimationFrame(performScroll)
     })
+    return
+  }
+
+  // iOS Safari/WebView: programmatic scrolling while keyboard is open can eject sticky header.
+  // During typing, keep keyboard + sticky chrome stable and skip auto-scroll.
+  if (isMemorizeIosWebHost() && iosSearchInputFocused) {
     return
   }
 
