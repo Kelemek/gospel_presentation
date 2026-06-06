@@ -70,7 +70,7 @@ const STICKY_HEADER_APPLIED_OFFSET_ATTR = 'data-profile-sticky-kbd-offset-applie
 
 function ensureIosKeyboardHeaderSpacer(header: HTMLElement): HTMLDivElement {
   const prev = header.previousElementSibling
-  if (prev instanceof HTMLElement && prev.hasAttribute(STICKY_HEADER_SPACER_ATTR)) {
+  if (prev instanceof HTMLDivElement && prev.hasAttribute(STICKY_HEADER_SPACER_ATTR)) {
     return prev
   }
   const spacer = document.createElement('div')
