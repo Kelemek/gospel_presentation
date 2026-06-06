@@ -127,12 +127,6 @@ describe('profileResourceInPageSearch', () => {
     const mark = document.createElement('mark')
     document.body.appendChild(mark)
     const scrollIntoViewSpy = jest.spyOn(mark, 'scrollIntoView').mockImplementation(() => {})
-    const rafSpy = jest
-      .spyOn(window, 'requestAnimationFrame')
-      .mockImplementation((cb: FrameRequestCallback) => {
-        cb(0)
-        return 1
-      })
 
     scrollProfileResourceSearchToMark(mark)
 
@@ -143,6 +137,35 @@ describe('profileResourceInPageSearch', () => {
     expect(mark.style.scrollMarginTop).toBe(`${120 + RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX}px`)
 
     scrollIntoViewSpy.mockRestore()
+  })
+
+  it('scrollProfileResourceSearchToMark dismisses iOS keyboard only when navigating matches', () => {
+    mockIsMemorizeIosWebHost.mockReturnValue(true)
+    mockStickyHeaderBottom(120)
+
+    const input = document.createElement('input')
+    input.setAttribute('aria-label', 'Search in resource')
+    document.body.appendChild(input)
+    input.focus()
+    const blurSpy = jest.spyOn(input, 'blur')
+
+    const mark = document.createElement('mark')
+    document.body.appendChild(mark)
+    jest.spyOn(mark, 'scrollIntoView').mockImplementation(() => {})
+    const rafSpy = jest
+      .spyOn(window, 'requestAnimationFrame')
+      .mockImplementation((cb: FrameRequestCallback) => {
+        cb(0)
+        return 1
+      })
+
+    scrollProfileResourceSearchToMark(mark)
+    expect(blurSpy).not.toHaveBeenCalled()
+
+    scrollProfileResourceSearchToMark(mark, { dismissKeyboard: true })
+    expect(blurSpy).toHaveBeenCalled()
+
+    blurSpy.mockRestore()
     rafSpy.mockRestore()
   })
 

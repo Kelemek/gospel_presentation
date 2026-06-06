@@ -341,7 +341,15 @@ function scrollProfileResourceSearchMarkIntoView(
   window.scrollTo({ top, behavior })
 }
 
-export function scrollProfileResourceSearchToMark(mark: HTMLElement | null | undefined): void {
+export type ScrollProfileResourceSearchToMarkOptions = {
+  /** Dismiss the iOS search keyboard before scrolling (prev/next navigation only). */
+  dismissKeyboard?: boolean
+}
+
+export function scrollProfileResourceSearchToMark(
+  mark: HTMLElement | null | undefined,
+  options?: ScrollProfileResourceSearchToMarkOptions
+): void {
   if (!mark || typeof window === 'undefined') return
   const offset = getProfileHeaderScrollOffset() + RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX
   const behavior =
@@ -349,15 +357,15 @@ export function scrollProfileResourceSearchToMark(mark: HTMLElement | null | und
 
   const performScroll = () => scrollProfileResourceSearchMarkIntoView(mark, offset, behavior)
 
-  if (!isMemorizeIosWebHost()) {
-    performScroll()
+  if (isMemorizeIosWebHost() && options?.dismissKeyboard) {
+    dismissIosSearchKeyboardForScroll()
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(performScroll)
+    })
     return
   }
 
-  dismissIosSearchKeyboardForScroll()
-  window.requestAnimationFrame(() => {
-    window.requestAnimationFrame(performScroll)
-  })
+  performScroll()
 }
 
 function resolveSearchRangeDomBounds(
@@ -507,7 +515,7 @@ export function runProfileResourceSearch(
     if (validRanges.length === 0) return
     const clamped = Math.max(0, Math.min(index, validRanges.length - 1))
     paintActive(clamped)
-    scrollProfileResourceSearchToMark(activeMark)
+    scrollProfileResourceSearchToMark(activeMark, { dismissKeyboard: true })
   }
 
   return {
