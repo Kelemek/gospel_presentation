@@ -60,6 +60,12 @@ export const SAFE_AREA_BAR_OFFSET_VAR = '--profile-safe-area-bar-offset'
 /** Set when the profile sticky header is pinned at its sticky `top` (site title scrolled away). */
 export const STICKY_HEADER_GAP_FILL_ATTR = 'data-sticky-header-gap-fill'
 
+/** Tracks last applied keyboard offset so we skip redundant style writes (reduces iOS scroll jitter). */
+const STICKY_HEADER_APPLIED_OFFSET_ATTR = 'data-profile-sticky-kbd-offset-applied'
+
+const GAP_FILL_PIN_THRESHOLD_PX = 4
+const GAP_FILL_UNPIN_THRESHOLD_PX = 12
+
 /**
  * iOS-only sticky-header pin: `position: sticky` anchors to the *layout* viewport, which desyncs
  * from the *visual* viewport when the on-screen keyboard opens (the header slides above the visible
@@ -71,6 +77,12 @@ export function applyStickyHeaderVisualViewportTop(
   viewport: { offsetTop: number } | null | undefined
 ): number {
   const offsetTop = Math.max(0, Math.round(viewport?.offsetTop ?? 0))
+  const previous = header.getAttribute(STICKY_HEADER_APPLIED_OFFSET_ATTR)
+  if (previous === String(offsetTop)) {
+    return offsetTop
+  }
+  header.setAttribute(STICKY_HEADER_APPLIED_OFFSET_ATTR, String(offsetTop))
+
   header.style.setProperty(STICKY_HEADER_KEYBOARD_OFFSET_VAR, `${offsetTop}px`)
   // Inline `top` on iOS only (see syncProfileIosVisualViewportChrome). Do not bake the keyboard
   // offset into the shared Tailwind class — `calc` + CSS variables in `position: sticky` breaks
@@ -78,11 +90,17 @@ export function applyStickyHeaderVisualViewportTop(
   header.style.top = `calc(env(safe-area-inset-top, 0px) + ${offsetTop}px)`
   document.body?.style.setProperty(SAFE_AREA_BAR_OFFSET_VAR, `${offsetTop}px`)
 
+  if (offsetTop <= 0) {
+    header.removeAttribute(STICKY_HEADER_GAP_FILL_ATTR)
+    return offsetTop
+  }
+
   const expectedTop = getSafeAreaInsetTop() + offsetTop
-  const pinned = Math.abs(header.getBoundingClientRect().top - expectedTop) <= 2
-  if (pinned && offsetTop > 0) {
+  const delta = Math.abs(header.getBoundingClientRect().top - expectedTop)
+  const hasGapFill = header.hasAttribute(STICKY_HEADER_GAP_FILL_ATTR)
+  if (!hasGapFill && delta <= GAP_FILL_PIN_THRESHOLD_PX) {
     header.setAttribute(STICKY_HEADER_GAP_FILL_ATTR, '')
-  } else {
+  } else if (hasGapFill && delta > GAP_FILL_UNPIN_THRESHOLD_PX) {
     header.removeAttribute(STICKY_HEADER_GAP_FILL_ATTR)
   }
 
@@ -95,6 +113,7 @@ export function clearProfileIosVisualViewportChrome(header: HTMLElement | null |
     header.style.removeProperty(STICKY_HEADER_KEYBOARD_OFFSET_VAR)
     header.style.removeProperty('top')
     header.removeAttribute(STICKY_HEADER_GAP_FILL_ATTR)
+    header.removeAttribute(STICKY_HEADER_APPLIED_OFFSET_ATTR)
   }
   document.body?.style.removeProperty(SAFE_AREA_BAR_OFFSET_VAR)
 }

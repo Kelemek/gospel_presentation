@@ -318,10 +318,13 @@ export const RESOURCE_SEARCH_INPUT_ARIA_LABEL = 'Search in resource'
 /** True when the in-page resource search field has focus (keyboard open on mobile). */
 export function isProfileResourceSearchInputFocused(): boolean {
   if (typeof document === 'undefined') return false
-  const active = document.activeElement
+  return isProfileResourceSearchInputElement(document.activeElement)
+}
+
+export function isProfileResourceSearchInputElement(target: EventTarget | null): boolean {
   return (
-    active instanceof HTMLInputElement &&
-    active.getAttribute('aria-label') === RESOURCE_SEARCH_INPUT_ARIA_LABEL
+    target instanceof HTMLInputElement &&
+    target.getAttribute('aria-label') === RESOURCE_SEARCH_INPUT_ARIA_LABEL
   )
 }
 

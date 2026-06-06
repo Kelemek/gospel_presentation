@@ -80,7 +80,7 @@ import {
   scrollToTocAnchorWhenReady,
   syncProfileIosVisualViewportChrome,
 } from '@/lib/scrollToTocAnchor'
-import { isProfileResourceSearchInputFocused } from '@/lib/profileResourceInPageSearch'
+import { isProfileResourceSearchInputFocused, isProfileResourceSearchInputElement } from '@/lib/profileResourceInPageSearch'
 import { hydrateGospelClientStorage } from '@/lib/gospelClientStorage'
 import {
   prefetchPublicResourcesMenu,
@@ -443,8 +443,8 @@ function ProfileContent({
   }, [profileSlug])
 
   // iOS sticky header vs. the on-screen keyboard (in-page search only).
-  // Normal scroll: site title scrolls away, menu sticks at safe-area inset. When the search input
-  // is focused, pin the menu to visualViewport.offsetTop so it stays visible above the keyboard.
+  // Normal scroll: rely on CSS sticky only — do not listen to visualViewport (Safari fires it while
+  // the URL bar animates, which made the header jump). Attach listeners only while search is focused.
   useEffect(() => {
     if (!isHydrated || !isMemorizeIosWebHost()) return
     const vv = typeof window !== 'undefined' ? window.visualViewport : null
@@ -452,22 +452,58 @@ function ProfileContent({
     const header = document.querySelector<HTMLElement>('[data-profile-sticky-header]')
     if (!header) return
 
+    let rafId = 0
+    let vvListenersActive = false
+
     const sync = () => {
-      syncProfileIosVisualViewportChrome(header, vv, isProfileResourceSearchInputFocused())
+      cancelAnimationFrame(rafId)
+      rafId = requestAnimationFrame(() => {
+        syncProfileIosVisualViewportChrome(header, vv, isProfileResourceSearchInputFocused())
+      })
     }
 
-    sync()
-    vv.addEventListener('resize', sync)
-    vv.addEventListener('scroll', sync)
-    document.addEventListener('focusin', sync)
-    document.addEventListener('focusout', sync)
+    const attachVvListeners = () => {
+      if (vvListenersActive) return
+      vvListenersActive = true
+      sync()
+      vv.addEventListener('resize', sync)
+      vv.addEventListener('scroll', sync)
+    }
 
-    return () => {
+    const detachVvListeners = () => {
+      cancelAnimationFrame(rafId)
+      if (!vvListenersActive) return
+      vvListenersActive = false
       vv.removeEventListener('resize', sync)
       vv.removeEventListener('scroll', sync)
-      document.removeEventListener('focusin', sync)
-      document.removeEventListener('focusout', sync)
       clearProfileIosVisualViewportChrome(header)
+    }
+
+    const onFocusIn = (event: FocusEvent) => {
+      if (!isProfileResourceSearchInputElement(event.target)) return
+      attachVvListeners()
+    }
+
+    const onFocusOut = (event: FocusEvent) => {
+      if (!isProfileResourceSearchInputElement(event.target)) return
+      requestAnimationFrame(() => {
+        if (!isProfileResourceSearchInputFocused()) detachVvListeners()
+      })
+    }
+
+    document.addEventListener('focusin', onFocusIn)
+    document.addEventListener('focusout', onFocusOut)
+
+    if (isProfileResourceSearchInputFocused()) {
+      attachVvListeners()
+    } else if (!resourceSearchOpen) {
+      detachVvListeners()
+    }
+
+    return () => {
+      document.removeEventListener('focusin', onFocusIn)
+      document.removeEventListener('focusout', onFocusOut)
+      detachVvListeners()
     }
   }, [isHydrated, sections, profileInfo, resourceSearchOpen])
 

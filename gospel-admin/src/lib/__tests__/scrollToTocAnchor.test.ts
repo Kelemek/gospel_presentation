@@ -49,6 +49,30 @@ describe('applyStickyHeaderVisualViewportTop', () => {
     expect(header.hasAttribute(STICKY_HEADER_GAP_FILL_ATTR)).toBe(false)
   })
 
+  it('applyStickyHeaderVisualViewportTop skips redundant style writes when offset is unchanged', () => {
+    const header = document.createElement('div')
+    const rectSpy = jest.spyOn(header, 'getBoundingClientRect').mockReturnValue({
+      top: 88,
+      left: 0,
+      right: 0,
+      bottom: 150,
+      width: 0,
+      height: 62,
+      x: 0,
+      y: 88,
+      toJSON: () => ({}),
+    })
+
+    applyStickyHeaderVisualViewportTop(header, { offsetTop: 88 })
+    rectSpy.mockClear()
+    header.style.setProperty = jest.fn(header.style.setProperty.bind(header.style))
+
+    applyStickyHeaderVisualViewportTop(header, { offsetTop: 88 })
+
+    expect(rectSpy).not.toHaveBeenCalled()
+    expect(header.style.setProperty).not.toHaveBeenCalled()
+  })
+
   it('falls back to zero offset when there is no offset or viewport', () => {
     const header = document.createElement('div')
     expect(applyStickyHeaderVisualViewportTop(header, { offsetTop: 0 })).toBe(0)
