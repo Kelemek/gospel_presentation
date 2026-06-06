@@ -189,7 +189,7 @@ type VisualViewportLike = {
 /**
  * iOS in-page search keyboard: sync profile header to visualViewport with scroll gating.
  * During window scroll momentum (including direction reversals), visualViewport.offsetTop
- * oscillates briefly — skip vv.scroll/resize updates until scroll settles, then snap once.
+ * oscillates briefly — skip vv.scroll updates until scroll settles, then snap once.
  */
 export function bindProfileIosKeyboardHeaderSync(options: {
   header: HTMLElement
@@ -222,10 +222,7 @@ export function bindProfileIosKeyboardHeaderSync(options: {
     windowScrollIdleTimer = window.setTimeout(onWindowScrollEnd, IOS_WINDOW_SCROLL_IDLE_MS)
   }
 
-  const onVvResize = () => {
-    if (windowScrolling) return
-    syncNow()
-  }
+  const onVvResize = () => syncNow()
 
   const onVvScroll = () => {
     if (windowScrolling) return

@@ -180,44 +180,6 @@ describe('bindProfileIosKeyboardHeaderSync', () => {
 
     unbind()
   })
-
-  it('ignores visualViewport resize while window scroll momentum is active', () => {
-    const header = document.createElement('div')
-    document.body.appendChild(header)
-
-    let offsetTop = 120
-    const viewport = {
-      get offsetTop() {
-        return offsetTop
-      },
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-    }
-
-    const unbind = bindProfileIosKeyboardHeaderSync({
-      header,
-      viewport,
-      isSearchFocused: () => true,
-    })
-
-    expect(header.style.getPropertyValue(STICKY_HEADER_KEYBOARD_OFFSET_VAR)).toBe('120px')
-
-    const resizeHandler = (viewport.addEventListener as jest.Mock).mock.calls.find(
-      (call) => call[0] === 'resize'
-    )?.[1] as (() => void) | undefined
-    expect(resizeHandler).toBeDefined()
-
-    window.dispatchEvent(new Event('scroll'))
-    offsetTop = 40
-    resizeHandler!()
-
-    expect(header.style.getPropertyValue(STICKY_HEADER_KEYBOARD_OFFSET_VAR)).toBe('120px')
-
-    jest.advanceTimersByTime(160)
-    expect(header.style.getPropertyValue(STICKY_HEADER_KEYBOARD_OFFSET_VAR)).toBe('40px')
-
-    unbind()
-  })
 })
 
 describe('scrollToTocAnchor', () => {
