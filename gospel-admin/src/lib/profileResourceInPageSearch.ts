@@ -313,22 +313,6 @@ export function prefersReducedMotionResourceSearch(): boolean {
   }
 }
 
-const RESOURCE_SEARCH_INPUT_LABEL = 'Search in resource'
-
-function isIosResourceSearchInputFocused(): boolean {
-  if (!isMemorizeIosWebHost()) return false
-  const active = document.activeElement
-  return (
-    active instanceof HTMLInputElement &&
-    active.getAttribute('aria-label') === RESOURCE_SEARCH_INPUT_LABEL
-  )
-}
-
-function dismissIosSearchKeyboardForScroll(): void {
-  if (!isIosResourceSearchInputFocused()) return
-  ;(document.activeElement as HTMLInputElement).blur()
-}
-
 /** True when the mark sits below the sticky header and above the keyboard (iOS visual viewport). */
 export function isProfileResourceSearchMarkInComfortZone(
   mark: HTMLElement,
@@ -344,64 +328,33 @@ export function isProfileResourceSearchMarkInComfortZone(
   return rect.top >= headerOffsetPx && rect.bottom <= viewBottom
 }
 
-function scrollMarkBelowProfileHeaderWithWindowScroll(
-  mark: HTMLElement,
-  offset: number,
-  behavior: ScrollBehavior
-): void {
-  const top = Math.max(0, mark.getBoundingClientRect().top + window.scrollY - offset)
-  window.scrollTo({ top, behavior })
-}
-
 function scrollProfileResourceSearchMarkIntoView(
   mark: HTMLElement,
   offset: number,
   behavior: ScrollBehavior
 ): void {
-  // Use one robust path across Android + iOS + desktop:
-  // explicit top offset under sticky header via window scroll.
-  scrollMarkBelowProfileHeaderWithWindowScroll(mark, offset, behavior)
+  if (isMemorizeIosWebHost()) {
+    // iOS Safari / WKWebView: `scrollIntoView` + `scroll-margin-top` keeps `position: sticky` pinned
+    // even while the keyboard is open. `window.scrollTo` detaches the sticky header on iOS until the
+    // next manual scroll (the "menu scrolls off, then comes back" bug). Android/desktop use scrollTo.
+    mark.style.scrollMarginTop = `${offset}px`
+    mark.scrollIntoView({ block: 'start', behavior })
+    return
+  }
+  const top = Math.max(0, mark.getBoundingClientRect().top + window.scrollY - offset)
+  window.scrollTo({ top, behavior })
 }
 
-export type ScrollProfileResourceSearchToMarkOptions = {
-  /** Dismiss the iOS search keyboard before scrolling (prev/next navigation only). */
-  dismissKeyboard?: boolean
-}
-
-export function scrollProfileResourceSearchToMark(
-  mark: HTMLElement | null | undefined,
-  options?: ScrollProfileResourceSearchToMarkOptions
-): void {
+export function scrollProfileResourceSearchToMark(mark: HTMLElement | null | undefined): void {
   if (!mark || typeof window === 'undefined') return
   const offset = getProfileHeaderScrollOffset() + RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX
+
+  // Already visible below the header and above the keyboard: don't scroll (avoids per-keystroke jitter).
+  if (isProfileResourceSearchMarkInComfortZone(mark, offset)) return
+
   const behavior =
     prefersReducedMotionResourceSearch() || isMemorizeIosWebHost() ? 'auto' : 'smooth'
-
-  const needsScroll = !isProfileResourceSearchMarkInComfortZone(mark, offset)
-  const performScroll = () => {
-    if (!needsScroll) return
-    scrollProfileResourceSearchMarkIntoView(mark, offset, behavior)
-  }
-
-  const iosSearchInputFocused = isIosResourceSearchInputFocused()
-
-  if (isMemorizeIosWebHost() && options?.dismissKeyboard) {
-    dismissIosSearchKeyboardForScroll()
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(performScroll)
-    })
-    return
-  }
-
-  // iOS Safari/WebView: programmatic scrolling while keyboard is open can eject sticky header.
-  // During typing, keep keyboard + sticky chrome stable and skip auto-scroll.
-  if (isMemorizeIosWebHost() && iosSearchInputFocused) {
-    return
-  }
-
-  if (!needsScroll) return
-
-  performScroll()
+  scrollProfileResourceSearchMarkIntoView(mark, offset, behavior)
 }
 
 function resolveSearchRangeDomBounds(
@@ -551,7 +504,7 @@ export function runProfileResourceSearch(
     if (validRanges.length === 0) return
     const clamped = Math.max(0, Math.min(index, validRanges.length - 1))
     paintActive(clamped)
-    scrollProfileResourceSearchToMark(activeMark, { dismissKeyboard: true })
+    scrollProfileResourceSearchToMark(activeMark)
   }
 
   return {

@@ -121,65 +121,80 @@ describe('profileResourceInPageSearch', () => {
     scrollSpy.mockRestore()
   })
 
-  it('scrollProfileResourceSearchToMark uses window.scrollTo on iOS when keyboard is down', () => {
+  it('scrollProfileResourceSearchToMark uses scrollIntoView on iOS so the sticky header stays pinned', () => {
     mockIsMemorizeIosWebHost.mockReturnValue(true)
     mockStickyHeaderBottom(120)
-
-    const mark = document.createElement('mark')
-    document.body.appendChild(mark)
-    jest.spyOn(mark, 'getBoundingClientRect').mockReturnValue({
-      top: 20,
-      left: 0,
-      right: 0,
-      bottom: 40,
-      width: 0,
-      height: 20,
-      x: 0,
-      y: 20,
-      toJSON: () => ({}),
-    })
-    Object.defineProperty(window, 'scrollY', { value: 300, configurable: true, writable: true })
-    const scrollSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => {})
-
-    scrollProfileResourceSearchToMark(mark)
-
-    expect(scrollSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        top: 300 + 20 - (120 + RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX),
-      })
-    )
-
-    scrollSpy.mockRestore()
-  })
-
-  it('scrollProfileResourceSearchToMark skips auto-scroll on iOS while search input is focused', () => {
-    mockIsMemorizeIosWebHost.mockReturnValue(true)
-    mockStickyHeaderBottom(96)
 
     const input = document.createElement('input')
     input.setAttribute('aria-label', 'Search in resource')
     document.body.appendChild(input)
     input.focus()
+    const blurSpy = jest.spyOn(input, 'blur')
 
     const mark = document.createElement('mark')
     document.body.appendChild(mark)
     jest.spyOn(mark, 'getBoundingClientRect').mockReturnValue({
-      top: 20,
+      top: 600,
       left: 0,
       right: 0,
-      bottom: 40,
+      bottom: 620,
       width: 0,
       height: 20,
       x: 0,
-      y: 20,
+      y: 600,
       toJSON: () => ({}),
     })
-    Object.defineProperty(window, 'scrollY', { value: 300, configurable: true, writable: true })
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: { offsetTop: 0, height: 500, width: 390, scale: 1 },
+    })
+    const scrollIntoViewSpy = jest.spyOn(mark, 'scrollIntoView').mockImplementation(() => {})
     const scrollSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => {})
 
     scrollProfileResourceSearchToMark(mark)
 
+    // iOS uses scrollIntoView + scroll-margin-top (keeps position:sticky pinned with keyboard open),
+    // never window.scrollTo, and never blurs the input (keyboard stays for search-as-you-type).
+    expect(scrollIntoViewSpy).toHaveBeenCalledWith({ block: 'start', behavior: 'auto' })
+    expect(mark.style.scrollMarginTop).toBe(`${120 + RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX}px`)
     expect(scrollSpy).not.toHaveBeenCalled()
+    expect(blurSpy).not.toHaveBeenCalled()
+
+    scrollIntoViewSpy.mockRestore()
+    scrollSpy.mockRestore()
+    blurSpy.mockRestore()
+  })
+
+  it('scrollProfileResourceSearchToMark skips scroll on iOS when the match is already visible', () => {
+    mockIsMemorizeIosWebHost.mockReturnValue(true)
+    mockStickyHeaderBottom(80)
+
+    const mark = document.createElement('mark')
+    document.body.appendChild(mark)
+    jest.spyOn(mark, 'getBoundingClientRect').mockReturnValue({
+      top: 200,
+      left: 0,
+      right: 0,
+      bottom: 220,
+      width: 0,
+      height: 20,
+      x: 0,
+      y: 200,
+      toJSON: () => ({}),
+    })
+    Object.defineProperty(window, 'visualViewport', {
+      configurable: true,
+      value: { offsetTop: 0, height: 500, width: 390, scale: 1 },
+    })
+    const scrollIntoViewSpy = jest.spyOn(mark, 'scrollIntoView').mockImplementation(() => {})
+    const scrollSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => {})
+
+    scrollProfileResourceSearchToMark(mark)
+
+    expect(scrollIntoViewSpy).not.toHaveBeenCalled()
+    expect(scrollSpy).not.toHaveBeenCalled()
+
+    scrollIntoViewSpy.mockRestore()
     scrollSpy.mockRestore()
   })
 
@@ -203,98 +218,6 @@ describe('profileResourceInPageSearch', () => {
 
     expect(isProfileResourceSearchMarkInComfortZone(mark, 80)).toBe(true)
     expect(isProfileResourceSearchMarkInComfortZone(mark, 120)).toBe(false)
-  })
-
-  it('scrollProfileResourceSearchToMark dismisses iOS keyboard only when navigating matches', () => {
-    mockIsMemorizeIosWebHost.mockReturnValue(true)
-    mockStickyHeaderBottom(120)
-
-    const input = document.createElement('input')
-    input.setAttribute('aria-label', 'Search in resource')
-    document.body.appendChild(input)
-    input.focus()
-    const blurSpy = jest.spyOn(input, 'blur')
-
-    const mark = document.createElement('mark')
-    document.body.appendChild(mark)
-    jest.spyOn(mark, 'getBoundingClientRect').mockReturnValue({
-      top: 20,
-      left: 0,
-      right: 0,
-      bottom: 40,
-      width: 0,
-      height: 20,
-      x: 0,
-      y: 20,
-      toJSON: () => ({}),
-    })
-    const scrollSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => {})
-    const rafSpy = jest
-      .spyOn(window, 'requestAnimationFrame')
-      .mockImplementation((cb: FrameRequestCallback) => {
-        cb(0)
-        return 1
-      })
-
-    scrollProfileResourceSearchToMark(mark)
-    expect(blurSpy).not.toHaveBeenCalled()
-
-    scrollProfileResourceSearchToMark(mark, { dismissKeyboard: true })
-    expect(blurSpy).toHaveBeenCalled()
-    expect(scrollSpy).toHaveBeenCalled()
-
-    scrollSpy.mockRestore()
-    blurSpy.mockRestore()
-    rafSpy.mockRestore()
-  })
-
-  it('scrollProfileResourceSearchToMark dismisses iOS keyboard on prev/next even when match is in comfort zone', () => {
-    mockIsMemorizeIosWebHost.mockReturnValue(true)
-    mockStickyHeaderBottom(80)
-
-    const input = document.createElement('input')
-    input.setAttribute('aria-label', 'Search in resource')
-    document.body.appendChild(input)
-    input.focus()
-    const blurSpy = jest.spyOn(input, 'blur')
-
-    const mark = document.createElement('mark')
-    document.body.appendChild(mark)
-    jest.spyOn(mark, 'getBoundingClientRect').mockReturnValue({
-      top: 100,
-      left: 0,
-      right: 0,
-      bottom: 120,
-      width: 0,
-      height: 20,
-      x: 0,
-      y: 100,
-      toJSON: () => ({}),
-    })
-    Object.defineProperty(window, 'visualViewport', {
-      configurable: true,
-      value: { offsetTop: 0, height: 500, width: 390, scale: 1 },
-    })
-    const scrollSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => {})
-    const rafSpy = jest
-      .spyOn(window, 'requestAnimationFrame')
-      .mockImplementation((cb: FrameRequestCallback) => {
-        cb(0)
-        return 1
-      })
-
-    expect(isProfileResourceSearchMarkInComfortZone(mark, 80 + RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX)).toBe(
-      true
-    )
-
-    scrollProfileResourceSearchToMark(mark, { dismissKeyboard: true })
-
-    expect(blurSpy).toHaveBeenCalled()
-    expect(scrollSpy).not.toHaveBeenCalled()
-
-    blurSpy.mockRestore()
-    scrollSpy.mockRestore()
-    rafSpy.mockRestore()
   })
 
   it('scrollProfileResourceSearchToMark uses fallback header offset when chrome is missing', () => {
