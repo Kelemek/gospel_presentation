@@ -25,6 +25,20 @@ html.text-size-largest [data-scripture-modal-chrome] {
   zoom: 0.8;
 }
 
+/* iOS in-page search: when the keyboard pins the header via --profile-sticky-kbd-offset, scrolling
+   content can show through the notch / status-bar band above the header. Extend the header's solid
+   background upward (safe area + keyboard offset) so that band stays opaque. */
+[data-profile-sticky-header]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: calc(env(safe-area-inset-top, 0px) + var(--profile-sticky-kbd-offset, 0px));
+  background: inherit;
+  pointer-events: none;
+}
+
 body {
   font-family: Arial, Helvetica, sans-serif;
   /* Respect safe areas in Capacitor app (notch, home indicator) */
