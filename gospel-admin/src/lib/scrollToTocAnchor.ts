@@ -112,6 +112,12 @@ function releaseIosKeyboardHeaderFixed(header: HTMLElement): void {
   }
 }
 
+/** Debounced trailing sync after visualViewport scroll (ms). */
+const IOS_VV_SCROLL_DEBOUNCE_MS = 80
+
+/** Window scroll treated as active until this long after the last scroll event (ms). */
+const IOS_WINDOW_SCROLL_IDLE_MS = 150
+
 /**
  * iOS-only search keyboard pin: switch the profile header to `position: fixed` and track
  * `visualViewport.offsetTop` so it stays at the top of the visible area above the keyboard.
@@ -124,7 +130,6 @@ export function applyStickyHeaderVisualViewportTop(
   const offsetTop = Math.max(0, Math.round(viewport?.offsetTop ?? 0))
 
   ensureIosKeyboardHeaderFixed(header)
-  updateIosKeyboardHeaderSpacer(header)
 
   const previous = header.getAttribute(STICKY_HEADER_APPLIED_OFFSET_ATTR)
   if (previous === String(offsetTop)) {
@@ -132,6 +137,7 @@ export function applyStickyHeaderVisualViewportTop(
   }
   header.setAttribute(STICKY_HEADER_APPLIED_OFFSET_ATTR, String(offsetTop))
 
+  updateIosKeyboardHeaderSpacer(header)
   header.style.setProperty(STICKY_HEADER_KEYBOARD_OFFSET_VAR, `${offsetTop}px`)
   header.style.top = `calc(env(safe-area-inset-top, 0px) + ${offsetTop}px)`
   document.body?.style.setProperty(SAFE_AREA_BAR_OFFSET_VAR, `${offsetTop}px`)
@@ -170,6 +176,79 @@ export function syncProfileIosVisualViewportChrome(
   if (searchInputFocused) {
     applyStickyHeaderVisualViewportTop(header, viewport)
   } else {
+    clearProfileIosVisualViewportChrome(header)
+  }
+}
+
+type VisualViewportLike = {
+  addEventListener: VisualViewport['addEventListener']
+  removeEventListener: VisualViewport['removeEventListener']
+  offsetTop: number
+}
+
+/**
+ * iOS in-page search keyboard: sync profile header to visualViewport with scroll gating.
+ * During window scroll momentum (including direction reversals), visualViewport.offsetTop
+ * oscillates briefly — skip vv.scroll updates until scroll settles, then snap once.
+ */
+export function bindProfileIosKeyboardHeaderSync(options: {
+  header: HTMLElement
+  viewport: VisualViewportLike
+  isSearchFocused: () => boolean
+}): () => void {
+  const { header, viewport: vv, isSearchFocused } = options
+  let rafId = 0
+  let vvScrollDebounceTimer = 0
+  let windowScrollIdleTimer = 0
+  let windowScrolling = false
+
+  const syncNow = () => {
+    cancelAnimationFrame(rafId)
+    rafId = requestAnimationFrame(() => {
+      syncProfileIosVisualViewportChrome(header, vv, isSearchFocused())
+    })
+  }
+
+  const onWindowScrollEnd = () => {
+    windowScrolling = false
+    window.clearTimeout(windowScrollIdleTimer)
+    syncNow()
+  }
+
+  const onWindowScroll = () => {
+    windowScrolling = true
+    window.clearTimeout(windowScrollIdleTimer)
+    window.clearTimeout(vvScrollDebounceTimer)
+    windowScrollIdleTimer = window.setTimeout(onWindowScrollEnd, IOS_WINDOW_SCROLL_IDLE_MS)
+  }
+
+  const onVvResize = () => syncNow()
+
+  const onVvScroll = () => {
+    if (windowScrolling) return
+    window.clearTimeout(vvScrollDebounceTimer)
+    vvScrollDebounceTimer = window.setTimeout(syncNow, IOS_VV_SCROLL_DEBOUNCE_MS)
+  }
+
+  vv.addEventListener('resize', onVvResize)
+  vv.addEventListener('scroll', onVvScroll)
+  window.addEventListener('scroll', onWindowScroll, { passive: true })
+  if ('onscrollend' in window) {
+    window.addEventListener('scrollend', onWindowScrollEnd, { passive: true })
+  }
+
+  syncNow()
+
+  return () => {
+    cancelAnimationFrame(rafId)
+    window.clearTimeout(vvScrollDebounceTimer)
+    window.clearTimeout(windowScrollIdleTimer)
+    vv.removeEventListener('resize', onVvResize)
+    vv.removeEventListener('scroll', onVvScroll)
+    window.removeEventListener('scroll', onWindowScroll)
+    if ('onscrollend' in window) {
+      window.removeEventListener('scrollend', onWindowScrollEnd)
+    }
     clearProfileIosVisualViewportChrome(header)
   }
 }

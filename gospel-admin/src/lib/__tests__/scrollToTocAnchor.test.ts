@@ -1,5 +1,6 @@
 import {
   applyStickyHeaderVisualViewportTop,
+  bindProfileIosKeyboardHeaderSync,
   clearProfileIosVisualViewportChrome,
   getSafeAreaInsetsPx,
   scrollToTocAnchor,
@@ -120,6 +121,64 @@ describe('applyStickyHeaderVisualViewportTop', () => {
     syncProfileIosVisualViewportChrome(header, { offsetTop: 88 }, true)
     expect(header.style.getPropertyValue(offsetVar)).toBe('88px')
     expect(document.body.style.getPropertyValue(SAFE_AREA_BAR_OFFSET_VAR)).toBe('88px')
+  })
+})
+
+describe('bindProfileIosKeyboardHeaderSync', () => {
+  beforeEach(() => {
+    jest.useFakeTimers()
+    document.body.innerHTML = ''
+    jest.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
+      cb(0)
+      return 1
+    })
+    jest.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    jest.restoreAllMocks()
+    jest.useRealTimers()
+  })
+
+  it('ignores visualViewport scroll while window scroll momentum is active', () => {
+    const header = document.createElement('div')
+    document.body.appendChild(header)
+
+    let offsetTop = 120
+    const viewport = {
+      get offsetTop() {
+        return offsetTop
+      },
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+    }
+
+    const unbind = bindProfileIosKeyboardHeaderSync({
+      header,
+      viewport,
+      isSearchFocused: () => true,
+    })
+
+    expect(header.style.getPropertyValue(STICKY_HEADER_KEYBOARD_OFFSET_VAR)).toBe('120px')
+
+    const scrollHandler = (viewport.addEventListener as jest.Mock).mock.calls.find(
+      (call) => call[0] === 'scroll'
+    )?.[1] as (() => void) | undefined
+    expect(scrollHandler).toBeDefined()
+
+    window.dispatchEvent(new Event('scroll'))
+    offsetTop = 40
+    scrollHandler!()
+
+    expect(header.style.getPropertyValue(STICKY_HEADER_KEYBOARD_OFFSET_VAR)).toBe('120px')
+
+    jest.advanceTimersByTime(149)
+    expect(header.style.getPropertyValue(STICKY_HEADER_KEYBOARD_OFFSET_VAR)).toBe('120px')
+
+    jest.advanceTimersByTime(10)
+    expect(header.style.getPropertyValue(STICKY_HEADER_KEYBOARD_OFFSET_VAR)).toBe('40px')
+
+    unbind()
   })
 })
 

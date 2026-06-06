@@ -75,10 +75,9 @@ import {
   removePresentationReadCompleteSlug,
 } from '@/lib/presentationReadCompleteStorage'
 import {
-  clearProfileIosVisualViewportChrome,
+  bindProfileIosKeyboardHeaderSync,
   scrollToTocAnchor,
   scrollToTocAnchorWhenReady,
-  syncProfileIosVisualViewportChrome,
 } from '@/lib/scrollToTocAnchor'
 import {
   isProfileResourceSearchInputElement,
@@ -446,9 +445,6 @@ function ProfileContent({
   }, [profileSlug])
 
   // iOS sticky header vs. the on-screen keyboard (in-page search only).
-  // `interactiveWidget: resizes-content` is not sufficient on iOS Safari / WKWebView — sticky still
-  // desyncs when the keyboard is open. Track visualViewport only while search is focused (Safari also
-  // fires visualViewport while the URL bar animates during normal scroll, which made the header jump).
   useEffect(() => {
     if (!isHydrated || !isMemorizeIosWebHost()) return
     const vv = typeof window !== 'undefined' ? window.visualViewport : null
@@ -456,42 +452,31 @@ function ProfileContent({
     const header = document.querySelector<HTMLElement>('[data-profile-sticky-header]')
     if (!header) return
 
-    let rafId = 0
-    let vvListenersActive = false
+    let unbindSync: (() => void) | null = null
 
-    const sync = () => {
-      cancelAnimationFrame(rafId)
-      rafId = requestAnimationFrame(() => {
-        syncProfileIosVisualViewportChrome(header, vv, isProfileResourceSearchInputFocused())
+    const attachSync = () => {
+      if (unbindSync) return
+      unbindSync = bindProfileIosKeyboardHeaderSync({
+        header,
+        viewport: vv,
+        isSearchFocused: isProfileResourceSearchInputFocused,
       })
     }
 
-    const attachVvListeners = () => {
-      if (vvListenersActive) return
-      vvListenersActive = true
-      sync()
-      vv.addEventListener('resize', sync)
-      vv.addEventListener('scroll', sync)
-    }
-
-    const detachVvListeners = () => {
-      cancelAnimationFrame(rafId)
-      if (!vvListenersActive) return
-      vvListenersActive = false
-      vv.removeEventListener('resize', sync)
-      vv.removeEventListener('scroll', sync)
-      clearProfileIosVisualViewportChrome(header)
+    const detachSync = () => {
+      unbindSync?.()
+      unbindSync = null
     }
 
     const onFocusIn = (event: FocusEvent) => {
       if (!isProfileResourceSearchInputElement(event.target)) return
-      attachVvListeners()
+      attachSync()
     }
 
     const onFocusOut = (event: FocusEvent) => {
       if (!isProfileResourceSearchInputElement(event.target)) return
       requestAnimationFrame(() => {
-        if (!isProfileResourceSearchInputFocused()) detachVvListeners()
+        if (!isProfileResourceSearchInputFocused()) detachSync()
       })
     }
 
@@ -499,15 +484,15 @@ function ProfileContent({
     document.addEventListener('focusout', onFocusOut)
 
     if (isProfileResourceSearchInputFocused()) {
-      attachVvListeners()
+      attachSync()
     } else if (!resourceSearchOpen) {
-      detachVvListeners()
+      detachSync()
     }
 
     return () => {
       document.removeEventListener('focusin', onFocusIn)
       document.removeEventListener('focusout', onFocusOut)
-      detachVvListeners()
+      detachSync()
     }
   }, [isHydrated, sections, profileInfo, resourceSearchOpen])
 
