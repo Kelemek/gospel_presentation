@@ -5,9 +5,12 @@ import {
   findProfileResourceSearchMatches,
   RESOURCE_SEARCH_ACTIVE_ATTR,
   RESOURCE_SEARCH_MATCH_ATTR,
+  RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX,
   runProfileResourceSearch,
+  scrollProfileResourceSearchToMark,
   setProfileResourceSearchActiveIndex,
 } from '@/lib/profileResourceInPageSearch'
+import { FALLBACK_HEADER_OFFSET } from '@/lib/scrollToTocAnchor'
 
 function mountScope(html: string): HTMLElement {
   const scope = document.createElement('main')
@@ -59,9 +62,70 @@ describe('profileResourceInPageSearch', () => {
     expect(mark.getAttribute(RESOURCE_SEARCH_ACTIVE_ATTR)).toBe('true')
   })
 
+  it('scrollProfileResourceSearchToMark scrolls below sticky profile header', () => {
+    const header = document.createElement('div')
+    header.setAttribute('data-profile-sticky-header', '')
+    Object.defineProperty(header, 'offsetHeight', { value: 96, configurable: true })
+    document.body.appendChild(header)
+
+    const mark = document.createElement('mark')
+    document.body.appendChild(mark)
+    jest.spyOn(mark, 'getBoundingClientRect').mockReturnValue({
+      top: 240,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      width: 0,
+      height: 0,
+      x: 0,
+      y: 240,
+      toJSON: () => ({}),
+    })
+    Object.defineProperty(window, 'scrollY', { value: 300, configurable: true, writable: true })
+    const scrollSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => {})
+
+    scrollProfileResourceSearchToMark(mark)
+
+    expect(scrollSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        top: 300 + 240 - (96 + RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX),
+      })
+    )
+
+    scrollSpy.mockRestore()
+  })
+
+  it('scrollProfileResourceSearchToMark uses fallback header offset when chrome is missing', () => {
+    const mark = document.createElement('mark')
+    document.body.appendChild(mark)
+    jest.spyOn(mark, 'getBoundingClientRect').mockReturnValue({
+      top: 100,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      width: 0,
+      height: 0,
+      x: 0,
+      y: 100,
+      toJSON: () => ({}),
+    })
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true, writable: true })
+    const scrollSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => {})
+
+    scrollProfileResourceSearchToMark(mark)
+
+    expect(scrollSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        top: 100 - (FALLBACK_HEADER_OFFSET + RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX),
+      })
+    )
+
+    scrollSpy.mockRestore()
+  })
+
   it('runProfileResourceSearch returns count and scrollToIndex', () => {
     const scope = mountScope('<p>find me find</p>')
-    const scrollSpy = jest.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(() => {})
+    const scrollSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => {})
 
     const result = runProfileResourceSearch(scope, 'find', { activeIndex: 0 })
     expect(result.count).toBe(2)

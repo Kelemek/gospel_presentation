@@ -84,7 +84,8 @@ describe('ProfileResourceInPageSearch', () => {
       jest.advanceTimersByTime(250)
     })
 
-    const scrollSpy = jest.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(() => {})
+    const scrollSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    scrollSpy.mockClear()
     fireEvent.click(screen.getByRole('button', { name: 'Next match' }))
     expect(scrollSpy).toHaveBeenCalled()
     expect(screen.getByText('2 of 2', { selector: '[aria-hidden="true"]' })).toBeInTheDocument()

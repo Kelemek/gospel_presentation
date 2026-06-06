@@ -129,6 +129,11 @@ global.fetch = jest.fn((url, opts) => {
   return Promise.resolve({ ok: true, json: async () => ({}) })
 })
 
+// jsdom: `window.scrollTo` throws "Not implemented"; TOC navigation and in-page search use it.
+if (typeof window !== 'undefined') {
+  window.scrollTo = jest.fn()
+}
+
 // jsdom: `scrollIntoView` is missing or incomplete on some elements; memorization/reorder use it.
 if (typeof HTMLElement !== 'undefined') {
   const proto = HTMLElement.prototype

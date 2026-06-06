@@ -1,11 +1,15 @@
 import { coerceHighlightMarkBlockChildren } from '@/lib/coerceHighlightMarkBlockChildren'
 import { isWithinButton, isWithinGospelMount } from '@/lib/profileHighlightVisibleText'
+import { getProfileHeaderScrollOffset } from '@/lib/scrollToTocAnchor'
 
 export const RESOURCE_SEARCH_MATCH_ATTR = 'data-resource-search-match'
 export const RESOURCE_SEARCH_ACTIVE_ATTR = 'data-resource-search-active'
 
 /** Only one ephemeral highlight is painted in the DOM at a time (large result sets). */
 export const RESOURCE_SEARCH_MAX_DOM_MARKS = 1
+
+/** Gap below sticky profile chrome (menu + tabs + search) when scrolling to a match. */
+export const RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX = 8
 
 export type PlainTextRange = { start: number; end: number }
 
@@ -309,11 +313,11 @@ export function prefersReducedMotionResourceSearch(): boolean {
 }
 
 export function scrollProfileResourceSearchToMark(mark: HTMLElement | null | undefined): void {
-  if (!mark) return
-  mark.scrollIntoView({
-    block: 'center',
-    behavior: prefersReducedMotionResourceSearch() ? 'auto' : 'smooth',
-  })
+  if (!mark || typeof window === 'undefined') return
+  const offset = getProfileHeaderScrollOffset() + RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX
+  const behavior = prefersReducedMotionResourceSearch() ? 'auto' : 'smooth'
+  const top = Math.max(0, mark.getBoundingClientRect().top + window.scrollY - offset)
+  window.scrollTo({ top, behavior })
 }
 
 function resolveSearchRangeDomBounds(

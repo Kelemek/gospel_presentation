@@ -2004,7 +2004,10 @@ function ProfileContent({
       {/* Unified Layout - Hamburger menu at all screen sizes */}
       <div className="flex min-h-screen flex-col">
         {/* Header with hamburger menu and optional edit button */}
-        <div data-profile-sticky-header className="sticky top-[env(safe-area-inset-top,0px)] z-40 bg-white/70 dark:bg-slate-800/90 backdrop-blur-sm shadow-md print-hide">
+        <div
+          data-profile-sticky-header
+          className="sticky top-[env(safe-area-inset-top,0px)] z-40 bg-white shadow-md dark:bg-slate-800 print-hide supports-backdrop-filter:md:bg-white/90 supports-backdrop-filter:md:dark:bg-slate-800/95 supports-backdrop-filter:md:backdrop-blur-sm"
+        >
           <div className="w-full min-w-0 px-5 py-3">
             <div className="flex min-w-0 justify-between items-center gap-3">
               <button
