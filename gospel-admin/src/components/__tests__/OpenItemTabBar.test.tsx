@@ -147,8 +147,9 @@ describe('OpenItemTabBar', () => {
       />
     )
     const tab = screen.getByRole('tab', { name: 'The Gospel' })
-    expect(tab).toHaveClass('flex-1', 'justify-start')
+    expect(tab).toHaveClass('flex-1', 'justify-center')
     expect(tab.closest('[data-open-item-tab-id="default"]')).toHaveClass('w-full', 'flex-1')
+    expect(screen.queryByRole('button', { name: 'Close The Gospel' })).not.toBeInTheDocument()
   })
 
   it('shows spyglass only on the active tab when onToggleSearch is set', () => {

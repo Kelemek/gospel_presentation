@@ -41,8 +41,9 @@ describe('ProfileResourceTabs', () => {
     )
     const tab = screen.getByRole('tab', { name: 'The Gospel' })
     expect(tab).toBeInTheDocument()
-    expect(tab).toHaveClass('flex-1')
+    expect(tab).toHaveClass('flex-1', 'justify-center')
     expect(screen.getByRole('button', { name: 'Search in resource' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Close The Gospel' })).not.toBeInTheDocument()
   })
 
   it('renders tabs with active selection', () => {

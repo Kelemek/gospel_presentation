@@ -235,13 +235,14 @@ export default function OpenItemTabBar({
             const isActive = entry.id === active
             const label = entry.ariaLabel ?? entry.title
             const showSearchToggle = isActive && onToggleSearch
+            const showCloseButton = tabs.length > 1
             return (
               <div
                 key={entry.id}
                 role="presentation"
                 data-open-item-tab-id={entry.id}
                 className={`flex items-stretch rounded-t-md border-r border-slate-200 dark:border-slate-600 last:border-r-0 ${
-                  isSingleExpandedTab ? 'min-w-0 w-full flex-1' : 'shrink-0'
+                  isSingleExpandedTab ? 'relative min-w-0 w-full flex-1' : 'shrink-0'
                 } ${
                   isActive
                     ? 'bg-white dark:bg-slate-800 shadow-sm'
@@ -257,21 +258,31 @@ export default function OpenItemTabBar({
                   onPointerDown={captureTabBarScroll}
                   onClick={() => onSelectTab(entry.id)}
                   className={`${TAB_SELECT_BUTTON_CLASS} ${
-                    isSingleExpandedTab ? 'min-w-0 flex-1 justify-start' : ''
+                    isSingleExpandedTab
+                      ? `min-w-0 w-full flex-1 justify-center ${
+                          showSearchToggle ? 'px-11' : ''
+                        }`
+                      : ''
                   } ${
                     isActive
                       ? 'text-slate-900 dark:text-slate-100'
                       : 'text-slate-600 dark:text-slate-300'
                   }`}
                 >
-                  <span className="inline-flex min-w-0">
+                  <span className="inline-flex min-w-0 justify-center">
                     {entry.titleParts ? (
                       <TabScriptureStyleTitle
                         book={entry.titleParts.book}
                         suffix={entry.titleParts.suffix}
                       />
                     ) : (
-                      <span className="whitespace-nowrap text-left">{entry.title}</span>
+                      <span
+                        className={`whitespace-nowrap ${
+                          isSingleExpandedTab ? 'text-center' : 'text-left'
+                        }`}
+                      >
+                        {entry.title}
+                      </span>
                     )}
                   </span>
                 </button>
@@ -287,7 +298,9 @@ export default function OpenItemTabBar({
                       e.stopPropagation()
                       onToggleSearch?.()
                     }}
-                    className={TAB_SEARCH_BUTTON_CLASS}
+                    className={`${TAB_SEARCH_BUTTON_CLASS} ${
+                      isSingleExpandedTab ? 'absolute right-0 top-0 bottom-0 z-10' : ''
+                    }`}
                   >
                     <svg
                       className={TAB_SEARCH_ICON_CLASS}
@@ -305,33 +318,35 @@ export default function OpenItemTabBar({
                     </svg>
                   </button>
                 ) : null}
-                <button
-                  type="button"
-                  aria-label={`Close ${label}`}
-                  title={`Close ${label}`}
-                  onPointerDown={captureTabBarScroll}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    captureTabBarScroll()
-                    onCloseTab(entry.id)
-                  }}
-                  className={TAB_CLOSE_BUTTON_CLASS}
-                >
-                  <svg
-                    className={TAB_CLOSE_ICON_CLASS}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden
+                {showCloseButton ? (
+                  <button
+                    type="button"
+                    aria-label={`Close ${label}`}
+                    title={`Close ${label}`}
+                    onPointerDown={captureTabBarScroll}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      captureTabBarScroll()
+                      onCloseTab(entry.id)
+                    }}
+                    className={TAB_CLOSE_BUTTON_CLASS}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
+                    <svg
+                      className={TAB_CLOSE_ICON_CLASS}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                ) : null}
               </div>
             )
           })}
