@@ -258,7 +258,7 @@ export default function CopyrightPage() {
                   <strong className="text-slate-800 dark:text-slate-100">Authentication:</strong> Supabase Auth with email verification codes
                 </p>
                 <p className="text-slate-700 dark:text-slate-200 text-base md:text-lg">
-                  <strong className="text-slate-800 dark:text-slate-100">User Roles:</strong> Admin (full access), Counselor (own profiles only) & Counselee (view-only access)
+                  <strong className="text-slate-800 dark:text-slate-100">User Roles:</strong> Admin (staff access to manage profiles and settings); gospel profiles are publicly viewable without signing in
                 </p>
                 <p className="text-slate-700 dark:text-slate-200 text-base md:text-lg">
                   <strong className="text-slate-800 dark:text-slate-100">Scripture APIs:</strong> ESV API v3; API.Bible (REST) for KJV, NASB, LSB, NIV, NLT, and CSB when configured
