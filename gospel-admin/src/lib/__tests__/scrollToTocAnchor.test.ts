@@ -7,6 +7,7 @@ import {
   scrollToTocAnchorWhenReady,
   SAFE_AREA_BAR_OFFSET_VAR,
   STICKY_HEADER_GAP_FILL_ATTR,
+  STICKY_HEADER_GAP_FILL_HEIGHT_VAR,
   STICKY_HEADER_KEYBOARD_FIXED_ATTR,
   STICKY_HEADER_KEYBOARD_OFFSET_VAR,
   STICKY_HEADER_SPACER_ATTR,
@@ -33,21 +34,21 @@ describe('applyStickyHeaderVisualViewportTop', () => {
     expect(header.hasAttribute(STICKY_HEADER_KEYBOARD_FIXED_ATTR)).toBe(true)
   })
 
-  it('enables gap fill when the keyboard offset is nonzero (fixed header mode)', () => {
+  it('keeps gap fill for the keyboard session and freezes height when offset drops to zero', () => {
     const header = document.createElement('div')
     document.body.appendChild(header)
 
     applyStickyHeaderVisualViewportTop(header, { offsetTop: 138 })
-
-    expect(header.hasAttribute(STICKY_HEADER_KEYBOARD_FIXED_ATTR)).toBe(true)
-    expect(header.style.position).toBe('fixed')
     expect(header.hasAttribute(STICKY_HEADER_GAP_FILL_ATTR)).toBe(true)
-    const spacer = header.previousElementSibling
-    expect(spacer).toBeInstanceOf(HTMLElement)
-    expect(spacer?.getAttribute(STICKY_HEADER_SPACER_ATTR)).toBe('')
+    expect(header.style.getPropertyValue(STICKY_HEADER_GAP_FILL_HEIGHT_VAR)).toBe('138px')
 
     applyStickyHeaderVisualViewportTop(header, { offsetTop: 0 })
-    expect(header.hasAttribute(STICKY_HEADER_GAP_FILL_ATTR)).toBe(false)
+    expect(header.hasAttribute(STICKY_HEADER_GAP_FILL_ATTR)).toBe(true)
+    expect(header.style.getPropertyValue(STICKY_HEADER_GAP_FILL_HEIGHT_VAR)).toBe('0px')
+
+    applyStickyHeaderVisualViewportTop(header, { offsetTop: 0 }, { gapFillHeightPx: 138 })
+    expect(header.style.getPropertyValue(STICKY_HEADER_KEYBOARD_OFFSET_VAR)).toBe('0px')
+    expect(header.style.getPropertyValue(STICKY_HEADER_GAP_FILL_HEIGHT_VAR)).toBe('138px')
   })
 
   it('applyStickyHeaderVisualViewportTop skips redundant style writes when offset is unchanged', () => {
@@ -177,6 +178,43 @@ describe('bindProfileIosKeyboardHeaderSync', () => {
 
     jest.advanceTimersByTime(10)
     expect(header.style.getPropertyValue(STICKY_HEADER_KEYBOARD_OFFSET_VAR)).toBe('40px')
+
+    unbind()
+  })
+
+  it('freezes gap-fill height during window scroll momentum', () => {
+    const header = document.createElement('div')
+    document.body.appendChild(header)
+
+    let offsetTop = 120
+    const viewport = {
+      get offsetTop() {
+        return offsetTop
+      },
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+    }
+
+    const unbind = bindProfileIosKeyboardHeaderSync({
+      header,
+      viewport,
+      isSearchFocused: () => true,
+    })
+
+    expect(header.style.getPropertyValue(STICKY_HEADER_GAP_FILL_HEIGHT_VAR)).toBe('120px')
+
+    window.dispatchEvent(new Event('scroll'))
+    offsetTop = 0
+    const resizeHandler = (viewport.addEventListener as jest.Mock).mock.calls.find(
+      (call) => call[0] === 'resize'
+    )?.[1] as (() => void) | undefined
+    resizeHandler?.()
+
+    expect(header.style.getPropertyValue(STICKY_HEADER_KEYBOARD_OFFSET_VAR)).toBe('0px')
+    expect(header.style.getPropertyValue(STICKY_HEADER_GAP_FILL_HEIGHT_VAR)).toBe('120px')
+
+    jest.advanceTimersByTime(160)
+    expect(header.style.getPropertyValue(STICKY_HEADER_GAP_FILL_HEIGHT_VAR)).toBe('0px')
 
     unbind()
   })

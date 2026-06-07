@@ -57,6 +57,9 @@ export const STICKY_HEADER_KEYBOARD_OFFSET_VAR = '--profile-sticky-kbd-offset'
 /** Moves the fixed notch/safe-area gradient bar with the iOS visual viewport (keyboard open). */
 export const SAFE_AREA_BAR_OFFSET_VAR = '--profile-safe-area-bar-offset'
 
+/** Gap-fill strip height (may stay frozen during scroll momentum while header top still tracks vv). */
+export const STICKY_HEADER_GAP_FILL_HEIGHT_VAR = '--profile-sticky-kbd-gap-fill-height'
+
 /** Set when the profile sticky header is pinned with the keyboard open (gap-fill above menu). */
 export const STICKY_HEADER_GAP_FILL_ATTR = 'data-sticky-header-gap-fill'
 
@@ -125,15 +128,20 @@ const IOS_WINDOW_SCROLL_IDLE_MS = 150
  */
 export function applyStickyHeaderVisualViewportTop(
   header: HTMLElement,
-  viewport: { offsetTop: number } | null | undefined
+  viewport: { offsetTop: number } | null | undefined,
+  options?: { gapFillHeightPx?: number }
 ): number {
   const offsetTop = Math.max(0, Math.round(viewport?.offsetTop ?? 0))
+  const gapFillHeightPx = Math.max(0, Math.round(options?.gapFillHeightPx ?? offsetTop))
 
   ensureIosKeyboardHeaderFixed(header)
 
   const previous = header.getAttribute(STICKY_HEADER_APPLIED_OFFSET_ATTR)
   if (previous === String(offsetTop)) {
-    return offsetTop
+    const appliedGap = header.style.getPropertyValue(STICKY_HEADER_GAP_FILL_HEIGHT_VAR)
+    if (appliedGap === `${gapFillHeightPx}px`) {
+      return offsetTop
+    }
   }
   header.setAttribute(STICKY_HEADER_APPLIED_OFFSET_ATTR, String(offsetTop))
 
@@ -142,11 +150,9 @@ export function applyStickyHeaderVisualViewportTop(
   header.style.top = `calc(env(safe-area-inset-top, 0px) + ${offsetTop}px)`
   document.body?.style.setProperty(SAFE_AREA_BAR_OFFSET_VAR, `${offsetTop}px`)
 
-  if (offsetTop > 0) {
-    header.setAttribute(STICKY_HEADER_GAP_FILL_ATTR, '')
-  } else {
-    header.removeAttribute(STICKY_HEADER_GAP_FILL_ATTR)
-  }
+  // Keep gap-fill active for the whole keyboard session; height follows vv unless frozen mid-scroll.
+  header.setAttribute(STICKY_HEADER_GAP_FILL_ATTR, '')
+  header.style.setProperty(STICKY_HEADER_GAP_FILL_HEIGHT_VAR, `${gapFillHeightPx}px`)
 
   return offsetTop
 }
@@ -157,6 +163,7 @@ export function clearProfileIosVisualViewportChrome(header: HTMLElement | null |
     releaseIosKeyboardHeaderFixed(header)
     header.style.removeProperty(STICKY_HEADER_KEYBOARD_OFFSET_VAR)
     header.style.removeProperty('top')
+    header.style.removeProperty(STICKY_HEADER_GAP_FILL_HEIGHT_VAR)
     header.removeAttribute(STICKY_HEADER_GAP_FILL_ATTR)
     header.removeAttribute(STICKY_HEADER_APPLIED_OFFSET_ATTR)
   }
@@ -171,10 +178,11 @@ export function clearProfileIosVisualViewportChrome(header: HTMLElement | null |
 export function syncProfileIosVisualViewportChrome(
   header: HTMLElement,
   viewport: { offsetTop: number } | null | undefined,
-  searchInputFocused: boolean
+  searchInputFocused: boolean,
+  options?: { gapFillHeightPx?: number }
 ): void {
   if (searchInputFocused) {
-    applyStickyHeaderVisualViewportTop(header, viewport)
+    applyStickyHeaderVisualViewportTop(header, viewport, options)
   } else {
     clearProfileIosVisualViewportChrome(header)
   }
@@ -201,11 +209,20 @@ export function bindProfileIosKeyboardHeaderSync(options: {
   let vvScrollDebounceTimer = 0
   let windowScrollIdleTimer = 0
   let windowScrolling = false
+  let frozenGapFillPx: number | null = null
 
   const syncNow = () => {
     cancelAnimationFrame(rafId)
     rafId = requestAnimationFrame(() => {
-      syncProfileIosVisualViewportChrome(header, vv, isSearchFocused())
+      const liveOffset = Math.max(0, Math.round(vv.offsetTop ?? 0))
+      const gapFillHeightPx =
+        windowScrolling && frozenGapFillPx !== null ? frozenGapFillPx : liveOffset
+      if (!windowScrolling) {
+        frozenGapFillPx = liveOffset
+      }
+      syncProfileIosVisualViewportChrome(header, vv, isSearchFocused(), {
+        gapFillHeightPx,
+      })
     })
   }
 
@@ -216,6 +233,10 @@ export function bindProfileIosKeyboardHeaderSync(options: {
   }
 
   const onWindowScroll = () => {
+    if (!windowScrolling) {
+      const applied = header.getAttribute(STICKY_HEADER_APPLIED_OFFSET_ATTR)
+      frozenGapFillPx = applied !== null ? Number(applied) : Math.max(0, Math.round(vv.offsetTop ?? 0))
+    }
     windowScrolling = true
     window.clearTimeout(windowScrollIdleTimer)
     window.clearTimeout(vvScrollDebounceTimer)

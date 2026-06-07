@@ -26,16 +26,16 @@ html.text-size-largest [data-scripture-modal-chrome] {
 }
 
 /* iOS in-page search: when the keyboard pins the profile sticky header, fill the slit above it
-   (keyboard offset only — not the notch band) so scrolling body text does not show through. Only
-   when the site title has scrolled away (`data-sticky-header-gap-fill`); otherwise this would
-   cover "The Gospel Presentation" header. The notch band uses `body::before` + --profile-safe-area-bar-offset. */
+   (keyboard offset only — not the notch band) so scrolling body text does not show through. Active
+   for the whole search+keyboard session; height may stay frozen during scroll momentum. The notch
+   band uses `body::before` + --profile-safe-area-bar-offset. */
 [data-profile-sticky-header][data-sticky-header-gap-fill]::before {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
   bottom: 100%;
-  height: var(--profile-sticky-kbd-offset, 0px);
+  height: var(--profile-sticky-kbd-gap-fill-height, var(--profile-sticky-kbd-offset, 0px));
   background: inherit;
   pointer-events: none;
 }
