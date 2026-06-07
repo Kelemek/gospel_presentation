@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import AddMemorizedBibleBooksModal from '@/components/AddMemorizedBibleBooksModal'
 import AddMemorizedVerseModal from '@/components/AddMemorizedVerseModal'
+import { bibleBooksCountLabel, isBibleBooksMemorizationItem } from '@/lib/bibleBooksMemorization'
 import MemorizationPracticeSession from '@/components/MemorizationPracticeSession'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import { useTranslation } from '@/contexts/TranslationContext'
@@ -56,6 +58,7 @@ export default function MemorizeDropdown({
   const { translation } = useTranslation()
   const [isOpen, setIsOpen] = useState(false)
   const [addVerseOpen, setAddVerseOpen] = useState(false)
+  const [addBibleBooksOpen, setAddBibleBooksOpen] = useState(false)
   const [verses, setVerses] = useState<MemorizedVerse[]>(() => loadMemorizedVerses())
   const [practiceVerse, setPracticeVerse] = useState<MemorizedVerse | null>(null)
 
@@ -75,7 +78,12 @@ export default function MemorizeDropdown({
 
   const handleRemove = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
-    const confirmed = await showConfirm('Remove this verse from your memorization list?')
+    const item = verses.find((v) => v.id === id)
+    const removeLabel =
+      item && isBibleBooksMemorizationItem(item)
+        ? `Remove ${item.reference} from your memorization list?`
+        : 'Remove this verse from your memorization list?'
+    const confirmed = await showConfirm(removeLabel)
     if (confirmed) {
       removeMemorizedVerse(id)
       refresh()
@@ -118,7 +126,9 @@ export default function MemorizeDropdown({
                   {v.reference}
                 </span>
                 <span className="text-xs text-slate-600 dark:text-slate-400 mt-0.5 block">
-                  {v.translation.toUpperCase()}
+                  {isBibleBooksMemorizationItem(v)
+                    ? bibleBooksCountLabel(v.bibleBooksScope)
+                    : v.translation.toUpperCase()}
                   {v.lastPracticedAt != null ? ` · Last: ${formatDate(v.lastPracticedAt)}` : ''}
                 </span>
                 <span className="text-xs text-slate-500 dark:text-slate-500 mt-0.5 block">
@@ -187,14 +197,24 @@ export default function MemorizeDropdown({
           </span>
         </button>
         {isOpen && (
-          <button
-            type="button"
-            data-tour="memorize-add-verse"
-            onClick={() => setAddVerseOpen(true)}
-            className="w-full min-h-[44px] cursor-pointer rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/40 px-4 py-2.5 text-sm font-medium text-blue-800 dark:text-blue-100 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-          >
-            + Add
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              data-tour="memorize-add-verse"
+              onClick={() => setAddVerseOpen(true)}
+              className="w-full min-h-[44px] cursor-pointer rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/40 px-4 py-2.5 text-sm font-medium text-blue-800 dark:text-blue-100 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+            >
+              + Add Verses
+            </button>
+            <button
+              type="button"
+              data-tour="memorize-add-bible-books"
+              onClick={() => setAddBibleBooksOpen(true)}
+              className="w-full min-h-[44px] cursor-pointer rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/40 px-4 py-2.5 text-sm font-medium text-blue-800 dark:text-blue-100 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+            >
+              + Bible Books
+            </button>
+          </div>
         )}
         {isOpen && (
           <div
@@ -205,10 +225,12 @@ export default function MemorizeDropdown({
           >
             {verses.length === 0 ? (
               <p className="text-sm text-slate-500 dark:text-slate-400 px-1 py-2">
-                No verses saved yet. Tap{' '}
-                <strong className="font-medium text-slate-600 dark:text-slate-300">+ Add</strong>
+                Nothing saved yet. Tap{' '}
+                <strong className="font-medium text-slate-600 dark:text-slate-300">+ Add Verses</strong>
                 {' '}
-                to choose a verse, or open a scripture passage and choose &quot;Memorize this verse&quot;.
+                to choose a passage, tap <strong className="font-medium text-slate-600 dark:text-slate-300">+ Bible Books</strong>
+                {' '}
+                to memorize book order, or open a scripture passage and choose &quot;Memorize this verse&quot;.
               </p>
             ) : (
               <>
@@ -228,6 +250,20 @@ export default function MemorizeDropdown({
             isOpen={addVerseOpen}
             onClose={() => {
               setAddVerseOpen(false)
+              refresh()
+            }}
+            translation={translation}
+          />,
+          document.body
+        )}
+
+      {addBibleBooksOpen &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <AddMemorizedBibleBooksModal
+            isOpen={addBibleBooksOpen}
+            onClose={() => {
+              setAddBibleBooksOpen(false)
               refresh()
             }}
             translation={translation}

@@ -7,7 +7,11 @@ import userEvent from '@testing-library/user-event'
 import MemorizeDropdown from '@/components/MemorizeDropdown'
 import { resetGospelClientStorageForTests } from '@/lib/gospelClientStorage'
 import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
-import { addMemorizedVerse, loadMemorizedVerses } from '@/lib/verseMemorizationStorage'
+import {
+  addMemorizedVerse,
+  loadMemorizedVerses,
+  tryAddMemorizedBibleBooks,
+} from '@/lib/verseMemorizationStorage'
 
 const mockShowConfirm = jest.fn()
 
@@ -19,6 +23,13 @@ jest.mock('@/components/AddMemorizedVerseModal', () => ({
   __esModule: true,
   default: function MockAddVerseModal({ isOpen }: { isOpen: boolean }) {
     return isOpen ? <div data-testid="add-memorized-verse-modal" /> : null
+  },
+}))
+
+jest.mock('@/components/AddMemorizedBibleBooksModal', () => ({
+  __esModule: true,
+  default: function MockAddBibleBooksModal({ isOpen }: { isOpen: boolean }) {
+    return isOpen ? <div data-testid="add-memorized-bible-books-modal" /> : null
   },
 }))
 
@@ -47,25 +58,42 @@ describe('MemorizeDropdown', () => {
     render(<MemorizeDropdown />)
     await user.click(screen.getByRole('button', { name: /memorize/i }))
     const panel = screen.getByRole('region', { name: 'Memorization list' })
-    expect(panel).toHaveTextContent(/No verses saved yet/)
-    expect(panel).toHaveTextContent(/Tap \+ Add to choose a verse/)
-    expect(panel.textContent).toMatch(/\+ Add to choose/)
-    expect(panel.textContent).not.toMatch(/\+ Addto/i)
+    expect(panel).toHaveTextContent(/Nothing saved yet/)
+    expect(panel).toHaveTextContent(/\+ Add Verses/)
+    expect(panel).toHaveTextContent(/Bible Books/)
   })
 
-  it('shows + Add when Memorize panel is expanded', async () => {
+  it('shows + Add Verses and + Bible Books when Memorize panel is expanded', async () => {
     const user = userEvent.setup()
     render(<MemorizeDropdown />)
     await user.click(screen.getByRole('button', { name: /memorize/i }))
-    expect(screen.getByRole('button', { name: /^\+ Add$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^\+ Add Verses$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^\+ Bible Books$/i })).toBeInTheDocument()
   })
 
-  it('opens add-verse modal when + Add is clicked', async () => {
+  it('opens add-verse modal when + Add Verses is clicked', async () => {
     const user = userEvent.setup()
     render(<MemorizeDropdown />)
     await user.click(screen.getByRole('button', { name: /memorize/i }))
-    await user.click(screen.getByRole('button', { name: /^\+ Add$/i }))
+    await user.click(screen.getByRole('button', { name: /^\+ Add Verses$/i }))
     expect(screen.getByTestId('add-memorized-verse-modal')).toBeInTheDocument()
+  })
+
+  it('opens bible books modal when + Bible Books is clicked', async () => {
+    const user = userEvent.setup()
+    render(<MemorizeDropdown />)
+    await user.click(screen.getByRole('button', { name: /memorize/i }))
+    await user.click(screen.getByRole('button', { name: /^\+ Bible Books$/i }))
+    expect(screen.getByTestId('add-memorized-bible-books-modal')).toBeInTheDocument()
+  })
+
+  it('lists bible books item with book count instead of translation', async () => {
+    await tryAddMemorizedBibleBooks('ot', 'esv')
+    const user = userEvent.setup()
+    render(<MemorizeDropdown />)
+    await user.click(screen.getByRole('button', { name: /memorize/i }))
+    expect(screen.getByText('Bible Books (OT)')).toBeInTheDocument()
+    expect(screen.getByText('39 books')).toBeInTheDocument()
   })
 
   it('lists verses grouped by mastery', async () => {

@@ -1,8 +1,10 @@
 import {
   buildInitialReorderSlotAssignment,
   buildMemorizationChoiceLabels,
+  buildBibleBooksReorderChunks,
   buildMemorizationReorderChunks,
   buildMemorizationTokens,
+  tokenizeMemorizationPlainWord,
   cueGlyphForTypableToken,
   firstLetterGlyphOfWord,
   firstLetterOfWord,
@@ -113,6 +115,23 @@ describe('memorizationPracticeUtils', () => {
       { kind: 'punct', text: '-' },
       { kind: 'digit', text: '2' },
     ])
+  })
+
+  it('tokenizeMemorizationPlainWord splits numeric-only words into digit tokens', () => {
+    expect(tokenizeMemorizationPlainWord('1')).toEqual([{ kind: 'digit', text: '1' }])
+    expect(tokenizeMemorizationPlainWord('16')).toEqual([
+      { kind: 'digit', text: '1' },
+      { kind: 'digit', text: '6' },
+    ])
+    expect(tokenizeMemorizationPlainWord('Corinthians')).toEqual([{ kind: 'word', text: 'Corinthians' }])
+  })
+
+  it('buildMemorizationTokens treats numeric book prefixes as digit blanks', () => {
+    const t = buildMemorizationTokens('1 Thessalonians 2 Timothy', '')
+    const typable = getTypableTokenIndices(t)
+    const digitTexts = typable.filter((i) => t[i]!.kind === 'digit').map((i) => t[i]!.text)
+    expect(digitTexts).toEqual(['1', '2'])
+    expect(formatMemorizationTokensPlain(t)).toBe('1 Thessalonians 2 Timothy')
   })
 
   it('buildMemorizationTokens appends reference after verse with spaces', () => {
@@ -230,6 +249,11 @@ describe('memorizationPracticeUtils', () => {
   it('buildMemorizationReorderChunks handles very short verse', () => {
     const c = buildMemorizationReorderChunks('Hi', 'R 1:1')
     expect(c.map((x) => x.text)).toEqual(['Hi', 'R', '1', '1'])
+  })
+
+  it('buildBibleBooksReorderChunks creates one chunk per book name', () => {
+    const c = buildBibleBooksReorderChunks(['Genesis', 'Exodus', 'Song of Solomon'])
+    expect(c.map((x) => x.text)).toEqual(['Genesis', 'Exodus', 'Song of Solomon'])
   })
 
   it('reorderMovableCountForRound increases through rounds', () => {

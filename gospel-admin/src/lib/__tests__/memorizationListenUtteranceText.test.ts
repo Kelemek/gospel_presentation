@@ -33,4 +33,23 @@ describe('getMemorizationListenUtteranceText', () => {
     const s = getMemorizationListenUtteranceText(v)
     expect(s).toBe('For God so loved the world John chapter 3, verse 16')
   })
+
+  it('speaks numbered bible books with ordinals for listen', () => {
+    const v: MemorizedVerse = {
+      id: 'bb',
+      reference: 'Bible Books (NT)',
+      text: '1 Peter 2 Timothy',
+      translation: 'esv',
+      dateAdded: 0,
+      lastPracticedAt: null,
+      practiceSessions: [],
+      kind: 'bibleBooks',
+      bibleBooksScope: 'nt',
+    }
+    const s = getMemorizationListenUtteranceText(v)
+    expect(s).toContain('first Peter')
+    expect(s).toContain('second Timothy')
+    expect(s).not.toMatch(/\bone Peter\b/i)
+    expect(s).not.toMatch(/\btwo Timothy\b/i)
+  })
 })

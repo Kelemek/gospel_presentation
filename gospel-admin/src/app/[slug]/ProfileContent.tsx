@@ -16,6 +16,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import GospelSection from '@/components/GospelSection'
 import ScriptureModal from '@/components/ScriptureModal'
 import MemorizationPracticeSession from '@/components/MemorizationPracticeSession'
+import { isBibleBooksMemorizationItem } from '@/lib/bibleBooksMemorization'
 import TableOfContents from '@/components/TableOfContents'
 import ProfileResourceTabs from '@/components/ProfileResourceTabs'
 import { clearProfileResourceSearchMarks } from '@/lib/profileResourceInPageSearch'
@@ -2552,12 +2553,16 @@ function ProfileContent({
                 completed: result.completed,
               })
             }}
-            onOpenSpurgeonStudy={(ref) => {
-              setStudyModalTitle(STUDY_MODAL_DEFAULT_TITLE)
-              setStudyLibraryFocus('all')
-              setSpurgeonStudyReference(ref)
-              setIsSpurgeonLibraryOpen(true)
-            }}
+            {...(!isBibleBooksMemorizationItem(memorizationPracticeVerse)
+              ? {
+                  onOpenSpurgeonStudy: (ref: string) => {
+                    setStudyModalTitle(STUDY_MODAL_DEFAULT_TITLE)
+                    setStudyLibraryFocus('all')
+                    setSpurgeonStudyReference(ref)
+                    setIsSpurgeonLibraryOpen(true)
+                  },
+                }
+              : {})}
           />,
           document.body
         )}

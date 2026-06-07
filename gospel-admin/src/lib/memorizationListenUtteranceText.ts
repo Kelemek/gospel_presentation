@@ -1,3 +1,5 @@
+import { booksForScope, isBibleBooksMemorizationItem } from '@/lib/bibleBooksMemorization'
+import { bibleBookNameToSpeechText } from '@/lib/bibleReferenceSpeechTransform'
 import { getWordsForMemorization } from '@/lib/memorizationPracticeUtils'
 import type { MemorizedVerse } from '@/lib/verseMemorizationStorage'
 
@@ -50,6 +52,11 @@ export function referenceToSpeechText(reference: string): string {
 /** Spoken string for the memorization line: verse + TTS-friendly reference (ESV: unused; TTS: non-ESV). */
 export function getMemorizationListenUtteranceText(verse: MemorizedVerse): string {
   const body = getWordsForMemorization(verse.text).join(' ')
+  if (isBibleBooksMemorizationItem(verse)) {
+    return booksForScope(verse.bibleBooksScope)
+      .map((b) => bibleBookNameToSpeechText(b.name))
+      .join(', ')
+  }
   const spokenRef = referenceToSpeechText(verse.reference)
   if (!body) return spokenRef
   if (!spokenRef) return body

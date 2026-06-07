@@ -179,6 +179,11 @@ export function buildBibleReferenceSpeakChunk(displayChunk: string): BibleRefere
   }
 }
 
+/** Spoken form of a Bible book name (e.g. `1 Peter` → `first Peter`). */
+export function bibleBookNameToSpeechText(bookName: string): string {
+  return buildBibleReferenceSpeakChunk(bookName.trim()).speakText
+}
+
 /** Map a code-unit index in the **spoken** chunk to a code-unit index in the **display** chunk. */
 export function displayCharIndexInChunkForSpeakIndex(
   speakIndex: number,

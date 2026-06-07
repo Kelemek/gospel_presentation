@@ -1,6 +1,11 @@
 import type { BibleTranslation } from '@/lib/bible-translations'
 import { isBibleTranslation } from '@/lib/bible-translations'
 import {
+  bibleBooksPlainText,
+  bibleBooksReferenceLabel,
+  type BibleBooksMemorizationScope,
+} from '@/lib/bibleBooksMemorization'
+import {
   gospelStorageGetSync,
   gospelStorageSet,
   gospelStorageSetSync,
@@ -44,6 +49,10 @@ export interface MemorizationInProgress {
 /** Payload from the practice UI (storage sets `updatedAt`). */
 export type MemorizationInProgressSavePayload = Omit<MemorizationInProgress, 'updatedAt'>
 
+export type MemorizationItemKind = 'verse' | 'bibleBooks'
+
+export type { BibleBooksMemorizationScope } from '@/lib/bibleBooksMemorization'
+
 export interface MemorizedVerse {
   id: string
   reference: string
@@ -54,6 +63,10 @@ export interface MemorizedVerse {
   practiceSessions: MemorizationPracticeSessionRecord[]
   /** Resume point for the current multi-round practice session, if any. */
   inProgressPractice?: MemorizationInProgress | null
+  /** Omitted means legacy verse memorization. */
+  kind?: MemorizationItemKind
+  /** Set when `kind === 'bibleBooks'`. */
+  bibleBooksScope?: BibleBooksMemorizationScope
 }
 
 interface StoredShape {
@@ -174,6 +187,12 @@ function normalizeVerse(v: unknown): MemorizedVerse | null {
     }
   }
   const inProgressPractice = normalizeInProgress(o.inProgressPractice)
+  const kindRaw = o.kind
+  const kind: MemorizationItemKind | undefined =
+    kindRaw === 'verse' || kindRaw === 'bibleBooks' ? kindRaw : undefined
+  const scopeRaw = o.bibleBooksScope
+  const bibleBooksScope: BibleBooksMemorizationScope | undefined =
+    scopeRaw === 'all' || scopeRaw === 'ot' || scopeRaw === 'nt' ? scopeRaw : undefined
   return {
     id,
     reference,
@@ -183,6 +202,8 @@ function normalizeVerse(v: unknown): MemorizedVerse | null {
     lastPracticedAt: typeof lastPracticedAt === 'number' ? lastPracticedAt : null,
     practiceSessions,
     ...(inProgressPractice ? { inProgressPractice } : {}),
+    ...(kind ? { kind } : {}),
+    ...(bibleBooksScope ? { bibleBooksScope } : {}),
   }
 }
 
@@ -272,7 +293,8 @@ function compactVersesForStoragePressure(
   if (level === 0) return verses
   const withoutProgress = verses.map((verse) => {
     if (!verse.inProgressPractice) return verse
-    const { inProgressPractice: _removed, ...rest } = verse
+    const rest = { ...verse }
+    delete rest.inProgressPractice
     return rest
   })
   if (level === 1) return withoutProgress
@@ -349,7 +371,12 @@ export async function tryAddMemorizedVerse(
   if (!plain) return { ok: false, reason: 'empty_text' }
 
   const list = loadMemorizedVerses()
-  const dup = list.some((v) => v.reference === normalizedRef && v.translation === translation)
+  const dup = list.some(
+    (v) =>
+      (v.kind === 'verse' || v.kind == null) &&
+      v.reference === normalizedRef &&
+      v.translation === translation
+  )
   if (dup) return { ok: false, reason: 'duplicate' }
 
   const next: MemorizedVerse = {
@@ -360,6 +387,38 @@ export async function tryAddMemorizedVerse(
     dateAdded: Date.now(),
     lastPracticedAt: null,
     practiceSessions: [],
+    kind: 'verse',
+  }
+
+  const merged = [next, ...list]
+  const saved = await persistWithRetry(merged)
+  if (saved.ok) return { ok: true }
+  return { ok: false, reason: saved.reason }
+}
+
+export async function tryAddMemorizedBibleBooks(
+  scope: BibleBooksMemorizationScope,
+  translation: BibleTranslation
+): Promise<AddMemorizedVerseOutcome> {
+  await hydrateGospelClientStorage()
+
+  const plain = bibleBooksPlainText(scope)
+  if (!plain) return { ok: false, reason: 'empty_text' }
+
+  const list = loadMemorizedVerses()
+  const dup = list.some((v) => v.kind === 'bibleBooks' && v.bibleBooksScope === scope)
+  if (dup) return { ok: false, reason: 'duplicate' }
+
+  const next: MemorizedVerse = {
+    id: newId(),
+    reference: bibleBooksReferenceLabel(scope),
+    text: plain,
+    translation,
+    dateAdded: Date.now(),
+    lastPracticedAt: null,
+    practiceSessions: [],
+    kind: 'bibleBooks',
+    bibleBooksScope: scope,
   }
 
   const merged = [next, ...list]

@@ -14,6 +14,7 @@ import {
   GOSPEL_MEMORIZATION_CHANGED_EVENT,
   VERSE_MEMORIZATION_STORAGE_KEY,
   addMemorizedVerse,
+  tryAddMemorizedBibleBooks,
   tryAddMemorizedVerse,
   clearMemorizationInProgress,
   hydrateMemorizedVersesStorage,
@@ -295,6 +296,23 @@ describe('verseMemorizationStorage', () => {
     expect(verses.some((v) => v.reference === '1 Peter 2:13')).toBe(true)
     const john = verses.find((v) => v.reference === 'John 3:16')
     expect(john?.inProgressPractice).toBeUndefined()
+  })
+
+  it('tryAddMemorizedBibleBooks stores scoped bible books item', async () => {
+    const result = await tryAddMemorizedBibleBooks('nt', 'esv')
+    expect(result).toEqual({ ok: true })
+    const items = loadMemorizedVerses()
+    expect(items).toHaveLength(1)
+    expect(items[0]?.kind).toBe('bibleBooks')
+    expect(items[0]?.bibleBooksScope).toBe('nt')
+    expect(items[0]?.reference).toBe('Bible Books (NT)')
+    expect(items[0]?.text.length).toBeGreaterThan(0)
+  })
+
+  it('tryAddMemorizedBibleBooks allows different scopes', async () => {
+    await expect(tryAddMemorizedBibleBooks('ot', 'esv')).resolves.toEqual({ ok: true })
+    await expect(tryAddMemorizedBibleBooks('nt', 'esv')).resolves.toEqual({ ok: true })
+    expect(loadMemorizedVerses()).toHaveLength(2)
   })
 
   it('getMasterLevel ignores in-progress only (completed sessions only)', () => {

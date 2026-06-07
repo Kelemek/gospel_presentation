@@ -29,7 +29,9 @@ import {
 } from '@/lib/memorizationViewportPlatform'
 import { getMemorizationListenUtteranceText } from '@/lib/memorizationListenUtteranceText'
 import { studyResourcesAvailableFromPayload } from '@/lib/studyResourcesAvailability'
+import BibleBooksMemorizationList from '@/components/BibleBooksMemorizationList'
 import { MemorizationReorderPanel } from '@/components/MemorizationReorderPanel'
+import { booksForScope, isBibleBooksMemorizationItem } from '@/lib/bibleBooksMemorization'
 import { MemorizeListenControlsDialog } from '@/components/MemorizeListenControlsDialog'
 import ScriptureModalToolbarMenu from '@/components/ScriptureModalToolbarMenu'
 import {
@@ -44,6 +46,7 @@ import { dispatchWebSpeechExclusiveOwner } from '@/lib/exclusiveWebSpeechListen'
 import {
   MEMORIZATION_FULL_HIDE_ROUND,
   buildInitialReorderSlotAssignment,
+  buildBibleBooksReorderChunks,
   buildMemorizationChoiceLabels,
   buildMemorizationReorderChunks,
   buildMemorizationTokens,
@@ -151,19 +154,28 @@ export default function MemorizationPracticeSession({
   onClearInProgress,
   onOpenSpurgeonStudy,
 }: MemorizationPracticeSessionProps) {
+  const isBibleBooks = isBibleBooksMemorizationItem(verse)
+
   /**
    * `verse.text` is whatever was saved when the verse was added (from `/api/scripture`).
    * API.Bible-backed fetches use `include-titles=false` and a verse-scoped passage id, so
    * section headings are not part of the payload; practice does not need a second pass to strip titles.
    */
   const tokens = useMemo(
-    () => buildMemorizationTokens(verse.text, verse.reference),
-    [verse.text, verse.reference]
+    () =>
+      isBibleBooks
+        ? buildMemorizationTokens(verse.text, '')
+        : buildMemorizationTokens(verse.text, verse.reference),
+    [isBibleBooks, verse.text, verse.reference]
   )
-  const reorderChunks = useMemo(
-    () => buildMemorizationReorderChunks(verse.text, verse.reference),
-    [verse.text, verse.reference]
-  )
+  const reorderChunks = useMemo(() => {
+    if (isBibleBooks) {
+      return buildBibleBooksReorderChunks(
+        booksForScope(verse.bibleBooksScope).map((b) => b.name)
+      )
+    }
+    return buildMemorizationReorderChunks(verse.text, verse.reference)
+  }, [isBibleBooks, verse.bibleBooksScope, verse.text, verse.reference])
   const reorderColonAfterSlotIndex = useMemo(
     () => reorderReferenceColonAfterSlotIndex(reorderChunks.length, verse.reference),
     [reorderChunks.length, verse.reference]
@@ -220,7 +232,7 @@ export default function MemorizationPracticeSession({
    * ESV: passage-scoped stream via `GET /api/scripture/audio` (Crossway). Other translations:
    * API.Bible only exposes **chapter** MP3s, so we use device TTS to read the saved verse line only.
    */
-  const listenViaEsvPassageUrl = verse.translation === 'esv'
+  const listenViaEsvPassageUrl = !isBibleBooks && verse.translation === 'esv'
   const memorizePassageAudioUrl = useMemo(
     () =>
       `/api/scripture/audio?${new URLSearchParams({
@@ -283,7 +295,7 @@ export default function MemorizationPracticeSession({
   }, [])
 
   useEffect(() => {
-    if (!onOpenSpurgeonStudy || !verse.reference.trim()) {
+    if (isBibleBooks || !onOpenSpurgeonStudy || !verse.reference.trim()) {
       setSpurgeonStudyMatch('unset')
       return
     }
@@ -316,7 +328,7 @@ export default function MemorizationPracticeSession({
     return () => {
       cancelled = true
     }
-  }, [verse.reference, onOpenSpurgeonStudy])
+  }, [isBibleBooks, verse.reference, onOpenSpurgeonStudy])
 
   useEffect(() => {
     const el = passageAudioRef.current
@@ -661,8 +673,7 @@ export default function MemorizationPracticeSession({
       roundAdvanceHandledRef.current = null
       const seed = sessionSeedRef.current || verse.id
       if (practiceModeRef.current === 'reorder') {
-        const chunkList = buildMemorizationReorderChunks(verse.text, verse.reference)
-        const n = chunkList.length
+        const n = reorderChunks.length
         const movableArr = pickReorderMovableIndices(n, r, seed)
         const rng = seedRandom(stringToSeed(`${seed}-mem-reorder-assign-r${r}`))
         const assignment = buildInitialReorderSlotAssignment(n, movableArr, rng)
@@ -694,7 +705,7 @@ export default function MemorizationPracticeSession({
       setRoundAffirmation('')
       setPhase('practicing')
     },
-    [memorizeAndroidHost, typableIndices, verse.id, verse.text, verse.reference]
+    [memorizeAndroidHost, reorderChunks, typableIndices, verse.id]
   )
 
   useLayoutEffect(() => {
@@ -717,8 +728,7 @@ export default function MemorizationPracticeSession({
       const seed = sessionSeedRef.current || verse.id
       const modeRaw = ip.practiceMode ?? 'type'
       if (modeRaw === 'reorder') {
-        const chunkList = buildMemorizationReorderChunks(verse.text, verse.reference)
-        const n = chunkList.length
+        const n = reorderChunks.length
         const identitySlots = n === 0 ? [] : Array.from({ length: n }, (_, i) => i)
         startTransition(() => {
           setWrongAttemptsTotal(ip.wrongAttempts)
@@ -759,8 +769,7 @@ export default function MemorizationPracticeSession({
       const modeRaw = ip.practiceMode ?? 'type'
       if (modeRaw === 'reorder') {
         const seed = sessionSeedRef.current
-        const chunkList = buildMemorizationReorderChunks(verse.text, verse.reference)
-        const n = chunkList.length
+        const n = reorderChunks.length
         const movableArr = pickReorderMovableIndices(n, r, seed)
         const rng = seedRandom(stringToSeed(`${seed}-mem-reorder-assign-r${r}`))
         const assignment = buildInitialReorderSlotAssignment(n, movableArr, rng)
@@ -813,7 +822,13 @@ export default function MemorizationPracticeSession({
         practiceInputRef.current?.focus({ preventScroll: true })
       }
     })
-  }, [memorizeAndroidHost, verse.id, verse.text, verse.reference, verse.inProgressPractice, typableIndices])
+  }, [
+    memorizeAndroidHost,
+    reorderChunks,
+    verse.id,
+    verse.inProgressPractice,
+    typableIndices,
+  ])
 
   /**
    * Scroll the active blank within the practice column, then nudge so it stays visible. **Type mode**
@@ -1792,7 +1807,7 @@ export default function MemorizationPracticeSession({
                 Listen
               </button>
             )}
-            {onOpenSpurgeonStudy && (
+            {onOpenSpurgeonStudy && !isBibleBooks && (
               <button
                 type="button"
                 data-tour="memorize-practice-spurgeon-study"
@@ -1976,12 +1991,21 @@ export default function MemorizationPracticeSession({
                     <strong>Start practice</strong> when you{"'"}re ready; <strong>Round</strong> sets where you begin in the
                     five-round run (1 is easiest).
                   </p>
-                  <p
-                    className="text-base leading-relaxed text-slate-900 dark:text-slate-100 font-serif"
-                    data-testid="memorize-intro-text"
-                  >
-                    {formatMemorizationTokensPlain(tokens)}
-                  </p>
+                  {isBibleBooks ? (
+                    <div data-testid="memorize-intro-bible-books">
+                      <BibleBooksMemorizationList
+                        scope={verse.bibleBooksScope}
+                        tourPrefix="memorize-bible-books"
+                      />
+                    </div>
+                  ) : (
+                    <p
+                      className="text-base leading-relaxed text-slate-900 dark:text-slate-100 font-serif"
+                      data-testid="memorize-intro-text"
+                    >
+                      {formatMemorizationTokensPlain(tokens)}
+                    </p>
+                  )}
                 </div>
               </div>
               <div
@@ -2173,6 +2197,7 @@ export default function MemorizationPracticeSession({
                   }
                   scrollParentRef={practiceScrollRef}
                   colonAfterSlotIndex={reorderColonAfterSlotIndex}
+                  extraFixedSlotSpacing={isBibleBooks}
                 />
               ) : practiceMode === 'word' ? (
                 <>

@@ -41,6 +41,7 @@ import { isMemorizeAndroidWebHost } from '@/lib/memorizationViewportPlatform'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import MemorizationPracticeSession from '@/components/MemorizationPracticeSession'
+import { bibleBooksPlainText, booksForScope } from '@/lib/bibleBooksMemorization'
 import type { MemorizedVerse } from '@/lib/verseMemorizationStorage'
 
 const baseVerse: MemorizedVerse = {
@@ -657,5 +658,71 @@ describe('MemorizationPracticeSession', () => {
     expect(onClose).toHaveBeenCalled()
     expect(openStudy).toHaveBeenCalledWith('John 3:16')
     fetchSpy.mockRestore()
+  })
+
+  it('bible books reorder mode renders one draggable slot per book', async () => {
+    const user = userEvent.setup()
+    const bibleBooksVerse: MemorizedVerse = {
+      id: 'bb-nt-reorder',
+      reference: 'Bible Books (NT)',
+      text: bibleBooksPlainText('nt'),
+      translation: 'esv',
+      dateAdded: Date.now(),
+      lastPracticedAt: null,
+      practiceSessions: [],
+      kind: 'bibleBooks',
+      bibleBooksScope: 'nt',
+    }
+    memorizeUtilsTestOverrides.sessionSeed = 'bb-nt-reorder-seed'
+    try {
+      render(
+        <MemorizationPracticeSession
+          verse={bibleBooksVerse}
+          onClose={jest.fn()}
+          onComplete={jest.fn()}
+        />
+      )
+      await user.click(screen.getByRole('button', { name: /Start practice/i }))
+      await user.click(screen.getByTestId('memorize-practice-mode-reorder'))
+      const list = screen.getByTestId('memorize-reorder-list')
+      const items = list.querySelectorAll('[data-reorder-slot]')
+      const bookCount = booksForScope('nt').length
+      expect(items.length).toBe(bookCount)
+      const bookNames = new Set(booksForScope('nt').map((b) => b.name))
+      const slotTexts = Array.from(items).map((el) => el.textContent?.trim() ?? '')
+      for (const text of slotTexts) {
+        expect(bookNames.has(text)).toBe(true)
+      }
+      const movable = list.querySelectorAll('[data-reorder-slot][draggable="true"]')
+      expect(movable.length).toBeGreaterThanOrEqual(2)
+    } finally {
+      memorizeUtilsTestOverrides.sessionSeed = null
+    }
+  })
+
+  it('shows bible books list on intro and hides Study for bible books items', async () => {
+    const bibleBooksVerse: MemorizedVerse = {
+      id: 'bb-1',
+      reference: 'Bible Books (OT)',
+      text: bibleBooksPlainText('ot'),
+      translation: 'esv',
+      dateAdded: Date.now(),
+      lastPracticedAt: null,
+      practiceSessions: [],
+      kind: 'bibleBooks',
+      bibleBooksScope: 'ot',
+    }
+    render(
+      <MemorizationPracticeSession
+        verse={bibleBooksVerse}
+        onClose={jest.fn()}
+        onComplete={jest.fn()}
+        onOpenSpurgeonStudy={jest.fn()}
+      />
+    )
+    expect(screen.getByTestId('memorize-intro-bible-books')).toBeInTheDocument()
+    expect(screen.getByText('Genesis')).toBeInTheDocument()
+    expect(screen.queryByTestId('memorize-practice-spurgeon-study')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('memorize-intro-text')).not.toBeInTheDocument()
   })
 })

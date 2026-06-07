@@ -39,6 +39,8 @@ export interface MemorizationReorderPanelProps {
    * Null when the reference has no parsed chapter:verse shape.
    */
   colonAfterSlotIndex?: number | null
+  /** Wider gaps between Bible book chips (locked, solved, and in-place names). */
+  extraFixedSlotSpacing?: boolean
 }
 
 /** Prefer pointer-driven reorder so WebKit does not require a long-press before HTML5 drag (Capacitor / phones). */
@@ -95,6 +97,7 @@ export function MemorizationReorderPanel({
   scrollParentRef,
   className = '',
   colonAfterSlotIndex = null,
+  extraFixedSlotSpacing = false,
 }: MemorizationReorderPanelProps) {
   const usePointerPath = useMemorizeReorderPointerPath()
   const [draggedSlot, setDraggedSlot] = useState<number | null>(null)
@@ -512,10 +515,12 @@ export function MemorizationReorderPanel({
             : needsAttention
               ? 'ring-2 ring-amber-300 dark:ring-amber-600/80 bg-amber-50/90 dark:bg-amber-950/35'
               : 'ring-2 ring-transparent'
-          /** Room for fingers on small screens; tighter on sm+ (desktop mouse). */
+          /** Movable wrong chips stay tighter; Bible Books keep wider gaps once locked or solved. */
           const spacingAfter = needsAttention
             ? 'mr-2 last:mr-0 sm:mr-1'
-            : 'mr-1.5 last:mr-0 sm:mr-0.5'
+            : extraFixedSlotSpacing
+              ? 'mr-3 last:mr-0 sm:mr-2.5'
+              : 'mr-1.5 last:mr-0 sm:mr-0.5'
           /** Padding changes during drag-over caused heavy reflow; use ring-only for drop target. */
           const pad =
             needsAttention

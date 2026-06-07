@@ -24,6 +24,14 @@ export function getWordsForMemorization(plainText: string): string[] {
   return plainText.trim().split(/\s+/).filter(Boolean)
 }
 
+/** One whitespace-delimited word from verse/book plain text → typable tokens (e.g. `1` → digit). */
+export function tokenizeMemorizationPlainWord(word: string): MemorizationToken[] {
+  if (/^[0-9]+$/.test(word)) {
+    return word.split('').map((text) => ({ kind: 'digit' as const, text }))
+  }
+  return [{ kind: 'word', text: word }]
+}
+
 /** One display/typing unit: verse words, reference words, per-digit blanks, or visible punctuation (not typed). */
 export type MemorizationToken = {
   kind: 'word' | 'digit' | 'punct'
@@ -69,8 +77,8 @@ export function buildMemorizationTokens(versePlainText: string, reference: strin
   const verseWords = getWordsForMemorization(versePlainText)
   const out: MemorizationToken[] = []
   for (let i = 0; i < verseWords.length; i++) {
-    if (i > 0) out.push({ kind: 'punct', text: ' ' })
-    out.push({ kind: 'word', text: verseWords[i]! })
+    if (out.length > 0) out.push({ kind: 'punct', text: ' ' })
+    out.push(...tokenizeMemorizationPlainWord(verseWords[i]!))
   }
   const refTokens = parseReferenceMemorizationTokens(reference)
   if (refTokens.length === 0) return out
@@ -174,6 +182,11 @@ export function buildMemorizationReorderChunks(
     textParts.push(...referenceTextsForMemorizationReorder(refT))
   }
   return textParts.map((text, id) => ({ id, text }))
+}
+
+/** One reorder chip per Bible book name (canon order). */
+export function buildBibleBooksReorderChunks(bookNames: string[]): MemorizationReorderChunk[] {
+  return bookNames.map((text, id) => ({ id, text }))
 }
 
 function splitReorderClausePart(part: string): string[] {
