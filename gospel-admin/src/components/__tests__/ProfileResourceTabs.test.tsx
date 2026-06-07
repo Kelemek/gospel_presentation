@@ -41,8 +41,11 @@ describe('ProfileResourceTabs', () => {
     )
     const tab = screen.getByRole('tab', { name: 'The Gospel' })
     expect(tab).toBeInTheDocument()
-    expect(tab).toHaveClass('flex-1', 'justify-center')
-    expect(screen.getByRole('button', { name: 'Search in resource' })).toBeInTheDocument()
+    const tabShell = tab.closest('[data-open-item-tab-id="default"]')
+    expect(tabShell).toHaveClass('w-full', 'flex-1', 'justify-center')
+    const search = screen.getByRole('button', { name: 'Search in resource' })
+    expect(search.className).not.toMatch(/\babsolute\b/)
+    expect(tab.compareDocumentPosition(search)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
     expect(screen.queryByRole('button', { name: 'Close The Gospel' })).not.toBeInTheDocument()
   })
 
