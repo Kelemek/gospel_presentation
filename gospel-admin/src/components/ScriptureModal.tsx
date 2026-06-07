@@ -53,7 +53,7 @@ import {
   wordStudyAvailableFromReference,
   wordStudyLanguageLabelFromReference,
 } from '@/lib/step-bible-reference'
-import type { ScriptureModalPresentationLocation } from '@/lib/presentationLocationFromAnchors'
+import { studyResourcesAvailableFromPayload } from '@/lib/studyResourcesAvailability'
 import {
   formatScriptureChapterHtml,
   formatScripturePassageHtml,
@@ -700,20 +700,12 @@ export default function ScriptureModal({
           calvinCount?: number
           henryCount?: number
           bookCount?: number
+          crossRefCount?: number
         }
-        const items = payload.items
-        const list = Array.isArray(items) ? items : []
-        const sermonCount = typeof payload.sermonCount === 'number' ? payload.sermonCount : list.length
-        const edwardsCount = typeof payload.edwardsCount === 'number' ? payload.edwardsCount : 0
-        const morneveCount = typeof payload.morneveCount === 'number' ? payload.morneveCount : 0
-        const calvinCount = typeof payload.calvinCount === 'number' ? payload.calvinCount : 0
-        const henryCount = typeof payload.henryCount === 'number' ? payload.henryCount : 0
-        const bookCount = typeof payload.bookCount === 'number' ? payload.bookCount : 0
-        const anyStudy =
-          sermonCount + edwardsCount + morneveCount + calvinCount + henryCount + bookCount > 0
+        const list = Array.isArray(payload.items) ? payload.items : []
         setSpurgeonStudyResolved({
           ref,
-          match: anyStudy ? 'yes' : 'no',
+          match: studyResourcesAvailableFromPayload({ ...payload, items: list }) ? 'yes' : 'no',
         })
       })
       .catch(() => {
@@ -1420,8 +1412,8 @@ export default function ScriptureModal({
                       : spurgeonStudyMatch === 'loading' || spurgeonStudyMatch === 'unset'
                         ? 'Checking indexed study resources…'
                         : spurgeonStudyMatch === 'no'
-                          ? 'No indexed study resources for this passage'
-                          : 'Search Spurgeon, devotions, Calvin, Matthew Henry, and indexed books for this passage'
+                          ? 'No indexed study resources or cross references for this passage'
+                          : 'Search cross references, Spurgeon, devotions, Calvin, Matthew Henry, and indexed books for this passage'
                   }
                   aria-label={
                     !reference.trim()
@@ -1429,8 +1421,8 @@ export default function ScriptureModal({
                       : spurgeonStudyMatch === 'loading' || spurgeonStudyMatch === 'unset'
                         ? 'Study: checking indexed resources'
                         : spurgeonStudyMatch === 'no'
-                          ? 'Study: no indexed resources for this passage'
-                          : 'Study: indexed Spurgeon, devotions, Calvin, Matthew Henry, and books for this passage'
+                          ? 'Study: no indexed resources or cross references for this passage'
+                          : 'Study: cross references and indexed resources for this passage'
                   }
                   className={`px-1.5 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 shrink-0 ${
                     !reference.trim() ||

@@ -12,6 +12,7 @@ import { sortSpurgeonSermonsByDisplayTitleAZ } from '@/lib/spurgeon/sortBySpurge
 import { isSpurgeonSermonProfileSlug } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
 import { sortIndexedBooksByTitleAZ } from '@/lib/study/sortIndexedBooksByTitle'
 import { isStudyLibraryCorpusProfileSlug } from '@/lib/study/studyLibraryCorpusSlug'
+import { countCrossReferences, isCrossReferenceDataPresent } from '@/lib/cross-references'
 import { profileIdsFromPassageIndexLookup } from '@/lib/spurgeon/spurgeonPassageIndexLookup'
 
 const MAX_ITEMS = 8
@@ -32,14 +33,13 @@ export async function GET(request: NextRequest) {
     }
 
     const passageKey = canonicalScriptureCacheReference(ref)
-    if (!passageKey) {
-      return NextResponse.json(emptyStudyLinksResponse())
-    }
+    const crossRefCount =
+      passageKey && isCrossReferenceDataPresent() ? countCrossReferences(ref) : 0
 
     const admin = createAdminClient()
-    const idsAll = await profileIdsFromPassageIndexLookup(admin, ref)
+    const idsAll = passageKey ? await profileIdsFromPassageIndexLookup(admin, ref) : []
     if (idsAll.length === 0) {
-      return NextResponse.json(emptyStudyLinksResponse())
+      return NextResponse.json(emptyStudyLinksResponse(crossRefCount))
     }
 
     const { data: profileRows, error: profErr } = await admin
@@ -101,6 +101,7 @@ export async function GET(request: NextRequest) {
       calvinCount: calvinSorted.length,
       henryCount: henrySorted.length,
       bookCount: bookSorted.length,
+      crossRefCount,
     })
   } catch (e) {
     logger.error('[API] GET /api/scripture/spurgeon-links', e)
@@ -108,7 +109,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function emptyStudyLinksResponse() {
+function emptyStudyLinksResponse(crossRefCount = 0) {
   return {
     items: [],
     sermonCount: 0,
@@ -117,5 +118,6 @@ function emptyStudyLinksResponse() {
     calvinCount: 0,
     henryCount: 0,
     bookCount: 0,
+    crossRefCount,
   }
 }

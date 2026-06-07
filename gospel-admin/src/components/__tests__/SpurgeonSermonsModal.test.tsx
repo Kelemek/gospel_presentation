@@ -36,10 +36,23 @@ function mockByReferenceFetch(
   items: { slug: string; title: string }[],
   morneveItems: { slug: string; title: string }[] = [],
   calvinItems: { slug: string; title: string }[] = [],
-  bookItems: { slug: string; title: string }[] = []
+  bookItems: { slug: string; title: string }[] = [],
+  crossRefItems: { passageKey: string; reference: string; votes: number }[] = []
 ) {
   return (input: string | URL | Request) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
+    if (url.includes('/api/scripture/cross-references')) {
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            total: crossRefItems.length,
+            offset: 0,
+            limit: 50,
+            items: crossRefItems,
+          }),
+      } as Response)
+    }
     if (url.includes('/api/books/by-reference')) {
       return Promise.resolve({
         ok: true,
@@ -95,6 +108,12 @@ describe('SpurgeonSermonsModal', () => {
     mockFetch.mockReset()
     mockFetch.mockImplementation((input: string | URL | Request) => {
       const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.toString()
+      if (url.includes('/api/scripture/cross-references')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ total: 0, offset: 0, limit: 50, items: [] }),
+        } as Response)
+      }
       if (url.includes('/api/calvin/') || url.includes('/api/spurgeon/sermons')) {
         return Promise.resolve(emptyPagedResponse())
       }
@@ -260,6 +279,37 @@ describe('SpurgeonSermonsModal', () => {
     expect(
       await screen.findByRole('link', { name: /Systematic Theology \(Louis Berkhof\)/i })
     ).toHaveAttribute('href', '/lbst?studyRef=Romans%203%3A23')
+  })
+
+  it('shows Cross references first on By scripture and opens scripture reader on click', async () => {
+    const user = userEvent.setup()
+    const onOpenScriptureReference = jest.fn()
+    mockFetch.mockImplementation(
+      mockByReferenceFetch(
+        [{ slug: 'sg00003', title: 'Indexed Sermon' }],
+        [],
+        [],
+        [],
+        [{ passageKey: 'JER.29.11', reference: 'Jeremiah 29:11', votes: 42 }]
+      )
+    )
+
+    render(
+      <SpurgeonSermonsModal
+        isOpen
+        onClose={jest.fn()}
+        onOpenScriptureReference={onOpenScriptureReference}
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: /By scripture/i }))
+    await user.type(screen.getByLabelText(/Scripture reference/i), 'Romans 8:28')
+
+    expect(await screen.findByRole('heading', { name: /^Cross references$/i })).toBeInTheDocument()
+    const crossRefButton = await screen.findByRole('button', { name: 'Jeremiah 29:11' })
+    await user.click(crossRefButton)
+    expect(onOpenScriptureReference).toHaveBeenCalledWith('Jeremiah 29:11')
+    expect(await screen.findByRole('heading', { name: /^Spurgeon Sermons$/i })).toBeInTheDocument()
   })
 
   it('shows Calvin commentaries section on By scripture when calvin by-reference returns hits', async () => {

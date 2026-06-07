@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/ensure-stepbible-data.js && next build",
+    "build": "node scripts/ensure-stepbible-data.js && node scripts/ensure-cross-references-data.js && next build",
     "start": "next start",
     "lint": "eslint",
     "knip": "knip",
@@ -47,6 +47,8 @@
     "import-edwards-religious-affections": "tsx scripts/import-edwards-religious-affections-ccel.ts",
     "import-stepbible": "node scripts/import-stepbible-data.js",
     "import-stepbible:fixtures": "node scripts/import-stepbible-data.js --fixtures-only",
+    "import-cross-references": "node scripts/import-cross-references.js",
+    "import-cross-references:fixtures": "node scripts/import-cross-references.js --fixtures-only",
     "reimport-stepbible": "FORCE_STEPBIBLE_REIMPORT=1 node scripts/ensure-stepbible-data.js",
     "sync-acbc-links": "tsx scripts/sync-acbc-external-links.ts",
     "add-acbc-sections": "tsx scripts/add-acbc-missing-sections.ts"

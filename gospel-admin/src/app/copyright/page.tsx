@@ -177,6 +177,32 @@ export default function CopyrightPage() {
                 </li>
                 <li className="flex items-start">
                   <span className="text-blue-600 dark:text-blue-400 font-bold mr-3">•</span>
+                  <span>
+                    <strong className="text-slate-800 dark:text-slate-100">Bible cross references (Study):</strong>{' '}
+                    Verse-to-verse cross references in the Study resources modal draw primarily from the Treasury of
+                    Scripture Knowledge via{' '}
+                    <a
+                      href="https://www.openbible.info/labs/cross-references/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors"
+                    >
+                      OpenBible.info
+                    </a>{' '}
+                    (
+                    <a
+                      href="https://creativecommons.org/licenses/by/4.0/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline transition-colors"
+                    >
+                      CC BY
+                    </a>
+                    ).
+                  </span>
+                </li>
+                <li className="flex items-start">
+                  <span className="text-blue-600 dark:text-blue-400 font-bold mr-3">•</span>
                   <span>Users are limited to viewing individual passages as displayed</span>
                 </li>
                 <li className="flex items-start">

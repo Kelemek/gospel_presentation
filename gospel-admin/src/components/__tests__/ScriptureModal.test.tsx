@@ -475,7 +475,7 @@ describe('ScriptureModal Component', () => {
       expect(mockFetch.mock.calls.some((c) => String(c[0]).includes('spurgeon-links'))).toBe(true)
     )
     const study = screen.getByRole('button', {
-      name: /Study: no indexed resources for this passage/i,
+      name: /Study: no indexed resources or cross references for this passage/i,
     })
     expect(study).toBeDisabled()
     expect(study).toHaveTextContent('Study')
@@ -627,6 +627,40 @@ describe('ScriptureModal Component', () => {
     expect(screen.getByRole('button', { name: 'Share passage' })).toBeDisabled()
   })
 
+  it('enables Study when spurgeon-links returns crossRefCount only', async () => {
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = fetchUrl(input)
+      if (url.includes('/api/scripture/spurgeon-links')) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              items: [],
+              sermonCount: 0,
+              edwardsCount: 0,
+              morneveCount: 0,
+              calvinCount: 0,
+              henryCount: 0,
+              bookCount: 0,
+              crossRefCount: 12,
+            }),
+        } as Response)
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ text: 'Sample scripture text' }),
+      } as Response)
+    })
+    renderWithTextSize(<ScriptureModal {...defaultProps} onOpenSpurgeonStudy={jest.fn()} />)
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', {
+          name: /Study: cross references and indexed resources for this passage/i,
+        })
+      ).not.toBeDisabled()
+    )
+  })
+
   it('calls onOpenSpurgeonStudy when Study is shown and clicked', async () => {
     const user = userEvent.setup()
     const openStudy = jest.fn()
@@ -652,13 +686,13 @@ describe('ScriptureModal Component', () => {
     await waitFor(() =>
       expect(
         screen.getByRole('button', {
-          name: /Study: indexed Spurgeon, devotions, Calvin, Matthew Henry, and books for this passage/i,
+          name: /Study: cross references and indexed resources for this passage/i,
         })
       ).toBeInTheDocument()
     )
     await user.click(
       screen.getByRole('button', {
-        name: /Study: indexed Spurgeon, devotions, Calvin, Matthew Henry, and books for this passage/i,
+        name: /Study: cross references and indexed resources for this passage/i,
       })
     )
     expect(openStudy).toHaveBeenCalledWith('John 3:16')

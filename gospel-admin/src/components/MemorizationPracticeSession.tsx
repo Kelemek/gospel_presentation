@@ -28,6 +28,7 @@ import {
   isMemorizeIosWebHost,
 } from '@/lib/memorizationViewportPlatform'
 import { getMemorizationListenUtteranceText } from '@/lib/memorizationListenUtteranceText'
+import { studyResourcesAvailableFromPayload } from '@/lib/studyResourcesAvailability'
 import { MemorizationReorderPanel } from '@/components/MemorizationReorderPanel'
 import { MemorizeListenControlsDialog } from '@/components/MemorizeListenControlsDialog'
 import ScriptureModalToolbarMenu from '@/components/ScriptureModalToolbarMenu'
@@ -303,22 +304,10 @@ export default function MemorizationPracticeSession({
           calvinCount?: number
           henryCount?: number
           bookCount?: number
+          crossRefCount?: number
         }
-        const sermonCount =
-          typeof payload.sermonCount === 'number'
-            ? payload.sermonCount
-            : Array.isArray(payload.items)
-              ? payload.items.length
-              : 0
-        const edwardsCount = typeof payload.edwardsCount === 'number' ? payload.edwardsCount : 0
-        const morneveCount = typeof payload.morneveCount === 'number' ? payload.morneveCount : 0
-        const calvinCount = typeof payload.calvinCount === 'number' ? payload.calvinCount : 0
-        const henryCount = typeof payload.henryCount === 'number' ? payload.henryCount : 0
-        const bookCount = typeof payload.bookCount === 'number' ? payload.bookCount : 0
         setSpurgeonStudyMatch(
-          sermonCount + edwardsCount + morneveCount + calvinCount + henryCount + bookCount > 0
-            ? 'yes'
-            : 'no'
+          studyResourcesAvailableFromPayload(payload) ? 'yes' : 'no'
         )
       })
       .catch(() => {

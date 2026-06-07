@@ -1417,6 +1417,41 @@ function ProfileContent({
     [sections, allScriptureRefs, favoriteReferences, persistReadingResumeBeforeLeave]
   )
 
+  const navigateScriptureInReader = useCallback(
+    (
+      ref: string,
+      meta?: {
+        initialChapterView?: boolean
+        fromPassagePicker?: boolean
+      }
+    ) => {
+      const chapterView =
+        meta?.initialChapterView === true ||
+        (meta?.initialChapterView !== false && isChapterOnlyScriptureReference(ref))
+      if (meta?.fromPassagePicker) {
+        setModalOpenAnchors({
+          reference: ref,
+          sectionId: 'modal-view',
+          subsectionId: 'modal-view',
+        })
+      } else {
+        syncNavIndexForReference(ref)
+      }
+      setSelectedScripture((prev) => ({
+        ...prev,
+        reference: ref,
+        isOpen: true,
+        ...(chapterView ? { initialChapterView: true as const } : { initialChapterView: undefined }),
+        ...(meta?.fromPassagePicker
+          ? { pickerNavigation: true as const }
+          : prev.pickerNavigation
+            ? { pickerNavigation: true as const }
+            : { pickerNavigation: undefined }),
+      }))
+    },
+    [syncNavIndexForReference]
+  )
+
   const deepLinkTranslation = useMemo((): BibleTranslation | null => {
     if (!translationParam || !isBibleTranslation(translationParam)) return null
     return translationParam
@@ -2411,31 +2446,7 @@ function ProfileContent({
           }
           void openScriptureFromTabEntry(next)
         }}
-        onNavigateReference={(ref, meta) => {
-          const chapterView =
-            meta?.initialChapterView === true ||
-            (meta?.initialChapterView !== false && isChapterOnlyScriptureReference(ref))
-          if (meta?.fromPassagePicker) {
-            setModalOpenAnchors({
-              reference: ref,
-              sectionId: 'modal-view',
-              subsectionId: 'modal-view',
-            })
-          } else {
-            syncNavIndexForReference(ref)
-          }
-          setSelectedScripture((prev) => ({
-            ...prev,
-            reference: ref,
-            isOpen: true,
-            ...(chapterView ? { initialChapterView: true as const } : { initialChapterView: undefined }),
-            ...(meta?.fromPassagePicker
-              ? { pickerNavigation: true as const }
-              : prev.pickerNavigation
-                ? { pickerNavigation: true as const }
-                : { pickerNavigation: undefined }),
-          }))
-        }}
+        onNavigateReference={navigateScriptureInReader}
         onPrevious={hasPrevious ? navigateToPrevious : undefined}
         onNext={hasNext ? navigateToNext : undefined}
         hasPrevious={hasPrevious}
@@ -2472,6 +2483,10 @@ function ProfileContent({
           setSpurgeonStudyReference(null)
           setStudyModalTitle(STUDY_MODAL_DEFAULT_TITLE)
           setStudyLibraryFocus('all')
+        }}
+        onOpenScriptureReference={(ref) => {
+          navigateScriptureInReader(ref)
+          setIsSpurgeonLibraryOpen(false)
         }}
       />
 

@@ -26,7 +26,11 @@ import {
   PRESENTATION_READ_COMPLETE_STORAGE_KEY,
 } from '@/lib/presentationReadCompleteStorage'
 
+import type { CrossReferenceTarget } from '@/lib/cross-reference-types'
+import ScriptureHoverModal from '@/components/ScriptureHoverModal'
+
 const SEARCH_PAGE_SIZE = 100
+const CROSS_REF_PAGE_SIZE = 50
 export const STUDY_MODAL_DEFAULT_TITLE = 'Study resources'
 
 /** Which corpora to load when opened from a Resources row vs unified Study. */
@@ -49,6 +53,8 @@ interface SpurgeonSermonsModalProps {
    * Use this to dismiss stacked UI such as the scripture reader so the resource opens as a normal full-page profile.
    */
   onFollowSermonLink?: () => void
+  /** Open a related verse in the scripture reader (cross references). */
+  onOpenScriptureReference?: (reference: string) => void
 }
 
 type Tab = 'search' | 'scripture' | 'read'
@@ -85,6 +91,7 @@ export default function SpurgeonSermonsModal({
   libraryFocus = 'all',
   initialByReference,
   onFollowSermonLink,
+  onOpenScriptureReference,
 }: SpurgeonSermonsModalProps) {
   const titleId = useId()
   const showSpurgeon = libraryFocus === 'all' || libraryFocus === 'spurgeon'
@@ -107,6 +114,8 @@ export default function SpurgeonSermonsModal({
   const [calvinRefItems, setCalvinRefItems] = useState<SermonRow[]>([])
   const [henryRefItems, setHenryRefItems] = useState<SermonRow[]>([])
   const [bookRefItems, setBookRefItems] = useState<SermonRow[]>([])
+  const [crossRefItems, setCrossRefItems] = useState<CrossReferenceTarget[]>([])
+  const [crossRefTotal, setCrossRefTotal] = useState(0)
   const [edwardsSearchItems, setEdwardsSearchItems] = useState<SermonRow[]>([])
   const [edwardsSearchTotal, setEdwardsSearchTotal] = useState(0)
   const [calvinSearchItems, setCalvinSearchItems] = useState<SermonRow[]>([])
@@ -322,6 +331,8 @@ export default function SpurgeonSermonsModal({
       setCalvinRefItems([])
       setHenryRefItems([])
       setBookRefItems([])
+      setCrossRefItems([])
+      setCrossRefTotal(0)
       setRefError('')
       setRefLoading(false)
       return
@@ -330,7 +341,12 @@ export default function SpurgeonSermonsModal({
     setRefError('')
     try {
       const q = encodeURIComponent(trimmed)
-      const fetches: Promise<Response>[] = []
+      const fetches: Promise<Response>[] = [
+        fetch(
+          `/api/scripture/cross-references?reference=${q}&offset=0&limit=${CROSS_REF_PAGE_SIZE}`,
+          { cache: 'no-store' }
+        ),
+      ]
       if (showSpurgeon) {
         fetches.push(fetch(`/api/spurgeon/by-reference?reference=${q}`, { cache: 'no-store' }))
         fetches.push(fetch(`/api/morneve/by-reference?reference=${q}`, { cache: 'no-store' }))
@@ -350,6 +366,7 @@ export default function SpurgeonSermonsModal({
 
       const results = await Promise.all(fetches)
       let ri = 0
+      const crossRefRes = results[ri++]
       const sermonRes = showSpurgeon ? results[ri++] : null
       const morneveRes = showSpurgeon ? results[ri++] : null
       const edwardsRes = showEdwards ? results[ri++] : null
@@ -357,6 +374,7 @@ export default function SpurgeonSermonsModal({
       const henryRes = showHenry ? results[ri++] : null
       const booksRes = showBooks ? results[ri++] : null
 
+      const crossRefData = crossRefRes ? await crossRefRes.json() : {}
       const sermonData = sermonRes ? await sermonRes.json() : {}
       const morneveData = morneveRes ? await morneveRes.json() : {}
       const edwardsData = edwardsRes ? await edwardsRes.json() : {}
@@ -387,6 +405,14 @@ export default function SpurgeonSermonsModal({
         { active: showBooks, failed: booksLookupFailed, payload: booksData },
       ] as const
       if (seq !== scriptureLookupSeqRef.current) return
+
+      if (!crossRefRes?.ok) {
+        setCrossRefItems([])
+        setCrossRefTotal(0)
+      } else {
+        setCrossRefItems(Array.isArray(crossRefData.items) ? crossRefData.items : [])
+        setCrossRefTotal(typeof crossRefData.total === 'number' ? crossRefData.total : 0)
+      }
 
       if (allActiveSourcesFailed(scriptureFailureSources)) {
         setRefError(firstStringApiError(scriptureFailureSources) ?? 'Lookup failed')
@@ -439,12 +465,32 @@ export default function SpurgeonSermonsModal({
       setCalvinRefItems([])
       setHenryRefItems([])
       setBookRefItems([])
+      setCrossRefItems([])
+      setCrossRefTotal(0)
     } finally {
       if (seq === scriptureLookupSeqRef.current) {
         setRefLoading(false)
       }
     }
   }, [showSpurgeon, showEdwards, showCalvin, showHenry, showBooks])
+
+  const loadMoreCrossRefs = useCallback(async () => {
+    const trimmed = debouncedScriptureRef.trim()
+    if (!trimmed || crossRefItems.length >= crossRefTotal) return
+    try {
+      const res = await fetch(
+        `/api/scripture/cross-references?reference=${encodeURIComponent(trimmed)}&offset=${crossRefItems.length}&limit=${CROSS_REF_PAGE_SIZE}`,
+        { cache: 'no-store' }
+      )
+      const data = await res.json()
+      if (!res.ok) return
+      const nextItems = Array.isArray(data.items) ? (data.items as CrossReferenceTarget[]) : []
+      setCrossRefItems((prev) => [...prev, ...nextItems])
+      if (typeof data.total === 'number') setCrossRefTotal(data.total)
+    } catch {
+      // Keep already loaded rows.
+    }
+  }, [crossRefItems.length, crossRefTotal, debouncedScriptureRef])
 
   useEffect(() => {
     if (!isOpen) {
@@ -463,6 +509,8 @@ export default function SpurgeonSermonsModal({
         setCalvinRefItems([])
         setHenryRefItems([])
         setBookRefItems([])
+        setCrossRefItems([])
+        setCrossRefTotal(0)
         setEdwardsSearchItems([])
         setEdwardsSearchTotal(0)
         setCalvinSearchItems([])
@@ -963,6 +1011,7 @@ export default function SpurgeonSermonsModal({
                 ) : null}
                 {!refLoading &&
                   !scriptureInputPending &&
+                  crossRefItems.length === 0 &&
                   (showSpurgeon ? refItems.length === 0 && morneveRefItems.length === 0 : true) &&
                   (showEdwards ? edwardsRefItems.length === 0 : true) &&
                   (showCalvin ? calvinRefItems.length === 0 : true) &&
@@ -972,6 +1021,38 @@ export default function SpurgeonSermonsModal({
                   !refError && (
                     <p className="text-sm text-slate-500 dark:text-slate-400">{scriptureEmptyMessage}</p>
                   )}
+                {crossRefItems.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
+                      Cross references
+                    </h3>
+                    <ul className="space-y-1">
+                      {crossRefItems.map((row) => (
+                        <li key={row.passageKey}>
+                          <ScriptureHoverModal reference={row.reference} hoverDelayMs={500}>
+                            <button
+                              type="button"
+                              onClick={() => onOpenScriptureReference?.(row.reference)}
+                              disabled={!onOpenScriptureReference}
+                              className="block w-full cursor-pointer text-left rounded-md px-2 py-2 text-sm font-normal text-blue-700 dark:text-blue-300 hover:bg-slate-100 dark:hover:bg-slate-700/80 disabled:opacity-60 disabled:cursor-default"
+                            >
+                              {row.reference}
+                            </button>
+                          </ScriptureHoverModal>
+                        </li>
+                      ))}
+                    </ul>
+                    {crossRefItems.length < crossRefTotal && (
+                      <button
+                        type="button"
+                        onClick={() => void loadMoreCrossRefs()}
+                        className="mt-2 cursor-pointer px-2 py-1.5 text-sm font-medium text-blue-700 dark:text-blue-300 hover:bg-slate-100 dark:hover:bg-slate-700/80 rounded-md"
+                      >
+                        Load more ({crossRefItems.length} of {crossRefTotal})
+                      </button>
+                    )}
+                  </div>
+                )}
                 {showSpurgeon && refItems.length > 0 && (
                   <div>
                     <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400 mb-2">
