@@ -53,6 +53,7 @@ import {
   wordStudyAvailableFromReference,
   wordStudyLanguageLabelFromReference,
 } from '@/lib/step-bible-reference'
+import type { ScriptureModalPresentationLocation } from '@/lib/presentationLocationFromAnchors'
 import { studyResourcesAvailableFromPayload } from '@/lib/studyResourcesAvailability'
 import {
   formatScriptureChapterHtml,
@@ -75,7 +76,7 @@ import {
   type RecordScriptureLastOpenInput,
 } from '@/lib/profileLastOpenResourceStorage'
 
-export type { ScriptureModalPresentationLocation } from '@/lib/presentationLocationFromAnchors'
+export type { ScriptureModalPresentationLocation }
 
 const EMPTY_SCRIPTURE_MODAL_TABS: ProfileRecentScriptureEntry[] = []
 
