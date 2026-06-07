@@ -147,8 +147,11 @@ describe('OpenItemTabBar', () => {
       />
     )
     const tab = screen.getByRole('tab', { name: 'The Gospel' })
-    expect(tab).toHaveClass('flex-1', 'justify-center')
-    expect(tab.closest('[data-open-item-tab-id="default"]')).toHaveClass('w-full', 'flex-1')
+    const tabShell = tab.closest('[data-open-item-tab-id="default"]')
+    expect(tabShell).toHaveClass('w-full', 'flex-1', 'justify-center')
+    const search = screen.getByRole('button', { name: 'Search in resource' })
+    expect(search.className).not.toMatch(/\babsolute\b/)
+    expect(tab.compareDocumentPosition(search)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
     expect(screen.queryByRole('button', { name: 'Close The Gospel' })).not.toBeInTheDocument()
   })
 

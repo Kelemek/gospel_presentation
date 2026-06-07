@@ -242,7 +242,7 @@ export default function OpenItemTabBar({
                 role="presentation"
                 data-open-item-tab-id={entry.id}
                 className={`flex items-stretch rounded-t-md border-r border-slate-200 dark:border-slate-600 last:border-r-0 ${
-                  isSingleExpandedTab ? 'relative min-w-0 w-full flex-1' : 'shrink-0'
+                  isSingleExpandedTab ? 'relative min-w-0 w-full flex-1 justify-center' : 'shrink-0'
                 } ${
                   isActive
                     ? 'bg-white dark:bg-slate-800 shadow-sm'
@@ -258,11 +258,7 @@ export default function OpenItemTabBar({
                   onPointerDown={captureTabBarScroll}
                   onClick={() => onSelectTab(entry.id)}
                   className={`${TAB_SELECT_BUTTON_CLASS} ${
-                    isSingleExpandedTab
-                      ? `min-w-0 w-full flex-1 justify-center ${
-                          showSearchToggle ? 'px-11' : ''
-                        }`
-                      : ''
+                    isSingleExpandedTab ? 'min-w-0' : ''
                   } ${
                     isActive
                       ? 'text-slate-900 dark:text-slate-100'
@@ -276,11 +272,7 @@ export default function OpenItemTabBar({
                         suffix={entry.titleParts.suffix}
                       />
                     ) : (
-                      <span
-                        className={`whitespace-nowrap ${
-                          isSingleExpandedTab ? 'text-center' : 'text-left'
-                        }`}
-                      >
+                      <span className="whitespace-nowrap text-left">
                         {entry.title}
                       </span>
                     )}
@@ -298,9 +290,7 @@ export default function OpenItemTabBar({
                       e.stopPropagation()
                       onToggleSearch?.()
                     }}
-                    className={`${TAB_SEARCH_BUTTON_CLASS} ${
-                      isSingleExpandedTab ? 'absolute right-0 top-0 bottom-0 z-10' : ''
-                    }`}
+                    className={TAB_SEARCH_BUTTON_CLASS}
                   >
                     <svg
                       className={TAB_SEARCH_ICON_CLASS}
