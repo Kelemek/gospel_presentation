@@ -6,6 +6,7 @@ import {
   isMemorizeAndroidWebHost,
   isMemorizeIosWebHost,
   isProfileResourceListenControlAvailable,
+  isProfileResourceSearchContentTouchBlurHost,
 } from '@/lib/memorizationViewportPlatform'
 
 describe('memorizationViewportPlatform', () => {
@@ -70,5 +71,28 @@ describe('isMemorizeIosWebHost', () => {
   it('returns false for Android user agents', () => {
     defineUA('Mozilla/5.0 (Linux; Android 14; Pixel) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36')
     expect(isMemorizeIosWebHost()).toBe(false)
+  })
+})
+
+describe('isProfileResourceSearchContentTouchBlurHost', () => {
+  const defineUA = (ua: string) => {
+    Object.defineProperty(navigator, 'userAgent', {
+      value: ua,
+      configurable: true,
+    })
+  }
+
+  it('returns true on iOS and Android', () => {
+    defineUA(
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+    )
+    expect(isProfileResourceSearchContentTouchBlurHost()).toBe(true)
+    defineUA('Mozilla/5.0 (Linux; Android 14; Pixel) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36')
+    expect(isProfileResourceSearchContentTouchBlurHost()).toBe(true)
+  })
+
+  it('returns false on desktop user agents', () => {
+    defineUA('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36')
+    expect(isProfileResourceSearchContentTouchBlurHost()).toBe(false)
   })
 })

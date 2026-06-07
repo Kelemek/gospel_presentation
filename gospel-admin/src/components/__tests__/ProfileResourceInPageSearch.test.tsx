@@ -2,15 +2,17 @@ import React, { createRef } from 'react'
 import { act, render, screen, fireEvent } from '@testing-library/react'
 import ProfileResourceInPageSearch from '../ProfileResourceInPageSearch'
 import { RESOURCE_SEARCH_MATCH_ATTR } from '@/lib/profileResourceInPageSearch'
-import { isMemorizeIosWebHost } from '@/lib/memorizationViewportPlatform'
+import { isProfileResourceSearchContentTouchBlurHost } from '@/lib/memorizationViewportPlatform'
 
 jest.mock('@/lib/memorizationViewportPlatform', () => ({
-  isMemorizeIosWebHost: jest.fn(() => false),
+  ...jest.requireActual('@/lib/memorizationViewportPlatform'),
+  isProfileResourceSearchContentTouchBlurHost: jest.fn(() => false),
 }))
 
-const mockIsMemorizeIosWebHost = isMemorizeIosWebHost as jest.MockedFunction<
-  typeof isMemorizeIosWebHost
->
+const mockIsProfileResourceSearchContentTouchBlurHost =
+  isProfileResourceSearchContentTouchBlurHost as jest.MockedFunction<
+    typeof isProfileResourceSearchContentTouchBlurHost
+  >
 
 describe('ProfileResourceInPageSearch', () => {
   beforeEach(() => {
@@ -21,7 +23,7 @@ describe('ProfileResourceInPageSearch', () => {
   afterEach(() => {
     jest.useRealTimers()
     document.body.innerHTML = ''
-    mockIsMemorizeIosWebHost.mockReturnValue(false)
+    mockIsProfileResourceSearchContentTouchBlurHost.mockReturnValue(false)
   })
 
   function renderPanel(open = true, resourceKey = 'default') {
@@ -207,8 +209,8 @@ describe('ProfileResourceInPageSearch', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 
-  it('on iOS, blurs the search field when the reader touches article content', () => {
-    mockIsMemorizeIosWebHost.mockReturnValue(true)
+  it('on mobile, blurs the search field when the reader touches article content', () => {
+    mockIsProfileResourceSearchContentTouchBlurHost.mockReturnValue(true)
     const { main } = renderPanel()
     const input = screen.getByRole('searchbox', { name: 'Search in resource' })
     input.focus()
@@ -219,8 +221,8 @@ describe('ProfileResourceInPageSearch', () => {
     expect(document.activeElement).not.toBe(input)
   })
 
-  it('on iOS, does not blur when touch starts on the search field', () => {
-    mockIsMemorizeIosWebHost.mockReturnValue(true)
+  it('on mobile, does not blur when touch starts on the search field', () => {
+    mockIsProfileResourceSearchContentTouchBlurHost.mockReturnValue(true)
     renderPanel()
     const input = screen.getByRole('searchbox', { name: 'Search in resource' })
     input.focus()

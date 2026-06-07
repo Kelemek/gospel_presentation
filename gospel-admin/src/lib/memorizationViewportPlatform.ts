@@ -22,3 +22,8 @@ export function isMemorizeIosWebHost(): boolean {
   // iPadOS 13+ desktop UA
   return navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1
 }
+
+/** iOS + Android: touching article content dismisses the in-page search keyboard (panel stays open). */
+export function isProfileResourceSearchContentTouchBlurHost(): boolean {
+  return isMemorizeIosWebHost() || isMemorizeAndroidWebHost()
+}

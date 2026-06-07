@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
-import { isMemorizeIosWebHost } from '@/lib/memorizationViewportPlatform'
+import { isProfileResourceSearchContentTouchBlurHost } from '@/lib/memorizationViewportPlatform'
 import { runProfileResourceSearch } from '@/lib/profileResourceInPageSearch'
 
 const RESOURCE_SEARCH_DEBOUNCE_MS = 250
@@ -44,9 +44,9 @@ export default function ProfileResourceInPageSearch({
     return () => window.clearTimeout(timer)
   }, [open, query])
 
-  /** iOS: dismiss the keyboard when the reader touches article content so scroll avoids vv jitter. */
+  /** Mobile: dismiss the keyboard when the reader touches article content (panel stays open). */
   useEffect(() => {
-    if (!open || !isMemorizeIosWebHost()) return
+    if (!open || !isProfileResourceSearchContentTouchBlurHost()) return
     const scope = contentRootRef.current
     if (!scope) return
 
