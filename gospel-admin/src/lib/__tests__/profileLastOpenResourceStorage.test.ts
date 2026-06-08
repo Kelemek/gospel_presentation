@@ -23,6 +23,7 @@ import {
   removeScriptureModalTab,
   resolveProfileTabNavigationAfterClose,
   resolveScriptureTabNavigationAfterClose,
+  resolveScriptureModalTabToRestore,
   scriptureModalTabKey,
   shouldSkipProfileAppLaunchResume,
   PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY,
@@ -571,6 +572,47 @@ describe('profileLastOpenResourceStorage', () => {
     removeScriptureModalTab('default', 'John 3:16')
     expect(loadProfileRecentScriptures().map((s) => s.reference)).toEqual(['John 3:16'])
     expect(loadScriptureModalTabs().map((s) => s.reference)).toEqual(['Romans 8:1'])
+  })
+
+  it('resolveScriptureModalTabToRestore returns null when no passages were opened', () => {
+    expect(resolveScriptureModalTabToRestore('default')).toBeNull()
+  })
+
+  it('resolveScriptureModalTabToRestore prefers rightmost tab on the current profile', () => {
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'John 3:16',
+      sectionId: 's1',
+      subsectionId: 's1-0',
+    })
+    recordScriptureModalTab({
+      slug: 'default',
+      profileTitle: 'Gospel',
+      reference: 'Romans 8:1',
+      sectionId: 's2',
+      subsectionId: 's2-0',
+    })
+    recordScriptureModalTab({
+      slug: 'sg00001',
+      profileTitle: 'Sermon',
+      reference: 'Ephesians 2:8',
+      sectionId: 's3',
+      subsectionId: 's3-0',
+    })
+    expect(resolveScriptureModalTabToRestore('default')?.reference).toBe('Romans 8:1')
+    expect(resolveScriptureModalTabToRestore('sg00001')?.reference).toBe('Ephesians 2:8')
+  })
+
+  it('resolveScriptureModalTabToRestore falls back to rightmost tab when profile has no tabs', () => {
+    recordScriptureModalTab({
+      slug: 'sg00001',
+      profileTitle: 'Sermon',
+      reference: 'Ephesians 2:8',
+      sectionId: 's1',
+      subsectionId: 's1-0',
+    })
+    expect(resolveScriptureModalTabToRestore('default')?.reference).toBe('Ephesians 2:8')
   })
 
   it('resolveScriptureTabNavigationAfterClose prefers tab to the right', () => {

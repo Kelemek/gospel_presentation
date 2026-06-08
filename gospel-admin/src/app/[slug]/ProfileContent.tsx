@@ -111,6 +111,7 @@ import {
   buildProfileRecentScriptureHref,
   removeProfileResourceTab,
   resolveProfileTabNavigationAfterClose,
+  resolveScriptureModalTabToRestore,
   type ProfileRecentScriptureEntry,
 } from '@/lib/profileLastOpenResourceStorage'
 import {
@@ -2018,6 +2019,16 @@ function ProfileContent({
     setIsMenuOpen(false)
   }
 
+  const handleOpenBibleReader = useCallback(() => {
+    closeMenu()
+    const tab = resolveScriptureModalTabToRestore(profileSlug)
+    if (tab) {
+      openScriptureFromTabEntry(tab)
+      return
+    }
+    setBibleReaderOpen(true)
+  }, [profileSlug, openScriptureFromTabEntry])
+
   const handleMemorizationPracticeStart = (verse: MemorizedVerse) => {
     setMemorizationPracticeVerse(verse)
     closeMenu()
@@ -2319,10 +2330,7 @@ function ProfileContent({
                   setStudyLibraryFocus('edwards')
                   setIsSpurgeonLibraryOpen(true)
                 }}
-                onOpenBibleReader={() => {
-                  setBibleReaderOpen(true)
-                  closeMenu()
-                }}
+                onOpenBibleReader={handleOpenBibleReader}
               />
               
               {/* Profile Info in Sidebar */}

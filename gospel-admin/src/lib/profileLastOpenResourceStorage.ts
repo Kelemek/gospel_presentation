@@ -595,6 +595,22 @@ export function getScriptureModalTabEntry(
   return scriptureTabs.find((t) => scriptureDedupeKey(t) === key)
 }
 
+/**
+ * Tab to activate when reopening Scripture modal (e.g. Bible Reader when passages are already open).
+ * Prefers the rightmost tab on the current profile; otherwise the rightmost tab overall.
+ */
+export function resolveScriptureModalTabToRestore(
+  profileSlug: string
+): ProfileRecentScriptureEntry | null {
+  const tabs = loadScriptureModalTabs()
+  if (tabs.length === 0) return null
+  const slug = profileSlug.trim()
+  if (!slug) return tabs[tabs.length - 1]!
+  const profileTabs = tabs.filter((t) => t.slug.trim() === slug)
+  if (profileTabs.length > 0) return profileTabs[profileTabs.length - 1]!
+  return tabs[tabs.length - 1]!
+}
+
 /** Entries for the Scripture modal tab bar (stable left-to-right order; up to {@link PROFILE_RECENT_MENU_MAX}). */
 export function loadScriptureModalTabs(
   current?: RecordScriptureLastOpenInput
