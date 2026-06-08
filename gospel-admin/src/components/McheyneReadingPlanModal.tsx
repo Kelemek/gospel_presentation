@@ -12,6 +12,7 @@ import {
 import { mcheynePlanDayFromDaySubsectionId } from '@/lib/mcheyne/mcheyneReadingDay'
 import { hydrateVersePinsFromStorage, loadVersePins } from '@/lib/versePinStorage'
 import { MCHEYNE_SLUG } from '@/lib/mcheyne/mcheyneSlug'
+import { usePostHogModalOpen } from '@/hooks/usePostHogModalOpen'
 
 interface McheyneReadingPlanModalProps {
   isOpen: boolean
@@ -64,6 +65,7 @@ export default function McheyneReadingPlanModal({
   onNavigateToPlanDay,
   onNavigateToLatest,
 }: McheyneReadingPlanModalProps) {
+  usePostHogModalOpen('mcheyne_reading_plan', isOpen)
   const titleId = useId()
   const now = new Date()
   const [monthIndex, setMonthIndex] = useState(now.getMonth())

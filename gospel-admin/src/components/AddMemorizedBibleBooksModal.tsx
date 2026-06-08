@@ -11,6 +11,7 @@ import {
 import { memorizationSaveFailureMessage } from '@/lib/memorizationSaveFailureMessage'
 import type { BibleTranslation } from '@/lib/bible-translations'
 import { tryAddMemorizedBibleBooks } from '@/lib/verseMemorizationStorage'
+import { usePostHogModalOpen } from '@/hooks/usePostHogModalOpen'
 
 export interface AddMemorizedBibleBooksModalProps {
   isOpen: boolean
@@ -29,6 +30,7 @@ export default function AddMemorizedBibleBooksModal({
   onClose,
   translation,
 }: AddMemorizedBibleBooksModalProps) {
+  usePostHogModalOpen('memorize_add_bible_books', isOpen)
   const { showAlert } = useAlertModal()
   const [scope, setScope] = useState<BibleBooksMemorizationScope>('all')
   const [submitting, setSubmitting] = useState(false)

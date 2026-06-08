@@ -92,6 +92,32 @@ If these are unset, PostHog does not initialize (safe for CI and local test runs
 
 Client init uses Next.js [`instrumentation-client.ts`](../gospel-admin/instrumentation-client.ts) (supported since Next.js 15.3; not `instrumentation.ts`, which is server-only). [`PostHogProvider`](../gospel-admin/src/components/PostHogProvider.tsx) calls the same idempotent init on mount as a fallback.
 
+### Custom events: modal opens
+
+Modals do not change the URL, so they are **not** tracked as Web Analytics paths. Feature modals fire a custom **`modal_opened`** event via [`posthog-analytics.ts`](../gospel-admin/src/lib/posthog-analytics.ts) and [`usePostHogModalOpen`](../gospel-admin/src/hooks/usePostHogModalOpen.ts) (edge-triggered on open; no-op when PostHog is unset).
+
+| `modal` property | Surface |
+|------------------|---------|
+| `scripture` | Scripture reader |
+| `study` | Study resources (Spurgeon, Calvin, Henry, Edwards) |
+| `coma` | COMA method |
+| `four_rules` | Four rules of communication |
+| `memorize_practice` | Memorization practice session |
+| `memorize_add_bible_books` | Add Bible books to memorize |
+| `bible_passage_picker` | Passage picker (`variant`: `memorize` or `reader`) |
+| `scripture_word_study` | Word study overlay in scripture reader |
+| `mcheyne_reading_plan` | M'Cheyne reading plan calendar |
+| `morneve_devotions` | Morning & Evening devotions calendar |
+| `github_feedback` | Feedback form |
+| `presentation_welcome` | First-visit welcome |
+| `memorize_listen_controls` | Memorize listen controls (modal presentation only) |
+
+Optional properties: `profile_slug`, `reference`, `library_focus`, `memorization_kind`.
+
+**Not tracked:** scripture hover previews (`ScriptureHoverModal`) and system alert/confirm dialogs (`AlertModalContext`) — low product signal and/or noisy volume.
+
+Analyze in PostHog **Trends** or **Activity** filtered on event `modal_opened`, broken down by `modal`.
+
 ### Free-tier limits and configuration
 
 - **Session replay:** 5,000 web recordings/month (hard cap; deleting replays does not free quota). Client init samples ~15% of sessions in [`posthog-config.ts`](../gospel-admin/src/lib/posthog-config.ts); adjust `POSTHOG_SESSION_RECORDING_SAMPLE_RATE` or use PostHog project sampling if traffic grows.

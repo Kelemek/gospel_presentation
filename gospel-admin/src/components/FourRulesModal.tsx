@@ -1,5 +1,7 @@
 'use client'
 
+import { usePostHogModalOpen } from '@/hooks/usePostHogModalOpen'
+
 interface FourRulesModalProps {
   isOpen: boolean
   onClose: () => void
@@ -13,6 +15,7 @@ const FOUR_RULES_HEADERS = [
 ]
 
 export default function FourRulesModal({ isOpen, onClose }: FourRulesModalProps) {
+  usePostHogModalOpen('four_rules', isOpen)
   if (!isOpen) return null
 
   return (

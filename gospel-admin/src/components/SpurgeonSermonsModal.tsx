@@ -28,6 +28,7 @@ import {
 
 import type { CrossReferenceTarget } from '@/lib/cross-reference-types'
 import ScriptureHoverModal from '@/components/ScriptureHoverModal'
+import { usePostHogModalOpen } from '@/hooks/usePostHogModalOpen'
 
 const SEARCH_PAGE_SIZE = 100
 const CROSS_REF_PAGE_SIZE = 50
@@ -93,6 +94,10 @@ export default function SpurgeonSermonsModal({
   onFollowSermonLink,
   onOpenScriptureReference,
 }: SpurgeonSermonsModalProps) {
+  usePostHogModalOpen('study', isOpen, {
+    library_focus: libraryFocus,
+    reference: initialByReference ?? undefined,
+  })
   const titleId = useId()
   const showSpurgeon = libraryFocus === 'all' || libraryFocus === 'spurgeon'
   const showEdwards = libraryFocus === 'all' || libraryFocus === 'edwards'

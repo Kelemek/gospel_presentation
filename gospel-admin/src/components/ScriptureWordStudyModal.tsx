@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef } from 'react'
 import ScriptureWordStudyPanel from '@/components/ScriptureWordStudyPanel'
+import { usePostHogModalMount } from '@/hooks/usePostHogModalOpen'
 
 interface ScriptureWordStudyModalProps {
   reference: string
@@ -20,6 +21,7 @@ export default function ScriptureWordStudyModal({
   onClose,
   onOpenReference,
 }: ScriptureWordStudyModalProps) {
+  usePostHogModalMount('scripture_word_study', { reference })
   const titleId = useId()
   const onCloseRef = useRef(onClose)
 

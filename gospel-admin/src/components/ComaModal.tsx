@@ -1,6 +1,7 @@
 'use client'
 
 import { useId, useState, useEffect } from 'react'
+import { usePostHogModalOpen } from '@/hooks/usePostHogModalOpen'
 
 interface ComaModalProps {
   isOpen: boolean
@@ -8,51 +9,55 @@ interface ComaModalProps {
 }
 
 export default function ComaModal({ isOpen, onClose }: ComaModalProps) {
+  usePostHogModalOpen('coma', isOpen)
   const comaModalTitleId = useId()
   const [instructions, setInstructions] = useState<string>('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (isOpen) {
-      loadInstructions()
+    if (!isOpen) return
+
+    let cancelled = false
+
+    void (async () => {
+      try {
+        const response = await fetch('/api/coma-template')
+        if (cancelled) return
+        if (response.ok) {
+          const data = await response.json()
+          const rawInstructions = data.template?.instructions || ''
+
+          if (!rawInstructions || rawInstructions.trim() === '') {
+            setInstructions('<p>COMA instructions are not currently available. Please contact your administrator.</p>')
+          } else {
+            const hasHtmlTags = /<[^>]+>/.test(rawInstructions)
+            if (!hasHtmlTags) {
+              const formatted = rawInstructions
+                .split('\n\n')
+                .map((para: string) => `<p>${para.replace(/\n/g, '<br>')}</p>`)
+                .join('')
+              setInstructions(formatted)
+            } else {
+              setInstructions(rawInstructions)
+            }
+          }
+        } else {
+          console.error('Failed to fetch COMA template, status:', response.status)
+          setInstructions('<p>Unable to load COMA instructions. Please contact your administrator.</p>')
+        }
+      } catch (error) {
+        if (cancelled) return
+        console.error('Failed to load COMA instructions:', error)
+        setInstructions('<p>Unable to load COMA instructions. Please contact your administrator.</p>')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
     }
   }, [isOpen])
-
-  const loadInstructions = async () => {
-    try {
-      const response = await fetch('/api/coma-template')
-      if (response.ok) {
-        const data = await response.json()
-        const rawInstructions = data.template?.instructions || ''
-        
-        // If instructions are empty or just whitespace, provide a default message
-        if (!rawInstructions || rawInstructions.trim() === '') {
-          setInstructions('<p>COMA instructions are not currently available. Please contact your administrator.</p>')
-        } else {
-          // Convert plain text to HTML if it doesn't contain HTML tags
-          const hasHtmlTags = /<[^>]+>/.test(rawInstructions)
-          if (!hasHtmlTags) {
-            // Convert newlines to <br> tags and wrap in paragraph
-            const formatted = rawInstructions
-              .split('\n\n')
-              .map((para: string) => `<p>${para.replace(/\n/g, '<br>')}</p>`)
-              .join('')
-            setInstructions(formatted)
-          } else {
-            setInstructions(rawInstructions)
-          }
-        }
-      } else {
-        console.error('Failed to fetch COMA template, status:', response.status)
-        setInstructions('<p>Unable to load COMA instructions. Please contact your administrator.</p>')
-      }
-    } catch (error) {
-      console.error('Failed to load COMA instructions:', error)
-      setInstructions('<p>Unable to load COMA instructions. Please contact your administrator.</p>')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   if (!isOpen) return null
 

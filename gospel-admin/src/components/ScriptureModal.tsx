@@ -16,6 +16,7 @@ import { useTranslation, type BibleTranslation } from '@/contexts/TranslationCon
 import { isBibleTranslation } from '@/lib/bible-translations'
 import { useTextSize } from '@/contexts/TextSizeContext'
 import { useAlertModal } from '@/contexts/AlertModalContext'
+import { usePostHogModalOpen } from '@/hooks/usePostHogModalOpen'
 import {
   isChapterOnlyScriptureReference,
   scriptureReferenceForPassageQuery,
@@ -183,6 +184,10 @@ export default function ScriptureModal({
   onScriptureTabCloseActive,
   mcheyneDayChapterReferences,
 }: ScriptureModalProps) {
+  usePostHogModalOpen('scripture', isOpen, {
+    reference,
+    profile_slug: profileSlug,
+  })
   const { translation, setTranslation, enabledTranslations, enabledTranslationOptions } =
     useTranslation()
   const { textSize } = useTextSize()

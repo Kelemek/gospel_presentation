@@ -8,6 +8,7 @@ import {
   morneveSlugForMmdd,
   morneveTitleForMmdd,
 } from '@/lib/spurgeon/morneveSlug'
+import { usePostHogModalOpen } from '@/hooks/usePostHogModalOpen'
 
 function mmddForCalendarDay(monthIndex: number, day: number): string {
   const mm = String(monthIndex + 1).padStart(2, '0')
@@ -26,6 +27,7 @@ export default function MorneveDevotionsModal({
   onClose,
   onFollowDayLink,
 }: MorneveDevotionsModalProps) {
+  usePostHogModalOpen('morneve_devotions', isOpen)
   const titleId = useId()
   const todaySlug = morneveSlugForLocalDate()
   const todayTitle = morneveTitleForMmdd(todaySlug.replace(/^me/i, ''))

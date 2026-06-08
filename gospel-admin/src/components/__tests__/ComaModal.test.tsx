@@ -2,9 +2,25 @@ import React from 'react'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import ComaModal from '../ComaModal'
 
+const mockCaptureModalOpened = jest.fn()
+
+jest.mock('@/lib/posthog-analytics', () => ({
+  captureModalOpened: (...args: unknown[]) => mockCaptureModalOpened(...args),
+}))
+
 describe('ComaModal', () => {
   beforeEach(() => {
     jest.restoreAllMocks()
+    mockCaptureModalOpened.mockClear()
+  })
+
+  it('captures modal_opened when opened', () => {
+    const onClose = jest.fn()
+    const { rerender } = render(<ComaModal isOpen={false} onClose={onClose} />)
+    expect(mockCaptureModalOpened).not.toHaveBeenCalled()
+
+    rerender(<ComaModal isOpen onClose={onClose} />)
+    expect(mockCaptureModalOpened).toHaveBeenCalledWith({ modal: 'coma' })
   })
 
   it('fetches and renders instructions HTML when opened', async () => {

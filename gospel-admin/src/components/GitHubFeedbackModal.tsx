@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import GitHubFeedbackForm, { type GitHubFeedbackFormValues } from '@/components/GitHubFeedbackForm'
+import { usePostHogModalOpen } from '@/hooks/usePostHogModalOpen'
 
 export interface GitHubFeedbackModalProps {
   isOpen: boolean
@@ -17,6 +18,7 @@ export default function GitHubFeedbackModal({
   profileSlug,
   profileTitle,
 }: GitHubFeedbackModalProps) {
+  usePostHogModalOpen('github_feedback', isOpen, { profile_slug: profileSlug })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')

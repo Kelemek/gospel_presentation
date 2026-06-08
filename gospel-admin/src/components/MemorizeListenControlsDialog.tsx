@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { MemorizeListenSpeedButton } from '@/components/MemorizeListenSpeedButton'
 import type { MemorizeListenSpeed } from '@/lib/memorizeListenSpeedStorage'
 import type { ProfileReadAlongUnderlineStyle } from '@/lib/profileReadAlongUnderlineStyleStorage'
+import { usePostHogModalOpen } from '@/hooks/usePostHogModalOpen'
 
 interface MemorizeListenControlsDialogPropsBase {
   open: boolean
@@ -136,6 +137,7 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
   const showRepeatControls = isRepeatVariant(props)
   const backdropRef = useRef<HTMLDivElement | null>(null)
   const isFloating = presentation === 'floating'
+  usePostHogModalOpen('memorize_listen_controls', open && !isFloating)
 
   useLayoutEffect(() => {
     if (!open || isFloating) return

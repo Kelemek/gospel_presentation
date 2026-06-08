@@ -11,6 +11,7 @@ import {
   type MemorizeAddTestament,
 } from '@/lib/memorizationAddVersePrefs'
 import { isChapterOnlyScriptureReference } from '@/lib/parse-scripture-reference'
+import { usePostHogModalOpen } from '@/hooks/usePostHogModalOpen'
 
 export type BiblePassagePickerVariant = 'memorize' | 'reader'
 
@@ -55,6 +56,9 @@ function pickerStateFromSeed(seedReference: string | null): {
 }
 
 export default function BiblePassagePickerModal(props: BiblePassagePickerModalProps) {
+  usePostHogModalOpen('bible_passage_picker', props.isOpen, {
+    variant: props.variant ?? 'memorize',
+  })
   if (!props.isOpen) return null
   return <BiblePassagePickerModalContent key={props.seedReference ?? ''} {...props} />
 }

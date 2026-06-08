@@ -32,6 +32,7 @@ import { studyResourcesAvailableFromPayload } from '@/lib/studyResourcesAvailabi
 import BibleBooksMemorizationList from '@/components/BibleBooksMemorizationList'
 import { MemorizationReorderPanel } from '@/components/MemorizationReorderPanel'
 import { booksForScope, isBibleBooksMemorizationItem } from '@/lib/bibleBooksMemorization'
+import { usePostHogModalMount } from '@/hooks/usePostHogModalOpen'
 import { MemorizeListenControlsDialog } from '@/components/MemorizeListenControlsDialog'
 import ScriptureModalToolbarMenu from '@/components/ScriptureModalToolbarMenu'
 import {
@@ -155,6 +156,10 @@ export default function MemorizationPracticeSession({
   onOpenSpurgeonStudy,
 }: MemorizationPracticeSessionProps) {
   const isBibleBooks = isBibleBooksMemorizationItem(verse)
+  usePostHogModalMount('memorize_practice', {
+    memorization_kind: isBibleBooks ? 'bible_books' : 'verse',
+    reference: verse.reference,
+  })
 
   /**
    * `verse.text` is whatever was saved when the verse was added (from `/api/scripture`).

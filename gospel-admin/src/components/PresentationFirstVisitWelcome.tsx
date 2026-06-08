@@ -7,6 +7,7 @@ import {
   dismissPresentationWelcome,
   hasPresentationWelcomeBeenDismissed,
 } from '@/lib/presentationWelcomeStorage'
+import { usePostHogModalOpen } from '@/hooks/usePostHogModalOpen'
 
 const HELP_TRIGGER_ID = 'profile-help-menu-trigger'
 
@@ -25,6 +26,7 @@ function pulseHelpTriggerBriefly(): void {
  */
 export default function PresentationFirstVisitWelcome() {
   const [show, setShow] = useState(false)
+  usePostHogModalOpen('presentation_welcome', show)
   const primaryRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
