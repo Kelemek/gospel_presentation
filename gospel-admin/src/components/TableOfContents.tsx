@@ -720,13 +720,71 @@ export default function TableOfContents({
         </button>
       ) : null}
 
+      {/* Bible Translation — same button + listbox panel as Text size (OS select menus cannot be themed) */}
+      <div data-tour="toc-bible-translation">
+        <button
+          type="button"
+          id="bible-translation"
+          data-tour="toc-bible-translation-toggle"
+          onClick={() => setIsTranslationOpen(!isTranslationOpen)}
+          className={resourcesRowClassName}
+          aria-expanded={isTranslationOpen}
+          aria-haspopup="listbox"
+        >
+          <svg className="w-5 h-5 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          </svg>
+          Bible Translation
+          <span className={`ml-auto transition-transform ${isTranslationOpen ? 'rotate-180' : ''}`}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </span>
+        </button>
+        {isTranslationOpen && (
+          <div
+            data-tour="bible-translation-panel"
+            className="mt-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-sm overflow-hidden"
+            role="listbox"
+            aria-labelledby="bible-translation"
+          >
+            {enabledTranslationOptions.map(({ translation_code, translation_name }) => (
+              <button
+                key={translation_code}
+                type="button"
+                role="option"
+                aria-selected={translation === translation_code}
+                onClick={() => void handlePickTranslation(translation_code as BibleTranslation)}
+                className={`flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-sm text-left transition-colors border-b border-slate-100 dark:border-slate-600 last:border-b-0 ${
+                  translation === translation_code
+                    ? 'bg-slate-100 dark:bg-slate-700 font-semibold text-slate-900 dark:text-slate-50'
+                    : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
+                }`}
+              >
+                {translation === translation_code && (
+                  <svg className="w-4 h-4 shrink-0 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+                <span className={translation === translation_code ? '' : 'pl-6'}>{translation_name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <MemorizeDropdown
+        onNavigate={onNavigate}
+        onMemorizationPracticeStart={onMemorizationPracticeStart}
+      />
+
       {/* Text size dropdown — same design as Resources */}
       <div>
         <button
           type="button"
           data-tour="toc-text-size-toggle"
           onClick={() => setIsTextSizeOpen(!isTextSizeOpen)}
-          className="inline-flex items-center w-full px-4 py-3 text-base md:text-lg font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500 border border-slate-300 dark:border-slate-600 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px] cursor-pointer"
+          className={resourcesRowClassName}
           aria-expanded={isTextSizeOpen}
           aria-haspopup="listbox"
         >
@@ -781,77 +839,18 @@ export default function TableOfContents({
         )}
       </div>
 
-      {/* Print + Bible + Memorize: Memorize sits below Bible Translation */}
-      <div className="space-y-4 md:space-y-3 pb-4 border-b border-slate-200 dark:border-slate-600">
+      <div className="pb-4 border-b border-slate-200 dark:border-slate-600">
         <button
           type="button"
           data-tour="toc-print-version"
           onClick={handlePrint}
-          className="inline-flex items-center w-full px-4 py-3 text-base md:text-lg font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500 border border-slate-300 dark:border-slate-600 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px] cursor-pointer"
+          className={resourcesRowClassName}
         >
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
           </svg>
           Print Version
         </button>
-
-        {/* Bible Translation — same button + listbox panel as Text size (OS select menus cannot be themed) */}
-        <div data-tour="toc-bible-translation">
-          <button
-            type="button"
-            id="bible-translation"
-            data-tour="toc-bible-translation-toggle"
-            onClick={() => setIsTranslationOpen(!isTranslationOpen)}
-            className="inline-flex items-center w-full px-4 py-3 text-base md:text-lg font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500 border border-slate-300 dark:border-slate-600 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px] cursor-pointer"
-            aria-expanded={isTranslationOpen}
-            aria-haspopup="listbox"
-          >
-            <svg className="w-5 h-5 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
-            Bible Translation
-            <span className={`ml-auto transition-transform ${isTranslationOpen ? 'rotate-180' : ''}`}>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </span>
-          </button>
-          {isTranslationOpen && (
-            <div
-              data-tour="bible-translation-panel"
-              className="mt-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 shadow-sm overflow-hidden"
-              role="listbox"
-              aria-labelledby="bible-translation"
-            >
-              {enabledTranslationOptions.map(({ translation_code, translation_name }) => (
-                <button
-                  key={translation_code}
-                  type="button"
-                  role="option"
-                  aria-selected={translation === translation_code}
-                  onClick={() => void handlePickTranslation(translation_code as BibleTranslation)}
-                  className={`flex w-full cursor-pointer items-center gap-2 px-4 py-3 text-sm text-left transition-colors border-b border-slate-100 dark:border-slate-600 last:border-b-0 ${
-                    translation === translation_code
-                      ? 'bg-slate-100 dark:bg-slate-700 font-semibold text-slate-900 dark:text-slate-50'
-                      : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {translation === translation_code && (
-                    <svg className="w-4 h-4 shrink-0 text-slate-600 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                  <span className={translation === translation_code ? '' : 'pl-6'}>{translation_name}</span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <MemorizeDropdown
-          onNavigate={onNavigate}
-          onMemorizationPracticeStart={onMemorizationPracticeStart}
-        />
       </div>
       <div data-tour="toc-section-links">
       {sections.map((section) => (
