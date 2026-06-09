@@ -1,29 +1,22 @@
-// Test the OG icon generator
+import fs from 'fs'
+import path from 'path'
 
-// Mock next/og ImageResponse so calling the default export doesn't throw
-jest.mock('next/og', () => ({
-  ImageResponse: class MockImageResponse {
-    child: any
-    opts: any
-    constructor(child: any, opts: any) {
-      this.child = child
-      this.opts = opts
-    }
-  }
-}))
+describe('app icon assets', () => {
+  const root = path.join(__dirname, '..', '..', '..')
 
-describe('OG Icon', () => {
-  it('exports size and contentType and returns an ImageResponse', async () => {
-    // Import after setting up the mock
-     
-    const iconMod = require('@/app/icon')
+  it('ships a committed master PNG in resources/', () => {
+    const sourcePath = path.join(root, 'resources', 'icon-source.png')
+    const legacyPath = path.join(root, 'resources', 'icon.png')
+    const iconPath = fs.existsSync(sourcePath) ? sourcePath : legacyPath
+    expect(fs.existsSync(iconPath)).toBe(true)
+    const buf = fs.readFileSync(iconPath)
+    expect(buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))).toBe(true)
+  })
 
-    expect(iconMod.size).toEqual({ width: 32, height: 32 })
-    expect(iconMod.contentType).toBe('image/png')
-
-    const result = iconMod.default()
-    // The mocked ImageResponse stores opts passed in
-    expect(result).toBeInstanceOf(require('next/og').ImageResponse)
-    expect(result.opts).toMatchObject({ width: 32, height: 32 })
+  it('generate-icons normalizes raw art to legacy rx=20 @ 180px once', () => {
+    const script = fs.readFileSync(path.join(root, 'scripts', 'generate-icons.js'), 'utf8')
+    expect(script).toContain('icon-source-raw.png')
+    expect(script).toContain('LEGACY_RX_AT_180 = 20')
+    expect(script).toContain('normalizeSourceFromRaw')
   })
 })

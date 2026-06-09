@@ -141,7 +141,7 @@ export const PROFILE_VALIDATION = {
   QUESTION_MAX_LENGTH: 500,        // Max length for question text
   ANSWER_MAX_LENGTH: 2000,         // Max length for answer text (allows full explanation)
   MAX_PROFILES_PER_USER: 50,
-  RESERVED_SLUGS: ['admin', 'api', 'auth', '_next', 'favicon', 'spurgeon']
+  RESERVED_SLUGS: ['admin', 'api', 'auth', '_next', 'favicon', 'icon', 'spurgeon']
 } as const
 
 // Resources dropdown order (admin_settings.public_template_order)

@@ -1,7 +1,7 @@
 import { GET } from '../route'
 
 describe('favicon route', () => {
-  it('redirects to /icon.svg with 301', async () => {
+  it('redirects to /icon with 301', async () => {
     const req: any = { url: 'https://example.com/favicon.ico' }
 
     // Mock Response.redirect used by Next's route handlers. Prefer constructing
@@ -36,6 +36,6 @@ describe('favicon route', () => {
 
     expect(res).toBeDefined()
     expect(res.status).toBe(301)
-    expect(res.headers.get('location')).toBe('https://example.com/icon.svg')
+    expect(res.headers.get('location')).toBe('https://example.com/favicon.png?v=8')
   })
 })

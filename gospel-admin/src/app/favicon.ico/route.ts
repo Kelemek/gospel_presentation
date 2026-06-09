@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 
 export async function GET(request: NextRequest) {
-  // Redirect favicon.ico requests to our SVG icon
-  return Response.redirect(new URL('/icon.svg', request.url), 301)
+  // /icon conflicts with [slug]; serve from public/favicon.png
+  return Response.redirect(new URL('/favicon.png?v=8', request.url), 301)
 }
