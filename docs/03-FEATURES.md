@@ -195,6 +195,8 @@ The app is wrapped for iOS and Android via Capacitor (WebView loads the deployed
 
 - **Splash screen (iOS)**: On launch, the iOS app shows a centered app icon on a solid background (Launch Screen) and keeps it visible until the web app has loaded. This avoids a black screen between the system launch screen and the first painted content. Implemented with `@capacitor/splash-screen` (`launchAutoHide: false`) and `SplashScreenController` calling `SplashScreen.hide()` once the app is ready; the launch screen is defined in `ios/App/App/Base.lproj/LaunchScreen.storyboard` and uses the `LaunchIcon` image set (same graphic as the app icon). Changing the launch screen or splash behavior requires a **native rebuild** (e.g. `npx cap sync` then build in Xcode).
 
+- **Mobile web install banner**: On **phones and tablets** in mobile browsers (iPhone/iPad → App Store, Android → Google Play), a sticky **Get the app** strip appears at the top of the site (`NativeAppInstallBanner` in `layout.tsx`). iPadOS “desktop” Safari is detected via `navigator.maxTouchPoints` when the user agent looks like Macintosh. Store URLs match the public [`/info`](gospel-admin/src/app/info/page.tsx) page (`info-page-links.ts`). Users can dismiss it; the choice is stored in `localStorage` (`gospel-native-app-banner-dismissed`) and syncs across tabs. The banner is **hidden** inside the Capacitor native app and on **`/info`** (that page already promotes the apps with QR codes). Logic: `nativeAppInstallBanner.ts`.
+
 ## Related Documentation
 - Questions: [QUESTIONS_FEATURE.md](QUESTIONS_FEATURE.md)
 - Answers: [ANSWERS_TO_DATABASE.md](ANSWERS_TO_DATABASE.md)
