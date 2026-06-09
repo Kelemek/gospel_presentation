@@ -1,8 +1,9 @@
 'use client'
 
 import React, { createContext, useContext, useSyncExternalStore, useCallback, useMemo } from 'react'
+import { THEME_STORAGE_KEY } from '@/lib/theme-init-script'
 
-const STORAGE_KEY = 'gospel-profile-theme'
+const STORAGE_KEY = THEME_STORAGE_KEY
 
 export type Theme = 'light' | 'dark'
 

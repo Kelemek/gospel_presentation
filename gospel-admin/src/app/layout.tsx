@@ -15,6 +15,7 @@ import { TextSizeProvider } from "@/contexts/TextSizeContext";
 import { ApplyTextSize } from "@/components/ApplyTextSize";
 import { TranslationProvider } from "@/contexts/TranslationContext";
 import { AlertModalProvider } from "@/contexts/AlertModalContext";
+import { getThemeInitScriptContent } from "@/lib/theme-init-script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -53,26 +54,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const themeScript = `
-(function() {
-  var key = 'gospel-profile-theme';
-  var stored = typeof localStorage !== 'undefined' && (localStorage.getItem(key) === 'light' || localStorage.getItem(key) === 'dark')
-    ? localStorage.getItem(key)
-    : null;
-  var theme = stored || (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  var isDark = theme === 'dark';
-  document.documentElement.classList.toggle('dark', isDark);
-  if (document.body) document.body.classList.toggle('dark', isDark);
-})();
-  `.trim()
-
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script dangerouslySetInnerHTML={{ __html: getThemeInitScriptContent() }} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
       >
         <PostHogProvider>
           <ThemeProvider>

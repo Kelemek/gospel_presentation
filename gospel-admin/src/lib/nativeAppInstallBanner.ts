@@ -5,6 +5,9 @@ import {
 
 export const NATIVE_APP_INSTALL_BANNER_DISMISS_KEY = 'gospel-native-app-banner-dismissed'
 
+/** Delay after client mount before the install banner may appear. */
+export const NATIVE_APP_INSTALL_BANNER_SHOW_DELAY_MS = 5000
+
 const dismissListeners = new Set<() => void>()
 let storageListenerAdded = false
 
@@ -65,6 +68,8 @@ export function isNativeAppInstallInfoPath(pathname: string): boolean {
   return pathname === '/info' || pathname.startsWith('/info/')
 }
 
+export type AppInstallBannerVariant = 'ios' | 'android' | 'desktop'
+
 export function getMobileAppStoreHref(userAgent: string, maxTouchPoints = 0): string | null {
   if (isIosMobileOrTabletUserAgent(userAgent, maxTouchPoints)) {
     return INFO_PAGE_APP_STORE_URL
@@ -75,6 +80,19 @@ export function getMobileAppStoreHref(userAgent: string, maxTouchPoints = 0): st
   return null
 }
 
+export function getAppInstallBannerVariant(
+  userAgent: string,
+  maxTouchPoints = 0
+): AppInstallBannerVariant {
+  if (isIosMobileOrTabletUserAgent(userAgent, maxTouchPoints)) {
+    return 'ios'
+  }
+  if (isAndroidMobileOrTabletUserAgent(userAgent)) {
+    return 'android'
+  }
+  return 'desktop'
+}
+
 export function shouldShowNativeAppInstallBanner(options: {
   isNative: boolean
   pathname: string
@@ -82,9 +100,9 @@ export function shouldShowNativeAppInstallBanner(options: {
   userAgent: string
   maxTouchPoints?: number
 }): boolean {
-  const { isNative, pathname, dismissed, userAgent, maxTouchPoints = 0 } = options
+  const { isNative, pathname, dismissed } = options
   if (isNative) return false
   if (dismissed) return false
   if (isNativeAppInstallInfoPath(pathname)) return false
-  return getMobileAppStoreHref(userAgent, maxTouchPoints) !== null
+  return true
 }

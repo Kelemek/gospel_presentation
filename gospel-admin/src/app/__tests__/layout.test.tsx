@@ -14,9 +14,11 @@ describe('RootLayout', () => {
         <div data-testid="child">Page content</div>
       </RootLayout>
     )
+
     expect(screen.getByTestId('child')).toBeInTheDocument()
     expect(screen.getByText('Page content')).toBeInTheDocument()
     expect(document.documentElement).toHaveAttribute('lang', 'en')
     expect(document.body).toHaveClass('antialiased')
+    expect(document.querySelector('script')).toBeTruthy()
   })
 })

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { act } from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { Capacitor } from '@capacitor/core'
 import { NativeAppInstallBanner } from '../NativeAppInstallBanner'
@@ -6,7 +6,10 @@ import {
   INFO_PAGE_APP_STORE_URL,
   INFO_PAGE_PLAY_STORE_URL,
 } from '@/lib/info-page-links'
-import { NATIVE_APP_INSTALL_BANNER_DISMISS_KEY } from '@/lib/nativeAppInstallBanner'
+import {
+  NATIVE_APP_INSTALL_BANNER_DISMISS_KEY,
+  NATIVE_APP_INSTALL_BANNER_SHOW_DELAY_MS,
+} from '@/lib/nativeAppInstallBanner'
 
 const mockPathname = jest.fn(() => '/default')
 
@@ -35,11 +38,18 @@ const ANDROID_TABLET_UA =
 const DESKTOP_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 
+function advanceBannerDelay() {
+  act(() => {
+    jest.advanceTimersByTime(NATIVE_APP_INSTALL_BANNER_SHOW_DELAY_MS)
+  })
+}
+
 describe('NativeAppInstallBanner', () => {
   const originalUA = navigator.userAgent
   const originalMaxTouchPoints = navigator.maxTouchPoints
 
   beforeEach(() => {
+    jest.useFakeTimers()
     jest.clearAllMocks()
     mockedIsNative.mockReturnValue(false)
     mockPathname.mockReturnValue('/default')
@@ -54,6 +64,11 @@ describe('NativeAppInstallBanner', () => {
     })
   })
 
+  afterEach(() => {
+    jest.runOnlyPendingTimers()
+    jest.useRealTimers()
+  })
+
   afterAll(() => {
     Object.defineProperty(window.navigator, 'userAgent', {
       configurable: true,
@@ -65,8 +80,19 @@ describe('NativeAppInstallBanner', () => {
     })
   })
 
-  it('renders on mobile web with App Store link on iOS', async () => {
+  it('does not render before the show delay', () => {
     render(<NativeAppInstallBanner />)
+
+    act(() => {
+      jest.advanceTimersByTime(NATIVE_APP_INSTALL_BANNER_SHOW_DELAY_MS - 1)
+    })
+
+    expect(screen.queryByRole('region', { name: /get the mobile app/i })).not.toBeInTheDocument()
+  })
+
+  it('renders on mobile web with App Store link on iOS after delay', async () => {
+    render(<NativeAppInstallBanner />)
+    advanceBannerDelay()
 
     const link = await screen.findByRole('link', { name: /get app/i })
     expect(link).toHaveAttribute('href', INFO_PAGE_APP_STORE_URL)
@@ -84,6 +110,7 @@ describe('NativeAppInstallBanner', () => {
       value: 5,
     })
     render(<NativeAppInstallBanner />)
+    advanceBannerDelay()
 
     const link = await screen.findByRole('link', { name: /get app/i })
     expect(link).toHaveAttribute('href', INFO_PAGE_APP_STORE_URL)
@@ -95,6 +122,7 @@ describe('NativeAppInstallBanner', () => {
       value: ANDROID_TABLET_UA,
     })
     render(<NativeAppInstallBanner />)
+    advanceBannerDelay()
 
     const link = await screen.findByRole('link', { name: /get app/i })
     expect(link).toHaveAttribute('href', INFO_PAGE_PLAY_STORE_URL)
@@ -106,17 +134,45 @@ describe('NativeAppInstallBanner', () => {
       value: ANDROID_UA,
     })
     render(<NativeAppInstallBanner />)
+    advanceBannerDelay()
 
     const link = await screen.findByRole('link', { name: /get app/i })
     expect(link).toHaveAttribute('href', INFO_PAGE_PLAY_STORE_URL)
   })
 
-  it('does not render on desktop', async () => {
+  it('renders on desktop with App Store and Play Store QR links after delay', async () => {
     Object.defineProperty(window.navigator, 'userAgent', {
       configurable: true,
       value: DESKTOP_UA,
     })
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      configurable: true,
+      value: 0,
+    })
     render(<NativeAppInstallBanner />)
+    advanceBannerDelay()
+
+    await screen.findByRole('region', { name: /get the mobile app/i })
+    expect(screen.getByText(/get the app on your phone/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /App Store: open link/i })).toHaveAttribute(
+      'href',
+      INFO_PAGE_APP_STORE_URL
+    )
+    expect(screen.getByRole('link', { name: /Google Play: open link/i })).toHaveAttribute(
+      'href',
+      INFO_PAGE_PLAY_STORE_URL
+    )
+    expect(screen.queryByRole('link', { name: /get app/i })).not.toBeInTheDocument()
+  })
+
+  it('does not render on desktop when dismissed', async () => {
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value: DESKTOP_UA,
+    })
+    window.localStorage.setItem(NATIVE_APP_INSTALL_BANNER_DISMISS_KEY, '1')
+    render(<NativeAppInstallBanner />)
+    advanceBannerDelay()
 
     await waitFor(() => {
       expect(screen.queryByRole('region', { name: /get the mobile app/i })).not.toBeInTheDocument()
@@ -126,6 +182,7 @@ describe('NativeAppInstallBanner', () => {
   it('does not render on Capacitor native', async () => {
     mockedIsNative.mockReturnValue(true)
     render(<NativeAppInstallBanner />)
+    advanceBannerDelay()
 
     await waitFor(() => {
       expect(screen.queryByRole('region', { name: /get the mobile app/i })).not.toBeInTheDocument()
@@ -135,6 +192,7 @@ describe('NativeAppInstallBanner', () => {
   it('does not render on /info', async () => {
     mockPathname.mockReturnValue('/info')
     render(<NativeAppInstallBanner />)
+    advanceBannerDelay()
 
     await waitFor(() => {
       expect(screen.queryByRole('region', { name: /get the mobile app/i })).not.toBeInTheDocument()
@@ -143,6 +201,7 @@ describe('NativeAppInstallBanner', () => {
 
   it('dismiss hides banner and persists to localStorage', async () => {
     render(<NativeAppInstallBanner />)
+    advanceBannerDelay()
 
     await screen.findByRole('region', { name: /get the mobile app/i })
     fireEvent.click(screen.getByRole('button', { name: /dismiss app install banner/i }))
@@ -154,6 +213,7 @@ describe('NativeAppInstallBanner', () => {
   it('stays hidden when dismiss flag is set', async () => {
     window.localStorage.setItem(NATIVE_APP_INSTALL_BANNER_DISMISS_KEY, '1')
     render(<NativeAppInstallBanner />)
+    advanceBannerDelay()
 
     await waitFor(() => {
       expect(screen.queryByRole('region', { name: /get the mobile app/i })).not.toBeInTheDocument()
@@ -162,6 +222,7 @@ describe('NativeAppInstallBanner', () => {
 
   it('hides when dismiss flag is set in another tab', async () => {
     render(<NativeAppInstallBanner />)
+    advanceBannerDelay()
 
     await screen.findByRole('region', { name: /get the mobile app/i })
 

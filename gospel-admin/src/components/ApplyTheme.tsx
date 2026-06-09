@@ -3,8 +3,9 @@
 import { useLayoutEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { useTheme } from '@/contexts/ThemeContext'
+import { THEME_STORAGE_KEY } from '@/lib/theme-init-script'
 
-const STORAGE_KEY = 'gospel-profile-theme'
+const STORAGE_KEY = THEME_STORAGE_KEY
 
 function getStoredTheme(): 'light' | 'dark' | null {
   if (typeof window === 'undefined') return null

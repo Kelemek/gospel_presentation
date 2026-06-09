@@ -45,6 +45,6 @@ describe('InfoQrBlock', () => {
     )
     const qrLink = screen.getByRole('link', { name: /Web: open link/i })
     const inner = qrLink.querySelector('.aspect-square')
-    expect(inner).toHaveClass('max-xl:max-w-[3.25rem]', 'xl:max-w-full')
+    expect(inner).toHaveClass('max-xl:max-w-13', 'xl:max-w-full')
   })
 })

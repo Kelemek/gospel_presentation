@@ -1,5 +1,6 @@
 import {
   dismissNativeAppInstallBanner,
+  getAppInstallBannerVariant,
   getMobileAppStoreHref,
   getNativeAppInstallBannerDismissed,
   isNativeAppInstallInfoPath,
@@ -24,6 +25,10 @@ const ANDROID_TABLET_UA =
   'Mozilla/5.0 (Linux; Android 14; SM-X900) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 const DESKTOP_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+const WINDOWS_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+const LINUX_UA =
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
 
 describe('nativeAppInstallBanner', () => {
   describe('getMobileAppStoreHref', () => {
@@ -50,6 +55,31 @@ describe('nativeAppInstallBanner', () => {
 
     it('returns null on desktop Mac without touch', () => {
       expect(getMobileAppStoreHref(DESKTOP_UA, 0)).toBeNull()
+    })
+  })
+
+  describe('getAppInstallBannerVariant', () => {
+    it('returns ios on iPhone', () => {
+      expect(getAppInstallBannerVariant(IOS_UA)).toBe('ios')
+    })
+
+    it('returns ios on iPad with desktop user agent when touch points indicate tablet', () => {
+      expect(getAppInstallBannerVariant(IPAD_DESKTOP_UA, 5)).toBe('ios')
+    })
+
+    it('returns android on Android phone and tablet', () => {
+      expect(getAppInstallBannerVariant(ANDROID_UA)).toBe('android')
+      expect(getAppInstallBannerVariant(ANDROID_TABLET_UA)).toBe('android')
+    })
+
+    it('returns desktop on Mac, Windows, and Linux without mobile UA', () => {
+      expect(getAppInstallBannerVariant(DESKTOP_UA, 0)).toBe('desktop')
+      expect(getAppInstallBannerVariant(WINDOWS_UA, 0)).toBe('desktop')
+      expect(getAppInstallBannerVariant(LINUX_UA, 0)).toBe('desktop')
+    })
+
+    it('returns desktop on iPad desktop UA without touch points', () => {
+      expect(getAppInstallBannerVariant(IPAD_DESKTOP_UA, 0)).toBe('desktop')
     })
   })
 
@@ -85,8 +115,8 @@ describe('nativeAppInstallBanner', () => {
       expect(shouldShowNativeAppInstallBanner({ ...base, pathname: '/info' })).toBe(false)
     })
 
-    it('hides on desktop', () => {
-      expect(shouldShowNativeAppInstallBanner({ ...base, userAgent: DESKTOP_UA })).toBe(false)
+    it('shows on desktop when not dismissed', () => {
+      expect(shouldShowNativeAppInstallBanner({ ...base, userAgent: DESKTOP_UA })).toBe(true)
     })
   })
 

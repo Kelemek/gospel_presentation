@@ -26,3 +26,7 @@ export const INFO_PAGE_LINKS = [
     href: INFO_PAGE_PLAY_STORE_URL,
   },
 ] as const
+
+export const APP_INSTALL_STORE_LINKS = INFO_PAGE_LINKS.filter(
+  (link) => link.id === 'appStore' || link.id === 'playStore'
+)
