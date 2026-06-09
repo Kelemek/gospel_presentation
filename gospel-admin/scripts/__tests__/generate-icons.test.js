@@ -23,4 +23,10 @@ describe('generate-icons script', () => {
     expect(cornerRadiusFor(180)).toBe(20)
     expect(cornerRadiusFor(1024)).toBe(114)
   })
+
+  it('generates favicon from normalized master with transparent corners', () => {
+    const script = fs.readFileSync(scriptPath, 'utf8')
+    expect(script).toContain('resizeSquareTransparent(32, src')
+    expect(script).toContain('transparent corners')
+  })
 })

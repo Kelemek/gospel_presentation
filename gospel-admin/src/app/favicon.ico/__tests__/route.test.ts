@@ -36,6 +36,6 @@ describe('favicon route', () => {
 
     expect(res).toBeDefined()
     expect(res.status).toBe(301)
-    expect(res.headers.get('location')).toBe('https://example.com/favicon.png?v=8')
+    expect(res.headers.get('location')).toBe('https://example.com/favicon.png?v=11')
   })
 })

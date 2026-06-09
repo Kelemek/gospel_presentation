@@ -46,6 +46,18 @@ const resizeSquare = (size, inPath, outPath) => {
   execSync(`"${magickCmd}" "${inPath}" -resize ${size}x${size} "${outPath}"`, { stdio: 'ignore' });
 };
 
+/** Browser tab favicon: downscale normalized master; white corner fill → transparent. */
+const resizeSquareTransparent = (size, inPath, outPath) => {
+  const r = cornerRadiusFor(size);
+  const w = size - 1;
+  execSync(
+    `"${magickCmd}" "${inPath}" -resize ${size}x${size} -alpha set ` +
+      `\\( -size ${size}x${size} xc:none -draw "fill white roundrectangle 0,0 ${w},${w} ${r},${r}" \\) ` +
+      `-compose DstIn -composite PNG32:"${outPath}"`,
+    { stdio: 'ignore' }
+  );
+};
+
 const normalizeSourceFromRaw = (outPath) => {
   const size = MASTER_SIZE;
   const r = cornerRadiusFor(size);
@@ -82,9 +94,10 @@ resizeSquare(MASTER_SIZE, src, roundedMaster);
 console.log('Icon preview:', roundedMaster);
 
 // Web: favicon + apple touch. Use public/favicon.png — /icon conflicts with [slug].
-resizeSquare(32, src, path.join(root, 'public', 'favicon.png'));
+// Favicon only: transparent corners (browser tab bar shows through). Apple touch keeps white corners.
+resizeSquareTransparent(32, src, path.join(root, 'public', 'favicon.png'));
 resizeSquare(180, src, path.join(root, 'public', 'apple-touch-icon.png'));
-console.log('Web icons generated: public/favicon.png, public/apple-touch-icon.png');
+console.log('Web icons generated: public/favicon.png (transparent corners), public/apple-touch-icon.png');
 
 // iOS: 1024x1024 app icon (square pixels — iOS applies squircle mask)
 const iosDir = path.join(root, 'ios', 'App', 'App', 'Assets.xcassets', 'AppIcon.appiconset');

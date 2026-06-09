@@ -2131,9 +2131,9 @@ function ProfileContent({
                 }`}
               >
                 <span className="flex flex-col gap-1" aria-hidden>
-                  <span className={`block w-5 h-0.5 bg-slate-800 dark:bg-white transition-transform ${isMenuOpen ? 'rotate-45 translate-y-1.5' : ''}`} />
-                  <span className={`block w-5 h-0.5 bg-slate-800 dark:bg-white transition-opacity ${isMenuOpen ? 'opacity-0' : ''}`} />
-                  <span className={`block w-5 h-0.5 bg-slate-800 dark:bg-white transition-transform ${isMenuOpen ? '-rotate-45 -translate-y-1.5' : ''}`} />
+                  <span className="block w-5 h-0.5 bg-slate-800 dark:bg-white" />
+                  <span className="block w-5 h-0.5 bg-slate-800 dark:bg-white" />
+                  <span className="block w-5 h-0.5 bg-slate-800 dark:bg-white" />
                 </span>
                 {showMenuLabel ? (
                   <span className="font-medium" aria-hidden>

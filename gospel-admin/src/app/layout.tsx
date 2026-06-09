@@ -43,8 +43,8 @@ export const metadata: Metadata = {
   keywords: ["gospel", "presentation", "scripture", "bible", "evangelism", "salvation"],
   authors: [{ name: "Dr. Stuart Scott" }],
   icons: {
-    icon: [{ url: '/favicon.png?v=8', type: 'image/png' }],
-    shortcut: '/favicon.png?v=8',
+    icon: [{ url: '/favicon.png?v=11', type: 'image/png' }],
+    shortcut: '/favicon.png?v=11',
     apple: '/apple-touch-icon.png?v=8',
   },
 };
