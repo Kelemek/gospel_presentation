@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "translation": "esv",
+  "generatedAt": "2026-06-07",
+  "prompts": [
+    {
+      "id": "john-3-16-verse-blank",
+      "reference": "John 3:16",
+      "kind": "verse_blank",
+      "mask": { "reference": { "hide": ["verse"] } }
+    },
+    {
+      "id": "john-3-16-chapter-blank",
+      "reference": "John 3:16",
+      "kind": "chapter_blank",
+      "mask": { "reference": { "hide": ["chapter"] } }
+    },
+    {
+      "id": "john-3-16-book-blank",
+      "reference": "John 3:16",
+      "kind": "book_blank",
+      "mask": { "reference": { "hide": ["book"] } }
+    },
+    {
+      "id": "romans-8-28-verse-blank",
+      "reference": "Romans 8:28",
+      "kind": "verse_blank",
+      "mask": { "reference": { "hide": ["verse"] } }
+    }
+  ]
+}

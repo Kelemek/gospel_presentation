@@ -23,6 +23,12 @@ export const MEMORIZATION_ALL_DONE_MESSAGES: readonly string[] = [
   'Complete! Perseverance in memorization is love for the Lord and His truth. Keep going in grace.',
 ]
 
+/** Round affirmations + all-done messages (memorize games and Daily Verse Hunt wins). */
+export const MEMORIZATION_ENCOURAGEMENT_MESSAGES: readonly string[] = [
+  ...MEMORIZATION_ROUND_AFFIRMATIONS,
+  ...MEMORIZATION_ALL_DONE_MESSAGES,
+]
+
 function pickRandomFrom(messages: readonly string[]): string {
   if (messages.length === 0) return ''
   const i = Math.floor(Math.random() * messages.length)
@@ -35,4 +41,8 @@ export function pickRandomRoundAffirmation(): string {
 
 export function pickRandomAllDoneMessage(): string {
   return pickRandomFrom(MEMORIZATION_ALL_DONE_MESSAGES)
+}
+
+export function pickRandomEncouragementMessage(): string {
+  return pickRandomFrom(MEMORIZATION_ENCOURAGEMENT_MESSAGES)
 }

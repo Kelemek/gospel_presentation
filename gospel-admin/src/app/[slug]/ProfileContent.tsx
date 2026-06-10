@@ -18,6 +18,7 @@ import ScriptureModal from '@/components/ScriptureModal'
 import MemorizationPracticeSession from '@/components/MemorizationPracticeSession'
 import { isBibleBooksMemorizationItem } from '@/lib/bibleBooksMemorization'
 import TableOfContents from '@/components/TableOfContents'
+import DailyVerseChallengeCard from '@/components/DailyVerseChallengeCard'
 import ProfileResourceTabs from '@/components/ProfileResourceTabs'
 import { clearProfileResourceSearchMarks } from '@/lib/profileResourceInPageSearch'
 import SpurgeonSermonsModal, {
@@ -58,6 +59,9 @@ import {
   versePinsListFromState,
 } from '@/lib/versePinStorage'
 import { logger } from '@/lib/logger'
+import { DailyVerseHuntSuccessContent } from '@/components/DailyVerseHuntSuccessContent'
+import { tryCompleteDailyVerseChallenge } from '@/lib/dailyVerseChallenge'
+import { capturePostHogEvent } from '@/lib/posthog-analytics'
 import {
   profileMenuLabelMinViewportPx,
   showProfileMenuLabelForViewport,
@@ -300,9 +304,30 @@ function ProfileContent({
   })
   const [highlightRevision, setHighlightRevision] = useState(0)
   const [versePinRevision, setVersePinRevision] = useState(0)
+  const [dailyVerseChallengeVersion, setDailyVerseChallengeVersion] = useState(0)
   const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null)
   const activeHighlightTimerRef = useRef<number | null>(null)
   const { showConfirm, showAlert } = useAlertModal()
+  const completeDailyVerseChallengeIfMatch = useCallback(
+    (openedReference: string) => {
+      const completed = tryCompleteDailyVerseChallenge(openedReference)
+      if (!completed) return
+      setDailyVerseChallengeVersion((v) => v + 1)
+      capturePostHogEvent('daily_verse_challenge_completed', {
+        prompt_id: completed.prompt.id,
+        reference: completed.prompt.reference,
+        kind: completed.prompt.kind,
+      })
+      showAlert(
+        <DailyVerseHuntSuccessContent
+          variant="modal"
+          encouragementMessage={completed.encouragementMessage}
+          reference={completed.prompt.reference}
+        />
+      )
+    },
+    [showAlert]
+  )
   const { translation, enabledTranslations, isLoading: translationsLoading, setTranslation } =
     useTranslation()
   const footerAttributionEnabledCodes = translationsLoading ? null : enabledTranslations
@@ -1415,8 +1440,9 @@ function ProfileContent({
           : {}),
         ...(options?.pickerNavigation ? { pickerNavigation: true as const } : {}),
       })
+      completeDailyVerseChallengeIfMatch(reference)
     },
-    [sections, allScriptureRefs, favoriteReferences, persistReadingResumeBeforeLeave]
+    [sections, allScriptureRefs, favoriteReferences, persistReadingResumeBeforeLeave, completeDailyVerseChallengeIfMatch]
   )
 
   const navigateScriptureInReader = useCallback(
@@ -1450,8 +1476,9 @@ function ProfileContent({
             ? { pickerNavigation: true as const }
             : { pickerNavigation: undefined }),
       }))
+      completeDailyVerseChallengeIfMatch(ref)
     },
-    [syncNavIndexForReference]
+    [syncNavIndexForReference, completeDailyVerseChallengeIfMatch]
   )
 
   const deepLinkTranslation = useMemo((): BibleTranslation | null => {
@@ -1624,7 +1651,8 @@ function ProfileContent({
       pickerNavigation: true,
       ...(adjacent.initialChapterView ? { initialChapterView: true as const } : {}),
     })
-  }, [activeScripture.reference])
+    completeDailyVerseChallengeIfMatch(adjacent.reference)
+  }, [activeScripture.reference, completeDailyVerseChallengeIfMatch])
 
   // Navigation functions for favorite references or all references if no favorites
   const navigateToPrevious = useCallback(() => {
@@ -2279,6 +2307,11 @@ function ProfileContent({
             }}
           >
             <div className="p-6">
+              <DailyVerseChallengeCard
+                completedVersion={dailyVerseChallengeVersion}
+                isAdmin={canEdit}
+              />
+
               <div className="flex items-center justify-between mb-6 pb-3 border-b border-gray-200 dark:border-slate-600">
                 <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-200">
                   Table of Contents
@@ -2294,7 +2327,7 @@ function ProfileContent({
                   </svg>
                 </button>
               </div>
-              
+
               <TableOfContents
                 sections={sections}
                 currentProfileSlug={profileInfo.slug}

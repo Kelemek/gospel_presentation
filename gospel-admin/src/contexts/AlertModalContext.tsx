@@ -14,21 +14,26 @@ function getTheme(): 'light' | 'dark' {
 
 type AlertModalVariant = 'alert' | 'confirm'
 
+type AlertModalContent = string | React.ReactNode
+
 interface AlertModalState {
   isOpen: boolean
-  message: string
+  message: AlertModalContent
   variant: AlertModalVariant
 }
 
 interface AlertModalContextType {
-  showAlert: (message: string) => void
+  showAlert: (message: AlertModalContent) => void
   showConfirm: (message: string) => Promise<boolean>
 }
 
 const AlertModalContext = createContext<AlertModalContextType | null>(null)
 
 /** Renders message; if it contains a blank line (\n\n), the first paragraph is emphasized. */
-function AlertModalMessage({ message }: { message: string }) {
+function AlertModalMessage({ message }: { message: AlertModalContent }) {
+  if (typeof message !== 'string') {
+    return <>{message}</>
+  }
   const parts = message.split(/\n\n/)
   if (parts.length === 1) {
     return <span className="whitespace-pre-wrap">{message}</span>
@@ -69,7 +74,7 @@ export function AlertModalProvider({ children }: { children: React.ReactNode }) 
     if (state.isOpen) queueMicrotask(() => setTheme(getTheme()))
   }, [state.isOpen])
 
-  const showAlert = useCallback((message: string) => {
+  const showAlert = useCallback((message: AlertModalContent) => {
     setState({ isOpen: true, message, variant: 'alert' })
   }, [])
 
@@ -112,9 +117,12 @@ export function AlertModalProvider({ children }: { children: React.ReactNode }) 
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-6 py-5 border-b border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50">
-              <p id="alert-modal-title" className="text-slate-800 dark:text-slate-100 text-base leading-relaxed whitespace-pre-wrap">
+              <div
+                id="alert-modal-title"
+                className="text-slate-800 dark:text-slate-100 text-base leading-relaxed whitespace-pre-wrap"
+              >
                 <AlertModalMessage message={state.message} />
-              </p>
+              </div>
             </div>
             <div className="px-6 py-4 bg-white dark:bg-slate-800 flex justify-end gap-3">
               {state.variant === 'confirm' && (

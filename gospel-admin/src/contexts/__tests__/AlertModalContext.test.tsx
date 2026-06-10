@@ -16,6 +16,16 @@ function TestConsumer() {
       <button type="button" onClick={() => showAlert('First line.\n\nSecond paragraph.')}>
         Show alert two-part
       </button>
+      <button
+        type="button"
+        onClick={() =>
+          showAlert(
+            <span data-testid="custom-alert-content">Custom alert body</span>
+          )
+        }
+      >
+        Show alert custom
+      </button>
       <button type="button" onClick={() => showConfirm('Confirm?')}>Show confirm</button>
     </div>
   )
@@ -61,6 +71,18 @@ describe('AlertModalContext', () => {
     expect(strong).not.toBeNull()
     expect(strong).toHaveTextContent('First line.')
     expect(screen.getByText('Second paragraph.')).toBeInTheDocument()
+  })
+
+  it('showAlert renders React node content', async () => {
+    const user = userEvent.setup({ delay: null })
+    render(
+      <AlertModalProvider>
+        <TestConsumer />
+      </AlertModalProvider>
+    )
+    await user.click(screen.getByRole('button', { name: /Show alert custom/i }))
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
+    expect(screen.getByTestId('custom-alert-content')).toHaveTextContent('Custom alert body')
   })
 
   it('showConfirm opens modal with Cancel and Confirm', async () => {

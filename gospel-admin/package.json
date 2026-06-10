@@ -51,7 +51,8 @@
     "import-cross-references:fixtures": "node scripts/import-cross-references.js --fixtures-only",
     "reimport-stepbible": "FORCE_STEPBIBLE_REIMPORT=1 node scripts/ensure-stepbible-data.js",
     "sync-acbc-links": "tsx scripts/sync-acbc-external-links.ts",
-    "add-acbc-sections": "tsx scripts/add-acbc-missing-sections.ts"
+    "add-acbc-sections": "tsx scripts/add-acbc-missing-sections.ts",
+    "build-daily-verse-prompts": "node scripts/build-daily-verse-prompts.js"
   },
   "dependencies": {
     "@capacitor/android": "8.1.0",
