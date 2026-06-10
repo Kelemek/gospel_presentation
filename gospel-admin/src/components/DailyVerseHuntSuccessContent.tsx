@@ -4,12 +4,15 @@ type DailyVerseHuntSuccessContentProps = {
   encouragementMessage: string
   reference: string
   variant?: 'card' | 'modal'
+  /** Shown after “You found …” (card completion state). */
+  verseText?: string | null
 }
 
 export function DailyVerseHuntSuccessContent({
   encouragementMessage,
   reference,
   variant = 'card',
+  verseText,
 }: DailyVerseHuntSuccessContentProps) {
   const isModal = variant === 'modal'
 
@@ -41,6 +44,26 @@ export function DailyVerseHuntSuccessContent({
           </span>
         </span>
       </p>
+      {verseText ? (
+        <p
+          className={
+            isModal
+              ? 'text-sm leading-snug text-slate-700 dark:text-slate-200'
+              : 'text-sm leading-snug text-blue-800 dark:text-blue-200'
+          }
+        >
+          {verseText}
+          <span
+            className={
+              isModal
+                ? 'text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap'
+                : 'text-[11px] text-blue-700/80 dark:text-blue-300/80 whitespace-nowrap'
+            }
+          >
+            {'\u00a0'}(ESV)
+          </span>
+        </p>
+      ) : null}
       <p
         className={
           isModal

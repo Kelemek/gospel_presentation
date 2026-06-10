@@ -136,7 +136,7 @@ export default function DailyVerseChallengeCard({
       {isExpanded ? (
         <div className="mt-2 pt-2 border-t border-blue-200/80 dark:border-blue-700/80 space-y-2">
           {completed ? (
-            <DailyVerseHuntSuccessContent
+            <CompletedChallengeBody
               encouragementMessage={encouragementMessage ?? ''}
               reference={prompt.reference}
             />
@@ -189,7 +189,7 @@ export default function DailyVerseChallengeCard({
   )
 }
 
-function ActiveChallengeBody({ prompt }: { prompt: DailyVersePrompt }) {
+function useDailyVerseEsvText(reference: string) {
   const [verseText, setVerseText] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
@@ -198,7 +198,7 @@ function ActiveChallengeBody({ prompt }: { prompt: DailyVersePrompt }) {
     let cancelled = false
 
     const params = new URLSearchParams({
-      reference: prompt.reference,
+      reference,
       translation: 'esv',
     })
 
@@ -224,12 +224,36 @@ function ActiveChallengeBody({ prompt }: { prompt: DailyVersePrompt }) {
     return () => {
       cancelled = true
     }
-  }, [prompt])
+  }, [reference])
 
   const displayText = useMemo(() => {
     if (!verseText) return null
     return stripLeadingVerseNumberMarker(verseText)
   }, [verseText])
+
+  return { displayText, loading, fetchError }
+}
+
+function CompletedChallengeBody({
+  encouragementMessage,
+  reference,
+}: {
+  encouragementMessage: string
+  reference: string
+}) {
+  const { displayText, loading } = useDailyVerseEsvText(reference)
+
+  return (
+    <DailyVerseHuntSuccessContent
+      encouragementMessage={encouragementMessage}
+      reference={reference}
+      verseText={loading ? null : displayText}
+    />
+  )
+}
+
+function ActiveChallengeBody({ prompt }: { prompt: DailyVersePrompt }) {
+  const { displayText, loading, fetchError } = useDailyVerseEsvText(prompt.reference)
 
   return (
     <div className="space-y-1 text-blue-800 dark:text-blue-200">

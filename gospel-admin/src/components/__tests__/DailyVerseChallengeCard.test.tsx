@@ -129,6 +129,14 @@ describe('DailyVerseChallengeCard', () => {
     expect(
       screen.getByText(/There will be a new verse to find tomorrow/)
     ).toBeInTheDocument()
-    expect(global.fetch).not.toHaveBeenCalled()
+    await waitFor(() => {
+      expect(
+        screen.getByText(/For God so loved the world, that he gave his only Son\./)
+      ).toBeInTheDocument()
+    })
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/scripture?'),
+      expect.objectContaining({ cache: 'no-store' })
+    )
   })
 })

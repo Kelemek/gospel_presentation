@@ -17,6 +17,20 @@ describe('DailyVerseHuntSuccessContent', () => {
     ).toBeInTheDocument()
   })
 
+  it('renders verse text after the found reference when provided', () => {
+    render(
+      <DailyVerseHuntSuccessContent
+        encouragementMessage="Well hunted."
+        reference="John 3:16"
+        verseText="For God so loved the world, that he gave his only Son."
+      />
+    )
+    expect(
+      screen.getByText(/For God so loved the world, that he gave his only Son\./)
+    ).toBeInTheDocument()
+    expect(screen.getByText('(ESV)')).toBeInTheDocument()
+  })
+
   it('renders modal variant', () => {
     render(
       <DailyVerseHuntSuccessContent
