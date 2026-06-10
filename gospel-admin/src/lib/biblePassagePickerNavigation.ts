@@ -2,11 +2,19 @@ import { bookNameToUsfm } from '@/lib/api-bible-passage-id'
 import { BIBLE_CANON_BOOKS_STATIC } from '@/lib/bibleCanonStatic'
 import { referenceBookNameFromApiBook } from '@/lib/bibleReferenceBookName'
 import { buildBiblePassageReference } from '@/lib/buildBiblePassageReference'
-import { parseReference } from '@/lib/parse-scripture-reference'
+import {
+  isChapterOnlyScriptureReference,
+  parseReference,
+} from '@/lib/parse-scripture-reference'
 
 export type AdjacentPickerPassage = {
   reference: string
   initialChapterView: boolean
+}
+
+/** Matches scripture open rules: flag from navigation or chapter-only reference string. */
+export function pickerAdjacentOpensInChapterView(adjacent: AdjacentPickerPassage): boolean {
+  return adjacent.initialChapterView || isChapterOnlyScriptureReference(adjacent.reference)
 }
 
 function canonBookForReference(reference: string) {

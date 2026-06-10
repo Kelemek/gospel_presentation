@@ -86,7 +86,7 @@ function introSubsection(): Subsection {
 <li><strong>Family</strong> — readings for worship together (read aloud).</li>
 <li><strong>Secret</strong> — readings for personal devotion.</li>
 </ul>
-<p>Over the year you read through the Old Testament once and the New Testament and Psalms twice. Tap a scripture card to open the Bible reader. Your place is saved automatically with the <strong>yellow pin</strong> on the last passage you opened (see <strong>Pinned passages</strong> in the menu). Open <strong>Resources</strong> → <strong>M&apos;Cheyne Bible Reading Plan</strong> for a calendar: choose <strong>Today</strong>, any date, or <strong>Resume</strong> to jump to your yellow pin.</p>
+<p>Over the year you read through the Old Testament once and the New Testament and Psalms twice. Tap a <strong>plan scripture card</strong> to open the Bible reader—your place is saved with the <strong>yellow pin</strong> as you read, including <strong>prev/next</strong> in the reader and <strong>Listen</strong> auto-advance (see <strong>Pinned passages</strong> in the menu). Opening the <strong>Bible Reader</strong> or <strong>passage picker</strong> from the menu, or using <strong>Daily Verse Hunt</strong>, does not move resume. Open <strong>Resources</strong> → <strong>M&apos;Cheyne Bible Reading Plan</strong> for a calendar: choose <strong>Today</strong>, any date, or <strong>Resume</strong> to jump to your yellow pin.</p>
 <p>This schedule uses <strong>365 calendar-dated days</strong>; there is no February 29 entry. See <a href="${MCHEYNE_COPYRIGHT_PAGE_HREF}">Copyright &amp; Attribution</a> for the reading-plan source.</p>`,
     questions: [],
   }

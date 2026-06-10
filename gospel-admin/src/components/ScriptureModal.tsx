@@ -148,6 +148,8 @@ interface ScriptureModalProps {
     reference: string,
     meta?: { initialChapterView?: boolean; fromPassagePicker?: boolean }
   ) => void
+  /** Fired when the header passage picker opens (before confirm). */
+  onPassagePickerOpen?: () => void
   /** When true (e.g. `?scriptureView=chapter` deep link), load full chapter after open. Chapter-only refs (e.g. `Genesis 1`) also open in chapter view automatically. */
   initialChapterView?: boolean
   /** Profile slug for share deep links (current resource). Omit to share passage text only. */
@@ -176,6 +178,7 @@ export default function ScriptureModal({
   versePinControl,
   onOpenSpurgeonStudy,
   onNavigateReference,
+  onPassagePickerOpen,
   initialChapterView = false,
   profileSlug,
   profileTitle,
@@ -1174,7 +1177,10 @@ export default function ScriptureModal({
                   type="button"
                   id={scriptureModalTitleId}
                   data-tour="scripture-modal-reference-picker"
-                  onClick={() => setPassagePickerOpen(true)}
+                  onClick={() => {
+                    onPassagePickerOpen?.()
+                    setPassagePickerOpen(true)
+                  }}
                   className={`${scriptureModalHeaderTitleClass} cursor-pointer rounded-md hover:bg-slate-200/80 dark:hover:bg-slate-600/80 active:bg-slate-300/80 dark:active:bg-slate-500/80 transition-colors`}
                   title={`${reference} — choose another passage`}
                   aria-label={`${reference}. Choose another passage`}

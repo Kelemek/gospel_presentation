@@ -135,6 +135,10 @@ import {
   setPendingMcheynePlanDay,
   setPendingMcheyneResumePin,
 } from '@/lib/mcheyne/mcheynePendingNavigation'
+import {
+  isMcheynePlanScriptureCardOpen,
+  shouldUpdateMcheyneReadingProgress,
+} from '@/lib/mcheyne/mcheynePlanCardPin'
 import { loadMcheyneYellowPinForResume } from '@/lib/mcheyne/mcheyneResumeYellowPin'
 import {
   cancelMcheyneResumeScroll,
@@ -144,6 +148,7 @@ import {
 import { findFirstScriptureCardAnchors } from '@/lib/findFirstScriptureCardAnchors'
 import {
   adjacentPickerPassage,
+  pickerAdjacentOpensInChapterView,
   pickerPassageHasNext,
   pickerPassageHasPrevious,
 } from '@/lib/biblePassagePickerNavigation'
@@ -243,6 +248,11 @@ type ScriptureModalState = {
   initialChapterView?: boolean
   /** Prev/next move by verse/chapter in-book (Bible Reader or header passage picker). */
   pickerNavigation?: boolean
+  /**
+   * On `mchy`, yellow resume tracking after a plan card open (in-modal nav + Listen)
+   * until the passage picker / Bible Reader is used.
+   */
+  mcheynePlanCardPin?: boolean
 }
 
 function ProfileContent({
@@ -1432,18 +1442,44 @@ function ProfileContent({
         if (allIndex !== -1) setCurrentReferenceIndex(allIndex)
       }
 
+      const mcheynePlanCardPin =
+        !options?.pickerNavigation &&
+        isMcheynePlanScriptureCardOpen(
+          profileInfo?.slug ?? '',
+          anchorSectionId,
+          anchorSubsectionId
+        )
+
       setSelectedScripture({
         reference,
         isOpen: true,
         ...(options?.initialChapterView || isChapterOnlyScriptureReference(reference)
           ? { initialChapterView: true }
           : {}),
-        ...(options?.pickerNavigation ? { pickerNavigation: true as const } : {}),
+        ...(options?.pickerNavigation
+          ? { pickerNavigation: true as const, mcheynePlanCardPin: undefined }
+          : {}),
+        ...(mcheynePlanCardPin ? { mcheynePlanCardPin: true as const } : {}),
       })
       completeDailyVerseChallengeIfMatch(reference)
     },
-    [sections, allScriptureRefs, favoriteReferences, persistReadingResumeBeforeLeave, completeDailyVerseChallengeIfMatch]
+    [
+      sections,
+      allScriptureRefs,
+      favoriteReferences,
+      profileInfo?.slug,
+      persistReadingResumeBeforeLeave,
+      completeDailyVerseChallengeIfMatch,
+    ]
   )
+
+  const clearMcheynePlanCardPinSession = useCallback(() => {
+    setSelectedScripture((prev) =>
+      prev.mcheynePlanCardPin === true
+        ? { ...prev, mcheynePlanCardPin: undefined }
+        : prev
+    )
+  }, [])
 
   const navigateScriptureInReader = useCallback(
     (
@@ -1465,17 +1501,19 @@ function ProfileContent({
       } else {
         syncNavIndexForReference(ref)
       }
-      setSelectedScripture((prev) => ({
-        ...prev,
-        reference: ref,
-        isOpen: true,
-        ...(chapterView ? { initialChapterView: true as const } : { initialChapterView: undefined }),
-        ...(meta?.fromPassagePicker
-          ? { pickerNavigation: true as const }
-          : prev.pickerNavigation
-            ? { pickerNavigation: true as const }
+      setSelectedScripture((prev) => {
+        const pickerNavigation =
+          meta?.fromPassagePicker === true || prev.pickerNavigation === true
+        return {
+          ...prev,
+          reference: ref,
+          isOpen: true,
+          ...(pickerNavigation
+            ? { pickerNavigation: true as const, mcheynePlanCardPin: undefined }
             : { pickerNavigation: undefined }),
-      }))
+          ...(chapterView ? { initialChapterView: true as const } : { initialChapterView: undefined }),
+        }
+      })
       completeDailyVerseChallengeIfMatch(ref)
     },
     [syncNavIndexForReference, completeDailyVerseChallengeIfMatch]
@@ -1640,6 +1678,7 @@ function ProfileContent({
     if (!ref) return
     const adjacent = adjacentPickerPassage(ref, direction)
     if (!adjacent) return
+    const initialChapterView = pickerAdjacentOpensInChapterView(adjacent)
     setModalOpenAnchors({
       reference: adjacent.reference,
       sectionId: 'modal-view',
@@ -1649,7 +1688,8 @@ function ProfileContent({
       reference: adjacent.reference,
       isOpen: true,
       pickerNavigation: true,
-      ...(adjacent.initialChapterView ? { initialChapterView: true as const } : {}),
+      mcheynePlanCardPin: undefined,
+      ...(initialChapterView ? { initialChapterView: true as const } : {}),
     })
     completeDailyVerseChallengeIfMatch(adjacent.reference)
   }, [activeScripture.reference, completeDailyVerseChallengeIfMatch])
@@ -1676,6 +1716,7 @@ function ProfileContent({
       setSelectedScripture({
         reference,
         isOpen: true,
+        ...(activeScripture.mcheynePlanCardPin ? { mcheynePlanCardPin: true as const } : {}),
       })
       return
     }
@@ -1690,9 +1731,11 @@ function ProfileContent({
     setSelectedScripture({
       reference: item.reference,
       isOpen: true,
+      ...(activeScripture.mcheynePlanCardPin ? { mcheynePlanCardPin: true as const } : {}),
     })
   }, [
     activeScripture.pickerNavigation,
+    activeScripture.mcheynePlanCardPin,
     favoriteReferences,
     navListLength,
     navReferenceIndex,
@@ -1722,6 +1765,7 @@ function ProfileContent({
       setSelectedScripture({
         reference,
         isOpen: true,
+        ...(activeScripture.mcheynePlanCardPin ? { mcheynePlanCardPin: true as const } : {}),
       })
       return
     }
@@ -1736,9 +1780,11 @@ function ProfileContent({
     setSelectedScripture({
       reference: item.reference,
       isOpen: true,
+      ...(activeScripture.mcheynePlanCardPin ? { mcheynePlanCardPin: true as const } : {}),
     })
   }, [
     activeScripture.pickerNavigation,
+    activeScripture.mcheynePlanCardPin,
     favoriteReferences,
     navListLength,
     navReferenceIndex,
@@ -1891,7 +1937,13 @@ function ProfileContent({
       if (bookmarkTint) {
         assignVersePin(profileInfo.slug, bookmarkTint, entry)
         bumpVersePins()
-      } else if (shouldAdvanceYellowLastViewed(versePinMap, entry)) {
+      } else if (
+        shouldUpdateMcheyneReadingProgress(
+          profileInfo.slug,
+          activeScripture.mcheynePlanCardPin
+        ) &&
+        shouldAdvanceYellowLastViewed(versePinMap, entry)
+      ) {
         assignYellowLastViewed(profileInfo.slug, entry)
         bumpVersePins()
       }
@@ -1904,6 +1956,7 @@ function ProfileContent({
       defaultModalPinColor,
       versePinMap,
       bumpVersePins,
+      activeScripture.mcheynePlanCardPin,
     ]
   )
 
@@ -2489,6 +2542,7 @@ function ProfileContent({
           void openScriptureFromTabEntry(next)
         }}
         onNavigateReference={navigateScriptureInReader}
+        onPassagePickerOpen={clearMcheynePlanCardPinSession}
         onPrevious={hasPrevious ? navigateToPrevious : undefined}
         onNext={hasNext ? navigateToNext : undefined}
         hasPrevious={hasPrevious}

@@ -1,5 +1,6 @@
 import {
   adjacentPickerPassage,
+  pickerAdjacentOpensInChapterView,
   pickerPassageHasNext,
   pickerPassageHasPrevious,
 } from '@/lib/biblePassagePickerNavigation'
@@ -41,6 +42,27 @@ describe('biblePassagePickerNavigation', () => {
 
   it('uses Psalm for psalms book', () => {
     expect(adjacentPickerPassage('Psalm 23', 'next')?.reference).toBe('Psalm 24')
+  })
+
+  it('pickerAdjacentOpensInChapterView uses flag or chapter-only reference', () => {
+    expect(
+      pickerAdjacentOpensInChapterView({
+        reference: 'Genesis 2',
+        initialChapterView: true,
+      })
+    ).toBe(true)
+    expect(
+      pickerAdjacentOpensInChapterView({
+        reference: 'Psalm 24',
+        initialChapterView: false,
+      })
+    ).toBe(true)
+    expect(
+      pickerAdjacentOpensInChapterView({
+        reference: 'John 3:17',
+        initialChapterView: false,
+      })
+    ).toBe(false)
   })
 
   it('reports boundaries for has prev/next', () => {
