@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { PostHogPageView } from "@/components/PostHogPageView";
 import { PostHogProvider } from "@/components/PostHogProvider";
 import { ApplyTheme } from "@/components/ApplyTheme";
+import { CapacitorDeployReloadController } from "@/components/CapacitorDeployReloadController";
 import { CapacitorKeepLinksInApp } from "@/components/CapacitorKeepLinksInApp";
 import { CapacitorProfileHelpTourNavigation } from "@/components/CapacitorProfileHelpTourNavigation";
 import { GospelClientStorageHydration } from "@/components/GospelClientStorageHydration";
@@ -69,6 +70,7 @@ export default function RootLayout({
             <TextSizeProvider>
               <ApplyTextSize />
               <CapacitorKeepLinksInApp />
+              <CapacitorDeployReloadController />
               <GospelClientStorageHydration />
               <ProfileAppLaunchResume />
               <CapacitorProfileHelpTourNavigation />

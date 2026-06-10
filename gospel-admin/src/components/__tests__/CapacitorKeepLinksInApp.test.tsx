@@ -41,6 +41,11 @@ describe('CapacitorKeepLinksInApp', () => {
       Capacitor.isNativePlatform = () => true
     })
 
+    afterEach(() => {
+      const Capacitor = require('@capacitor/core').Capacitor
+      Capacitor.isNativePlatform = () => false
+    })
+
     it('intercepts same-origin /privacy link and calls router.push', () => {
       const { unmount } = render(<CapacitorKeepLinksInApp />)
       const anchor = document.createElement('a')
