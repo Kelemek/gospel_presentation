@@ -293,7 +293,7 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
                     onClick={() => onReadAlongUnderlineStyle('word')}
                     className={`cursor-pointer px-2 sm:px-2.5 min-w-11 text-xs font-medium transition-colors ${
                       readAlongUnderlineStyle === 'word'
-                        ? 'bg-amber-50 dark:bg-amber-900/25 text-amber-900 dark:text-amber-100'
+                        ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200'
                         : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
                     }`}
                     aria-pressed={readAlongUnderlineStyle === 'word'}
@@ -306,7 +306,7 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
                     onClick={() => onReadAlongUnderlineStyle('line')}
                     className={`cursor-pointer px-2 sm:px-2.5 min-w-11 text-xs font-medium transition-colors ${
                       readAlongUnderlineStyle === 'line'
-                        ? 'bg-amber-50 dark:bg-amber-900/25 text-amber-900 dark:text-amber-100'
+                        ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200'
                         : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
                     }`}
                     aria-pressed={readAlongUnderlineStyle === 'line'}
