@@ -1,3 +1,5 @@
+import { reloadCapacitorWebViewInApp } from '@/lib/capacitorClientReload'
+
 export const CAPACITOR_DEPLOY_VERSION_STORAGE_KEY = 'gospel-capacitor-deploy-version'
 
 /** Poll interval while the Capacitor WebView session is open. */
@@ -68,5 +70,12 @@ export function messageFromUnknownError(reason: unknown): string {
 /** Update the stored deploy id, then reload the WebView (avoids a reload loop). */
 export function reloadCapacitorWebViewForDeploy(remoteVersion: string): void {
   setStoredCapacitorDeployVersion(remoteVersion)
+  if (reloadCapacitorWebViewInApp(remoteVersion)) return
+  window.location.reload()
+}
+
+/** Reload after stale-chunk errors when no deploy id is available. */
+export function reloadCapacitorWebView(): void {
+  if (reloadCapacitorWebViewInApp()) return
   window.location.reload()
 }

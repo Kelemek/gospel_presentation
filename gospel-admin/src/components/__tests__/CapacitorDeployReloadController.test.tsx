@@ -4,6 +4,7 @@
 
 import React from 'react'
 import { render, waitFor } from '@testing-library/react'
+import { useRouter } from 'next/navigation'
 import { CapacitorDeployReloadController } from '../CapacitorDeployReloadController'
 import {
   CAPACITOR_DEPLOY_VERSION_STORAGE_KEY,
@@ -13,6 +14,10 @@ import {
 
 jest.mock('@capacitor/core', () => ({
   Capacitor: { isNativePlatform: () => false },
+}))
+
+jest.mock('next/navigation', () => ({
+  useRouter: jest.fn(),
 }))
 
 jest.mock('@/lib/capacitorAppDeployVersion', () => {
@@ -26,6 +31,7 @@ jest.mock('@/lib/capacitorAppDeployVersion', () => {
 })
 
 const mockedReload = jest.mocked(reloadCapacitorWebViewForDeploy)
+const mockedUseRouter = jest.mocked(useRouter)
 
 function setVisibilityState(state: DocumentVisibilityState) {
   Object.defineProperty(document, 'visibilityState', {
@@ -44,6 +50,10 @@ describe('CapacitorDeployReloadController', () => {
     jest.restoreAllMocks()
     sessionStorage.clear()
     mockedReload.mockClear()
+    mockedUseRouter.mockReturnValue({
+      replace: jest.fn(),
+      refresh: jest.fn(),
+    } as unknown as ReturnType<typeof useRouter>)
     setVisibilityState('visible')
     setCapacitorNativePlatform(false)
   })
@@ -154,6 +164,19 @@ describe('CapacitorDeployReloadController', () => {
       await waitFor(() => {
         expect(mockedReload).toHaveBeenCalledWith('deploy-new')
       })
+    })
+
+    it('strips the deploy reload query param after a hard reload lands', () => {
+      const replace = jest.fn()
+      mockedUseRouter.mockReturnValue({
+        replace,
+        refresh: jest.fn(),
+      } as unknown as ReturnType<typeof useRouter>)
+
+      window.history.replaceState({}, '', '/mchy?planDay=3&_capDeploy=deploy-new')
+      render(<CapacitorDeployReloadController />)
+
+      expect(replace).toHaveBeenCalledWith('/mchy?planDay=3')
     })
 
     it('reloads on foreground return when deploy changed while backgrounded', async () => {

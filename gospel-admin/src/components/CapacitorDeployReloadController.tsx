@@ -1,6 +1,7 @@
 'use client'
 
 import { Capacitor } from '@capacitor/core'
+import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react'
 import {
   CAPACITOR_DEPLOY_CHECK_INTERVAL_MS,
@@ -9,9 +10,11 @@ import {
   isCapacitorDeployVersionStale,
   isLikelyStaleChunkLoadError,
   messageFromUnknownError,
+  reloadCapacitorWebView,
   reloadCapacitorWebViewForDeploy,
   setStoredCapacitorDeployVersion,
 } from '@/lib/capacitorAppDeployVersion'
+import { CAPACITOR_DEPLOY_RELOAD_QUERY } from '@/lib/capacitorClientReload'
 
 const subscribeClientMounted = () => () => {}
 
@@ -21,6 +24,7 @@ const subscribeClientMounted = () => () => {}
  * - Stale chunk / runtime errors: reload immediately.
  */
 export function CapacitorDeployReloadController() {
+  const router = useRouter()
   const clientMounted = useSyncExternalStore(
     subscribeClientMounted,
     () => true,
@@ -47,7 +51,7 @@ export function CapacitorDeployReloadController() {
       reloadCapacitorWebViewForDeploy(remoteVersion)
       return
     }
-    window.location.reload()
+    reloadCapacitorWebView()
   }, [])
 
   const checkForDeployUpdate = useCallback(async () => {
@@ -64,6 +68,16 @@ export function CapacitorDeployReloadController() {
       reloadForDeploy(remoteVersion)
     }
   }, [baselineDeployVersion, rememberDeployVersion, reloadForDeploy])
+
+  useEffect(() => {
+    if (!clientMounted || !Capacitor.isNativePlatform()) return
+    const params = new URLSearchParams(window.location.search)
+    if (!params.has(CAPACITOR_DEPLOY_RELOAD_QUERY)) return
+    params.delete(CAPACITOR_DEPLOY_RELOAD_QUERY)
+    const qs = params.toString()
+    const path = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`
+    router.replace(path)
+  }, [clientMounted, router])
 
   useEffect(() => {
     if (!clientMounted || !Capacitor.isNativePlatform()) return

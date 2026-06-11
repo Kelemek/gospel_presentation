@@ -1,5 +1,6 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react'
+import { CAPACITOR_ALLOW_FULL_NAVIGATION_ATTR } from '@/lib/capacitorClientReload'
 import { CapacitorKeepLinksInApp } from '../CapacitorKeepLinksInApp'
 
 const mockPush = jest.fn()
@@ -146,6 +147,23 @@ describe('CapacitorKeepLinksInApp', () => {
 
       expect(mockPush).not.toHaveBeenCalled()
       document.body.removeChild(div)
+      unmount()
+    })
+
+    it('does not intercept deploy hard-reload links marked for full navigation', () => {
+      const { unmount } = render(<CapacitorKeepLinksInApp />)
+      const anchor = document.createElement('a')
+      anchor.href = `${window.location.origin}/mchy`
+      anchor.setAttribute(CAPACITOR_ALLOW_FULL_NAVIGATION_ATTR, 'true')
+      document.body.appendChild(anchor)
+
+      const ev = new MouseEvent('click', { bubbles: true, cancelable: true })
+      const preventDefaultSpy = jest.spyOn(ev, 'preventDefault')
+      anchor.dispatchEvent(ev)
+
+      expect(preventDefaultSpy).not.toHaveBeenCalled()
+      expect(mockPush).not.toHaveBeenCalled()
+      document.body.removeChild(anchor)
       unmount()
     })
 

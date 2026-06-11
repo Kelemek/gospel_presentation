@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Capacitor } from '@capacitor/core'
+import { isCapacitorFullNavigationAnchor } from '@/lib/capacitorClientReload'
 
 /** Same-origin navigations that should stay in the Capacitor WebView (not Safari). */
 export function shouldKeepCapacitorLinkInApp(url: URL, currentHref: string): boolean {
@@ -47,6 +48,7 @@ export function CapacitorKeepLinksInApp() {
     const handleClick = (e: MouseEvent) => {
       const anchor = (e.target as HTMLElement)?.closest?.('a')
       if (!anchor || !anchor.href) return
+      if (isCapacitorFullNavigationAnchor(anchor)) return
 
       try {
         const url = new URL(anchor.href)
