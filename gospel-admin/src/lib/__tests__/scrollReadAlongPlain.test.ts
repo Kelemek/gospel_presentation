@@ -8,6 +8,7 @@ import {
   computeReadAlongVerticalScrollDeltaForComfortZone,
   computeScrollDeltaToAlignCaretTopToViewportY,
   computeScriptureListenProportionalScrollTop,
+  scriptureListenPlaybackFractionForScroll,
   computeScriptureListenTargetScrollTop,
   scrollReadAlongPlainInScrollContainerIfNeeded,
   walkerOffsetForReadAlongPlainOffset,
@@ -266,6 +267,23 @@ describe('computeScriptureListenProportionalScrollTop', () => {
     Object.defineProperty(container, 'clientHeight', { configurable: true, value: 400 })
     expect(computeScriptureListenProportionalScrollTop(container, 0.5)).toBe(300)
     expect(computeScriptureListenProportionalScrollTop(container, 1.2)).toBe(600)
+  })
+})
+
+describe('scriptureListenPlaybackFractionForScroll', () => {
+  it('returns 0 before start delay elapses', () => {
+    expect(scriptureListenPlaybackFractionForScroll(1.5, 10, 2)).toBe(0)
+    expect(scriptureListenPlaybackFractionForScroll(2, 10, 2)).toBe(0)
+  })
+
+  it('ramps from 0 to 1 across the scrollable remainder of the track', () => {
+    expect(scriptureListenPlaybackFractionForScroll(6, 10, 2)).toBe(0.5)
+    expect(scriptureListenPlaybackFractionForScroll(10, 10, 2)).toBe(1)
+  })
+
+  it('returns 1 when delay consumes the full duration', () => {
+    expect(scriptureListenPlaybackFractionForScroll(0, 5, 5)).toBe(1)
+    expect(scriptureListenPlaybackFractionForScroll(0, 5, 6)).toBe(1)
   })
 })
 

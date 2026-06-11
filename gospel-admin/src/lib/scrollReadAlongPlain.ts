@@ -347,6 +347,24 @@ export function computeScriptureListenProportionalScrollTop(
 }
 
 /**
+ * Remap integrated playback time to a scroll fraction, holding at 0 until `startDelaySec` then
+ * mapping the remainder of the track to scroll positions 0–1.
+ */
+export function scriptureListenPlaybackFractionForScroll(
+  integratedTimeSec: number,
+  durationSec: number,
+  startDelaySec: number
+): number {
+  if (!Number.isFinite(durationSec) || durationSec <= 0) return 0
+  const delay = Math.max(0, startDelaySec)
+  if (delay >= durationSec) return 1
+  if (integratedTimeSec <= delay) return 0
+  const scrollableDuration = durationSec - delay
+  if (scrollableDuration <= 0) return 1
+  return Math.min(1, Math.max(0, (integratedTimeSec - delay) / scrollableDuration))
+}
+
+/**
  * Advance integrated playback time between rAF frames (independent of sparse `timeupdate` events).
  * Stays aligned with `audioCurrentTimeSec` after seeks; never lags behind the audio clock.
  */

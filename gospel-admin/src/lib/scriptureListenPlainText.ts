@@ -113,6 +113,98 @@ export function locateScriptureListenRawTextOffset(
 
 export const SCRIPTURE_LISTEN_TEXT_OPTIONS: ScriptureListenTextOptions = { omitVerseSup: true }
 
+/** Visible lines to hold before scripture Listen auto-scroll begins. */
+export const SCRIPTURE_LISTEN_AUTOSCROLL_START_LINE_COUNT = 2
+
+const LINE_TOP_EPSILON_PX = 4
+const COARSE_PLAIN_OFFSET_STEP = 48
+const MAX_AUTOSCROLL_START_CONTENT_FRACTION = 0.35
+const MIN_AUTOSCROLL_SCROLL_WINDOW_SEC = 0.25
+
+/**
+ * Plain offset at the end of the Nth visible line (listen plain stream), or `totalLen` when
+ * the passage has fewer than `lineCount` lines.
+ */
+export function plainOffsetAfterVisibleLineCount(
+  scope: HTMLElement,
+  lineCount = SCRIPTURE_LISTEN_AUTOSCROLL_START_LINE_COUNT,
+  opts: ScriptureListenTextOptions = SCRIPTURE_LISTEN_TEXT_OPTIONS
+): number {
+  const plain = plainTextForScriptureListen(scope, opts)
+  const totalLen = plain.length
+  if (totalLen === 0 || lineCount <= 0) return 0
+
+  const caretTopAt = (offset: number): number | null => {
+    const rect = getScriptureListenCaretClientRect(scope, totalLen, offset, opts)
+    return rect?.top ?? null
+  }
+
+  let linesSeen = 1
+  let lastTop = caretTopAt(0)
+  if (lastTop === null) return totalLen
+
+  let offset = 0
+  while (offset < totalLen - 1) {
+    const step = Math.min(COARSE_PLAIN_OFFSET_STEP, totalLen - 1 - offset)
+    const probe = offset + step
+    const top = caretTopAt(probe)
+    if (top === null) break
+
+    if (top > lastTop + LINE_TOP_EPSILON_PX) {
+      let lo = offset + 1
+      let hi = probe
+      while (lo < hi) {
+        const mid = Math.floor((lo + hi) / 2)
+        const midTop = caretTopAt(mid)
+        if (midTop !== null && midTop > lastTop + LINE_TOP_EPSILON_PX) {
+          hi = mid
+        } else {
+          lo = mid + 1
+        }
+      }
+      const lineStartOffset = lo
+      linesSeen += 1
+      if (linesSeen > lineCount) {
+        return Math.max(0, lineStartOffset - 1)
+      }
+      lastTop = caretTopAt(lineStartOffset) ?? top
+      offset = lineStartOffset
+    } else {
+      offset = probe
+    }
+  }
+
+  return totalLen
+}
+
+/**
+ * Seconds of audio playback before proportional auto-scroll should begin — derived from how much
+ * plain text falls in the first `lineCount` visible lines relative to the full passage.
+ */
+export function computeScriptureListenAutoScrollStartDelaySec(
+  scope: HTMLElement,
+  durationSec: number,
+  lineCount = SCRIPTURE_LISTEN_AUTOSCROLL_START_LINE_COUNT,
+  opts: ScriptureListenTextOptions = SCRIPTURE_LISTEN_TEXT_OPTIONS
+): number {
+  if (!Number.isFinite(durationSec) || durationSec <= 0) return 0
+
+  const plain = plainTextForScriptureListen(scope, opts)
+  const totalLen = plain.length
+  if (totalLen === 0) return 0
+
+  const offsetAfterLines = plainOffsetAfterVisibleLineCount(scope, lineCount, opts)
+  let contentFraction = Math.min(1, offsetAfterLines / totalLen)
+  contentFraction = Math.min(contentFraction, MAX_AUTOSCROLL_START_CONTENT_FRACTION)
+
+  let startDelaySec = durationSec * contentFraction
+  if (startDelaySec >= durationSec - MIN_AUTOSCROLL_SCROLL_WINDOW_SEC) {
+    startDelaySec = Math.max(0, durationSec - MIN_AUTOSCROLL_SCROLL_WINDOW_SEC)
+  }
+
+  return startDelaySec
+}
+
 export function walkerOffsetForScriptureReadAlongPlainOffset(
   scope: HTMLElement,
   plainCollapsedLen: number,

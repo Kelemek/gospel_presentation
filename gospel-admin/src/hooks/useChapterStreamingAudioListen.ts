@@ -13,8 +13,10 @@ import {
   computeScriptureListenProportionalScrollTop,
   getScrollContainerMaxScrollTop,
   isScrollContainerAtBottom,
+  scriptureListenPlaybackFractionForScroll,
   SCRIPTURE_LISTEN_SCROLL_BOTTOM_EPSILON_PX,
 } from '@/lib/scrollReadAlongPlain'
+import { computeScriptureListenAutoScrollStartDelaySec } from '@/lib/scriptureListenPlainText'
 
 export interface ScriptureAudioAutoScrollConfig {
   scopeRef: RefObject<HTMLElement | null>
@@ -80,6 +82,10 @@ export function useChapterStreamingAudioListen({
   const autoScrollFrozenAtBottomRef = useRef(false)
   const autoScrollIntegratedTimeRef = useRef(0)
   const autoScrollLastFrameMsRef = useRef<number | null>(null)
+  const autoScrollStartDelayRef = useRef<{ cacheKey: string; delaySec: number }>({
+    cacheKey: '',
+    delaySec: 0,
+  })
   /** User started Play; keep advancing via `onAutoAdvanceAfterPlayback` until Pause/stop. */
   const continuousPlaybackRef = useRef(false)
   const autoPlayAfterNavRef = useRef(false)
@@ -143,6 +149,7 @@ export function useChapterStreamingAudioListen({
 
   const invalidateAutoScrollTracking = useCallback(() => {
     autoScrollFrozenAtBottomRef.current = false
+    autoScrollStartDelayRef.current = { cacheKey: '', delaySec: 0 }
     resetAutoScrollClock()
   }, [resetAutoScrollClock])
 
@@ -193,7 +200,23 @@ export function useChapterStreamingAudioListen({
     }
     autoScrollLastFrameMsRef.current = nowMs
 
-    const fraction = autoScrollIntegratedTimeRef.current / duration
+    const scope = cfg.scopeRef.current
+    const delayCacheKey = `${cfg.passageScopeKey ?? ''}|${duration}`
+    if (
+      scope &&
+      autoScrollStartDelayRef.current.cacheKey !== delayCacheKey
+    ) {
+      autoScrollStartDelayRef.current = {
+        cacheKey: delayCacheKey,
+        delaySec: computeScriptureListenAutoScrollStartDelaySec(scope, duration),
+      }
+    }
+    const startDelaySec = scope ? autoScrollStartDelayRef.current.delaySec : 0
+    const fraction = scriptureListenPlaybackFractionForScroll(
+      autoScrollIntegratedTimeRef.current,
+      duration,
+      startDelaySec
+    )
     const targetScrollTop = computeScriptureListenProportionalScrollTop(scrollContainer, fraction)
 
     if (targetScrollTop >= maxScrollTop - SCRIPTURE_LISTEN_SCROLL_BOTTOM_EPSILON_PX) {

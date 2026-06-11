@@ -3,12 +3,39 @@
  */
 
 import {
+  computeScriptureListenAutoScrollStartDelaySec,
   getScriptureListenCaretClientRect,
   getScriptureListenInterpolatedCaretClientRect,
+  plainOffsetAfterVisibleLineCount,
   plainTextForScriptureListen,
   SCRIPTURE_LISTEN_TEXT_OPTIONS,
   visibleScriptureListenRawText,
 } from '@/lib/scriptureListenPlainText'
+
+function mockCaretTopsByPlainOffset(lineBreakOffsets: number[]) {
+  Range.prototype.getBoundingClientRect = jest.fn(function (this: Range) {
+    const offset =
+      this.startContainer instanceof Text
+        ? this.startOffset
+        : 0
+    let lineIndex = 0
+    for (const breakAt of lineBreakOffsets) {
+      if (offset >= breakAt) lineIndex += 1
+    }
+    const top = 10 + lineIndex * 20
+    return {
+      top,
+      bottom: top + 14,
+      left: 0,
+      right: 40,
+      width: 40,
+      height: 14,
+      x: 0,
+      y: top,
+      toJSON: () => ({}),
+    }
+  })
+}
 
 describe('scriptureListenPlainText', () => {
   it('visibleScriptureListenRawText skips verse sup elements', () => {
@@ -57,6 +84,29 @@ describe('scriptureListenPlainText', () => {
     const rect = getScriptureListenCaretClientRect(scope, plain.length, 4)
     expect(rect).not.toBeNull()
     expect(rect!.width).toBe(40)
+  })
+
+  it('plainOffsetAfterVisibleLineCount returns offset at end of the Nth visible line', () => {
+    document.body.innerHTML = `<div id="scope">${'a'.repeat(90)}</div>`
+    const scope = document.getElementById('scope') as HTMLElement
+    const plainLen = plainTextForScriptureListen(scope).length
+    mockCaretTopsByPlainOffset([30, 60])
+    expect(plainOffsetAfterVisibleLineCount(scope, 2)).toBe(59)
+    expect(plainOffsetAfterVisibleLineCount(scope, 1)).toBe(29)
+    expect(plainOffsetAfterVisibleLineCount(scope, 99)).toBe(plainLen)
+  })
+
+  it('computeScriptureListenAutoScrollStartDelaySec scales with duration and line content', () => {
+    document.body.innerHTML = `<div id="scope">${'word '.repeat(40)}</div>`
+    const scope = document.getElementById('scope') as HTMLElement
+    const plainLen = plainTextForScriptureListen(scope).length
+    mockCaretTopsByPlainOffset([40, 80])
+    const offsetLine2 = plainOffsetAfterVisibleLineCount(scope, 2)
+    const uncapped = (100 * offsetLine2) / plainLen
+    expect(computeScriptureListenAutoScrollStartDelaySec(scope, 100)).toBeCloseTo(
+      Math.min(uncapped, 35)
+    )
+    expect(computeScriptureListenAutoScrollStartDelaySec(scope, 0.2)).toBe(0)
   })
 
   it('getScriptureListenInterpolatedCaretClientRect lerps between adjacent offsets', () => {

@@ -6,6 +6,7 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useChapterStreamingAudioListen } from '@/hooks/useChapterStreamingAudioListen'
 import { applyMemorizeListenPlaybackRateToMediaElement } from '@/lib/memorizeListenSpeedStorage'
+import { computeScriptureListenAutoScrollStartDelaySec } from '@/lib/scriptureListenPlainText'
 
 jest.mock('@/lib/memorizeListenSpeedStorage', () => {
   const actual = jest.requireActual<typeof import('@/lib/memorizeListenSpeedStorage')>(
@@ -26,6 +27,20 @@ jest.mock('@/lib/scrollReadAlongPlain', () => {
     prefersReducedMotionReadAlong: jest.fn(() => true),
   }
 })
+
+jest.mock('@/lib/scriptureListenPlainText', () => {
+  const actual = jest.requireActual<typeof import('@/lib/scriptureListenPlainText')>(
+    '@/lib/scriptureListenPlainText'
+  )
+  return {
+    ...actual,
+    computeScriptureListenAutoScrollStartDelaySec: jest.fn(() => 2),
+  }
+})
+
+const mockAutoScrollStartDelay = computeScriptureListenAutoScrollStartDelaySec as jest.MockedFunction<
+  typeof computeScriptureListenAutoScrollStartDelaySec
+>
 
 const mockApplyRate = applyMemorizeListenPlaybackRateToMediaElement as jest.MockedFunction<
   typeof applyMemorizeListenPlaybackRateToMediaElement
@@ -102,6 +117,7 @@ describe('useChapterStreamingAudioListen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockAutoScrollStartDelay.mockImplementation(() => 2)
     localStorage.clear()
     HTMLMediaElement.prototype.play = jest.fn().mockResolvedValue(undefined)
     HTMLMediaElement.prototype.pause = jest.fn()
@@ -393,7 +409,48 @@ describe('useChapterStreamingAudioListen', () => {
     await act(async () => {
       flushRaf()
     })
-    expect(scrollContainer.scrollTop).toBe(300)
+    // 2s hold, then (5 - 2) / (10 - 2) = 0.375 through scroll range (max 600)
+    expect(scrollContainer.scrollTop).toBe(225)
+  })
+
+  it('holds auto-scroll at the top while playback is within the start delay window', async () => {
+    mockAutoScrollStartDelay.mockImplementation(() => 8)
+    document.body.innerHTML = '<div id="scope">For God so loved the world</div>'
+    const scope = document.getElementById('scope') as HTMLElement
+    const scrollContainer = document.createElement('div')
+    document.body.appendChild(scrollContainer)
+    Object.defineProperty(scrollContainer, 'scrollTop', { configurable: true, writable: true, value: 0 })
+    Object.defineProperty(scrollContainer, 'scrollHeight', { configurable: true, value: 1000 })
+    Object.defineProperty(scrollContainer, 'clientHeight', { configurable: true, value: 400 })
+
+    let now = 1000
+    jest.spyOn(performance, 'now').mockImplementation(() => now)
+
+    const user = userEvent.setup()
+    render(
+      <Harness
+        audioUrls={[audioUrl]}
+        enabled
+        autoScroll={{ scopeRef: { current: scope }, scrollContainerRef: { current: scrollContainer } }}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+    Object.defineProperty(el, 'duration', { configurable: true, value: 10 })
+    Object.defineProperty(el, 'currentTime', { configurable: true, value: 0, writable: true })
+    Object.defineProperty(el, 'paused', { configurable: true, get: () => false })
+
+    await act(async () => {
+      el.dispatchEvent(new Event('play'))
+      flushRaf()
+    })
+    expect(mockAutoScrollStartDelay).toHaveBeenCalled()
+
+    now += 5000
+    await act(async () => {
+      flushRaf()
+    })
+    expect(scrollContainer.scrollTop).toBe(0)
   })
 
   it('cancels rAF auto-scroll loop on pause', async () => {
@@ -511,6 +568,11 @@ describe('useChapterStreamingAudioListen', () => {
     })
 
     expect(afterFirst).toBe(0)
+
+    now += 2500
+    await act(async () => {
+      flushRaf()
+    })
     expect(scrollContainer.scrollTop).toBeGreaterThan(0)
   })
 })
