@@ -4,12 +4,39 @@ import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Capacitor } from '@capacitor/core'
 
-const IN_APP_PATHS = ['/privacy', '/copyright']
+/** Same-origin navigations that should stay in the Capacitor WebView (not Safari). */
+export function shouldKeepCapacitorLinkInApp(url: URL, currentHref: string): boolean {
+  let current: URL
+  try {
+    current = new URL(currentHref)
+  } catch {
+    return false
+  }
+
+  const sameOrigin =
+    url.origin === current.origin || url.host === current.host
+  if (!sameOrigin) return false
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return false
+
+  // Hash-only anchors on the current page: let the browser scroll.
+  if (
+    url.pathname === current.pathname &&
+    url.search === current.search &&
+    Boolean(url.hash)
+  ) {
+    return false
+  }
+
+  return true
+}
+
+export function capacitorInAppHref(url: URL): string {
+  return `${url.pathname}${url.search}${url.hash}`
+}
 
 /**
- * When running in the Capacitor native app, intercepts clicks on links to
- * /privacy and /copyright so they always navigate inside the WebView instead
- * of opening in the system browser.
+ * When running in the Capacitor native app, intercepts same-origin link clicks so
+ * navigation stays inside the WebView instead of opening the system browser.
  */
 export function CapacitorKeepLinksInApp() {
   const router = useRouter()
@@ -23,15 +50,11 @@ export function CapacitorKeepLinksInApp() {
 
       try {
         const url = new URL(anchor.href)
-        const sameOrigin =
-          url.origin === window.location.origin ||
-          url.host === window.location.host
-        const pathname = url.pathname || '/'
-        if (sameOrigin && IN_APP_PATHS.includes(pathname)) {
-          e.preventDefault()
-          e.stopPropagation()
-          router.push(pathname)
-        }
+        if (!shouldKeepCapacitorLinkInApp(url, window.location.href)) return
+
+        e.preventDefault()
+        e.stopPropagation()
+        router.push(capacitorInAppHref(url))
       } catch {
         // Ignore invalid URLs
       }

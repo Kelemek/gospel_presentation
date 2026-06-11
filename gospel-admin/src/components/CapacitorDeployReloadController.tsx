@@ -17,8 +17,8 @@ const subscribeClientMounted = () => () => {}
 
 /**
  * On Capacitor native, silently reloads the WebView when the server deploy changes.
- * - New deploy while reading: reload on the next return to foreground.
- * - Stale chunk errors: reload immediately.
+ * - New deploy while the app is open: reload immediately (before navigation can fail).
+ * - Stale chunk / runtime errors: reload immediately.
  */
 export function CapacitorDeployReloadController() {
   const clientMounted = useSyncExternalStore(
@@ -26,7 +26,6 @@ export function CapacitorDeployReloadController() {
     () => true,
     () => false
   )
-  const pendingForegroundReloadRef = useRef(false)
   const reloadingRef = useRef(false)
   /** Fallback when sessionStorage is unavailable (private mode / quota). */
   const inMemoryDeployVersionRef = useRef<string | null>(null)
@@ -62,24 +61,9 @@ export function CapacitorDeployReloadController() {
     }
 
     if (isCapacitorDeployVersionStale(baselineVersion, remoteVersion)) {
-      pendingForegroundReloadRef.current = true
-    }
-  }, [baselineDeployVersion, rememberDeployVersion])
-
-  const tryForegroundReload = useCallback(async () => {
-    if (!pendingForegroundReloadRef.current) return
-
-    const remoteVersion = await fetchAppDeployVersion()
-    if (!remoteVersion) return
-
-    const baselineVersion = baselineDeployVersion()
-    if (isCapacitorDeployVersionStale(baselineVersion, remoteVersion)) {
       reloadForDeploy(remoteVersion)
-      return
     }
-
-    pendingForegroundReloadRef.current = false
-  }, [baselineDeployVersion, reloadForDeploy])
+  }, [baselineDeployVersion, rememberDeployVersion, reloadForDeploy])
 
   useEffect(() => {
     if (!clientMounted || !Capacitor.isNativePlatform()) return
@@ -90,10 +74,20 @@ export function CapacitorDeployReloadController() {
 
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        void checkForDeployUpdate().then(() => tryForegroundReload())
+        void checkForDeployUpdate()
       }
     }
     document.addEventListener('visibilitychange', onVisibilityChange)
+
+    const onWindowFocus = () => {
+      void checkForDeployUpdate()
+    }
+    window.addEventListener('focus', onWindowFocus)
+
+    const onOnline = () => {
+      void checkForDeployUpdate()
+    }
+    window.addEventListener('online', onOnline)
 
     const intervalId = window.setInterval(() => {
       void checkForDeployUpdate()
@@ -121,11 +115,13 @@ export function CapacitorDeployReloadController() {
     return () => {
       window.clearTimeout(initialCheckId)
       document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('focus', onWindowFocus)
+      window.removeEventListener('online', onOnline)
       window.clearInterval(intervalId)
       window.removeEventListener('error', onWindowError)
       window.removeEventListener('unhandledrejection', onUnhandledRejection)
     }
-  }, [clientMounted, checkForDeployUpdate, tryForegroundReload, reloadForDeploy])
+  }, [clientMounted, checkForDeployUpdate, reloadForDeploy])
 
   return null
 }

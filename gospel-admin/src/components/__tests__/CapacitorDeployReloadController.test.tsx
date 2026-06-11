@@ -82,7 +82,7 @@ describe('CapacitorDeployReloadController', () => {
       expect(mockedReload).not.toHaveBeenCalled()
     })
 
-    it('waits for foreground return before reloading after a deploy change', async () => {
+    it('reloads immediately when a deploy change is detected', async () => {
       setStoredCapacitorDeployVersion('deploy-old')
       global.fetch = jest.fn(async () => ({
         ok: true,
@@ -92,56 +92,20 @@ describe('CapacitorDeployReloadController', () => {
       render(<CapacitorDeployReloadController />)
 
       await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalled()
-      })
-      expect(mockedReload).not.toHaveBeenCalled()
-
-      setVisibilityState('hidden')
-      document.dispatchEvent(new Event('visibilitychange'))
-      setVisibilityState('visible')
-      document.dispatchEvent(new Event('visibilitychange'))
-
-      await waitFor(() => {
         expect(mockedReload).toHaveBeenCalledWith('deploy-new')
       })
     })
 
-    it('retries foreground reload when verify fetch fails, then reloads on success', async () => {
+    it('does not reload when verify fetch fails', async () => {
       setStoredCapacitorDeployVersion('deploy-old')
-      global.fetch = jest.fn(async () => {
-        const call = (global.fetch as jest.Mock).mock.calls.length
-        if (call === 3) {
-          return { ok: false }
-        }
-        return {
-          ok: true,
-          json: async () => ({ version: 'deploy-new' }),
-        }
-      }) as unknown as typeof fetch
+      global.fetch = jest.fn(async () => ({ ok: false })) as unknown as typeof fetch
 
       render(<CapacitorDeployReloadController />)
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalled()
       })
-
-      const foreground = () => {
-        setVisibilityState('hidden')
-        document.dispatchEvent(new Event('visibilitychange'))
-        setVisibilityState('visible')
-        document.dispatchEvent(new Event('visibilitychange'))
-      }
-
-      foreground()
-      await waitFor(() => {
-        expect((global.fetch as jest.Mock).mock.calls.length).toBeGreaterThanOrEqual(3)
-      })
       expect(mockedReload).not.toHaveBeenCalled()
-
-      foreground()
-      await waitFor(() => {
-        expect(mockedReload).toHaveBeenCalledWith('deploy-new')
-      })
     })
 
     it('detects deploy changes when sessionStorage is unavailable', async () => {
@@ -167,10 +131,7 @@ describe('CapacitorDeployReloadController', () => {
       })
       expect(mockedReload).not.toHaveBeenCalled()
 
-      setVisibilityState('hidden')
-      document.dispatchEvent(new Event('visibilitychange'))
-      setVisibilityState('visible')
-      document.dispatchEvent(new Event('visibilitychange'))
+      window.dispatchEvent(new Event('focus'))
 
       await waitFor(() => {
         expect(mockedReload).toHaveBeenCalledWith('deploy-new')
@@ -189,6 +150,25 @@ describe('CapacitorDeployReloadController', () => {
       window.dispatchEvent(
         new ErrorEvent('error', { message: 'Loading chunk 12 failed.' })
       )
+
+      await waitFor(() => {
+        expect(mockedReload).toHaveBeenCalledWith('deploy-new')
+      })
+    })
+
+    it('reloads on foreground return when deploy changed while backgrounded', async () => {
+      setStoredCapacitorDeployVersion('deploy-old')
+      global.fetch = jest.fn(async () => ({
+        ok: true,
+        json: async () => ({ version: 'deploy-new' }),
+      })) as unknown as typeof fetch
+
+      render(<CapacitorDeployReloadController />)
+
+      setVisibilityState('hidden')
+      document.dispatchEvent(new Event('visibilitychange'))
+      setVisibilityState('visible')
+      document.dispatchEvent(new Event('visibilitychange'))
 
       await waitFor(() => {
         expect(mockedReload).toHaveBeenCalledWith('deploy-new')

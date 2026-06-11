@@ -80,11 +80,39 @@ describe('CapacitorKeepLinksInApp', () => {
       unmount()
     })
 
-    it('does not intercept same-origin link to other path', () => {
+    it('intercepts same-origin profile/resource links such as /mchy', () => {
+      const { unmount } = render(<CapacitorKeepLinksInApp />)
+      const anchor = document.createElement('a')
+      anchor.href = `${window.location.origin}/mchy`
+      anchor.textContent = "M'Cheyne"
+      document.body.appendChild(anchor)
+
+      fireEvent.click(anchor, { bubbles: true })
+
+      expect(mockPush).toHaveBeenCalledWith('/mchy')
+      document.body.removeChild(anchor)
+      unmount()
+    })
+
+    it('intercepts same-origin home link', () => {
       const { unmount } = render(<CapacitorKeepLinksInApp />)
       const anchor = document.createElement('a')
       anchor.href = `${window.location.origin}/`
       anchor.textContent = 'Home'
+      document.body.appendChild(anchor)
+
+      fireEvent.click(anchor, { bubbles: true })
+
+      expect(mockPush).toHaveBeenCalledWith('/')
+      document.body.removeChild(anchor)
+      unmount()
+    })
+
+    it('does not intercept hash-only anchor on the current page', () => {
+      const { unmount } = render(<CapacitorKeepLinksInApp />)
+      const anchor = document.createElement('a')
+      anchor.href = `${window.location.origin}${window.location.pathname}#section-1`
+      anchor.textContent = 'Section'
       document.body.appendChild(anchor)
 
       fireEvent.click(anchor, { bubbles: true })

@@ -1,7 +1,7 @@
 export const CAPACITOR_DEPLOY_VERSION_STORAGE_KEY = 'gospel-capacitor-deploy-version'
 
 /** Poll interval while the Capacitor WebView session is open. */
-export const CAPACITOR_DEPLOY_CHECK_INTERVAL_MS = 5 * 60 * 1000
+export const CAPACITOR_DEPLOY_CHECK_INTERVAL_MS = 60 * 1000
 
 export async function fetchAppDeployVersion(): Promise<string | null> {
   try {
@@ -48,7 +48,14 @@ export function isLikelyStaleChunkLoadError(message: string): boolean {
     normalized.includes('loading chunk') ||
     normalized.includes('failed to fetch dynamically imported module') ||
     normalized.includes('importing a module script failed') ||
-    normalized.includes('chunkloaderror')
+    normalized.includes('chunkloaderror') ||
+    normalized.includes('failed to load script') ||
+    normalized.includes('error loading dynamically imported module') ||
+    normalized.includes('unable to preload css') ||
+    normalized.includes('missing required error components') ||
+    normalized.includes('is not a valid javascript mime type') ||
+    normalized.includes('unexpected token') && normalized.includes('<!') ||
+    normalized.includes('hydration failed')
   )
 }
 

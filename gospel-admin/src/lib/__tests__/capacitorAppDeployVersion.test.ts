@@ -28,6 +28,12 @@ describe('capacitorAppDeployVersion', () => {
         isLikelyStaleChunkLoadError('Failed to fetch dynamically imported module')
       ).toBe(true)
       expect(isLikelyStaleChunkLoadError('Importing a module script failed.')).toBe(true)
+      expect(isLikelyStaleChunkLoadError('Failed to load script: /_next/static/chunks/1.js')).toBe(
+        true
+      )
+      expect(isLikelyStaleChunkLoadError('Hydration failed because the server HTML was replaced.')).toBe(
+        true
+      )
     })
 
     it('ignores unrelated errors', () => {
