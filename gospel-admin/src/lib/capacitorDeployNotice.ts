@@ -1,5 +1,5 @@
 const CAPACITOR_RESTART_APP_INSTRUCTIONS =
-  'A new version is on the server. Please close the Gospel Presentation app completely (swipe it away from the app switcher), then open it again.'
+  'A new version of the app is available. Please close the Gospel Presentation app completely (swipe it away from the app switcher), then open it again.'
 
 /** Shown when the server has a newer deploy than this WebView session started with. */
 export const CAPACITOR_RESTART_APP_NOTICE = buildCapacitorRestartAppNotice()
