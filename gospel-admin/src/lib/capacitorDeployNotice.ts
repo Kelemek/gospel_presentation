@@ -12,13 +12,13 @@ export const CAPACITOR_RESTART_APP_NOTICE = buildCapacitorRestartAppNotice()
 
 export const CAPACITOR_WHATS_NEW_NOTICE_MAX_LENGTH = 1200
 
-/** Compose native restart alert with optional user-facing changelog from deploy-update-message.txt. */
-export function buildCapacitorRestartAppNotice(optionalMessage?: string | null): string {
-  const changelog = optionalMessage?.trim()
-  if (!changelog) {
+/** Compose restart alert with release notes the user has not seen yet. */
+export function buildCapacitorRestartAppNotice(unseenMessages?: string[] | null): string {
+  const body = formatCapacitorWhatsNewBody(unseenMessages ?? [])
+  if (!body) {
     return `Update available\n\n${CAPACITOR_RESTART_APP_INSTRUCTIONS}`
   }
-  return `Update available\n\nWhat has changed:\n\n${changelog}\n\n${CAPACITOR_RESTART_APP_INSTRUCTIONS}`
+  return `Update available\n\nWhat has changed:\n\n${body}\n\n${CAPACITOR_RESTART_APP_INSTRUCTIONS}`
 }
 
 /** Format one or more missed release notes for users who open the app after an update. */

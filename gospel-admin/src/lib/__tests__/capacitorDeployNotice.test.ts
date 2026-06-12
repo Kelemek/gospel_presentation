@@ -16,17 +16,26 @@ import {
 } from '@/lib/capacitorDeployNotice'
 
 describe('capacitorDeployNotice', () => {
-  it('buildCapacitorRestartAppNotice omits changelog when message is empty', () => {
+  it('buildCapacitorRestartAppNotice omits changelog when there are no unseen messages', () => {
     expect(buildCapacitorRestartAppNotice()).toBe(CAPACITOR_RESTART_APP_NOTICE)
-    expect(buildCapacitorRestartAppNotice('   ')).toBe(CAPACITOR_RESTART_APP_NOTICE)
+    expect(buildCapacitorRestartAppNotice([])).toBe(CAPACITOR_RESTART_APP_NOTICE)
   })
 
-  it('buildCapacitorRestartAppNotice inserts changelog before restart instructions', () => {
-    const notice = buildCapacitorRestartAppNotice('Fixed the Resources menu on iPhone.')
+  it('buildCapacitorRestartAppNotice inserts unseen changelog before restart instructions', () => {
+    const notice = buildCapacitorRestartAppNotice(['Fixed the Resources menu on iPhone.'])
     expect(notice).toContain('Update available')
     expect(notice).toContain('What has changed:')
     expect(notice).toContain('Fixed the Resources menu on iPhone.')
     expect(notice).toContain('close the Gospel Presentation app completely')
+  })
+
+  it('buildCapacitorRestartAppNotice numbers multiple unseen messages', () => {
+    const notice = buildCapacitorRestartAppNotice([
+      'Older release note.',
+      'Latest release note.',
+    ])
+    expect(notice).toContain('1. Older release note.')
+    expect(notice).toContain('2. Latest release note.')
   })
 
   beforeEach(() => {

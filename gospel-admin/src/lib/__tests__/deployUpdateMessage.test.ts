@@ -1,7 +1,7 @@
 import {
-  DEPLOY_UPDATE_MESSAGE_MAX_LENGTH,
-  parseDeployUpdateMessageFileContent,
-  resolveDeployUpdateChangelog,
+  DEPLOY_UPDATE_CHANGELOG_ENTRY_MAX_LENGTH,
+  DEPLOY_UPDATE_CHANGELOG_MAX_ENTRIES,
+  readDeployUpdateChangelog,
 } from '@/lib/deployUpdateMessage'
 
 jest.mock('fs', () => ({
@@ -10,49 +10,67 @@ jest.mock('fs', () => ({
 }))
 
 describe('deployUpdateMessage', () => {
-  it('parseDeployUpdateMessageFileContent strips comment lines and trims', () => {
-    const raw = `# header comment
-
-Fixed the Resources menu on iPhone.
-`
-    expect(parseDeployUpdateMessageFileContent(raw)).toBe(
-      'Fixed the Resources menu on iPhone.'
-    )
-  })
-
-  it('parseDeployUpdateMessageFileContent returns null when only comments or whitespace', () => {
-    expect(parseDeployUpdateMessageFileContent('# only comments\n')).toBeNull()
-    expect(parseDeployUpdateMessageFileContent('   \n\n  ')).toBeNull()
-  })
-
-  it('parseDeployUpdateMessageFileContent truncates long messages', () => {
-    const long = 'a'.repeat(DEPLOY_UPDATE_MESSAGE_MAX_LENGTH + 10)
-    const parsed = parseDeployUpdateMessageFileContent(long)
-    expect(parsed).not.toBeNull()
-    expect(parsed!.length).toBeLessThanOrEqual(DEPLOY_UPDATE_MESSAGE_MAX_LENGTH)
-    expect(parsed!.endsWith('…')).toBe(true)
-  })
-
-  it('resolveDeployUpdateChangelog appends the current deploy message when it is new', () => {
+  it('readDeployUpdateChangelog parses a JSON string array', () => {
     const fs = jest.requireMock('fs') as {
       existsSync: jest.Mock
       readFileSync: jest.Mock
     }
 
-    fs.existsSync.mockImplementation((filePath: string) =>
-      String(filePath).endsWith('deploy-update-changelog.json') ||
-      String(filePath).endsWith('deploy-update-message.txt')
+    fs.existsSync.mockReturnValue(true)
+    fs.readFileSync.mockReturnValue(
+      JSON.stringify([
+        'Older release note.',
+        'Fixed the Resources menu on iPhone.',
+      ])
     )
-    fs.readFileSync.mockImplementation((filePath: string) => {
-      if (String(filePath).endsWith('deploy-update-changelog.json')) {
-        return JSON.stringify(['Older release note.'])
-      }
-      return 'Brand-new release note.'
-    })
 
-    expect(resolveDeployUpdateChangelog()).toEqual([
+    expect(readDeployUpdateChangelog()).toEqual([
       'Older release note.',
-      'Brand-new release note.',
+      'Fixed the Resources menu on iPhone.',
     ])
+  })
+
+  it('readDeployUpdateChangelog keeps only the last five entries', () => {
+    const fs = jest.requireMock('fs') as {
+      existsSync: jest.Mock
+      readFileSync: jest.Mock
+    }
+
+    fs.existsSync.mockReturnValue(true)
+    fs.readFileSync.mockReturnValue(
+      JSON.stringify([
+        'Note 1.',
+        'Note 2.',
+        'Note 3.',
+        'Note 4.',
+        'Note 5.',
+        'Note 6.',
+      ])
+    )
+
+    expect(readDeployUpdateChangelog()).toEqual([
+      'Note 2.',
+      'Note 3.',
+      'Note 4.',
+      'Note 5.',
+      'Note 6.',
+    ])
+    expect(readDeployUpdateChangelog()).toHaveLength(DEPLOY_UPDATE_CHANGELOG_MAX_ENTRIES)
+  })
+
+  it('readDeployUpdateChangelog truncates long entries', () => {
+    const fs = jest.requireMock('fs') as {
+      existsSync: jest.Mock
+      readFileSync: jest.Mock
+    }
+
+    const long = 'a'.repeat(DEPLOY_UPDATE_CHANGELOG_ENTRY_MAX_LENGTH + 10)
+    fs.existsSync.mockReturnValue(true)
+    fs.readFileSync.mockReturnValue(JSON.stringify([long]))
+
+    const changelog = readDeployUpdateChangelog()
+    expect(changelog).toHaveLength(1)
+    expect(changelog[0]!.length).toBeLessThanOrEqual(DEPLOY_UPDATE_CHANGELOG_ENTRY_MAX_LENGTH)
+    expect(changelog[0]!.endsWith('…')).toBe(true)
   })
 })

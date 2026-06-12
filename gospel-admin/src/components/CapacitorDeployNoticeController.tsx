@@ -7,7 +7,7 @@ import {
   CAPACITOR_DEPLOY_CHECK_INTERVAL_MS,
   fetchAppDeployInfo,
   getSeenChangelogCount,
-  getStoredCapacitorDeployVersion,
+  getEffectiveDeployBaseline,
   getUnseenChangelogMessages,
   isCapacitorDeployVersionStale,
   isLikelyStaleChunkLoadError,
@@ -28,10 +28,10 @@ import { hasPresentationWelcomeBeenDismissed } from '@/lib/presentationWelcomeSt
 const subscribeClientMounted = () => () => {}
 
 /**
- * On Capacitor native, detects a new server deploy (or stale chunk errors) and
- * politely asks the user to close and reopen the app — no automatic reload.
- * After a cold start (or when the app was closed during deploy), shows missed
- * "what's new" notes once the first-visit welcome has been dismissed.
+ * Detects deploy updates and shows missed release notes ("what's new") on web and
+ * native once the first-visit welcome has been dismissed. On Capacitor native,
+ * also detects stale bundles / mid-session deploys and asks the user to close
+ * and reopen the app — no automatic reload.
  */
 export function CapacitorDeployNoticeController() {
   const { showAlert } = useAlertModal()
@@ -45,7 +45,7 @@ export function CapacitorDeployNoticeController() {
   const inMemoryDeployVersionRef = useRef<string | null>(null)
 
   const baselineDeployVersion = useCallback(
-    () => getStoredCapacitorDeployVersion() ?? inMemoryDeployVersionRef.current,
+    () => getEffectiveDeployBaseline(inMemoryDeployVersionRef.current),
     []
   )
 
@@ -55,28 +55,35 @@ export function CapacitorDeployNoticeController() {
   }, [])
 
   const promptRestartIfNeeded = useCallback(
-    (remoteVersion: string | null, changelogMessage?: string | null) => {
+    (remoteVersion: string | null, unseenMessages: string[]) => {
       if (!remoteVersion || noticePendingRef.current) return
       if (!shouldShowCapacitorDeployNotice(remoteVersion)) return
 
       noticePendingRef.current = true
       markCapacitorDeployNoticeShown(remoteVersion)
-      showAlert(buildCapacitorRestartAppNotice(changelogMessage))
+      showAlert(buildCapacitorRestartAppNotice(unseenMessages))
       noticePendingRef.current = false
     },
     [showAlert]
   )
 
   const promptWhatsNewIfNeeded = useCallback(
-    (messages: string[], remoteVersion: string, changelog: string[]) => {
+    (
+      messages: string[],
+      remoteVersion: string,
+      changelog: string[],
+      options?: { midSession?: boolean }
+    ) => {
       if (!messages.length || noticePendingRef.current) return
-      if (!shouldShowCapacitorWhatsNewOnColdStart()) return
+      if (!options?.midSession && !shouldShowCapacitorWhatsNewOnColdStart()) return
 
       const notice = buildCapacitorWhatsNewNotice(messages)
       if (!notice) return
 
       noticePendingRef.current = true
-      markCapacitorWhatsNewShownThisSession()
+      if (!options?.midSession) {
+        markCapacitorWhatsNewShownThisSession()
+      }
       acknowledgeCapacitorDeployChangelog(changelog, remoteVersion)
       showAlert(notice)
       noticePendingRef.current = false
@@ -85,19 +92,20 @@ export function CapacitorDeployNoticeController() {
   )
 
   const checkForDeployUpdate = useCallback(async () => {
-    const { version: remoteVersion, message, changelog } = await fetchAppDeployInfo()
+    const { version: remoteVersion, changelog } = await fetchAppDeployInfo()
     if (!remoteVersion) return
 
+    const isNative = Capacitor.isNativePlatform()
     const baselineVersion = baselineDeployVersion()
+    const unseenMessages = getUnseenChangelogMessages(changelog, getSeenChangelogCount())
 
     if (!baselineVersion) {
-      rememberDeployVersion(remoteVersion)
-
       if (!hasPresentationWelcomeBeenDismissed()) {
         return
       }
 
-      const unseenMessages = getUnseenChangelogMessages(changelog, getSeenChangelogCount())
+      rememberDeployVersion(remoteVersion)
+
       if (unseenMessages.length > 0) {
         promptWhatsNewIfNeeded(unseenMessages, remoteVersion, changelog)
         return
@@ -107,9 +115,25 @@ export function CapacitorDeployNoticeController() {
       return
     }
 
-    if (isCapacitorDeployVersionStale(baselineVersion, remoteVersion)) {
-      promptRestartIfNeeded(remoteVersion, message)
+    if (!isCapacitorDeployVersionStale(baselineVersion, remoteVersion)) {
+      return
     }
+
+    if (isNative) {
+      promptRestartIfNeeded(remoteVersion, unseenMessages)
+      return
+    }
+
+    if (!hasPresentationWelcomeBeenDismissed()) {
+      return
+    }
+
+    if (unseenMessages.length > 0) {
+      promptWhatsNewIfNeeded(unseenMessages, remoteVersion, changelog, { midSession: true })
+    } else {
+      acknowledgeCapacitorDeployChangelog(changelog, remoteVersion)
+    }
+    rememberDeployVersion(remoteVersion)
   }, [
     baselineDeployVersion,
     rememberDeployVersion,
@@ -118,39 +142,40 @@ export function CapacitorDeployNoticeController() {
   ])
 
   useEffect(() => {
-    if (!clientMounted || !Capacitor.isNativePlatform()) return
+    if (!clientMounted) return
 
-    const initialCheckId = window.setTimeout(() => {
+    const runCheck = () => {
       void checkForDeployUpdate()
-    }, 0)
+    }
+
+    const initialCheckId = window.setTimeout(runCheck, 0)
 
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        void checkForDeployUpdate()
+        runCheck()
       }
     }
     document.addEventListener('visibilitychange', onVisibilityChange)
 
     const onWindowFocus = () => {
-      void checkForDeployUpdate()
+      runCheck()
     }
     window.addEventListener('focus', onWindowFocus)
 
     const onOnline = () => {
-      void checkForDeployUpdate()
+      runCheck()
     }
     window.addEventListener('online', onOnline)
 
-    const intervalId = window.setInterval(() => {
-      void checkForDeployUpdate()
-    }, CAPACITOR_DEPLOY_CHECK_INTERVAL_MS)
+    const intervalId = window.setInterval(runCheck, CAPACITOR_DEPLOY_CHECK_INTERVAL_MS)
 
+    const isNative = Capacitor.isNativePlatform()
     const onStaleChunkError = () => {
-      void fetchAppDeployInfo().then(({ version, message }) => {
-        promptRestartIfNeeded(version ?? 'stale-chunk', message)
+      void fetchAppDeployInfo().then(({ version, changelog }) => {
+        const unseen = getUnseenChangelogMessages(changelog, getSeenChangelogCount())
+        promptRestartIfNeeded(version ?? 'stale-chunk', unseen)
       })
     }
-
     const onWindowError = (event: ErrorEvent) => {
       if (isLikelyStaleChunkLoadError(event.message ?? '')) {
         onStaleChunkError()
@@ -161,8 +186,11 @@ export function CapacitorDeployNoticeController() {
         onStaleChunkError()
       }
     }
-    window.addEventListener('error', onWindowError)
-    window.addEventListener('unhandledrejection', onUnhandledRejection)
+
+    if (isNative) {
+      window.addEventListener('error', onWindowError)
+      window.addEventListener('unhandledrejection', onUnhandledRejection)
+    }
 
     return () => {
       window.clearTimeout(initialCheckId)
@@ -170,8 +198,10 @@ export function CapacitorDeployNoticeController() {
       window.removeEventListener('focus', onWindowFocus)
       window.removeEventListener('online', onOnline)
       window.clearInterval(intervalId)
-      window.removeEventListener('error', onWindowError)
-      window.removeEventListener('unhandledrejection', onUnhandledRejection)
+      if (isNative) {
+        window.removeEventListener('error', onWindowError)
+        window.removeEventListener('unhandledrejection', onUnhandledRejection)
+      }
     }
   }, [clientMounted, checkForDeployUpdate, promptRestartIfNeeded])
 

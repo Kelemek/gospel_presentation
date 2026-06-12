@@ -12,7 +12,6 @@ export const CAPACITOR_DEPLOY_CHECK_INTERVAL_MS = 60 * 1000
 
 export type AppDeployInfo = {
   version: string | null
-  message: string | null
   changelog: string[]
 }
 
@@ -27,20 +26,17 @@ function parseDeployChangelog(value: unknown): string[] {
 export async function fetchAppDeployInfo(): Promise<AppDeployInfo> {
   try {
     const response = await fetch('/api/app-deploy-version', { cache: 'no-store' })
-    if (!response.ok) return { version: null, message: null, changelog: [] }
+    if (!response.ok) return { version: null, changelog: [] }
     const data = (await response.json()) as {
       version?: unknown
-      message?: unknown
       changelog?: unknown
     }
     const version =
       typeof data.version === 'string' && data.version.trim() ? data.version.trim() : null
-    const message =
-      typeof data.message === 'string' && data.message.trim() ? data.message.trim() : null
     const changelog = parseDeployChangelog(data.changelog)
-    return { version, message, changelog }
+    return { version, changelog }
   } catch {
-    return { version: null, message: null, changelog: [] }
+    return { version: null, changelog: [] }
   }
 }
 
@@ -88,6 +84,20 @@ export function getUnseenChangelogMessages(changelog: string[], seenCount: numbe
   return changelog.slice(safeSeen)
 }
 
+/** Survives React remounts within the same WebView / browser tab JS context. */
+let webViewSessionDeployBaseline: string | null = null
+
+export function resetWebViewSessionDeployBaseline(): void {
+  webViewSessionDeployBaseline = null
+}
+
+/** First deploy version seen this WebView JS context; not advanced on later syncs. */
+function captureSessionStartDeployBaselineIfUnset(version: string): void {
+  if (webViewSessionDeployBaseline === null) {
+    webViewSessionDeployBaseline = version
+  }
+}
+
 export function getStoredCapacitorDeployVersion(): string | null {
   if (typeof sessionStorage === 'undefined') return null
   try {
@@ -97,7 +107,22 @@ export function getStoredCapacitorDeployVersion(): string | null {
   }
 }
 
+/** Session baseline for deploy polling; falls back to the in-memory WebView baseline. */
+export function getEffectiveDeployBaseline(inMemoryFallback: string | null = null): string | null {
+  const stored = getStoredCapacitorDeployVersion()
+  if (stored) {
+    captureSessionStartDeployBaselineIfUnset(stored)
+    return stored
+  }
+  if (inMemoryFallback) {
+    captureSessionStartDeployBaselineIfUnset(inMemoryFallback)
+    return inMemoryFallback
+  }
+  return webViewSessionDeployBaseline
+}
+
 export function setStoredCapacitorDeployVersion(version: string): void {
+  captureSessionStartDeployBaselineIfUnset(version)
   try {
     sessionStorage.setItem(CAPACITOR_DEPLOY_VERSION_STORAGE_KEY, version)
   } catch {

@@ -1,5 +1,0 @@
-# Optional native-app deploy notice (shown once per deploy when users need to restart).
-# Plain language for app users; 1–3 short sentences. Leave body empty when nothing user-facing changed.
-# Lines starting with # are not shown in the app.
-
-When an update is ready, the app can show what's new and clearer steps to close and reopen it.

@@ -15,7 +15,7 @@ When you add a **new feature** or **change existing behavior**, update the relev
 - **Scripture / Bible** — [docs/02-BIBLE_AND_SCRIPTURE.md](docs/02-BIBLE_AND_SCRIPTURE.md); [gospel-admin/docs/SCRIPTURE_ACCESS_LOGGING.md](gospel-admin/docs/SCRIPTURE_ACCESS_LOGGING.md) if logging changes.
 - **Deployment / infra** — [docs/05-INFRASTRUCTURE.md](docs/05-INFRASTRUCTURE.md), [docs/DEPLOYMENT_CHECKLIST.md](docs/DEPLOYMENT_CHECKLIST.md).
 - **Capacitor / native app** — note in [gospel-admin/README.md](gospel-admin/README.md) or the Capacitor rule if it affects when native apps must be redeployed.
-- **Native app deploy notice (user-visible releases)** — [gospel-admin/data/deploy-update-message.txt](gospel-admin/data/deploy-update-message.txt): succinct end-user wording for the optional restart alert (see `.cursor/rules/deploy-update-message.mdc`).
+- **Deploy update notice (user-visible releases)** — [gospel-admin/data/deploy-update-changelog.json](gospel-admin/data/deploy-update-changelog.json): append succinct end-user release notes (see `.cursor/rules/deploy-update-message.mdc`).
 - **Index** — if a new doc is added or a topic moves, update [docs/README.md](docs/README.md) (Core Topics table / Quick Start).
 
 ## Practice

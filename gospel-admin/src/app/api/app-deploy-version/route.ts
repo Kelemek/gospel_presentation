@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { readDeployUpdateMessage, resolveDeployUpdateChangelog } from '@/lib/deployUpdateMessage'
+import { readDeployUpdateChangelog } from '@/lib/deployUpdateMessage'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,12 +15,8 @@ function resolveAppDeployVersion(): string {
 
 export async function GET() {
   const version = resolveAppDeployVersion()
-  const message = readDeployUpdateMessage()
-  const changelog = resolveDeployUpdateChangelog()
-  const body: { version: string; message?: string; changelog?: string[] } = { version }
-  if (message) {
-    body.message = message
-  }
+  const changelog = readDeployUpdateChangelog()
+  const body: { version: string; changelog?: string[] } = { version }
   if (changelog.length > 0) {
     body.changelog = changelog
   }

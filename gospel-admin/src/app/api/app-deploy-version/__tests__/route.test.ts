@@ -1,18 +1,15 @@
 import { GET } from '../route'
-import { readDeployUpdateMessage, resolveDeployUpdateChangelog } from '@/lib/deployUpdateMessage'
+import { readDeployUpdateChangelog } from '@/lib/deployUpdateMessage'
 
 jest.mock('@/lib/deployUpdateMessage', () => ({
-  readDeployUpdateMessage: jest.fn(() => null),
-  resolveDeployUpdateChangelog: jest.fn(() => []),
+  readDeployUpdateChangelog: jest.fn(() => []),
 }))
 
-const mockedReadDeployUpdateMessage = jest.mocked(readDeployUpdateMessage)
-const mockedResolveDeployUpdateChangelog = jest.mocked(resolveDeployUpdateChangelog)
+const mockedReadDeployUpdateChangelog = jest.mocked(readDeployUpdateChangelog)
 
 describe('/api/app-deploy-version route', () => {
   beforeEach(() => {
-    mockedReadDeployUpdateMessage.mockReturnValue(null)
-    mockedResolveDeployUpdateChangelog.mockReturnValue([])
+    mockedReadDeployUpdateChangelog.mockReturnValue([])
   })
 
   it('returns a non-empty version string', async () => {
@@ -21,20 +18,11 @@ describe('/api/app-deploy-version route', () => {
 
     expect(typeof data.version).toBe('string')
     expect(data.version.length).toBeGreaterThan(0)
-    expect(data.message).toBeUndefined()
-  })
-
-  it('includes message when deploy-update-message.txt has user-visible content', async () => {
-    mockedReadDeployUpdateMessage.mockReturnValue('Fixed the Resources menu on iPhone.')
-
-    const response = await GET()
-    const data = await response.json()
-
-    expect(data.message).toBe('Fixed the Resources menu on iPhone.')
+    expect(data.changelog).toBeUndefined()
   })
 
   it('includes changelog when release notes exist', async () => {
-    mockedResolveDeployUpdateChangelog.mockReturnValue([
+    mockedReadDeployUpdateChangelog.mockReturnValue([
       'Older release note.',
       'Fixed the Resources menu on iPhone.',
     ])

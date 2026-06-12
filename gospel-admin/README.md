@@ -79,4 +79,4 @@ Presentation backup **Save my data** on **Android** uses **`@capacitor/filesyste
 
 **Share this resource** (sticky profile header, **to the right of Bookmarks**) and admin **Copy URL** use **`@capacitor/share`** on native when available (share a presentation URL), then the **Web Share API** in supporting browsers, then **clipboard** copy. Uses the existing **`@capacitor/share`** dependency—no new native plugins.
 
-**Deploy update notice (native)** polls for a new server deploy and asks users to close and reopen the app. Optional plain-language “what changed” text: edit **`data/deploy-update-message.txt`** in the release commit (see `.cursor/rules/deploy-update-message.mdc`). Web-only—no App Store / Play update required.
+**Deploy update notice** polls for missed release notes on web and native; the native app also asks users to close and reopen when a deploy lands mid-session. Append plain-language notes to **`data/deploy-update-changelog.json`** when shipping (see `.cursor/rules/deploy-update-message.mdc`). Web-only—no App Store / Play update required for notice text.
