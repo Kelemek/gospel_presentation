@@ -1,8 +1,18 @@
 import {
+  CAPACITOR_DEPLOY_ACK_VERSION_KEY,
+  CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY,
+  setSeenChangelogCount,
+} from '@/lib/capacitorAppDeployVersion'
+import {
+  acknowledgeCapacitorDeployChangelog,
   buildCapacitorRestartAppNotice,
+  buildCapacitorWhatsNewNotice,
   CAPACITOR_RESTART_APP_NOTICE,
+  CAPACITOR_WHATS_NEW_NOTICE_SHOWN_SESSION_KEY,
   markCapacitorDeployNoticeShown,
+  markCapacitorWhatsNewShownThisSession,
   shouldShowCapacitorDeployNotice,
+  shouldShowCapacitorWhatsNewOnColdStart,
 } from '@/lib/capacitorDeployNotice'
 
 describe('capacitorDeployNotice', () => {
@@ -21,6 +31,7 @@ describe('capacitorDeployNotice', () => {
 
   beforeEach(() => {
     sessionStorage.clear()
+    localStorage.clear()
   })
 
   it('shouldShowCapacitorDeployNotice is true until marked for that version', () => {
@@ -28,5 +39,34 @@ describe('capacitorDeployNotice', () => {
     markCapacitorDeployNoticeShown('deploy-new')
     expect(shouldShowCapacitorDeployNotice('deploy-new')).toBe(false)
     expect(shouldShowCapacitorDeployNotice('deploy-next')).toBe(true)
+  })
+
+  it('buildCapacitorWhatsNewNotice formats one or more missed updates', () => {
+    expect(buildCapacitorWhatsNewNotice(['Fixed the Resources menu on iPhone.'])).toBe(
+      "What's new\n\nFixed the Resources menu on iPhone."
+    )
+    expect(
+      buildCapacitorWhatsNewNotice([
+        'Fixed the Resources menu on iPhone.',
+        'Daily verse challenge: clearer feedback when you finish a day.',
+      ])
+    ).toBe(
+      "What's new\n\n1. Fixed the Resources menu on iPhone.\n\n2. Daily verse challenge: clearer feedback when you finish a day."
+    )
+    expect(buildCapacitorWhatsNewNotice(['   '])).toBeNull()
+  })
+
+  it('acknowledgeCapacitorDeployChangelog persists seen changelog count and deploy version', () => {
+    setSeenChangelogCount(1)
+    acknowledgeCapacitorDeployChangelog(['one', 'two'], 'deploy-new')
+    expect(localStorage.getItem(CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY)).toBe('2')
+    expect(localStorage.getItem(CAPACITOR_DEPLOY_ACK_VERSION_KEY)).toBe('deploy-new')
+  })
+
+  it('shouldShowCapacitorWhatsNewOnColdStart is false after marking this session', () => {
+    expect(shouldShowCapacitorWhatsNewOnColdStart()).toBe(true)
+    markCapacitorWhatsNewShownThisSession()
+    expect(shouldShowCapacitorWhatsNewOnColdStart()).toBe(false)
+    expect(sessionStorage.getItem(CAPACITOR_WHATS_NEW_NOTICE_SHOWN_SESSION_KEY)).toBe('1')
   })
 })

@@ -32,6 +32,8 @@ const SMALL_LOCAL_STORAGE_KEYS = new Set([
   'gospel-admin:profile-read-along-underline-style',
   'gospel-presentation-first-visit-welcome-v1',
   'gospel-profile-last-open-resource:v1',
+  'gospel-capacitor-deploy-changelog-seen-count',
+  'gospel-capacitor-deploy-ack-version',
 ])
 
 const ALLOWED_GOSPEL_PROFILE_SUFFIXES = new Set([

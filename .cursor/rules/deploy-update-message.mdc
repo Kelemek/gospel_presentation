@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Native app deploy update message
 
-When you finish **user-visible** changes that will deploy to production (UI, UX, content, fixes to broken flows), update [gospel-admin/data/deploy-update-message.txt](gospel-admin/data/deploy-update-message.txt) so native app users see a short “what changed” note in the restart alert.
+When you finish **user-visible** changes that will deploy to production (UI, UX, content, fixes to broken flows), update [gospel-admin/data/deploy-update-message.txt](gospel-admin/data/deploy-update-message.txt) so native app users see a short “what changed” note in the restart alert or on the next app open. Also **append the same message** to [gospel-admin/data/deploy-update-changelog.json](gospel-admin/data/deploy-update-changelog.json) (JSON string array, oldest first) so users who missed one or more releases see every note they have not read yet.
 
 ## When to update
 
@@ -30,3 +30,5 @@ When you finish **user-visible** changes that will deploy to production (UI, UX,
 ## File format
 
 Keep the `#` header comments at the top. Put user-visible text below them (lines starting with `#` are not shown in the app).
+
+For `deploy-update-changelog.json`, append one string per user-facing release, e.g. `["Older note.", "This release note."]`. The API also includes the current `deploy-update-message.txt` body when it is not already the latest changelog entry.

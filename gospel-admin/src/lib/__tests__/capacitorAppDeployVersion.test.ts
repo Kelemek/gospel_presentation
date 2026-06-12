@@ -1,7 +1,10 @@
 import {
+  getSeenChangelogCount,
+  getUnseenChangelogMessages,
   isCapacitorDeployVersionStale,
   isLikelyStaleChunkLoadError,
   messageFromUnknownError,
+  setSeenChangelogCount,
   setStoredCapacitorDeployVersion,
 } from '@/lib/capacitorAppDeployVersion'
 
@@ -51,11 +54,33 @@ describe('capacitorAppDeployVersion', () => {
 
   describe('setStoredCapacitorDeployVersion', () => {
     it('ignores sessionStorage errors', () => {
-      jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      const setItemSpy = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
         throw new Error('quota exceeded')
       })
 
       expect(() => setStoredCapacitorDeployVersion('deploy-new')).not.toThrow()
+      setItemSpy.mockRestore()
+    })
+  })
+
+  describe('changelog seen count', () => {
+    beforeEach(() => {
+      localStorage.clear()
+    })
+
+    it('getUnseenChangelogMessages returns entries after the seen count', () => {
+      expect(getUnseenChangelogMessages(['one', 'two', 'three'], 0)).toEqual([
+        'one',
+        'two',
+        'three',
+      ])
+      expect(getUnseenChangelogMessages(['one', 'two', 'three'], 2)).toEqual(['three'])
+      expect(getUnseenChangelogMessages(['one', 'two', 'three'], 5)).toEqual([])
+    })
+
+    it('setSeenChangelogCount persists a non-negative integer', () => {
+      setSeenChangelogCount(2)
+      expect(getSeenChangelogCount()).toBe(2)
     })
   })
 })

@@ -6,23 +6,32 @@ import { useAlertModal } from '@/contexts/AlertModalContext'
 import {
   CAPACITOR_DEPLOY_CHECK_INTERVAL_MS,
   fetchAppDeployInfo,
+  getSeenChangelogCount,
   getStoredCapacitorDeployVersion,
+  getUnseenChangelogMessages,
   isCapacitorDeployVersionStale,
   isLikelyStaleChunkLoadError,
   messageFromUnknownError,
   setStoredCapacitorDeployVersion,
 } from '@/lib/capacitorAppDeployVersion'
 import {
+  acknowledgeCapacitorDeployChangelog,
   buildCapacitorRestartAppNotice,
+  buildCapacitorWhatsNewNotice,
   markCapacitorDeployNoticeShown,
+  markCapacitorWhatsNewShownThisSession,
   shouldShowCapacitorDeployNotice,
+  shouldShowCapacitorWhatsNewOnColdStart,
 } from '@/lib/capacitorDeployNotice'
+import { hasPresentationWelcomeBeenDismissed } from '@/lib/presentationWelcomeStorage'
 
 const subscribeClientMounted = () => () => {}
 
 /**
  * On Capacitor native, detects a new server deploy (or stale chunk errors) and
  * politely asks the user to close and reopen the app — no automatic reload.
+ * After a cold start (or when the app was closed during deploy), shows missed
+ * "what's new" notes once the first-visit welcome has been dismissed.
  */
 export function CapacitorDeployNoticeController() {
   const { showAlert } = useAlertModal()
@@ -58,20 +67,55 @@ export function CapacitorDeployNoticeController() {
     [showAlert]
   )
 
+  const promptWhatsNewIfNeeded = useCallback(
+    (messages: string[], remoteVersion: string, changelog: string[]) => {
+      if (!messages.length || noticePendingRef.current) return
+      if (!shouldShowCapacitorWhatsNewOnColdStart()) return
+
+      const notice = buildCapacitorWhatsNewNotice(messages)
+      if (!notice) return
+
+      noticePendingRef.current = true
+      markCapacitorWhatsNewShownThisSession()
+      acknowledgeCapacitorDeployChangelog(changelog, remoteVersion)
+      showAlert(notice)
+      noticePendingRef.current = false
+    },
+    [showAlert]
+  )
+
   const checkForDeployUpdate = useCallback(async () => {
-    const { version: remoteVersion, message } = await fetchAppDeployInfo()
+    const { version: remoteVersion, message, changelog } = await fetchAppDeployInfo()
     if (!remoteVersion) return
 
     const baselineVersion = baselineDeployVersion()
+
     if (!baselineVersion) {
       rememberDeployVersion(remoteVersion)
+
+      if (!hasPresentationWelcomeBeenDismissed()) {
+        return
+      }
+
+      const unseenMessages = getUnseenChangelogMessages(changelog, getSeenChangelogCount())
+      if (unseenMessages.length > 0) {
+        promptWhatsNewIfNeeded(unseenMessages, remoteVersion, changelog)
+        return
+      }
+
+      acknowledgeCapacitorDeployChangelog(changelog, remoteVersion)
       return
     }
 
     if (isCapacitorDeployVersionStale(baselineVersion, remoteVersion)) {
       promptRestartIfNeeded(remoteVersion, message)
     }
-  }, [baselineDeployVersion, rememberDeployVersion, promptRestartIfNeeded])
+  }, [
+    baselineDeployVersion,
+    rememberDeployVersion,
+    promptRestartIfNeeded,
+    promptWhatsNewIfNeeded,
+  ])
 
   useEffect(() => {
     if (!clientMounted || !Capacitor.isNativePlatform()) return

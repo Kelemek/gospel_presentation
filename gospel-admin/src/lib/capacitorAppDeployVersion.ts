@@ -1,26 +1,91 @@
 export const CAPACITOR_DEPLOY_VERSION_STORAGE_KEY = 'gospel-capacitor-deploy-version'
 
+/** How many changelog entries the user has already been shown (localStorage). */
+export const CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY =
+  'gospel-capacitor-deploy-changelog-seen-count'
+
+/** Last deploy version the user was notified about across app restarts (localStorage). */
+export const CAPACITOR_DEPLOY_ACK_VERSION_KEY = 'gospel-capacitor-deploy-ack-version'
+
 /** Poll interval while the Capacitor WebView session is open. */
 export const CAPACITOR_DEPLOY_CHECK_INTERVAL_MS = 60 * 1000
 
 export type AppDeployInfo = {
   version: string | null
   message: string | null
+  changelog: string[]
+}
+
+function parseDeployChangelog(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
 }
 
 export async function fetchAppDeployInfo(): Promise<AppDeployInfo> {
   try {
     const response = await fetch('/api/app-deploy-version', { cache: 'no-store' })
-    if (!response.ok) return { version: null, message: null }
-    const data = (await response.json()) as { version?: unknown; message?: unknown }
+    if (!response.ok) return { version: null, message: null, changelog: [] }
+    const data = (await response.json()) as {
+      version?: unknown
+      message?: unknown
+      changelog?: unknown
+    }
     const version =
       typeof data.version === 'string' && data.version.trim() ? data.version.trim() : null
     const message =
       typeof data.message === 'string' && data.message.trim() ? data.message.trim() : null
-    return { version, message }
+    const changelog = parseDeployChangelog(data.changelog)
+    return { version, message, changelog }
   } catch {
-    return { version: null, message: null }
+    return { version: null, message: null, changelog: [] }
   }
+}
+
+export function getSeenChangelogCount(): number {
+  if (typeof localStorage === 'undefined') return 0
+  try {
+    const raw = localStorage.getItem(CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY)
+    if (!raw) return 0
+    const parsed = Number.parseInt(raw, 10)
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0
+  } catch {
+    return 0
+  }
+}
+
+export function setSeenChangelogCount(count: number): void {
+  if (!Number.isFinite(count) || count < 0) return
+  try {
+    localStorage.setItem(CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY, String(Math.floor(count)))
+  } catch {
+    // private mode / quota
+  }
+}
+
+export function getAcknowledgedDeployVersion(): string | null {
+  if (typeof localStorage === 'undefined') return null
+  try {
+    return localStorage.getItem(CAPACITOR_DEPLOY_ACK_VERSION_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function setAcknowledgedDeployVersion(version: string): void {
+  try {
+    localStorage.setItem(CAPACITOR_DEPLOY_ACK_VERSION_KEY, version)
+  } catch {
+    // private mode / quota
+  }
+}
+
+export function getUnseenChangelogMessages(changelog: string[], seenCount: number): string[] {
+  if (!changelog.length) return []
+  const safeSeen = Math.max(0, Math.min(seenCount, changelog.length))
+  return changelog.slice(safeSeen)
 }
 
 export function getStoredCapacitorDeployVersion(): string | null {

@@ -1,7 +1,13 @@
 import {
   DEPLOY_UPDATE_MESSAGE_MAX_LENGTH,
   parseDeployUpdateMessageFileContent,
+  resolveDeployUpdateChangelog,
 } from '@/lib/deployUpdateMessage'
+
+jest.mock('fs', () => ({
+  existsSync: jest.fn(() => false),
+  readFileSync: jest.fn(),
+}))
 
 describe('deployUpdateMessage', () => {
   it('parseDeployUpdateMessageFileContent strips comment lines and trims', () => {
@@ -25,5 +31,28 @@ Fixed the Resources menu on iPhone.
     expect(parsed).not.toBeNull()
     expect(parsed!.length).toBeLessThanOrEqual(DEPLOY_UPDATE_MESSAGE_MAX_LENGTH)
     expect(parsed!.endsWith('…')).toBe(true)
+  })
+
+  it('resolveDeployUpdateChangelog appends the current deploy message when it is new', () => {
+    const fs = jest.requireMock('fs') as {
+      existsSync: jest.Mock
+      readFileSync: jest.Mock
+    }
+
+    fs.existsSync.mockImplementation((filePath: string) =>
+      String(filePath).endsWith('deploy-update-changelog.json') ||
+      String(filePath).endsWith('deploy-update-message.txt')
+    )
+    fs.readFileSync.mockImplementation((filePath: string) => {
+      if (String(filePath).endsWith('deploy-update-changelog.json')) {
+        return JSON.stringify(['Older release note.'])
+      }
+      return 'Brand-new release note.'
+    })
+
+    expect(resolveDeployUpdateChangelog()).toEqual([
+      'Older release note.',
+      'Brand-new release note.',
+    ])
   })
 })
