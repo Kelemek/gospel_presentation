@@ -1,6 +1,5 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react'
-import { CAPACITOR_ALLOW_FULL_NAVIGATION_ATTR } from '@/lib/capacitorClientReload'
 import { CapacitorKeepLinksInApp } from '../CapacitorKeepLinksInApp'
 
 const mockPush = jest.fn()
@@ -150,23 +149,6 @@ describe('CapacitorKeepLinksInApp', () => {
       unmount()
     })
 
-    it('does not intercept deploy hard-reload links marked for full navigation', () => {
-      const { unmount } = render(<CapacitorKeepLinksInApp />)
-      const anchor = document.createElement('a')
-      anchor.href = `${window.location.origin}/mchy`
-      anchor.setAttribute(CAPACITOR_ALLOW_FULL_NAVIGATION_ATTR, 'true')
-      document.body.appendChild(anchor)
-
-      const ev = new MouseEvent('click', { bubbles: true, cancelable: true })
-      const preventDefaultSpy = jest.spyOn(ev, 'preventDefault')
-      anchor.dispatchEvent(ev)
-
-      expect(preventDefaultSpy).not.toHaveBeenCalled()
-      expect(mockPush).not.toHaveBeenCalled()
-      document.body.removeChild(anchor)
-      unmount()
-    })
-
     it('intercepts click on child of link (closest("a"))', () => {
       const { unmount } = render(<CapacitorKeepLinksInApp />)
       const anchor = document.createElement('a')
@@ -180,6 +162,65 @@ describe('CapacitorKeepLinksInApp', () => {
 
       expect(mockPush).toHaveBeenCalledWith('/privacy')
       document.body.removeChild(anchor)
+      unmount()
+    })
+
+    it('intercepts touchstart before native navigation on iOS-style taps', () => {
+      const { unmount } = render(<CapacitorKeepLinksInApp />)
+      const anchor = document.createElement('a')
+      anchor.href = `${window.location.origin}/mchy`
+      anchor.textContent = "M'Cheyne"
+      document.body.appendChild(anchor)
+
+      fireEvent.touchStart(anchor, { touches: [{ clientX: 0, clientY: 0 }] })
+      expect(mockPush).toHaveBeenCalledWith('/mchy')
+
+      fireEvent.click(anchor, { bubbles: true })
+      expect(mockPush).toHaveBeenCalledTimes(1)
+
+      document.body.removeChild(anchor)
+      unmount()
+    })
+
+    it('removes listeners on unmount so remount does not stack handlers', () => {
+      const anchor = document.createElement('a')
+      anchor.href = `${window.location.origin}/mchy`
+      anchor.textContent = "M'Cheyne"
+      document.body.appendChild(anchor)
+
+      const first = render(<CapacitorKeepLinksInApp />)
+      fireEvent.touchStart(anchor, { touches: [{ clientX: 0, clientY: 0 }] })
+      expect(mockPush).toHaveBeenCalledTimes(1)
+      first.unmount()
+
+      const second = render(<CapacitorKeepLinksInApp />)
+      fireEvent.touchStart(anchor, { touches: [{ clientX: 0, clientY: 0 }] })
+      expect(mockPush).toHaveBeenCalledTimes(2)
+
+      document.body.removeChild(anchor)
+      second.unmount()
+    })
+
+    it('still navigates when a different link is clicked soon after a touch', () => {
+      const { unmount } = render(<CapacitorKeepLinksInApp />)
+      const first = document.createElement('a')
+      first.href = `${window.location.origin}/mchy`
+      first.textContent = "M'Cheyne"
+      const second = document.createElement('a')
+      second.href = `${window.location.origin}/privacy`
+      second.textContent = 'Privacy'
+      document.body.appendChild(first)
+      document.body.appendChild(second)
+
+      fireEvent.touchStart(first, { touches: [{ clientX: 0, clientY: 0 }] })
+      expect(mockPush).toHaveBeenCalledWith('/mchy')
+
+      fireEvent.click(second, { bubbles: true })
+      expect(mockPush).toHaveBeenCalledWith('/privacy')
+      expect(mockPush).toHaveBeenCalledTimes(2)
+
+      document.body.removeChild(first)
+      document.body.removeChild(second)
       unmount()
     })
   })

@@ -1,39 +1,11 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Capacitor } from '@capacitor/core'
-import { isCapacitorFullNavigationAnchor } from '@/lib/capacitorClientReload'
+import { resolveCapacitorInAppLinkFromEvent } from '@/lib/capacitorKeepLinksInApp'
 
-/** Same-origin navigations that should stay in the Capacitor WebView (not Safari). */
-export function shouldKeepCapacitorLinkInApp(url: URL, currentHref: string): boolean {
-  let current: URL
-  try {
-    current = new URL(currentHref)
-  } catch {
-    return false
-  }
-
-  const sameOrigin =
-    url.origin === current.origin || url.host === current.host
-  if (!sameOrigin) return false
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') return false
-
-  // Hash-only anchors on the current page: let the browser scroll.
-  if (
-    url.pathname === current.pathname &&
-    url.search === current.search &&
-    Boolean(url.hash)
-  ) {
-    return false
-  }
-
-  return true
-}
-
-export function capacitorInAppHref(url: URL): string {
-  return `${url.pathname}${url.search}${url.hash}`
-}
+export { shouldKeepCapacitorLinkInApp } from '@/lib/capacitorKeepLinksInApp'
 
 /**
  * When running in the Capacitor native app, intercepts same-origin link clicks so
@@ -41,29 +13,60 @@ export function capacitorInAppHref(url: URL): string {
  */
 export function CapacitorKeepLinksInApp() {
   const router = useRouter()
+  const touchHandledHrefRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (typeof window === 'undefined' || !Capacitor.isNativePlatform()) return
 
-    const handleClick = (e: MouseEvent) => {
-      const anchor = (e.target as HTMLElement)?.closest?.('a')
-      if (!anchor || !anchor.href) return
-      if (isCapacitorFullNavigationAnchor(anchor)) return
-
-      try {
-        const url = new URL(anchor.href)
-        if (!shouldKeepCapacitorLinkInApp(url, window.location.href)) return
-
-        e.preventDefault()
-        e.stopPropagation()
-        router.push(capacitorInAppHref(url))
-      } catch {
-        // Ignore invalid URLs
-      }
+    const navigateInApp = (href: string) => {
+      router.push(href)
     }
 
+    const intercept = (e: Event): boolean => {
+      const resolved = resolveCapacitorInAppLinkFromEvent(e, window.location.href)
+      if (!resolved) return false
+
+      e.preventDefault()
+      e.stopPropagation()
+      navigateInApp(resolved.href)
+      return true
+    }
+
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return
+      const resolved = resolveCapacitorInAppLinkFromEvent(e, window.location.href)
+      if (!resolved) return
+      e.preventDefault()
+      e.stopPropagation()
+      navigateInApp(resolved.href)
+      touchHandledHrefRef.current = resolved.href
+      window.setTimeout(() => {
+        touchHandledHrefRef.current = null
+      }, 500)
+    }
+
+    const handleClick = (e: MouseEvent) => {
+      const resolved = resolveCapacitorInAppLinkFromEvent(e, window.location.href)
+      // Suppress only the synthetic click that follows touchstart on the same link.
+      if (resolved && touchHandledHrefRef.current === resolved.href) {
+        e.preventDefault()
+        e.stopPropagation()
+        return
+      }
+      if (!resolved) return
+      intercept(e)
+    }
+
+    const touchStartListenerOptions: AddEventListenerOptions = {
+      capture: true,
+      passive: false,
+    }
+    document.addEventListener('touchstart', handleTouchStart, touchStartListenerOptions)
     document.addEventListener('click', handleClick, true)
-    return () => document.removeEventListener('click', handleClick, true)
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart, touchStartListenerOptions)
+      document.removeEventListener('click', handleClick, true)
+    }
   }, [router])
 
   return null

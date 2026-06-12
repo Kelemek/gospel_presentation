@@ -17,9 +17,10 @@ export function CapacitorProfileHelpTourNavigation() {
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return
-    setProfileHelpTourClientNavigate((path) => {
+    const navigate = (path: string) => {
       router.push(path)
-    })
+    }
+    setProfileHelpTourClientNavigate(navigate)
     return () => setProfileHelpTourClientNavigate(null)
   }, [router])
 

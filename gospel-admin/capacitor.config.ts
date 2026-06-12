@@ -17,6 +17,7 @@ const config: CapacitorConfig = {
   },
   server: {
     url: process.env.CAPACITOR_SERVER_URL || 'https://cp-church.org',
+    iosScheme: 'https',
     cleartext: true,  // Only for dev if using http://; remove for production
     errorPath: '/capacitor-offline.html',
     // Keep same-origin navigations (including deploy reload) inside the WebView on iOS/Android.

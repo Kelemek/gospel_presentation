@@ -1,8 +1,8 @@
 'use client'
 
 import { Capacitor } from '@capacitor/core'
-import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react'
+import { useAlertModal } from '@/contexts/AlertModalContext'
 import {
   CAPACITOR_DEPLOY_CHECK_INTERVAL_MS,
   fetchAppDeployVersion,
@@ -10,27 +10,28 @@ import {
   isCapacitorDeployVersionStale,
   isLikelyStaleChunkLoadError,
   messageFromUnknownError,
-  reloadCapacitorWebView,
-  reloadCapacitorWebViewForDeploy,
   setStoredCapacitorDeployVersion,
 } from '@/lib/capacitorAppDeployVersion'
-import { CAPACITOR_DEPLOY_RELOAD_QUERY } from '@/lib/capacitorClientReload'
+import {
+  CAPACITOR_RESTART_APP_NOTICE,
+  markCapacitorDeployNoticeShown,
+  shouldShowCapacitorDeployNotice,
+} from '@/lib/capacitorDeployNotice'
 
 const subscribeClientMounted = () => () => {}
 
 /**
- * On Capacitor native, silently reloads the WebView when the server deploy changes.
- * - New deploy while the app is open: reload immediately (before navigation can fail).
- * - Stale chunk / runtime errors: reload immediately.
+ * On Capacitor native, detects a new server deploy (or stale chunk errors) and
+ * politely asks the user to close and reopen the app — no automatic reload.
  */
-export function CapacitorDeployReloadController() {
-  const router = useRouter()
+export function CapacitorDeployNoticeController() {
+  const { showAlert } = useAlertModal()
   const clientMounted = useSyncExternalStore(
     subscribeClientMounted,
     () => true,
     () => false
   )
-  const reloadingRef = useRef(false)
+  const noticePendingRef = useRef(false)
   /** Fallback when sessionStorage is unavailable (private mode / quota). */
   const inMemoryDeployVersionRef = useRef<string | null>(null)
 
@@ -44,15 +45,18 @@ export function CapacitorDeployReloadController() {
     setStoredCapacitorDeployVersion(version)
   }, [])
 
-  const reloadForDeploy = useCallback((remoteVersion: string | null) => {
-    if (reloadingRef.current) return
-    reloadingRef.current = true
-    if (remoteVersion) {
-      reloadCapacitorWebViewForDeploy(remoteVersion)
-      return
-    }
-    reloadCapacitorWebView()
-  }, [])
+  const promptRestartIfNeeded = useCallback(
+    (remoteVersion: string | null) => {
+      if (!remoteVersion || noticePendingRef.current) return
+      if (!shouldShowCapacitorDeployNotice(remoteVersion)) return
+
+      noticePendingRef.current = true
+      markCapacitorDeployNoticeShown(remoteVersion)
+      showAlert(CAPACITOR_RESTART_APP_NOTICE)
+      noticePendingRef.current = false
+    },
+    [showAlert]
+  )
 
   const checkForDeployUpdate = useCallback(async () => {
     const remoteVersion = await fetchAppDeployVersion()
@@ -65,19 +69,9 @@ export function CapacitorDeployReloadController() {
     }
 
     if (isCapacitorDeployVersionStale(baselineVersion, remoteVersion)) {
-      reloadForDeploy(remoteVersion)
+      promptRestartIfNeeded(remoteVersion)
     }
-  }, [baselineDeployVersion, rememberDeployVersion, reloadForDeploy])
-
-  useEffect(() => {
-    if (!clientMounted || !Capacitor.isNativePlatform()) return
-    const params = new URLSearchParams(window.location.search)
-    if (!params.has(CAPACITOR_DEPLOY_RELOAD_QUERY)) return
-    params.delete(CAPACITOR_DEPLOY_RELOAD_QUERY)
-    const qs = params.toString()
-    const path = `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`
-    router.replace(path)
-  }, [clientMounted, router])
+  }, [baselineDeployVersion, rememberDeployVersion, promptRestartIfNeeded])
 
   useEffect(() => {
     if (!clientMounted || !Capacitor.isNativePlatform()) return
@@ -109,7 +103,7 @@ export function CapacitorDeployReloadController() {
 
     const onStaleChunkError = () => {
       void fetchAppDeployVersion().then((remoteVersion) => {
-        reloadForDeploy(remoteVersion)
+        promptRestartIfNeeded(remoteVersion ?? 'stale-chunk')
       })
     }
 
@@ -135,7 +129,7 @@ export function CapacitorDeployReloadController() {
       window.removeEventListener('error', onWindowError)
       window.removeEventListener('unhandledrejection', onUnhandledRejection)
     }
-  }, [clientMounted, checkForDeployUpdate, reloadForDeploy])
+  }, [clientMounted, checkForDeployUpdate, promptRestartIfNeeded])
 
   return null
 }
