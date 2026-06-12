@@ -10,7 +10,7 @@ export function buildCapacitorRestartAppNotice(optionalMessage?: string | null):
   if (!changelog) {
     return `Update available\n\n${CAPACITOR_RESTART_APP_INSTRUCTIONS}`
   }
-  return `Update available\n\n${changelog}\n\n${CAPACITOR_RESTART_APP_INSTRUCTIONS}`
+  return `Update available\n\nWhat has changed:\n\n${changelog}\n\n${CAPACITOR_RESTART_APP_INSTRUCTIONS}`
 }
 
 export const CAPACITOR_DEPLOY_NOTICE_SHOWN_FOR_KEY = 'gospel-capacitor-deploy-notice-for'
