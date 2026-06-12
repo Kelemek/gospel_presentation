@@ -10,6 +10,7 @@ import {
   setStoredCapacitorDeployVersion,
 } from '@/lib/capacitorAppDeployVersion'
 import {
+  buildCapacitorRestartAppNotice,
   CAPACITOR_DEPLOY_NOTICE_SHOWN_FOR_KEY,
   CAPACITOR_RESTART_APP_NOTICE,
 } from '@/lib/capacitorDeployNotice'
@@ -120,6 +121,27 @@ describe('CapacitorDeployNoticeController', () => {
 
       await waitFor(() => {
         expect(mockShowAlert).toHaveBeenCalledWith(CAPACITOR_RESTART_APP_NOTICE)
+      })
+    })
+
+    it('includes optional deploy changelog in the alert', async () => {
+      setStoredCapacitorDeployVersion('deploy-old')
+      global.fetch = jest.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          version: 'deploy-new',
+          message: 'Daily verse challenge: clearer feedback when you finish a day.',
+        }),
+      })) as unknown as typeof fetch
+
+      render(<CapacitorDeployNoticeController />)
+
+      await waitFor(() => {
+        expect(mockShowAlert).toHaveBeenCalledWith(
+          buildCapacitorRestartAppNotice(
+            'Daily verse challenge: clearer feedback when you finish a day.'
+          )
+        )
       })
     })
   })

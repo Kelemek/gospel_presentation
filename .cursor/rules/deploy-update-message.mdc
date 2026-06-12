@@ -1,0 +1,32 @@
+---
+description: Update the native app deploy notice with succinct end-user wording when shipping user-visible changes
+alwaysApply: true
+---
+
+# Native app deploy update message
+
+When you finish **user-visible** changes that will deploy to production (UI, UX, content, fixes to broken flows), update [gospel-admin/data/deploy-update-message.txt](gospel-admin/data/deploy-update-message.txt) so native app users see a short “what changed” note in the restart alert.
+
+## When to update
+
+- **Do update** for changes counselors or counselees might notice.
+- **Do not update** for internal-only work (tests, refactors, CI, docs-only, admin tooling with no user impact).
+- **Clear the body** (leave only `#` comment lines) when the release has nothing worth telling users.
+
+## Writing rules
+
+- Plain language for app users — not developers.
+- No file paths, component names, APIs, “deploy”, “WebView”, “chunk”, or other technical terms.
+- **1–3 short sentences** or up to **3 brief bullets**; aim for **~200 characters** (server caps at 400).
+- Calm and helpful tone; not marketing hype.
+
+## Examples
+
+- Good: `Fixed an issue where the menu could open an external browser on iPhone.`
+- Good: `Daily verse challenge: clearer feedback when you complete a day.`
+- Bad: `CapacitorKeepLinksInApp touchstart intercept; router.push for same-origin links.`
+- Bad: `Refactored capacitorDeployNotice controller and added Jest mocks.`
+
+## File format
+
+Keep the `#` header comments at the top. Put user-visible text below them (lines starting with `#` are not shown in the app).

@@ -3,16 +3,23 @@ export const CAPACITOR_DEPLOY_VERSION_STORAGE_KEY = 'gospel-capacitor-deploy-ver
 /** Poll interval while the Capacitor WebView session is open. */
 export const CAPACITOR_DEPLOY_CHECK_INTERVAL_MS = 60 * 1000
 
-export async function fetchAppDeployVersion(): Promise<string | null> {
+export type AppDeployInfo = {
+  version: string | null
+  message: string | null
+}
+
+export async function fetchAppDeployInfo(): Promise<AppDeployInfo> {
   try {
     const response = await fetch('/api/app-deploy-version', { cache: 'no-store' })
-    if (!response.ok) return null
-    const data = (await response.json()) as { version?: unknown }
-    return typeof data.version === 'string' && data.version.trim()
-      ? data.version.trim()
-      : null
+    if (!response.ok) return { version: null, message: null }
+    const data = (await response.json()) as { version?: unknown; message?: unknown }
+    const version =
+      typeof data.version === 'string' && data.version.trim() ? data.version.trim() : null
+    const message =
+      typeof data.message === 'string' && data.message.trim() ? data.message.trim() : null
+    return { version, message }
   } catch {
-    return null
+    return { version: null, message: null }
   }
 }
 

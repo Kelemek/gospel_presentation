@@ -1,6 +1,17 @@
+const CAPACITOR_RESTART_APP_INSTRUCTIONS =
+  'A new version is on the server. Please close the Gospel Presentation app completely (swipe it away from the app switcher), then open it again.'
+
 /** Shown when the server has a newer deploy than this WebView session started with. */
-export const CAPACITOR_RESTART_APP_NOTICE =
-  'Update available\n\nA new version is on the server. Please close the Gospel Presentation app completely (swipe it away from the app switcher), then open it again.'
+export const CAPACITOR_RESTART_APP_NOTICE = buildCapacitorRestartAppNotice()
+
+/** Compose native restart alert with optional user-facing changelog from deploy-update-message.txt. */
+export function buildCapacitorRestartAppNotice(optionalMessage?: string | null): string {
+  const changelog = optionalMessage?.trim()
+  if (!changelog) {
+    return `Update available\n\n${CAPACITOR_RESTART_APP_INSTRUCTIONS}`
+  }
+  return `Update available\n\n${changelog}\n\n${CAPACITOR_RESTART_APP_INSTRUCTIONS}`
+}
 
 export const CAPACITOR_DEPLOY_NOTICE_SHOWN_FOR_KEY = 'gospel-capacitor-deploy-notice-for'
 

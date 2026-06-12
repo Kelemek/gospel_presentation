@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import {
   CAPACITOR_DEPLOY_CHECK_INTERVAL_MS,
-  fetchAppDeployVersion,
+  fetchAppDeployInfo,
   getStoredCapacitorDeployVersion,
   isCapacitorDeployVersionStale,
   isLikelyStaleChunkLoadError,
@@ -13,7 +13,7 @@ import {
   setStoredCapacitorDeployVersion,
 } from '@/lib/capacitorAppDeployVersion'
 import {
-  CAPACITOR_RESTART_APP_NOTICE,
+  buildCapacitorRestartAppNotice,
   markCapacitorDeployNoticeShown,
   shouldShowCapacitorDeployNotice,
 } from '@/lib/capacitorDeployNotice'
@@ -46,20 +46,20 @@ export function CapacitorDeployNoticeController() {
   }, [])
 
   const promptRestartIfNeeded = useCallback(
-    (remoteVersion: string | null) => {
+    (remoteVersion: string | null, changelogMessage?: string | null) => {
       if (!remoteVersion || noticePendingRef.current) return
       if (!shouldShowCapacitorDeployNotice(remoteVersion)) return
 
       noticePendingRef.current = true
       markCapacitorDeployNoticeShown(remoteVersion)
-      showAlert(CAPACITOR_RESTART_APP_NOTICE)
+      showAlert(buildCapacitorRestartAppNotice(changelogMessage))
       noticePendingRef.current = false
     },
     [showAlert]
   )
 
   const checkForDeployUpdate = useCallback(async () => {
-    const remoteVersion = await fetchAppDeployVersion()
+    const { version: remoteVersion, message } = await fetchAppDeployInfo()
     if (!remoteVersion) return
 
     const baselineVersion = baselineDeployVersion()
@@ -69,7 +69,7 @@ export function CapacitorDeployNoticeController() {
     }
 
     if (isCapacitorDeployVersionStale(baselineVersion, remoteVersion)) {
-      promptRestartIfNeeded(remoteVersion)
+      promptRestartIfNeeded(remoteVersion, message)
     }
   }, [baselineDeployVersion, rememberDeployVersion, promptRestartIfNeeded])
 
@@ -102,8 +102,8 @@ export function CapacitorDeployNoticeController() {
     }, CAPACITOR_DEPLOY_CHECK_INTERVAL_MS)
 
     const onStaleChunkError = () => {
-      void fetchAppDeployVersion().then((remoteVersion) => {
-        promptRestartIfNeeded(remoteVersion ?? 'stale-chunk')
+      void fetchAppDeployInfo().then(({ version, message }) => {
+        promptRestartIfNeeded(version ?? 'stale-chunk', message)
       })
     }
 
