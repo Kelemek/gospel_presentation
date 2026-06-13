@@ -22,8 +22,10 @@ import {
   markCapacitorWhatsNewShownThisSession,
   shouldShowCapacitorDeployNotice,
   shouldShowCapacitorWhatsNewOnColdStart,
+  WEB_REFRESH_AFTER_UPDATE_NOTICE,
 } from '@/lib/capacitorDeployNotice'
 import { hasPresentationWelcomeBeenDismissed } from '@/lib/presentationWelcomeStorage'
+import { attemptCapacitorRecoveryReload } from '@/lib/capacitorAppRecovery'
 
 const subscribeClientMounted = () => () => {}
 
@@ -41,6 +43,7 @@ export function CapacitorDeployNoticeController() {
     () => false
   )
   const noticePendingRef = useRef(false)
+  const staleChunkNoticeInFlightRef = useRef(false)
   /** Fallback when sessionStorage is unavailable (private mode / quota). */
   const inMemoryDeployVersionRef = useRef<string | null>(null)
 
@@ -141,11 +144,27 @@ export function CapacitorDeployNoticeController() {
     promptWhatsNewIfNeeded,
   ])
 
+  const deployNoticeHandlersRef = useRef({
+    checkForDeployUpdate,
+    promptRestartIfNeeded,
+    rememberDeployVersion,
+    showAlert,
+  })
+
+  useEffect(() => {
+    deployNoticeHandlersRef.current = {
+      checkForDeployUpdate,
+      promptRestartIfNeeded,
+      rememberDeployVersion,
+      showAlert,
+    }
+  }, [checkForDeployUpdate, promptRestartIfNeeded, rememberDeployVersion, showAlert])
+
   useEffect(() => {
     if (!clientMounted) return
 
     const runCheck = () => {
-      void checkForDeployUpdate()
+      void deployNoticeHandlersRef.current.checkForDeployUpdate()
     }
 
     const initialCheckId = window.setTimeout(runCheck, 0)
@@ -169,12 +188,46 @@ export function CapacitorDeployNoticeController() {
 
     const intervalId = window.setInterval(runCheck, CAPACITOR_DEPLOY_CHECK_INTERVAL_MS)
 
-    const isNative = Capacitor.isNativePlatform()
     const onStaleChunkError = () => {
-      void fetchAppDeployInfo().then(({ version, changelog }) => {
-        const unseen = getUnseenChangelogMessages(changelog, getSeenChangelogCount())
-        promptRestartIfNeeded(version ?? 'stale-chunk', unseen)
-      })
+      if (staleChunkNoticeInFlightRef.current) return
+      staleChunkNoticeInFlightRef.current = true
+
+      void fetchAppDeployInfo()
+        .then(({ version, changelog }) => {
+          const {
+            promptRestartIfNeeded: promptRestart,
+            rememberDeployVersion: rememberVersion,
+            showAlert: alert,
+          } = deployNoticeHandlersRef.current
+          const unseen = getUnseenChangelogMessages(changelog, getSeenChangelogCount())
+          const remoteVersion = version ?? 'stale-chunk'
+          const isNative = Capacitor.isNativePlatform()
+
+          if (isNative) {
+            if (attemptCapacitorRecoveryReload('stale-chunk')) return
+            promptRestart(remoteVersion, unseen)
+            return
+          }
+
+          if (!hasPresentationWelcomeBeenDismissed()) return
+          if (noticePendingRef.current) return
+
+          const whatsNew = unseen.length > 0 ? buildCapacitorWhatsNewNotice(unseen) : null
+          const notice = whatsNew ?? WEB_REFRESH_AFTER_UPDATE_NOTICE
+          noticePendingRef.current = true
+          try {
+            if (whatsNew) {
+              acknowledgeCapacitorDeployChangelog(changelog, remoteVersion)
+            }
+            alert(notice)
+            rememberVersion(remoteVersion)
+          } finally {
+            noticePendingRef.current = false
+          }
+        })
+        .finally(() => {
+          staleChunkNoticeInFlightRef.current = false
+        })
     }
     const onWindowError = (event: ErrorEvent) => {
       if (isLikelyStaleChunkLoadError(event.message ?? '')) {
@@ -187,10 +240,8 @@ export function CapacitorDeployNoticeController() {
       }
     }
 
-    if (isNative) {
-      window.addEventListener('error', onWindowError)
-      window.addEventListener('unhandledrejection', onUnhandledRejection)
-    }
+    window.addEventListener('error', onWindowError)
+    window.addEventListener('unhandledrejection', onUnhandledRejection)
 
     return () => {
       window.clearTimeout(initialCheckId)
@@ -198,12 +249,10 @@ export function CapacitorDeployNoticeController() {
       window.removeEventListener('focus', onWindowFocus)
       window.removeEventListener('online', onOnline)
       window.clearInterval(intervalId)
-      if (isNative) {
-        window.removeEventListener('error', onWindowError)
-        window.removeEventListener('unhandledrejection', onUnhandledRejection)
-      }
+      window.removeEventListener('error', onWindowError)
+      window.removeEventListener('unhandledrejection', onUnhandledRejection)
     }
-  }, [clientMounted, checkForDeployUpdate, promptRestartIfNeeded])
+  }, [clientMounted])
 
   return null
 }

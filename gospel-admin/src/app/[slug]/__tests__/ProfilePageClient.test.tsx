@@ -30,6 +30,12 @@ jest.mock('@/lib/supabase/client', () => ({
   createClient: jest.fn()
 }))
 
+jest.mock('@/lib/capacitorAppRecovery', () => ({
+  attemptCapacitorRecoveryReload: jest.fn(() => false),
+}))
+
+import { attemptCapacitorRecoveryReload } from '@/lib/capacitorAppRecovery'
+
 describe('ProfilePageClient', () => {
   const defaultProfile = {
     id: 'p1',
@@ -82,7 +88,7 @@ describe('ProfilePageClient', () => {
     expect(screen.queryByTestId('profile-content')).not.toBeInTheDocument()
   })
 
-  it('shows loading state while profile cache validation is in progress', () => {
+  it('renders cached profile while validation is still in progress', () => {
     ;(useProfileWithCache as jest.Mock).mockReturnValue({
       profile: defaultProfile,
       isLoading: false,
@@ -93,25 +99,80 @@ describe('ProfilePageClient', () => {
 
     render(<ProfilePageClient slug="test" />)
 
-    expect(screen.getByText(/Loading\.\.\./i)).toBeInTheDocument()
-    expect(screen.queryByTestId('profile-content')).not.toBeInTheDocument()
+    expect(screen.getByTestId('profile-content')).toBeInTheDocument()
+    expect(screen.queryByText(/Loading\.\.\./i)).not.toBeInTheDocument()
   })
 
-  it('returns null when error is set and redirect effect will run', async () => {
+  it('shows reconnecting state when load fails instead of a blank page', async () => {
     ;(useProfileWithCache as jest.Mock).mockReturnValue({
       profile: null,
       isLoading: false,
-      error: 'Something went wrong',
+      error: 'Failed to load profile',
       profileLoadSettled: true,
       refresh: mockRefresh
     })
 
-    const { container } = render(<ProfilePageClient slug="my-slug" />)
+    render(<ProfilePageClient slug="my-slug" />)
+
+    expect(screen.getByText(/Reconnecting\.\.\./i)).toBeInTheDocument()
+    expect(mockRefresh).toHaveBeenCalledTimes(1)
+    expect(attemptCapacitorRecoveryReload).not.toHaveBeenCalled()
+    expect(mockReplace).not.toHaveBeenCalled()
+    expect(notFound).not.toHaveBeenCalled()
+  })
+
+  it('attempts native recovery reload at most once after refresh keeps failing', () => {
+    ;(useProfileWithCache as jest.Mock).mockReturnValue({
+      profile: null,
+      isLoading: false,
+      error: 'Failed to load profile',
+      profileLoadSettled: true,
+      refresh: mockRefresh,
+    })
+
+    const { rerender } = render(<ProfilePageClient slug="my-slug" />)
+
+    expect(mockRefresh).toHaveBeenCalledTimes(1)
+    expect(attemptCapacitorRecoveryReload).not.toHaveBeenCalled()
+
+    const secondRefresh = jest.fn()
+    ;(useProfileWithCache as jest.Mock).mockReturnValue({
+      profile: null,
+      isLoading: false,
+      error: 'Failed to load profile',
+      profileLoadSettled: true,
+      refresh: secondRefresh,
+    })
+    rerender(<ProfilePageClient slug="my-slug" />)
+
+    expect(attemptCapacitorRecoveryReload).toHaveBeenCalledTimes(1)
+    expect(attemptCapacitorRecoveryReload).toHaveBeenCalledWith('profile-load-failed')
+    expect(secondRefresh).not.toHaveBeenCalled()
+
+    rerender(<ProfilePageClient slug="my-slug" />)
+
+    expect(attemptCapacitorRecoveryReload).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not treat a transient load error as a missing profile for signed-in users', async () => {
+    ;(useProfileWithCache as jest.Mock).mockReturnValue({
+      profile: null,
+      isLoading: false,
+      error: 'Failed to load profile',
+      profileLoadSettled: true,
+      refresh: mockRefresh
+    })
+    ;(createClient as jest.Mock).mockReturnValue({
+      auth: { getUser: async () => ({ data: { user: { id: 'u1' } } }) }
+    })
+
+    render(<ProfilePageClient slug="my-slug" />)
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/login?redirect=/my-slug')
+      expect(screen.getByText(/Reconnecting\.\.\./i)).toBeInTheDocument()
     })
-    expect(container.firstChild).toBeNull()
+    expect(notFound).not.toHaveBeenCalled()
+    expect(mockReplace).not.toHaveBeenCalled()
   })
 
   it('redirects to login when profile is null after loading and user is not signed in', async () => {

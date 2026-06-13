@@ -5,7 +5,7 @@ import * as gospelClientStorage from '@/lib/gospelClientStorage'
 import { gospelStorageSetSync } from '@/lib/gospelClientStorage'
 import { profileOfflineCacheKey } from '@/lib/gospelClientStoragePolicy'
 import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
-import { clearProfileSessionCacheForTests, useProfileWithCache } from '../useProfileWithCache'
+import { clearProfileSessionCacheForTests, loadOfflineCachedProfile, useProfileWithCache } from '../useProfileWithCache'
 
 jest.spyOn(gospelClientStorage, 'hydrateGospelClientStorage').mockResolvedValue(undefined)
 
@@ -104,12 +104,14 @@ describe('useProfileWithCache', () => {
     expect(screen.getByTestId('loading')).toHaveTextContent('idle')
   })
 
-  it('sets error when fetch fails', async () => {
+  it('sets error when fetch fails after retries', async () => {
     ;(global as any).fetch = jest.fn(() => Promise.reject(new Error('Network error')))
 
     render(<TestHarness slug="fail" />)
 
-    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('idle'))
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('idle'), {
+      timeout: 3000,
+    })
     await waitFor(() => expect(screen.getByTestId('error')).toHaveTextContent(/Failed to load profile/))
   })
 
@@ -191,6 +193,37 @@ describe('useProfileWithCache', () => {
     render(<TestHarness slug="empty" />)
     await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('idle'))
     expect(screen.getByTestId('profile')).toHaveTextContent('none')
+    expect(screen.getByTestId('error')).toHaveTextContent('')
+  })
+
+  it('clears a prior error when a later successful response has no profile', async () => {
+    let failProfileFetch = true
+    ;(global as any).fetch = jest.fn((url: string) => {
+      if (url.includes('/modified')) {
+        return Promise.resolve({ ok: true, json: async () => ({}) })
+      }
+      if (url.includes('/api/profiles/retry-empty')) {
+        if (failProfileFetch) {
+          return Promise.reject(new Error('Network error'))
+        }
+        return Promise.resolve({ ok: true, json: async () => ({}) })
+      }
+      return Promise.resolve({ ok: false })
+    })
+
+    render(<TestHarness slug="retry-empty" />)
+
+    await waitFor(
+      () => expect(screen.getByTestId('error')).toHaveTextContent(/Failed to load profile/),
+      { timeout: 3000 }
+    )
+
+    failProfileFetch = false
+    await userEvent.click(screen.getByText('refresh'))
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('idle'))
+    expect(screen.getByTestId('profile')).toHaveTextContent('none')
+    expect(screen.getByTestId('error')).toHaveTextContent('')
   })
 
   it('refetches when cached profile is stale (modified endpoint returns newer updatedAt)', async () => {
@@ -355,6 +388,47 @@ describe('useProfileWithCache', () => {
     })
     render(<TestHarness slug="badjson" />)
     await waitFor(() => expect(screen.getByTestId('profile')).toHaveTextContent('Fetched After Bad Cache'))
+  })
+
+  it('loadOfflineCachedProfile returns null when storage hydrate fails', async () => {
+    jest.spyOn(gospelClientStorage, 'hydrateGospelClientStorage').mockRejectedValueOnce(
+      new Error('Storage blocked')
+    )
+
+    await expect(loadOfflineCachedProfile('blocked')).resolves.toBeNull()
+  })
+
+  it('sets error when fetch fails and storage hydrate is unavailable', async () => {
+    jest.spyOn(gospelClientStorage, 'hydrateGospelClientStorage').mockRejectedValue(
+      new Error('Storage blocked')
+    )
+    ;(global as any).fetch = jest.fn(() => Promise.reject(new Error('Network error')))
+
+    render(<TestHarness slug="blocked" />)
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('idle'), {
+      timeout: 3000,
+    })
+    await waitFor(() =>
+      expect(screen.getByTestId('error')).toHaveTextContent(/Failed to load profile/)
+    )
+  })
+
+  it('sets error when fetch fails and localStorage reads throw', async () => {
+    const storage = installTestLocalStorage()
+    jest.spyOn(storage, 'getItem').mockImplementation(() => {
+      throw new DOMException('The operation is insecure.', 'SecurityError')
+    })
+    ;(global as any).fetch = jest.fn(() => Promise.reject(new Error('Network error')))
+
+    render(<TestHarness slug="insecure" />)
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('idle'), {
+      timeout: 3000,
+    })
+    await waitFor(() =>
+      expect(screen.getByTestId('error')).toHaveTextContent(/Failed to load profile/)
+    )
   })
 
   it('still sets profile when offline cache write fails (quota)', async () => {

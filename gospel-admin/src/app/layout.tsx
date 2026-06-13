@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { PostHogPageView } from "@/components/PostHogPageView";
 import { PostHogProvider } from "@/components/PostHogProvider";
 import { ApplyTheme } from "@/components/ApplyTheme";
+import { CapacitorBlankPageGuard } from "@/components/CapacitorBlankPageGuard";
 import { CapacitorDeployNoticeController } from "@/components/CapacitorDeployNoticeController";
 import { CapacitorKeepLinksInApp } from "@/components/CapacitorKeepLinksInApp";
 import { CapacitorProfileHelpTourNavigation } from "@/components/CapacitorProfileHelpTourNavigation";
@@ -73,8 +74,18 @@ export default function RootLayout({
               <GospelClientStorageHydration />
               <ProfileAppLaunchResume />
               <CapacitorProfileHelpTourNavigation />
+              <CapacitorBlankPageGuard />
               <SplashScreenController />
-              <Suspense fallback={null}>
+              <Suspense
+                fallback={
+                  <div
+                    className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center"
+                    data-gospel-surface
+                  >
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-slate-400" />
+                  </div>
+                }
+              >
                 <PostHogPageView />
               </Suspense>
               <TranslationProvider>

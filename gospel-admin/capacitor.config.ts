@@ -11,8 +11,8 @@ const config: CapacitorConfig = {
   webDir: 'public',
   plugins: {
     SplashScreen: {
-      launchAutoHide: true,
-      launchShowDuration: 2500,
+      // SplashScreenController hides after content paints; avoids white flash before React hydrates.
+      launchAutoHide: false,
     },
   },
   server: {

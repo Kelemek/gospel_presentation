@@ -1,12 +1,13 @@
 'use client'
 
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, notFound } from 'next/navigation'
 import ProfileContent from './ProfileContent'
 import { useProfileWithCache } from '@/lib/useProfileWithCache'
 import { createClient } from '@/lib/supabase/client'
 import type { GospelProfile } from '@/lib/types'
 import { isProfileResourceTabNavigationPending } from '@/lib/profileResourceTabNavigation'
+import { attemptCapacitorRecoveryReload } from '@/lib/capacitorAppRecovery'
 import {
   tryStartMarriageSeminarTourAfterNavigation,
   tryStartMemorizeTourAfterNavigation,
@@ -63,7 +64,7 @@ function ProfilePageBody({
   const favoriteScriptures = extractFavoriteScriptures(gospelData || [])
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900" data-gospel-surface>
       {!siteHeaderHidden ? (
         <header className="bg-linear-to-br from-slate-700 to-slate-800 text-white text-center py-5 shadow-lg">
           <div className="container mx-auto px-5">
@@ -91,15 +92,56 @@ function ProfilePageBody({
   )
 }
 
+function ProfileLoadingSurface({ message }: { message: string }) {
+  return (
+    <div
+      className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center"
+      data-gospel-surface
+    >
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-600 dark:border-slate-400 mx-auto mb-4" />
+        <p className="text-slate-600 dark:text-slate-300">{message}</p>
+      </div>
+    </div>
+  )
+}
+
 export default function ProfilePageClient({ slug }: ProfilePageClientProps) {
   const router = useRouter()
-  const { profile, isLoading, error, profileLoadSettled } = useProfileWithCache(slug)
+  const { profile, isLoading, error, profileLoadSettled, refresh } = useProfileWithCache(slug)
+  const profileRefreshAttemptedRef = useRef(false)
+  const profileRecoveryReloadAttemptedRef = useRef(false)
 
-  // When profile is null after loading, check auth and redirect or 404
   const showLoadingSpinner = isLoading || !profileLoadSettled
 
   useEffect(() => {
-    if (isLoading || !profileLoadSettled || profile) return
+    profileRefreshAttemptedRef.current = false
+    profileRecoveryReloadAttemptedRef.current = false
+  }, [slug])
+
+  useEffect(() => {
+    if (profile) {
+      profileRefreshAttemptedRef.current = false
+      profileRecoveryReloadAttemptedRef.current = false
+      return
+    }
+
+    if (!error || !profileLoadSettled) return
+
+    if (!profileRefreshAttemptedRef.current) {
+      profileRefreshAttemptedRef.current = true
+      void refresh()
+      return
+    }
+
+    if (profileRecoveryReloadAttemptedRef.current) return
+
+    profileRecoveryReloadAttemptedRef.current = true
+    attemptCapacitorRecoveryReload('profile-load-failed')
+  }, [error, profile, profileLoadSettled, refresh])
+
+  useEffect(() => {
+    if (isLoading || !profileLoadSettled || profile || error) return
     const run = async () => {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
@@ -110,7 +152,7 @@ export default function ProfilePageClient({ slug }: ProfilePageClientProps) {
       }
     }
     run()
-  }, [profile, isLoading, profileLoadSettled, slug, router])
+  }, [profile, isLoading, profileLoadSettled, error, slug, router])
 
   useEffect(() => {
     if (!profile) return
@@ -120,27 +162,24 @@ export default function ProfilePageClient({ slug }: ProfilePageClientProps) {
     tryStartMarriageSeminarTourAfterNavigation(slug)
   }, [profile, slug])
 
-  if (showLoadingSpinner) {
+  if (profile) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-600 dark:border-slate-400 mx-auto mb-4" />
-          <p className="text-slate-600 dark:text-slate-300">Loading...</p>
-        </div>
-      </div>
+      <ProfilePageBody
+        key={slug}
+        slug={slug}
+        profile={profile}
+        profileLoadSettled={profileLoadSettled}
+      />
     )
   }
 
-  if (error || !profile) {
-    return null // Redirect effect will run
+  if (error && profileLoadSettled) {
+    return <ProfileLoadingSurface message="Reconnecting..." />
   }
 
-  return (
-    <ProfilePageBody
-      key={slug}
-      slug={slug}
-      profile={profile}
-      profileLoadSettled={profileLoadSettled}
-    />
-  )
+  if (showLoadingSpinner) {
+    return <ProfileLoadingSurface message="Loading..." />
+  }
+
+  return <ProfileLoadingSurface message="One moment..." />
 }

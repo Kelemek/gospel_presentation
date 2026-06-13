@@ -31,6 +31,17 @@ jest.mock('@/contexts/AlertModalContext', () => ({
   useAlertModal: () => ({ showAlert: mockShowAlert }),
 }))
 
+const attemptCapacitorRecoveryReloadMock = jest.fn(() => true)
+
+jest.mock('@/lib/capacitorAppRecovery', () => {
+  const actual = jest.requireActual('@/lib/capacitorAppRecovery')
+  return {
+    ...actual,
+    attemptCapacitorRecoveryReload: (...args: unknown[]) =>
+      attemptCapacitorRecoveryReloadMock(...args),
+  }
+})
+
 function setCapacitorNativePlatform(isNative: boolean) {
   const Capacitor = require('@capacitor/core').Capacitor
   Capacitor.isNativePlatform = () => isNative
@@ -43,6 +54,8 @@ describe('CapacitorDeployNoticeController', () => {
     localStorage.clear()
     resetWebViewSessionDeployBaseline()
     mockShowAlert.mockClear()
+    attemptCapacitorRecoveryReloadMock.mockClear()
+    attemptCapacitorRecoveryReloadMock.mockReturnValue(true)
     setCapacitorNativePlatform(false)
   })
 
@@ -192,7 +205,52 @@ describe('CapacitorDeployNoticeController', () => {
       )
     })
 
-    it('does not prompt on stale chunk errors', async () => {
+    it('prompts to refresh on stale chunk errors when welcome was dismissed', async () => {
+      localStorage.setItem(PRESENTATION_FIRST_VISIT_WELCOME_KEY, '1')
+      setStoredCapacitorDeployVersion('deploy-old')
+      global.fetch = jest.fn(async () => ({
+        ok: true,
+        json: async () => ({ version: 'deploy-new', changelog: [] }),
+      })) as unknown as typeof fetch
+
+      render(<CapacitorDeployNoticeController />)
+
+      window.dispatchEvent(
+        new ErrorEvent('error', { message: 'Loading chunk 12 failed.' })
+      )
+
+      await waitFor(() => {
+        expect(mockShowAlert).toHaveBeenCalledWith(
+          expect.stringContaining('refresh this page')
+        )
+      })
+    })
+
+    it('shows whats-new on stale chunk errors when unseen changelog entries exist', async () => {
+      localStorage.setItem(PRESENTATION_FIRST_VISIT_WELCOME_KEY, '1')
+      setStoredCapacitorDeployVersion('deploy-old')
+      global.fetch = jest.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          version: 'deploy-new',
+          changelog: ['Latest release note.'],
+        }),
+      })) as unknown as typeof fetch
+
+      render(<CapacitorDeployNoticeController />)
+
+      window.dispatchEvent(
+        new ErrorEvent('error', { message: 'Loading chunk 12 failed.' })
+      )
+
+      await waitFor(() => {
+        expect(mockShowAlert).toHaveBeenCalledWith(
+          buildCapacitorWhatsNewNotice(['Latest release note.'])
+        )
+      })
+    })
+
+    it('does not prompt on stale chunk errors while welcome is not dismissed', async () => {
       setStoredCapacitorDeployVersion('deploy-old')
       global.fetch = jest.fn(async () => ({
         ok: true,
@@ -209,6 +267,37 @@ describe('CapacitorDeployNoticeController', () => {
         expect(global.fetch).toHaveBeenCalled()
       })
       expect(mockShowAlert).not.toHaveBeenCalled()
+    })
+
+    it('shows at most one stale-chunk alert while deploy info fetch is in flight', async () => {
+      localStorage.setItem(PRESENTATION_FIRST_VISIT_WELCOME_KEY, '1')
+      setStoredCapacitorDeployVersion('deploy-old')
+
+      let resolveFetch: (value: Response) => void = () => {}
+      const fetchPromise = new Promise<Response>((resolve) => {
+        resolveFetch = resolve
+      })
+      global.fetch = jest.fn(() => fetchPromise) as unknown as typeof fetch
+
+      render(<CapacitorDeployNoticeController />)
+
+      window.dispatchEvent(
+        new ErrorEvent('error', { message: 'Loading chunk 12 failed.' })
+      )
+      window.dispatchEvent(
+        new ErrorEvent('error', { message: 'Loading chunk 99 failed.' })
+      )
+
+      expect(global.fetch).toHaveBeenCalledTimes(1)
+
+      resolveFetch({
+        ok: true,
+        json: async () => ({ version: 'deploy-new', changelog: [] }),
+      } as Response)
+
+      await waitFor(() => {
+        expect(mockShowAlert).toHaveBeenCalledTimes(1)
+      })
     })
   })
 
@@ -403,7 +492,8 @@ describe('CapacitorDeployNoticeController', () => {
       expect(mockShowAlert).not.toHaveBeenCalled()
     })
 
-    it('prompts on stale chunk errors', async () => {
+    it('reloads on stale chunk errors before showing a restart alert', async () => {
+      localStorage.setItem(PRESENTATION_FIRST_VISIT_WELCOME_KEY, '1')
       setStoredCapacitorDeployVersion('deploy-old')
       global.fetch = jest.fn(async () => ({
         ok: true,
@@ -412,13 +502,19 @@ describe('CapacitorDeployNoticeController', () => {
 
       render(<CapacitorDeployNoticeController />)
 
+      await waitFor(() => {
+        expect(global.fetch).toHaveBeenCalled()
+      })
+      mockShowAlert.mockClear()
+
       window.dispatchEvent(
         new ErrorEvent('error', { message: 'Loading chunk 12 failed.' })
       )
 
       await waitFor(() => {
-        expect(mockShowAlert).toHaveBeenCalledWith(CAPACITOR_RESTART_APP_NOTICE)
+        expect(attemptCapacitorRecoveryReloadMock).toHaveBeenCalledWith('stale-chunk')
       })
+      expect(mockShowAlert).not.toHaveBeenCalled()
     })
 
     it('includes only unseen changelog entries in the restart alert', async () => {
@@ -462,5 +558,35 @@ describe('CapacitorDeployNoticeController', () => {
         )
       })
     })
+  })
+
+  it('does not re-register window error listeners on re-render', async () => {
+    const addSpy = jest.spyOn(window, 'addEventListener')
+
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({ version: 'deploy-v1', changelog: [] }),
+    })) as unknown as typeof fetch
+
+    const { rerender } = render(<CapacitorDeployNoticeController />)
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalled()
+    })
+
+    const errorListenerCount = () =>
+      addSpy.mock.calls.filter(([type]) => type === 'error').length
+    const rejectionListenerCount = () =>
+      addSpy.mock.calls.filter(([type]) => type === 'unhandledrejection').length
+
+    expect(errorListenerCount()).toBe(1)
+    expect(rejectionListenerCount()).toBe(1)
+
+    rerender(<CapacitorDeployNoticeController />)
+
+    expect(errorListenerCount()).toBe(1)
+    expect(rejectionListenerCount()).toBe(1)
+
+    addSpy.mockRestore()
   })
 })

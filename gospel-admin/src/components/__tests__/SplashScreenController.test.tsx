@@ -52,4 +52,22 @@ describe('SplashScreenController', () => {
       writable: true,
     })
   })
+
+  it('clears web splash timers with window.clearTimeout on unmount', () => {
+    const clearTimeoutSpy = jest.spyOn(window, 'clearTimeout')
+    Object.defineProperty(document, 'readyState', {
+      value: 'loading',
+      writable: true,
+    })
+
+    const { unmount } = render(<SplashScreenController />)
+    unmount()
+
+    expect(clearTimeoutSpy).toHaveBeenCalledTimes(2)
+    clearTimeoutSpy.mockRestore()
+    Object.defineProperty(document, 'readyState', {
+      value: 'complete',
+      writable: true,
+    })
+  })
 })

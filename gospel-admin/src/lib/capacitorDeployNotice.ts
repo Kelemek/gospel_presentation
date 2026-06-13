@@ -44,6 +44,10 @@ export function buildCapacitorWhatsNewNotice(messages: string[]): string | null 
   return `What's new\n\n${body}`
 }
 
+/** Shown on web when a stale JS bundle fails to load after a deploy. */
+export const WEB_REFRESH_AFTER_UPDATE_NOTICE =
+  'Update available\n\nPlease refresh this page to load the latest version.'
+
 export function acknowledgeCapacitorDeployChangelog(
   changelog: string[],
   remoteVersion: string

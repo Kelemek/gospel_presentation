@@ -3,6 +3,9 @@
 import Link from 'next/link'
 import { useApplyPageThemeToDocument, usePageTheme } from '@/lib/usePageTheme'
 
+/** Fixed string avoids server/client timezone mismatch (React hydration #418). */
+const PRIVACY_POLICY_LAST_UPDATED = 'June 13, 2026'
+
 export default function PrivacyPage() {
   const theme = usePageTheme()
   useApplyPageThemeToDocument(theme)
@@ -94,7 +97,7 @@ export default function PrivacyPage() {
             </Link>
           </div>
           <p className="mt-4 text-sm opacity-80 text-center">
-            Last updated: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}. Gospel Presentation Project.
+            Last updated: {PRIVACY_POLICY_LAST_UPDATED}. Gospel Presentation Project.
           </p>
         </div>
       </footer>

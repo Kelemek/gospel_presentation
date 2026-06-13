@@ -19,6 +19,65 @@ const PROFILE_VALIDATION_TTL_MS = 120_000
 
 const fetchInFlightBySlug = new Map<string, Promise<void>>()
 
+const PROFILE_FETCH_RETRY_ATTEMPTS = 3
+const PROFILE_FETCH_RETRY_BASE_DELAY_MS = 400
+
+/** @internal Tests only */
+export async function loadOfflineCachedProfile(
+  slug: string
+): Promise<{ profile: GospelProfile; updatedAt: string } | null> {
+  const key = slug.trim()
+  if (!key || typeof window === 'undefined') return null
+
+  try {
+    await hydrateGospelClientStorage()
+    const cachedRaw =
+      (await gospelStorageGet(profileOfflineCacheKey(key))) ?? getProfileOfflineCache(key)
+    return parseCachedProfile(cachedRaw)
+  } catch {
+    return null
+  }
+}
+
+async function fetchWithRetries(url: string): Promise<Response> {
+  let lastError: unknown
+  for (let attempt = 0; attempt < PROFILE_FETCH_RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      return await fetch(url)
+    } catch (error) {
+      lastError = error
+      if (attempt < PROFILE_FETCH_RETRY_ATTEMPTS - 1) {
+        await new Promise((resolve) => {
+          window.setTimeout(resolve, PROFILE_FETCH_RETRY_BASE_DELAY_MS * (attempt + 1))
+        })
+      }
+    }
+  }
+  throw lastError
+}
+
+async function applyOfflineCacheOrError(
+  slug: string,
+  setProfile: (profile: GospelProfile | null) => void,
+  setError: (error: string | null) => void
+): Promise<boolean> {
+  try {
+    const offline = await loadOfflineCachedProfile(slug)
+    if (!offline) {
+      setError('Failed to load profile')
+      return false
+    }
+    rememberProfileInSession(slug, offline.profile, offline.updatedAt)
+    recordProfileValidation(slug, offline.updatedAt)
+    setProfile(offline.profile)
+    setError(null)
+    return true
+  } catch {
+    setError('Failed to load profile')
+    return false
+  }
+}
+
 /** @internal Tests only */
 export function clearProfileSessionCacheForTests(): void {
   profileSessionCache.clear()
@@ -157,13 +216,13 @@ export function useProfileWithCache(slug: string): UseProfileWithCacheResult {
     }
     const run = async () => {
     try {
-      const res = await fetch(`/api/profiles/${slug}`)
+      const res = await fetchWithRetries(`/api/profiles/${slug}`)
       if (!res.ok) {
         if (res.status === 404) {
           setProfile(null)
           setError(null)
         } else {
-          setError('Failed to load profile')
+          await applyOfflineCacheOrError(slug, setProfile, setError)
         }
         return
       }
@@ -171,6 +230,7 @@ export function useProfileWithCache(slug: string): UseProfileWithCacheResult {
       const p = data.profile
       if (!p) {
         setProfile(null)
+        setError(null)
         return
       }
       const profileObj: GospelProfile = {
@@ -216,7 +276,7 @@ export function useProfileWithCache(slug: string): UseProfileWithCacheResult {
       setProfile(profileObj)
       setError(null)
     } catch {
-      setError('Failed to load profile')
+      await applyOfflineCacheOrError(slug, setProfile, setError)
     } finally {
       setIsLoading(false)
       setProfileLoadSettled(true)
@@ -288,41 +348,38 @@ export function useProfileWithCache(slug: string): UseProfileWithCacheResult {
     }
 
     const run = async () => {
-      const sessionCached = readProfileFromSession(slug)
-      if (sessionCached) {
-        applyCachedProfile(sessionCached)
-        if (shouldSkipModifiedCheck(slug, sessionCached.updatedAt)) {
-          queueMicrotask(() => {
-            if (!cancelled) setProfileLoadSettled(true)
-          })
-        } else {
-          void validateCachedInBackground(sessionCached.updatedAt)
+      try {
+        const sessionCached = readProfileFromSession(slug)
+        if (sessionCached) {
+          applyCachedProfile(sessionCached)
+          if (shouldSkipModifiedCheck(slug, sessionCached.updatedAt)) {
+            queueMicrotask(() => {
+              if (!cancelled) setProfileLoadSettled(true)
+            })
+          } else {
+            void validateCachedInBackground(sessionCached.updatedAt)
+          }
+          return
         }
-        return
-      }
 
-      let cachedRaw: string | null = null
-      if (typeof window !== 'undefined') {
-        await hydrateGospelClientStorage()
+        const cached = await loadOfflineCachedProfile(slug)
         if (cancelled) return
-        cachedRaw =
-          (await gospelStorageGet(profileOfflineCacheKey(slug))) ??
-          getProfileOfflineCache(slug) ??
-          (typeof localStorage !== 'undefined'
-            ? localStorage.getItem(profileOfflineCacheKey(slug))
-            : null)
-      }
-      const cached = parseCachedProfile(cachedRaw)
 
-      if (cached) {
-        applyCachedProfile(cached)
-        void validateCachedInBackground(cached.updatedAt)
-        return
-      }
+        if (cached) {
+          applyCachedProfile(cached)
+          void validateCachedInBackground(cached.updatedAt)
+          return
+        }
 
-      await fetchAndCache()
+        await fetchAndCache()
+      } catch {
+        if (cancelled) return
+        setError('Failed to load profile')
+        setIsLoading(false)
+        setProfileLoadSettled(true)
+      }
     }
-    run()
+    void run()
     return () => {
       cancelled = true
     }

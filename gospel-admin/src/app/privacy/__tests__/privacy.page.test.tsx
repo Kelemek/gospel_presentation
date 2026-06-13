@@ -44,4 +44,12 @@ describe('Privacy page', () => {
     render(<PrivacyPage />)
     expect(screen.getByRole('link', { name: /Back to Gospel Presentation/i })).toBeInTheDocument()
   })
+
+  it('renders a fixed last-updated date without calling Date at render time', () => {
+    const dateSpy = jest.spyOn(Date.prototype, 'toLocaleDateString')
+    render(<PrivacyPage />)
+    expect(screen.getByText(/Last updated: June 13, 2026/i)).toBeInTheDocument()
+    expect(dateSpy).not.toHaveBeenCalled()
+    dateSpy.mockRestore()
+  })
 })
