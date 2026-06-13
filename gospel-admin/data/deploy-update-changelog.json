@@ -2,5 +2,6 @@
   "When an update is ready, the mobile app can show what's new and clearer steps to close and reopen it.",
   "When you return after an update, the website and mobile app show a short what's-new note for any releases you missed.",
   "If something doesn't load correctly, the app now tries again on its own instead of showing a blank screen.",
-  "Bug fix: Returning to a book or switching back to the app should put you back where you left off."
+  "Bug fix: Returning to a book or switching back to the app should put you back where you left off.",
+  "Bug fix: In word study concordance, press and hold a verse link on mobile to preview the passage instead of the verse-number setting."
 ]

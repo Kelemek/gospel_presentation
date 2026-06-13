@@ -5,9 +5,9 @@ alwaysApply: true
 
 # Deploy update changelog
 
-When you finish **user-visible** changes that will deploy to production (UI, UX, content, fixes to broken flows), **append** a short note to [gospel-admin/data/deploy-update-changelog.json](gospel-admin/data/deploy-update-changelog.json) (JSON string array, oldest first). Web and native users see every entry they have not read yet in **What's new** on return, and native users also see unseen entries in the **restart** alert when a deploy lands while the app is open.
+When you finish **user-visible** changes that will deploy to production (UI, UX, content, fixes to broken flows), **append** a short note to the **end** of [gospel-admin/data/deploy-update-changelog.json](gospel-admin/data/deploy-update-changelog.json) (JSON string array: **oldest first, newest last**—never prepend at index `0`). Web and native users see every entry they have not read yet in **What's new** on return, and native users also see unseen entries in the **restart** alert when a deploy lands while the app is open.
 
-**Keep only the last 5 entries** in the JSON file—drop the oldest when a sixth would be added. The API also serves at most the five most recent notes.
+**Keep only the last 5 entries** in the JSON file—after appending at the end, drop the oldest from the **start** (index `0`) when a sixth would remain. The API also serves at most the five most recent notes.
 
 ## When to update
 
@@ -21,14 +21,39 @@ When you finish **user-visible** changes that will deploy to production (UI, UX,
 - No file paths, component names, APIs, “deploy”, “WebView”, “chunk”, or other technical terms.
 - **1–3 short sentences** or up to **3 brief bullets** per entry; aim for **~200 characters** (server caps each entry at 400).
 - Calm and helpful tone; not marketing hype.
+- **Bug fixes** (broken behavior restored): always start the entry with **`Bug fix:`** (exact spelling and capitalization), then plain-language description.
 
 ## Examples
 
-- Good: `Fixed an issue where the menu could open an external browser on iPhone.`
+- Good: `Bug fix: Fixed an issue where the menu could open an external browser on iPhone.`
 - Good: `Daily verse challenge: clearer feedback when you complete a day.`
 - Bad: `CapacitorKeepLinksInApp touchstart intercept; router.push for same-origin links.`
 - Bad: `Refactored capacitorDeployNotice controller and added Jest mocks.`
+- Bad: `Fixed concordance long-press.` (missing required `Bug fix:` prefix for a bug fix)
 
 ## File format
 
-Append one string per user-facing release, e.g. `["Older note.", "This release note."]`. After appending, trim so the array has **at most 5 strings** (remove from the start). Shipped via `GET /api/app-deploy-version` as `changelog`.
+The JSON file is a **string array in chronological order: oldest first, newest last.**
+
+1. **Append** the new note as the **last** element (after the final `]`’s preceding entry)—never insert at index `0` or anywhere except the end.
+2. If the array would have **more than 5** strings, **remove the oldest** from the **start** (index `0`) until only five remain.
+3. Do not reorder existing entries when adding a new one.
+
+```json
+[
+  "Oldest note still shown.",
+  "Middle note.",
+  "This release note goes here — last item in the array."
+]
+```
+
+**Wrong:** prepending the new release at the top:
+
+```json
+[
+  "This release note.",  // ← wrong: newest must be last, not first
+  "Older note."
+]
+```
+
+Shipped via `GET /api/app-deploy-version` as `changelog` (same oldest→newest order).

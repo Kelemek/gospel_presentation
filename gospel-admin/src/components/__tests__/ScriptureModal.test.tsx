@@ -719,7 +719,7 @@ describe('ScriptureModal Component', () => {
     expect(openStudy).toHaveBeenCalledWith('John 3:16')
   })
 
-  it('long press on attribution in scroll pane prompts to hide verse numbers and persists preference', async () => {
+  it('long press on passage text prompts to hide verse numbers and persists preference', async () => {
     const alertMocks = getAlertModalMocks()
     alertMocks.showConfirm.mockResolvedValue(true)
 
@@ -747,12 +747,9 @@ describe('ScriptureModal Component', () => {
     expect(passage).toBeTruthy()
     expect(passage!.querySelector('sup.text-blue-600')).toBeTruthy()
 
-    const attribution = document.querySelector('.scripture-modal-attribution') as HTMLElement
-    expect(attribution).toBeTruthy()
-
     jest.useFakeTimers()
     act(() => {
-      fireEvent.pointerDown(attribution, { button: 0, clientX: 100, clientY: 200 })
+      fireEvent.pointerDown(passage!, { button: 0, clientX: 100, clientY: 200 })
     })
     act(() => {
       jest.advanceTimersByTime(DEFAULT_LONG_PRESS_MS)

@@ -1525,7 +1525,6 @@ export default function ScriptureModal({
         {/* Scrollable content + horizontal swipe (whole pane, including attribution) */}
         <ScripturePassageSwipeLayer
           className="relative z-0 flex-1 min-h-0 flex flex-col"
-          onLongPress={handlePassageLongPress}
           {...passageSwipeNavProps}
         >
           <div
@@ -1576,12 +1575,18 @@ export default function ScriptureModal({
                       )}
                       {!showingContext && compareText && (
                         <div className="prose max-w-none">
-                          <ScripturePassageText html={formatPassageText(compareText)} />
+                          <ScripturePassageText
+                            html={formatPassageText(compareText)}
+                            onLongPress={handlePassageLongPress}
+                          />
                         </div>
                       )}
                       {showingContext && compareChapterText && (
                         <div className="prose max-w-none">
-                          <ScripturePassageText html={processChapterText(compareChapterText)} />
+                          <ScripturePassageText
+                            html={processChapterText(compareChapterText)}
+                            onLongPress={handlePassageLongPress}
+                          />
                         </div>
                       )}
                     </div>
@@ -1594,6 +1599,7 @@ export default function ScriptureModal({
                           <ScripturePassageText
                             html={formatPassageText(scriptureText)}
                             innerRef={passageScopeRef}
+                            onLongPress={handlePassageLongPress}
                           />
                         </div>
                       )}
@@ -1604,6 +1610,7 @@ export default function ScriptureModal({
                             data-tour="scripture-modal-chapter-body"
                             html={processChapterText(chapterText)}
                             innerRef={passageScopeRef}
+                            onLongPress={handlePassageLongPress}
                           />
                         </div>
                       )}
@@ -1644,6 +1651,7 @@ export default function ScriptureModal({
                         <ScripturePassageText
                           html={formatPassageText(scriptureText)}
                           innerRef={passageScopeRef}
+                          onLongPress={handlePassageLongPress}
                         />
                       </div>
                     )}
@@ -1654,6 +1662,7 @@ export default function ScriptureModal({
                           data-tour="scripture-modal-chapter-body"
                           html={processChapterText(chapterText)}
                           innerRef={passageScopeRef}
+                          onLongPress={handlePassageLongPress}
                         />
                       </div>
                     )}
