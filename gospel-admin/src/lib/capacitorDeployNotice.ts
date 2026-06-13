@@ -49,10 +49,12 @@ export const WEB_REFRESH_AFTER_UPDATE_NOTICE =
   'Update available\n\nPlease refresh this page to load the latest version.'
 
 export function acknowledgeCapacitorDeployChangelog(
-  changelog: string[],
+  acknowledgedThroughCount: number,
   remoteVersion: string
 ): void {
-  setSeenChangelogCount(Math.max(getSeenChangelogCount(), changelog.length))
+  const count = Math.floor(acknowledgedThroughCount)
+  if (!Number.isFinite(count) || count < 0) return
+  setSeenChangelogCount(Math.max(getSeenChangelogCount(), count))
   setAcknowledgedDeployVersion(remoteVersion)
 }
 

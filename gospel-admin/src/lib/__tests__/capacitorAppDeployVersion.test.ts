@@ -6,6 +6,7 @@ import {
   isLikelyStaleChunkLoadError,
   messageFromUnknownError,
   resetWebViewSessionDeployBaseline,
+  selectChangelogMessagesToShow,
   setSeenChangelogCount,
   setStoredCapacitorDeployVersion,
 } from '@/lib/capacitorAppDeployVersion'
@@ -94,12 +95,12 @@ describe('capacitorAppDeployVersion', () => {
     })
   })
 
-  describe('changelog seen count', () => {
+  describe('changelog acknowledged count', () => {
     beforeEach(() => {
       localStorage.clear()
     })
 
-    it('getUnseenChangelogMessages returns entries after the seen count', () => {
+    it('getUnseenChangelogMessages returns entries after the acknowledged count', () => {
       expect(getUnseenChangelogMessages(['one', 'two', 'three'], 0)).toEqual([
         'one',
         'two',
@@ -107,6 +108,22 @@ describe('capacitorAppDeployVersion', () => {
       ])
       expect(getUnseenChangelogMessages(['one', 'two', 'three'], 2)).toEqual(['three'])
       expect(getUnseenChangelogMessages(['one', 'two', 'three'], 5)).toEqual([])
+    })
+
+    it('selectChangelogMessagesToShow surfaces a sixth entry when five are already acknowledged', () => {
+      const changelog = ['1', '2', '3', '4', '5', '6']
+      expect(selectChangelogMessagesToShow(changelog, 5)).toEqual({
+        messages: ['6'],
+        nextAcknowledgedCount: 6,
+      })
+    })
+
+    it('selectChangelogMessagesToShow caps display at five but acknowledges through the latest entry', () => {
+      const changelog = ['1', '2', '3', '4', '5', '6', '7', '8']
+      expect(selectChangelogMessagesToShow(changelog, 0)).toEqual({
+        messages: ['4', '5', '6', '7', '8'],
+        nextAcknowledgedCount: 8,
+      })
     })
 
     it('setSeenChangelogCount persists a non-negative integer', () => {

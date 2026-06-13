@@ -78,10 +78,31 @@ export function setAcknowledgedDeployVersion(version: string): void {
   }
 }
 
-export function getUnseenChangelogMessages(changelog: string[], seenCount: number): string[] {
+/** Max release notes shown in one What's new / restart alert (newest unseen first). */
+export const DEPLOY_CHANGELOG_DISPLAY_MAX_ENTRIES = 5
+
+export function getUnseenChangelogMessages(changelog: string[], acknowledgedCount: number): string[] {
   if (!changelog.length) return []
-  const safeSeen = Math.max(0, Math.min(seenCount, changelog.length))
-  return changelog.slice(safeSeen)
+  const safeAcknowledged = Math.max(0, Math.min(acknowledgedCount, changelog.length))
+  return changelog.slice(safeAcknowledged)
+}
+
+/** Pick up to `maxDisplay` newest unseen notes; acknowledging jumps to the end of the changelog. */
+export function selectChangelogMessagesToShow(
+  changelog: string[],
+  acknowledgedCount: number,
+  maxDisplay: number = DEPLOY_CHANGELOG_DISPLAY_MAX_ENTRIES
+): { messages: string[]; nextAcknowledgedCount: number } {
+  const unseen = getUnseenChangelogMessages(changelog, acknowledgedCount)
+  if (!unseen.length) {
+    return { messages: [], nextAcknowledgedCount: acknowledgedCount }
+  }
+  const messages = unseen.length > maxDisplay ? unseen.slice(-maxDisplay) : unseen
+  return {
+    messages,
+    /** Dismissing the alert marks through the latest entry; older unseen notes may be skipped. */
+    nextAcknowledgedCount: changelog.length,
+  }
 }
 
 /** Survives React remounts within the same WebView / browser tab JS context. */

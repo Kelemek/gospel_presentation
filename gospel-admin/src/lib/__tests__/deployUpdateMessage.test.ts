@@ -1,6 +1,5 @@
 import {
   DEPLOY_UPDATE_CHANGELOG_ENTRY_MAX_LENGTH,
-  DEPLOY_UPDATE_CHANGELOG_MAX_ENTRIES,
   readDeployUpdateChangelog,
 } from '@/lib/deployUpdateMessage'
 
@@ -30,7 +29,7 @@ describe('deployUpdateMessage', () => {
     ])
   })
 
-  it('readDeployUpdateChangelog keeps only the last five entries', () => {
+  it('readDeployUpdateChangelog returns every entry in the file (append-only)', () => {
     const fs = jest.requireMock('fs') as {
       existsSync: jest.Mock
       readFileSync: jest.Mock
@@ -49,13 +48,14 @@ describe('deployUpdateMessage', () => {
     )
 
     expect(readDeployUpdateChangelog()).toEqual([
+      'Note 1.',
       'Note 2.',
       'Note 3.',
       'Note 4.',
       'Note 5.',
       'Note 6.',
     ])
-    expect(readDeployUpdateChangelog()).toHaveLength(DEPLOY_UPDATE_CHANGELOG_MAX_ENTRIES)
+    expect(readDeployUpdateChangelog()).toHaveLength(6)
   })
 
   it('readDeployUpdateChangelog truncates long entries', () => {

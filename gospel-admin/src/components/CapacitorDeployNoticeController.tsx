@@ -8,7 +8,7 @@ import {
   fetchAppDeployInfo,
   getSeenChangelogCount,
   getEffectiveDeployBaseline,
-  getUnseenChangelogMessages,
+  selectChangelogMessagesToShow,
   isCapacitorDeployVersionStale,
   isLikelyStaleChunkLoadError,
   messageFromUnknownError,
@@ -58,13 +58,18 @@ export function CapacitorDeployNoticeController() {
   }, [])
 
   const promptRestartIfNeeded = useCallback(
-    (remoteVersion: string | null, unseenMessages: string[]) => {
+    (
+      remoteVersion: string | null,
+      messages: string[],
+      nextAcknowledgedCount: number
+    ) => {
       if (!remoteVersion || noticePendingRef.current) return
       if (!shouldShowCapacitorDeployNotice(remoteVersion)) return
 
       noticePendingRef.current = true
       markCapacitorDeployNoticeShown(remoteVersion)
-      showAlert(buildCapacitorRestartAppNotice(unseenMessages))
+      acknowledgeCapacitorDeployChangelog(nextAcknowledgedCount, remoteVersion)
+      showAlert(buildCapacitorRestartAppNotice(messages))
       noticePendingRef.current = false
     },
     [showAlert]
@@ -74,7 +79,7 @@ export function CapacitorDeployNoticeController() {
     (
       messages: string[],
       remoteVersion: string,
-      changelog: string[],
+      nextAcknowledgedCount: number,
       options?: { midSession?: boolean }
     ) => {
       if (!messages.length || noticePendingRef.current) return
@@ -87,7 +92,7 @@ export function CapacitorDeployNoticeController() {
       if (!options?.midSession) {
         markCapacitorWhatsNewShownThisSession()
       }
-      acknowledgeCapacitorDeployChangelog(changelog, remoteVersion)
+      acknowledgeCapacitorDeployChangelog(nextAcknowledgedCount, remoteVersion)
       showAlert(notice)
       noticePendingRef.current = false
     },
@@ -100,7 +105,11 @@ export function CapacitorDeployNoticeController() {
 
     const isNative = Capacitor.isNativePlatform()
     const baselineVersion = baselineDeployVersion()
-    const unseenMessages = getUnseenChangelogMessages(changelog, getSeenChangelogCount())
+    const acknowledgedCount = getSeenChangelogCount()
+    const { messages: messagesToShow, nextAcknowledgedCount } = selectChangelogMessagesToShow(
+      changelog,
+      acknowledgedCount
+    )
 
     if (!baselineVersion) {
       if (!hasPresentationWelcomeBeenDismissed()) {
@@ -109,12 +118,12 @@ export function CapacitorDeployNoticeController() {
 
       rememberDeployVersion(remoteVersion)
 
-      if (unseenMessages.length > 0) {
-        promptWhatsNewIfNeeded(unseenMessages, remoteVersion, changelog)
+      if (messagesToShow.length > 0) {
+        promptWhatsNewIfNeeded(messagesToShow, remoteVersion, nextAcknowledgedCount)
         return
       }
 
-      acknowledgeCapacitorDeployChangelog(changelog, remoteVersion)
+      acknowledgeCapacitorDeployChangelog(nextAcknowledgedCount, remoteVersion)
       return
     }
 
@@ -123,7 +132,7 @@ export function CapacitorDeployNoticeController() {
     }
 
     if (isNative) {
-      promptRestartIfNeeded(remoteVersion, unseenMessages)
+      promptRestartIfNeeded(remoteVersion, messagesToShow, nextAcknowledgedCount)
       return
     }
 
@@ -131,10 +140,12 @@ export function CapacitorDeployNoticeController() {
       return
     }
 
-    if (unseenMessages.length > 0) {
-      promptWhatsNewIfNeeded(unseenMessages, remoteVersion, changelog, { midSession: true })
+    if (messagesToShow.length > 0) {
+      promptWhatsNewIfNeeded(messagesToShow, remoteVersion, nextAcknowledgedCount, {
+        midSession: true,
+      })
     } else {
-      acknowledgeCapacitorDeployChangelog(changelog, remoteVersion)
+      acknowledgeCapacitorDeployChangelog(nextAcknowledgedCount, remoteVersion)
     }
     rememberDeployVersion(remoteVersion)
   }, [
@@ -199,26 +210,27 @@ export function CapacitorDeployNoticeController() {
             rememberDeployVersion: rememberVersion,
             showAlert: alert,
           } = deployNoticeHandlersRef.current
-          const unseen = getUnseenChangelogMessages(changelog, getSeenChangelogCount())
+          const acknowledgedCount = getSeenChangelogCount()
+          const { messages: messagesToShow, nextAcknowledgedCount } =
+            selectChangelogMessagesToShow(changelog, acknowledgedCount)
           const remoteVersion = version ?? 'stale-chunk'
           const isNative = Capacitor.isNativePlatform()
 
           if (isNative) {
             if (attemptCapacitorRecoveryReload('stale-chunk')) return
-            promptRestart(remoteVersion, unseen)
+            promptRestart(remoteVersion, messagesToShow, nextAcknowledgedCount)
             return
           }
 
           if (!hasPresentationWelcomeBeenDismissed()) return
           if (noticePendingRef.current) return
 
-          const whatsNew = unseen.length > 0 ? buildCapacitorWhatsNewNotice(unseen) : null
+          const whatsNew =
+            messagesToShow.length > 0 ? buildCapacitorWhatsNewNotice(messagesToShow) : null
           const notice = whatsNew ?? WEB_REFRESH_AFTER_UPDATE_NOTICE
           noticePendingRef.current = true
           try {
-            if (whatsNew) {
-              acknowledgeCapacitorDeployChangelog(changelog, remoteVersion)
-            }
+            acknowledgeCapacitorDeployChangelog(nextAcknowledgedCount, remoteVersion)
             alert(notice)
             rememberVersion(remoteVersion)
           } finally {

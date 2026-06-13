@@ -4,9 +4,6 @@ import { logger } from '@/lib/logger'
 
 export const DEPLOY_UPDATE_CHANGELOG_ENTRY_MAX_LENGTH = 400
 
-/** Maximum release notes kept in the changelog file and served to clients. */
-export const DEPLOY_UPDATE_CHANGELOG_MAX_ENTRIES = 5
-
 const DEPLOY_UPDATE_CHANGELOG_FILE = path.join(
   process.cwd(),
   'data',
@@ -31,7 +28,6 @@ function parseDeployUpdateChangelogFileContent(raw: string): string[] {
       .map((entry) => entry.trim())
       .filter(Boolean)
       .map((entry) => truncateDeployUpdateChangelogEntry(entry))
-      .slice(-DEPLOY_UPDATE_CHANGELOG_MAX_ENTRIES)
   } catch {
     return []
   }

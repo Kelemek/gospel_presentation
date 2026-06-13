@@ -1,6 +1,7 @@
 import {
-  CAPACITOR_DEPLOY_ACK_VERSION_KEY,
-  CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY,
+  getAcknowledgedDeployVersion,
+  getSeenChangelogCount,
+  selectChangelogMessagesToShow,
   setSeenChangelogCount,
 } from '@/lib/capacitorAppDeployVersion'
 import {
@@ -65,11 +66,16 @@ describe('capacitorDeployNotice', () => {
     expect(buildCapacitorWhatsNewNotice(['   '])).toBeNull()
   })
 
-  it('acknowledgeCapacitorDeployChangelog persists seen changelog count and deploy version', () => {
+  it('acknowledgeCapacitorDeployChangelog persists acknowledged count and deploy version', () => {
+    const changelog = ['one', 'two']
     setSeenChangelogCount(1)
-    acknowledgeCapacitorDeployChangelog(['one', 'two'], 'deploy-new')
-    expect(localStorage.getItem(CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY)).toBe('2')
-    expect(localStorage.getItem(CAPACITOR_DEPLOY_ACK_VERSION_KEY)).toBe('deploy-new')
+    const { nextAcknowledgedCount } = selectChangelogMessagesToShow(changelog, 1)
+    expect(nextAcknowledgedCount).toBe(2)
+
+    acknowledgeCapacitorDeployChangelog(nextAcknowledgedCount, 'deploy-new')
+
+    expect(getSeenChangelogCount()).toBe(2)
+    expect(getAcknowledgedDeployVersion()).toBe('deploy-new')
   })
 
   it('shouldShowCapacitorWhatsNewOnColdStart is false after marking this session', () => {

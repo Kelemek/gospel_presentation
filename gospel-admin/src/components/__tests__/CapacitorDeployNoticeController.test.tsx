@@ -224,6 +224,34 @@ describe('CapacitorDeployNoticeController', () => {
           expect.stringContaining('refresh this page')
         )
       })
+      expect(localStorage.getItem(CAPACITOR_DEPLOY_ACK_VERSION_KEY)).toBe('deploy-new')
+    })
+
+    it('acknowledges changelog on stale chunk refresh even when there are no unseen notes', async () => {
+      localStorage.setItem(PRESENTATION_FIRST_VISIT_WELCOME_KEY, '1')
+      setStoredCapacitorDeployVersion('deploy-old')
+      setSeenChangelogCount(2)
+      global.fetch = jest.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          version: 'deploy-new',
+          changelog: ['Older release note.', 'Latest release note.'],
+        }),
+      })) as unknown as typeof fetch
+
+      render(<CapacitorDeployNoticeController />)
+
+      window.dispatchEvent(
+        new ErrorEvent('error', { message: 'Loading chunk 12 failed.' })
+      )
+
+      await waitFor(() => {
+        expect(mockShowAlert).toHaveBeenCalledWith(
+          expect.stringContaining('refresh this page')
+        )
+      })
+      expect(localStorage.getItem(CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY)).toBe('2')
+      expect(localStorage.getItem(CAPACITOR_DEPLOY_ACK_VERSION_KEY)).toBe('deploy-new')
     })
 
     it('shows whats-new on stale chunk errors when unseen changelog entries exist', async () => {
@@ -405,6 +433,28 @@ describe('CapacitorDeployNoticeController', () => {
       expect(sessionStorage.getItem(CAPACITOR_DEPLOY_NOTICE_SHOWN_FOR_KEY)).toBe(
         'deploy-new'
       )
+      expect(localStorage.getItem(CAPACITOR_DEPLOY_ACK_VERSION_KEY)).toBe('deploy-new')
+    })
+
+    it('acknowledges deploy version on restart when all changelog entries are already seen', async () => {
+      localStorage.setItem(PRESENTATION_FIRST_VISIT_WELCOME_KEY, '1')
+      setStoredCapacitorDeployVersion('deploy-old')
+      setSeenChangelogCount(2)
+      global.fetch = jest.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          version: 'deploy-new',
+          changelog: ['Older release note.', 'Latest release note.'],
+        }),
+      })) as unknown as typeof fetch
+
+      render(<CapacitorDeployNoticeController />)
+
+      await waitFor(() => {
+        expect(mockShowAlert).toHaveBeenCalledWith(CAPACITOR_RESTART_APP_NOTICE)
+      })
+      expect(localStorage.getItem(CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY)).toBe('2')
+      expect(localStorage.getItem(CAPACITOR_DEPLOY_ACK_VERSION_KEY)).toBe('deploy-new')
     })
 
     it('prompts to restart when remounted mid-session after sessionStorage is cleared', async () => {
@@ -432,16 +482,14 @@ describe('CapacitorDeployNoticeController', () => {
       render(<CapacitorDeployNoticeController />)
 
       await waitFor(() => {
-        expect(mockShowAlert).toHaveBeenCalledWith(
-          buildCapacitorRestartAppNotice(['Older release note.', 'Latest release note.'])
-        )
+        expect(mockShowAlert).toHaveBeenCalledWith(CAPACITOR_RESTART_APP_NOTICE)
       })
       expect(mockShowAlert).not.toHaveBeenCalledWith(
         buildCapacitorWhatsNewNotice(['Older release note.', 'Latest release note.'])
       )
     })
 
-    it('does not mark changelog as seen when prompting to restart', async () => {
+    it('does not show whats-new again after restart alert included release notes', async () => {
       localStorage.setItem(PRESENTATION_FIRST_VISIT_WELCOME_KEY, '1')
       setStoredCapacitorDeployVersion('deploy-old')
       global.fetch = jest.fn(async () => ({
@@ -459,8 +507,8 @@ describe('CapacitorDeployNoticeController', () => {
           buildCapacitorRestartAppNotice(['Older release note.', 'Latest release note.'])
         )
       })
-      expect(localStorage.getItem(CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY)).toBeNull()
-      expect(localStorage.getItem(CAPACITOR_DEPLOY_ACK_VERSION_KEY)).toBeNull()
+      expect(localStorage.getItem(CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY)).toBe('2')
+      expect(localStorage.getItem(CAPACITOR_DEPLOY_ACK_VERSION_KEY)).toBe('deploy-new')
 
       unmount()
       mockShowAlert.mockClear()
@@ -470,10 +518,11 @@ describe('CapacitorDeployNoticeController', () => {
       render(<CapacitorDeployNoticeController />)
 
       await waitFor(() => {
-        expect(mockShowAlert).toHaveBeenCalledWith(
-          buildCapacitorWhatsNewNotice(['Older release note.', 'Latest release note.'])
-        )
+        expect(global.fetch).toHaveBeenCalled()
       })
+      expect(mockShowAlert).not.toHaveBeenCalledWith(
+        buildCapacitorWhatsNewNotice(['Older release note.', 'Latest release note.'])
+      )
     })
 
     it('does not prompt again for the same remote deploy version', async () => {
@@ -536,6 +585,7 @@ describe('CapacitorDeployNoticeController', () => {
           buildCapacitorRestartAppNotice(['Latest release note.'])
         )
       })
+      expect(localStorage.getItem(CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY)).toBe('2')
     })
 
     it('includes unseen deploy changelog entries in the restart alert', async () => {
