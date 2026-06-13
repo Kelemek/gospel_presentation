@@ -96,17 +96,18 @@ import {
 import { consumePendingBookmarkResume } from '@/lib/profileBookmarkResumeSession'
 import {
   captureReadingPositionAtViewport,
-  isReadingPositionFingerprintValid,
-  listenTextOptionsForProfileSlug,
+  isReadingPositionAheadOf,
   restoreReadingPosition,
   resolveReadingScope,
 } from '@/lib/profileReadingPosition'
+import { getOrderedTocAnchorIds } from '@/lib/tocAnchorFromScroll'
 import {
   clearProfileReadingResume,
   loadProfileReadingResume,
   saveProfileReadingResume,
   type ProfileReadingResumeV1,
 } from '@/lib/profileReadingResumeStorage'
+import { runReadingResumeRestoreWithFingerprintRetry, readingResumeForScrollTopGuard } from '@/lib/profileReadingResumeRestore'
 import {
   GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT,
   loadProfileRecentResourcesForTabs,
@@ -286,6 +287,12 @@ function ProfileContent({
   const readingResumeSaveIdleRef = useRef<number | null>(null)
   const readingResumeSaveUsesIdleCallbackRef = useRef(false)
   const flushReadingResumeSaveRef = useRef<(reason?: string) => void>(() => {})
+  const lastSavedReadingResumeRef = useRef<ProfileReadingResumeV1 | null>(null)
+  const lastSavedReadingResumeSlugRef = useRef<string | null>(null)
+  const readingResumeAppVisibleRestoreKeyRef = useRef<string | null>(null)
+  const appVisibleRestoreCancelRef = useRef<(() => void) | null>(null)
+  const profileSlugRef = useRef('')
+  const tryAppResumeReadingRestoreRef = useRef<() => void>(() => {})
   type TabNavStagingRef =
     | { status: 'unset' }
     | { status: 'not-tab-nav' }
@@ -591,20 +598,29 @@ function ProfileContent({
       }
       if (!captured) return
 
+      const scrollTopGuardReasons = new Set([
+        'tab-select-leave',
+        'visibility-hide',
+        'pagehide',
+        'beforeunload',
+      ])
       if (
-        (flushReason === 'tab-select-leave' || flushReason === 'visibility-hide') &&
+        flushReason &&
+        scrollTopGuardReasons.has(flushReason) &&
         typeof window !== 'undefined' &&
         window.scrollY <= 8
       ) {
-        const existing = loadProfileReadingResume(profileSlug)
-        // Only block regress within the same section (route scroll reset at top). A different
-        // anchor means the reader moved sections and we should persist that navigation.
-        if (
-          existing &&
-          existing.anchorId === captured.anchorId &&
-          existing.plainOffset > captured.plainOffset
-        ) {
-          return
+        const existing = readingResumeForScrollTopGuard(
+          profileSlug,
+          loadProfileReadingResume(profileSlug),
+          lastSavedReadingResumeSlugRef.current,
+          lastSavedReadingResumeRef.current
+        )
+        if (existing) {
+          const orderedIds = getOrderedTocAnchorIds(sections)
+          if (isReadingPositionAheadOf(existing, captured, orderedIds)) {
+            return
+          }
         }
       }
 
@@ -614,6 +630,13 @@ function ProfileContent({
         captured.plainOffset,
         captured.fingerprint
       )
+      lastSavedReadingResumeRef.current = {
+        v: 1,
+        anchorId: captured.anchorId,
+        plainOffset: captured.plainOffset,
+        fingerprint: captured.fingerprint,
+      }
+      lastSavedReadingResumeSlugRef.current = profileSlug
     },
     [profileSlug, sectionCount, sections, selectedScripture.isOpen]
   )
@@ -689,7 +712,7 @@ function ProfileContent({
           markProfileResourceTabNavigation(nextSlug, saved)
           router.push(`/${nextSlug}`, { scroll: false })
         } else {
-          router.push('/default')
+          router.push('/default', { scroll: false })
         }
       }
     },
@@ -700,6 +723,9 @@ function ProfileContent({
     if (!isHydrated || !profileSlug || sectionCount === 0) return
 
     const scheduleSave = () => {
+      if (typeof window !== 'undefined' && window.scrollY > 64) {
+        readingResumeAppVisibleRestoreKeyRef.current = null
+      }
       cancelPendingReadingResumeSave()
       readingResumeSaveTimerRef.current = window.setTimeout(() => {
         readingResumeSaveTimerRef.current = null
@@ -708,16 +734,33 @@ function ProfileContent({
     }
 
     window.addEventListener('scroll', scheduleSave, { passive: true })
-    const onHide = () => {
-      persistReadingResumeBeforeLeave('visibility-hide')
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        readingResumeAppVisibleRestoreKeyRef.current = null
+        persistReadingResumeBeforeLeave('visibility-hide')
+        return
+      }
+      if (document.visibilityState === 'visible') {
+        tryAppResumeReadingRestoreRef.current()
+      }
     }
-    document.addEventListener('visibilitychange', onHide)
-    window.addEventListener('pagehide', onHide)
+    const onPageHide = () => {
+      persistReadingResumeBeforeLeave('pagehide')
+    }
+    const onBeforeUnload = () => {
+      persistReadingResumeBeforeLeave('beforeunload')
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    window.addEventListener('pagehide', onPageHide)
+    window.addEventListener('beforeunload', onBeforeUnload)
 
     return () => {
       window.removeEventListener('scroll', scheduleSave)
-      document.removeEventListener('visibilitychange', onHide)
-      window.removeEventListener('pagehide', onHide)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('pagehide', onPageHide)
+      window.removeEventListener('beforeunload', onBeforeUnload)
       // Do not persist on effect cleanup: scrollY is often 0 during route/tab transitions
       // and would overwrite a valid resume saved in tab-select-leave.
       cancelPendingReadingResumeSave()
@@ -755,7 +798,8 @@ function ProfileContent({
       anchorId: string,
       plainOffset: number,
       fingerprint: string,
-      onSettled?: () => void
+      onSettled?: () => void,
+      restoreProfileSlug: string = profileSlug
     ) => {
       cancelReadingResumeRestore()
       const abortUserIntent = new AbortController()
@@ -763,7 +807,7 @@ function ProfileContent({
         anchorId,
         plainOffset,
         fingerprint,
-        profileSlug,
+        restoreProfileSlug,
         {
           onDone: () => onSettled?.(),
           onGiveUp: () => onSettled?.(),
@@ -785,10 +829,85 @@ function ProfileContent({
   const startReadingResumeRestoreRef = useRef(startReadingResumeRestore)
   const onReadingResumeSettledRef = useRef(onReadingResumeSettled)
 
+  const tryAppResumeReadingRestore = useCallback(() => {
+    if (!profileSlug || sectionCount === 0) return
+    if (typeof window === 'undefined' || window.scrollY > 8) return
+    if (selectedScripture.isOpen) return
+    if (studyRefParam) return
+
+    const rawHash = window.location.hash.slice(1)
+    if (rawHash && rawHash.startsWith('section-')) return
+
+    if (isMcheyneProfileSlug(profileSlug)) {
+      if (resolveMcheynePlanDayFromNavigation(mcheynePlanDayParam) != null) return
+      if (resolveMcheyneResumePinFromNavigation(mcheyneResumePinParam)) return
+    }
+
+    const slugForRestore = profileSlug
+
+    void (async () => {
+      await hydrateGospelClientStorage()
+      if (profileSlugRef.current !== slugForRestore) return
+
+      const saved = loadProfileReadingResume(slugForRestore)
+      if (!saved) return
+
+      const restoreKey = `${slugForRestore}:${saved.anchorId}:${saved.plainOffset}`
+      if (readingResumeAppVisibleRestoreKeyRef.current === restoreKey) return
+
+      appVisibleRestoreCancelRef.current?.()
+      appVisibleRestoreCancelRef.current = runReadingResumeRestoreWithFingerprintRetry(
+        saved,
+        slugForRestore,
+        {
+          onInvalidFingerprint: () => {
+            if (profileSlugRef.current !== slugForRestore) return
+            const scope = resolveReadingScope(saved.anchorId)
+            if (scope) clearProfileReadingResume(slugForRestore)
+          },
+          onSettled: () => {
+            if (profileSlugRef.current !== slugForRestore) return
+            readingResumeAppVisibleRestoreKeyRef.current = restoreKey
+          },
+          onRestore: (resume, onSettled) => {
+            if (profileSlugRef.current !== slugForRestore) return
+            startReadingResumeRestoreRef.current(
+              resume.anchorId,
+              resume.plainOffset,
+              resume.fingerprint,
+              onSettled,
+              slugForRestore
+            )
+          },
+        }
+      )
+    })()
+  }, [
+    profileSlug,
+    sectionCount,
+    selectedScripture.isOpen,
+    studyRefParam,
+    mcheynePlanDayParam,
+    mcheyneResumePinParam,
+  ])
+
+  useLayoutEffect(() => {
+    profileSlugRef.current = profileSlug
+  }, [profileSlug])
+
+  useEffect(() => {
+    lastSavedReadingResumeRef.current = null
+    lastSavedReadingResumeSlugRef.current = null
+    readingResumeAppVisibleRestoreKeyRef.current = null
+    appVisibleRestoreCancelRef.current?.()
+    appVisibleRestoreCancelRef.current = null
+  }, [profileSlug])
+
   useEffect(() => {
     startReadingResumeRestoreRef.current = startReadingResumeRestore
     onReadingResumeSettledRef.current = onReadingResumeSettled
-  }, [startReadingResumeRestore, onReadingResumeSettled])
+    tryAppResumeReadingRestoreRef.current = tryAppResumeReadingRestore
+  }, [startReadingResumeRestore, onReadingResumeSettled, tryAppResumeReadingRestore])
 
   useEffect(() => {
     const slugOnMount = profileSlug
@@ -832,36 +951,22 @@ function ProfileContent({
       return
     }
 
-    const TAB_NAV_RESTORE_MAX_FRAMES = 30
-    let cancelled = false
-
-    const runTabNavRestore = (frame: number) => {
-      if (cancelled) return
-
-      const scope = resolveReadingScope(tabNavResume.anchorId)
-      const listenOpts = listenTextOptionsForProfileSlug(profileSlug)
-      const fingerprintValid =
-        !scope || isReadingPositionFingerprintValid(scope, tabNavResume.fingerprint, listenOpts)
-
-      if (!fingerprintValid && frame < TAB_NAV_RESTORE_MAX_FRAMES) {
-        requestAnimationFrame(() => runTabNavRestore(frame + 1))
-        return
-      }
-
-      startReadingResumeRestoreRef.current(
-        tabNavResume.anchorId,
-        tabNavResume.plainOffset,
-        tabNavResume.fingerprint,
-        () => {
-          settle()
-        }
-      )
-    }
-
-    requestAnimationFrame(() => runTabNavRestore(0))
+    const cancelRetry = runReadingResumeRestoreWithFingerprintRetry(tabNavResume, profileSlug, {
+      skipRestoreOnInvalidFingerprint: false,
+      onRestore: (resume) => {
+        startReadingResumeRestoreRef.current(
+          resume.anchorId,
+          resume.plainOffset,
+          resume.fingerprint,
+          () => {
+            settle()
+          }
+        )
+      },
+    })
 
     return () => {
-      cancelled = true
+      cancelRetry()
     }
   }, [isHydrated, sectionCount, profileSlug])
 
@@ -914,16 +1019,20 @@ function ProfileContent({
           return
         }
 
-        const scope = resolveReadingScope(saved.anchorId)
-        const listenOpts = listenTextOptionsForProfileSlug(profileSlug)
-        if (scope && !isReadingPositionFingerprintValid(scope, saved.fingerprint, listenOpts)) {
-          clearProfileReadingResume(profileSlug)
-          profileReadingNavAppliedRef.current = true
-          return
-        }
-
         profileReadingNavAppliedRef.current = true
-        startReadingResumeRestore(saved.anchorId, saved.plainOffset, saved.fingerprint)
+        runReadingResumeRestoreWithFingerprintRetry(saved, profileSlug, {
+          onInvalidFingerprint: () => {
+            const scope = resolveReadingScope(saved.anchorId)
+            if (scope) clearProfileReadingResume(profileSlug)
+          },
+          onRestore: (resume) => {
+            startReadingResumeRestore(
+              resume.anchorId,
+              resume.plainOffset,
+              resume.fingerprint
+            )
+          },
+        })
       })()
     }, 120)
 
@@ -2042,7 +2151,7 @@ function ProfileContent({
         void setTranslation(entry.translation)
       }
       if (entry.slug.trim() !== profileSlug.trim()) {
-        router.push(buildProfileRecentScriptureHref(entry))
+        router.push(buildProfileRecentScriptureHref(entry), { scroll: false })
         return
       }
       const wantChapterView =

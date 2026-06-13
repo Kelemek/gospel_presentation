@@ -6,6 +6,7 @@ import {
   collapsedPlainOffsetBeforeListenBoundary,
   collapsedPlainOffsetFromRawListenOffset,
   excerptAroundPlainOffset,
+  isReadingPositionAheadOf,
   profileReadingLineViewportY,
   READING_POSITION_VIEWPORT_LINE_GAP_PX,
   restoreReadingPosition,
@@ -92,6 +93,31 @@ describe('profileReadingPosition', () => {
     const excerpt = excerptAroundPlainOffset(text, 60)
     expect(excerpt.startsWith('…') || excerpt.length <= 96).toBe(true)
     expect(excerpt.length).toBeLessThanOrEqual(96)
+  })
+
+  it('isReadingPositionAheadOf compares anchor order then plain offset', () => {
+    const ordered = ['section-1-0', 'section-1-1', 'section-2-0']
+    expect(
+      isReadingPositionAheadOf(
+        { anchorId: 'section-2-0', plainOffset: 0 },
+        { anchorId: 'section-1-0', plainOffset: 999 },
+        ordered
+      )
+    ).toBe(true)
+    expect(
+      isReadingPositionAheadOf(
+        { anchorId: 'section-1-0', plainOffset: 10 },
+        { anchorId: 'section-1-0', plainOffset: 5 },
+        ordered
+      )
+    ).toBe(true)
+    expect(
+      isReadingPositionAheadOf(
+        { anchorId: 'section-1-0', plainOffset: 2 },
+        { anchorId: 'section-1-1', plainOffset: 0 },
+        ordered
+      )
+    ).toBe(false)
   })
 
   describe('restoreReadingPosition', () => {

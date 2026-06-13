@@ -34,7 +34,7 @@ describe('ProfileAppLaunchResume', () => {
     render(<ProfileAppLaunchResume />)
 
     await waitFor(() => {
-      expect(mockReplace).toHaveBeenCalledWith('/last-slug')
+      expect(mockReplace).toHaveBeenCalledWith('/last-slug', { scroll: false })
     })
     expect(sessionStorage.getItem(PROFILE_APP_LAUNCH_RESUME_SESSION_KEY)).toBe('1')
   })

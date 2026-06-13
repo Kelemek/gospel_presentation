@@ -348,6 +348,25 @@ export function isReadingPositionFingerprintValid(
   return readAlongTextFingerprint(plain) === fingerprint
 }
 
+export type ReadingPositionRef = {
+  anchorId: string
+  plainOffset: number
+}
+
+/** True when `ahead` is later in the document than `behind` (TOC anchor order, then plain offset). */
+export function isReadingPositionAheadOf(
+  ahead: ReadingPositionRef,
+  behind: ReadingPositionRef,
+  orderedAnchorIds: string[]
+): boolean {
+  const aheadIdx = orderedAnchorIds.indexOf(ahead.anchorId)
+  const behindIdx = orderedAnchorIds.indexOf(behind.anchorId)
+  if (aheadIdx < 0 || behindIdx < 0) return false
+  if (aheadIdx > behindIdx) return true
+  if (aheadIdx < behindIdx) return false
+  return ahead.plainOffset > behind.plainOffset
+}
+
 export type RestoreReadingPositionOptions = {
   behavior?: ScrollBehavior
   maxFrames?: number

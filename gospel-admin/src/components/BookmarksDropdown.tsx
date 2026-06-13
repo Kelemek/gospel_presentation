@@ -43,7 +43,7 @@ function bookmarkHasPrecisePosition(b: ProfileBookmark): boolean {
 export function openProfileBookmark(
   b: ProfileBookmark,
   currentProfileSlug: string,
-  router: { push: (href: string) => void }
+  router: { push: (href: string, options?: { scroll?: boolean }) => void }
 ): void {
   const precise = bookmarkHasPrecisePosition(b)
 
@@ -55,7 +55,7 @@ export function openProfileBookmark(
         fingerprint: b.fingerprint!,
       })
     }
-    router.push(`/${b.slug}#${encodeURIComponent(b.anchorId)}`)
+    router.push(`/${b.slug}#${encodeURIComponent(b.anchorId)}`, { scroll: false })
     return
   }
 

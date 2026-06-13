@@ -18,7 +18,9 @@ export function ProfileAppLaunchResume() {
     let cancelled = false
     const getPathname = () => (cancelled ? null : window.location.pathname)
 
-    void applyProfileAppLaunchResume((path) => router.replace(path), { getPathname })
+    void applyProfileAppLaunchResume((path) => router.replace(path, { scroll: false }), {
+      getPathname,
+    })
 
     return () => {
       cancelled = true

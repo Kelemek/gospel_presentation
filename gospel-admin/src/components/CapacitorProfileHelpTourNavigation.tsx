@@ -18,7 +18,7 @@ export function CapacitorProfileHelpTourNavigation() {
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return
     const navigate = (path: string) => {
-      router.push(path)
+      router.push(path, { scroll: false })
     }
     setProfileHelpTourClientNavigate(navigate)
     return () => setProfileHelpTourClientNavigate(null)

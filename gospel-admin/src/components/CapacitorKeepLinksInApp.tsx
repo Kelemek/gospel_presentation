@@ -19,7 +19,7 @@ export function CapacitorKeepLinksInApp() {
     if (typeof window === 'undefined' || !Capacitor.isNativePlatform()) return
 
     const navigateInApp = (href: string) => {
-      router.push(href)
+      router.push(href, { scroll: false })
     }
 
     const intercept = (e: Event): boolean => {

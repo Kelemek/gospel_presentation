@@ -151,7 +151,7 @@ export default function HighlightsDropdown({
       if (ok) onOpenHighlight(h)
       return
     }
-    router.push(`/${h.slug}#${encodeURIComponent(h.anchorId)}`)
+    router.push(`/${h.slug}#${encodeURIComponent(h.anchorId)}`, { scroll: false })
   }
 
   const handleRemove = async (e: React.MouseEvent, id: string) => {

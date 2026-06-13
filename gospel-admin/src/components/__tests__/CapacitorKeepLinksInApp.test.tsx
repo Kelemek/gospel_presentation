@@ -60,7 +60,7 @@ describe('CapacitorKeepLinksInApp', () => {
 
       expect(preventDefaultSpy).toHaveBeenCalled()
       expect(stopPropagationSpy).toHaveBeenCalled()
-      expect(mockPush).toHaveBeenCalledWith('/privacy')
+      expect(mockPush).toHaveBeenCalledWith('/privacy', { scroll: false })
 
       document.body.removeChild(anchor)
       unmount()
@@ -75,7 +75,7 @@ describe('CapacitorKeepLinksInApp', () => {
 
       fireEvent.click(anchor, { bubbles: true })
 
-      expect(mockPush).toHaveBeenCalledWith('/copyright')
+      expect(mockPush).toHaveBeenCalledWith('/copyright', { scroll: false })
       document.body.removeChild(anchor)
       unmount()
     })
@@ -89,7 +89,7 @@ describe('CapacitorKeepLinksInApp', () => {
 
       fireEvent.click(anchor, { bubbles: true })
 
-      expect(mockPush).toHaveBeenCalledWith('/mchy')
+      expect(mockPush).toHaveBeenCalledWith('/mchy', { scroll: false })
       document.body.removeChild(anchor)
       unmount()
     })
@@ -103,7 +103,7 @@ describe('CapacitorKeepLinksInApp', () => {
 
       fireEvent.click(anchor, { bubbles: true })
 
-      expect(mockPush).toHaveBeenCalledWith('/')
+      expect(mockPush).toHaveBeenCalledWith('/', { scroll: false })
       document.body.removeChild(anchor)
       unmount()
     })
@@ -160,7 +160,7 @@ describe('CapacitorKeepLinksInApp', () => {
 
       fireEvent.click(span, { bubbles: true })
 
-      expect(mockPush).toHaveBeenCalledWith('/privacy')
+      expect(mockPush).toHaveBeenCalledWith('/privacy', { scroll: false })
       document.body.removeChild(anchor)
       unmount()
     })
@@ -173,7 +173,7 @@ describe('CapacitorKeepLinksInApp', () => {
       document.body.appendChild(anchor)
 
       fireEvent.touchStart(anchor, { touches: [{ clientX: 0, clientY: 0 }] })
-      expect(mockPush).toHaveBeenCalledWith('/mchy')
+      expect(mockPush).toHaveBeenCalledWith('/mchy', { scroll: false })
 
       fireEvent.click(anchor, { bubbles: true })
       expect(mockPush).toHaveBeenCalledTimes(1)
@@ -213,10 +213,10 @@ describe('CapacitorKeepLinksInApp', () => {
       document.body.appendChild(second)
 
       fireEvent.touchStart(first, { touches: [{ clientX: 0, clientY: 0 }] })
-      expect(mockPush).toHaveBeenCalledWith('/mchy')
+      expect(mockPush).toHaveBeenCalledWith('/mchy', { scroll: false })
 
       fireEvent.click(second, { bubbles: true })
-      expect(mockPush).toHaveBeenCalledWith('/privacy')
+      expect(mockPush).toHaveBeenCalledWith('/privacy', { scroll: false })
       expect(mockPush).toHaveBeenCalledTimes(2)
 
       document.body.removeChild(first)

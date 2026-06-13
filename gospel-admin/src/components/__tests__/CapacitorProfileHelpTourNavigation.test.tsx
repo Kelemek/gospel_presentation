@@ -31,7 +31,7 @@ describe('CapacitorProfileHelpTourNavigation', () => {
 
     scriptureReaderTourNavigation.assign('/default')
 
-    expect(mockPush).toHaveBeenCalledWith('/default')
+    expect(mockPush).toHaveBeenCalledWith('/default', { scroll: false })
   })
 
   it('tags body with capacitor-native + capacitor-<platform> classes while mounted on native', () => {

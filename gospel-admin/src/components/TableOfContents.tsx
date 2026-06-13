@@ -132,6 +132,7 @@ function ResourceTemplateMenuLink({
   return (
     <Link
       href={`/${slug}`}
+      scroll={false}
       data-resource-template-slug={slug}
       className={className}
     >
@@ -359,6 +360,7 @@ export default function TableOfContents({
                     <Link
                       key={entry.slug}
                       href={`/${entry.slug}`}
+                      scroll={false}
                       data-recent-resource-slug={entry.slug}
                       onClick={() => onNavigate?.()}
                       className="flex items-center gap-2 px-4 py-3 text-sm font-normal text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-600 last:border-b-0 transition-colors min-w-0"

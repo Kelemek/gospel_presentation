@@ -207,7 +207,7 @@ describe('BookmarksDropdown', () => {
     await user.click(screen.getByRole('button', { name: 'Bookmarks' }))
     await user.click(screen.getByText('Other book'))
 
-    expect(mockPush).toHaveBeenCalledWith('/other#section-2-0')
+    expect(mockPush).toHaveBeenCalledWith('/other#section-2-0', { scroll: false })
     expect(setPendingBookmarkResume).not.toHaveBeenCalled()
   })
 
@@ -247,7 +247,7 @@ describe('BookmarksDropdown', () => {
       plainOffset: 40,
       fingerprint: 'fp-other',
     })
-    expect(mockPush).toHaveBeenCalledWith('/other#section-2-0')
+    expect(mockPush).toHaveBeenCalledWith('/other#section-2-0', { scroll: false })
   })
 
   it('shows excerpt behind chevron toggle', async () => {
