@@ -6,6 +6,22 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import BiblePassagePickerModal from '@/components/BiblePassagePickerModal'
 
+jest.mock('@/components/ScriptureHoverModal', () => {
+  return function MockScriptureHoverModal({
+    reference,
+    children,
+  }: {
+    reference: string
+    children: React.ReactNode
+  }) {
+    return (
+      <div data-testid="scripture-hover" data-reference={reference}>
+        {children}
+      </div>
+    )
+  }
+})
+
 function getChapterButtons() {
   const chapterLabel = screen.getByText('Chapter')
   const wrap = chapterLabel.nextElementSibling as HTMLElement | null
@@ -95,5 +111,30 @@ describe('BiblePassagePickerModal', () => {
     await user.click(screen.getByRole('button', { name: /^Read$/i }))
 
     expect(onConfirm).toHaveBeenCalledWith('John 3:16-18', { initialChapterView: false })
+  })
+
+  it('wraps verse buttons with scripture hover preview references', async () => {
+    const user = userEvent.setup()
+    render(
+      <BiblePassagePickerModal
+        isOpen
+        onClose={jest.fn()}
+        confirmLabel="Read"
+        requireVerse={false}
+        variant="reader"
+        onConfirm={jest.fn()}
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: 'New Testament' }))
+    await user.click(screen.getByRole('button', { name: /^John$/i }))
+    await user.click(getChapterButtons()[2])
+
+    const verses = getVerseButtons()
+    expect(verses[2]).toHaveAttribute('data-bible-picker-verse-number', '3')
+    expect(verses[2].closest('[data-testid="scripture-hover"]')).toHaveAttribute(
+      'data-reference',
+      'John 3:3'
+    )
   })
 })

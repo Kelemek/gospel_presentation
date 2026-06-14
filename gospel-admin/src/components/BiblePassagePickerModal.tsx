@@ -12,6 +12,7 @@ import {
 } from '@/lib/memorizationAddVersePrefs'
 import { isChapterOnlyScriptureReference } from '@/lib/parse-scripture-reference'
 import { usePostHogModalOpen } from '@/hooks/usePostHogModalOpen'
+import ScriptureHoverModal from '@/components/ScriptureHoverModal'
 
 export type BiblePassagePickerVariant = 'memorize' | 'reader'
 
@@ -388,21 +389,36 @@ function BiblePassagePickerModalContent({
                               <div className="grid w-full grid-cols-[repeat(auto-fill,minmax(3rem,1fr))] gap-2">
                                 {verseNumbers.map((n) => {
                                   const on = inRange(n)
+                                  const verseReference =
+                                    selectedChapterNum !== null
+                                      ? buildBiblePassageReference(
+                                          book.id,
+                                          book.name,
+                                          selectedChapterNum,
+                                          n,
+                                          null
+                                        )
+                                      : ''
                                   return (
-                                    <button
+                                    <ScriptureHoverModal
                                       key={n}
-                                      type="button"
-                                      data-tour={tourAttr(variant, 'verse')}
-                                      data-bible-picker-verse-number={n}
-                                      onClick={() => onVerseClick(n)}
-                                      className={`min-h-[48px] w-full min-w-0 cursor-pointer rounded-lg text-sm font-medium border transition-colors touch-manipulation ${
-                                        on
-                                          ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100 border-blue-300 dark:border-blue-600'
-                                          : 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600'
-                                      }`}
+                                      reference={verseReference}
+                                      hoverDelayMs={500}
                                     >
-                                      {n}
-                                    </button>
+                                      <button
+                                        type="button"
+                                        data-tour={tourAttr(variant, 'verse')}
+                                        data-bible-picker-verse-number={n}
+                                        onClick={() => onVerseClick(n)}
+                                        className={`min-h-[48px] w-full min-w-0 cursor-pointer rounded-lg text-sm font-medium border transition-colors touch-manipulation ${
+                                          on
+                                            ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-100 border-blue-300 dark:border-blue-600'
+                                            : 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 border-slate-200 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600'
+                                        }`}
+                                      >
+                                        {n}
+                                      </button>
+                                    </ScriptureHoverModal>
                                   )
                                 })}
                               </div>
