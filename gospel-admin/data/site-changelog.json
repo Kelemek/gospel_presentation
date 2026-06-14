@@ -1303,5 +1303,10 @@
     "releasedAt": "2026-06-13",
     "committedAt": "2026-06-14T03:00:00.000Z",
     "message": "Open Help (?), then Change log to browse what's new and past improvements to the app."
+  },
+  {
+    "releasedAt": "2026-06-14",
+    "committedAt": "2026-06-14T19:31:54.731Z",
+    "message": "A.W. Pink's The Attributes of God is now available in the Books library."
   }
 ]

@@ -16,6 +16,7 @@ const PILGRIM = /^ppgr$/i
 const ALL_OF_GRACE = /^aogr$/i
 const REFORMED_PASTOR = /^bxrp$/i
 const RYLE_HOLINESS = /^jryh$/i
+const PINK_ATTRIBUTES = /^pkag$/i
 const RYLE_THOUGHTS_FOR_YOUNG_MEN = /^jrym$/i
 const BERKHOF_ST = /^lbst$/i
 const EDWARDS_BOOK = /^je(fow|rea|tog)$/i
@@ -36,6 +37,7 @@ function isReimportableCorpusProfileSlug(slug) {
     ALL_OF_GRACE.test(s) ||
     REFORMED_PASTOR.test(s) ||
     RYLE_HOLINESS.test(s) ||
+    PINK_ATTRIBUTES.test(s) ||
     RYLE_THOUGHTS_FOR_YOUNG_MEN.test(s) ||
     BERKHOF_ST.test(s) ||
     EDWARDS_BOOK.test(s) ||

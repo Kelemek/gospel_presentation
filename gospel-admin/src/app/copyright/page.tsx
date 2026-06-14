@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { AcbcExternalResourceLinksAttribution } from '@/components/AcbcExternalResourceLinksAttribution'
 import { CcelPublicDomainAttribution } from '@/components/CcelPublicDomainAttribution'
 import { McheyneReadingPlanAttribution } from '@/components/McheyneReadingPlanAttribution'
+import { PinkAttributesChapelAttribution } from '@/components/PinkAttributesChapelAttribution'
 import { CopyrightScriptureAttributionSections } from '@/components/CopyrightScriptureAttributionSections'
 import { ScriptureFooterAttributionParagraphs } from '@/components/ScriptureFooterAttributionParagraphs'
 import { CCEL_COPYRIGHT_ATTRIBUTIONS, CCEL_COPYRIGHT_POLICY_URL } from '@/lib/ccelCopyrightAttributions'
@@ -84,6 +85,8 @@ export default function CopyrightPage() {
             </div>
 
             <McheyneReadingPlanAttribution className="mb-6" />
+
+            <PinkAttributesChapelAttribution className="mb-6" />
 
             <AcbcExternalResourceLinksAttribution className="mb-6" />
 

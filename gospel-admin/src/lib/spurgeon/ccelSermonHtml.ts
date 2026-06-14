@@ -77,6 +77,8 @@ const THML_BOOK_ABBREV_TO_BOOK_ALIAS: Record<string, string> = {
   lam: 'lamentations',
   ezek: 'ezekiel',
   ezk: 'ezekiel',
+  eze: 'ezekiel',
+  neh: 'nehemiah',
   dan: 'daniel',
   hos: 'hosea',
   joel: 'joel',

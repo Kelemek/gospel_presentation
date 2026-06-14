@@ -12,6 +12,7 @@ describe('isReimportableCorpusProfileSlug', () => {
     expect(isReimportableCorpusProfileSlug('aogr')).toBe(true)
     expect(isReimportableCorpusProfileSlug('bxrp')).toBe(true)
     expect(isReimportableCorpusProfileSlug('jryh')).toBe(true)
+    expect(isReimportableCorpusProfileSlug('pkag')).toBe(true)
     expect(isReimportableCorpusProfileSlug('jrym')).toBe(true)
     expect(isReimportableCorpusProfileSlug('jefow')).toBe(true)
     expect(isReimportableCorpusProfileSlug('jerea')).toBe(true)
