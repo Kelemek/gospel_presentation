@@ -3,9 +3,19 @@
 import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Capacitor } from '@capacitor/core'
-import { resolveCapacitorInAppLinkFromEvent } from '@/lib/capacitorKeepLinksInApp'
+import {
+  exceedsCapacitorLinkTapMoveThreshold,
+  resolveCapacitorInAppLinkFromEvent,
+} from '@/lib/capacitorKeepLinksInApp'
 
 export { shouldKeepCapacitorLinkInApp } from '@/lib/capacitorKeepLinksInApp'
+
+type PendingLinkTouch = {
+  href: string
+  startX: number
+  startY: number
+  moved: boolean
+}
 
 /**
  * When running in the Capacitor native app, intercepts same-origin link clicks so
@@ -14,12 +24,17 @@ export { shouldKeepCapacitorLinkInApp } from '@/lib/capacitorKeepLinksInApp'
 export function CapacitorKeepLinksInApp() {
   const router = useRouter()
   const touchHandledHrefRef = useRef<string | null>(null)
+  const pendingTouchRef = useRef<PendingLinkTouch | null>(null)
 
   useEffect(() => {
     if (typeof window === 'undefined' || !Capacitor.isNativePlatform()) return
 
     const navigateInApp = (href: string) => {
       router.push(href, { scroll: false })
+    }
+
+    const clearPendingTouch = () => {
+      pendingTouchRef.current = null
     }
 
     const intercept = (e: Event): boolean => {
@@ -33,16 +48,56 @@ export function CapacitorKeepLinksInApp() {
     }
 
     const handleTouchStart = (e: TouchEvent) => {
-      if (e.touches.length !== 1) return
+      if (e.touches.length !== 1) {
+        clearPendingTouch()
+        return
+      }
       const resolved = resolveCapacitorInAppLinkFromEvent(e, window.location.href)
-      if (!resolved) return
+      if (!resolved) {
+        clearPendingTouch()
+        return
+      }
+      const touch = e.touches[0]
+      pendingTouchRef.current = {
+        href: resolved.href,
+        startX: touch.clientX,
+        startY: touch.clientY,
+        moved: false,
+      }
+    }
+
+    const handleTouchMove = (e: TouchEvent) => {
+      const pending = pendingTouchRef.current
+      if (!pending || pending.moved || e.touches.length !== 1) return
+      const touch = e.touches[0]
+      if (
+        exceedsCapacitorLinkTapMoveThreshold(
+          pending.startX,
+          pending.startY,
+          touch.clientX,
+          touch.clientY
+        )
+      ) {
+        pending.moved = true
+      }
+    }
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      const pending = pendingTouchRef.current
+      clearPendingTouch()
+      if (!pending || pending.moved) return
+
       e.preventDefault()
       e.stopPropagation()
-      navigateInApp(resolved.href)
-      touchHandledHrefRef.current = resolved.href
+      navigateInApp(pending.href)
+      touchHandledHrefRef.current = pending.href
       window.setTimeout(() => {
         touchHandledHrefRef.current = null
       }, 500)
+    }
+
+    const handleTouchCancel = () => {
+      clearPendingTouch()
     }
 
     const handleClick = (e: MouseEvent) => {
@@ -57,14 +112,19 @@ export function CapacitorKeepLinksInApp() {
       intercept(e)
     }
 
-    const touchStartListenerOptions: AddEventListenerOptions = {
-      capture: true,
-      passive: false,
-    }
-    document.addEventListener('touchstart', handleTouchStart, touchStartListenerOptions)
+    const passiveCapture: AddEventListenerOptions = { capture: true, passive: true }
+    const activeCapture: AddEventListenerOptions = { capture: true, passive: false }
+
+    document.addEventListener('touchstart', handleTouchStart, passiveCapture)
+    document.addEventListener('touchmove', handleTouchMove, passiveCapture)
+    document.addEventListener('touchend', handleTouchEnd, activeCapture)
+    document.addEventListener('touchcancel', handleTouchCancel, passiveCapture)
     document.addEventListener('click', handleClick, true)
     return () => {
-      document.removeEventListener('touchstart', handleTouchStart, touchStartListenerOptions)
+      document.removeEventListener('touchstart', handleTouchStart, passiveCapture)
+      document.removeEventListener('touchmove', handleTouchMove, passiveCapture)
+      document.removeEventListener('touchend', handleTouchEnd, activeCapture)
+      document.removeEventListener('touchcancel', handleTouchCancel, passiveCapture)
       document.removeEventListener('click', handleClick, true)
     }
   }, [router])

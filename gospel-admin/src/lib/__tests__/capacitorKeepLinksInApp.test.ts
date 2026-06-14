@@ -3,6 +3,7 @@
  */
 
 import {
+  exceedsCapacitorLinkTapMoveThreshold,
   resolveCapacitorInAppLinkFromEvent,
   shouldKeepCapacitorLinkInApp,
 } from '@/lib/capacitorKeepLinksInApp'
@@ -41,5 +42,11 @@ describe('capacitorKeepLinksInApp', () => {
     })
 
     document.body.removeChild(anchor)
+  })
+
+  it('exceedsCapacitorLinkTapMoveThreshold detects scroll-sized movement', () => {
+    expect(exceedsCapacitorLinkTapMoveThreshold(0, 0, 0, 9)).toBe(false)
+    expect(exceedsCapacitorLinkTapMoveThreshold(0, 0, 0, 11)).toBe(true)
+    expect(exceedsCapacitorLinkTapMoveThreshold(0, 0, 20, 0)).toBe(true)
   })
 })

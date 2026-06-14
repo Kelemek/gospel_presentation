@@ -52,6 +52,21 @@ export type CapacitorLinkInterceptResult = {
   anchor: HTMLAnchorElement
 }
 
+/** Finger movement above this (px) on a link touch is treated as scroll, not navigation. */
+export const CAPACITOR_LINK_TAP_MOVE_THRESHOLD_PX = 10
+
+export function exceedsCapacitorLinkTapMoveThreshold(
+  startX: number,
+  startY: number,
+  clientX: number,
+  clientY: number,
+  thresholdPx: number = CAPACITOR_LINK_TAP_MOVE_THRESHOLD_PX
+): boolean {
+  const dx = clientX - startX
+  const dy = clientY - startY
+  return dx * dx + dy * dy > thresholdPx * thresholdPx
+}
+
 /** Resolve a same-origin in-app link from a DOM event, if any. */
 export function resolveCapacitorInAppLinkFromEvent(
   event: Event,

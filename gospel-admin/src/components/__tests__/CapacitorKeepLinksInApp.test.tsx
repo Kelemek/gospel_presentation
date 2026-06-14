@@ -165,7 +165,7 @@ describe('CapacitorKeepLinksInApp', () => {
       unmount()
     })
 
-    it('intercepts touchstart before native navigation on iOS-style taps', () => {
+    it('intercepts touch tap (touchstart + touchend) before native navigation on iOS-style taps', () => {
       const { unmount } = render(<CapacitorKeepLinksInApp />)
       const anchor = document.createElement('a')
       anchor.href = `${window.location.origin}/mchy`
@@ -173,10 +173,30 @@ describe('CapacitorKeepLinksInApp', () => {
       document.body.appendChild(anchor)
 
       fireEvent.touchStart(anchor, { touches: [{ clientX: 0, clientY: 0 }] })
+      expect(mockPush).not.toHaveBeenCalled()
+
+      fireEvent.touchEnd(anchor, { changedTouches: [{ clientX: 0, clientY: 0 }] })
       expect(mockPush).toHaveBeenCalledWith('/mchy', { scroll: false })
 
       fireEvent.click(anchor, { bubbles: true })
       expect(mockPush).toHaveBeenCalledTimes(1)
+
+      document.body.removeChild(anchor)
+      unmount()
+    })
+
+    it('does not navigate when the finger moves before touchend (scroll)', () => {
+      const { unmount } = render(<CapacitorKeepLinksInApp />)
+      const anchor = document.createElement('a')
+      anchor.href = `${window.location.origin}/mchy`
+      anchor.textContent = "M'Cheyne"
+      document.body.appendChild(anchor)
+
+      fireEvent.touchStart(anchor, { touches: [{ clientX: 0, clientY: 0 }] })
+      fireEvent.touchMove(anchor, { touches: [{ clientX: 0, clientY: 24 }] })
+      fireEvent.touchEnd(anchor, { changedTouches: [{ clientX: 0, clientY: 24 }] })
+
+      expect(mockPush).not.toHaveBeenCalled()
 
       document.body.removeChild(anchor)
       unmount()
@@ -190,11 +210,13 @@ describe('CapacitorKeepLinksInApp', () => {
 
       const first = render(<CapacitorKeepLinksInApp />)
       fireEvent.touchStart(anchor, { touches: [{ clientX: 0, clientY: 0 }] })
+      fireEvent.touchEnd(anchor, { changedTouches: [{ clientX: 0, clientY: 0 }] })
       expect(mockPush).toHaveBeenCalledTimes(1)
       first.unmount()
 
       const second = render(<CapacitorKeepLinksInApp />)
       fireEvent.touchStart(anchor, { touches: [{ clientX: 0, clientY: 0 }] })
+      fireEvent.touchEnd(anchor, { changedTouches: [{ clientX: 0, clientY: 0 }] })
       expect(mockPush).toHaveBeenCalledTimes(2)
 
       document.body.removeChild(anchor)
@@ -213,6 +235,7 @@ describe('CapacitorKeepLinksInApp', () => {
       document.body.appendChild(second)
 
       fireEvent.touchStart(first, { touches: [{ clientX: 0, clientY: 0 }] })
+      fireEvent.touchEnd(first, { changedTouches: [{ clientX: 0, clientY: 0 }] })
       expect(mockPush).toHaveBeenCalledWith('/mchy', { scroll: false })
 
       fireEvent.click(second, { bubbles: true })
