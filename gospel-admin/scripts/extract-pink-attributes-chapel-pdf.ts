@@ -8,7 +8,7 @@
  */
 import * as fs from 'fs'
 import * as path from 'path'
-import pdfParse from 'pdf-parse/lib/pdf-parse.js'
+import pdfParse from 'pdf-parse'
 import { paragraphsFromPdfLines } from '../src/lib/pinkAttributes/pinkAttributesPdfText'
 
 const CHAPEL_PDF_URL = 'https://www.chapellibrary.org/api/books/download?code=aogo&format=pdf'
