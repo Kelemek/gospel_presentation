@@ -1,0 +1,1307 @@
+[
+  {
+    "releasedAt": "2025-10-24",
+    "committedAt": "2025-10-24T21:29:06.000Z",
+    "message": "Add simple last visited date display."
+  },
+  {
+    "releasedAt": "2025-10-24",
+    "committedAt": "2025-10-24T21:32:42.000Z",
+    "message": "Bug fix: Include lastVisited field in profiles API response."
+  },
+  {
+    "releasedAt": "2025-10-24",
+    "committedAt": "2025-10-24T21:35:59.000Z",
+    "message": "Bug fix: Handle lastVisited field type conversion safely."
+  },
+  {
+    "releasedAt": "2025-10-24",
+    "committedAt": "2025-10-24T21:46:46.000Z",
+    "message": "Add persistent sidebar navigation on large screens."
+  },
+  {
+    "releasedAt": "2025-10-24",
+    "committedAt": "2025-10-24T21:55:41.000Z",
+    "message": "Display 'Never visited' for unvisited profiles."
+  },
+  {
+    "releasedAt": "2025-10-26",
+    "committedAt": "2025-10-27T02:12:30.000Z",
+    "message": "Add centralized logger system."
+  },
+  {
+    "releasedAt": "2025-11-01",
+    "committedAt": "2025-11-02T01:35:03.000Z",
+    "message": "Improve login/logout UX and expand test coverage."
+  },
+  {
+    "releasedAt": "2025-11-04",
+    "committedAt": "2025-11-05T00:06:31.000Z",
+    "message": "Add user dropdown for counselee invites on profile creation form."
+  },
+  {
+    "releasedAt": "2025-11-04",
+    "committedAt": "2025-11-05T00:15:01.000Z",
+    "message": "Bug fix: Correct authenticate function signature and auth-server imports."
+  },
+  {
+    "releasedAt": "2025-11-04",
+    "committedAt": "2025-11-05T00:47:19.000Z",
+    "message": "Bug fix: Allow public read access to COMA templates for counselees."
+  },
+  {
+    "releasedAt": "2025-11-04",
+    "committedAt": "2025-11-05T01:04:45.000Z",
+    "message": "Add user dropdown to profile settings counselee invite."
+  },
+  {
+    "releasedAt": "2025-11-08",
+    "committedAt": "2025-11-08T20:48:15.000Z",
+    "message": "Bug fix: Logged-in badge now disappears immediately after logout."
+  },
+  {
+    "releasedAt": "2025-11-10",
+    "committedAt": "2025-11-11T01:30:53.000Z",
+    "message": "Bug fix: Align question numbers and normalize .question-content list/paragraph spacing."
+  },
+  {
+    "releasedAt": "2025-11-16",
+    "committedAt": "2025-11-16T14:13:36.000Z",
+    "message": "Auto-update profile description with counselee emails."
+  },
+  {
+    "releasedAt": "2025-11-16",
+    "committedAt": "2025-11-16T14:45:37.000Z",
+    "message": "Add counselee filter to profile management page."
+  },
+  {
+    "releasedAt": "2025-11-16",
+    "committedAt": "2025-11-16T15:05:53.000Z",
+    "message": "Bug fix: Update tests and complete UI improvements."
+  },
+  {
+    "releasedAt": "2025-11-16",
+    "committedAt": "2025-11-17T05:28:10.000Z",
+    "message": "Prioritize chapter deletion in ESV cache LRU enforcement."
+  },
+  {
+    "releasedAt": "2025-11-19",
+    "committedAt": "2025-11-20T00:00:26.000Z",
+    "message": "Add responsive grid layout, role filter dropdown, and color-coded role badges."
+  },
+  {
+    "releasedAt": "2025-11-21",
+    "committedAt": "2025-11-21T19:17:54.000Z",
+    "message": "Add NASB translation support with USX parser."
+  },
+  {
+    "releasedAt": "2025-11-21",
+    "committedAt": "2025-11-21T22:01:20.000Z",
+    "message": "Add NASB attribution and fix verse range highlighting."
+  },
+  {
+    "releasedAt": "2025-11-22",
+    "committedAt": "2025-11-22T20:29:21.000Z",
+    "message": "Add Microsoft Clarity analytics integration."
+  },
+  {
+    "releasedAt": "2025-11-22",
+    "committedAt": "2025-11-22T20:38:54.000Z",
+    "message": "Bug fix: Correct Clarity script initialization."
+  },
+  {
+    "releasedAt": "2025-11-22",
+    "committedAt": "2025-11-22T20:44:28.000Z",
+    "message": "Bug fix: Fix TypeScript compilation error in ClarityProvider."
+  },
+  {
+    "releasedAt": "2025-11-23",
+    "committedAt": "2025-11-24T04:06:16.000Z",
+    "message": "Add card view with collapsible details and expand/collapse all for templates admin UI."
+  },
+  {
+    "releasedAt": "2025-11-24",
+    "committedAt": "2025-11-24T13:54:04.000Z",
+    "message": "Hide template card details button for counselors."
+  },
+  {
+    "releasedAt": "2025-12-13",
+    "committedAt": "2025-12-13T19:57:30.000Z",
+    "message": "Add page-turning sound effects to scripture navigation."
+  },
+  {
+    "releasedAt": "2025-12-23",
+    "committedAt": "2025-12-24T00:14:49.000Z",
+    "message": "Implement assignment email notifications with unauthenticated user redirect flow."
+  },
+  {
+    "releasedAt": "2025-12-23",
+    "committedAt": "2025-12-24T02:02:49.000Z",
+    "message": "Bug fix: Use existing SUPABASE_SERVICE_KEY environment variable for email notifications."
+  },
+  {
+    "releasedAt": "2025-12-23",
+    "committedAt": "2025-12-24T02:05:48.000Z",
+    "message": "Bug fix: Update test to use correct SUPABASE_SERVICE_KEY environment variable."
+  },
+  {
+    "releasedAt": "2025-12-23",
+    "committedAt": "2025-12-24T02:27:35.000Z",
+    "message": "Bug fix: Prioritize NEXT_PUBLIC_APP_URL over VERCEL_URL for email links."
+  },
+  {
+    "releasedAt": "2025-12-25",
+    "committedAt": "2025-12-26T01:52:01.000Z",
+    "message": "Expand E2E test coverage with scripture, permissions, and UI interaction tests."
+  },
+  {
+    "releasedAt": "2025-12-25",
+    "committedAt": "2025-12-26T01:57:16.000Z",
+    "message": "Add comprehensive API, state, and edge case E2E tests."
+  },
+  {
+    "releasedAt": "2025-12-25",
+    "committedAt": "2025-12-26T02:07:43.000Z",
+    "message": "Bug fix: Add E2E test scripts to package.json."
+  },
+  {
+    "releasedAt": "2025-12-31",
+    "committedAt": "2025-12-31T20:21:29.000Z",
+    "message": "Bug fix: Enable RLS on admin_settings and fix function search_path security warnings."
+  },
+  {
+    "releasedAt": "2026-04-17",
+    "committedAt": "2026-04-18T00:42:10.000Z",
+    "message": "Bug fix: Respect Android nav bar in help tour popovers."
+  },
+  {
+    "releasedAt": "2026-04-17",
+    "committedAt": "2026-04-18T00:53:28.000Z",
+    "message": "Bug fix: Raise Android tour popover bottom inset and retry nudge."
+  },
+  {
+    "releasedAt": "2026-04-17",
+    "committedAt": "2026-04-18T01:04:14.000Z",
+    "message": "Bug fix: Reserve bottom margin on tour popovers via mobile app body class."
+  },
+  {
+    "releasedAt": "2026-04-17",
+    "committedAt": "2026-04-18T01:16:29.000Z",
+    "message": "Bug fix: Only bump tour popover style.bottom when inside Android nav zone."
+  },
+  {
+    "releasedAt": "2026-04-17",
+    "committedAt": "2026-04-18T01:29:34.000Z",
+    "message": "Bug fix: Drop popover MutationObserver that swallowed button taps."
+  },
+  {
+    "releasedAt": "2026-04-17",
+    "committedAt": "2026-04-18T01:44:39.000Z",
+    "message": "Bug fix: Apply popover safe-area nudge after scroll settles."
+  },
+  {
+    "releasedAt": "2026-04-21",
+    "committedAt": "2026-04-21T12:52:37.000Z",
+    "message": "Bug fix: Enhance button accessibility and interaction across components."
+  },
+  {
+    "releasedAt": "2026-04-21",
+    "committedAt": "2026-04-21T18:10:20.000Z",
+    "message": "Bug fix: Improve cursor indication for interactive elements in dropdowns and table of contents."
+  },
+  {
+    "releasedAt": "2026-04-24",
+    "committedAt": "2026-04-25T04:18:41.000Z",
+    "message": "Add audio playback functionality for memorization practice."
+  },
+  {
+    "releasedAt": "2026-04-24",
+    "committedAt": "2026-04-25T04:39:51.000Z",
+    "message": "Enhance text-to-speech functionality for verse references."
+  },
+  {
+    "releasedAt": "2026-04-25",
+    "committedAt": "2026-04-25T05:05:09.000Z",
+    "message": "Enhance listen controls for Android and ESV support."
+  },
+  {
+    "releasedAt": "2026-04-25",
+    "committedAt": "2026-04-25T15:21:54.000Z",
+    "message": "Implement playback speed controls for listen functionality."
+  },
+  {
+    "releasedAt": "2026-04-25",
+    "committedAt": "2026-04-25T20:46:37.000Z",
+    "message": "Enhance listen functionality with new controls and improved user experience."
+  },
+  {
+    "releasedAt": "2026-04-26",
+    "committedAt": "2026-04-26T12:13:35.000Z",
+    "message": "Bug fix: Reset scroll position on practice UI transition."
+  },
+  {
+    "releasedAt": "2026-04-26",
+    "committedAt": "2026-04-26T21:51:10.000Z",
+    "message": "Enhance listen controls and tour guidance."
+  },
+  {
+    "releasedAt": "2026-04-26",
+    "committedAt": "2026-04-26T22:19:36.000Z",
+    "message": "Bug fix: Add data attributes for tour guidance in practice session."
+  },
+  {
+    "releasedAt": "2026-04-27",
+    "committedAt": "2026-04-27T11:46:36.000Z",
+    "message": "Allow users to select starting round for practice sessions."
+  },
+  {
+    "releasedAt": "2026-04-27",
+    "committedAt": "2026-04-27T12:05:40.000Z",
+    "message": "Enhance accessibility by adding unique IDs for modal titles."
+  },
+  {
+    "releasedAt": "2026-04-28",
+    "committedAt": "2026-04-28T23:52:03.000Z",
+    "message": "Improve loading indicator in ScriptureHoverModal."
+  },
+  {
+    "releasedAt": "2026-04-28",
+    "committedAt": "2026-04-29T01:26:05.000Z",
+    "message": "Introduce practice mode selection for memorization sessions."
+  },
+  {
+    "releasedAt": "2026-04-29",
+    "committedAt": "2026-04-29T12:56:41.000Z",
+    "message": "Introduce reorder mode for memorization practice sessions."
+  },
+  {
+    "releasedAt": "2026-04-29",
+    "committedAt": "2026-04-29T16:59:48.000Z",
+    "message": "Enhance reorder functionality for memorization practice."
+  },
+  {
+    "releasedAt": "2026-04-29",
+    "committedAt": "2026-04-29T17:05:08.000Z",
+    "message": "Bug fix: Update timer type in MemorizationReorderPanel."
+  },
+  {
+    "releasedAt": "2026-04-29",
+    "committedAt": "2026-04-29T17:20:53.000Z",
+    "message": "Bug fix: Prevent text selection during drag-and-drop in MemorizationReorderPanel."
+  },
+  {
+    "releasedAt": "2026-04-29",
+    "committedAt": "2026-04-29T17:28:57.000Z",
+    "message": "Bug fix: Refine drag-and-drop behavior in MemorizationReorderPanel."
+  },
+  {
+    "releasedAt": "2026-04-29",
+    "committedAt": "2026-04-29T17:38:54.000Z",
+    "message": "Bug fix: Enhance pointer event handling in MemorizationReorderPanel."
+  },
+  {
+    "releasedAt": "2026-04-29",
+    "committedAt": "2026-04-29T17:49:30.000Z",
+    "message": "Bug fix: Enhance pointer drag preview in MemorizationReorderPanel."
+  },
+  {
+    "releasedAt": "2026-04-29",
+    "committedAt": "2026-04-29T17:59:17.000Z",
+    "message": "Bug fix: Optimize padding and class handling in MemorizationReorderPanel."
+  },
+  {
+    "releasedAt": "2026-04-29",
+    "committedAt": "2026-04-29T19:11:06.000Z",
+    "message": "Bug fix: Refine drag preview styles in MemorizationReorderPanel."
+  },
+  {
+    "releasedAt": "2026-04-29",
+    "committedAt": "2026-04-29T21:08:37.000Z",
+    "message": "Bug fix: Enhance verse chunk reordering in MemorizationPracticeSession."
+  },
+  {
+    "releasedAt": "2026-04-29",
+    "committedAt": "2026-04-30T02:13:45.000Z",
+    "message": "Implement local verse pinning feature for scripture references."
+  },
+  {
+    "releasedAt": "2026-04-29",
+    "committedAt": "2026-04-30T02:32:46.000Z",
+    "message": "Implement migration from legacy scripture progress to verse pins."
+  },
+  {
+    "releasedAt": "2026-04-30",
+    "committedAt": "2026-04-30T11:13:01.000Z",
+    "message": "Enhance local verse pinning functionality and storage structure."
+  },
+  {
+    "releasedAt": "2026-04-30",
+    "committedAt": "2026-05-01T03:17:16.000Z",
+    "message": "Enhance ScriptureHoverModal for improved user experience."
+  },
+  {
+    "releasedAt": "2026-05-01",
+    "committedAt": "2026-05-01T13:07:31.000Z",
+    "message": "Enhance context rendering with HTML support."
+  },
+  {
+    "releasedAt": "2026-05-01",
+    "committedAt": "2026-05-01T21:55:11.000Z",
+    "message": "Implement data backup and restore functionality in slide-out menu."
+  },
+  {
+    "releasedAt": "2026-05-01",
+    "committedAt": "2026-05-01T22:07:22.000Z",
+    "message": "Enhance data backup functionality with system share support."
+  },
+  {
+    "releasedAt": "2026-05-01",
+    "committedAt": "2026-05-01T22:38:56.000Z",
+    "message": "Refine backup and restore functionality with enhanced sharing support."
+  },
+  {
+    "releasedAt": "2026-05-01",
+    "committedAt": "2026-05-01T23:23:46.000Z",
+    "message": "Enhance backup functionality with new mobile app plugins."
+  },
+  {
+    "releasedAt": "2026-05-01",
+    "committedAt": "2026-05-02T00:30:18.000Z",
+    "message": "Update backup filename handling for improved sharing on Android."
+  },
+  {
+    "releasedAt": "2026-05-04",
+    "committedAt": "2026-05-04T19:06:44.000Z",
+    "message": "Integrate Spurgeon sermon study feature in scripture modal."
+  },
+  {
+    "releasedAt": "2026-05-04",
+    "committedAt": "2026-05-04T20:23:34.000Z",
+    "message": "Enhance sermon management with pagination and sorting."
+  },
+  {
+    "releasedAt": "2026-05-04",
+    "committedAt": "2026-05-04T20:47:52.000Z",
+    "message": "Implement A–Z sorting and improved pagination for sermon links."
+  },
+  {
+    "releasedAt": "2026-05-04",
+    "committedAt": "2026-05-04T22:30:45.000Z",
+    "message": "Enhance sermon import and indexing functionality."
+  },
+  {
+    "releasedAt": "2026-05-04",
+    "committedAt": "2026-05-04T23:37:42.000Z",
+    "message": "Update sermon import logic and enhance parsing capabilities."
+  },
+  {
+    "releasedAt": "2026-05-04",
+    "committedAt": "2026-05-04T23:51:52.000Z",
+    "message": "Bug fix: Correct catalog number mappings and enhance test coverage."
+  },
+  {
+    "releasedAt": "2026-05-04",
+    "committedAt": "2026-05-05T01:10:51.000Z",
+    "message": "Enhance Spurgeon sermon integration and user experience."
+  },
+  {
+    "releasedAt": "2026-05-04",
+    "committedAt": "2026-05-05T01:21:23.000Z",
+    "message": "Bug fix: Improve modal layout and safe area handling."
+  },
+  {
+    "releasedAt": "2026-05-04",
+    "committedAt": "2026-05-05T01:53:54.000Z",
+    "message": "Bug fix: Refine modal layout and input handling."
+  },
+  {
+    "releasedAt": "2026-05-04",
+    "committedAt": "2026-05-05T02:10:59.000Z",
+    "message": "Bug fix: Enhance sermon search functionality and pagination."
+  },
+  {
+    "releasedAt": "2026-05-04",
+    "committedAt": "2026-05-05T02:52:20.000Z",
+    "message": "Bug fix: Repair Roman numeral handling in sermon subsections."
+  },
+  {
+    "releasedAt": "2026-05-04",
+    "committedAt": "2026-05-05T03:18:58.000Z",
+    "message": "Enhance translation and compare functionality in modal."
+  },
+  {
+    "releasedAt": "2026-05-05",
+    "committedAt": "2026-05-05T11:53:33.000Z",
+    "message": "Bug fix: Add WebSocket support to database backup and cleanup scripts."
+  },
+  {
+    "releasedAt": "2026-05-05",
+    "committedAt": "2026-05-05T12:07:25.000Z",
+    "message": "Bug fix: Add WebSocket support to database connection in workflows."
+  },
+  {
+    "releasedAt": "2026-05-05",
+    "committedAt": "2026-05-05T12:52:48.000Z",
+    "message": "Bug fix: Adjust trigger button width in toolbar menu."
+  },
+  {
+    "releasedAt": "2026-05-05",
+    "committedAt": "2026-05-05T22:05:23.000Z",
+    "message": "Implement local text highlighting feature for profiles."
+  },
+  {
+    "releasedAt": "2026-05-05",
+    "committedAt": "2026-05-05T22:09:58.000Z",
+    "message": "Include text highlights in local data backup functionality."
+  },
+  {
+    "releasedAt": "2026-05-05",
+    "committedAt": "2026-05-05T22:18:29.000Z",
+    "message": "Bug fix: Refine block ancestor detection logic."
+  },
+  {
+    "releasedAt": "2026-05-05",
+    "committedAt": "2026-05-06T01:12:56.000Z",
+    "message": "Bug fix: Improve Roman numeral handling in sermon outlines."
+  },
+  {
+    "releasedAt": "2026-05-07",
+    "committedAt": "2026-05-07T17:32:23.000Z",
+    "message": "Enhance backup functionality with full and differential options."
+  },
+  {
+    "releasedAt": "2026-05-07",
+    "committedAt": "2026-05-08T02:40:00.000Z",
+    "message": "Enhance profile read-aloud functionality and highlight management."
+  },
+  {
+    "releasedAt": "2026-05-07",
+    "committedAt": "2026-05-08T02:49:45.000Z",
+    "message": "Disable read-aloud feature for Android users."
+  },
+  {
+    "releasedAt": "2026-05-07",
+    "committedAt": "2026-05-08T02:58:05.000Z",
+    "message": "Enhance read-aloud functionality with smooth scrolling and word tracking."
+  },
+  {
+    "releasedAt": "2026-05-07",
+    "committedAt": "2026-05-08T03:12:18.000Z",
+    "message": "Enhance read-aloud functionality with text exclusion and improved offset mapping."
+  },
+  {
+    "releasedAt": "2026-05-07",
+    "committedAt": "2026-05-08T03:46:38.000Z",
+    "message": "Enhance read-aloud functionality with automatic progression and resume capabilities."
+  },
+  {
+    "releasedAt": "2026-05-07",
+    "committedAt": "2026-05-08T04:50:12.000Z",
+    "message": "Introduce underline toggle and update controls for enhanced listening experience."
+  },
+  {
+    "releasedAt": "2026-05-08",
+    "committedAt": "2026-05-08T12:54:36.000Z",
+    "message": "Implement exclusive ownership for Web Speech and enhance scrolling behavior."
+  },
+  {
+    "releasedAt": "2026-05-08",
+    "committedAt": "2026-05-08T17:55:46.000Z",
+    "message": "Enhance text offset mapping and improve highlight functionality."
+  },
+  {
+    "releasedAt": "2026-05-08",
+    "committedAt": "2026-05-08T22:14:58.000Z",
+    "message": "Improve boundary UI lag handling and enhance word tracking."
+  },
+  {
+    "releasedAt": "2026-05-08",
+    "committedAt": "2026-05-08T23:12:48.000Z",
+    "message": "Introduce underline style options and enhance controls."
+  },
+  {
+    "releasedAt": "2026-05-08",
+    "committedAt": "2026-05-09T00:09:54.000Z",
+    "message": "Enhance read-aloud functionality with heading exclusion and progress management."
+  },
+  {
+    "releasedAt": "2026-05-08",
+    "committedAt": "2026-05-09T00:29:53.000Z",
+    "message": "Enhance read-aloud controls and confirmation for session restart."
+  },
+  {
+    "releasedAt": "2026-05-09",
+    "committedAt": "2026-05-09T18:50:56.000Z",
+    "message": "Implement heading text exclusion and enhance read-aloud options."
+  },
+  {
+    "releasedAt": "2026-05-09",
+    "committedAt": "2026-05-09T19:43:30.000Z",
+    "message": "Enhance read-aloud functionality with scripture card integration and text processing improvements."
+  },
+  {
+    "releasedAt": "2026-05-09",
+    "committedAt": "2026-05-09T22:24:35.000Z",
+    "message": "Implement read completion tracking and UI updates."
+  },
+  {
+    "releasedAt": "2026-05-09",
+    "committedAt": "2026-05-09T23:29:07.000Z",
+    "message": "Add 'By read' tab to Spurgeon Sermons Modal for tracking read sermons."
+  },
+  {
+    "releasedAt": "2026-05-10",
+    "committedAt": "2026-05-10T13:16:43.000Z",
+    "message": "Introduce 'Initials' practice mode for enhanced memorization."
+  },
+  {
+    "releasedAt": "2026-05-11",
+    "committedAt": "2026-05-11T17:48:13.000Z",
+    "message": "Replace select with ScriptureModalToolbarMenu for starting round selection."
+  },
+  {
+    "releasedAt": "2026-05-11",
+    "committedAt": "2026-05-11T18:19:09.000Z",
+    "message": "Improve print layout for long sections and enhance print styling."
+  },
+  {
+    "releasedAt": "2026-05-13",
+    "committedAt": "2026-05-13T11:38:24.000Z",
+    "message": "Enhance toolbar menu with dynamic listbox placement."
+  },
+  {
+    "releasedAt": "2026-05-14",
+    "committedAt": "2026-05-15T02:22:36.000Z",
+    "message": "Enhance admin dashboard with template management and settings access."
+  },
+  {
+    "releasedAt": "2026-05-14",
+    "committedAt": "2026-05-15T02:38:18.000Z",
+    "message": "Update template management to exclude Spurgeon sermon profiles."
+  },
+  {
+    "releasedAt": "2026-05-15",
+    "committedAt": "2026-05-16T01:28:55.000Z",
+    "message": "Enhance sharing functionality and UI updates."
+  },
+  {
+    "releasedAt": "2026-05-15",
+    "committedAt": "2026-05-16T01:57:13.000Z",
+    "message": "Refine menu label visibility based on viewport size."
+  },
+  {
+    "releasedAt": "2026-05-15",
+    "committedAt": "2026-05-16T02:05:47.000Z",
+    "message": "Bug fix: Adjust padding and gap for menu button and toolbar icons."
+  },
+  {
+    "releasedAt": "2026-05-15",
+    "committedAt": "2026-05-16T02:08:12.000Z",
+    "message": "Bug fix: Update gap values for toolbar icons to enhance layout responsiveness."
+  },
+  {
+    "releasedAt": "2026-05-15",
+    "committedAt": "2026-05-16T02:42:17.000Z",
+    "message": "Enhance tutorial features and sharing functionality."
+  },
+  {
+    "releasedAt": "2026-05-15",
+    "committedAt": "2026-05-16T03:38:56.000Z",
+    "message": "Enhance tutorial structure and add new features."
+  },
+  {
+    "releasedAt": "2026-05-16",
+    "committedAt": "2026-05-16T14:01:35.000Z",
+    "message": "Add unused code analysis and update dependencies."
+  },
+  {
+    "releasedAt": "2026-05-16",
+    "committedAt": "2026-05-16T18:24:26.000Z",
+    "message": "Enhance textarea usability for iOS Safari."
+  },
+  {
+    "releasedAt": "2026-05-16",
+    "committedAt": "2026-05-16T21:03:21.000Z",
+    "message": "Enhance admin template management and cloning functionality."
+  },
+  {
+    "releasedAt": "2026-05-17",
+    "committedAt": "2026-05-17T20:58:06.000Z",
+    "message": "Enhance ScriptureModal with contextual navigation display."
+  },
+  {
+    "releasedAt": "2026-05-17",
+    "committedAt": "2026-05-17T21:23:02.000Z",
+    "message": "Improve ScriptureModal toolbar for better mobile usability."
+  },
+  {
+    "releasedAt": "2026-05-17",
+    "committedAt": "2026-05-17T21:53:10.000Z",
+    "message": "Refine ScriptureModal for improved mobile context display."
+  },
+  {
+    "releasedAt": "2026-05-17",
+    "committedAt": "2026-05-17T22:36:21.000Z",
+    "message": "Enhance ScriptureModal and memorization features for improved user experience."
+  },
+  {
+    "releasedAt": "2026-05-18",
+    "committedAt": "2026-05-18T17:20:55.000Z",
+    "message": "Implement scroll reset on memorization session completion."
+  },
+  {
+    "releasedAt": "2026-05-19",
+    "committedAt": "2026-05-19T20:01:28.000Z",
+    "message": "Add Morning & Evening library and enhance Spurgeon features."
+  },
+  {
+    "releasedAt": "2026-05-19",
+    "committedAt": "2026-05-20T02:23:47.000Z",
+    "message": "Enhance study resources integration in ScriptureModal and admin settings."
+  },
+  {
+    "releasedAt": "2026-05-19",
+    "committedAt": "2026-05-20T02:30:24.000Z",
+    "message": "Add support for Calvin commentaries in resource tours."
+  },
+  {
+    "releasedAt": "2026-05-19",
+    "committedAt": "2026-05-20T03:38:04.000Z",
+    "message": "Enhance commentary routing for scripture div2 elements."
+  },
+  {
+    "releasedAt": "2026-05-19",
+    "committedAt": "2026-05-20T04:36:48.000Z",
+    "message": "Enhance SpurgeonSermonsModal and ProfileContent for scripture navigation."
+  },
+  {
+    "releasedAt": "2026-05-20",
+    "committedAt": "2026-05-21T00:03:14.000Z",
+    "message": "Expand resource management with Luther and enhanced category structure."
+  },
+  {
+    "releasedAt": "2026-05-20",
+    "committedAt": "2026-05-21T00:15:09.000Z",
+    "message": "Enhance resource order management and template handling."
+  },
+  {
+    "releasedAt": "2026-05-20",
+    "committedAt": "2026-05-21T02:20:09.000Z",
+    "message": "Integrate Edwards sermons into resource management and scripture modal."
+  },
+  {
+    "releasedAt": "2026-05-21",
+    "committedAt": "2026-05-21T19:07:45.000Z",
+    "message": "Introduce STEP Bible word study feature in ScriptureModal."
+  },
+  {
+    "releasedAt": "2026-05-21",
+    "committedAt": "2026-05-21T19:16:24.000Z",
+    "message": "Bug fix: Update STEP Bible data handling and documentation."
+  },
+  {
+    "releasedAt": "2026-05-21",
+    "committedAt": "2026-05-21T19:39:29.000Z",
+    "message": "Enhance STEP Bible data import and verse handling."
+  },
+  {
+    "releasedAt": "2026-05-21",
+    "committedAt": "2026-05-21T21:46:10.000Z",
+    "message": "Enhance word study feature with language labels."
+  },
+  {
+    "releasedAt": "2026-05-21",
+    "committedAt": "2026-05-22T01:57:38.000Z",
+    "message": "Introduce Greek and Hebrew word study feature in ScriptureModal."
+  },
+  {
+    "releasedAt": "2026-05-21",
+    "committedAt": "2026-05-22T03:54:47.000Z",
+    "message": "Integrate Matthew Henry commentary into resource management and scripture modal."
+  },
+  {
+    "releasedAt": "2026-05-22",
+    "committedAt": "2026-05-22T06:13:25.000Z",
+    "message": "Implement automated backup exclusions for re-importable CCEL corpora."
+  },
+  {
+    "releasedAt": "2026-05-22",
+    "committedAt": "2026-05-22T20:18:07.000Z",
+    "message": "Add first-line paragraph indent feature in rich text editor."
+  },
+  {
+    "releasedAt": "2026-05-22",
+    "committedAt": "2026-05-22T20:23:49.000Z",
+    "message": "Extend paragraph indent functionality with command interface."
+  },
+  {
+    "releasedAt": "2026-05-22",
+    "committedAt": "2026-05-22T21:31:12.000Z",
+    "message": "Add sun-moon animated icon to Table of Contents."
+  },
+  {
+    "releasedAt": "2026-05-23",
+    "committedAt": "2026-05-23T12:06:01.000Z",
+    "message": "Enhance ScriptureModal with concordance feature."
+  },
+  {
+    "releasedAt": "2026-05-23",
+    "committedAt": "2026-05-23T12:12:39.000Z",
+    "message": "Enhance ScriptureHoverModal with portal and z-index adjustments."
+  },
+  {
+    "releasedAt": "2026-05-23",
+    "committedAt": "2026-05-23T17:59:23.000Z",
+    "message": "Enhance memorization features in Scripture and AddMemorizedVerse modals."
+  },
+  {
+    "releasedAt": "2026-05-23",
+    "committedAt": "2026-05-23T22:34:19.000Z",
+    "message": "Migrate storage from device storage to offline storage for answers and highlights."
+  },
+  {
+    "releasedAt": "2026-05-23",
+    "committedAt": "2026-05-23T23:12:00.000Z",
+    "message": "Add share passage functionality to ScriptureModal."
+  },
+  {
+    "releasedAt": "2026-05-23",
+    "committedAt": "2026-05-24T00:25:12.000Z",
+    "message": "Enhance ScriptureModal with deep link sharing and chapter context loading."
+  },
+  {
+    "releasedAt": "2026-05-23",
+    "committedAt": "2026-05-24T00:39:42.000Z",
+    "message": "Improve layout and styling in ScriptureWordStudyPanel."
+  },
+  {
+    "releasedAt": "2026-05-23",
+    "committedAt": "2026-05-24T01:26:10.000Z",
+    "message": "Enhance read-aloud functionality for profile resources."
+  },
+  {
+    "releasedAt": "2026-05-23",
+    "committedAt": "2026-05-24T04:17:33.000Z",
+    "message": "Enhance CCEL import functionality and scripture reference handling."
+  },
+  {
+    "releasedAt": "2026-05-23",
+    "committedAt": "2026-05-24T04:24:51.000Z",
+    "message": "Update copyright page with CCEL attributions and improve layout."
+  },
+  {
+    "releasedAt": "2026-05-23",
+    "committedAt": "2026-05-24T04:36:50.000Z",
+    "message": "Refine scripture reference handling in profiles."
+  },
+  {
+    "releasedAt": "2026-05-24",
+    "committedAt": "2026-05-24T18:47:45.000Z",
+    "message": "Deduplicate concordance occurrences and improve pagination."
+  },
+  {
+    "releasedAt": "2026-05-24",
+    "committedAt": "2026-05-24T20:07:02.000Z",
+    "message": "Integrate analytics for monitoring and remove Sentry."
+  },
+  {
+    "releasedAt": "2026-05-25",
+    "committedAt": "2026-05-26T02:31:11.000Z",
+    "message": "Bug fix: Update analytics configuration and documentation."
+  },
+  {
+    "releasedAt": "2026-05-26",
+    "committedAt": "2026-05-26T12:46:41.000Z",
+    "message": "Bug fix: Clarify session replay masking in documentation and tests."
+  },
+  {
+    "releasedAt": "2026-05-26",
+    "committedAt": "2026-05-27T01:00:02.000Z",
+    "message": "Add All of Grace import functionality and update documentation."
+  },
+  {
+    "releasedAt": "2026-05-26",
+    "committedAt": "2026-05-27T01:19:00.000Z",
+    "message": "Add Thomas Watson import functionality and update documentation."
+  },
+  {
+    "releasedAt": "2026-05-26",
+    "committedAt": "2026-05-27T01:23:13.000Z",
+    "message": "Enhance scripture reference normalization and testing."
+  },
+  {
+    "releasedAt": "2026-05-26",
+    "committedAt": "2026-05-27T02:05:53.000Z",
+    "message": "Add M'Cheyne Bible reading plan and enhance profile features."
+  },
+  {
+    "releasedAt": "2026-05-26",
+    "committedAt": "2026-05-27T02:09:09.000Z",
+    "message": "Bug fix: Export RawDay type for better accessibility."
+  },
+  {
+    "releasedAt": "2026-05-27",
+    "committedAt": "2026-05-27T14:44:14.000Z",
+    "message": "Enhance M'Cheyne reading plan navigation and profile integration."
+  },
+  {
+    "releasedAt": "2026-05-27",
+    "committedAt": "2026-05-27T19:17:59.000Z",
+    "message": "Enhance scripture modal with audio playback and chapter view handling."
+  },
+  {
+    "releasedAt": "2026-05-27",
+    "committedAt": "2026-05-27T20:33:16.000Z",
+    "message": "Add Bible Reader feature to resources and enhance navigation."
+  },
+  {
+    "releasedAt": "2026-05-27",
+    "committedAt": "2026-05-28T00:41:06.000Z",
+    "message": "Enhance M'Cheyne reading plan navigation with modal and swipe controls."
+  },
+  {
+    "releasedAt": "2026-05-28",
+    "committedAt": "2026-05-28T17:53:07.000Z",
+    "message": "Synchronize navigation index with modal reference changes."
+  },
+  {
+    "releasedAt": "2026-05-28",
+    "committedAt": "2026-05-28T18:20:46.000Z",
+    "message": "Bug fix: Resolve navigation index issues in ProfileContent component."
+  },
+  {
+    "releasedAt": "2026-05-28",
+    "committedAt": "2026-05-29T01:48:32.000Z",
+    "message": "Enhance Matthew Henry commentaries integration and indexing."
+  },
+  {
+    "releasedAt": "2026-05-29",
+    "committedAt": "2026-05-29T11:49:04.000Z",
+    "message": "Enhance ScriptureModal with verse number visibility toggle."
+  },
+  {
+    "releasedAt": "2026-05-29",
+    "committedAt": "2026-05-29T12:35:36.000Z",
+    "message": "Implement swipe navigation for scripture passages in ScriptureModal."
+  },
+  {
+    "releasedAt": "2026-05-29",
+    "committedAt": "2026-05-29T18:06:40.000Z",
+    "message": "Enhance ScriptureModal with improved swipe navigation and audio playback controls."
+  },
+  {
+    "releasedAt": "2026-05-29",
+    "committedAt": "2026-05-29T20:57:22.000Z",
+    "message": "Refine swipe navigation and enhance gesture handling in scripture components."
+  },
+  {
+    "releasedAt": "2026-05-29",
+    "committedAt": "2026-05-30T01:23:42.000Z",
+    "message": "Enhance ScriptureModal with auto-scrolling audio playback feature."
+  },
+  {
+    "releasedAt": "2026-05-29",
+    "committedAt": "2026-05-30T01:39:13.000Z",
+    "message": "Update Listen control in ScriptureModal for improved usability."
+  },
+  {
+    "releasedAt": "2026-05-29",
+    "committedAt": "2026-05-30T01:58:10.000Z",
+    "message": "Enhance auto-scrolling behavior for scripture audio playback."
+  },
+  {
+    "releasedAt": "2026-05-30",
+    "committedAt": "2026-05-30T13:26:35.000Z",
+    "message": "Refine scripture audio playback with enhanced auto-scrolling and continuous drift."
+  },
+  {
+    "releasedAt": "2026-05-30",
+    "committedAt": "2026-05-30T22:21:59.000Z",
+    "message": "Integrate GitHub feedback settings into admin panel."
+  },
+  {
+    "releasedAt": "2026-05-30",
+    "committedAt": "2026-05-30T22:32:55.000Z",
+    "message": "Update GitHub feedback settings with type safety and payload simplification."
+  },
+  {
+    "releasedAt": "2026-05-30",
+    "committedAt": "2026-05-30T23:03:51.000Z",
+    "message": "Enhance feedback submission with optional email support."
+  },
+  {
+    "releasedAt": "2026-05-30",
+    "committedAt": "2026-05-30T23:27:43.000Z",
+    "message": "Enhance ScriptureModalToolbarMenu with form styling options."
+  },
+  {
+    "releasedAt": "2026-05-30",
+    "committedAt": "2026-05-31T00:31:55.000Z",
+    "message": "Enhance ProfileContent with resume scroll functionality."
+  },
+  {
+    "releasedAt": "2026-05-31",
+    "committedAt": "2026-06-01T01:20:30.000Z",
+    "message": "Implement precise bookmark resume functionality."
+  },
+  {
+    "releasedAt": "2026-05-31",
+    "committedAt": "2026-06-01T02:16:38.000Z",
+    "message": "Enhance Table of Contents with Last Open resources feature."
+  },
+  {
+    "releasedAt": "2026-05-31",
+    "committedAt": "2026-06-01T02:25:52.000Z",
+    "message": "Bug fix: Update input text size in dropdown components."
+  },
+  {
+    "releasedAt": "2026-05-31",
+    "committedAt": "2026-06-01T02:29:07.000Z",
+    "message": "Refine bookmark functionality and remove resume notice."
+  },
+  {
+    "releasedAt": "2026-05-31",
+    "committedAt": "2026-06-01T02:56:59.000Z",
+    "message": "Implement app launch resume functionality for profiles."
+  },
+  {
+    "releasedAt": "2026-05-31",
+    "committedAt": "2026-06-01T03:25:56.000Z",
+    "message": "Enhance ProfileContent with advanced reading resume capabilities."
+  },
+  {
+    "releasedAt": "2026-05-31",
+    "committedAt": "2026-06-01T03:36:52.000Z",
+    "message": "Optimize reading position management in ProfileContent."
+  },
+  {
+    "releasedAt": "2026-06-01",
+    "committedAt": "2026-06-01T22:45:04.000Z",
+    "message": "Enhance Table of Contents with recent scriptures tracking."
+  },
+  {
+    "releasedAt": "2026-06-02",
+    "committedAt": "2026-06-02T23:58:03.000Z",
+    "message": "Enhance scripture modal with tabbed navigation and recent scripture tracking."
+  },
+  {
+    "releasedAt": "2026-06-02",
+    "committedAt": "2026-06-03T02:19:17.000Z",
+    "message": "Enhance tabbed navigation in scripture and profile resource components."
+  },
+  {
+    "releasedAt": "2026-06-02",
+    "committedAt": "2026-06-03T03:51:40.000Z",
+    "message": "Enhance ProfileContent and Table of Contents with reading resume and Bible Reader integration."
+  },
+  {
+    "releasedAt": "2026-06-03",
+    "committedAt": "2026-06-03T12:07:08.000Z",
+    "message": "Enhance scripture modal and profile content with improved scroll management and reading resume features."
+  },
+  {
+    "releasedAt": "2026-06-03",
+    "committedAt": "2026-06-03T12:37:37.000Z",
+    "message": "Implement scroll position persistence in OpenItemTabBar for improved navigation."
+  },
+  {
+    "releasedAt": "2026-06-03",
+    "committedAt": "2026-06-03T17:17:41.000Z",
+    "message": "Enhance profile pages with prefetching and caching for public resources menu."
+  },
+  {
+    "releasedAt": "2026-06-03",
+    "committedAt": "2026-06-03T17:59:57.000Z",
+    "message": "Enhance tab navigation and visibility in scripture and profile components."
+  },
+  {
+    "releasedAt": "2026-06-03",
+    "committedAt": "2026-06-03T18:23:15.000Z",
+    "message": "Bug fix: Improve overflow handling in ProfileContent menu panel."
+  },
+  {
+    "releasedAt": "2026-06-03",
+    "committedAt": "2026-06-03T21:02:26.000Z",
+    "message": "Enhance OpenItemTabBar with improved scroll interactions and wheel support."
+  },
+  {
+    "releasedAt": "2026-06-03",
+    "committedAt": "2026-06-03T21:21:37.000Z",
+    "message": "Bug fix: Correct scroll behavior in OpenItemTabBar and drag scroll functionality."
+  },
+  {
+    "releasedAt": "2026-06-03",
+    "committedAt": "2026-06-04T01:20:21.000Z",
+    "message": "Add Berkhof Systematic Theology and update backup exclusions."
+  },
+  {
+    "releasedAt": "2026-06-03",
+    "committedAt": "2026-06-04T02:12:30.000Z",
+    "message": "Enhance profile visit tracking and caching mechanisms."
+  },
+  {
+    "releasedAt": "2026-06-04",
+    "committedAt": "2026-06-04T12:51:49.000Z",
+    "message": "Enhance verse pinning functionality in ProfileContent."
+  },
+  {
+    "releasedAt": "2026-06-04",
+    "committedAt": "2026-06-05T00:22:06.000Z",
+    "message": "Add The Reformed Pastor import functionality and update backup exclusions."
+  },
+  {
+    "releasedAt": "2026-06-04",
+    "committedAt": "2026-06-05T00:33:10.000Z",
+    "message": "Add Richard Baxter's The Reformed Pastor to copyright attributions test."
+  },
+  {
+    "releasedAt": "2026-06-04",
+    "committedAt": "2026-06-05T01:21:05.000Z",
+    "message": "Add J.C. Ryle's Holiness import functionality and update backup exclusions."
+  },
+  {
+    "releasedAt": "2026-06-04",
+    "committedAt": "2026-06-05T01:44:27.000Z",
+    "message": "Add import functionality for Jonathan Edwards' treatises and update backup exclusions."
+  },
+  {
+    "releasedAt": "2026-06-04",
+    "committedAt": "2026-06-05T02:17:59.000Z",
+    "message": "Add import functionality for Martin Luther's The Bondage of the Will and update backup exclusions."
+  },
+  {
+    "releasedAt": "2026-06-05",
+    "committedAt": "2026-06-05T13:03:53.000Z",
+    "message": "Add external resource links functionality to profile sections."
+  },
+  {
+    "releasedAt": "2026-06-05",
+    "committedAt": "2026-06-05T23:55:09.000Z",
+    "message": "Enhance resource tab functionality with in-page search."
+  },
+  {
+    "releasedAt": "2026-06-05",
+    "committedAt": "2026-06-06T00:00:51.000Z",
+    "message": "Bug fix: Adjust input styling for resource search component."
+  },
+  {
+    "releasedAt": "2026-06-05",
+    "committedAt": "2026-06-06T00:22:44.000Z",
+    "message": "Update OpenItemTabBar to enhance tab functionality."
+  },
+  {
+    "releasedAt": "2026-06-05",
+    "committedAt": "2026-06-06T02:21:52.000Z",
+    "message": "Enhance ACBC link sync and external resource management."
+  },
+  {
+    "releasedAt": "2026-06-05",
+    "committedAt": "2026-06-06T02:31:25.000Z",
+    "message": "Bug fix: Update account client type in backup restoration script."
+  },
+  {
+    "releasedAt": "2026-06-06",
+    "committedAt": "2026-06-06T10:59:37.000Z",
+    "message": "Enhance profile resource search and navigation functionality."
+  },
+  {
+    "releasedAt": "2026-06-06",
+    "committedAt": "2026-06-06T11:20:26.000Z",
+    "message": "Improve sticky header behavior and scrolling for resource search."
+  },
+  {
+    "releasedAt": "2026-06-06",
+    "committedAt": "2026-06-06T11:26:44.000Z",
+    "message": "Enhance scrolling behavior for resource search and keyboard management."
+  },
+  {
+    "releasedAt": "2026-06-06",
+    "committedAt": "2026-06-06T11:41:05.000Z",
+    "message": "Refine resource search scrolling and keyboard management."
+  },
+  {
+    "releasedAt": "2026-06-06",
+    "committedAt": "2026-06-06T11:59:11.000Z",
+    "message": "Unify scrolling behavior for resource search across platforms."
+  },
+  {
+    "releasedAt": "2026-06-06",
+    "committedAt": "2026-06-06T12:08:11.000Z",
+    "message": "Bug fix: Refine scrolling behavior for iOS resource search input."
+  },
+  {
+    "releasedAt": "2026-06-06",
+    "committedAt": "2026-06-06T12:38:29.000Z",
+    "message": "Enhance sticky header behavior for iOS keyboard interaction."
+  },
+  {
+    "releasedAt": "2026-06-06",
+    "committedAt": "2026-06-06T12:45:33.000Z",
+    "message": "Extend sticky header background for iOS search usability."
+  },
+  {
+    "releasedAt": "2026-06-06",
+    "committedAt": "2026-06-06T22:02:05.000Z",
+    "message": "Refine sticky header behavior for iOS in-page search."
+  },
+  {
+    "releasedAt": "2026-06-06",
+    "committedAt": "2026-06-06T22:15:48.000Z",
+    "message": "Optimize sticky header behavior for iOS during in-page search."
+  },
+  {
+    "releasedAt": "2026-06-06",
+    "committedAt": "2026-06-06T22:25:16.000Z",
+    "message": "Enhance sticky header functionality for iOS during in-page search."
+  },
+  {
+    "releasedAt": "2026-06-06",
+    "committedAt": "2026-06-06T22:28:52.000Z",
+    "message": "Bug fix: Correct type check for sticky header spacer element."
+  },
+  {
+    "releasedAt": "2026-06-06",
+    "committedAt": "2026-06-06T22:50:57.000Z",
+    "message": "Enhance sticky header and scrolling behavior for iOS during in-page search."
+  },
+  {
+    "releasedAt": "2026-06-06",
+    "committedAt": "2026-06-06T23:02:43.000Z",
+    "message": "Enhance sticky header synchronization with iOS keyboard interactions."
+  },
+  {
+    "releasedAt": "2026-06-06",
+    "committedAt": "2026-06-06T23:24:05.000Z",
+    "message": "Refine sticky header synchronization for iOS keyboard interactions."
+  },
+  {
+    "releasedAt": "2026-06-06",
+    "committedAt": "2026-06-07T00:35:35.000Z",
+    "message": "Implement keyboard dismissal for iOS during in-page search."
+  },
+  {
+    "releasedAt": "2026-06-07",
+    "committedAt": "2026-06-07T12:54:13.000Z",
+    "message": "Bug fix: Update user roles description in copyright page."
+  },
+  {
+    "releasedAt": "2026-06-07",
+    "committedAt": "2026-06-07T19:03:16.000Z",
+    "message": "Enhance scripture study features with cross references."
+  },
+  {
+    "releasedAt": "2026-06-07",
+    "committedAt": "2026-06-07T19:08:46.000Z",
+    "message": "Bug fix: Correct export statement for ScriptureModalPresentationLocation type."
+  },
+  {
+    "releasedAt": "2026-06-07",
+    "committedAt": "2026-06-07T22:58:14.000Z",
+    "message": "Introduce Bible books memorization features."
+  },
+  {
+    "releasedAt": "2026-06-07",
+    "committedAt": "2026-06-08T00:40:23.000Z",
+    "message": "Implement modal tracking for analytics."
+  },
+  {
+    "releasedAt": "2026-06-08",
+    "committedAt": "2026-06-08T18:08:35.000Z",
+    "message": "Enhance Bible Reader functionality with tab restoration."
+  },
+  {
+    "releasedAt": "2026-06-08",
+    "committedAt": "2026-06-08T22:15:37.000Z",
+    "message": "Add Bible Translation dropdown to Table of Contents."
+  },
+  {
+    "releasedAt": "2026-06-08",
+    "committedAt": "2026-06-09T01:38:00.000Z",
+    "message": "Update app icons and remove legacy assets."
+  },
+  {
+    "releasedAt": "2026-06-09",
+    "committedAt": "2026-06-09T12:57:45.000Z",
+    "message": "Add mobile web install banner for app promotion."
+  },
+  {
+    "releasedAt": "2026-06-09",
+    "committedAt": "2026-06-09T18:02:39.000Z",
+    "message": "Enhance app install banner functionality and theme management."
+  },
+  {
+    "releasedAt": "2026-06-09",
+    "committedAt": "2026-06-09T22:28:42.000Z",
+    "message": "Update favicon generation to support transparent corners."
+  },
+  {
+    "releasedAt": "2026-06-09",
+    "committedAt": "2026-06-10T02:22:27.000Z",
+    "message": "Add Daily Verse Hunt feature to profile pages."
+  },
+  {
+    "releasedAt": "2026-06-10",
+    "committedAt": "2026-06-10T13:37:34.000Z",
+    "message": "Enhance scripture modal and profile content for M'Cheyne plan."
+  },
+  {
+    "releasedAt": "2026-06-10",
+    "committedAt": "2026-06-10T16:48:12.000Z",
+    "message": "Implement silent deploy reload for mobile app app."
+  },
+  {
+    "releasedAt": "2026-06-10",
+    "committedAt": "2026-06-11T01:37:35.000Z",
+    "message": "Enhance silent deploy reload and link handling in mobile app app."
+  },
+  {
+    "releasedAt": "2026-06-11",
+    "committedAt": "2026-06-11T12:10:26.000Z",
+    "message": "Enhance scripture listening experience with auto-scroll functionality."
+  },
+  {
+    "releasedAt": "2026-06-11",
+    "committedAt": "2026-06-11T12:32:42.000Z",
+    "message": "Enhance silent deploy reload and link handling in mobile app app."
+  },
+  {
+    "releasedAt": "2026-06-12",
+    "committedAt": "2026-06-12T16:18:42.000Z",
+    "message": "Bug fix: Update deploy notice to clarify changelog presentation."
+  },
+  {
+    "releasedAt": "2026-06-13",
+    "committedAt": "2026-06-13T12:15:34.000Z",
+    "message": "Enhance deploy update handling and error recovery."
+  },
+  {
+    "releasedAt": "2026-06-13",
+    "committedAt": "2026-06-13T18:21:15.000Z",
+    "message": "Enhance bookmark and reading resume functionality."
+  },
+  {
+    "releasedAt": "2026-06-13",
+    "committedAt": "2026-06-14T00:04:51.000Z",
+    "message": "Enhance Bible Reader functionality and scripture preview."
+  },
+  {
+    "releasedAt": "2026-06-13",
+    "committedAt": "2026-06-14T01:07:26.000Z",
+    "message": "Improve scripture reader layout and functionality."
+  },
+  {
+    "releasedAt": "2026-06-13",
+    "committedAt": "2026-06-14T01:48:57.000Z",
+    "message": "Enhance Resources list scrolling and touch handling."
+  },
+  {
+    "releasedAt": "2026-06-13",
+    "committedAt": "2026-06-14T02:28:18.000Z",
+    "message": "Add J.C. Ryle's Thoughts for Young Men to resources and backup exclusions."
+  },
+  {
+    "releasedAt": "2026-06-13",
+    "committedAt": "2026-06-14T03:00:00.000Z",
+    "message": "Open Help (?), then Change log to browse what's new and past improvements to the app."
+  }
+]

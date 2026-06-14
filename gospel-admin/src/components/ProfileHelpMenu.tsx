@@ -24,6 +24,7 @@ import {
   runThemeFeatureTour,
 } from '@/lib/profileHelpTours'
 import GitHubFeedbackModal from '@/components/GitHubFeedbackModal'
+import SiteChangelogModal from '@/components/SiteChangelogModal'
 import { isProfileResourceListenControlAvailable } from '@/lib/memorizationViewportPlatform'
 
 const TRIGGER_CLASS =
@@ -180,6 +181,7 @@ export default function ProfileHelpMenu({ profileSlug, profileTitle }: ProfileHe
   const tutorials = useMemo(() => buildProfileTutorialMenuItems(), [])
   const [open, setOpen] = useState(false)
   const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const [changelogOpen, setChangelogOpen] = useState(false)
   const [feedbackEnabled, setFeedbackEnabled] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -245,6 +247,13 @@ export default function ProfileHelpMenu({ profileSlug, profileTitle }: ProfileHe
     })
   }
 
+  const openChangelog = () => {
+    setOpen(false)
+    window.requestAnimationFrame(() => {
+      setChangelogOpen(true)
+    })
+  }
+
   return (
     <div className="relative print-hide">
       <button
@@ -291,29 +300,41 @@ export default function ProfileHelpMenu({ profileSlug, profileTitle }: ProfileHe
               role="menu"
               aria-label="Tutorials"
             >
-              {feedbackEnabled ? (
-                <>
-                  <div className="shrink-0 border-b border-slate-200 dark:border-slate-600 px-3 py-2">
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Support</p>
-                  </div>
-                  <div className="shrink-0 border-b border-slate-200 dark:border-slate-600 p-2">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      data-tour="profile-help-send-feedback"
-                      className="w-full text-left rounded-lg px-3 py-3 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 dark:focus-visible:ring-slate-500 cursor-pointer"
-                      onClick={openFeedback}
-                    >
-                      <span className="block text-sm font-medium text-slate-800 dark:text-slate-100">
-                        Send feedback
-                      </span>
-                      <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        Suggestions, bug reports, and feature requests
-                      </span>
-                    </button>
-                  </div>
-                </>
-              ) : null}
+              <div className="shrink-0 border-b border-slate-200 dark:border-slate-600 px-3 py-2">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Support</p>
+              </div>
+              <div className="shrink-0 border-b border-slate-200 dark:border-slate-600 p-2 space-y-1">
+                {feedbackEnabled ? (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    data-tour="profile-help-send-feedback"
+                    className="w-full text-left rounded-lg px-3 py-3 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 dark:focus-visible:ring-slate-500 cursor-pointer"
+                    onClick={openFeedback}
+                  >
+                    <span className="block text-sm font-medium text-slate-800 dark:text-slate-100">
+                      Send feedback
+                    </span>
+                    <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Suggestions, bug reports, and feature requests
+                    </span>
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  role="menuitem"
+                  data-tour="profile-help-change-log"
+                  className="w-full text-left rounded-lg px-3 py-3 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 dark:focus-visible:ring-slate-500 cursor-pointer"
+                  onClick={openChangelog}
+                >
+                  <span className="block text-sm font-medium text-slate-800 dark:text-slate-100">
+                    Change log
+                  </span>
+                  <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    See what&apos;s new and past improvements to the app
+                  </span>
+                </button>
+              </div>
               <div className="shrink-0 border-b border-slate-200 dark:border-slate-600 px-3 py-2">
                 <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">Tutorials</p>
               </div>
@@ -349,6 +370,7 @@ export default function ProfileHelpMenu({ profileSlug, profileTitle }: ProfileHe
         profileSlug={profileSlug}
         profileTitle={profileTitle}
       />
+      <SiteChangelogModal isOpen={changelogOpen} onClose={() => setChangelogOpen(false)} />
     </div>
   )
 }

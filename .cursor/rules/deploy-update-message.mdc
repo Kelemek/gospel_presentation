@@ -1,17 +1,44 @@
 ---
-description: Update the deploy notice changelog with succinct end-user wording when shipping user-visible changes
+description: Update both release changelogs with the same succinct end-user wording when shipping user-visible changes
 alwaysApply: true
 ---
 
-# Deploy update changelog
+# Release changelogs (What's new + Help → Change log)
 
-When you finish **user-visible** changes that will deploy to production (UI, UX, content, fixes to broken flows), **append** a short note to the **end** of [gospel-admin/data/deploy-update-changelog.json](gospel-admin/data/deploy-update-changelog.json) (JSON string array: **oldest first, newest last**—never prepend at index `0`). The file is **append-only** (do not remove older entries). The API serves the full list; each client stores the **index through which they have read** (count of entries acknowledged from the start). Each alert shows **at most the five newest** release notes they have not passed yet; dismissing it marks **through the latest entry** in the changelog (older skipped notes are not shown later). Web and native users see missed notes in **What's new** on return, and native users also see unseen entries in the **restart** alert when a deploy lands while the app is open.
+When you finish **user-visible** changes that will deploy to production (UI, UX, content, fixes to broken flows), append **the same plain-language note** to **both**:
+
+1. [gospel-admin/data/deploy-update-changelog.json](gospel-admin/data/deploy-update-changelog.json) — string array for **What's new** / native restart alerts
+2. [gospel-admin/data/site-changelog.json](gospel-admin/data/site-changelog.json) — dated objects for **Help → Change log**
+
+Users should see **identical wording** in both places.
+
+**Preferred:** from `gospel-admin/`, run:
+
+```bash
+npm run append-release-changelog -- "Your release note in plain language."
+```
+
+That appends to both files in one step (`releaseChangelog.ts`). You may also append manually: add the string to the **end** of the deploy JSON array, and add `{ "releasedAt": "YYYY-MM-DD", "committedAt": "<ISO now>", "message": "<same string>" }` to the **end** of the site JSON array.
+
+`npm run generate-site-changelog` is **only** for one-time git history backfill — **not** part of normal agent workflow after shipping.
+
+## Deploy JSON (`deploy-update-changelog.json`)
+
+- **Oldest first, newest last** — never prepend at index `0`
+- **Append-only** — do not remove older entries (clients track read index from the start)
+- Each alert shows at most the **five newest** unseen notes; dismissing marks through the latest entry
+
+## Site JSON (`site-changelog.json`)
+
+- Same message text as the deploy entry for that release
+- **Oldest first, newest last** in the file; the modal groups by month (newest first)
+- `releasedAt`: calendar date (`YYYY-MM-DD`); `committedAt`: ISO timestamp for same-day ordering
 
 ## When to update
 
 - **Do update** for changes counselors or counselees might notice.
 - **Do not update** for internal-only work (tests, refactors, CI, docs-only, admin tooling with no user impact).
-- **Leave the array unchanged** when the release has nothing worth telling users.
+- **Leave both files unchanged** when the release has nothing worth telling users.
 
 ## Writing rules
 
@@ -29,7 +56,7 @@ When you finish **user-visible** changes that will deploy to production (UI, UX,
 - Bad: `Refactored capacitorDeployNotice controller and added Jest mocks.`
 - Bad: `Fixed concordance long-press.` (missing required `Bug fix:` prefix for a bug fix)
 
-## File format
+## File format (deploy)
 
 The JSON file is a **string array in chronological order: oldest first, newest last.**
 
@@ -45,13 +72,4 @@ The JSON file is a **string array in chronological order: oldest first, newest l
 ]
 ```
 
-**Wrong:** prepending the new release at the top:
-
-```json
-[
-  "This release note.",  // ← wrong: newest must be last, not first
-  "Older note."
-]
-```
-
-Shipped via `GET /api/app-deploy-version` as `changelog` (same oldest→newest order).
+Shipped via `GET /api/app-deploy-version` as `changelog`. Full dated history: `GET /api/site-changelog` from `site-changelog.json`.

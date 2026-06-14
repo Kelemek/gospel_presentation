@@ -50,6 +50,8 @@
     "import-stepbible:fixtures": "node scripts/import-stepbible-data.js --fixtures-only",
     "import-cross-references": "node scripts/import-cross-references.js",
     "import-cross-references:fixtures": "node scripts/import-cross-references.js --fixtures-only",
+    "generate-site-changelog": "tsx scripts/generate-site-changelog-from-git.ts",
+    "append-release-changelog": "tsx scripts/append-release-changelog.ts",
     "reimport-stepbible": "FORCE_STEPBIBLE_REIMPORT=1 node scripts/ensure-stepbible-data.js",
     "sync-acbc-links": "tsx scripts/sync-acbc-external-links.ts",
     "add-acbc-sections": "tsx scripts/add-acbc-missing-sections.ts",

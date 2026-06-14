@@ -14,6 +14,7 @@ export type ModalAnalyticsName =
   | 'mcheyne_reading_plan'
   | 'morneve_devotions'
   | 'github_feedback'
+  | 'site_changelog'
   | 'presentation_welcome'
   | 'memorize_listen_controls'
 

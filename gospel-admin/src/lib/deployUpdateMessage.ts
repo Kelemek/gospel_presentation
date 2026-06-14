@@ -1,8 +1,13 @@
 import fs from 'fs'
 import path from 'path'
 import { logger } from '@/lib/logger'
+import {
+  RELEASE_CHANGELOG_ENTRY_MAX_LENGTH,
+  truncateReleaseChangelogMessage,
+} from '@/lib/changelogShared'
 
-export const DEPLOY_UPDATE_CHANGELOG_ENTRY_MAX_LENGTH = 400
+/** @deprecated Prefer RELEASE_CHANGELOG_ENTRY_MAX_LENGTH from changelogShared */
+export const DEPLOY_UPDATE_CHANGELOG_ENTRY_MAX_LENGTH = RELEASE_CHANGELOG_ENTRY_MAX_LENGTH
 
 const DEPLOY_UPDATE_CHANGELOG_FILE = path.join(
   process.cwd(),
@@ -11,11 +16,11 @@ const DEPLOY_UPDATE_CHANGELOG_FILE = path.join(
 )
 
 function truncateDeployUpdateChangelogEntry(entry: string): string {
-  if (entry.length <= DEPLOY_UPDATE_CHANGELOG_ENTRY_MAX_LENGTH) {
-    return entry
+  const truncated = truncateReleaseChangelogMessage(entry)
+  if (truncated !== entry) {
+    logger.warn('Deploy update changelog entry truncated to fit alert limit')
   }
-  logger.warn('Deploy update changelog entry truncated to fit alert limit')
-  return `${entry.slice(0, DEPLOY_UPDATE_CHANGELOG_ENTRY_MAX_LENGTH - 1).trimEnd()}…`
+  return truncated
 }
 
 function parseDeployUpdateChangelogFileContent(raw: string): string[] {
@@ -46,4 +51,25 @@ export function readDeployUpdateChangelog(): string[] {
     logger.warn('Failed to read deploy update changelog file', error)
     return []
   }
+}
+
+function writeDeployUpdateChangelog(entries: string[]): void {
+  fs.writeFileSync(
+    DEPLOY_UPDATE_CHANGELOG_FILE,
+    `${JSON.stringify(entries, null, 2)}\n`,
+    'utf8'
+  )
+}
+
+/** Append one release note (oldest first). Same text should go to site-changelog.json via appendReleaseChangelog. */
+export function appendDeployUpdateChangelogEntry(message: string): string {
+  const trimmed = message.trim()
+  if (!trimmed) {
+    throw new Error('Release note message is required')
+  }
+  const entry = truncateDeployUpdateChangelogEntry(trimmed)
+  const entries = readDeployUpdateChangelog()
+  entries.push(entry)
+  writeDeployUpdateChangelog(entries)
+  return entry
 }

@@ -340,6 +340,31 @@ describe('ProfileHelpMenu', () => {
     })
   })
 
+  it('always shows Change log in Support', async () => {
+    const user = userEvent.setup()
+    render(<ProfileHelpMenu />)
+
+    await user.click(screen.getByRole('button', { name: /help and tutorials/i }))
+    expect(screen.getByText('Support')).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /change log/i })).toBeInTheDocument()
+  })
+
+  it('opens change log modal when chosen', async () => {
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ groups: [] }),
+    })
+    const user = userEvent.setup()
+    render(<ProfileHelpMenu />)
+
+    await user.click(screen.getByRole('button', { name: /help and tutorials/i }))
+    await user.click(screen.getByRole('menuitem', { name: /change log/i }))
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: /change log/i })).toBeInTheDocument()
+    })
+  })
+
   it('shows Send feedback when enabled and opens modal', async () => {
     ;(global.fetch as jest.Mock).mockResolvedValue({
       ok: true,
