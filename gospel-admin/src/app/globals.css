@@ -1292,6 +1292,10 @@ body.capacitor-android .scripture-word-study-card {
     max-height: calc(100% - max(0.5rem, env(safe-area-inset-bottom, 0px), 72px));
   }
 
+  body.capacitor-android [data-tour='scripture-modal-scroll-area'] {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px), 72px);
+  }
+
   .profile-help-tour-popover.driver-popover .driver-popover-footer {
     margin-top: 14px;
     gap: 10px;

@@ -70,6 +70,18 @@ describe('ScriptureModal Component', () => {
     })
   })
 
+  it('extends to the bottom on mobile while keeping top and side safe-area inset', () => {
+    renderWithTextSize(<ScriptureModal {...defaultProps} />)
+
+    const overlay = document.querySelector('[data-scripture-modal-overlay]') as HTMLElement
+    expect(overlay).toHaveStyle({ paddingTop: 'env(safe-area-inset-top)' })
+    expect(overlay.style.paddingBottom).toBe('')
+
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveClass('h-full')
+    expect(dialog).not.toHaveClass('h-dvh')
+  })
+
   it('locks document scroll without jumping the page to the top', () => {
     Object.defineProperty(window, 'scrollY', { value: 180, configurable: true, writable: true })
     const scrollToSpy = jest.spyOn(window, 'scrollTo').mockImplementation(() => {})

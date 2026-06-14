@@ -32,6 +32,7 @@ When the exact phrase "Four Rules of Communication" (F, R, C capitalized) appear
 
 When users click a scripture reference, a modal displays the full text with these features:
 
+- **Layout**: On phone-sized viewports the reader is **full height to the bottom edge** of the screen; the overlay still insets the **top and sides** for the notch and side safe areas (same as before). From **`lg`** up it is a centered card at **80vh** height with rounded corners. Scrollable content respects the bottom safe area (with extra bottom padding on Capacitor Android when the system nav bar overlaps the WebView).
 - **Translation selector**: Choose from enabled translations (ESV and optionally KJV, NASB, LSB, NIV, NLT, CSB via API.Bible when configured and enabled in admin). In the scripture reader modal, translation and compare use the same **button + listbox** pattern as the pin control (not native `<select>`). Options are ordered by admin **display_order** in `translation_settings`, including the **Bible Translation** control in the table-of-contents menu (`TableOfContents.tsx`).
 - **Compare feature**: A second menu (default label **Compare**) lets users pick another translation to view side-by-side
   - Compare translation appears on the left, main translation on the right

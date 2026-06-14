@@ -1116,18 +1116,16 @@ export default function ScriptureModal({
   return (
     <>
     <div
-      className="fixed top-0 left-0 right-0 bottom-0 bg-black/50 z-50 flex items-start lg:items-center justify-center p-0 lg:p-4"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-0 lg:items-center lg:p-4"
+      data-scripture-modal-overlay
       style={{
-        minHeight: '100vh',
-        minWidth: '100vw',
         paddingTop: 'env(safe-area-inset-top)',
         paddingRight: 'env(safe-area-inset-right)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
         paddingLeft: 'env(safe-area-inset-left)',
       }}
     >
       <div
-        className="bg-white dark:bg-slate-800 w-full lg:max-w-2xl xl:max-w-4xl 2xl:max-w-5xl shadow-xl flex flex-col h-full lg:h-[80vh] lg:rounded-lg min-h-0"
+        className="bg-white dark:bg-slate-800 w-full shadow-xl flex flex-col h-full min-h-0 lg:h-[80vh] lg:max-h-[80vh] lg:max-w-2xl xl:max-w-4xl 2xl:max-w-5xl lg:rounded-lg"
         role="dialog"
         aria-modal="true"
         aria-labelledby={scriptureModalTitleId}
@@ -1529,7 +1527,7 @@ export default function ScriptureModal({
         >
           <div
             ref={scrollAreaRef}
-            className="relative flex-1 overflow-y-auto touch-pan-y px-4 py-4 min-h-0"
+            className="relative flex-1 overflow-y-auto touch-pan-y px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))] min-h-0"
             data-tour={isComparing ? 'scripture-modal-compare-columns' : 'scripture-modal-scroll-area'}
           >
             {isComparing ? (
