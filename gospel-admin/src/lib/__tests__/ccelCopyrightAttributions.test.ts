@@ -15,6 +15,7 @@ describe('CCEL_COPYRIGHT_ATTRIBUTIONS', () => {
       'Martin Luther, Commentary on Galatians',
       'Martin Luther, The Bondage of the Will',
       'J.C. Ryle, Holiness',
+      'J.C. Ryle, Thoughts for Young Men',
       'Richard Baxter, The Reformed Pastor',
       'Charles H. Spurgeon, All of Grace',
       'Charles H. Spurgeon, Morning and Evening',

@@ -10,6 +10,7 @@ import { isLutherBondageProfileSlug } from '@/lib/lutherBondage/lutherBondageSlu
 import { isAllOfGraceProfileSlug } from '@/lib/allOfGrace/allOfGraceSlug'
 import { isReformedPastorProfileSlug } from '@/lib/reformedPastor/reformedPastorSlug'
 import { isRyleHolinessProfileSlug } from '@/lib/ryleHoliness/ryleHolinessSlug'
+import { isRyleThoughtsForYoungMenProfileSlug } from '@/lib/ryleThoughtsForYoungMen/ryleThoughtsForYoungMenSlug'
 import { isBerkhofSystematicTheologyProfileSlug } from '@/lib/berkhof/berkhofSlug'
 import { isPilgrimProgressProfileSlug } from '@/lib/pilgrim/pilgrimSlug'
 import { isWatsonBookProfileSlug } from '@/lib/watson/watsonSlug'
@@ -37,6 +38,7 @@ export function isReimportableCorpusProfileSlug(slug: string): boolean {
     isAllOfGraceProfileSlug(s) ||
     isReformedPastorProfileSlug(s) ||
     isRyleHolinessProfileSlug(s) ||
+    isRyleThoughtsForYoungMenProfileSlug(s) ||
     isBerkhofSystematicTheologyProfileSlug(s) ||
     isWatsonBookProfileSlug(s)
   )

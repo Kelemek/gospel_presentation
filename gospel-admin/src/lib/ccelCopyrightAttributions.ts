@@ -68,6 +68,11 @@ export const CCEL_COPYRIGHT_ATTRIBUTIONS: readonly CcelCopyrightAttribution[] = 
     sourceHref: 'https://www.ccel.org/ccel/ryle/holiness.html',
   },
   {
+    title: 'J.C. Ryle, Thoughts for Young Men',
+    body: 'The underlying work is in the public domain. Text in this app was imported from Chapter XIX of the ThML edition of The Upper Room',
+    sourceHref: 'https://www.ccel.org/ccel/ryle/upper_room.html',
+  },
+  {
     title: 'Richard Baxter, The Reformed Pastor',
     body: 'The underlying work is in the public domain. Text in this app was imported from the ThML edition',
     sourceHref: 'https://www.ccel.org/ccel/baxter/pastor.html',
