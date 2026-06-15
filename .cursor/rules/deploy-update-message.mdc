@@ -25,7 +25,8 @@ That appends to both files in one step (`releaseChangelog.ts`). You may also app
 ## Deploy JSON (`deploy-update-changelog.json`)
 
 - **Oldest first, newest last** — never prepend at index `0`
-- **Append-only** — do not remove older entries (clients track read index from the start)
+- **Append-only** — do not remove, reorder, or replace older entries (clients track read progress by **array index** from the start; deleting from the front breaks What's new for returning users)
+- **Never trim the file to a maximum length** — there is no “keep last N entries” rule. The UI already shows at most **five** unseen notes per alert; that cap is client-side only.
 - Each alert shows at most the **five newest** unseen notes; dismissing marks through the latest entry
 
 ## Site JSON (`site-changelog.json`)
@@ -61,7 +62,7 @@ That appends to both files in one step (`releaseChangelog.ts`). You may also app
 The JSON file is a **string array in chronological order: oldest first, newest last.**
 
 1. **Append** the new note as the **last** element—never insert at index `0` or anywhere except the end.
-2. **Do not delete** older entries from the file when adding a new one (the client tracks which indices the user has read).
+2. **Do not delete, splice, shift, or trim** older entries when adding a new one (the client tracks which indices the user has read). **Never** “keep only the last 5” in this file.
 3. Do not reorder existing entries when adding a new one.
 
 ```json

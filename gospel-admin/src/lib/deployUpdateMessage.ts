@@ -61,7 +61,7 @@ function writeDeployUpdateChangelog(entries: string[]): void {
   )
 }
 
-/** Append one release note (oldest first). Same text should go to site-changelog.json via appendReleaseChangelog. */
+/** Append one release note (oldest first). Same text should go to site-changelog.json via appendReleaseChangelog. Never removes older entries. */
 export function appendDeployUpdateChangelogEntry(message: string): string {
   const trimmed = message.trim()
   if (!trimmed) {
@@ -69,7 +69,11 @@ export function appendDeployUpdateChangelogEntry(message: string): string {
   }
   const entry = truncateDeployUpdateChangelogEntry(trimmed)
   const entries = readDeployUpdateChangelog()
+  const priorLength = entries.length
   entries.push(entry)
+  if (entries.length !== priorLength + 1) {
+    throw new Error('Deploy update changelog append failed')
+  }
   writeDeployUpdateChangelog(entries)
   return entry
 }
