@@ -18,6 +18,23 @@ describe('collectScriptureReferencesForSubsection', () => {
     expect(cards.map((c) => c.reference)).toEqual(['John 3:16'])
   })
 
+  it('splits non-contiguous comma scripRef lists into separate cards', () => {
+    const thml = `<p><scripRef passage="Eph 2:1" /> and <scripRef passage="Eph 2:5" /></p>`
+    const contentHtml =
+      '<p>See Ephesians 2:1 and Ephesians 2:5.</p>'
+    const cards = collectScriptureReferencesForSubsection({
+      thmlInner: thml,
+      contentHtml,
+    })
+    expect(cards.map((c) => c.reference)).toEqual(['Ephesians 2:1', 'Ephesians 2:5'])
+  })
+
+  it('splits a single non-contiguous comma passage into separate cards', () => {
+    const thml = `<p><scripRef passage="Eph 2:1,5" parsed="|Eph|2|1|0|0" /></p>`
+    const contentHtml = '<p>See Ephesians 2:1; Ephesians 2:5.</p>'
+    const cards = collectScriptureReferencesForSubsection({ thmlInner: thml, contentHtml })
+    expect(cards.map((c) => c.reference)).toEqual(['Ephesians 2:1', 'Ephesians 2:5'])
+  })
   it('skips non-canonical strings', () => {
     const cards = collectScriptureReferencesForSubsection({
       contentHtml: '<p>Not a verse: foo bar baz.</p>',

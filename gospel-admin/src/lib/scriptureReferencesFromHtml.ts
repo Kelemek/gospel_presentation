@@ -1,9 +1,8 @@
 import { segmentPlainTextForGospelInlines } from '@/lib/injectGospelInlineMarkersInHtml'
 import {
-  expandCommaBetweenDistinctScriptureRefs,
-  expandSameChapterCommaVerseOrSeparate,
   isGospelCanonicalScriptureRef,
   normalizeScriptureReferenceString,
+  scriptureDisplaysToCardRefs,
 } from '@/lib/scriptureReferenceNormalize'
 import { passageDisplaysFromFragment } from '@/lib/spurgeon/ccelSermonHtml'
 import { gospelHtmlToPlainForScriptureScan } from '@/lib/spurgeon/passageKeysFromGospelData'
@@ -16,22 +15,17 @@ function pushPlainTextRefs(plain: string, out: string[]): void {
   }
 }
 
-function expandThmlPassageDisplay(raw: string): string {
-  return expandSameChapterCommaVerseOrSeparate(
-    expandCommaBetweenDistinctScriptureRefs(raw.trim())
-  )
-}
-
 function orderedUniqueCanonicalRefs(displays: readonly string[]): string[] {
   const seen = new Set<string>()
   const out: string[] = []
   for (const raw of displays) {
-    const trimmed = expandThmlPassageDisplay(raw)
-    if (!trimmed) continue
-    const norm = normalizeScriptureReferenceString(trimmed)
-    if (!norm || !isGospelCanonicalScriptureRef(norm) || seen.has(norm)) continue
-    seen.add(norm)
-    out.push(norm)
+    for (const trimmed of scriptureDisplaysToCardRefs(raw)) {
+      if (!trimmed) continue
+      const norm = normalizeScriptureReferenceString(trimmed)
+      if (!norm || !isGospelCanonicalScriptureRef(norm) || seen.has(norm)) continue
+      seen.add(norm)
+      out.push(norm)
+    }
   }
   return out
 }

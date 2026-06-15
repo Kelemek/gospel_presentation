@@ -10,6 +10,7 @@ import {
   normalizeScriptureReferencesInHtml,
   preprocessScriptureHtmlForNormalize,
   scanCanonicalScriptureSpansInPlainText,
+  scriptureDisplaysToCardRefs,
 } from '@/lib/scriptureReferenceNormalize'
 import type { GospelPresentationData } from '@/lib/types'
 
@@ -158,6 +159,25 @@ describe('scriptureReferenceNormalize', () => {
 
   it('leaves non-contiguous comma verse lists unchanged', () => {
     expect(normalizeScriptureReferenceString('Acts 2:23,36,37,41')).toBe('Acts 2:23,36,37,41')
+  })
+
+  it('scriptureDisplaysToCardRefs splits non-contiguous comma lists for cards', () => {
+    expect(scriptureDisplaysToCardRefs('Ephesians 2:1, 5')).toEqual([
+      'Ephesians 2:1',
+      'Ephesians 2:5',
+    ])
+    expect(scriptureDisplaysToCardRefs('Romans 1:24, 26, 28')).toEqual([
+      'Romans 1:24',
+      'Romans 1:26',
+      'Romans 1:28',
+    ])
+    expect(scriptureDisplaysToCardRefs('Col. 2:14,15')).toEqual(['Colossians 2:14-15'])
+  })
+
+  it('expandSameChapterCommaVerseOrSeparate handles space after comma', () => {
+    expect(expandSameChapterCommaVerseOrSeparate('Ephesians 2:1, 5')).toBe(
+      'Ephesians 2:1; Ephesians 2:5'
+    )
   })
 
   it('strips following-verse markers (f./ff.) for canonical refs and HTML', () => {

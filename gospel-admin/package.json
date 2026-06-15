@@ -41,6 +41,7 @@
     "import-pink-attributes": "tsx scripts/import-pink-attributes.ts",
     "import-ryle-thoughts-for-young-men": "tsx scripts/import-ryle-thoughts-for-young-men-ccel.ts",
     "import-berkhof": "tsx scripts/import-berkhof-ccel.ts",
+    "import-hodge": "tsx scripts/import-hodge-ccel.ts",
     "import-mcheyne": "tsx scripts/import-mcheyne.ts",
     "import-watson": "tsx scripts/import-watson-ccel.ts",
     "import-edwards": "tsx scripts/import-edwards-ccel.ts",

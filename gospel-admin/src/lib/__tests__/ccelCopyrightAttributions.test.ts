@@ -17,6 +17,7 @@ describe('CCEL_COPYRIGHT_ATTRIBUTIONS', () => {
       'J.C. Ryle, Holiness',
       'J.C. Ryle, Thoughts for Young Men',
       'Richard Baxter, The Reformed Pastor',
+      'Charles Hodge, Systematic Theology',
       'Charles H. Spurgeon, All of Grace',
       'Charles H. Spurgeon, Morning and Evening',
       'Charles H. Spurgeon sermons',

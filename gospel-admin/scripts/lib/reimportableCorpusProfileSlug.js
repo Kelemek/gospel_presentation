@@ -19,6 +19,7 @@ const RYLE_HOLINESS = /^jryh$/i
 const PINK_ATTRIBUTES = /^pkag$/i
 const RYLE_THOUGHTS_FOR_YOUNG_MEN = /^jrym$/i
 const BERKHOF_ST = /^lbst$/i
+const HODGE_ST = /^chst[123]$/i
 const EDWARDS_BOOK = /^je(fow|rea|tog)$/i
 const WATSON_BOOK = /^tw(cm|bt|bd|dc|lp|tc)$/i
 
@@ -40,6 +41,7 @@ function isReimportableCorpusProfileSlug(slug) {
     PINK_ATTRIBUTES.test(s) ||
     RYLE_THOUGHTS_FOR_YOUNG_MEN.test(s) ||
     BERKHOF_ST.test(s) ||
+    HODGE_ST.test(s) ||
     EDWARDS_BOOK.test(s) ||
     WATSON_BOOK.test(s)
   )

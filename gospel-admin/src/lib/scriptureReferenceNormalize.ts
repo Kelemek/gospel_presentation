@@ -264,7 +264,7 @@ export function expandCommaBetweenDistinctScriptureRefs(text: string): string {
  */
 export function expandSameChapterCommaVerseOrSeparate(text: string): string {
   return text.replace(
-    /(\b(?:\d+\s+)?(?:[A-Za-z]+(?:\s+(?:of\s+)?[A-Za-z]+)*)\s+\d+:\d+),(\d+)\b/g,
+    /(\b(?:\d+\s+)?(?:[A-Za-z]+(?:\s+(?:of\s+)?[A-Za-z]+)*)\s+\d+:\d+),\s*(\d+)\b/g,
     (full, head, verseStr) => {
       const normHead = normalizeScriptureReferenceString(String(head))
       const ranged = commaVerseTailToRange(normHead, `,${verseStr}`)
@@ -276,6 +276,49 @@ export function expandSameChapterCommaVerseOrSeparate(text: string): string {
       return `${normHead}; ${bookLabel} ${parsed.chapter}:${verseStr}`
     }
   )
+}
+
+function splitSingleDisplayToCardRefs(part: string): string[] {
+  const norm = normalizeScriptureReferenceString(part.trim())
+  if (!norm) return []
+  const withoutFollowing = stripFollowingVersesMarker(norm)
+  const commaTail = withoutFollowing.match(COMMA_VERSE_TAIL_RE)
+  if (!commaTail) return isGospelCanonicalScriptureRef(norm) ? [norm] : []
+  const head = normalizeScriptureReferenceString(commaTail[1])
+  const ranged = commaVerseTailToRange(head, commaTail[2])
+  if (ranged && isGospelCanonicalScriptureRef(ranged)) return [ranged]
+  if (!isGospelCanonicalScriptureRef(head)) return []
+  const tailVerses = commaTailVerseNumbers(commaTail[2])
+  if (!tailVerses) return [norm]
+  const parsed = parseReference(head)
+  if (!parsed) return [norm]
+  const bookLabel = head.replace(/\s+\d+:\d+(?:-\d+)?$/, '').trim()
+  const refs = [head]
+  for (const v of tailVerses) {
+    refs.push(`${bookLabel} ${parsed.chapter}:${v}`)
+  }
+  return refs
+    .map((r) => normalizeScriptureReferenceString(r))
+    .filter((r) => isGospelCanonicalScriptureRef(r))
+}
+
+/**
+ * Expand a ThML/display passage string into one canonical ref per scripture card.
+ * Splits semicolon-joined refs and non-contiguous same-chapter comma lists.
+ */
+export function scriptureDisplaysToCardRefs(display: string): string[] {
+  const expanded = expandSameChapterCommaVerseOrSeparate(
+    expandCommaBetweenDistinctScriptureRefs(display.trim())
+  )
+  const parts = expanded
+    .split(/\s*;\s*/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+  const out: string[] = []
+  for (const part of parts) {
+    out.push(...splitSingleDisplayToCardRefs(part))
+  }
+  return out
 }
 
 /** Unicode dashes → ASCII hyphen so verse ranges match in HTML and plain text. */
@@ -432,6 +475,7 @@ function looksLikeCalendarOrSectionHeadingFalsePositive(match: string): boolean 
   if (/^PART\s+(?:[IVXLCDM]+|\d+)$/i.test(t)) return true
   if (/^ARTICLE\s+[IVXLCDM]+$/i.test(t)) return true
   if (new RegExp(`^(?:${MONTH_NAMES})\\s+\\d{1,2}(?:,|\\s|$)`, 'i').test(t)) return true
+  if (new RegExp(`^(?:${MONTH_NAMES})\\s+\\d{4}$`, 'i').test(t)) return true
   if (new RegExp(`^\\d{1,2}\\s+(?:${MONTH_NAMES})\\s+\\d{4}$`, 'i').test(t)) return true
   // Prose like "After 4,000 years" (regex stops at the thousands comma).
   if (/^After\s+\d+$/i.test(t)) return true
@@ -456,6 +500,23 @@ function looksLikeEdwardsCitationFalsePositive(match: string): boolean {
   if (/^Kings\s+\d+:\d+$/i.test(t)) return true
   if (/^Peter\s+\d+:\d+$/i.test(t)) return true
   if (/^Timothy\s+\d+:\d+$/i.test(t)) return true
+  if (/^Quest\.\s*\d+$/i.test(t)) return true
+  if (/^Sess\.\s*\d+$/i.test(t)) return true
+  if (/^No\.\s*\d+$/i.test(t)) return true
+  if (/^Colophon\s+\d+$/i.test(t)) return true
+  if (/^In the\s+/i.test(t)) return true
+  if (/^existence of God\.\s*\d+$/i.test(t)) return true
+  if (/^Genev\.\s+\d{4}$/i.test(t)) return true
+  if (/^In\s+\d{4}$/i.test(t)) return true
+  if (/^Lord\s+\d{4}$/i.test(t)) return true
+  if (/^SIR\s+\d/i.test(t)) return true
+  if (/^[A-Z][a-z]+\s+\d{4}$/.test(t) && !isGospelCanonicalScriptureRef(normalizeScriptureReferenceString(t)))
+    return true
+  if (
+    /^[A-Z][a-z]+\.\s+\d+$/i.test(t) &&
+    !isGospelCanonicalScriptureRef(normalizeScriptureReferenceString(t))
+  )
+    return true
   // CCEL comma after verse range (e.g. "1 Timothy 2:3-4,6").
   if (/\d+:\d+-\d+,\d+/.test(t)) return true
   return false

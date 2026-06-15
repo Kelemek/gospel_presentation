@@ -61,7 +61,7 @@ Automated backups are performed by the Supabase Edge Function `backup-to-storage
 - Uses `get_backup_tables()` to dynamically include new `public` tables (excludes cache/log/session tables, `backup_runs`, `bible_verses`, `scripture_access_logs`, `verification_codes`; apply **`sql/migrations/20260509_get_backup_tables_fix_log_exclusions.sql`** if an older migration still listed the wrong log table name and pulled full access logs into backups).
 
 **Excluded from export (re-importable CCEL corpora):**
-- `backup-to-storage` and `npm run backup` **skip** `profiles` rows with slugs `sg…`, `meMMDD`, `cv…`, `mh…`, `je…`, `jefow`/`jerea`/`jetog`, `lgal`, `ltbw` (and deprecated `luthergal`), `ppgr`, `aogr`, `bxrp`, `jryh`, `jrym`, `pkag`, `lbst`, `twcm`/`twbt`/`twbd`/`twdc`/`twlp`/`twtc`, plus `spurgeon_passage_index` rows for those profile ids. User-authored profiles and non-corpus index rows are still backed up.
+- `backup-to-storage` and `npm run backup` **skip** `profiles` rows with slugs `sg…`, `meMMDD`, `cv…`, `mh…`, `je…`, `jefow`/`jerea`/`jetog`, `lgal`, `ltbw` (and deprecated `luthergal`), `ppgr`, `aogr`, `bxrp`, `jryh`, `jrym`, `pkag`, `lbst`, `chst1`/`chst2`/`chst3`, `twcm`/`twbt`/`twbd`/`twdc`/`twlp`/`twtc`, plus `spurgeon_passage_index` rows for those profile ids. User-authored profiles and non-corpus index rows are still backed up.
 - Manifest `metadata.excluded_reimportable_corpus` and `metadata.corpus_profile_count_excluded` record the policy.
 - **`restore-profile-from-backup`** rejects corpus slugs with **400** (use import scripts instead).
 

@@ -13,6 +13,7 @@ import { isPinkAttributesProfileSlug } from '@/lib/pinkAttributes/pinkAttributes
 import { isRyleHolinessProfileSlug } from '@/lib/ryleHoliness/ryleHolinessSlug'
 import { isRyleThoughtsForYoungMenProfileSlug } from '@/lib/ryleThoughtsForYoungMen/ryleThoughtsForYoungMenSlug'
 import { isBerkhofSystematicTheologyProfileSlug } from '@/lib/berkhof/berkhofSlug'
+import { isHodgeVolumeProfileSlug } from '@/lib/hodge/hodgeSlug'
 import { isPilgrimProgressProfileSlug } from '@/lib/pilgrim/pilgrimSlug'
 import { isWatsonBookProfileSlug } from '@/lib/watson/watsonSlug'
 import { isMorneveProfileSlug } from '@/lib/spurgeon/morneveSlug'
@@ -42,6 +43,7 @@ export function isReimportableCorpusProfileSlug(slug: string): boolean {
     isPinkAttributesProfileSlug(s) ||
     isRyleThoughtsForYoungMenProfileSlug(s) ||
     isBerkhofSystematicTheologyProfileSlug(s) ||
+    isHodgeVolumeProfileSlug(s) ||
     isWatsonBookProfileSlug(s)
   )
 }

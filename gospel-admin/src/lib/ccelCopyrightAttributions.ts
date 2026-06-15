@@ -78,6 +78,11 @@ export const CCEL_COPYRIGHT_ATTRIBUTIONS: readonly CcelCopyrightAttribution[] = 
     sourceHref: 'https://www.ccel.org/ccel/baxter/pastor.html',
   },
   {
+    title: 'Charles Hodge, Systematic Theology',
+    body: 'The underlying work is in the public domain. Text in this app was imported from the three-volume ThML edition',
+    sourceHref: 'https://www.ccel.org/ccel/hodge/theology1.html',
+  },
+  {
     title: 'Charles H. Spurgeon, All of Grace',
     body: 'The underlying work is in the public domain. Text in this app was imported from the ThML edition',
     sourceHref: 'https://www.ccel.org/ccel/spurgeon/grace.html',
