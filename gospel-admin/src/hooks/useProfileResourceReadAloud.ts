@@ -59,6 +59,7 @@ import {
 } from '@/lib/profileReadAlongUnderlineStyleStorage'
 import { isListenOmitHeadingProfileSlug } from '@/lib/profileResourceListenText'
 import { addPresentationReadCompleteSlug } from '@/lib/presentationReadCompleteStorage'
+import { plainOffsetAtViewportSentenceStart } from '@/lib/profileReadingPosition'
 
 /** After chunks ending in `.` `!` `?`, brief delay before the next utterance so engines do not run sentences together. */
 const READ_ALONG_AFTER_SENTENCE_GAP_MS = 55
@@ -675,7 +676,11 @@ export function useProfileResourceReadAloud({
   }, [speakChunkInternal])
 
   const startReadAloudSession = useCallback(
-    (fromBeginning: boolean, forcedResolved?: { scope: HTMLElement; text: string }) => {
+    (
+      fromBeginning: boolean,
+      forcedResolved?: { scope: HTMLElement; text: string },
+      forcedStartPlainOffset?: number
+    ) => {
       if (androidHost) return
       if (typeof window === 'undefined' || !window.speechSynthesis) return
 
@@ -684,8 +689,9 @@ export function useProfileResourceReadAloud({
 
       let resolved = resolvedScroll
       const slug = profileSlugRef.current
+      const useForcedStartOffset = forcedStartPlainOffset !== undefined
 
-      if (!fromBeginning && slug) {
+      if (!fromBeginning && !useForcedStartOffset && slug) {
         const scrollAnchorId = resolvedScroll.scope.id
         const textScroll = resolvedScroll.text
         const fpScroll = readAlongTextFingerprint(textScroll)
@@ -738,7 +744,11 @@ export function useProfileResourceReadAloud({
 
       let startChunk = 0
       lastPersistedPlainOffsetRef.current = 0
-      if (!fromBeginning && slug) {
+      if (useForcedStartOffset) {
+        const offset = Math.max(0, Math.min(forcedStartPlainOffset, resolved.text.length))
+        startChunk = chunkIndexContainingPlainOffset(chunkMeta, offset)
+        lastPersistedPlainOffsetRef.current = offset
+      } else if (!fromBeginning && slug) {
         const saved = loadProfileReadAlongProgress(slug, anchorId)
         if (
           saved &&
@@ -806,6 +816,25 @@ export function useProfileResourceReadAloud({
     sections,
     startReadAloudSession,
   ])
+
+  const startReadAloudFromHere = useCallback(() => {
+    if (androidHost) return
+    const resolved = resolveListenScopeAndText()
+    if (!resolved) return
+
+    const chunkMeta = listenPlainAndChunksForScope(
+      resolved.scope,
+      listenTextOptionsRef.current
+    ).chunks
+    if (chunkMeta.length === 0) return
+
+    const offset = plainOffsetAtViewportSentenceStart(
+      resolved.scope,
+      chunkMeta,
+      listenTextOptionsRef.current
+    )
+    startReadAloudSession(false, resolved, offset)
+  }, [androidHost, resolveListenScopeAndText, startReadAloudSession])
 
   const handlePrimaryClick = useCallback(() => {
     if (androidHost) return
@@ -941,6 +970,7 @@ export function useProfileResourceReadAloud({
     readAloudDialogPrimaryAriaLabel,
     listenAriaPressed,
     restartReadAloudFromBeginning,
+    startReadAloudFromHere,
     readAlongUnderlineOn,
     toggleReadAlongUnderline,
     readAlongUnderlineStyle,

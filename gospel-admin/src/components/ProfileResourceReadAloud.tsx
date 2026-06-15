@@ -38,6 +38,7 @@ export default function ProfileResourceReadAloud({ sections, profileSlug }: Prof
     readAloudDialogPrimaryAriaLabel,
     listenAriaPressed,
     restartReadAloudFromBeginning,
+    startReadAloudFromHere,
     readAlongUnderlineOn,
     toggleReadAlongUnderline,
     readAlongUnderlineStyle,
@@ -103,6 +104,7 @@ export default function ProfileResourceReadAloud({ sections, profileSlug }: Prof
         onToggleReadAlongUnderline={toggleReadAlongUnderline}
         readAlongUnderlineStyle={readAlongUnderlineStyle}
         onReadAlongUnderlineStyle={setReadAlongUnderlineStyle}
+        onStartFromHere={startReadAloudFromHere}
         onStartFromBeginning={confirmRestartReadAloudFromBeginning}
       />
     </>

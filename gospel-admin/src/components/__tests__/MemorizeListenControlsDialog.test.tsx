@@ -116,8 +116,9 @@ describe('MemorizeListenControlsDialog', () => {
     expect(onClose).not.toHaveBeenCalled()
   })
 
-  it('with showRepeat false and onStartFromBeginning, renders Start from beginning control', () => {
-    const onStart = jest.fn()
+  it('with showRepeat false and onStartFromBeginning, renders Start from Here and Beginning controls', () => {
+    const onStartBeginning = jest.fn()
+    const onStartHere = jest.fn()
     render(
       <MemorizeListenControlsDialog
         open
@@ -132,11 +133,16 @@ describe('MemorizeListenControlsDialog', () => {
         primaryAriaPressed={false}
         listenPlaybackRate={1}
         onSelectSpeed={jest.fn()}
-        onStartFromBeginning={onStart}
+        onStartFromHere={onStartHere}
+        onStartFromBeginning={onStartBeginning}
       />
     )
+    expect(screen.getByText('Start from')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('memorize-listen-start-from-here'))
+    expect(onStartHere).toHaveBeenCalledTimes(1)
+    expect(onStartBeginning).not.toHaveBeenCalled()
     fireEvent.click(screen.getByTestId('memorize-listen-start-from-beginning'))
-    expect(onStart).toHaveBeenCalledTimes(1)
+    expect(onStartBeginning).toHaveBeenCalledTimes(1)
   })
 
   it('with showRepeat false and underline props, renders Underline toggle between Play and speed', () => {

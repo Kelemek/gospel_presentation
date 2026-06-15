@@ -7,14 +7,16 @@ import {
   collapsedPlainOffsetFromRawListenOffset,
   excerptAroundPlainOffset,
   isReadingPositionAheadOf,
+  plainOffsetAtViewportSentenceStart,
   profileReadingLineViewportY,
   READING_POSITION_VIEWPORT_LINE_GAP_PX,
   restoreReadingPosition,
 } from '../profileReadingPosition'
 import { getProfileHeaderScrollOffset, scrollToTocAnchorWhenReady } from '../scrollToTocAnchor'
-import { plainTextForProfileResourceListen } from '../profileResourceListenText'
+import { plainTextForProfileResourceListen, visibleListenRawText } from '../profileResourceListenText'
 import { readAlongTextFingerprint } from '../profileReadAlongProgressStorage'
 import { scrollPlainOffsetToViewportY } from '../scrollReadAlongPlain'
+import { splitListenRawIntoTtsChunksWithOffsets } from '../splitTextForTtsChunks'
 
 jest.mock('../scrollToTocAnchor', () => {
   const actual = jest.requireActual('../scrollToTocAnchor')
@@ -64,6 +66,36 @@ describe('profileReadingPosition', () => {
     expect(profileReadingLineViewportY()).toBe(
       getProfileHeaderScrollOffset() + READING_POSITION_VIEWPORT_LINE_GAP_PX
     )
+  })
+
+  it('plainOffsetAtViewportSentenceStart snaps to TTS chunk start at read line', () => {
+    const scope = document.createElement('div')
+    scope.innerHTML = '<p>First sentence. Second sentence.</p>'
+    document.body.appendChild(scope)
+
+    const raw = visibleListenRawText(scope)
+    const chunks = splitListenRawIntoTtsChunksWithOffsets(raw)
+    expect(chunks).toHaveLength(2)
+
+    const p = scope.querySelector('p')!
+    const textNode = p.firstChild as Text
+    const secIdx = (textNode.textContent ?? '').indexOf('Second')
+
+    const caretRangeFromPoint = jest.fn(() => {
+      const range = document.createRange()
+      range.setStart(textNode, secIdx + 3)
+      range.collapse(true)
+      return range
+    })
+    document.caretRangeFromPoint = caretRangeFromPoint as typeof document.caretRangeFromPoint
+
+    const offset = plainOffsetAtViewportSentenceStart(scope, chunks)
+    expect(offset).toBe(chunks[1]!.plainStart)
+    expect(chunks[0]!.text).toBe('First sentence.')
+    expect(chunks[1]!.text).toBe('Second sentence.')
+
+    document.body.removeChild(scope)
+    delete (document as { caretRangeFromPoint?: unknown }).caretRangeFromPoint
   })
 
   it('captureReadingPositionAtViewport uses offset 0 at document top without binary search', () => {

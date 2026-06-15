@@ -226,4 +226,39 @@ describe('ProfileResourceReadAloud', () => {
     const utt = speak.mock.calls[0][0] as SpeechSynthesisUtterance
     expect(utt.text).toContain('First section text')
   })
+
+  it('starts from the viewport sentence on Start from Here without confirmation', async () => {
+    const confirmMock = getAlertModalMocks().showConfirm
+    confirmMock.mockReset()
+    confirmMock.mockResolvedValue(false)
+
+    document.body.innerHTML += `
+      <section id="section-1" class="scroll-mt-20">
+        <div id="section-1-0" class="scroll-mt-20"><p>First sentence. Second sentence.</p></div>
+      </section>
+    `
+
+    const p = document.querySelector('#section-1-0 p')!
+    const textNode = p.firstChild as Text
+    const secIdx = (textNode.textContent ?? '').indexOf('Second')
+    document.caretRangeFromPoint = jest.fn(() => {
+      const range = document.createRange()
+      range.setStart(textNode, secIdx + 2)
+      range.collapse(true)
+      return range
+    }) as typeof document.caretRangeFromPoint
+
+    const speak = window.speechSynthesis.speak as jest.Mock
+    const user = userEvent.setup({ delay: null })
+    render(<ProfileResourceReadAloud sections={sections} profileSlug="p1" />)
+    await user.click(screen.getByRole('button', { name: /listen/i }))
+    await user.click(screen.getByTestId('memorize-listen-start-from-here'))
+
+    await waitFor(() => expect(speak).toHaveBeenCalled())
+    expect(confirmMock).not.toHaveBeenCalled()
+    const utt = speak.mock.calls[0][0] as SpeechSynthesisUtterance
+    expect(utt.text).toBe('Second sentence.')
+
+    delete (document as { caretRangeFromPoint?: unknown }).caretRangeFromPoint
+  })
 })

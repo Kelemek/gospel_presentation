@@ -19,6 +19,10 @@ import {
   scrollPlainOffsetToViewportY,
 } from '@/lib/scrollReadAlongPlain'
 import { getProfileHeaderScrollOffset, scrollToTocAnchorWhenReady } from '@/lib/scrollToTocAnchor'
+import {
+  chunkIndexContainingPlainOffset,
+  type TtsTextChunk,
+} from '@/lib/splitTextForTtsChunks'
 
 export const READING_POSITION_VIEWPORT_LINE_GAP_PX = 24
 
@@ -282,6 +286,20 @@ export function getPlainOffsetAtViewportReadLine(
   }
 
   return binarySearchPlainOffsetAtViewportLine(scope, plainLen, opts)
+}
+
+/**
+ * Collapsed plain offset at the start of the TTS sentence containing the viewport read line.
+ */
+export function plainOffsetAtViewportSentenceStart(
+  scope: HTMLElement,
+  chunks: TtsTextChunk[],
+  opts?: ProfileListenTextOptions
+): number {
+  if (chunks.length === 0) return 0
+  const atLine = getPlainOffsetAtViewportReadLine(scope, opts)
+  const idx = chunkIndexContainingPlainOffset(chunks, atLine)
+  return chunks[idx]?.plainStart ?? 0
 }
 
 export function excerptAroundPlainOffset(plain: string, plainOffset: number): string {

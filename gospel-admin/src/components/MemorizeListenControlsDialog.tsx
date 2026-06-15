@@ -26,6 +26,8 @@ interface MemorizeListenControlsDialogPropsBase {
   /** When underline is on: word vs full wrapped-line highlight. */
   readAlongUnderlineStyle?: ProfileReadAlongUnderlineStyle
   onReadAlongUnderlineStyle?: (style: ProfileReadAlongUnderlineStyle) => void
+  /** Profile read-aloud only: play from the sentence at the viewport read line (no confirm). */
+  onStartFromHere?: () => void | Promise<void>
   /** Profile read-aloud only: clears saved resume position and restarts from the first section (parent may confirm first). */
   onStartFromBeginning?: () => void | Promise<void>
   /**
@@ -130,6 +132,7 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
     onToggleReadAlongUnderline,
     readAlongUnderlineStyle,
     onReadAlongUnderlineStyle,
+    onStartFromHere,
     onStartFromBeginning,
     presentation = 'modal',
   } = props
@@ -185,15 +188,29 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
             Listen
           </h2>
           <div className="flex justify-center shrink-0 px-1">
-            {!showRepeatControls && onStartFromBeginning ? (
-              <button
-                type="button"
-                data-testid="memorize-listen-start-from-beginning"
-                onClick={onStartFromBeginning}
-                className="cursor-pointer text-center text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 underline-offset-2 hover:underline py-1 whitespace-nowrap"
-              >
-                Start from beginning
-              </button>
+            {!showRepeatControls && onStartFromBeginning && onStartFromHere ? (
+              <div className="flex items-center gap-1 text-sm whitespace-nowrap">
+                <span className="text-slate-600 dark:text-slate-400 font-medium">Start from</span>
+                <button
+                  type="button"
+                  data-testid="memorize-listen-start-from-here"
+                  onClick={onStartFromHere}
+                  className="cursor-pointer text-center font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 underline-offset-2 hover:underline py-1"
+                >
+                  Here
+                </button>
+                <span className="text-slate-400 dark:text-slate-500" aria-hidden>
+                  \
+                </span>
+                <button
+                  type="button"
+                  data-testid="memorize-listen-start-from-beginning"
+                  onClick={onStartFromBeginning}
+                  className="cursor-pointer text-center font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 underline-offset-2 hover:underline py-1"
+                >
+                  Beginning
+                </button>
+              </div>
             ) : null}
           </div>
           <div className="flex justify-end">
@@ -327,7 +344,7 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
   )
 
   const overlay = isFloating ? (
-    <div className="fixed inset-x-0 top-0 z-120 flex justify-center px-4 pb-2 pointer-events-none pt-[calc(env(safe-area-inset-top,0px)+3.5rem)]">
+    <div className="fixed inset-x-0 top-0 z-120 flex justify-center px-4 pb-2 pointer-events-none pt-[calc(env(safe-area-inset-top,0)+3.5rem)]">
       <div className="pointer-events-auto w-full max-w-md">{panel}</div>
     </div>
   ) : (
