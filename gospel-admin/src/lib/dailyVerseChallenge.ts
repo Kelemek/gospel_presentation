@@ -43,7 +43,7 @@ export type DailyVerseChallengeWin = {
   encouragementMessage: string
 }
 
-const STORAGE_KEY = 'gospel-daily-verse-challenge-v1'
+export const DAILY_VERSE_CHALLENGE_STORAGE_KEY = 'gospel-daily-verse-challenge-v1'
 
 /** Local calendar date `YYYY-MM-DD`. */
 export function getLocalDateKey(date: Date = new Date()): string {
@@ -98,7 +98,7 @@ export function loadDailyVersePrompts(): DailyVersePrompt[] {
 export function loadDailyVerseChallengeCompletion(): DailyVerseChallengeCompletion | null {
   if (typeof window === 'undefined') return null
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
+    const raw = window.localStorage.getItem(DAILY_VERSE_CHALLENGE_STORAGE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw) as DailyVerseChallengeCompletion
     if (
@@ -118,7 +118,7 @@ export function saveDailyVerseChallengeCompletion(
 ): void {
   if (typeof window === 'undefined') return
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(completion))
+    window.localStorage.setItem(DAILY_VERSE_CHALLENGE_STORAGE_KEY, JSON.stringify(completion))
   } catch {
     // Quota or private mode — completion is best-effort
   }

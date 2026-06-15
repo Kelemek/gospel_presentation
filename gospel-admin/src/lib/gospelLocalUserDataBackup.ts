@@ -21,6 +21,11 @@ import {
   isProfileReadAlongPersistenceKey,
   shouldUseIndexedDb,
 } from '@/lib/gospelClientStoragePolicy'
+import {
+  CAPACITOR_DEPLOY_ACK_VERSION_KEY,
+  CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY,
+} from '@/lib/capacitorAppDeployVersion'
+import { DAILY_VERSE_CHALLENGE_STORAGE_KEY } from '@/lib/dailyVerseChallenge'
 import { MCHEYNE_START_DATE_KEY_PREFIX } from '@/lib/mcheyne/mcheyneStartDateStorage'
 import { SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY } from '@/lib/scriptureVerseNumbersPreference'
 
@@ -47,6 +52,9 @@ export const GOSPEL_LOCAL_USER_DATA_FIXED_KEYS = [
   PRESENTATION_READ_COMPLETE_STORAGE_KEY,
   PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY,
   SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY,
+  DAILY_VERSE_CHALLENGE_STORAGE_KEY,
+  CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY,
+  CAPACITOR_DEPLOY_ACK_VERSION_KEY,
 ] as const
 
 const KEY_PREFIXES = [

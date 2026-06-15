@@ -18,11 +18,17 @@ import {
   gospelLocalBackupFilename,
   parseGospelLocalUserDataImport,
 } from '@/lib/gospelLocalUserDataBackup'
+import {
+  CAPACITOR_DEPLOY_ACK_VERSION_KEY,
+  CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY,
+} from '@/lib/capacitorAppDeployVersion'
+import { DAILY_VERSE_CHALLENGE_STORAGE_KEY } from '@/lib/dailyVerseChallenge'
 import { PROFILE_BOOKMARKS_STORAGE_KEY } from '@/lib/profileBookmarksStorage'
 import { PROFILE_HIGHLIGHTS_STORAGE_KEY } from '@/lib/profileHighlightsStorage'
 import { PROFILE_READ_ALONG_UNDERLINE_STYLE_STORAGE_KEY } from '@/lib/profileReadAlongUnderlineStyleStorage'
 import { PRESENTATION_READ_COMPLETE_STORAGE_KEY } from '@/lib/presentationReadCompleteStorage'
 import { PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY } from '@/lib/profileLastOpenResourceStorage'
+import { SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY } from '@/lib/scriptureVerseNumbersPreference'
 import { VERSE_MEMORIZATION_STORAGE_KEY } from '@/lib/verseMemorizationStorage'
 
 function createMemoryStorage(initial: Record<string, string | null> = {}): Storage {
@@ -83,6 +89,10 @@ describe('gospelLocalUserDataBackup', () => {
       [PROFILE_READ_ALONG_UNDERLINE_STYLE_STORAGE_KEY]: 'line',
       [PRESENTATION_READ_COMPLETE_STORAGE_KEY]: '{"v":1,"slugs":["done-slug"]}',
       [PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY]: '{"v":1,"slug":"default","title":"Gospel"}',
+      [DAILY_VERSE_CHALLENGE_STORAGE_KEY]: '{"dateKey":"2026-06-13","promptId":"p1"}',
+      [SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY]: 'true',
+      [CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY]: '12',
+      [CAPACITOR_DEPLOY_ACK_VERSION_KEY]: 'deploy-abc',
     })
     const map = collectGospelLocalUserDataForExport(s)
     expect(map[PROFILE_BOOKMARKS_STORAGE_KEY]).toBeDefined()
@@ -102,6 +112,10 @@ describe('gospelLocalUserDataBackup', () => {
     expect(map[PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY]).toBe(
       '{"v":1,"slug":"default","title":"Gospel"}'
     )
+    expect(map[DAILY_VERSE_CHALLENGE_STORAGE_KEY]).toBe('{"dateKey":"2026-06-13","promptId":"p1"}')
+    expect(map[SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY]).toBe('true')
+    expect(map[CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY]).toBe('12')
+    expect(map[CAPACITOR_DEPLOY_ACK_VERSION_KEY]).toBe('deploy-abc')
   })
 
   it('collectGospelLocalUserDataForExport excludes auth, view preference, and profile cache keys', () => {
@@ -242,6 +256,43 @@ describe('gospelLocalUserDataBackup', () => {
     )
     await applyGospelLocalUserDataImport(payload, target)
     expect(target.getItem('gospel-preferred-translation')).toBe('kjv')
+  })
+
+  it('applyGospelLocalUserDataImport restores deploy changelog acknowledgement keys', async () => {
+    const target = createMemoryStorage()
+    const payload = parseGospelLocalUserDataImport(
+      JSON.stringify({
+        kind: GOSPEL_LOCAL_USER_DATA_KIND,
+        schemaVersion: GOSPEL_LOCAL_USER_DATA_SCHEMA_VERSION,
+        exportedAt: '2026-01-01T00:00:00.000Z',
+        origin: '',
+        localStorage: {
+          [CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY]: '12',
+          [CAPACITOR_DEPLOY_ACK_VERSION_KEY]: 'deploy-abc',
+        },
+      })
+    )
+    await applyGospelLocalUserDataImport(payload, target)
+    expect(target.getItem(CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY)).toBe('12')
+    expect(target.getItem(CAPACITOR_DEPLOY_ACK_VERSION_KEY)).toBe('deploy-abc')
+  })
+
+  it('applyGospelLocalUserDataImport restores daily verse challenge completion', async () => {
+    const target = createMemoryStorage()
+    const challengePayload = '{"dateKey":"2026-06-13","promptId":"p1"}'
+    const payload = parseGospelLocalUserDataImport(
+      JSON.stringify({
+        kind: GOSPEL_LOCAL_USER_DATA_KIND,
+        schemaVersion: GOSPEL_LOCAL_USER_DATA_SCHEMA_VERSION,
+        exportedAt: '2026-01-01T00:00:00.000Z',
+        origin: '',
+        localStorage: {
+          [DAILY_VERSE_CHALLENGE_STORAGE_KEY]: challengePayload,
+        },
+      })
+    )
+    await applyGospelLocalUserDataImport(payload, target)
+    expect(target.getItem(DAILY_VERSE_CHALLENGE_STORAGE_KEY)).toBe(challengePayload)
   })
 
   it('applyGospelLocalUserDataImport restores presentation read-complete key', async () => {
