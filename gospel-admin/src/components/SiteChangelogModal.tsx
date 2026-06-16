@@ -97,11 +97,11 @@ export default function SiteChangelogModal({ isOpen, onClose }: SiteChangelogMod
 
   return createPortal(
     <div
-      className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-black/50 dark:bg-black/70"
+      className="gospel-modal-safe-overlay fixed inset-0 z-60 flex items-center justify-center bg-black/50 dark:bg-black/70"
       onClick={handleClose}
     >
       <div
-        className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full max-h-[min(90vh,90dvh)] flex flex-col overflow-hidden"
+        className="gospel-modal-safe-panel bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full flex flex-col overflow-hidden min-h-0"
         role="dialog"
         aria-modal="true"
         aria-labelledby="site-changelog-modal-title"
@@ -126,7 +126,7 @@ export default function SiteChangelogModal({ isOpen, onClose }: SiteChangelogMod
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+        <div className="gospel-modal-safe-scroll px-6 py-6">
           <SiteChangelogModalBody key="site-changelog-body" />
         </div>
       </div>

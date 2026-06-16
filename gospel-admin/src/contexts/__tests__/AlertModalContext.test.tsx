@@ -85,6 +85,31 @@ describe('AlertModalContext', () => {
     expect(screen.getByTestId('custom-alert-content')).toHaveTextContent('Custom alert body')
   })
 
+  it('showAlert uses a scrollable body region for long changelog-style messages', async () => {
+    const user = userEvent.setup({ delay: null })
+    const longBody = Array.from({ length: 12 }, (_, i) => `${i + 1}. Release note ${i + 1}.`).join(
+      '\n\n'
+    )
+    function LongAlertConsumer() {
+      const { showAlert } = useAlertModal()
+      return (
+        <button type="button" onClick={() => showAlert(`What's new\n\n${longBody}`)}>
+          Show long alert
+        </button>
+      )
+    }
+    render(
+      <AlertModalProvider>
+        <LongAlertConsumer />
+      </AlertModalProvider>
+    )
+    await user.click(screen.getByRole('button', { name: /Show long alert/i }))
+    await waitFor(() => expect(screen.getByRole('dialog')).toBeInTheDocument())
+    const scrollRegion = document.querySelector('.gospel-modal-safe-scroll')
+    expect(scrollRegion).not.toBeNull()
+    expect(scrollRegion).toHaveTextContent('Release note 12.')
+  })
+
   it('showConfirm opens modal with Cancel and Confirm', async () => {
     const user = userEvent.setup({ delay: null })
     render(

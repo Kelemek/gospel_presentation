@@ -82,6 +82,9 @@ describe('SiteChangelogModal', () => {
       expect(screen.getByRole('dialog')).toBeInTheDocument()
     })
 
+    expect(document.querySelector('.gospel-modal-safe-panel')).not.toBeNull()
+    expect(document.querySelector('.gospel-modal-safe-scroll')).not.toBeNull()
+
     await user.click(screen.getByRole('button', { name: /close change log/i }))
     expect(onClose).toHaveBeenCalledTimes(1)
   })

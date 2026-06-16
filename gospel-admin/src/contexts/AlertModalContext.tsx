@@ -106,17 +106,17 @@ export function AlertModalProvider({ children }: { children: React.ReactNode }) 
       {children}
       {state.isOpen && (
         <div
-          className={`fixed inset-0 z-130 flex items-center justify-center p-4 bg-black/50 ${theme === 'dark' ? 'dark' : ''}`}
+          className={`gospel-modal-safe-overlay fixed inset-0 z-130 flex items-center justify-center bg-black/50 ${theme === 'dark' ? 'dark' : ''}`}
           role="dialog"
           aria-modal="true"
           aria-labelledby="alert-modal-title"
           onClick={state.variant === 'alert' ? handleClose : undefined}
         >
           <div
-            className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full border border-slate-200 dark:border-slate-600 overflow-hidden"
+            className="gospel-modal-safe-panel bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full border border-slate-200 dark:border-slate-600 overflow-hidden flex flex-col min-h-0"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-6 py-5 border-b border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50">
+            <div className="gospel-modal-safe-scroll px-6 py-5 border-b border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/50">
               <div
                 id="alert-modal-title"
                 className="text-slate-800 dark:text-slate-100 text-base leading-relaxed whitespace-pre-wrap"
@@ -124,7 +124,7 @@ export function AlertModalProvider({ children }: { children: React.ReactNode }) 
                 <AlertModalMessage message={state.message} />
               </div>
             </div>
-            <div className="px-6 py-4 bg-white dark:bg-slate-800 flex justify-end gap-3">
+            <div className="shrink-0 px-6 py-4 bg-white dark:bg-slate-800 flex justify-end gap-3">
               {state.variant === 'confirm' && (
                 <button
                   type="button"
