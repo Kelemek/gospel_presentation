@@ -19,6 +19,7 @@ import { useAlertModal } from '@/contexts/AlertModalContext'
 import { usePostHogModalOpen } from '@/hooks/usePostHogModalOpen'
 import {
   isChapterOnlyScriptureReference,
+  parseReference,
   scriptureReferenceForPassageQuery,
 } from '@/lib/parse-scripture-reference'
 import { splitScriptureReferenceForHeader } from '@/lib/splitScriptureReferenceForHeader'
@@ -39,6 +40,7 @@ import {
 } from '@/lib/verseMemorizationStorage'
 import type { VerseBookmarkColorId, VersePinColorId } from '@/lib/versePinStorage'
 import ScriptureModalPinPick from '@/components/ScriptureModalPinPick'
+import ScriptureModalHighlightPick from '@/components/ScriptureModalHighlightPick'
 import ScriptureModalTabs from '@/components/ScriptureModalTabs'
 import ScriptureModalToolbarMenu from '@/components/ScriptureModalToolbarMenu'
 import ScriptureWordStudyModal from '@/components/ScriptureWordStudyModal'
@@ -59,7 +61,16 @@ import { studyResourcesAvailableFromPayload } from '@/lib/studyResourcesAvailabi
 import {
   formatScriptureChapterHtml,
   formatScripturePassageHtml,
+  type ScripturePassageSavedHighlight,
 } from '@/lib/scripturePassageHtml'
+import {
+  getScriptureHighlightForReference,
+  scriptureHighlightsForChapter,
+} from '@/lib/profileHighlightsStorage'
+import {
+  scriptureHighlightStorageReference,
+  scriptureHighlightVerseRange,
+} from '@/lib/scriptureHighlightReference'
 import {
   readScriptureShowVerseNumbersFromStorage,
   subscribeScriptureShowVerseNumbers,
@@ -141,6 +152,12 @@ interface ScriptureModalProps {
     onDraftColorChange: (value: VersePinColorId) => void
     colorsAvailableInDropdown: readonly VerseBookmarkColorId[]
   }
+  /** Bible Reader / passage picker: colored highlight picker instead of pins. */
+  scriptureHighlightControl?: {
+    highlightsRevision?: number
+    profileSlug?: string
+    onChanged?: () => void
+  }
   /** Opens unified study library modal with “by scripture” search for this reference (profile pages). */
   onOpenSpurgeonStudy?: (reference: string) => void
   /** Navigate the reader to another verse (e.g. concordance link in word study, passage picker). */
@@ -176,6 +193,7 @@ export default function ScriptureModal({
   hasNext = false,
   presentationLocation,
   versePinControl,
+  scriptureHighlightControl,
   onOpenSpurgeonStudy,
   onNavigateReference,
   onPassagePickerOpen,
@@ -371,18 +389,76 @@ export default function ScriptureModal({
     }
   }, [showConfirm, showVerseNumbers])
 
+  const scriptureHighlightsRevision = scriptureHighlightControl?.highlightsRevision ?? 0
+
+  const highlightStorageReference = useMemo(
+    () => scriptureHighlightStorageReference(reference),
+    [reference]
+  )
+
+  const verseSavedHighlight = useMemo(() => {
+    void scriptureHighlightsRevision
+    if (!highlightStorageReference) return null
+    return getScriptureHighlightForReference(highlightStorageReference)
+  }, [highlightStorageReference, scriptureHighlightsRevision])
+
+  const isChapterTab = useMemo(
+    () => isChapterOnlyScriptureReference(reference),
+    [reference]
+  )
+
+  const chapterSavedHighlights = useMemo((): ScripturePassageSavedHighlight[] => {
+    if (!isChapterTab) return []
+    void scriptureHighlightsRevision
+    const parsed = parseReference(reference)
+    if (!parsed) return []
+    return scriptureHighlightsForChapter(parsed.book, parsed.chapter)
+      .map((h) => {
+        const range = scriptureHighlightVerseRange(h.reference)
+        if (!range) return null
+        return {
+          id: h.id,
+          colorId: h.colorId,
+          verseStart: range.verseStart,
+          verseEnd: range.verseEnd,
+        }
+      })
+      .filter((row): row is ScripturePassageSavedHighlight => row !== null)
+  }, [isChapterTab, reference, scriptureHighlightsRevision])
+
   const processChapterText = useCallback(
     (text: string): string =>
       formatScriptureChapterHtml(text, {
         showVerseNumbers,
         highlightVerses: getVerseNumbers(reference),
+        savedHighlights: chapterSavedHighlights,
       }),
-    [reference, showVerseNumbers]
+    [reference, showVerseNumbers, chapterSavedHighlights]
   )
 
   const formatPassageText = useCallback(
-    (text: string): string => formatScripturePassageHtml(text, { showVerseNumbers }),
-    [showVerseNumbers]
+    (text: string): string =>
+      formatScripturePassageHtml(text, {
+        showVerseNumbers,
+        ...(verseSavedHighlight
+          ? { savedHighlight: { id: verseSavedHighlight.id, colorId: verseSavedHighlight.colorId } }
+          : {}),
+      }),
+    [showVerseNumbers, verseSavedHighlight]
+  )
+
+  /** Chapter-only tabs: per-verse marks in chapter view. Verse tabs: blue box only (no colored tint). */
+  const formatChapterContextHtml = useCallback(
+    (text: string): string => processChapterText(text),
+    [processChapterText]
+  )
+
+  const formatPrimaryPassageHtml = useCallback(
+    (text: string, chapterContext: boolean): string => {
+      if (isChapterTab || chapterContext) return processChapterText(text)
+      return formatPassageText(text)
+    },
+    [isChapterTab, processChapterText, formatPassageText]
   )
 
   const loading =
@@ -538,6 +614,12 @@ export default function ScriptureModal({
 
   /** Verse ↔ chapter toggle: fixed width so label does not shift (Chapter / Verse / Loading…). */
   const verseChapterToggleWidthClass = 'w-[88px] min-w-[88px] max-w-[88px] shrink-0'
+
+  /** Word-study toggle (Greek / Hebrew / Aramaic / Words): fixed width so the toolbar does not shift. */
+  const wordStudyButtonWidthClass =
+    'flex-none w-[60px] min-w-[60px] max-w-[60px] shrink-0 grow-0'
+
+  const wordStudyToolbarLabel = wordStudyLanguageLabel ?? 'Words'
 
   /** Active toolbar control (Chapter/Verse toggle, Words when open). */
   const scriptureToolbarActiveClass =
@@ -1332,6 +1414,16 @@ export default function ScriptureModal({
                   disabled={loading || !!error || !reference.trim()}
                 />
               )}
+              {scriptureHighlightControl && (
+                <ScriptureModalHighlightPick
+                  reference={reference}
+                  passageText={scriptureText}
+                  profileSlug={scriptureHighlightControl.profileSlug}
+                  highlightsRevision={scriptureHighlightControl.highlightsRevision}
+                  onChanged={scriptureHighlightControl.onChanged}
+                  disabled={loading || !!error || !reference.trim() || !scriptureText}
+                />
+              )}
             </div>
 
             <div className="w-full sm:w-auto flex flex-wrap gap-1 justify-center sm:justify-start items-center">
@@ -1390,7 +1482,7 @@ export default function ScriptureModal({
                     : `Open ${wordStudyLanguageLabel ?? 'word'} study`
                 }
                 aria-pressed={wordStudyEnabled}
-                className={`px-1.5 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 shrink-0 ${
+                className={`${wordStudyButtonWidthClass} px-1.5 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 ${
                   !wordStudyAvailable || showingContext
                     ? 'text-slate-400 dark:text-slate-500 border-slate-300 dark:border-slate-600 cursor-not-allowed bg-slate-50 dark:bg-slate-700/50'
                     : wordStudyEnabled
@@ -1398,7 +1490,7 @@ export default function ScriptureModal({
                       : 'cursor-pointer text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600'
                 }`}
               >
-                {wordStudyLanguageLabel ?? 'Words'}
+                {wordStudyToolbarLabel}
               </button>
 
               {onOpenSpurgeonStudy && (
@@ -1574,7 +1666,7 @@ export default function ScriptureModal({
                       {!showingContext && compareText && (
                         <div className="prose max-w-none">
                           <ScripturePassageText
-                            html={formatPassageText(compareText)}
+                            html={formatPrimaryPassageHtml(compareText, false)}
                             onLongPress={handlePassageLongPress}
                           />
                         </div>
@@ -1582,7 +1674,7 @@ export default function ScriptureModal({
                       {showingContext && compareChapterText && (
                         <div className="prose max-w-none">
                           <ScripturePassageText
-                            html={processChapterText(compareChapterText)}
+                            html={formatChapterContextHtml(compareChapterText)}
                             onLongPress={handlePassageLongPress}
                           />
                         </div>
@@ -1595,7 +1687,7 @@ export default function ScriptureModal({
                       {!showingContext && scriptureText && (
                         <div className="prose max-w-none" data-tour="scripture-modal-verse-body">
                           <ScripturePassageText
-                            html={formatPassageText(scriptureText)}
+                            html={formatPrimaryPassageHtml(scriptureText, false)}
                             innerRef={passageScopeRef}
                             onLongPress={handlePassageLongPress}
                           />
@@ -1606,7 +1698,7 @@ export default function ScriptureModal({
                           <ScripturePassageText
                             id="chapter-content"
                             data-tour="scripture-modal-chapter-body"
-                            html={processChapterText(chapterText)}
+                            html={formatChapterContextHtml(chapterText)}
                             innerRef={passageScopeRef}
                             onLongPress={handlePassageLongPress}
                           />
@@ -1647,7 +1739,7 @@ export default function ScriptureModal({
                     {!showingContext && scriptureText && (
                       <div className="prose max-w-none" data-tour="scripture-modal-verse-body">
                         <ScripturePassageText
-                          html={formatPassageText(scriptureText)}
+                          html={formatPrimaryPassageHtml(scriptureText, false)}
                           innerRef={passageScopeRef}
                           onLongPress={handlePassageLongPress}
                         />
@@ -1658,7 +1750,7 @@ export default function ScriptureModal({
                         <ScripturePassageText
                           id="chapter-content"
                           data-tour="scripture-modal-chapter-body"
-                          html={processChapterText(chapterText)}
+                          html={formatChapterContextHtml(chapterText)}
                           innerRef={passageScopeRef}
                           onLongPress={handlePassageLongPress}
                         />

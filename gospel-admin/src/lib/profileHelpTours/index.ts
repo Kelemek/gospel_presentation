@@ -3051,7 +3051,7 @@ function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourO
       popover: {
         title: 'Pin a passage (optional)',
         description:
-          'Use the <strong>pin</strong> button to open bookmark tints (<strong>red</strong>, <strong>blue</strong>, <strong>green</strong>, <strong>violet</strong>)—saved when you <strong>close</strong> the reader (this device only). The control shows <strong>yellow</strong> for “last verse viewed”; leave it unchanged or pick a menu tint. Clearing pins uses the 📌 on the card or **Clear pinned passages** in the menu. Use <strong>Next</strong> to choose a menu tint for this tour.',
+          'Use the <strong>pin</strong> button when this passage came from a scripture <strong>card</strong> on the profile (not Bible Reader). Open bookmark tints (<strong>red</strong>, <strong>blue</strong>, <strong>green</strong>, <strong>violet</strong>)—saved when you <strong>close</strong> the reader (this device only). The control shows <strong>yellow</strong> for “last verse viewed”; leave it unchanged or pick a menu tint. Clearing pins uses the 📌 on the card or **Clear pinned passages** in the menu. Use <strong>Next</strong> to choose a menu tint for this tour.',
         ...pop({ side: 'bottom', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           const root = document.querySelector(SCRIPTURE_MODAL_PIN_COLOR)
@@ -3300,7 +3300,7 @@ async function runResourcesFeatureTourAsync(options?: ProfileFeatureTourOptions)
             popover: {
               title: escapeForPopoverText(bibleReaderTitle),
               description:
-                '<p>This button opens the <strong>Bible Reader</strong>: pick a book, chapter, and optional verses, then read in the scripture modal on the current profile.</p><p class="mt-2">Tap it when you want to read any passage without leaving this presentation.</p>',
+                '<p>This button opens the <strong>Bible Reader</strong>: pick a book, chapter, and optional verses, then read in the scripture modal on the current profile.</p><p class="mt-2">In the reader toolbar, use the <strong>highlight</strong> marker to tint the passage (red, blue, yellow, green, or violet) and find it again under <strong>Highlights</strong> in the header.</p>',
               side: 'right' as Side,
               align: 'start' as Alignment,
             },

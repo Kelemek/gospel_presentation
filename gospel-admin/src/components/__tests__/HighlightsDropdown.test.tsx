@@ -58,7 +58,13 @@ describe('HighlightsDropdown', () => {
       })
     )
 
-    render(<HighlightsDropdown profileSlug="slug-a" onOpenHighlight={jest.fn()} />)
+    render(
+      <HighlightsDropdown
+        profileSlug="slug-a"
+        onOpenHighlight={jest.fn()}
+        onOpenScriptureHighlight={jest.fn()}
+      />
+    )
     await user.click(screen.getByRole('button', { name: 'Highlights' }))
     expect(screen.getByText(/Hello Fear tail/)).toBeInTheDocument()
     expect(screen.queryByText(/<strong>/i)).not.toBeInTheDocument()
@@ -87,7 +93,13 @@ describe('HighlightsDropdown', () => {
       })
     )
 
-    render(<HighlightsDropdown profileSlug="slug-a" onOpenHighlight={jest.fn()} />)
+    render(
+      <HighlightsDropdown
+        profileSlug="slug-a"
+        onOpenHighlight={jest.fn()}
+        onOpenScriptureHighlight={jest.fn()}
+      />
+    )
     await user.click(screen.getByRole('button', { name: 'Highlights' }))
     expect(screen.getByRole('dialog', { name: 'Highlights' })).toBeInTheDocument()
     expect(screen.getByText(/Resource A/)).toBeInTheDocument()
@@ -117,7 +129,13 @@ describe('HighlightsDropdown', () => {
         ],
       })
     )
-    render(<HighlightsDropdown profileSlug="slug-a" onOpenHighlight={onOpen} />)
+    render(
+      <HighlightsDropdown
+        profileSlug="slug-a"
+        onOpenHighlight={onOpen}
+        onOpenScriptureHighlight={jest.fn()}
+      />
+    )
     await user.click(screen.getByRole('button', { name: 'Highlights' }))
     await user.click(screen.getByText(/highlight quote/i))
     expect(scrollToTocAnchor).toHaveBeenCalledWith('section-1-0')
@@ -147,7 +165,13 @@ describe('HighlightsDropdown', () => {
         ],
       })
     )
-    render(<HighlightsDropdown profileSlug="slug-a" onOpenHighlight={jest.fn()} />)
+    render(
+      <HighlightsDropdown
+        profileSlug="slug-a"
+        onOpenHighlight={jest.fn()}
+        onOpenScriptureHighlight={jest.fn()}
+      />
+    )
     await user.click(screen.getByRole('button', { name: 'Highlights' }))
     await user.click(screen.getByRole('button', { name: 'Remove highlight' }))
     await waitFor(() => expect(mockShowConfirm).toHaveBeenCalledWith('Remove this highlight?'))
@@ -156,7 +180,13 @@ describe('HighlightsDropdown', () => {
 
   it('closes panel when close event dispatched', async () => {
     const user = userEvent.setup()
-    render(<HighlightsDropdown profileSlug="slug-a" onOpenHighlight={jest.fn()} />)
+    render(
+      <HighlightsDropdown
+        profileSlug="slug-a"
+        onOpenHighlight={jest.fn()}
+        onOpenScriptureHighlight={jest.fn()}
+      />
+    )
     await user.click(screen.getByRole('button', { name: 'Highlights' }))
     expect(screen.getByRole('dialog', { name: 'Highlights' })).toBeInTheDocument()
     await act(async () => {
@@ -204,7 +234,13 @@ describe('HighlightsDropdown', () => {
         })
       )
 
-      render(<HighlightsDropdown profileSlug="slug-a" onOpenHighlight={jest.fn()} />)
+      render(
+      <HighlightsDropdown
+        profileSlug="slug-a"
+        onOpenHighlight={jest.fn()}
+        onOpenScriptureHighlight={jest.fn()}
+      />
+    )
       await user.click(screen.getByRole('button', { name: 'Highlights' }))
       await user.type(screen.getByRole('searchbox', { name: 'Search highlights' }), 'alpha')
 
@@ -258,7 +294,13 @@ describe('HighlightsDropdown', () => {
         })
       )
 
-      render(<HighlightsDropdown profileSlug="slug-a" onOpenHighlight={jest.fn()} />)
+      render(
+      <HighlightsDropdown
+        profileSlug="slug-a"
+        onOpenHighlight={jest.fn()}
+        onOpenScriptureHighlight={jest.fn()}
+      />
+    )
       await user.click(screen.getByRole('button', { name: 'Highlights' }))
       await user.type(screen.getByRole('searchbox', { name: 'Search highlights' }), 'five')
 
@@ -284,6 +326,94 @@ describe('HighlightsDropdown', () => {
     } finally {
       jest.useRealTimers()
     }
+  })
+
+  it('groups scripture highlights under Old and New Testament', async () => {
+    const user = userEvent.setup()
+    gospelStorageSetSync(
+      PROFILE_HIGHLIGHTS_STORAGE_KEY,
+      JSON.stringify({
+        v: 2,
+        highlights: [
+          {
+            kind: 'scripture',
+            id: 's1',
+            reference: 'Psalm 24:1',
+            quote: 'The earth is the LORDs',
+            colorId: 'blue',
+            createdAt: 2,
+          },
+          {
+            kind: 'scripture',
+            id: 's2',
+            reference: 'John 3:16',
+            quote: 'For God so loved',
+            colorId: 'red',
+            createdAt: 1,
+          },
+          {
+            id: 'h1',
+            slug: 'default',
+            resourceTitle: 'The Gospel Presentation',
+            anchorId: 'section-1-0',
+            locationLabel: 'Part 1',
+            scopeId: 'section-1-0__content',
+            quote: 'resource quote',
+            startOffset: 1,
+            endOffset: 10,
+            createdAt: 3,
+          },
+        ],
+      })
+    )
+    render(
+      <HighlightsDropdown
+        profileSlug="default"
+        onOpenHighlight={jest.fn()}
+        onOpenScriptureHighlight={jest.fn()}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: 'Highlights' }))
+    expect(screen.getByText(/Old Testament \(1\)/)).toBeInTheDocument()
+    expect(screen.getByText(/New Testament \(1\)/)).toBeInTheDocument()
+    expect(screen.getByText(/The earth is the LORDs/)).toBeInTheDocument()
+    expect(screen.getByText('Psalm 24:1')).toBeInTheDocument()
+    expect(screen.getByText(/For God so loved/)).toBeInTheDocument()
+    expect(screen.getByText('John 3:16')).toBeInTheDocument()
+    expect(screen.getByText(/The Gospel Presentation \(1\)/)).toBeInTheDocument()
+  })
+
+  it('opens scripture highlight via callback', async () => {
+    const user = userEvent.setup()
+    const onOpenScripture = jest.fn()
+    gospelStorageSetSync(
+      PROFILE_HIGHLIGHTS_STORAGE_KEY,
+      JSON.stringify({
+        v: 2,
+        highlights: [
+          {
+            kind: 'scripture',
+            id: 's1',
+            reference: 'John 3:16',
+            quote: 'For God so loved',
+            colorId: 'red',
+            createdAt: 1,
+          },
+        ],
+      })
+    )
+    render(
+      <HighlightsDropdown
+        profileSlug="slug-a"
+        onOpenHighlight={jest.fn()}
+        onOpenScriptureHighlight={onOpenScripture}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: 'Highlights' }))
+    await user.click(screen.getByText(/For God so loved/i))
+    expect(onOpenScripture).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 's1', reference: 'John 3:16' })
+    )
   })
 })
 

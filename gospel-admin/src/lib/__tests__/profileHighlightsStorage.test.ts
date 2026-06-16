@@ -3,9 +3,13 @@ import { resetGospelStorageTestState, installTestLocalStorage } from '@/lib/test
 import {
   PROFILE_HIGHLIGHTS_STORAGE_KEY,
   addHighlight,
+  getScriptureHighlightForReference,
   highlightsForSlug,
   loadHighlights,
+  loadScriptureHighlights,
   removeHighlight,
+  scriptureHighlightsForChapter,
+  toggleScriptureHighlight,
 } from '../profileHighlightsStorage'
 
 describe('profileHighlightsStorage', () => {
@@ -14,7 +18,7 @@ describe('profileHighlightsStorage', () => {
     installTestLocalStorage()
   })
 
-  it('adds and loads highlights', () => {
+  it('adds and loads resource highlights', () => {
     expect(loadHighlights()).toEqual([])
     const added = addHighlight({
       slug: 'abc',
@@ -29,8 +33,8 @@ describe('profileHighlightsStorage', () => {
     expect(added).not.toBeNull()
     const list = loadHighlights()
     expect(list).toHaveLength(1)
-    expect(list[0].slug).toBe('abc')
-    expect(list[0].scopeId).toBe('section-1-0-content')
+    expect(highlightsForSlug('abc')).toHaveLength(1)
+    expect(highlightsForSlug('abc')[0]!.scopeId).toBe('section-1-0-content')
   })
 
   it('filters by slug', () => {
@@ -103,5 +107,88 @@ describe('profileHighlightsStorage', () => {
     gospelStorageSetSync(PROFILE_HIGHLIGHTS_STORAGE_KEY, 'not-json')
     expect(loadHighlights()).toEqual([])
   })
-})
 
+  it('migrates v1 resource highlights', () => {
+    gospelStorageSetSync(
+      PROFILE_HIGHLIGHTS_STORAGE_KEY,
+      JSON.stringify({
+        v: 1,
+        highlights: [
+          {
+            id: 'h1',
+            slug: 'abc',
+            resourceTitle: 'R',
+            anchorId: 'a',
+            locationLabel: 'L',
+            scopeId: 's',
+            quote: 'q',
+            startOffset: 0,
+            endOffset: 1,
+            createdAt: 1,
+          },
+        ],
+      })
+    )
+    expect(loadHighlights()).toHaveLength(1)
+  })
+
+  it('upserts scripture highlight by normalized reference', () => {
+    const first = toggleScriptureHighlight({
+      reference: 'John 3:16',
+      quote: 'For God so loved',
+      colorId: 'red',
+    })
+    expect(first).not.toBeNull()
+    expect(first!.colorId).toBe('red')
+    expect(loadScriptureHighlights()).toHaveLength(1)
+
+    const second = toggleScriptureHighlight({
+      reference: 'John 3:16',
+      quote: 'For God so loved the world',
+      colorId: 'blue',
+    })
+    expect(second!.colorId).toBe('blue')
+    expect(loadScriptureHighlights()).toHaveLength(1)
+    expect(getScriptureHighlightForReference('John 3:16')?.colorId).toBe('blue')
+  })
+
+  it('toggleScriptureHighlight removes when same color picked again', () => {
+    toggleScriptureHighlight({
+      reference: 'Romans 8:28',
+      quote: 'And we know',
+      colorId: 'green',
+    })
+    const removed = toggleScriptureHighlight({
+      reference: 'Romans 8:28',
+      quote: 'And we know',
+      colorId: 'green',
+    })
+    expect(removed).toBeNull()
+    expect(loadScriptureHighlights()).toHaveLength(0)
+  })
+
+  it('persists yellow scripture highlight', () => {
+    const saved = toggleScriptureHighlight({
+      reference: 'Psalm 23:1',
+      quote: 'The Lord is my shepherd',
+      colorId: 'yellow',
+    })
+    expect(saved?.colorId).toBe('yellow')
+    expect(getScriptureHighlightForReference('Psalm 23:1')?.colorId).toBe('yellow')
+  })
+
+  it('scriptureHighlightsForChapter matches Psalm and Psalms spellings', () => {
+    toggleScriptureHighlight({
+      reference: 'Psalm 24:2',
+      quote: 'verse two',
+      colorId: 'red',
+    })
+    toggleScriptureHighlight({
+      reference: 'Psalms 24:3',
+      quote: 'verse three',
+      colorId: 'blue',
+    })
+    expect(scriptureHighlightsForChapter('Psalm', 24)).toHaveLength(2)
+    expect(scriptureHighlightsForChapter('Psalms', 24)).toHaveLength(2)
+  })
+})

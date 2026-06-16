@@ -3,6 +3,7 @@ import {
   isChapterOnlyScriptureReference,
   isSingleChapterBookChapterOneReference,
   parseReference,
+  scriptureChapterReferenceKey,
   scriptureReferenceForPassageQuery,
 } from '@/lib/parse-scripture-reference'
 
@@ -34,6 +35,15 @@ describe('parse-scripture-reference', () => {
     it('returns false when a verse is present', () => {
       expect(isChapterOnlyScriptureReference('John 3:16')).toBe(false)
       expect(isChapterOnlyScriptureReference('Genesis 1:1-3')).toBe(false)
+    })
+  })
+
+  describe('scriptureChapterReferenceKey', () => {
+    it('matches Psalm and Psalms spellings for the same chapter', () => {
+      expect(scriptureChapterReferenceKey('Psalm 24')).toBe('psalms|24')
+      expect(scriptureChapterReferenceKey('Psalms 24')).toBe('psalms|24')
+      expect(scriptureChapterReferenceKey('Psalm 24:2')).toBe('psalms|24')
+      expect(scriptureChapterReferenceKey('Psalms 24:3')).toBe('psalms|24')
     })
   })
 

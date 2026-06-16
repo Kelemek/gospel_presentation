@@ -1,5 +1,6 @@
 /**
  * Append the same release note to deploy-update-changelog.json and site-changelog.json.
+ * Append-only: never delete, reorder, or trim older deploy entries (clients track read index).
  *
  * Usage (from gospel-admin/):
  *   npm run append-release-changelog -- "Open Help (?), then Change log to browse what's new."

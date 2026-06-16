@@ -1,4 +1,5 @@
 import { BIBLE_CANON_BOOKS_STATIC } from '@/lib/bibleCanonStatic'
+import { normalizeScriptureReferenceString } from '@/lib/scriptureReferenceNormalize'
 
 /** Verse count for Protestant one-chapter books (Obadiah, Philemon, 2–3 John, Jude). */
 const SINGLE_CHAPTER_BOOK_VERSES = new Map(
@@ -38,7 +39,8 @@ export function isChapterOnlyScriptureReference(reference: string): boolean {
 
 /** Stable key for matching chapter-level references (`Genesis 1`, `Genesis 1:16`, etc.). */
 export function scriptureChapterReferenceKey(reference: string): string | null {
-  const parsed = parseReference(reference.trim())
+  const normalized = normalizeScriptureReferenceString(reference.trim())
+  const parsed = parseReference(normalized)
   if (!parsed) return null
   return `${parsed.book.toLowerCase()}|${parsed.chapter}`
 }

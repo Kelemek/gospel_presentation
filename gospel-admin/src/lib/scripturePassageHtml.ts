@@ -1,3 +1,6 @@
+import { SCRIPTURE_HIGHLIGHT_MARK_CLASSES } from '@/lib/scriptureHighlightStyles'
+import type { ScriptureHighlightColorId } from '@/lib/scriptureHighlightStyles'
+
 export function verseSupHtml(n: number, showVerseNumbers: boolean): string {
   if (showVerseNumbers) {
     return `<sup class="text-blue-600 font-medium">${n}</sup>`
@@ -13,21 +16,97 @@ function replaceParagraphBreaks(text: string): string {
   return text.replace(/\n\n/g, '</p><p class="mt-4">')
 }
 
+export interface ScripturePassageSavedHighlight {
+  id: string
+  verseStart: number
+  verseEnd: number
+  colorId: ScriptureHighlightColorId
+}
+
+export interface ScripturePassageSavedHighlightOption {
+  id: string
+  colorId: ScriptureHighlightColorId
+}
+
+function markAttrsForHighlight(id: string, colorId: ScriptureHighlightColorId): string {
+  const cls = SCRIPTURE_HIGHLIGHT_MARK_CLASSES[colorId]
+  return `data-scripture-highlight-id="${id}" class="${cls}"`
+}
+
+function wrapVerseRangeInMark(
+  html: string,
+  verseStart: number,
+  verseEnd: number,
+  markAttrs: string
+): string {
+  const nextVerseAfterSelection = verseEnd + 1
+  const markOpen = `<mark ${markAttrs}>`
+  const markClose = '</mark>'
+  if (verseStart === verseEnd) {
+    return html.replace(
+      new RegExp(
+        `(<sup[^>]*>${verseStart}</sup>[\\s\\S]*?)(?=<sup[^>]*>${nextVerseAfterSelection}</sup>|$)`,
+        'g'
+      ),
+      `${markOpen}$1${markClose}`
+    )
+  }
+  const rangePattern = new RegExp(
+    `(<sup[^>]*>${verseStart}</sup>[\\s\\S]*?<sup[^>]*>${verseEnd}</sup>[^<]*?)(?=<sup[^>]*>${nextVerseAfterSelection}</sup>|$)`,
+    'g'
+  )
+  return html.replace(rangePattern, `${markOpen}$1${markClose}`)
+}
+
+function applySavedHighlightMarks(
+  html: string,
+  saved: readonly ScripturePassageSavedHighlight[]
+): string {
+  let out = html
+  for (const h of saved) {
+    out = wrapVerseRangeInMark(
+      out,
+      h.verseStart,
+      h.verseEnd,
+      markAttrsForHighlight(h.id, h.colorId)
+    )
+  }
+  return out
+}
+
 export function formatScripturePassageHtml(
   text: string,
-  options: { showVerseNumbers: boolean }
+  options: {
+    showVerseNumbers: boolean
+    savedHighlight?: ScripturePassageSavedHighlightOption
+  }
 ): string {
-  return replaceParagraphBreaks(replaceVerseMarkers(text, options.showVerseNumbers))
+  let html = replaceParagraphBreaks(replaceVerseMarkers(text, options.showVerseNumbers))
+  if (options.savedHighlight) {
+    const attrs = markAttrsForHighlight(options.savedHighlight.id, options.savedHighlight.colorId)
+    html = `<mark ${attrs}>${html}</mark>`
+  }
+  return html
 }
 
 export function formatScriptureChapterHtml(
   text: string,
-  options: { showVerseNumbers: boolean; highlightVerses: number[] }
+  options: {
+    showVerseNumbers: boolean
+    highlightVerses: number[]
+    savedHighlights?: readonly ScripturePassageSavedHighlight[]
+  }
 ): string {
-  const { showVerseNumbers, highlightVerses } = options
+  const { showVerseNumbers, highlightVerses, savedHighlights = [] } = options
+
+  let processedText = replaceParagraphBreaks(replaceVerseMarkers(text, showVerseNumbers))
+
+  if (savedHighlights.length > 0) {
+    processedText = applySavedHighlightMarks(processedText, savedHighlights)
+  }
 
   if (highlightVerses.length === 0) {
-    return formatScripturePassageHtml(text, { showVerseNumbers })
+    return processedText
   }
 
   const firstVerse = highlightVerses[0]
@@ -35,8 +114,6 @@ export function formatScriptureChapterHtml(
   const isRange = highlightVerses.length > 1
   /** Next verse after the selection; footnotes use `[1]` etc. and must not end the highlight early. */
   const nextVerseAfterSelection = lastVerse + 1
-
-  let processedText = replaceParagraphBreaks(replaceVerseMarkers(text, showVerseNumbers))
 
   if (isRange) {
     const rangePattern = new RegExp(

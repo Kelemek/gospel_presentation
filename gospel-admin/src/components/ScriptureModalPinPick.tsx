@@ -2,6 +2,10 @@
 
 import { useEffect, useId, useRef, useState } from 'react'
 import VersePinGlyph from '@/components/VersePinGlyph'
+import {
+  scriptureModalColorPickerOptionButtonClass,
+  scriptureModalColorPickerTriggerInteractiveClass,
+} from '@/components/scriptureModalColorPickerTrigger'
 import type { VerseBookmarkColorId, VersePinColorId } from '@/lib/versePinStorage'
 import { VERSE_BOOKMARK_COLOR_IDS } from '@/lib/versePinStorage'
 
@@ -13,18 +17,9 @@ const SR_LABEL: Record<VersePinColorId, string> = {
   violet: 'Violet',
 }
 
-const triggerButtonClass =
-  'inline-flex items-center gap-1 rounded-md border-2 h-9 min-h-[36px] px-2 box-border transition-colors shrink-0 ' +
-  'border-slate-400 dark:border-slate-500 bg-slate-100 dark:bg-slate-700 ' +
-  'text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 ' +
-  'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-slate-100 dark:disabled:hover:bg-slate-700'
+const triggerButtonInteractiveClass = scriptureModalColorPickerTriggerInteractiveClass
 
-const triggerButtonInteractiveClass = `${triggerButtonClass} cursor-pointer disabled:cursor-not-allowed`
-
-const optionButtonClass =
-  'flex items-center justify-center rounded px-2 py-2 min-h-[38px] w-full gap-2 ' +
-  'hover:bg-slate-200 dark:hover:bg-slate-600 aria-selected:bg-slate-300/80 dark:aria-selected:bg-slate-600/80 ' +
-  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-500'
+const optionButtonClass = scriptureModalColorPickerOptionButtonClass
 
 export interface ScriptureModalPinPickProps {
   reference: string
@@ -101,12 +96,10 @@ export default function ScriptureModalPinPick({
         className={triggerButtonInteractiveClass}
         onClick={() => !disabled && canOpenMenu && setDropdownForReference(open ? null : reference)}
       >
-        <span className="flex items-center gap-0.5" aria-hidden>
-          <span className="inline-flex h-5.5 w-5.5 items-center justify-center text-lg leading-none select-none">
-            <VersePinGlyph colorId={draftColor} />
-          </span>
+        <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center text-lg leading-none select-none" aria-hidden>
+          <VersePinGlyph colorId={draftColor} />
         </span>
-        {canOpenMenu && (
+        {canOpenMenu ? (
           <svg
             aria-hidden
             className="h-3 w-3 shrink-0 text-slate-500 dark:text-slate-400 mt-px"
@@ -121,6 +114,8 @@ export default function ScriptureModalPinPick({
               d="m6 8 4 4 4-4"
             />
           </svg>
+        ) : (
+          <span className="h-3 w-3 shrink-0" aria-hidden />
         )}
       </button>
 

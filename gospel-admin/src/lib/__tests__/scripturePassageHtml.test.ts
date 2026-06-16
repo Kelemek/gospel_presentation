@@ -29,6 +29,23 @@ describe('formatScripturePassageHtml', () => {
     expect(html).toContain('<sup class="hidden" aria-hidden="true">16</sup>')
     expect(html).not.toContain('text-blue-600')
   })
+
+  it('wraps passage in saved highlight mark', () => {
+    const html = formatScripturePassageHtml('[16] For God so loved', {
+      showVerseNumbers: true,
+      savedHighlight: { id: 'h1', colorId: 'red' },
+    })
+    expect(html).toContain('data-scripture-highlight-id="h1"')
+    expect(html).toContain('scripture-highlight-mark-red')
+  })
+
+  it('wraps passage in yellow saved highlight mark', () => {
+    const html = formatScripturePassageHtml('[16] For God so loved', {
+      showVerseNumbers: true,
+      savedHighlight: { id: 'h2', colorId: 'yellow' },
+    })
+    expect(html).toContain('scripture-highlight-mark-yellow')
+  })
 })
 
 describe('formatScriptureChapterHtml', () => {
@@ -69,5 +86,45 @@ describe('formatScriptureChapterHtml', () => {
     })
     expect(html).toContain('id="verse-16"')
     expect(html).toContain('<sup class="hidden" aria-hidden="true">16</sup>')
+  })
+
+  it('applies saved highlight marks in chapter view', () => {
+    const html = formatScriptureChapterHtml(chapterText, {
+      showVerseNumbers: true,
+      highlightVerses: [],
+      savedHighlights: [{ id: 'h1', verseStart: 16, verseEnd: 16, colorId: 'blue' }],
+    })
+    expect(html).toContain('data-scripture-highlight-id="h1"')
+    expect(html).toContain('scripture-highlight-mark-blue')
+    expect(html).toContain('For God so loved the world.')
+  })
+
+  it('applies multiple saved highlight marks in chapter view', () => {
+    const multiVerseChapter =
+      '[1] Verse one. [2] Verse two. [3] Verse three. [4] Verse four.'
+    const html = formatScriptureChapterHtml(multiVerseChapter, {
+      showVerseNumbers: true,
+      highlightVerses: [],
+      savedHighlights: [
+        { id: 'h1', verseStart: 2, verseEnd: 2, colorId: 'red' },
+        { id: 'h2', verseStart: 3, verseEnd: 3, colorId: 'blue' },
+      ],
+    })
+    expect(html).toContain('data-scripture-highlight-id="h1"')
+    expect(html).toContain('data-scripture-highlight-id="h2"')
+    expect(html).toContain('Verse two.')
+    expect(html).toContain('Verse three.')
+    expect(html.indexOf('Verse one.')).toBeLessThan(html.indexOf('<mark'))
+    expect(html.lastIndexOf('Verse four.')).toBeGreaterThan(html.lastIndexOf('</mark>'))
+  })
+
+  it('does not mark other verses when saved highlight range is clipped to one verse', () => {
+    const html = formatScriptureChapterHtml(chapterText, {
+      showVerseNumbers: true,
+      highlightVerses: [16],
+      savedHighlights: [{ id: 'h1', verseStart: 16, verseEnd: 16, colorId: 'red' }],
+    })
+    expect(html).toContain('data-scripture-highlight-id="h1"')
+    expect(html).not.toMatch(/<mark[^>]*>[\s\S]*Verse fifteen/)
   })
 })

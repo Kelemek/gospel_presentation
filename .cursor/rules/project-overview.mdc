@@ -26,3 +26,4 @@ Next.js 16 app for "The Gospel in its Context" (Dr. Stuart Scott): counselor/cou
 - Use **logger** from `@/lib/logger` for server/API logging; avoid `console.log` in production paths.
 - Sensitive config in env vars (Supabase, ESV API); never commit secrets.
 - New UI must support **dark mode** (Tailwind `dark:` variants) to match existing components.
+- **Release changelogs** (user-visible ships): append only—run `npm run append-release-changelog -- "…"` from `gospel-admin/` (updates both JSON files). **Do not** trim `deploy-update-changelog.json` to five entries; the five-note cap is UI-only. See `.cursor/rules/deploy-update-message.mdc`.

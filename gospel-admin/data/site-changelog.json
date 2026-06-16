@@ -1323,5 +1323,10 @@
     "releasedAt": "2026-06-15",
     "committedAt": "2026-06-15T22:06:31.145Z",
     "message": "Save and restore my data now includes Daily Verse Hunt progress, which What's new notes you've already seen, and your other saved settings."
+  },
+  {
+    "releasedAt": "2026-06-16",
+    "committedAt": "2026-06-16T12:26:07.953Z",
+    "message": "Bible Reader: highlight verses or chapters with colored markers. Find them also in the Highlights menu under Old Testament or New Testament."
   }
 ]

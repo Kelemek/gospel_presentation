@@ -118,6 +118,86 @@ body.dark mark[data-resource-highlight-id][data-resource-highlight-active="true"
   box-shadow: 0 0 0 2px rgb(252 211 77 / 0.8); /* amber-300 */
 }
 
+/* Highlight marker icon (Highlights menu + Bible Reader picker). */
+.highlight-marker-icon-neutral-outline,
+.highlight-marker-icon-pen {
+  stroke: #1e293b; /* slate-800 */
+}
+
+html.dark .highlight-marker-icon-neutral-outline,
+body.dark .highlight-marker-icon-neutral-outline,
+html.dark .highlight-marker-icon-colored-outline,
+body.dark .highlight-marker-icon-colored-outline,
+html.dark .highlight-marker-icon-pen,
+body.dark .highlight-marker-icon-pen {
+  stroke: #fff;
+}
+
+/* Scripture modal highlights (Bible Reader / passage picker). */
+mark.scripture-highlight-mark {
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  border-radius: 0.125rem;
+  padding: 0 0.125rem;
+  font-weight: inherit;
+  font-style: inherit;
+}
+
+mark.scripture-highlight-mark-red {
+  background-color: rgb(254 202 202 / 0.95) !important;
+  color: rgb(69 10 10) !important;
+}
+
+html.dark mark.scripture-highlight-mark-red,
+body.dark mark.scripture-highlight-mark-red {
+  background-color: rgb(127 29 29 / 0.75) !important;
+  color: rgb(254 226 226) !important;
+}
+
+mark.scripture-highlight-mark-blue {
+  background-color: rgb(191 219 254 / 0.95) !important;
+  color: rgb(30 58 138) !important;
+}
+
+html.dark mark.scripture-highlight-mark-blue,
+body.dark mark.scripture-highlight-mark-blue {
+  background-color: rgb(30 58 138 / 0.75) !important;
+  color: rgb(219 234 254) !important;
+}
+
+mark.scripture-highlight-mark-yellow {
+  background-color: rgb(254 240 138 / 0.95) !important;
+  color: rgb(69 26 3) !important;
+}
+
+html.dark mark.scripture-highlight-mark-yellow,
+body.dark mark.scripture-highlight-mark-yellow {
+  background-color: rgb(245 158 11 / 0.85) !important;
+  color: rgb(254 243 199) !important;
+}
+
+mark.scripture-highlight-mark-green {
+  background-color: rgb(167 243 208 / 0.95) !important;
+  color: rgb(6 78 59) !important;
+}
+
+html.dark mark.scripture-highlight-mark-green,
+body.dark mark.scripture-highlight-mark-green {
+  background-color: rgb(6 78 59 / 0.75) !important;
+  color: rgb(209 250 229) !important;
+}
+
+mark.scripture-highlight-mark-violet {
+  background-color: rgb(221 214 254 / 0.95) !important;
+  color: rgb(76 29 149) !important;
+}
+
+html.dark mark.scripture-highlight-mark-violet,
+body.dark mark.scripture-highlight-mark-violet {
+  background-color: rgb(76 29 149 / 0.75) !important;
+  color: rgb(237 233 254) !important;
+}
+
 /* Highlighted excerpt text should stay readable even if TipTap/HTML nested spans pin a dark ink. */
 mark[data-resource-highlight-id] *,
 mark[data-resource-highlight-id] strong,

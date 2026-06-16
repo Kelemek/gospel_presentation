@@ -124,10 +124,14 @@ import {
   markProfileResourceTabNavigation,
   peekProfileResourceTabNavigation,
 } from '@/lib/profileResourceTabNavigation'
-import { mcheyneDayChapterReferencesForAnchor } from '@/lib/mcheyne/mcheyneReadingDay'
+import {
+  isProfileScriptureCardAnchors,
+  scriptureModalUsesHighlightPicker,
+} from '@/lib/scriptureModalOpenMode'
 import { isMcheyneProfileSlug } from '@/lib/mcheyne/mcheyneSlug'
 import {
   findMcheyneDayAnchor,
+  mcheyneDayChapterReferencesForAnchor,
   mcheyneDaySubsectionIdFromAnchor,
 } from '@/lib/mcheyne/mcheyneReadingDay'
 import {
@@ -1559,16 +1563,28 @@ function ProfileContent({
           anchorSubsectionId
         )
 
+      const resolvedSectionId = sectionId || 'modal-view'
+      const resolvedSubsectionId = subsectionId || 'modal-view'
+      const fromScriptureCard = isProfileScriptureCardAnchors(
+        reference,
+        resolvedSectionId,
+        resolvedSubsectionId,
+        allScriptureRefs
+      )
+      const usePickerNavigation = options?.pickerNavigation === true || !fromScriptureCard
+
       setSelectedScripture({
         reference,
         isOpen: true,
         ...(options?.initialChapterView || isChapterOnlyScriptureReference(reference)
           ? { initialChapterView: true }
           : {}),
-        ...(options?.pickerNavigation
+        ...(usePickerNavigation
           ? { pickerNavigation: true as const, mcheynePlanCardPin: undefined }
           : {}),
-        ...(mcheynePlanCardPin ? { mcheynePlanCardPin: true as const } : {}),
+        ...(mcheynePlanCardPin && !usePickerNavigation
+          ? { mcheynePlanCardPin: true as const }
+          : {}),
       })
       completeDailyVerseChallengeIfMatch(reference)
     },
@@ -1694,6 +1710,26 @@ function ProfileContent({
     deepLinkModalAnchors,
   ])
 
+  const scriptureModalHighlightPicker = useMemo(
+    () =>
+      scriptureModalUsesHighlightPicker({
+        reference: activeScripture.reference,
+        pickerNavigation: activeScripture.pickerNavigation,
+        anchors:
+          effectiveModalOpenAnchors?.reference.trim().replace(/–/g, '-') ===
+          activeScripture.reference.trim().replace(/–/g, '-')
+            ? effectiveModalOpenAnchors
+            : null,
+        scriptureCards: allScriptureRefs,
+      }),
+    [
+      activeScripture.reference,
+      activeScripture.pickerNavigation,
+      effectiveModalOpenAnchors,
+      allScriptureRefs,
+    ]
+  )
+
   useEffect(() => {
     if (!profileSlug || !activeScripture.isOpen) return
     const reference = activeScripture.reference.trim()
@@ -1805,7 +1841,7 @@ function ProfileContent({
 
   // Navigation functions for favorite references or all references if no favorites
   const navigateToPrevious = useCallback(() => {
-    if (activeScripture.pickerNavigation) {
+    if (scriptureModalHighlightPicker) {
       navigatePickerPassage('prev')
       return
     }
@@ -1843,7 +1879,7 @@ function ProfileContent({
       ...(activeScripture.mcheynePlanCardPin ? { mcheynePlanCardPin: true as const } : {}),
     })
   }, [
-    activeScripture.pickerNavigation,
+    scriptureModalHighlightPicker,
     activeScripture.mcheynePlanCardPin,
     favoriteReferences,
     navListLength,
@@ -1854,7 +1890,7 @@ function ProfileContent({
   ])
 
   const navigateToNext = useCallback(() => {
-    if (activeScripture.pickerNavigation) {
+    if (scriptureModalHighlightPicker) {
       navigatePickerPassage('next')
       return
     }
@@ -1892,7 +1928,7 @@ function ProfileContent({
       ...(activeScripture.mcheynePlanCardPin ? { mcheynePlanCardPin: true as const } : {}),
     })
   }, [
-    activeScripture.pickerNavigation,
+    scriptureModalHighlightPicker,
     activeScripture.mcheynePlanCardPin,
     favoriteReferences,
     navListLength,
@@ -1903,10 +1939,10 @@ function ProfileContent({
   ])
 
   const pickerNavRef = activeScripture.isOpen ? activeScripture.reference.trim() : ''
-  const hasPrevious = activeScripture.pickerNavigation
+  const hasPrevious = scriptureModalHighlightPicker
     ? pickerPassageHasPrevious(pickerNavRef)
     : navListLength > 1
-  const hasNext = activeScripture.pickerNavigation
+  const hasNext = scriptureModalHighlightPicker
     ? pickerPassageHasNext(pickerNavRef)
     : navListLength > 1
 
@@ -2105,7 +2141,7 @@ function ProfileContent({
 
   /** Pin yellow (or chosen tint) as soon as the open passage changes — not only on modal close. */
   useEffect(() => {
-    if (!activeScripture.isOpen) {
+    if (!activeScripture.isOpen || scriptureModalHighlightPicker) {
       lastPersistedModalPinKeyRef.current = null
       pendingBookmarkOverrideByPinKeyRef.current.clear()
       return
@@ -2125,10 +2161,13 @@ function ProfileContent({
     modalPassageAnchorsForPins,
     persistVersePinForModalPassage,
     flushPendingBookmarkOverrideForPinKey,
+    scriptureModalHighlightPicker,
   ])
 
   const closeModal = () => {
-    persistVersePinForModalPassage(activeScripture.reference.trim())
+    if (!scriptureModalHighlightPicker) {
+      persistVersePinForModalPassage(activeScripture.reference.trim())
+    }
     pendingBookmarkOverrideByPinKeyRef.current.clear()
     setModalPinUserOverride(null)
     setModalOpenAnchors(null)
@@ -2165,13 +2204,22 @@ function ProfileContent({
         sectionId: entry.sectionId,
         subsectionId: entry.subsectionId,
       })
+      const fromScriptureCard = isProfileScriptureCardAnchors(
+        entry.reference,
+        entry.sectionId,
+        entry.subsectionId,
+        allScriptureRefs
+      )
       setSelectedScripture({
         reference: entry.reference,
         isOpen: true,
         initialChapterView: wantChapterView,
+        ...(fromScriptureCard
+          ? {}
+          : { pickerNavigation: true as const, mcheynePlanCardPin: undefined }),
       })
     },
-    [profileSlug, router, enabledTranslations, setTranslation, syncNavIndexForReference]
+    [profileSlug, router, enabledTranslations, setTranslation, syncNavIndexForReference, allScriptureRefs]
   )
 
   const scripturePinCommitOnUnmountRef = useRef<{
@@ -2364,6 +2412,14 @@ function ProfileContent({
                 <HighlightsDropdown
                   profileSlug={profileInfo.slug}
                   onOpenHighlight={(h) => focusHighlightById(h.id)}
+                  onOpenScriptureHighlight={(h) => {
+                    navigateScriptureInReader(h.reference, {
+                      fromPassagePicker: true,
+                      ...(isChapterOnlyScriptureReference(h.reference)
+                        ? { initialChapterView: true }
+                        : {}),
+                    })
+                  }}
                   onHighlightsChanged={bumpHighlights}
                 />
                 <BookmarksDropdown
@@ -2657,15 +2713,25 @@ function ProfileContent({
         hasPrevious={hasPrevious}
         hasNext={hasNext}
         presentationLocation={scriptureModalPresentationLocation}
-        versePinControl={{
-          draftColor: modalPinDraftColor,
-          onDraftColorChange: (color) => {
-            if (modalPinSyncedKey && isVerseBookmarkColorId(color)) {
-              setModalPinUserOverride({ key: modalPinSyncedKey, color })
+        {...(scriptureModalHighlightPicker
+          ? {
+              scriptureHighlightControl: {
+                highlightsRevision: highlightRevision,
+                profileSlug: profileInfo?.slug,
+                onChanged: bumpHighlights,
+              },
             }
-          },
-          colorsAvailableInDropdown: modalPinDropdownColors,
-        }}
+          : {
+              versePinControl: {
+                draftColor: modalPinDraftColor,
+                onDraftColorChange: (color: VersePinColorId) => {
+                  if (modalPinSyncedKey && isVerseBookmarkColorId(color)) {
+                    setModalPinUserOverride({ key: modalPinSyncedKey, color })
+                  }
+                },
+                colorsAvailableInDropdown: modalPinDropdownColors,
+              },
+            })}
         onOpenSpurgeonStudy={(ref) => {
           setStudyModalTitle(STUDY_MODAL_DEFAULT_TITLE)
           setStudyLibraryFocus('all')

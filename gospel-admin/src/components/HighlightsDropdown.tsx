@@ -4,15 +4,27 @@ import type { CSSProperties } from 'react'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
+import HighlightMarkerIcon from '@/components/HighlightMarkerIcon'
 import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
 import { plainTextForProfileHighlightUi } from '@/lib/profileHighlightVisibleText'
-import type { ProfileHighlight } from '@/lib/profileHighlightsStorage'
+import type {
+  GospelHighlight,
+  ProfileHighlight,
+  ScriptureHighlight,
+} from '@/lib/profileHighlightsStorage'
 import {
+  isResourceHighlight,
+  isScriptureHighlight,
   loadHighlights,
   removeHighlight,
 } from '@/lib/profileHighlightsStorage'
 import { GOSPEL_CLOSE_BOOKMARKS_PANEL_EVENT } from '@/lib/bookmarksPanelCloseEvent'
 import { useAlertModal } from '@/contexts/AlertModalContext'
+import {
+  SCRIPTURE_HIGHLIGHT_TESTAMENT_LABELS,
+  scriptureHighlightTestament,
+} from '@/lib/scriptureHighlightReference'
+import type { BibleCanonTestament } from '@/lib/bibleCanonStatic'
 
 const TRIGGER_CLASS =
   'p-2 rounded-md flex items-center justify-center min-h-[36px] min-w-[36px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white transition-colors cursor-pointer'
@@ -21,16 +33,39 @@ const PANEL_MARGIN = 8
 const HIGHLIGHTS_PANEL_CENTER_BELOW_PX = 768
 const HIGHLIGHT_SEARCH_DEBOUNCE_MS = 250
 
-function highlightMatchesSearch(h: ProfileHighlight, trimmedLowerNeedle: string): boolean {
+const SCRIPTURE_TESTAMENT_ORDER: readonly BibleCanonTestament[] = ['ot', 'nt']
+
+function resourceHighlightGroupTitle(h: ProfileHighlight): string {
+  return h.resourceTitle || h.slug
+}
+
+function highlightSecondaryLabel(h: GospelHighlight): string {
+  if (isScriptureHighlight(h)) {
+    return h.reference
+  }
+  return h.locationLabel
+}
+
+function highlightMatchesSearch(h: GospelHighlight, trimmedLowerNeedle: string): boolean {
   if (!trimmedLowerNeedle) return true
-  const parts = [
-    plainTextForProfileHighlightUi(h.quote),
-    plainTextForProfileHighlightUi(h.locationLabel),
-    h.resourceTitle,
-    h.slug,
-    h.anchorId,
-    h.scopeId,
-  ]
+  const parts: string[] = [plainTextForProfileHighlightUi(h.quote)]
+  if (isScriptureHighlight(h)) {
+    const testament = scriptureHighlightTestament(h.reference)
+    parts.push(
+      h.reference,
+      h.resourceTitle ?? '',
+      h.profileSlug ?? '',
+      ...(testament ? [SCRIPTURE_HIGHLIGHT_TESTAMENT_LABELS[testament]] : [])
+    )
+  } else {
+    parts.push(
+      plainTextForProfileHighlightUi(h.locationLabel),
+      h.resourceTitle,
+      h.slug,
+      h.anchorId,
+      h.scopeId
+    )
+  }
   return parts.some((t) => t.toLowerCase().includes(trimmedLowerNeedle))
 }
 
@@ -58,18 +93,47 @@ function highlightsPanelStyleFromTrigger(rect: DOMRectReadOnly): CSSProperties {
 interface HighlightsDropdownProps {
   profileSlug: string
   onOpenHighlight: (h: ProfileHighlight) => void
+  onOpenScriptureHighlight: (h: ScriptureHighlight) => void
   onHighlightsChanged?: () => void
 }
+
+function HighlightGroupSummary({ title, count }: { title: string; count: number }) {
+  return (
+    <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-700">
+      <span className="min-w-0 truncate">
+        {title} ({count})
+      </span>
+      <svg
+        aria-hidden
+        className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400 transition-transform group-open:rotate-180"
+        fill="none"
+        viewBox="0 0 20 20"
+      >
+        <path
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="m6 8 4 4 4-4"
+        />
+      </svg>
+    </summary>
+  )
+}
+
+const HIGHLIGHT_GROUP_DETAILS_CLASS =
+  'group border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 overflow-hidden'
 
 export default function HighlightsDropdown({
   profileSlug,
   onOpenHighlight,
+  onOpenScriptureHighlight,
   onHighlightsChanged,
 }: HighlightsDropdownProps) {
   const router = useRouter()
   const { showConfirm } = useAlertModal()
   const [open, setOpen] = useState(false)
-  const [highlights, setHighlights] = useState<ProfileHighlight[]>([])
+  const [highlights, setHighlights] = useState<GospelHighlight[]>([])
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -137,15 +201,35 @@ export default function HighlightsDropdown({
     ? highlights.filter((h) => highlightMatchesSearch(h, debouncedSearch))
     : highlights
 
-  const grouped = filteredHighlights.reduce<Record<string, ProfileHighlight[]>>((acc, h) => {
-    const k = h.resourceTitle || h.slug
-    if (!acc[k]) acc[k] = []
-    acc[k]!.push(h)
-    return acc
-  }, {})
+  const scriptureHighlights = filteredHighlights.filter(isScriptureHighlight)
+  const scriptureByTestament = SCRIPTURE_TESTAMENT_ORDER.reduce<
+    Record<BibleCanonTestament, ScriptureHighlight[]>
+  >(
+    (acc, testament) => {
+      acc[testament] = []
+      return acc
+    },
+    { ot: [], nt: [] }
+  )
+  for (const h of scriptureHighlights) {
+    const testament = scriptureHighlightTestament(h.reference)
+    if (testament) scriptureByTestament[testament].push(h)
+  }
+  const groupedResources = filteredHighlights
+    .filter(isResourceHighlight)
+    .reduce<Record<string, ProfileHighlight[]>>((acc, h) => {
+      const k = resourceHighlightGroupTitle(h)
+      if (!acc[k]) acc[k] = []
+      acc[k]!.push(h)
+      return acc
+    }, {})
 
-  const openHighlight = (h: ProfileHighlight) => {
+  const openHighlightEntry = (h: GospelHighlight) => {
     closeDropdown()
+    if (isScriptureHighlight(h)) {
+      onOpenScriptureHighlight(h)
+      return
+    }
     if (h.slug === profileSlug) {
       const ok = scrollToTocAnchor(h.anchorId)
       if (ok) onOpenHighlight(h)
@@ -181,19 +265,7 @@ export default function HighlightsDropdown({
           setOpen(next)
         }}
       >
-        <svg
-          className="w-5 h-5 shrink-0"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden
-        >
-          <path d="m9 11-6 6v3h9l3-3" />
-          <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" />
-        </svg>
+        <HighlightMarkerIcon />
       </button>
 
       {open &&
@@ -235,22 +307,72 @@ export default function HighlightsDropdown({
               <div id="highlights-panel-list" className="overflow-y-auto p-2 space-y-2 min-h-0 flex-1">
                 {highlights.length === 0 ? (
                   <p className="px-1 py-3 text-sm text-slate-600 dark:text-slate-300">
-                    No highlights yet. Select text in section content to add one.
+                    No highlights yet. Select text in section content, or highlight a passage in the
+                    Bible Reader.
                   </p>
-                ) : Object.keys(grouped).length === 0 ? (
+                ) : scriptureHighlights.length === 0 && Object.keys(groupedResources).length === 0 ? (
                   <p className="px-1 py-3 text-sm text-slate-600 dark:text-slate-300">
                     No highlights match your search.
                   </p>
                 ) : null}
-                {Object.entries(grouped).map(([resourceTitle, items]) => (
-                  <details
-                    key={resourceTitle}
-                    className="border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 overflow-hidden"
-                    open
-                  >
-                    <summary className="cursor-pointer list-none px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-100 bg-slate-100 dark:bg-slate-700">
-                      {resourceTitle} ({items.length})
-                    </summary>
+                {SCRIPTURE_TESTAMENT_ORDER.map((testament) => {
+                  const items = scriptureByTestament[testament]
+                  if (items.length === 0) return null
+                  const groupTitle = SCRIPTURE_HIGHLIGHT_TESTAMENT_LABELS[testament]
+                  return (
+                    <details key={testament} className={HIGHLIGHT_GROUP_DETAILS_CLASS} open>
+                      <HighlightGroupSummary title={groupTitle} count={items.length} />
+                      <div role="list">
+                        {items.map((h) => (
+                          <div
+                            key={h.id}
+                            role="listitem"
+                            className="flex border-t border-slate-100 dark:border-slate-600"
+                          >
+                            <button
+                              type="button"
+                              className="min-w-0 flex-1 cursor-pointer text-left px-3 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80"
+                              onClick={() => openHighlightEntry(h)}
+                            >
+                              <span className="font-medium line-clamp-2 block">
+                                “{plainTextForProfileHighlightUi(h.quote)}”
+                              </span>
+                              <span className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5 block">
+                                {plainTextForProfileHighlightUi(highlightSecondaryLabel(h))}
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => handleRemove(e, h.id)}
+                              className="shrink-0 flex cursor-pointer items-center justify-center px-3 min-h-[48px] text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 hover:bg-slate-50 dark:hover:bg-slate-700/80"
+                              aria-label="Remove highlight"
+                              title="Remove"
+                            >
+                              <svg
+                                className="w-5 h-5"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.5}
+                                stroke="currentColor"
+                                aria-hidden
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  )
+                })}
+                {Object.entries(groupedResources).map(([resourceTitle, items]) => (
+                  <details key={resourceTitle} className={HIGHLIGHT_GROUP_DETAILS_CLASS} open>
+                    <HighlightGroupSummary title={resourceTitle} count={items.length} />
                     <div role="list">
                       {items.map((h) => (
                         <div
@@ -261,13 +383,13 @@ export default function HighlightsDropdown({
                           <button
                             type="button"
                             className="min-w-0 flex-1 cursor-pointer text-left px-3 py-2.5 text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/80"
-                            onClick={() => openHighlight(h)}
+                            onClick={() => openHighlightEntry(h)}
                           >
                             <span className="font-medium line-clamp-2 block">
                               “{plainTextForProfileHighlightUi(h.quote)}”
                             </span>
                             <span className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5 block">
-                              {plainTextForProfileHighlightUi(h.locationLabel)}
+                              {plainTextForProfileHighlightUi(highlightSecondaryLabel(h))}
                             </span>
                           </button>
                           <button
@@ -306,4 +428,3 @@ export default function HighlightsDropdown({
     </div>
   )
 }
-
