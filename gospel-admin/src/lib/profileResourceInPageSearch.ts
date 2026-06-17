@@ -314,6 +314,7 @@ export function prefersReducedMotionResourceSearch(): boolean {
 }
 
 export const RESOURCE_SEARCH_INPUT_ARIA_LABEL = 'Search in resource'
+export const SCRIPTURE_SEARCH_INPUT_ARIA_LABEL = 'Search in passage'
 
 /** True when the in-page resource search field has focus (keyboard open on mobile). */
 export function isProfileResourceSearchInputFocused(): boolean {
@@ -326,6 +327,18 @@ export function isProfileResourceSearchInputElement(target: EventTarget | null):
     target instanceof HTMLInputElement &&
     target.getAttribute('aria-label') === RESOURCE_SEARCH_INPUT_ARIA_LABEL
   )
+}
+
+export function isScriptureModalSearchInputElement(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement &&
+    target.getAttribute('aria-label') === SCRIPTURE_SEARCH_INPUT_ARIA_LABEL
+  )
+}
+
+export function isScriptureModalSearchInputFocused(): boolean {
+  if (typeof document === 'undefined') return false
+  return isScriptureModalSearchInputElement(document.activeElement)
 }
 
 /** True when the mark sits below the sticky header and above the keyboard (iOS visual viewport). */
@@ -343,6 +356,21 @@ export function isProfileResourceSearchMarkInComfortZone(
   return rect.top >= headerOffsetPx && rect.bottom <= viewBottom
 }
 
+/** True when the mark is visible inside a scroll container and above the keyboard. */
+export function isContainerSearchMarkInComfortZone(
+  mark: HTMLElement,
+  scrollContainer: HTMLElement,
+  topGapPx: number
+): boolean {
+  const markRect = mark.getBoundingClientRect()
+  const containerRect = scrollContainer.getBoundingClientRect()
+  const vv = typeof window !== 'undefined' ? window.visualViewport : null
+  const viewBottom = vv
+    ? Math.min(vv.offsetTop + vv.height, containerRect.bottom) - RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX
+    : containerRect.bottom
+  return markRect.top >= containerRect.top + topGapPx && markRect.bottom <= viewBottom
+}
+
 function scrollProfileResourceSearchMarkIntoView(
   mark: HTMLElement,
   offset: number,
@@ -352,20 +380,58 @@ function scrollProfileResourceSearchMarkIntoView(
   window.scrollTo({ top, behavior })
 }
 
-export function scrollProfileResourceSearchToMark(mark: HTMLElement | null | undefined): void {
+function scrollContainerSearchMarkIntoView(
+  mark: HTMLElement,
+  scrollContainer: HTMLElement,
+  topGapPx: number,
+  behavior: ScrollBehavior
+): void {
+  const containerRect = scrollContainer.getBoundingClientRect()
+  const markRect = mark.getBoundingClientRect()
+  const delta = markRect.top - containerRect.top - topGapPx
+  scrollContainer.scrollBy({ top: delta, behavior })
+}
+
+export type ProfileResourceSearchScrollOptions =
+  | { mode: 'window' }
+  | { mode: 'container'; scrollContainer: HTMLElement }
+
+function searchScrollBehavior(inputFocused: boolean): ScrollBehavior {
+  return prefersReducedMotionResourceSearch() ||
+    (isMemorizeIosWebHost() && inputFocused)
+    ? 'auto'
+    : 'smooth'
+}
+
+export function scrollProfileResourceSearchToMark(
+  mark: HTMLElement | null | undefined,
+  scrollOptions: ProfileResourceSearchScrollOptions = { mode: 'window' }
+): void {
   if (!mark || typeof window === 'undefined') return
+
+  if (scrollOptions.mode === 'container') {
+    const topGap = RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX
+    const container = scrollOptions.scrollContainer
+    if (isContainerSearchMarkInComfortZone(mark, container, topGap)) return
+    scrollContainerSearchMarkIntoView(
+      mark,
+      container,
+      topGap,
+      searchScrollBehavior(isScriptureModalSearchInputFocused())
+    )
+    return
+  }
+
   const offset = getProfileHeaderScrollOffset() + RESOURCE_SEARCH_MATCH_SCROLL_GAP_PX
 
   // Already visible below the header and above the keyboard: don't scroll (avoids per-keystroke jitter).
   if (isProfileResourceSearchMarkInComfortZone(mark, offset)) return
 
-  // Instant scroll on iOS while the keyboard is open: smooth scroll + visualViewport sync caused jitter.
-  const behavior =
-    prefersReducedMotionResourceSearch() ||
-    (isMemorizeIosWebHost() && isProfileResourceSearchInputFocused())
-      ? 'auto'
-      : 'smooth'
-  scrollProfileResourceSearchMarkIntoView(mark, offset, behavior)
+  scrollProfileResourceSearchMarkIntoView(
+    mark,
+    offset,
+    searchScrollBehavior(isProfileResourceSearchInputFocused())
+  )
 }
 
 function resolveSearchRangeDomBounds(
@@ -473,9 +539,10 @@ export type ProfileResourceSearchHandle = {
 export function runProfileResourceSearch(
   scope: HTMLElement | null,
   query: string,
-  options?: { activeIndex?: number }
+  options?: { activeIndex?: number; scroll?: ProfileResourceSearchScrollOptions }
 ): ProfileResourceSearchHandle {
   const clear = () => clearProfileResourceSearchMarks(scope)
+  const scrollOptions = options?.scroll ?? { mode: 'window' as const }
 
   if (!scope) {
     return { count: 0, marks: [], scrollToIndex: () => {}, clear }
@@ -509,13 +576,13 @@ export function runProfileResourceSearch(
   }
 
   paintActive(activeIndex)
-  if (activeMark) scrollProfileResourceSearchToMark(activeMark)
+  if (activeMark) scrollProfileResourceSearchToMark(activeMark, scrollOptions)
 
   const scrollToIndex = (index: number) => {
     if (validRanges.length === 0) return
     const clamped = Math.max(0, Math.min(index, validRanges.length - 1))
     paintActive(clamped)
-    scrollProfileResourceSearchToMark(activeMark)
+    scrollProfileResourceSearchToMark(activeMark, scrollOptions)
   }
 
   return {

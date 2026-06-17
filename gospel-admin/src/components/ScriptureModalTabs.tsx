@@ -1,8 +1,10 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, type RefObject } from 'react'
 import OpenItemTabBar from '@/components/OpenItemTabBar'
+import ScriptureModalInPageSearch from '@/components/ScriptureModalInPageSearch'
 import { lastOpenScriptureDisplayParts } from '@/lib/lastOpenScriptureLabel'
+import { SCRIPTURE_SEARCH_INPUT_ARIA_LABEL } from '@/lib/profileResourceInPageSearch'
 import { SCRIPTURE_MODAL_TAB_BAR_SCROLL_KEY } from '@/lib/openItemTabBarScrollStorage'
 import {
   consumeRevealScriptureTabKey,
@@ -16,6 +18,9 @@ export type ScriptureModalTabsProps = {
   activeReference: string
   onSelectTab: (entry: ProfileRecentScriptureEntry) => void
   onCloseTab: (entry: ProfileRecentScriptureEntry) => void
+  searchOpen?: boolean
+  onToggleSearch?: () => void
+  contentRootRef: RefObject<HTMLElement | null>
 }
 
 export default function ScriptureModalTabs({
@@ -24,6 +29,9 @@ export default function ScriptureModalTabs({
   activeReference,
   onSelectTab,
   onCloseTab,
+  searchOpen = false,
+  onToggleSearch,
+  contentRootRef,
 }: ScriptureModalTabsProps) {
   const activeId = scriptureModalTabKey({ slug: activeSlug, reference: activeReference })
   const revealTabId = useMemo(() => {
@@ -41,22 +49,40 @@ export default function ScriptureModalTabs({
     }
   })
 
+  if (tabs.length === 0) return null
+
   return (
-    <OpenItemTabBar
-      dataTour="scripture-modal-tabs"
-      tablistAriaLabel="Open scripture passages"
-      tabs={openTabs}
-      activeId={activeId}
-      onSelectTab={(id) => {
-        const entry = tabs.find((t) => scriptureModalTabKey(t) === id)
-        if (entry) onSelectTab(entry)
-      }}
-      onCloseTab={(id) => {
-        const entry = tabs.find((t) => scriptureModalTabKey(t) === id)
-        if (entry) onCloseTab(entry)
-      }}
-      persistScrollKey={SCRIPTURE_MODAL_TAB_BAR_SCROLL_KEY}
-      revealTabId={revealTabId}
-    />
+    <div className="w-full min-w-0">
+      <OpenItemTabBar
+        dataTour="scripture-modal-tabs"
+        tablistAriaLabel="Open scripture passages"
+        tabs={openTabs}
+        activeId={activeId}
+        onSelectTab={(id) => {
+          const entry = tabs.find((t) => scriptureModalTabKey(t) === id)
+          if (entry) onSelectTab(entry)
+        }}
+        onCloseTab={(id) => {
+          const entry = tabs.find((t) => scriptureModalTabKey(t) === id)
+          if (entry) onCloseTab(entry)
+        }}
+        persistScrollKey={SCRIPTURE_MODAL_TAB_BAR_SCROLL_KEY}
+        revealTabId={revealTabId}
+        hideWhenSingleTab={false}
+        expandSingleTab
+        searchOpen={searchOpen}
+        onToggleSearch={onToggleSearch}
+        searchAriaLabel={SCRIPTURE_SEARCH_INPUT_ARIA_LABEL}
+        searchDataTour="scripture-modal-search"
+      />
+      <ScriptureModalInPageSearch
+        key={activeId}
+        open={searchOpen}
+        onOpenChange={(open) => {
+          if (!open) onToggleSearch?.()
+        }}
+        contentRootRef={contentRootRef}
+      />
+    </div>
   )
 }

@@ -57,6 +57,7 @@ import {
   wordStudyLanguageLabelFromReference,
 } from '@/lib/step-bible-reference'
 import type { ScriptureModalPresentationLocation } from '@/lib/presentationLocationFromAnchors'
+import { clearProfileResourceSearchMarks } from '@/lib/profileResourceInPageSearch'
 import { studyResourcesAvailableFromPayload } from '@/lib/studyResourcesAvailability'
 import {
   formatScriptureChapterHtml,
@@ -268,6 +269,11 @@ export default function ScriptureModal({
   const [memorizeInFlight, setMemorizeInFlight] = useState(false)
   const [shareInFlight, setShareInFlight] = useState(false)
   const [passagePickerOpen, setPassagePickerOpen] = useState(false)
+  const [scriptureSearchOpen, setScriptureSearchOpen] = useState(false)
+
+  const handleToggleScriptureSearch = useCallback(() => {
+    setScriptureSearchOpen((open) => !open)
+  }, [])
 
   const [scriptureResolved, setScriptureResolved] = useState<{
     key: string
@@ -571,6 +577,26 @@ export default function ScriptureModal({
     },
     [scriptureTabInput, onScriptureTabActivate]
   )
+
+  useEffect(() => {
+    if (!isOpen) {
+      clearProfileResourceSearchMarks(scrollAreaRef.current)
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+    clearProfileResourceSearchMarks(scrollAreaRef.current)
+  }, [
+    isOpen,
+    reference,
+    scriptureTabUiKey,
+    chapterView?.sessionKey,
+    compareTranslation,
+    scriptureResolved?.key,
+    compareVerseResolved?.key,
+    compareChapterResolved?.key,
+  ])
 
   const isMcheyneDayPlaylist =
     translation === 'esv' &&
@@ -1054,6 +1080,8 @@ export default function ScriptureModal({
     setChapterView(null)
     setChapterContextError(null)
     setWordStudyEnabled(false)
+    setScriptureSearchOpen(false)
+    clearProfileResourceSearchMarks(scrollAreaRef.current)
     onClose()
   }
 
@@ -1586,6 +1614,9 @@ export default function ScriptureModal({
             activeReference={reference}
             onSelectTab={handleScriptureTabSelect}
             onCloseTab={handleScriptureTabClose}
+            searchOpen={scriptureSearchOpen}
+            onToggleSearch={handleToggleScriptureSearch}
+            contentRootRef={scrollAreaRef}
           />
         ) : null}
 

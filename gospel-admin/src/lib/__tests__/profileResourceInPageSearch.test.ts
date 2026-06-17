@@ -425,4 +425,23 @@ describe('profileResourceInPageSearch', () => {
     expect(empty.count).toBe(0)
     expect(scope.querySelectorAll(`mark[${RESOURCE_SEARCH_MATCH_ATTR}]`)).toHaveLength(0)
   })
+
+  it('container scroll mode scrolls within the scroll container', () => {
+    const container = document.createElement('div')
+    container.style.height = '100px'
+    container.style.overflow = 'auto'
+    const scope = document.createElement('div')
+    scope.innerHTML = '<p style="height: 400px">alpha</p><p>beta beta beta</p>'
+    container.appendChild(scope)
+    document.body.appendChild(container)
+
+    const scrollBy = jest.fn()
+    Object.defineProperty(container, 'scrollBy', { value: scrollBy, configurable: true })
+
+    const result = runProfileResourceSearch(scope, 'beta', {
+      scroll: { mode: 'container', scrollContainer: container },
+    })
+    expect(result.count).toBe(3)
+    expect(scrollBy).toHaveBeenCalled()
+  })
 })

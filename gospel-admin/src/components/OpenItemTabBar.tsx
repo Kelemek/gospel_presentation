@@ -83,6 +83,10 @@ export type OpenItemTabBarProps = {
   expandSingleTab?: boolean
   searchOpen?: boolean
   onToggleSearch?: () => void
+  /** Spyglass aria-label/title on the active tab. Default: Search in resource */
+  searchAriaLabel?: string
+  /** data-tour on the spyglass button. Default: profile-resource-search */
+  searchDataTour?: string
 }
 
 export default function OpenItemTabBar({
@@ -99,6 +103,8 @@ export default function OpenItemTabBar({
   expandSingleTab = false,
   searchOpen = false,
   onToggleSearch,
+  searchAriaLabel = 'Search in resource',
+  searchDataTour = 'profile-resource-search',
 }: OpenItemTabBarProps) {
   const active = activeId.trim()
   const isSingleExpandedTab = expandSingleTab && tabs.length === 1
@@ -281,10 +287,10 @@ export default function OpenItemTabBar({
                 {showSearchToggle ? (
                   <button
                     type="button"
-                    aria-label="Search in resource"
-                    title="Search in resource"
+                    aria-label={searchAriaLabel}
+                    title={searchAriaLabel}
                     aria-pressed={searchOpen}
-                    data-tour="profile-resource-search"
+                    data-tour={searchDataTour}
                     onPointerDown={captureTabBarScroll}
                     onClick={(e) => {
                       e.stopPropagation()

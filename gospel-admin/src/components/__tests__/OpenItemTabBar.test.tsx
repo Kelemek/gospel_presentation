@@ -176,6 +176,23 @@ describe('OpenItemTabBar', () => {
     expect(searchButtons[0]).toHaveAttribute('data-tour', 'profile-resource-search')
   })
 
+  it('uses custom search aria label and data-tour when provided', () => {
+    render(
+      <OpenItemTabBar
+        tabs={resourceTabs}
+        activeId="default"
+        onSelectTab={jest.fn()}
+        onCloseTab={jest.fn()}
+        tablistAriaLabel="Open resources"
+        onToggleSearch={jest.fn()}
+        searchAriaLabel="Search in passage"
+        searchDataTour="scripture-modal-search"
+      />
+    )
+    const search = screen.getByRole('button', { name: 'Search in passage' })
+    expect(search).toHaveAttribute('data-tour', 'scripture-modal-search')
+  })
+
   it('renders tablist, active state, and data-tour', () => {
     render(
       <OpenItemTabBar
