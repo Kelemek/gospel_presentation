@@ -44,7 +44,9 @@ import ScriptureModalHighlightPick from '@/components/ScriptureModalHighlightPic
 import ScriptureModalTabs from '@/components/ScriptureModalTabs'
 import ScriptureModalToolbarMenu from '@/components/ScriptureModalToolbarMenu'
 import ScriptureWordStudyModal from '@/components/ScriptureWordStudyModal'
+import BibleSearchModal from '@/components/BibleSearchModal'
 import ScriptureModalChapterListen from '@/components/ScriptureModalChapterListen'
+import type { BibleSearchPage } from '@/lib/bible-search-api'
 import ScripturePassageText from '@/components/ScripturePassageText'
 import ScripturePassageSwipeLayer from '@/components/ScripturePassageSwipeLayer'
 import { usePassageAnchorKey } from '@/hooks/usePassageAnchorKey'
@@ -270,6 +272,21 @@ export default function ScriptureModal({
   const [shareInFlight, setShareInFlight] = useState(false)
   const [passagePickerOpen, setPassagePickerOpen] = useState(false)
   const [scriptureSearchOpen, setScriptureSearchOpen] = useState(false)
+  const [bibleSearchOpen, setBibleSearchOpen] = useState(false)
+  const [bibleSearchSession, setBibleSearchSession] = useState<BibleSearchPage | null>(null)
+  const prevTranslationForBibleSearchRef = useRef(translation)
+
+  useEffect(() => {
+    if (prevTranslationForBibleSearchRef.current !== translation) {
+      prevTranslationForBibleSearchRef.current = translation
+      setBibleSearchSession(null)
+    }
+  }, [translation])
+
+  const bibleSearchTranslationLabel = useMemo(() => {
+    const match = enabledTranslationOptions.find((o) => o.translation_code === translation)
+    return match?.translation_name ?? translation.toUpperCase()
+  }, [enabledTranslationOptions, translation])
 
   const handleToggleScriptureSearch = useCallback(() => {
     setScriptureSearchOpen((open) => !open)
@@ -512,6 +529,19 @@ export default function ScriptureModal({
   ])
 
   const [scriptureTabsRevision, setScriptureTabsRevision] = useState(0)
+
+  const handleBibleSearchSelect = useCallback(
+    (ref: string) => {
+      if (!onNavigateReference) return
+      onNavigateReference(ref, {
+        fromPassagePicker: true,
+        ...(isChapterOnlyScriptureReference(ref) ? { initialChapterView: true } : {}),
+      })
+      setBibleSearchOpen(false)
+      setScriptureTabsRevision((n) => n + 1)
+    },
+    [onNavigateReference]
+  )
 
   useEffect(() => {
     if (!isOpen || !onScriptureTabActivate) return
@@ -1081,6 +1111,8 @@ export default function ScriptureModal({
     setChapterContextError(null)
     setWordStudyEnabled(false)
     setScriptureSearchOpen(false)
+    setBibleSearchOpen(false)
+    setBibleSearchSession(null)
     clearProfileResourceSearchMarks(scrollAreaRef.current)
     onClose()
   }
@@ -1340,6 +1372,31 @@ export default function ScriptureModal({
               data-scripture-modal-chrome
               className="flex shrink-0 items-center gap-1.5"
             >
+              {onNavigateReference ? (
+                <button
+                  type="button"
+                  data-tour="scripture-modal-bible-search"
+                  onClick={() => setBibleSearchOpen(true)}
+                  className={scriptureModalHeaderIconButtonClass}
+                  aria-label="Search Bible"
+                  title="Search Bible"
+                >
+                  <svg
+                    className="w-5 h-5 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+                    />
+                  </svg>
+                </button>
+              ) : null}
               <ScriptureModalChapterListen
                 passageReference={passageAudioReference}
                 chapterReference={getChapterReference(reference)}
@@ -1811,6 +1868,22 @@ export default function ScriptureModal({
       </div>
 
     </div>
+
+      {typeof document !== 'undefined' &&
+        bibleSearchOpen &&
+        onNavigateReference &&
+        createPortal(
+          <BibleSearchModal
+            isOpen={bibleSearchOpen}
+            onClose={() => setBibleSearchOpen(false)}
+            translation={translation}
+            translationLabel={bibleSearchTranslationLabel}
+            session={bibleSearchSession}
+            onSessionChange={setBibleSearchSession}
+            onSelectReference={handleBibleSearchSelect}
+          />,
+          document.body
+        )}
 
       {typeof document !== 'undefined' &&
         passagePickerOpen &&

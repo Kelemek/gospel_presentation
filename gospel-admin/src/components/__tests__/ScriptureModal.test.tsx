@@ -375,6 +375,22 @@ describe('ScriptureModal Component', () => {
     expect(screen.queryByRole('button', { name: /chapter context/i })).toBeInTheDocument()
   })
 
+  it('shows Search Bible control left of Listen when onNavigateReference is set', async () => {
+    renderWithTextSize(
+      <ScriptureModal {...defaultProps} onNavigateReference={jest.fn()} />
+    )
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /John 3:16/i })).toBeInTheDocument()
+    )
+    await waitFor(() => expect(screen.getByLabelText(/^Listen$/i)).toBeInTheDocument())
+    const search = screen.getByRole('button', { name: /^Search Bible$/i })
+    const listen = screen.getByRole('button', { name: /^Listen$/i })
+    const headerRow = listen.parentElement
+    expect(headerRow).toContainElement(search)
+    const buttons: HTMLElement[] = Array.from(headerRow?.querySelectorAll('button') ?? [])
+    expect(buttons.indexOf(search)).toBeLessThan(buttons.indexOf(listen))
+  })
+
   it('shows chapter Listen control left of Share when chapter context is loaded', async () => {
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = fetchUrl(input)

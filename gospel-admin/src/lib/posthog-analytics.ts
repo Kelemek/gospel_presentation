@@ -10,6 +10,7 @@ export type ModalAnalyticsName =
   | 'memorize_practice'
   | 'memorize_add_bible_books'
   | 'bible_passage_picker'
+  | 'bible_search'
   | 'scripture_word_study'
   | 'mcheyne_reading_plan'
   | 'morneve_devotions'
@@ -25,6 +26,7 @@ export type ModalOpenedProperties = {
   library_focus?: 'all' | 'spurgeon' | 'calvin' | 'henry' | 'edwards'
   variant?: 'memorize' | 'reader'
   memorization_kind?: 'verse' | 'bible_books'
+  translation?: string
 }
 
 export type PostHogEventProperties = Record<
@@ -60,6 +62,9 @@ export function captureModalOpened(
   }
   if (properties.memorization_kind !== undefined) {
     payload.memorization_kind = properties.memorization_kind
+  }
+  if (properties.translation !== undefined) {
+    payload.translation = properties.translation
   }
   capturePostHogEvent('modal_opened', payload)
 }

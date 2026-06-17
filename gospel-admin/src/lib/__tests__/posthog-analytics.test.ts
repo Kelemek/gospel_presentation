@@ -53,4 +53,12 @@ describe('posthog-analytics', () => {
     captureModalOpened({ modal: 'coma' })
     expect(mockCapture).toHaveBeenCalledWith('modal_opened', { modal: 'coma' })
   })
+
+  it('captureModalOpened includes bible_search translation', () => {
+    captureModalOpened({ modal: 'bible_search', translation: 'esv' })
+    expect(mockCapture).toHaveBeenCalledWith('modal_opened', {
+      modal: 'bible_search',
+      translation: 'esv',
+    })
+  })
 })

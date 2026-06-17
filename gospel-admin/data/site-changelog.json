@@ -1333,5 +1333,10 @@
     "releasedAt": "2026-06-17",
     "committedAt": "2026-06-17T12:08:47.202Z",
     "message": "Bible Reader passage tabs now include search: find text in the open passage and jump between matches."
+  },
+  {
+    "releasedAt": "2026-06-17",
+    "committedAt": "2026-06-17T23:20:42.588Z",
+    "message": "Bible Reader: search the whole Bible from the toolbar. Matching words are highlighted."
   }
 ]

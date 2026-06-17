@@ -65,6 +65,16 @@ Passage requests use USFM-style IDs (e.g. `JHN.3.16`); mapping lives in `gospel-
 GET /api/scripture?reference=John%203:16&translation=esv
 ```
 
+### Bible full-text search
+
+```
+GET /api/scripture/search?q=grace&translation=esv&page=1&pageSize=20
+```
+
+Proxies **Crossway** `GET /v3/passage/search/` for **ESV** and **API.Bible** `GET /v1/bibles/{bibleId}/search` for **KJV, NASB, LSB, NIV, NLT, CSB** ([`bible-search-api.ts`](../gospel-admin/src/lib/bible-search-api.ts)). Query must be at least **three** characters; `translation` must be **admin-enabled**. Response: `{ translation, query, total, page, pageSize, totalPages, items: [{ reference, snippet }] }`.
+
+In **ScriptureModal**, the header **Search Bible** control (`data-tour="scripture-modal-bible-search"`, left of **Listen**) opens **`BibleSearchModal`**: search runs in the **current reader translation** only; results are **paginated**; choosing a hit opens that reference as a **new passage tab** (`fromPassagePicker`). Closing the search modal **keeps the last results** so you can reopen Search and open another hit without retyping (session clears when the reader closes or the translation changes). This is separate from the tab-bar **in-passage search** spyglass (`ScriptureModalInPageSearch`), which finds text inside the open passage pane.
+
 **Spoken audio (not cached):** `GET /api/scripture/audio?reference=…&translation=…` returns **302** to a provider audio URL. **ESV** uses Crossway’s passage-audio API (MP3 for the requested passage). For **one-chapter books** (Obadiah, Philemon, 2–3 John, Jude), M'Cheyne-style refs like `Obadiah 1` mean the whole book; the server expands them to `1:1–N` before calling ESV so text/audio are not limited to verse 1 (`scriptureReferenceForPassageQuery` in `parse-scripture-reference.ts`). **KJV, NASB, LSB, NIV, NLT, CSB** use API.Bible: `GET /v1/audio-bibles/.../chapters/...` (see [API.Bible — Audio Bibles](https://api.bible/api-reference)) — the **audio Bible** `bibleId` in that path is **not** the same string as the text `bibleId` in `API_BIBLE_BIBLE_ID_*`, but it must be **linked to that text bible**: `data.audioBibles` on `GET /v1/bibles/{textBibleId}`, or a row from `GET /v1/audio-bibles?bibleId={textBibleId}` with the same **DBL id** or edition abbreviation/name as the text bible. The server does **not** use unrelated linked audio (e.g. NASB audio while displaying LSB text). Optional override per translation: `API_BIBLE_AUDIO_BIBLE_ID_KJV`, `API_BIBLE_AUDIO_BIBLE_ID_NASB`, `API_BIBLE_AUDIO_BIBLE_ID_LSB`, etc. (from `GET /v1/audio-bibles`) when needed. Requires the same env as text (`ESV_API_TOKEN`, `API_BIBLE_KEY`, per-translation `API_BIBLE_BIBLE_ID_*`). If no audio is linked or the reference does not parse, the route may return 404/502. In **ScriptureModal**, **Listen** (**ESV only**) uses this route for the open passage—verse or chapter scope depending on verse/chapter view; the control is hidden for API.Bible text translations (`ScriptureModalChapterListen.tsx`).
 
 ### Scripture modal share deep links
