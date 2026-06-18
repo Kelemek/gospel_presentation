@@ -10,6 +10,7 @@ import {
   useCallback,
   useSyncExternalStore,
 } from 'react'
+import ScriptureModalHeaderBookReveal from '@/components/ScriptureModalHeaderBookReveal'
 import { createPortal } from 'react-dom'
 import BiblePassagePickerModal from '@/components/BiblePassagePickerModal'
 import { useTranslation, type BibleTranslation } from '@/contexts/TranslationContext'
@@ -53,6 +54,8 @@ import { usePassageAnchorKey } from '@/hooks/usePassageAnchorKey'
 import {
   scriptureModalHeaderCloseButtonClass,
   scriptureModalHeaderIconButtonClass,
+  scriptureModalHeaderNavButtonClass,
+  scriptureModalHeaderNavIconClass,
 } from '@/components/scriptureModalHeaderButtons'
 import {
   wordStudyAvailableFromReference,
@@ -95,23 +98,25 @@ export type { ScriptureModalPresentationLocation }
 
 const EMPTY_SCRIPTURE_MODAL_TABS: ProfileRecentScriptureEntry[] = []
 
-/** Same 36px row height as prev/next (`scriptureModalHeaderIconButtonClass`). */
+/** Same 36px row height as prev/next (`scriptureModalHeaderNavButtonClass`). */
 const scriptureModalHeaderTitleClass =
   'text-base md:text-lg font-semibold text-slate-800 dark:text-slate-100 leading-tight px-1 min-w-0 flex-1 max-w-full overflow-hidden flex items-center justify-center h-9 min-h-[36px] box-border'
 
 function ScriptureModalHeaderReference({
+  reference,
   book,
   suffix,
 }: {
+  reference: string
   book: string
   suffix: string
 }) {
   if (!suffix) {
-    return <span className="min-w-0 truncate">{book}</span>
+    return <ScriptureModalHeaderBookReveal book={book} revealKey={reference} />
   }
   return (
     <span className="min-w-0 max-w-full inline-flex items-baseline gap-1 overflow-hidden">
-      <span className="truncate">{book}</span>
+      <ScriptureModalHeaderBookReveal book={book} revealKey={reference} />
       <span className="shrink-0 whitespace-nowrap">{suffix}</span>
     </span>
   )
@@ -1281,7 +1286,7 @@ export default function ScriptureModal({
         >
           {/* Navigation Controls - Always at Top */}
           <div className="flex items-center gap-1.5 min-w-0 mb-2">
-            <div className="flex items-center gap-1.5 min-w-0 flex-1 justify-center">
+            <div className="flex items-center gap-1 min-w-0 flex-1 justify-center md:gap-1.5">
               <span data-scripture-modal-chrome className="shrink-0 inline-flex">
               <button
                 type="button"
@@ -1292,12 +1297,12 @@ export default function ScriptureModal({
                   }
                 }}
                 disabled={!hasPrevious}
-                className={scriptureModalHeaderIconButtonClass}
+                className={scriptureModalHeaderNavButtonClass}
                 title="Previous Scripture"
                 aria-label="Previous Scripture"
               >
                 <svg
-                  className="w-5 h-5 shrink-0"
+                  className={scriptureModalHeaderNavIconClass}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1325,7 +1330,11 @@ export default function ScriptureModal({
                   title={`${reference} — choose another passage`}
                   aria-label={`${reference}. Choose another passage`}
                 >
-                  <ScriptureModalHeaderReference book={headerBook} suffix={headerSuffix} />
+                  <ScriptureModalHeaderReference
+                    reference={reference}
+                    book={headerBook}
+                    suffix={headerSuffix}
+                  />
                 </button>
               ) : (
                 <h3
@@ -1334,7 +1343,11 @@ export default function ScriptureModal({
                   title={reference}
                   aria-label={reference}
                 >
-                  <ScriptureModalHeaderReference book={headerBook} suffix={headerSuffix} />
+                  <ScriptureModalHeaderReference
+                    reference={reference}
+                    book={headerBook}
+                    suffix={headerSuffix}
+                  />
                 </h3>
               )}
               <span data-scripture-modal-chrome className="shrink-0 inline-flex">
@@ -1347,12 +1360,12 @@ export default function ScriptureModal({
                   }
                 }}
                 disabled={!hasNext}
-                className={scriptureModalHeaderIconButtonClass}
+                className={scriptureModalHeaderNavButtonClass}
                 title="Next Scripture"
                 aria-label="Next Scripture"
               >
                 <svg
-                  className="w-5 h-5 shrink-0"
+                  className={scriptureModalHeaderNavIconClass}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
