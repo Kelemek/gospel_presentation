@@ -2,6 +2,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import BibleSearchModal from '../BibleSearchModal'
 import type { BibleSearchPage } from '@/lib/bible-search-api'
+import { RESOURCE_SEARCH_MATCH_ATTR } from '@/lib/profileResourceInPageSearch'
 import { isProfileResourceSearchContentTouchBlurHost } from '@/lib/memorizationViewportPlatform'
 
 jest.mock('@/lib/memorizationViewportPlatform', () => ({
@@ -43,7 +44,7 @@ describe('BibleSearchModal', () => {
     )
 
     await waitFor(() => {
-      const mark = document.querySelector('.bible-search-hit')
+      const mark = document.querySelector(`mark[${RESOURCE_SEARCH_MATCH_ATTR}]`)
       expect(mark).toHaveTextContent('grace')
     })
     expect(document.querySelector('.bible-search-snippet')).not.toBeNull()

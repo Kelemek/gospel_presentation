@@ -14,6 +14,10 @@ import type { BibleSearchPage } from '@/lib/bible-search-api'
 import { bibleSearchSnippetForDisplay } from '@/lib/bible-search-api'
 import { BIBLE_SEARCH_MIN_QUERY_LENGTH } from '@/lib/bible-search-api'
 import { splitBibleSearchSnippetByQuery } from '@/lib/bibleSearchSnippetHighlight'
+import {
+  RESOURCE_SEARCH_ACTIVE_ATTR,
+  RESOURCE_SEARCH_MATCH_ATTR,
+} from '@/lib/profileResourceInPageSearch'
 import { scriptureModalHeaderCloseButtonHoverOnlyClass } from '@/components/scriptureModalHeaderButtons'
 import { isProfileResourceSearchContentTouchBlurHost } from '@/lib/memorizationViewportPlatform'
 import { usePostHogModalOpen } from '@/hooks/usePostHogModalOpen'
@@ -26,7 +30,13 @@ function BibleSearchSnippet({ snippet, query }: { snippet: string; query: string
     <>
       {parts.map((part, index) =>
         part.match ? (
-          <mark key={index} className="bible-search-hit">
+          <mark
+            key={index}
+            {...{
+              [RESOURCE_SEARCH_MATCH_ATTR]: 'true',
+              [RESOURCE_SEARCH_ACTIVE_ATTR]: 'true',
+            }}
+          >
             {part.text}
           </mark>
         ) : (
