@@ -1,4 +1,5 @@
 import {
+  bibleSearchSnippetForDisplay,
   bibleSearchSnippetFromText,
   clampBibleSearchPageSize,
   searchBible,
@@ -26,6 +27,13 @@ describe('bible-search-api', () => {
       const snippet = bibleSearchSnippetFromText(long, 40)
       expect(snippet).not.toMatch(/^\[1\]/)
       expect(snippet.endsWith('…')).toBe(true)
+    })
+  })
+
+  describe('bibleSearchSnippetForDisplay', () => {
+    it('removes trailing server ellipsis for CSS line-clamp', () => {
+      expect(bibleSearchSnippetForDisplay('Short verse')).toBe('Short verse')
+      expect(bibleSearchSnippetForDisplay('Long verse text…')).toBe('Long verse text')
     })
   })
 

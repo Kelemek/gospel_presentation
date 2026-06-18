@@ -48,6 +48,7 @@ describe('BibleSearchModal', () => {
       expect(mark).toHaveTextContent('grace')
     })
     expect(document.querySelector('.bible-search-snippet')).not.toBeNull()
+    expect(document.querySelector('.bible-search-snippet__text')).not.toBeNull()
   })
 
   it('restores session on reopen without refetching', async () => {

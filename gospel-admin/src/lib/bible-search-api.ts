@@ -73,6 +73,11 @@ export function bibleSearchSnippetFromText(raw: string, maxLen = 240): string {
   return `${plain.slice(0, maxLen - 1)}…`
 }
 
+/** Strip server ellipsis so CSS line-clamp supplies the visual truncation only. */
+export function bibleSearchSnippetForDisplay(snippet: string): string {
+  return snippet.endsWith('…') ? snippet.slice(0, -1).trimEnd() : snippet
+}
+
 function totalPagesFromCount(total: number, pageSize: number): number {
   if (total <= 0) return 0
   return Math.max(1, Math.ceil(total / pageSize))
