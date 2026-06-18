@@ -290,12 +290,12 @@ export default function BibleSearchModal({
                   <button
                     type="button"
                     onClick={() => onSelectReference(hit.reference)}
-                    className="w-full cursor-pointer text-left rounded-md border border-slate-200 dark:border-slate-600 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors"
+                    className="w-full cursor-pointer overflow-hidden text-left rounded-md border border-slate-200 dark:border-slate-600 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors"
                   >
                     <div className="text-sm font-semibold text-blue-700 dark:text-blue-300">
                       {hit.reference}
                     </div>
-                    <div className="text-sm text-slate-600 dark:text-slate-300 mt-0.5 line-clamp-3">
+                    <div className="bible-search-snippet text-sm text-slate-600 dark:text-slate-300 mt-0.5 line-clamp-3">
                       <BibleSearchSnippet snippet={hit.snippet} query={debouncedQ} />
                     </div>
                   </button>
