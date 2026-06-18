@@ -268,35 +268,26 @@ body.dark h6 mark[data-resource-search-match][data-resource-search-active="true"
   box-shadow: inset 0 0 0 2px rgb(217 119 6 / 0.8);
 }
 
-/* Bible search results: cap at 3 lines and clip Safari overflow that inflates gaps between cards. */
+/* Bible search results: plain overflow clip only (no -webkit-line-clamp — iOS mis-measures it).
+   Snippet length is capped in bibleSearchSnippetForDisplay. */
 .bible-search-snippet {
   max-height: 3.75rem; /* text-sm / leading-5 × 3 */
   line-height: 1.25rem;
-  overflow: clip;
-}
-
-.bible-search-snippet__text {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
   overflow: hidden;
 }
 
-.bible-search-snippet mark[data-resource-search-match] {
-  -webkit-box-decoration-break: slice;
-  box-decoration-break: slice;
+.bible-search-hit {
+  background-color: rgb(252 211 77 / 0.45);
+  color: inherit;
+  font-weight: inherit;
+  font-style: inherit;
   padding: 0;
-  box-shadow: none !important;
+  border-radius: 0.125rem;
 }
 
-.bible-search-snippet mark[data-resource-search-match][data-resource-search-active="true"] {
-  background-color: rgb(252 211 77 / 0.45) !important;
-}
-
-html.dark .bible-search-snippet mark[data-resource-search-match][data-resource-search-active="true"],
-body.dark .bible-search-snippet mark[data-resource-search-match][data-resource-search-active="true"] {
-  background-color: rgb(217 119 6 / 0.35) !important;
+html.dark .bible-search-hit,
+body.dark .bible-search-hit {
+  background-color: rgb(217 119 6 / 0.35);
 }
 
 /* Print Styles - Highly Condensed Format */

@@ -31,9 +31,12 @@ describe('bible-search-api', () => {
   })
 
   describe('bibleSearchSnippetForDisplay', () => {
-    it('removes trailing server ellipsis for CSS line-clamp', () => {
+    it('normalizes and caps snippet length for the modal', () => {
       expect(bibleSearchSnippetForDisplay('Short verse')).toBe('Short verse')
       expect(bibleSearchSnippetForDisplay('Long verse text…')).toBe('Long verse text')
+      const long = 'x'.repeat(200)
+      expect(bibleSearchSnippetForDisplay(long).endsWith('…')).toBe(true)
+      expect(bibleSearchSnippetForDisplay(long).length).toBe(170)
     })
   })
 

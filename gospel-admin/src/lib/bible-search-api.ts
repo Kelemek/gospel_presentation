@@ -73,9 +73,17 @@ export function bibleSearchSnippetFromText(raw: string, maxLen = 240): string {
   return `${plain.slice(0, maxLen - 1)}…`
 }
 
-/** Strip server ellipsis so CSS line-clamp supplies the visual truncation only. */
-export function bibleSearchSnippetForDisplay(snippet: string): string {
-  return snippet.endsWith('…') ? snippet.slice(0, -1).trimEnd() : snippet
+/** ~3 lines in a search result card at text-sm on a narrow phone. */
+export const BIBLE_SEARCH_SNIPPET_DISPLAY_MAX_LEN = 170
+
+/** Plain-text snippet for the modal (no CSS line-clamp; iOS mis-measures -webkit-line-clamp). */
+export function bibleSearchSnippetForDisplay(
+  snippet: string,
+  maxLen = BIBLE_SEARCH_SNIPPET_DISPLAY_MAX_LEN
+): string {
+  const plain = snippet.endsWith('…') ? snippet.slice(0, -1).trimEnd() : snippet
+  if (plain.length <= maxLen) return plain
+  return `${plain.slice(0, maxLen - 1)}…`
 }
 
 function totalPagesFromCount(total: number, pageSize: number): number {

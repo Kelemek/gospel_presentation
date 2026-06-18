@@ -7,16 +7,13 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type KeyboardEvent,
 } from 'react'
 import type { BibleTranslation } from '@/lib/bible-translations'
 import type { BibleSearchPage } from '@/lib/bible-search-api'
 import { bibleSearchSnippetForDisplay } from '@/lib/bible-search-api'
 import { BIBLE_SEARCH_MIN_QUERY_LENGTH } from '@/lib/bible-search-api'
 import { splitBibleSearchSnippetByQuery } from '@/lib/bibleSearchSnippetHighlight'
-import {
-  RESOURCE_SEARCH_ACTIVE_ATTR,
-  RESOURCE_SEARCH_MATCH_ATTR,
-} from '@/lib/profileResourceInPageSearch'
 import { scriptureModalHeaderCloseButtonHoverOnlyClass } from '@/components/scriptureModalHeaderButtons'
 import { isProfileResourceSearchContentTouchBlurHost } from '@/lib/memorizationViewportPlatform'
 import { usePostHogModalOpen } from '@/hooks/usePostHogModalOpen'
@@ -26,23 +23,17 @@ const SEARCH_DEBOUNCE_MS = 250
 function BibleSearchSnippet({ snippet, query }: { snippet: string; query: string }) {
   const parts = splitBibleSearchSnippetByQuery(snippet, query)
   return (
-    <span className="bible-search-snippet__text">
+    <>
       {parts.map((part, index) =>
         part.match ? (
-          <mark
-            key={index}
-            {...{
-              [RESOURCE_SEARCH_MATCH_ATTR]: 'true',
-              [RESOURCE_SEARCH_ACTIVE_ATTR]: 'true',
-            }}
-          >
+          <mark key={index} className="bible-search-hit">
             {part.text}
           </mark>
         ) : (
           <span key={index}>{part.text}</span>
         )
       )}
-    </span>
+    </>
   )
 }
 
@@ -218,6 +209,20 @@ export default function BibleSearchModal({
     setPage((p) => p + 1)
   }
 
+  const handleSelectReference = (reference: string) => {
+    onSelectReference(reference)
+  }
+
+  const handleResultKeyDown = (
+    event: KeyboardEvent<HTMLDivElement>,
+    reference: string
+  ) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      handleSelectReference(reference)
+    }
+  }
+
   if (!isOpen) return null
 
   const sessionMatchesQuery = session != null && session.query === debouncedQ
@@ -285,13 +290,15 @@ export default function BibleSearchModal({
           ) : items.length === 0 && debouncedQ.length >= BIBLE_SEARCH_MIN_QUERY_LENGTH ? (
             <p className="text-sm text-slate-500 dark:text-slate-400">No verses found.</p>
           ) : items.length === 0 ? null : (
-            <ul className="space-y-2">
+            <div className="flex flex-col gap-2" role="list">
               {items.map((hit) => (
-                <li key={`${hit.reference}-${hit.snippet.slice(0, 40)}`}>
-                  <button
-                    type="button"
-                    onClick={() => onSelectReference(hit.reference)}
-                    className="w-full cursor-pointer overflow-clip isolate text-left rounded-md border border-slate-200 dark:border-slate-600 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors"
+                <div key={`${hit.reference}-${hit.snippet.slice(0, 40)}`} role="listitem">
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleSelectReference(hit.reference)}
+                    onKeyDown={(event) => handleResultKeyDown(event, hit.reference)}
+                    className="w-full cursor-pointer text-left rounded-md border border-slate-200 dark:border-slate-600 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/60 transition-colors"
                   >
                     <div className="text-sm font-semibold text-blue-700 dark:text-blue-300">
                       {hit.reference}
@@ -302,10 +309,10 @@ export default function BibleSearchModal({
                         query={debouncedQ}
                       />
                     </div>
-                  </button>
-                </li>
+                  </div>
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </div>
 
