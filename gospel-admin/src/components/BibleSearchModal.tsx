@@ -17,6 +17,7 @@ import {
   RESOURCE_SEARCH_MATCH_ATTR,
 } from '@/lib/profileResourceInPageSearch'
 import { scriptureModalHeaderCloseButtonHoverOnlyClass } from '@/components/scriptureModalHeaderButtons'
+import { isProfileResourceSearchContentTouchBlurHost } from '@/lib/memorizationViewportPlatform'
 import { usePostHogModalOpen } from '@/hooks/usePostHogModalOpen'
 
 const SEARCH_DEBOUNCE_MS = 250
@@ -73,6 +74,8 @@ export default function BibleSearchModal({
   const [error, setError] = useState('')
   const fetchSeqRef = useRef(0)
   const wasOpenRef = useRef(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   useLayoutEffect(() => {
     if (!isOpen) {
@@ -95,6 +98,36 @@ export default function BibleSearchModal({
     }, SEARCH_DEBOUNCE_MS)
     return () => window.clearTimeout(timer)
   }, [inputQ, isOpen])
+
+  /** Dismiss the keyboard when tapping or clicking elsewhere in the modal (panel stays open). */
+  useEffect(() => {
+    if (!isOpen) return
+    const panel = panelRef.current
+    if (!panel) return
+
+    const blurSearchIfOutside = (target: EventTarget | null) => {
+      const input = inputRef.current
+      if (!input || document.activeElement !== input) return
+      if (!(target instanceof Node) || input.contains(target)) return
+      input.blur()
+    }
+
+    const onTouchStart = (event: TouchEvent) => {
+      if (!isProfileResourceSearchContentTouchBlurHost()) return
+      blurSearchIfOutside(event.target)
+    }
+
+    const onMouseDown = (event: MouseEvent) => {
+      blurSearchIfOutside(event.target)
+    }
+
+    panel.addEventListener('touchstart', onTouchStart, { passive: true })
+    panel.addEventListener('mousedown', onMouseDown)
+    return () => {
+      panel.removeEventListener('touchstart', onTouchStart)
+      panel.removeEventListener('mousedown', onMouseDown)
+    }
+  }, [isOpen])
 
   const runSearch = useCallback(
     async (query: string, targetPage: number) => {
@@ -198,6 +231,7 @@ export default function BibleSearchModal({
       role="presentation"
     >
       <div
+        ref={panelRef}
         className="min-w-0 bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full max-h-[calc(100dvh-max(2.5rem,env(safe-area-inset-top,0))-max(2rem,max(48px,env(safe-area-inset-bottom,0))))] sm:max-h-[calc(100dvh-max(3.5rem,env(safe-area-inset-top,0))-max(2rem,max(48px,env(safe-area-inset-bottom,0))))] overflow-hidden flex flex-col"
         role="dialog"
         aria-modal="true"
@@ -223,13 +257,14 @@ export default function BibleSearchModal({
             Search Bible text
           </label>
           <input
+            ref={inputRef}
             id={inputId}
             type="search"
             value={inputQ}
             onChange={(e) => handleInputChange(e.target.value)}
             placeholder="Search words or phrases…"
             autoComplete="off"
-            className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+            className="w-full rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-base text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
           />
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Searching in {translationLabel}
