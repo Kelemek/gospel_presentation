@@ -566,7 +566,7 @@ function NestedSubsectionComponent({
       <FourRulesModal isOpen={showFourRulesModal} onClose={() => setShowFourRulesModal(false)} />
       <div id={nestedId} className="scroll-mt-20 ml-6 mt-4 pl-4 print-subsection">
         <h5 
-          className="font-medium text-slate-800 dark:text-slate-100 mb-2 print-subsection-title text-lg md:text-xl"
+          className="text-base md:text-lg font-medium text-slate-800 dark:text-slate-100 mb-2 print-subsection-title"
         >
           <TextWithComaButtons 
             text={nestedSubsection.title} 

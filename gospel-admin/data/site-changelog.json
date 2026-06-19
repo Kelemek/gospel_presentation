@@ -1343,5 +1343,10 @@
     "releasedAt": "2026-06-18",
     "committedAt": "2026-06-19T02:06:38.430Z",
     "message": "Small visual tweaks: tab bars fade as you scroll, long book names pan in the reader, and slimmer prev/next on phones."
+  },
+  {
+    "releasedAt": "2026-06-19",
+    "committedAt": "2026-06-19T15:11:04.211Z",
+    "message": "Spurgeon's Lectures to My Students is now available in the Books library."
   }
 ]

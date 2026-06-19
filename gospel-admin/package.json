@@ -39,6 +39,7 @@
     "import-reformed-pastor": "tsx scripts/import-reformed-pastor-ccel.ts",
     "import-ryle-holiness": "tsx scripts/import-ryle-holiness-ccel.ts",
     "import-pink-attributes": "tsx scripts/import-pink-attributes.ts",
+    "import-lectures-to-my-students": "tsx scripts/import-lectures-to-my-students.ts",
     "import-ryle-thoughts-for-young-men": "tsx scripts/import-ryle-thoughts-for-young-men-ccel.ts",
     "import-berkhof": "tsx scripts/import-berkhof-ccel.ts",
     "import-hodge": "tsx scripts/import-hodge-ccel.ts",

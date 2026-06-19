@@ -5,72 +5,74 @@ alwaysApply: true
 
 # Release changelogs (What's new + Help → Change log)
 
-When you finish **user-visible** changes that will deploy to production (UI, UX, content, fixes to broken flows), append **the same plain-language note** to **both**:
+## Agent checklist (required for every user-visible ship)
 
-1. [gospel-admin/data/deploy-update-changelog.json](gospel-admin/data/deploy-update-changelog.json) — string array for **What's new** / native restart alerts
-2. [gospel-admin/data/site-changelog.json](gospel-admin/data/site-changelog.json) — dated objects for **Help → Change log**
+When counselors or counselees might notice the change, **before you finish**:
 
-Users should see **identical wording** in both places.
+1. From **`gospel-admin/`**, run **one** command (updates **both** JSON files):
 
-**Preferred:** from `gospel-admin/`, run:
+   ```bash
+   npm run append-release-changelog -- "Your plain-language release note."
+   ```
 
-```bash
-npm run append-release-changelog -- "Your release note in plain language."
-```
+2. **Verify** (do not skip):
+   - `data/deploy-update-changelog.json` — array length **increased by 1**; new string is the **last** element
+   - `data/site-changelog.json` — array length **increased by 1**; new object is the **last** element with the **same `message`** text
+   - Deploy file length **did not shrink** (if `git diff` shows many deleted lines, you trimmed—undo and use step 1)
 
-That appends to both files in one step (`releaseChangelog.ts`). You may also append manually: add the string to the **end** of the deploy JSON array, and add `{ "releasedAt": "YYYY-MM-DD", "committedAt": "<ISO now>", "message": "<same string>" }` to the **end** of the site JSON array.
+3. **Bug fixes** in the note: start with **`Bug fix:`** (exact spelling), then plain-language description.
 
-`npm run generate-site-changelog` is **only** for one-time git history backfill — **not** part of normal agent workflow after shipping.
+**Do not** finish a user-visible task with changelog edits only in one file, or with a shorter deploy array than before.
 
-## Deploy JSON (`deploy-update-changelog.json`)
+## Forbidden (common mistakes)
 
-- **Oldest first, newest last** — never prepend at index `0`
-- **Append-only** — do not remove, reorder, or replace older entries (clients track read progress by **array index** from the start; deleting from the front breaks What's new for returning users)
-- **Never trim the file to a maximum length** — there is no “keep last N entries” rule. The UI already shows at most **five** unseen notes per alert; that cap is client-side only.
-- Each alert shows at most the **five newest** unseen notes; dismissing marks through the latest entry
+| Do not | Why |
+|--------|-----|
+| Trim `deploy-update-changelog.json` to “last 5” (or any max length) | Full history is stored; clients track read progress by **index from the start**. Trimming breaks What's new for returning users. |
+| Update only `deploy-update-changelog.json` | Help → Change log reads `site-changelog.json`; users must see the **same** wording in both places. |
+| Prepend, splice, shift, reorder, or replace existing entries | Append **only** at the end. |
+| `git checkout` the deploy file to “reset” then rewrite a short array | Restores history but agents often drop entries; use `append-release-changelog` instead. |
+| Use `npm run generate-site-changelog` after a normal ship | Backfill tool only—not for new release notes. |
 
-## Site JSON (`site-changelog.json`)
-
-- Same message text as the deploy entry for that release
-- **Oldest first, newest last** in the file; the modal groups by month (newest first)
-- `releasedAt`: calendar date (`YYYY-MM-DD`); `committedAt`: ISO timestamp for same-day ordering
+**There is no rule to cap the deploy JSON file at five strings.** The app shows at most **five unseen** notes per alert; that cap is **client-side only** (`capacitorDeployNotice.ts`).
 
 ## When to update
 
-- **Do update** for changes counselors or counselees might notice.
-- **Do not update** for internal-only work (tests, refactors, CI, docs-only, admin tooling with no user impact).
+- **Do update** for UI, UX, content, or fixes to broken flows users would notice.
+- **Do not update** for tests, refactors, CI, docs-only, or admin tooling with no user impact.
 - **Leave both files unchanged** when the release has nothing worth telling users.
 
 ## Writing rules
 
 - Plain language for app users — not developers.
 - No file paths, component names, APIs, “deploy”, “WebView”, “chunk”, or other technical terms.
-- **1–3 short sentences** or up to **3 brief bullets** per entry; aim for **~200 characters** (server caps each entry at 400).
+- **1–3 short sentences** or up to **3 brief bullets**; aim for **~200 characters** (server caps each entry at 400).
 - Calm and helpful tone; not marketing hype.
-- **Bug fixes** (broken behavior restored): always start the entry with **`Bug fix:`** (exact spelling and capitalization), then plain-language description.
 
 ## Examples
 
 - Good: `Bug fix: Fixed an issue where the menu could open an external browser on iPhone.`
-- Good: `Daily verse challenge: clearer feedback when you complete a day.`
+- Good: `Spurgeon's Lectures to My Students is now available in the Books library.`
 - Bad: `CapacitorKeepLinksInApp touchstart intercept; router.push for same-origin links.`
-- Bad: `Refactored capacitorDeployNotice controller and added Jest mocks.`
-- Bad: `Fixed concordance long-press.` (missing required `Bug fix:` prefix for a bug fix)
+- Bad: `Fixed concordance long-press.` (bug fix missing required `Bug fix:` prefix)
 
-## File format (deploy)
+## Files and formats
 
-The JSON file is a **string array in chronological order: oldest first, newest last.**
+| File | Purpose | Format |
+|------|---------|--------|
+| [gospel-admin/data/deploy-update-changelog.json](gospel-admin/data/deploy-update-changelog.json) | What's new / native restart | String array, **oldest first, newest last** |
+| [gospel-admin/data/site-changelog.json](gospel-admin/data/site-changelog.json) | Help → Change log | Object array, **oldest first, newest last**; `{ "releasedAt": "YYYY-MM-DD", "committedAt": "<ISO>", "message": "<same as deploy>" }` |
 
-1. **Append** the new note as the **last** element—never insert at index `0` or anywhere except the end.
-2. **Do not delete, splice, shift, or trim** older entries when adding a new one (the client tracks which indices the user has read). **Never** “keep only the last 5” in this file.
-3. Do not reorder existing entries when adding a new one.
+Implementation: [`releaseChangelog.ts`](gospel-admin/src/lib/releaseChangelog.ts) (`appendReleaseChangelog`), CLI [`append-release-changelog.ts`](gospel-admin/scripts/append-release-changelog.ts).
+
+Manual append (only if the npm script cannot run): add the string to the **end** of the deploy array, and add the object above to the **end** of the site array—**never** remove older deploy strings.
 
 ```json
 [
-  "Oldest note still shown.",
-  "Middle note.",
-  "This release note goes here — last item in the array."
+  "Oldest note still in file.",
+  "Previous release note.",
+  "This release note — must be the last array element."
 ]
 ```
 
-Shipped via `GET /api/app-deploy-version` as `changelog`. Full dated history: `GET /api/site-changelog` from `site-changelog.json`.
+Shipped via `GET /api/app-deploy-version` (`changelog`) and `GET /api/site-changelog`.

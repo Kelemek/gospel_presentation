@@ -891,7 +891,8 @@ export default function TableOfContents({
                             <a 
                               href={`#section-${section.section}-${index}-${originalNestedIndex}`}
                               onClick={(e) => handleTocClick(e, `#section-${section.section}-${index}-${originalNestedIndex}`, onNavigate)}
-                              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 active:text-blue-900 dark:active:text-blue-200 text-sm py-2 md:py-1.5 px-3 md:px-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 active:bg-blue-100 dark:active:bg-blue-900/50 transition-colors min-h-[40px] flex items-center leading-relaxed"
+                              title={stripHtmlTags(nested.title)}
+                              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 active:text-blue-900 dark:active:text-blue-200 text-xs md:text-xs font-normal py-1.5 md:py-1 px-3 md:px-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 active:bg-blue-100 dark:active:bg-blue-900/50 transition-colors flex items-start leading-snug line-clamp-3"
                             >
                               {stripHtmlTags(nested.title)}
                             </a>
