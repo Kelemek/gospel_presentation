@@ -73,6 +73,7 @@ const MEMORIZE_LISTEN_CLOSE = '[data-tour="memorize-listen-close"]'
 /** Number of driver.js steps for Listen → read-aloud panel walkthrough; must match the block in `runMemorizeFeatureTourOnCurrentPage`. */
 const MEMORIZE_READ_ALOUD_TOUR_STEPS = 5
 const TOC_SECTION_LINKS = '[data-tour="toc-section-links"]'
+const TOC_SECTION_TOGGLE = '[data-tour="toc-section-toggle"]'
 const TOC_VERSE_PINS = '[data-tour="toc-verse-pins"]'
 const TOC_RESET_PROGRESS = '[data-tour="toc-reset-progress"]'
 const SCRIPTURE_CARD = '[data-tour="scripture-card"]'
@@ -2542,7 +2543,7 @@ export function runTableOfContentsFeatureTour(options?: ProfileFeatureTourOption
         popover: {
           title: 'Menu',
           description:
-            'Tap the <strong>menu icon</strong> (top-left) to open the slide-out. At the top you will find <strong>Resources</strong>, <strong>Text size</strong>, <strong>Print</strong>, and <strong>Bible translation</strong>, with <strong>Memorize</strong> just below <strong>Bible translation</strong>. Below that is the <strong>table of contents</strong>—links that match each section of this presentation. Use <strong>Next</strong> to open the menu for this tour.',
+            'Tap the <strong>menu icon</strong> (top-left) to open the slide-out <strong>Menu</strong>. At the top you will find <strong>Resources</strong>, <strong>Text size</strong>, <strong>Print</strong>, and <strong>Bible translation</strong>, with <strong>Memorize</strong> just below <strong>Bible translation</strong>. Below that is <strong>Table of Contents</strong>—open it to jump to sections in this presentation. Use <strong>Next</strong> to open the slide-out for this tour.',
           side: 'bottom',
           align: 'start',
           onNextClick: (_e, _s, { driver: drv }) => {
@@ -2556,13 +2557,14 @@ export function runTableOfContentsFeatureTour(options?: ProfileFeatureTourOption
       },
       {
         element: () =>
+          document.querySelector(TOC_SECTION_TOGGLE) ??
           document.querySelector(TOC_SECTION_LINKS) ??
           document.querySelector(PROFILE_SLIDEOUT_MENU) ??
           document.body,
         popover: {
-          title: 'Navigate this presentation',
+          title: 'Table of Contents',
           description:
-            'These blue links list every main section and subsection. Tap one to <strong>jump</strong> to that part of the page without leaving this profile. On a long presentation, scroll inside the menu to see them all. Matching anchors are also used when you <strong>bookmark</strong> your place.',
+            'Open <strong>Table of Contents</strong>, expand a section, then tap a subsection to <strong>jump</strong> to that part of the page without leaving this profile. On a long presentation, expand nested rows for smaller headings. Matching anchors are also used when you <strong>bookmark</strong> your place.',
           side: 'right',
           align: 'start',
         },

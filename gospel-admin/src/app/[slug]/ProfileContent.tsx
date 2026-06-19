@@ -2532,7 +2532,7 @@ function ProfileContent({
 
               <div className="flex items-center justify-between mb-6 pb-3 border-b border-gray-200 dark:border-slate-600">
                 <h3 className="text-xl font-semibold text-slate-700 dark:text-slate-200">
-                  Table of Contents
+                  Menu
                 </h3>
                 <button
                   type="button"

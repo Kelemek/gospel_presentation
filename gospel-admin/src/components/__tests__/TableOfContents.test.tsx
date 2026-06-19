@@ -1,5 +1,6 @@
 import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import TableOfContents from '../TableOfContents'
 import { GospelSection } from '@/lib/types'
 import { TextSizeProvider } from '@/contexts/TextSizeContext'
@@ -7,6 +8,10 @@ import { TextSizeProvider } from '@/contexts/TextSizeContext'
 function renderToc(ui: React.ReactElement) {
   return render(<TextSizeProvider>{ui}</TextSizeProvider>)
 }
+
+jest.mock('@/lib/scrollToTocAnchor', () => ({
+  scrollToTocAnchor: jest.fn(() => true),
+}))
 
 // Mock Next.js router
 const mockPush = jest.fn()
@@ -31,8 +36,16 @@ jest.mock('@capgo/capacitor-printer', () => ({
 // Mock window.scrollTo
 Object.defineProperty(window, 'scrollTo', {
   value: jest.fn(),
-  writable: true
+  writable: true,
 })
+
+async function openPresentationMenu(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: /^Table of Contents$/ }))
+}
+
+async function expandSection(user: ReturnType<typeof userEvent.setup>, title: string) {
+  await user.click(screen.getByRole('button', { name: new RegExp(`^Expand ${title}$`) }))
+}
 
 describe('TableOfContents Component', () => {
   const mockSections: GospelSection[] = [
@@ -44,17 +57,17 @@ describe('TableOfContents Component', () => {
           title: 'A. God is Holy',
           content: 'Test content',
           scriptureReferences: [
-            { reference: 'Isaiah 6:3', favorite: true }
-          ]
+            { reference: 'Isaiah 6:3', favorite: true },
+          ],
         },
         {
           title: 'B. God is Love',
           content: 'Test content',
           scriptureReferences: [
-            { reference: '1 John 4:8', favorite: false }
-          ]
-        }
-      ]
+            { reference: '1 John 4:8', favorite: false },
+          ],
+        },
+      ],
     },
     {
       section: '2',
@@ -64,55 +77,74 @@ describe('TableOfContents Component', () => {
           title: 'A. Man is Sinful',
           content: 'Test content',
           scriptureReferences: [
-            { reference: 'Romans 3:23', favorite: true }
-          ]
-        }
-      ]
-    }
+            { reference: 'Romans 3:23', favorite: true },
+          ],
+        },
+      ],
+    },
   ]
 
   beforeEach(() => {
     jest.clearAllMocks()
   })
 
-  it('should render all sections and subsections', () => {
+  it('should render sections and subsections inside Menu dropdown', async () => {
+    const user = userEvent.setup()
     renderToc(<TableOfContents sections={mockSections} />)
 
-  // Check main sections (title text may be rendered without numeric prefix)
-  expect(screen.getByText('God')).toBeInTheDocument()
-  expect(screen.getByText('Man')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Table of Contents$/ })).toBeInTheDocument()
+    expect(screen.queryByText('A. God is Holy')).not.toBeInTheDocument()
 
-    // Check subsections
+    await openPresentationMenu(user)
+    await expandSection(user, 'God')
+
     expect(screen.getByText('A. God is Holy')).toBeInTheDocument()
     expect(screen.getByText('B. God is Love')).toBeInTheDocument()
+
+    await expandSection(user, 'Man')
     expect(screen.getByText('A. Man is Sinful')).toBeInTheDocument()
   })
 
-  it('should handle section clicks and scroll to section', () => {
-    renderToc(<TableOfContents sections={mockSections} />)
+  it('should handle section clicks when the section has no subsections', async () => {
+    const user = userEvent.setup()
+    renderToc(
+      <TableOfContents
+        sections={[
+          {
+            section: '1',
+            title: 'Introduction',
+            subsections: [],
+          },
+        ]}
+      />
+    )
 
-  const sectionLink = screen.getByText('God')
-    // component renders anchor links with fragment hrefs
+    await openPresentationMenu(user)
+    const sectionLink = screen.getByRole('link', { name: 'Introduction' })
     expect(sectionLink).toHaveAttribute('href', '#section-1')
   })
 
-  it('should handle subsection clicks and scroll to subsection', () => {
+  it('should handle subsection clicks and scroll to subsection', async () => {
+    const user = userEvent.setup()
     renderToc(<TableOfContents sections={mockSections} />)
 
-    const subsectionLink = screen.getByText('A. God is Holy')
+    await openPresentationMenu(user)
+    await expandSection(user, 'God')
+    const subsectionLink = screen.getByRole('link', { name: 'A. God is Holy' })
     expect(subsectionLink).toHaveAttribute('href', '#section-1-0')
   })
 
-  it('should handle missing DOM elements gracefully', () => {
+  it('should handle missing DOM elements gracefully', async () => {
+    const user = userEvent.setup()
     renderToc(<TableOfContents sections={mockSections} />)
-    // The component renders section titles without numeric prefixes; click
-    // the visible link text instead of expecting a prefixed label.
-    const sectionLink = screen.getByText('God')
-    // clicking the anchor should not throw even if target element isn't present
-    expect(() => fireEvent.click(sectionLink)).not.toThrow()
+
+    await openPresentationMenu(user)
+    await expandSection(user, 'God')
+    const subsectionLink = screen.getByRole('link', { name: 'A. God is Holy' })
+    expect(() => fireEvent.click(subsectionLink)).not.toThrow()
   })
 
-  it('should render nested subsections (level 3) if present', () => {
+  it('should render nested subsections (level 3) if present', async () => {
     const sectionsWithNested: GospelSection[] = [
       {
         section: '1',
@@ -127,52 +159,52 @@ describe('TableOfContents Component', () => {
                 title: 'i. Definition of Holiness',
                 content: 'Nested content',
                 scriptureReferences: [
-                  { reference: 'Leviticus 11:44', favorite: false }
-                ]
-              }
-            ]
-          }
-        ]
-      }
+                  { reference: 'Leviticus 11:44', favorite: false },
+                ],
+              },
+            ],
+          },
+        ],
+      },
     ]
 
+    const user = userEvent.setup()
     renderToc(<TableOfContents sections={sectionsWithNested} />)
 
-    expect(screen.getByText('i. Definition of Holiness')).toBeInTheDocument()
-    const nestedLink = screen.getByText('i. Definition of Holiness')
+    await openPresentationMenu(user)
+    await expandSection(user, 'God')
+    await expandSection(user, 'A. God is Holy')
+
+    const nestedLink = screen.getByRole('link', { name: 'i. Definition of Holiness' })
     expect(nestedLink).toHaveAttribute('href', '#section-1-0-0')
   })
 
-  it('should apply correct styling classes', () => {
+  it('should apply correct styling classes on Menu button', () => {
     const { container } = renderToc(<TableOfContents sections={mockSections} />)
 
     const tocContainer = container.firstChild as HTMLElement
-    // component now renders a root div with spacing classes
     expect(tocContainer).toHaveClass('space-y-4')
 
-    // Check for section styling
-  const sectionButton = screen.getByText('God')
-    expect(sectionButton).toHaveClass('text-blue-600', 'hover:text-blue-800', 'font-medium')
+    const tocButton = screen.getByRole('button', { name: /^Table of Contents$/ })
+    expect(tocButton).toHaveClass('rounded-lg')
   })
 
-  it('should handle empty sections array', () => {
+  it('should hide Menu when sections array is empty', () => {
     const { container } = renderToc(<TableOfContents sections={[]} />)
 
     const tocContainer = container.firstChild as HTMLElement
     expect(tocContainer).toBeInTheDocument()
-  // With no sections the component still renders the print/admin controls
-  // The exact wording varies; assert the primary control exists
-  expect(screen.getByText(/Print/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Table of Contents$/ })).not.toBeInTheDocument()
+    expect(screen.getByText(/Print/i)).toBeInTheDocument()
   })
 
-  it('should render with proper accessibility attributes', () => {
-    const { container } = renderToc(<TableOfContents sections={mockSections} />)
+  it('should render subsection links as anchors inside Menu', async () => {
+    const user = userEvent.setup()
+    renderToc(<TableOfContents sections={mockSections} />)
 
-    const root = container.firstChild as HTMLElement
-    expect(root).toBeInTheDocument()
-
-    // Check that section items are rendered as links
-  const sectionButton = screen.getByText('God')
-    expect(sectionButton.tagName).toBe('A')
+    await openPresentationMenu(user)
+    await expandSection(user, 'God')
+    const subsectionLink = screen.getByRole('link', { name: 'A. God is Holy' })
+    expect(subsectionLink.tagName).toBe('A')
   })
 })

@@ -14,8 +14,6 @@ import { useTranslation, BibleTranslation } from '@/contexts/TranslationContext'
 import { useTextSize } from '@/contexts/TextSizeContext'
 import { Capacitor } from '@capacitor/core'
 import { Printer } from '@capgo/capacitor-printer'
-import { stripHtmlTags } from '@/lib/stripHtmlTags'
-import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
 import {
   BIBLE_READER_DEFAULT_MENU_TITLE,
   groupPublicResourceItems,
@@ -43,6 +41,7 @@ import {
   readPublicResourcesMenuCache,
   shouldLoadPublicResourcesMenu,
 } from '@/lib/publicResourcesMenuClient'
+import PresentationTocDropdown from '@/components/PresentationTocDropdown'
 
 interface TableOfContentsProps {
   sections: GospelSection[]
@@ -65,24 +64,6 @@ interface TableOfContentsProps {
   onOpenEdwardsLibrary?: (menuTitle?: string) => void
   /** Opens the Bible passage picker (main menu, same row style as Text size / Print). */
   onOpenBibleReader?: () => void
-}
-
-// Helper to check if a title is blank (used to filter out empty TOC entries)
-function isTitleBlank(title: string | undefined): boolean {
-  return !stripHtmlTags(title ?? '').trim()
-}
-
-function handleTocClick(
-  e: React.MouseEvent<HTMLAnchorElement>,
-  href: string,
-  onNavigate?: () => void
-) {
-  if (!href.startsWith('#')) return
-  const id = href.slice(1)
-  if (scrollToTocAnchor(id)) {
-    e.preventDefault()
-    onNavigate?.()
-  }
 }
 
 function resourceTemplateLinkClassName(readComplete: boolean, nested: boolean): string {
@@ -841,73 +822,22 @@ export default function TableOfContents({
         )}
       </div>
 
-      <div className="pb-4 border-b border-slate-200 dark:border-slate-600">
-        <button
-          type="button"
-          data-tour="toc-print-version"
-          onClick={handlePrint}
-          className={resourcesRowClassName}
-        >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-          </svg>
-          Print Version
-        </button>
-      </div>
-      <div data-tour="toc-section-links">
-      {sections.map((section) => (
-        <div key={section.section} className="mb-4 md:mb-3">
-          <a 
-            href={`#section-${section.section}`}
-            onClick={(e) => handleTocClick(e, `#section-${section.section}`, onNavigate)}
-            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 active:text-blue-900 dark:active:text-blue-200 font-medium text-xl md:text-lg mb-3 md:mb-2 py-3 md:py-2 px-4 md:px-3 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 active:bg-blue-100 dark:active:bg-blue-900/50 transition-colors min-h-[52px] flex items-center"
-          >
-            {stripHtmlTags(section.title)}
-          </a>
-          <ul className="ml-2 md:ml-4 space-y-2 md:space-y-1">
-            {section.subsections.map((subsection, index) => {
-              const nestedSubsections = subsection.nestedSubsections?.filter((n) => !isTitleBlank(n.title)) ?? []
-              const hasVisibleNested = nestedSubsections.length > 0
-              const subsectionTitleBlank = isTitleBlank(subsection.title)
-              // Skip subsections that have neither a title nor visible nested items
-              if (subsectionTitleBlank && !hasVisibleNested) return null
-              return (
-                <li key={index}>
-                  {!subsectionTitleBlank && (
-                    <a 
-                      href={`#section-${section.section}-${index}`}
-                      onClick={(e) => handleTocClick(e, `#section-${section.section}-${index}`, onNavigate)}
-                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 active:text-blue-900 dark:active:text-blue-200 text-base md:text-sm py-3 md:py-2 px-4 md:px-3 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 active:bg-blue-100 dark:active:bg-blue-900/50 transition-colors min-h-[48px] flex items-center leading-relaxed"
-                    >
-                      {stripHtmlTags(subsection.title)}
-                    </a>
-                  )}
-                  {hasVisibleNested && (
-                    <ul className="ml-2 md:ml-4 mt-1 space-y-1">
-                      {nestedSubsections.map((nested, nestedIndex) => {
-                        const originalNestedIndex = subsection.nestedSubsections!.indexOf(nested)
-                        return (
-                          <li key={nestedIndex}>
-                            <a 
-                              href={`#section-${section.section}-${index}-${originalNestedIndex}`}
-                              onClick={(e) => handleTocClick(e, `#section-${section.section}-${index}-${originalNestedIndex}`, onNavigate)}
-                              title={stripHtmlTags(nested.title)}
-                              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 active:text-blue-900 dark:active:text-blue-200 text-xs md:text-xs font-normal py-1.5 md:py-1 px-3 md:px-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 active:bg-blue-100 dark:active:bg-blue-900/50 transition-colors flex items-start leading-snug line-clamp-3"
-                            >
-                              {stripHtmlTags(nested.title)}
-                            </a>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-      ))}
-      </div>
+      <button
+        type="button"
+        data-tour="toc-print-version"
+        onClick={handlePrint}
+        className={resourcesRowClassName}
+      >
+        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+        </svg>
+        Print Version
+      </button>
+      <PresentationTocDropdown
+        sections={sections}
+        rowClassName={resourcesRowClassName}
+        onNavigate={onNavigate}
+      />
     </div>
   )
 }
