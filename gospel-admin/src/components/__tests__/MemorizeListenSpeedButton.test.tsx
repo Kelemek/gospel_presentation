@@ -25,4 +25,16 @@ describe('MemorizeListenSpeedButton', () => {
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
   })
+
+  it('highlights the selected speed with blue theme', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemorizeListenSpeedButton value={1.5} onSelect={jest.fn()} inline />
+    )
+    await user.click(screen.getByTestId('memorize-listen-speed'))
+    const selected = screen.getByTestId('memorize-listen-speed-option-1.5')
+    expect(selected).toHaveAttribute('aria-selected', 'true')
+    expect(selected.className).toContain('bg-blue-100')
+    expect(selected.className).toContain('text-blue-800')
+  })
 })

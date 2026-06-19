@@ -25,8 +25,13 @@ function replaceVerseMarkers(
 }
 
 function replaceParagraphBreaks(text: string): string {
-  return text.replace(/\n\n/g, '</p><p class="mt-4">')
+  if (!/\n\n/.test(text)) return text
+  return `<p>${text.replace(/\n\n/g, '</p><p>')}</p>`
 }
+
+/** Tailwind typography wrapper for scripture HTML (`<p>` blocks from {@link replaceParagraphBreaks}). */
+export const SCRIPTURE_READER_PROSE_CLASS =
+  'prose max-w-none prose-p:my-0 prose-p:first:mt-0 [&_p+p]:mt-2'
 
 export interface ScripturePassageSavedHighlight {
   id: string

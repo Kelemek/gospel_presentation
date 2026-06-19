@@ -43,4 +43,37 @@ describe('fetchScripture', () => {
 
     await expect(fetchScripture('John 3:16', 'niv')).rejects.toThrow('API.Bible error: 500')
   })
+
+  it('formats JSON passage content with paragraph breaks for KJV', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        data: {
+          content: [
+            {
+              name: 'para',
+              type: 'tag',
+              items: [
+                {
+                  name: 'verse',
+                  type: 'tag',
+                  attrs: { number: '16' },
+                  items: [{ text: '16', type: 'text' }],
+                },
+                { text: 'For God so loved the world.', type: 'text' },
+              ],
+            },
+          ],
+        },
+      }),
+    } as Response)
+
+    const result = await fetchScripture('John 3:16', 'kjv')
+    expect(result.text).toBe('[16] For God so loved the world.')
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('content-type=json'),
+      expect.any(Object)
+    )
+  })
 })

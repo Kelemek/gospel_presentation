@@ -76,6 +76,7 @@ import { studyResourcesAvailableFromPayload } from '@/lib/studyResourcesAvailabi
 import {
   formatScriptureChapterHtml,
   formatScripturePassageHtml,
+  SCRIPTURE_READER_PROSE_CLASS,
   type ScripturePassageSavedHighlight,
 } from '@/lib/scripturePassageHtml'
 import {
@@ -1853,7 +1854,7 @@ export default function ScriptureModal({
                         </span>
                       )}
                       {!showingContext && compareText && (
-                        <div className="prose max-w-none">
+                        <div className={SCRIPTURE_READER_PROSE_CLASS}>
                           <ScripturePassageText
                             html={formatPrimaryPassageHtml(compareText, false)}
                             onLongPress={handlePassageLongPress}
@@ -1861,7 +1862,7 @@ export default function ScriptureModal({
                         </div>
                       )}
                       {showingContext && compareChapterText && (
-                        <div className="prose max-w-none">
+                        <div className={SCRIPTURE_READER_PROSE_CLASS}>
                           <ScripturePassageText
                             html={formatChapterContextHtml(compareChapterText, {
                               clickableVerseNumbers: false,
@@ -1876,7 +1877,7 @@ export default function ScriptureModal({
                         {translation}
                       </span>
                       {!showingContext && scriptureText && (
-                        <div className="prose max-w-none" data-tour="scripture-modal-verse-body">
+                        <div className={SCRIPTURE_READER_PROSE_CLASS} data-tour="scripture-modal-verse-body">
                           <ScripturePassageText
                             html={formatPrimaryPassageHtml(scriptureText, false)}
                             innerRef={passageScopeRef}
@@ -1885,7 +1886,7 @@ export default function ScriptureModal({
                         </div>
                       )}
                       {showingContext && chapterText && (
-                        <div className="prose max-w-none">
+                        <div className={SCRIPTURE_READER_PROSE_CLASS}>
                           <ScripturePassageText
                             id="chapter-content"
                             data-tour="scripture-modal-chapter-body"
@@ -1931,7 +1932,7 @@ export default function ScriptureModal({
                 {!error && showPassageSwipeLayer ? (
                   <>
                     {!showingContext && scriptureText && (
-                      <div className="prose max-w-none" data-tour="scripture-modal-verse-body">
+                      <div className={SCRIPTURE_READER_PROSE_CLASS} data-tour="scripture-modal-verse-body">
                         <ScripturePassageText
                           html={formatPrimaryPassageHtml(scriptureText, false)}
                           innerRef={passageScopeRef}
@@ -1940,7 +1941,7 @@ export default function ScriptureModal({
                       </div>
                     )}
                     {showingContext && chapterText && (
-                      <div className="prose max-w-none">
+                      <div className={SCRIPTURE_READER_PROSE_CLASS}>
                         <ScripturePassageText
                           id="chapter-content"
                           data-tour="scripture-modal-chapter-body"

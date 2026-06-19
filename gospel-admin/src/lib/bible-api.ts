@@ -2,7 +2,7 @@
 // Supports ESV (api.esv.org) and API.Bible (KJV/NASB/LSB/NIV/NLT/CSB)
 
 import type { ApiBibleTranslation, BibleTranslation } from '@/lib/bible-translations'
-import { formatApiBiblePassageText } from '@/lib/api-bible-format'
+import { formatApiBiblePassageContent } from '@/lib/api-bible-format'
 import { referenceToApiBiblePassageId } from '@/lib/api-bible-passage-id'
 import { logger } from '@/lib/logger'
 import { scriptureReferenceForPassageQuery } from '@/lib/parse-scripture-reference'
@@ -86,8 +86,8 @@ async function fetchFromApiBible(
   }
 
   const base = (process.env.API_BIBLE_BASE_URL || 'https://rest.api.bible').replace(/\/$/, '')
-  /** `include-titles=false` asks API.Bible not to add section titles in passage content (see API reference). */
-  const url = `${base}/v1/bibles/${encodeURIComponent(bibleId)}/passages/${encodeURIComponent(passageId)}?content-type=text&include-verse-numbers=true&include-titles=false`
+  /** JSON `para` nodes preserve paragraph breaks; `include-titles=false` omits section titles. */
+  const url = `${base}/v1/bibles/${encodeURIComponent(bibleId)}/passages/${encodeURIComponent(passageId)}?content-type=json&include-verse-numbers=true&include-titles=false`
 
   const response = await fetch(url, {
     headers: {
@@ -102,13 +102,18 @@ async function fetchFromApiBible(
     throw new Error(`API.Bible error: ${response.status}`)
   }
 
-  const payload = (await response.json()) as { data?: { content?: string } }
+  const payload = (await response.json()) as { data?: { content?: unknown } }
   const content = payload?.data?.content
-  if (typeof content !== 'string' || !content.trim()) {
+  if (content == null || (typeof content === 'string' && !content.trim())) {
     throw new Error('Scripture text not found')
   }
 
-  const text = formatApiBiblePassageText(content)
+  const text =
+    typeof content === 'string'
+      ? formatApiBiblePassageContent(content)
+      : Array.isArray(content)
+        ? formatApiBiblePassageContent(content)
+        : ''
   if (!text.trim()) {
     throw new Error('Scripture text not found')
   }

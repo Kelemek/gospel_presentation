@@ -124,7 +124,7 @@ On profile gospel pages, **ScriptureModal** includes a **Greek**, **Hebrew**, or
 2. **Cache hit** → return stored text (HTTP `Cache-Control: no-store`; only `scripture_cache` dedupes). Keys use `referenceToApiBiblePassageId` when the reference parses (e.g. `Psalms 23:4a` and `Psalm 23:4` → `PSA.23.4`); otherwise a normalized string fallback.
 3. **Cache miss** → call **ESV API** or **API.Bible** (`fetchScripture` in `bible-api.ts`) → upsert `scripture_cache` → run **`enforce_esv_cache_limit`** or **`enforce_translation_cache_limit`**.
 
-**Headings vs. verse text**: ESV requests use `include-headings=false`. API.Bible passage requests use **`include-titles=false`** so section titles are not requested in the response (see API reference: `include-titles` controls “Include section titles in content”). `formatApiBiblePassageText` only normalizes whitespace and verse-number shapes for display; it does not remove scripture.
+**Headings vs. verse text**: ESV requests use `include-headings=false`. API.Bible passage requests use **`content-type=json`** with **`include-titles=false`** so section titles are not requested; `formatApiBiblePassageContent` maps each JSON `para` node to a paragraph (`\n\n` between blocks) and `[n]` verse markers for display. Search snippets and legacy cached plain text still use the string normalizer in `formatApiBiblePassageText`.
 
 ### Verse Range Handling
 Scripture references can include verse ranges using hyphens or en-dashes:

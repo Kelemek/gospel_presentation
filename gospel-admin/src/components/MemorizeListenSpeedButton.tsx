@@ -24,12 +24,15 @@ const triggerButtonClass =
 const triggerButtonInteractiveClass = `${triggerButtonClass} cursor-pointer disabled:cursor-not-allowed`
 
 /** Option rows aligned with Word/Line segment buttons inside the same dialog. */
-const optionButtonClass =
-  'flex items-center justify-start rounded-md px-2 py-2 min-h-[38px] w-full gap-2 text-sm font-medium transition-colors ' +
-  'text-slate-700 dark:text-slate-200 ' +
-  'hover:bg-slate-50 dark:hover:bg-slate-700 ' +
-  'aria-selected:bg-amber-50 dark:aria-selected:bg-amber-900/25 aria-selected:text-amber-900 dark:aria-selected:text-amber-100 ' +
+const optionButtonBaseClass =
+  'flex items-center justify-start rounded-md px-2 py-2 min-h-[38px] w-full gap-2 text-sm font-medium transition-colors cursor-pointer ' +
   'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-500'
+
+const optionButtonSelectedClass =
+  'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200'
+
+const optionButtonUnselectedClass =
+  'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700'
 
 export interface MemorizeListenSpeedButtonProps {
   value: MemorizeListenSpeed
@@ -154,19 +157,22 @@ export function MemorizeListenSpeedButton({
         }}
         className="flex min-w-32 flex-col gap-0.5 rounded-lg border border-slate-300 bg-white p-1 shadow-lg dark:border-slate-600 dark:bg-slate-800 text-slate-800 dark:text-slate-100"
       >
-        {options.map((rate) => (
+        {options.map((rate) => {
+          const selected = rate === value
+          return (
           <button
             key={String(rate)}
             type="button"
             role="option"
             data-testid={`memorize-listen-speed-option-${rate}`}
-            aria-selected={rate === value}
-            className={`${optionButtonClass} cursor-pointer`}
+            aria-selected={selected}
+            className={`${optionButtonBaseClass} ${selected ? optionButtonSelectedClass : optionButtonUnselectedClass}`}
             onClick={() => choose(rate)}
           >
             {formatMemorizeListenSpeedLabel(rate)}
           </button>
-        ))}
+          )
+        })}
       </div>
     ) : null
 

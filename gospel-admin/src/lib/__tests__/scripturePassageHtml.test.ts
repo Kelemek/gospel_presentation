@@ -26,7 +26,8 @@ describe('formatScripturePassageHtml', () => {
       showVerseNumbers: true,
     })
     expect(html).toContain('<sup class="text-blue-600 font-medium">1</sup>')
-    expect(html).toContain('</p><p class="mt-4">')
+    expect(html).toContain('</p><p>')
+    expect(html).toMatch(/^<p>[\s\S]*<\/p>$/)
     expect(html).toContain('<sup class="text-blue-600 font-medium">2</sup>')
   })
 
