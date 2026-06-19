@@ -19,6 +19,7 @@ import { useTextSize } from '@/contexts/TextSizeContext'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import { usePostHogModalOpen } from '@/hooks/usePostHogModalOpen'
 import {
+  buildVerseRangeReferenceFromChapter,
   isChapterOnlyScriptureReference,
   parseReference,
   scriptureReferenceForPassageQuery,
@@ -49,6 +50,7 @@ import BibleSearchModal from '@/components/BibleSearchModal'
 import ScriptureModalChapterListen from '@/components/ScriptureModalChapterListen'
 import type { BibleSearchPage } from '@/lib/bible-search-api'
 import ScripturePassageText from '@/components/ScripturePassageText'
+import ScriptureChapterVersePickerDialog from '@/components/ScriptureChapterVersePickerDialog'
 import ScripturePassageSwipeLayer from '@/components/ScripturePassageSwipeLayer'
 import { usePassageAnchorKey } from '@/hooks/usePassageAnchorKey'
 import {
@@ -61,6 +63,13 @@ import {
   wordStudyAvailableFromReference,
   wordStudyLanguageLabelFromReference,
 } from '@/lib/step-bible-reference'
+import {
+  EMPTY_VERSE_RANGE_SELECTION,
+  nextVerseRangeSelection,
+  verseNumbersInRange,
+  type VerseRangeSelection,
+} from '@/lib/bibleVerseRangeSelection'
+import { verseCountForChapterReference } from '@/lib/chapterVerseCount'
 import type { ScriptureModalPresentationLocation } from '@/lib/presentationLocationFromAnchors'
 import { clearProfileResourceSearchMarks } from '@/lib/profileResourceInPageSearch'
 import { studyResourcesAvailableFromPayload } from '@/lib/studyResourcesAvailability'
@@ -142,6 +151,14 @@ function getVerseNumbers(verseRef: string): number[] {
 function shouldResetChapterPaneScrollTop(verseRef: string): boolean {
   const verseNumbers = getVerseNumbers(verseRef)
   return verseNumbers.length === 0 || isChapterOnlyScriptureReference(verseRef)
+}
+
+function getChapterReference(verseRef: string): string {
+  const match = verseRef.match(/^(.+?)\s+(\d+)(?::\d+)?(?:-\d+)?/)
+  if (match) {
+    return `${match[1]} ${match[2]}`
+  }
+  return verseRef
 }
 
 interface ScriptureModalProps {
@@ -435,6 +452,14 @@ export default function ScriptureModal({
     [reference]
   )
 
+  const [chapterVerseSelection, setChapterVerseSelection] =
+    useState<VerseRangeSelection>(EMPTY_VERSE_RANGE_SELECTION)
+  const [chapterVersePickerReading, setChapterVersePickerReading] = useState(false)
+
+  const chapterRefForPicker = useMemo(() => getChapterReference(reference), [reference])
+  const chapterRefForPickerRef = useRef(chapterRefForPicker)
+  const chapterVerseReadPendingRef = useRef(false)
+
   const chapterSavedHighlights = useMemo((): ScripturePassageSavedHighlight[] => {
     if (!isChapterTab) return []
     void scriptureHighlightsRevision
@@ -454,14 +479,22 @@ export default function ScriptureModal({
       .filter((row): row is ScripturePassageSavedHighlight => row !== null)
   }, [isChapterTab, reference, scriptureHighlightsRevision])
 
+  const chapterHighlightVerses = useMemo(() => {
+    const base = getVerseNumbers(reference)
+    if (chapterVerseSelection.verseStart === null) return base
+    const pickerVerses = verseNumbersInRange(chapterVerseSelection)
+    return [...new Set([...base, ...pickerVerses])].sort((a, b) => a - b)
+  }, [reference, chapterVerseSelection])
+
   const processChapterText = useCallback(
-    (text: string): string =>
+    (text: string, options?: { clickableVerseNumbers?: boolean }): string =>
       formatScriptureChapterHtml(text, {
         showVerseNumbers,
-        highlightVerses: getVerseNumbers(reference),
+        highlightVerses: chapterHighlightVerses,
         savedHighlights: chapterSavedHighlights,
+        clickableVerseNumbers: options?.clickableVerseNumbers ?? !!onNavigateReference,
       }),
-    [reference, showVerseNumbers, chapterSavedHighlights]
+    [chapterHighlightVerses, showVerseNumbers, chapterSavedHighlights, onNavigateReference]
   )
 
   const formatPassageText = useCallback(
@@ -477,7 +510,8 @@ export default function ScriptureModal({
 
   /** Chapter-only tabs: per-verse marks in chapter view. Verse tabs: blue box only (no colored tint). */
   const formatChapterContextHtml = useCallback(
-    (text: string): string => processChapterText(text),
+    (text: string, options?: { clickableVerseNumbers?: boolean }): string =>
+      processChapterText(text, options),
     [processChapterText]
   )
 
@@ -508,6 +542,16 @@ export default function ScriptureModal({
     chapterView.text.length > 0
 
   const chapterText = showingContext ? chapterView.text : ''
+
+  const chapterVersePickerVisible =
+    showingContext &&
+    isOpen &&
+    (chapterVerseSelection.verseStart !== null || chapterVersePickerReading)
+
+  const chapterVerseCount = useMemo(
+    () => verseCountForChapterReference(chapterRefForPicker, chapterText || undefined),
+    [chapterRefForPicker, chapterText]
+  )
 
   const scriptureTabInput = useMemo((): RecordScriptureLastOpenInput | undefined => {
     const slug = profileSlug?.trim()
@@ -547,6 +591,54 @@ export default function ScriptureModal({
     },
     [onNavigateReference]
   )
+
+  const handleChapterVerseNumberClick = useCallback(
+    (verse: number) => {
+      if (!onNavigateReference) return
+      const chapterChanged = chapterRefForPickerRef.current !== chapterRefForPicker
+      chapterRefForPickerRef.current = chapterRefForPicker
+      setChapterVerseSelection((prev) =>
+        nextVerseRangeSelection(chapterChanged ? EMPTY_VERSE_RANGE_SELECTION : prev, verse)
+      )
+    },
+    [onNavigateReference, chapterRefForPicker]
+  )
+
+  const handleChapterVersePickerVerseClick = useCallback((verse: number) => {
+    setChapterVerseSelection((prev) => nextVerseRangeSelection(prev, verse))
+  }, [])
+
+  const handleChapterVersePickerRead = useCallback(() => {
+    if (!onNavigateReference || chapterVerseSelection.verseStart === null) return
+    const verseRef = buildVerseRangeReferenceFromChapter(
+      chapterRefForPicker,
+      chapterVerseSelection.verseStart,
+      chapterVerseSelection.verseEnd
+    )
+    if (!verseRef) return
+    setChapterVersePickerReading(true)
+    chapterVerseReadPendingRef.current = true
+    onNavigateReference(verseRef, { fromPassagePicker: true })
+    setScriptureTabsRevision((n) => n + 1)
+    if (verseRef === reference.trim()) {
+      chapterVerseReadPendingRef.current = false
+      setChapterVersePickerReading(false)
+      setChapterVerseSelection(EMPTY_VERSE_RANGE_SELECTION)
+    }
+  }, [onNavigateReference, chapterRefForPicker, chapterVerseSelection, reference])
+
+  const closeChapterVersePicker = useCallback(() => {
+    chapterVerseReadPendingRef.current = false
+    setChapterVersePickerReading(false)
+    setChapterVerseSelection(EMPTY_VERSE_RANGE_SELECTION)
+  }, [])
+
+  useEffect(() => {
+    if (!chapterVerseReadPendingRef.current) return
+    chapterVerseReadPendingRef.current = false
+    setChapterVersePickerReading(false)
+    setChapterVerseSelection(EMPTY_VERSE_RANGE_SELECTION)
+  }, [reference])
 
   useEffect(() => {
     if (!isOpen || !onScriptureTabActivate) return
@@ -605,12 +697,13 @@ export default function ScriptureModal({
 
   const handleScriptureTabSelect = useCallback(
     (entry: ProfileRecentScriptureEntry) => {
+      closeChapterVersePicker()
       if (scriptureTabInput) {
         recordScriptureModalTab(scriptureTabInput)
       }
       onScriptureTabActivate?.(entry)
     },
-    [scriptureTabInput, onScriptureTabActivate]
+    [scriptureTabInput, onScriptureTabActivate, closeChapterVersePicker]
   )
 
   useEffect(() => {
@@ -701,15 +794,7 @@ export default function ScriptureModal({
     [enabledTranslations]
   )
 
-  // Extract chapter reference from verse reference
-  const getChapterReference = (verseRef: string): string => {
-    const match = verseRef.match(/^(.+?)\s+(\d+)(?::\d+)?(?:-\d+)?/)
-    if (match) {
-      return `${match[1]} ${match[2]}`
-    }
-    return verseRef
-  }
-
+  // Extract chapter reference from verse reference (module helper: getChapterReference)
   const passageAudioReference = scriptureReferenceForPassageQuery(
     showingContext ? getChapterReference(reference) : reference.trim()
   )
@@ -908,7 +993,9 @@ export default function ScriptureModal({
       const verseRect = highlightedElement.getBoundingClientRect()
       const delta =
         verseRect.top - paneRect.top - paneRect.height / 2 + verseRect.height / 2
-      pane.scrollBy({ top: delta, behavior })
+      if (typeof pane.scrollBy === 'function') {
+        pane.scrollBy({ top: delta, behavior })
+      }
     }
 
     let cancelled = false
@@ -1533,6 +1620,7 @@ export default function ScriptureModal({
                   if (showingContext) {
                     setChapterView(null)
                     setChapterContextError(null)
+                    closeChapterVersePicker()
                   } else {
                     setWordStudyEnabled(false)
                     void fetchChapterContext()
@@ -1775,7 +1863,9 @@ export default function ScriptureModal({
                       {showingContext && compareChapterText && (
                         <div className="prose max-w-none">
                           <ScripturePassageText
-                            html={formatChapterContextHtml(compareChapterText)}
+                            html={formatChapterContextHtml(compareChapterText, {
+                              clickableVerseNumbers: false,
+                            })}
                             onLongPress={handlePassageLongPress}
                           />
                         </div>
@@ -1802,6 +1892,9 @@ export default function ScriptureModal({
                             html={formatChapterContextHtml(chapterText)}
                             innerRef={passageScopeRef}
                             onLongPress={handlePassageLongPress}
+                            onVerseNumberClick={
+                              onNavigateReference ? handleChapterVerseNumberClick : undefined
+                            }
                           />
                         </div>
                       )}
@@ -1854,6 +1947,9 @@ export default function ScriptureModal({
                           html={formatChapterContextHtml(chapterText)}
                           innerRef={passageScopeRef}
                           onLongPress={handlePassageLongPress}
+                          onVerseNumberClick={
+                            onNavigateReference ? handleChapterVerseNumberClick : undefined
+                          }
                         />
                       </div>
                     )}
@@ -1881,6 +1977,19 @@ export default function ScriptureModal({
       </div>
 
     </div>
+
+      {onNavigateReference ? (
+        <ScriptureChapterVersePickerDialog
+          open={chapterVersePickerVisible}
+          onClose={closeChapterVersePicker}
+          chapterReference={chapterRefForPicker}
+          selection={chapterVerseSelection}
+          onVerseClick={handleChapterVersePickerVerseClick}
+          onRead={handleChapterVersePickerRead}
+          verseCount={chapterVerseCount}
+          reading={chapterVersePickerReading}
+        />
+      ) : null}
 
       {typeof document !== 'undefined' &&
         bibleSearchOpen &&

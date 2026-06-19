@@ -37,6 +37,32 @@ export function isChapterOnlyScriptureReference(reference: string): boolean {
   return parsed !== null && parsed.verseStart === null
 }
 
+/** Build a verse reference from a chapter-level reference and verse number (`Genesis 1` + `16` → `Genesis 1:16`). */
+export function buildVerseReferenceFromChapter(
+  chapterReference: string,
+  verse: number
+): string | null {
+  return buildVerseRangeReferenceFromChapter(chapterReference, verse, null)
+}
+
+/** Build a verse or verse-range reference from a chapter-level reference. */
+export function buildVerseRangeReferenceFromChapter(
+  chapterReference: string,
+  verseStart: number,
+  verseEnd: number | null
+): string | null {
+  if (!Number.isFinite(verseStart) || verseStart < 1) return null
+  const parsed = parseReference(chapterReference.trim())
+  if (!parsed) return null
+  if (verseEnd === null || verseEnd === verseStart) {
+    return `${parsed.book} ${parsed.chapter}:${verseStart}`
+  }
+  if (!Number.isFinite(verseEnd) || verseEnd < 1) return null
+  const lo = Math.min(verseStart, verseEnd)
+  const hi = Math.max(verseStart, verseEnd)
+  return `${parsed.book} ${parsed.chapter}:${lo}-${hi}`
+}
+
 /** Stable key for matching chapter-level references (`Genesis 1`, `Genesis 1:16`, etc.). */
 export function scriptureChapterReferenceKey(reference: string): string | null {
   const normalized = normalizeScriptureReferenceString(reference.trim())

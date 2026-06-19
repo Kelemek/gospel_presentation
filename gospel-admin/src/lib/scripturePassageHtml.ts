@@ -1,15 +1,27 @@
 import { SCRIPTURE_HIGHLIGHT_MARK_CLASSES } from '@/lib/scriptureHighlightStyles'
 import type { ScriptureHighlightColorId } from '@/lib/scriptureHighlightStyles'
 
-export function verseSupHtml(n: number, showVerseNumbers: boolean): string {
+const SCRIPTURE_VERSE_NUMBER_CLICKABLE_CLASS =
+  'scripture-verse-number cursor-pointer hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 rounded-sm'
+
+export function verseSupHtml(n: number, showVerseNumbers: boolean, clickable = false): string {
   if (showVerseNumbers) {
+    if (clickable) {
+      return `<sup class="text-blue-600 font-medium ${SCRIPTURE_VERSE_NUMBER_CLICKABLE_CLASS}" data-scripture-verse="${n}" role="button" tabindex="0">${n}</sup>`
+    }
     return `<sup class="text-blue-600 font-medium">${n}</sup>`
   }
   return `<sup class="hidden" aria-hidden="true">${n}</sup>`
 }
 
-function replaceVerseMarkers(text: string, showVerseNumbers: boolean): string {
-  return text.replace(/\[(\d+)\]/g, (_match, n: string) => verseSupHtml(Number(n), showVerseNumbers))
+function replaceVerseMarkers(
+  text: string,
+  showVerseNumbers: boolean,
+  clickableVerseNumbers = false
+): string {
+  return text.replace(/\[(\d+)\]/g, (_match, n: string) =>
+    verseSupHtml(Number(n), showVerseNumbers, clickableVerseNumbers)
+  )
 }
 
 function replaceParagraphBreaks(text: string): string {
@@ -95,11 +107,19 @@ export function formatScriptureChapterHtml(
     showVerseNumbers: boolean
     highlightVerses: number[]
     savedHighlights?: readonly ScripturePassageSavedHighlight[]
+    clickableVerseNumbers?: boolean
   }
 ): string {
-  const { showVerseNumbers, highlightVerses, savedHighlights = [] } = options
+  const {
+    showVerseNumbers,
+    highlightVerses,
+    savedHighlights = [],
+    clickableVerseNumbers = false,
+  } = options
 
-  let processedText = replaceParagraphBreaks(replaceVerseMarkers(text, showVerseNumbers))
+  let processedText = replaceParagraphBreaks(
+    replaceVerseMarkers(text, showVerseNumbers, clickableVerseNumbers)
+  )
 
   if (savedHighlights.length > 0) {
     processedText = applySavedHighlightMarks(processedText, savedHighlights)

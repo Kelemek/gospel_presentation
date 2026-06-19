@@ -18,6 +18,7 @@ export type ModalAnalyticsName =
   | 'site_changelog'
   | 'presentation_welcome'
   | 'memorize_listen_controls'
+  | 'scripture_chapter_verse_picker'
 
 export type ModalOpenedProperties = {
   modal: ModalAnalyticsName

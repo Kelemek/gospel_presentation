@@ -9,6 +9,12 @@ describe('verseSupHtml', () => {
     expect(verseSupHtml(16, true)).toBe('<sup class="text-blue-600 font-medium">16</sup>')
   })
 
+  it('renders clickable verse sup when requested', () => {
+    expect(verseSupHtml(16, true, true)).toContain('data-scripture-verse="16"')
+    expect(verseSupHtml(16, true, true)).toContain('scripture-verse-number')
+    expect(verseSupHtml(16, true, true)).toContain('>16</sup>')
+  })
+
   it('renders hidden sup when showVerseNumbers is false', () => {
     expect(verseSupHtml(16, false)).toBe('<sup class="hidden" aria-hidden="true">16</sup>')
   })
@@ -77,6 +83,15 @@ describe('formatScriptureChapterHtml', () => {
     })
     expect(html).not.toContain('id="verse-16"')
     expect(html).toContain('<sup class="text-blue-600 font-medium">16</sup>')
+  })
+
+  it('marks verse numbers clickable when clickableVerseNumbers is true', () => {
+    const html = formatScriptureChapterHtml(chapterText, {
+      showVerseNumbers: true,
+      highlightVerses: [],
+      clickableVerseNumbers: true,
+    })
+    expect(html).toContain('data-scripture-verse="16"')
   })
 
   it('still highlights when verse numbers are hidden', () => {

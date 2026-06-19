@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TextSizeProvider } from '@/contexts/TextSizeContext'
 import ScriptureModal from '../ScriptureModal'
@@ -196,6 +196,121 @@ describe('ScriptureModal additional behaviors', () => {
 
     expect(inner).toMatch(/In the beginning/)
     expect(inner).toMatch(/And then/)
+  })
+
+  it('opens the chapter verse picker and reads a verse range in a new tab', async () => {
+    const user = userEvent.setup()
+    const onNavigateReference = jest.fn()
+
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (url.includes('Genesis%201%3A')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ text: 'Initial scripture text' }),
+        } as unknown as Response)
+      }
+      if (url.includes('reference=Genesis%201&')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ text: '[1] In the beginning\n\n[2] And then' }),
+        } as unknown as Response)
+      }
+      return Promise.resolve(defaultFetchSuccess)
+    })
+
+    const { container } = renderWithTextSize(
+      <ScriptureModal {...defaultProps} onNavigateReference={onNavigateReference} />
+    )
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: /Genesis 1:1-2.*choose another passage/i })
+      ).toBeInTheDocument()
+    )
+
+    await user.click(screen.getByRole('button', { name: /chapter context/i }))
+
+    await waitFor(() => expect(container.querySelector('#chapter-content')).toBeInTheDocument())
+
+    const verseTwo = container.querySelector('[data-scripture-verse="2"]')
+    expect(verseTwo).toBeTruthy()
+    await user.click(verseTwo!)
+
+    await waitFor(() =>
+      expect(document.getElementById('scripture-chapter-verse-picker-dialog')).toBeInTheDocument()
+    )
+    const picker = document.getElementById('scripture-chapter-verse-picker-dialog')!
+    expect(screen.getByText('Verse 2')).toBeInTheDocument()
+
+    await user.click(within(picker).getByRole('button', { name: '1' }))
+    expect(screen.getByText('Verses 1–2')).toBeInTheDocument()
+
+    await user.click(within(picker).getByRole('button', { name: 'Read' }))
+    expect(onNavigateReference).toHaveBeenCalledWith('Genesis 1:1-2', { fromPassagePicker: true })
+  })
+
+  it('does not open the chapter verse picker when clicking compare column verse numbers', async () => {
+    const user = userEvent.setup()
+    const onNavigateReference = jest.fn()
+
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (url.includes('Genesis%201%3A')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ text: 'Initial scripture text' }),
+        } as unknown as Response)
+      }
+      if (url.includes('reference=Genesis%201&') && url.includes('translation=kjv')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ text: '[1] KJV beginning\n\n[2] KJV second verse' }),
+        } as unknown as Response)
+      }
+      if (url.includes('reference=Genesis%201&')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ text: '[1] In the beginning\n\n[2] And then' }),
+        } as unknown as Response)
+      }
+      return Promise.resolve(defaultFetchSuccess)
+    })
+
+    const { container } = renderWithTextSize(
+      <ScriptureModal {...defaultProps} onNavigateReference={onNavigateReference} />
+    )
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: /Genesis 1:1-2.*choose another passage/i })
+      ).toBeInTheDocument()
+    )
+
+    await user.click(screen.getByRole('button', { name: /Compare with another translation/i }))
+    await user.click(await screen.findByRole('option', { name: /^KJV$/i }))
+
+    await user.click(screen.getByRole('button', { name: /chapter context/i }))
+
+    await waitFor(() => expect(container.querySelector('#chapter-content')).toBeInTheDocument())
+
+    const compareColumn = container.querySelector('.grid.grid-cols-1 > .flex.flex-col')
+    expect(compareColumn).toBeTruthy()
+    await waitFor(() => expect(compareColumn).toHaveTextContent('KJV second verse'))
+
+    expect(compareColumn!.querySelector('[data-scripture-verse]')).toBeNull()
+    const compareVerseTwo = compareColumn!.querySelector('sup')
+    expect(compareVerseTwo).toBeTruthy()
+    await user.click(compareVerseTwo!)
+    expect(document.getElementById('scripture-chapter-verse-picker-dialog')).toBeNull()
+
+    const primaryVerseTwo = container.querySelector('#chapter-content [data-scripture-verse="2"]')
+    expect(primaryVerseTwo).toBeTruthy()
+    await user.click(primaryVerseTwo!)
+
+    await waitFor(() =>
+      expect(document.getElementById('scripture-chapter-verse-picker-dialog')).toBeInTheDocument()
+    )
   })
 
   it('shows pin icon picker when versePinControl is provided', async () => {

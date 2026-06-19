@@ -1348,5 +1348,10 @@
     "releasedAt": "2026-06-19",
     "committedAt": "2026-06-19T15:11:04.211Z",
     "message": "Spurgeon's Lectures to My Students is now available in the Books library."
+  },
+  {
+    "releasedAt": "2026-06-19",
+    "committedAt": "2026-06-19T17:29:59.718Z",
+    "message": "Chapter view: tap verse numbers to pick a range, then Read to open a new Bible tab."
   }
 ]

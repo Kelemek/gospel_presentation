@@ -1,5 +1,7 @@
 import { canonicalScriptureCacheReference } from '@/lib/api-bible-passage-id'
 import {
+  buildVerseRangeReferenceFromChapter,
+  buildVerseReferenceFromChapter,
   isChapterOnlyScriptureReference,
   isSingleChapterBookChapterOneReference,
   parseReference,
@@ -35,6 +37,20 @@ describe('parse-scripture-reference', () => {
     it('returns false when a verse is present', () => {
       expect(isChapterOnlyScriptureReference('John 3:16')).toBe(false)
       expect(isChapterOnlyScriptureReference('Genesis 1:1-3')).toBe(false)
+    })
+  })
+
+  describe('buildVerseReferenceFromChapter', () => {
+    it('builds a verse reference from chapter context', () => {
+      expect(buildVerseReferenceFromChapter('Genesis 1', 16)).toBe('Genesis 1:16')
+      expect(buildVerseReferenceFromChapter('John 3', 16)).toBe('John 3:16')
+    })
+  })
+
+  describe('buildVerseRangeReferenceFromChapter', () => {
+    it('builds verse ranges from chapter context', () => {
+      expect(buildVerseRangeReferenceFromChapter('Genesis 1', 1, 3)).toBe('Genesis 1:1-3')
+      expect(buildVerseRangeReferenceFromChapter('John 3', 16, null)).toBe('John 3:16')
     })
   })
 
