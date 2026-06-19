@@ -1,7 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { attachOpenItemTabBarDragScroll } from '@/lib/openItemTabBarDragScroll'
+import { getHorizontalScrollEdges } from '@/lib/horizontalScrollEdges'
 import {
   captureOpenItemTabBarScroll,
   loadOpenItemTabBarScrollLeft,
@@ -110,6 +111,16 @@ export default function OpenItemTabBar({
   const isSingleExpandedTab = expandSingleTab && tabs.length === 1
   const tablistScrollElRef = useRef<HTMLDivElement | null>(null)
   const scrollInteractionCleanupRef = useRef<(() => void) | null>(null)
+  const [scrollEdges, setScrollEdges] = useState({ showStart: false, showEnd: false })
+
+  const updateScrollEdges = useCallback(() => {
+    const el = tablistScrollElRef.current
+    if (!el) return
+    const { showStart, showEnd } = getHorizontalScrollEdges(el)
+    setScrollEdges((prev) =>
+      prev.showStart === showStart && prev.showEnd === showEnd ? prev : { showStart, showEnd }
+    )
+  }, [])
 
   const teardownScrollInteraction = useCallback(() => {
     scrollInteractionCleanupRef.current?.()
@@ -144,9 +155,30 @@ export default function OpenItemTabBar({
         return
       }
       setupScrollInteraction(node)
+      updateScrollEdges()
     },
-    [setupScrollInteraction, teardownScrollInteraction]
+    [setupScrollInteraction, teardownScrollInteraction, updateScrollEdges]
   )
+
+  useEffect(() => {
+    const el = tablistScrollElRef.current
+    if (!el) return
+
+    updateScrollEdges()
+    const onScroll = () => updateScrollEdges()
+    el.addEventListener('scroll', onScroll, { passive: true })
+
+    let resizeObserver: ResizeObserver | undefined
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => updateScrollEdges())
+      resizeObserver.observe(el)
+    }
+
+    return () => {
+      el.removeEventListener('scroll', onScroll)
+      resizeObserver?.disconnect()
+    }
+  }, [tabs.length, active, updateScrollEdges])
 
   useEffect(() => () => teardownScrollInteraction(), [teardownScrollInteraction])
 
@@ -173,6 +205,7 @@ export default function OpenItemTabBar({
           return
         }
         scrollOpenItemTabIntoView(el, revealId, persistScrollKey)
+        updateScrollEdges()
       }
 
       applyReveal()
@@ -200,13 +233,14 @@ export default function OpenItemTabBar({
         return
       }
       restoreOpenItemTabBarScrollPosition(el, persistScrollKey)
+      updateScrollEdges()
     }
 
     applyRestore()
     return () => {
       cancelled = true
     }
-  }, [persistScrollKey, revealTabId, active, tabs.length])
+  }, [persistScrollKey, revealTabId, active, tabs.length, updateScrollEdges])
 
   useEffect(() => {
     if (!persistScrollKey) return
@@ -228,15 +262,16 @@ export default function OpenItemTabBar({
       {...(dataTour ? { 'data-tour': dataTour } : {})}
       className={`w-full min-w-0 border-t border-slate-200 dark:border-slate-600 overflow-hidden ${className}`.trim()}
     >
-      <div
-        ref={tablistScrollRef}
-        role="tablist"
-        aria-label={tablistAriaLabel}
-        className={TABLIST_SCROLL_CLASS}
-      >
+      <div className="open-item-tab-bar-scroll-shadow relative min-w-0">
         <div
-          className={`flex min-w-full flex-nowrap ${isSingleExpandedTab ? 'w-full' : 'w-max'}`}
+          ref={tablistScrollRef}
+          role="tablist"
+          aria-label={tablistAriaLabel}
+          className={TABLIST_SCROLL_CLASS}
         >
+          <div
+            className={`flex min-w-full flex-nowrap ${isSingleExpandedTab ? 'w-full' : 'w-max'}`}
+          >
           {tabs.map((entry) => {
             const isActive = entry.id === active
             const label = entry.ariaLabel ?? entry.title
@@ -347,6 +382,21 @@ export default function OpenItemTabBar({
             )
           })}
         </div>
+        </div>
+        <div
+          aria-hidden
+          data-scroll-edge="start"
+          className={`open-item-tab-bar-scroll-fade open-item-tab-bar-scroll-fade--start${
+            scrollEdges.showStart ? ' is-visible' : ''
+          }`}
+        />
+        <div
+          aria-hidden
+          data-scroll-edge="end"
+          className={`open-item-tab-bar-scroll-fade open-item-tab-bar-scroll-fade--end${
+            scrollEdges.showEnd ? ' is-visible' : ''
+          }`}
+        />
       </div>
     </div>
   )

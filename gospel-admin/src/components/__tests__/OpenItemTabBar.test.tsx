@@ -431,4 +431,33 @@ describe('OpenItemTabBar', () => {
     expect(within(romansTab).getByText('8:1')).toBeInTheDocument()
     expect(romansTab.querySelector('.gap-x-1')).toBeInTheDocument()
   })
+
+  it('shows scroll edge fades when tabs overflow horizontally', () => {
+    render(
+      <OpenItemTabBar
+        tabs={resourceTabs}
+        activeId="default"
+        onSelectTab={jest.fn()}
+        onCloseTab={jest.fn()}
+        tablistAriaLabel="Open resources"
+      />
+    )
+    const tablist = screen.getByRole('tablist', { name: 'Open resources' })
+    Object.defineProperty(tablist, 'scrollWidth', { value: 500, configurable: true })
+    Object.defineProperty(tablist, 'clientWidth', { value: 200, configurable: true })
+    Object.defineProperty(tablist, 'scrollLeft', { value: 0, writable: true, configurable: true })
+
+    fireEvent.scroll(tablist)
+
+    const endFade = document.querySelector('[data-scroll-edge="end"]')
+    const startFade = document.querySelector('[data-scroll-edge="start"]')
+    expect(endFade).toHaveClass('is-visible')
+    expect(startFade).not.toHaveClass('is-visible')
+
+    Object.defineProperty(tablist, 'scrollLeft', { value: 120, writable: true, configurable: true })
+    fireEvent.scroll(tablist)
+
+    expect(startFade).toHaveClass('is-visible')
+    expect(endFade).toHaveClass('is-visible')
+  })
 })

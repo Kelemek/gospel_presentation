@@ -1338,5 +1338,10 @@
     "releasedAt": "2026-06-17",
     "committedAt": "2026-06-17T23:20:42.588Z",
     "message": "Bible Reader: search the whole Bible from the toolbar. Matching words are highlighted."
+  },
+  {
+    "releasedAt": "2026-06-18",
+    "committedAt": "2026-06-19T02:06:38.430Z",
+    "message": "Small visual tweaks: tab bars fade as you scroll, long book names pan in the reader, and slimmer prev/next on phones."
   }
 ]

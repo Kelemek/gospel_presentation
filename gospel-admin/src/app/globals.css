@@ -1749,3 +1749,45 @@ body.dark .profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-de
     transform: translate(-50%, 0);
   }
 }
+
+/* Open resource / scripture tab bars: edge fade when horizontally scrolled (PostHog-style wrap). */
+.open-item-tab-bar-scroll-shadow {
+  --open-item-tab-bar-fade-base: rgb(241 245 249); /* slate-100 — matches tab track */
+  --open-item-tab-bar-fade-width: 1.75rem;
+}
+
+html.dark .open-item-tab-bar-scroll-shadow,
+body.dark .open-item-tab-bar-scroll-shadow {
+  --open-item-tab-bar-fade-base: rgb(51 65 85); /* slate-700 */
+}
+
+.open-item-tab-bar-scroll-fade {
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 10;
+  width: var(--open-item-tab-bar-fade-width);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.open-item-tab-bar-scroll-fade.is-visible {
+  opacity: 1;
+}
+
+.open-item-tab-bar-scroll-fade--start {
+  left: 0;
+  background: linear-gradient(to right, var(--open-item-tab-bar-fade-base), transparent);
+}
+
+.open-item-tab-bar-scroll-fade--end {
+  right: 0;
+  background: linear-gradient(to left, var(--open-item-tab-bar-fade-base), transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .open-item-tab-bar-scroll-fade {
+    transition: none;
+  }
+}
