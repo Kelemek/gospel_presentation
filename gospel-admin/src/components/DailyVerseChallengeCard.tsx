@@ -1,19 +1,47 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 import { DailyVerseHuntSuccessContent } from '@/components/DailyVerseHuntSuccessContent'
+import { GOSPEL_CLIENT_STORAGE_CHANGED_EVENT } from '@/lib/gospelClientStorageEvents'
+import { DEVICE_SYNC_STATE_CHANGED_EVENT } from '@/lib/gospelDeviceSync/dirty'
 import {
+  DAILY_VERSE_CHALLENGE_STORAGE_KEY,
   formatMaskedReference,
   stripLeadingVerseNumberMarker,
+  getLocalDateKey,
   getPromptAtIndex,
   getPromptIndexForDate,
   getTodayDailyVerseHuntEncouragementMessage,
   getTodayPrompt,
-  isTodayChallengeCompleted,
+  loadDailyVerseChallengeCompletion,
   loadDailyVersePrompts,
   normalizePromptIndex,
   type DailyVersePrompt,
 } from '@/lib/dailyVerseChallenge'
+
+function subscribeDailyVerseCompletion(onStoreChange: () => void): () => void {
+  const onClientStorageChanged = (event: Event) => {
+    const key = (event as CustomEvent<{ key: string }>).detail?.key
+    if (key === DAILY_VERSE_CHALLENGE_STORAGE_KEY) {
+      onStoreChange()
+    }
+  }
+  const onDeviceSyncStateChanged = () => {
+    onStoreChange()
+  }
+  window.addEventListener(GOSPEL_CLIENT_STORAGE_CHANGED_EVENT, onClientStorageChanged)
+  window.addEventListener(DEVICE_SYNC_STATE_CHANGED_EVENT, onDeviceSyncStateChanged)
+  return () => {
+    window.removeEventListener(GOSPEL_CLIENT_STORAGE_CHANGED_EVENT, onClientStorageChanged)
+    window.removeEventListener(DEVICE_SYNC_STATE_CHANGED_EVENT, onDeviceSyncStateChanged)
+  }
+}
+
+function getDailyVerseCompletionSnapshot(): string {
+  const stored = loadDailyVerseChallengeCompletion()
+  if (!stored) return ''
+  return `${stored.dateKey}:${stored.promptId}`
+}
 
 type ScriptureApiResponse = {
   text?: string
@@ -64,10 +92,16 @@ export default function DailyVerseChallengeCard({
     ? getPromptAtIndex(prompts, previewIndex)
     : getTodayPrompt(prompts)
 
+  const completionSnapshot = useSyncExternalStore(
+    subscribeDailyVerseCompletion,
+    getDailyVerseCompletionSnapshot,
+    () => ''
+  )
+
   const completed =
     !previewEnabled &&
     prompt != null &&
-    isTodayChallengeCompleted(prompt.id)
+    completionSnapshot === `${getLocalDateKey()}:${prompt.id}`
 
   const encouragementMessage = completed
     ? getTodayDailyVerseHuntEncouragementMessage()

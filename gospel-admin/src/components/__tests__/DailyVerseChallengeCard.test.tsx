@@ -1,10 +1,14 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import DailyVerseChallengeCard from '@/components/DailyVerseChallengeCard'
+import { GOSPEL_CLIENT_STORAGE_CHANGED_EVENT } from '@/lib/gospelClientStorageEvents'
+import { gospelStorageGetSync } from '@/lib/gospelClientStorage'
 import {
+  DAILY_VERSE_CHALLENGE_STORAGE_KEY,
   getLocalDateKey,
   saveDailyVerseChallengeCompletion,
 } from '@/lib/dailyVerseChallenge'
+import { installTestLocalStorage, resetGospelStorageTestState } from '@/lib/testing/testLocalStorage'
 import fixturePrompts from '../../../data/daily-verse-challenge/prompts.fixtures.json'
 
 jest.mock('@/lib/dailyVerseChallenge', () => {
@@ -23,8 +27,9 @@ jest.mock('@/lib/dailyVerseChallenge', () => {
 describe('DailyVerseChallengeCard', () => {
   const originalFetch = global.fetch
 
-  beforeEach(() => {
-    window.localStorage.clear()
+  beforeEach(async () => {
+    installTestLocalStorage()
+    await resetGospelStorageTestState()
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -138,5 +143,39 @@ describe('DailyVerseChallengeCard', () => {
       expect.stringContaining('/api/scripture?'),
       expect.objectContaining({ cache: 'no-store' })
     )
+  })
+
+  it('shows completed state after remote sync without completedVersion bump', async () => {
+    const prompts = fixturePrompts.prompts
+    const dateKey = getLocalDateKey()
+    const index =
+      require('@/lib/dailyVerseChallenge').hashDateKey(dateKey) % prompts.length
+    const prompt = prompts[index]!
+
+    render(<DailyVerseChallengeCard completedVersion={0} />)
+
+    await act(async () => {
+      saveDailyVerseChallengeCompletion({
+        dateKey,
+        promptId: prompt.id,
+        encouragementMessage:
+          'Finished! What you’ve stored in your heart is richer than anything on a screen. Well done.',
+      })
+    })
+
+    expect(gospelStorageGetSync(DAILY_VERSE_CHALLENGE_STORAGE_KEY)).toContain(prompt.id)
+
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent(GOSPEL_CLIENT_STORAGE_CHANGED_EVENT, {
+          detail: { key: DAILY_VERSE_CHALLENGE_STORAGE_KEY },
+        })
+      )
+    })
+
+    await waitFor(() => {
+      const subtitle = screen.getByText(prompt.reference)
+      expect(subtitle.closest('p')).toHaveTextContent(`✓ ${prompt.reference}`)
+    })
   })
 })

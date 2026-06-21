@@ -3,7 +3,7 @@ import {
   DAILY_VERSE_HUNT_ENCOURAGEMENT_MESSAGES,
   pickRandomDailyVerseHuntEncouragementMessage,
 } from '@/lib/dailyVerseHuntEncouragementMessages'
-import { gospelStorageSetSync } from '@/lib/gospelClientStorage'
+import { gospelStorageGetSync, gospelStorageSetSync } from '@/lib/gospelClientStorage'
 import { parseReference } from '@/lib/parse-scripture-reference'
 import { normalizeScriptureReferenceString } from '@/lib/scriptureReferenceNormalize'
 
@@ -99,7 +99,7 @@ export function loadDailyVersePrompts(): DailyVersePrompt[] {
 export function loadDailyVerseChallengeCompletion(): DailyVerseChallengeCompletion | null {
   if (typeof window === 'undefined') return null
   try {
-    const raw = window.localStorage.getItem(DAILY_VERSE_CHALLENGE_STORAGE_KEY)
+    const raw = gospelStorageGetSync(DAILY_VERSE_CHALLENGE_STORAGE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw) as DailyVerseChallengeCompletion
     if (
