@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import DeviceSyncModal from '@/components/DeviceSyncModal'
 import { AlertModalProvider } from '@/contexts/AlertModalContext'
@@ -35,6 +35,8 @@ const client = jest.requireMock('@/lib/gospelDeviceSync/client') as {
   wrapAndUploadPairingEnvelope: jest.Mock
   pushFullSnapshot: jest.Mock
   fetchPairingCodePending: jest.Mock
+  claimPairingCode: jest.Mock
+  completePairingFromClaim: jest.Mock
 }
 
 function renderModal(ui: React.ReactElement) {
@@ -50,6 +52,11 @@ describe('DeviceSyncModal', () => {
       storageId: 'a'.repeat(64),
     })
     client.fetchPairingCodePending.mockResolvedValue(true)
+    client.claimPairingCode.mockResolvedValue({
+      storageId: 'b'.repeat(64),
+      syncKeyEnvelope: 'envelope',
+    })
+    client.completePairingFromClaim.mockResolvedValue(undefined)
   })
 
   it('shows Try again when create flow fails', async () => {
@@ -160,5 +167,51 @@ describe('DeviceSyncModal', () => {
     }, { timeout: 3000 })
     expect(screen.queryByText(/expires in/i)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /done/i })).toBeInTheDocument()
+  })
+
+  it('claims pairing code when user enters six digits and submits', async () => {
+    const onClose = jest.fn()
+    const user = userEvent.setup()
+    renderModal(<DeviceSyncModal isOpen onClose={onClose} initialMode="enter" />)
+
+    const input = screen.getByLabelText(/6-digit pairing code/i)
+    await user.type(input, '482910')
+
+    await waitFor(() => {
+      expect(client.claimPairingCode).toHaveBeenCalledWith('482910')
+    })
+    expect(client.completePairingFromClaim).toHaveBeenCalledWith('482910', {
+      storageId: 'b'.repeat(64),
+      syncKeyEnvelope: 'envelope',
+    })
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('sanitizes pasted pairing codes with spaces before claiming', async () => {
+    const onClose = jest.fn()
+    const user = userEvent.setup()
+    renderModal(<DeviceSyncModal isOpen onClose={onClose} initialMode="enter" />)
+
+    const input = screen.getByLabelText(/6-digit pairing code/i)
+    await user.click(input)
+    await user.paste('12 34 56')
+
+    await waitFor(() => {
+      expect(client.claimPairingCode).toHaveBeenCalledWith('123456')
+    })
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('claims when a full code is inserted via input (iOS autofill)', async () => {
+    const onClose = jest.fn()
+    renderModal(<DeviceSyncModal isOpen onClose={onClose} initialMode="enter" />)
+
+    const input = screen.getByLabelText(/6-digit pairing code/i)
+    fireEvent.input(input, { target: { value: '998877' } })
+
+    await waitFor(() => {
+      expect(client.claimPairingCode).toHaveBeenCalledWith('998877')
+    })
+    expect(onClose).toHaveBeenCalled()
   })
 })

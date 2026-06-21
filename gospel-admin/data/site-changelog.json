@@ -1373,5 +1373,10 @@
     "releasedAt": "2026-06-21",
     "committedAt": "2026-06-21T13:33:43.919Z",
     "message": "Bug fix: In the Bible passage picker, verse previews now update when you change chapter and show your full selected range when several verses are highlighted."
+  },
+  {
+    "releasedAt": "2026-06-21",
+    "committedAt": "2026-06-21T14:29:21.962Z",
+    "message": "Bug fix: Entering a device sync code on iPhone Safari now works with autofill, paste, and the keyboard Go button."
   }
 ]

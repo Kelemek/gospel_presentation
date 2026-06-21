@@ -72,6 +72,11 @@ function formatCountdown(ms: number): string {
   return `${min}:${String(sec).padStart(2, '0')}`
 }
 
+/** Strip non-digits; iOS OTP autofill may include spaces or punctuation. */
+function normalizePairingCodeInput(raw: string): string {
+  return raw.replace(/\D/g, '').slice(0, 6)
+}
+
 function resetCreateFlowState(
   setCode: (code: string) => void,
   setExpiresAt: (expiresAt: string | null) => void,
@@ -116,10 +121,12 @@ export default function DeviceSyncModal({
   )
   const [codeClaimed, setCodeClaimed] = useState(false)
   const createStartedRef = useRef(false)
+  const claimInFlightRef = useRef(false)
 
   useEffect(() => {
     if (!isOpen) {
       createStartedRef.current = false
+      claimInFlightRef.current = false
     }
   }, [isOpen])
 
@@ -256,26 +263,44 @@ export default function DeviceSyncModal({
     onClose()
   }
 
-  const handleClaim = async () => {
-    const trimmed = enterCode.replace(/\D/g, '').slice(0, 6)
-    if (trimmed.length !== 6) {
-      setError('Enter the 6-digit code from your other device.')
-      return
-    }
-    setBusy(true)
-    setError(null)
-    try {
-      const claim = await claimPairingCode(trimmed)
-      await completePairingFromClaim(trimmed, claim)
-      emitDeviceSyncStateChanged()
-      onClose()
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Could not link this device.'
-      setError(msg)
-    } finally {
-      setBusy(false)
-    }
-  }
+  const handleClaim = useCallback(
+    async (codeOverride?: string) => {
+      const trimmed = normalizePairingCodeInput(codeOverride ?? enterCode)
+      if (trimmed.length !== 6) {
+        setError('Enter the 6-digit code from your other device.')
+        return
+      }
+      if (claimInFlightRef.current) return
+      claimInFlightRef.current = true
+      setBusy(true)
+      setError(null)
+      try {
+        const claim = await claimPairingCode(trimmed)
+        await completePairingFromClaim(trimmed, claim)
+        emitDeviceSyncStateChanged()
+        onClose()
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : 'Could not link this device.'
+        setError(msg)
+      } finally {
+        setBusy(false)
+        claimInFlightRef.current = false
+      }
+    },
+    [enterCode, onClose]
+  )
+
+  const updateEnterCode = useCallback(
+    (raw: string, options?: { autoClaim?: boolean }) => {
+      const next = normalizePairingCodeInput(raw)
+      setEnterCode(next)
+      setError(null)
+      if (options?.autoClaim !== false && next.length === 6) {
+        void handleClaim(next)
+      }
+    },
+    [handleClaim]
+  )
 
   if (!isOpen || typeof document === 'undefined') return null
 
@@ -355,32 +380,45 @@ export default function DeviceSyncModal({
   )
 
   const renderEnterCodePanel = () => (
-    <div className="space-y-3">
+    <form
+      className="space-y-3"
+      onSubmit={(e) => {
+        e.preventDefault()
+        void handleClaim()
+      }}
+    >
       <p className="text-sm text-slate-600 dark:text-slate-300">
         Enter the 6-digit code shown on your other device.
       </p>
       <input
         type="text"
+        name="one-time-code"
         inputMode="numeric"
+        pattern="[0-9]*"
         autoComplete="one-time-code"
-        maxLength={6}
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
+        enterKeyHint="go"
         value={enterCode}
-        onChange={(e) => {
-          setEnterCode(e.target.value.replace(/\D/g, '').slice(0, 6))
-          setError(null)
+        onChange={(e) => updateEnterCode(e.target.value)}
+        onInput={(e) => updateEnterCode(e.currentTarget.value)}
+        onPaste={(e) => {
+          e.preventDefault()
+          updateEnterCode(e.clipboardData.getData('text'))
         }}
-        className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-3 text-center text-2xl font-semibold tracking-[0.35em] text-slate-900 dark:text-slate-100"
+        disabled={busy}
+        className="device-sync-pairing-code-input w-full appearance-none rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 h-14 py-0 leading-[3.5rem] text-center text-2xl font-semibold tracking-[0.35em] tabular-nums text-slate-900 dark:text-slate-100 disabled:opacity-60"
         aria-label="6-digit pairing code"
       />
       <button
-        type="button"
-        onClick={() => void handleClaim()}
+        type="submit"
         disabled={busy || enterCode.length !== 6}
         className={`w-full ${primaryButtonClass}`}
       >
         {busy ? 'Linking…' : 'Link device'}
       </button>
-    </div>
+    </form>
   )
 
   return createPortal(
@@ -451,7 +489,11 @@ export default function DeviceSyncModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSetupPanel('enter')}
+                  onClick={() => {
+                    setEnterCode('')
+                    setError(null)
+                    setSetupPanel('enter')
+                  }}
                   className={setupTabClass(setupPanel === 'enter')}
                 >
                   Enter a code
