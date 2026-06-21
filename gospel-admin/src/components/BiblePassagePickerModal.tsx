@@ -391,17 +391,29 @@ function BiblePassagePickerModalContent({
                                   const on = inRange(n)
                                   const verseReference =
                                     selectedChapterNum !== null
-                                      ? buildBiblePassageReference(
-                                          book.id,
-                                          book.name,
-                                          selectedChapterNum,
-                                          n,
-                                          null
-                                        )
+                                      ? on && verseStart !== null && verseEnd !== null
+                                        ? buildBiblePassageReference(
+                                            book.id,
+                                            book.name,
+                                            selectedChapterNum,
+                                            verseStart,
+                                            verseEnd
+                                          )
+                                        : buildBiblePassageReference(
+                                            book.id,
+                                            book.name,
+                                            selectedChapterNum,
+                                            n,
+                                            null
+                                          )
                                       : ''
+                                  const hoverKey =
+                                    on && verseStart !== null && verseEnd !== null
+                                      ? `${selectedChapterId}-range-${verseStart}-${verseEnd}-${n}`
+                                      : `${selectedChapterId}-${n}`
                                   return (
                                     <ScriptureHoverModal
-                                      key={n}
+                                      key={hoverKey}
                                       reference={verseReference}
                                       hoverDelayMs={500}
                                     >

@@ -215,6 +215,44 @@ describe('ScriptureHoverModal', () => {
     Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: origIH })
   })
 
+  it('fetches again when reference changes after a prior load', async () => {
+    jest.useFakeTimers()
+    ;(global.fetch as jest.Mock)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ reference: 'Genesis 1:3', text: 'Chapter one verse three.' }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ reference: 'Genesis 2:3', text: 'Chapter two verse three.' }),
+      })
+
+    const { rerender } = render(
+      <ScriptureHoverModal reference="Genesis 1:3" hoverDelayMs={100}>
+        <span>Trigger</span>
+      </ScriptureHoverModal>
+    )
+    const wrapper = screen.getByText('Trigger').parentElement!
+    fireEvent.mouseEnter(wrapper)
+    act(() => {
+      jest.advanceTimersByTime(100)
+    })
+    await waitFor(() => expect(screen.getByText('Chapter one verse three.')).toBeInTheDocument())
+
+    rerender(
+      <ScriptureHoverModal reference="Genesis 2:3" hoverDelayMs={100}>
+        <span>Trigger</span>
+      </ScriptureHoverModal>
+    )
+    fireEvent.mouseEnter(wrapper)
+    act(() => {
+      jest.advanceTimersByTime(100)
+    })
+    await waitFor(() => expect(screen.getByText('Chapter two verse three.')).toBeInTheDocument())
+    expect(global.fetch).toHaveBeenCalledTimes(2)
+    jest.useRealTimers()
+  })
+
   it('on touch-only device backdrop closes modal when tapping outside', async () => {
     ;(window as any).matchMedia = jest.fn(() => ({ matches: true }))
     const Capacitor = require('@capacitor/core').Capacitor

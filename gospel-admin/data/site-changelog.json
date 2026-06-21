@@ -1368,5 +1368,10 @@
     "releasedAt": "2026-06-20",
     "committedAt": "2026-06-20T22:25:28.900Z",
     "message": "Sync across devices (BETA): link a phone and tablet with a short pairing code so bookmarks, highlights, and other saved data stay in sync—no account needed."
+  },
+  {
+    "releasedAt": "2026-06-21",
+    "committedAt": "2026-06-21T13:33:43.919Z",
+    "message": "Bug fix: In the Bible passage picker, verse previews now update when you change chapter and show your full selected range when several verses are highlighted."
   }
 ]

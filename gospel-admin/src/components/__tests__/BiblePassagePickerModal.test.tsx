@@ -136,5 +136,51 @@ describe('BiblePassagePickerModal', () => {
       'data-reference',
       'John 3:3'
     )
+
+    await user.click(getChapterButtons()[1])
+    const versesChapterTwo = getVerseButtons()
+    expect(versesChapterTwo[2].closest('[data-testid="scripture-hover"]')).toHaveAttribute(
+      'data-reference',
+      'John 2:3'
+    )
+  })
+
+  it('uses the selected verse range for hover preview on highlighted verses', async () => {
+    const user = userEvent.setup()
+    render(
+      <BiblePassagePickerModal
+        isOpen
+        onClose={jest.fn()}
+        confirmLabel="Read"
+        requireVerse={false}
+        variant="reader"
+        onConfirm={jest.fn()}
+      />
+    )
+
+    await user.click(screen.getByRole('button', { name: 'New Testament' }))
+    await user.click(screen.getByRole('button', { name: /^John$/i }))
+    await user.click(getChapterButtons()[2])
+    const verses = getVerseButtons()
+    await user.click(verses[15])
+    await user.click(verses[17])
+
+    const selectedVerses = getVerseButtons()
+    expect(selectedVerses[15].closest('[data-testid="scripture-hover"]')).toHaveAttribute(
+      'data-reference',
+      'John 3:16-18'
+    )
+    expect(selectedVerses[16].closest('[data-testid="scripture-hover"]')).toHaveAttribute(
+      'data-reference',
+      'John 3:16-18'
+    )
+    expect(selectedVerses[17].closest('[data-testid="scripture-hover"]')).toHaveAttribute(
+      'data-reference',
+      'John 3:16-18'
+    )
+    expect(selectedVerses[14].closest('[data-testid="scripture-hover"]')).toHaveAttribute(
+      'data-reference',
+      'John 3:15'
+    )
   })
 })

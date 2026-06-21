@@ -64,11 +64,17 @@ function layoutViewportSize(): { w: number; h: number } {
   return { w: Math.max(1, w), h: Math.max(1, h) }
 }
 
+type ScriptureFetchState = {
+  translation: string
+  reference: string
+  data: ScriptureData | null
+  error: string | null
+  loading: boolean
+}
+
 export default function ScriptureHoverModal({ reference, children, hoverDelayMs = 500, inline = false }: ScriptureHoverModalProps) {
-  const [isVisible, setIsVisible] = useState(false)
-  const [scriptureData, setScriptureData] = useState<ScriptureData | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [visibleForReference, setVisibleForReference] = useState<string | null>(null)
+  const [fetchState, setFetchState] = useState<ScriptureFetchState | null>(null)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [popoverWidthPx, setPopoverWidthPx] = useState(MODAL_WIDTH_CAP_DEFAULT_PX)
   const [popoverMaxHeightPx, setPopoverMaxHeightPx] = useState(() =>
@@ -83,35 +89,71 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
   const containerRef = useRef<HTMLElement | null>(null)
   const popoverRef = useRef<HTMLDivElement | null>(null)
   const anchorPointRef = useRef({ cx: 0, cy: 0 })
-  const [openedByLongPress, setOpenedByLongPress] = useState(false)
+  const fetchStateRef = useRef<ScriptureFetchState | null>(null)
+  const [openedByLongPressForReference, setOpenedByLongPressForReference] = useState<string | null>(null)
 
-  // Clear cached scripture when translation changes
   useEffect(() => {
-    setScriptureData(null)
-  }, [translation])
+    fetchStateRef.current = fetchState
+  }, [fetchState])
 
-  const fetchScriptureText = async () => {
-    if (scriptureData) return // Already fetched
+  const isVisible = visibleForReference === reference
+  const openedByLongPress = openedByLongPressForReference === reference
+  const matchesActiveFetch =
+    fetchState?.reference === reference && fetchState?.translation === translation
+  const scriptureData = matchesActiveFetch ? fetchState.data : null
+  const loading = matchesActiveFetch ? fetchState.loading : false
+  const error = matchesActiveFetch ? fetchState.error : null
 
-    setLoading(true)
-    setError(null)
+  const fetchScriptureText = async (requestedRef: string) => {
+    if (!requestedRef) return
+    const cached = fetchStateRef.current
+    if (
+      cached?.reference === requestedRef &&
+      cached.translation === translation &&
+      cached.data
+    ) {
+      return
+    }
+
+    setFetchState({
+      translation,
+      reference: requestedRef,
+      data: null,
+      error: null,
+      loading: true,
+    })
 
     try {
       const response = await fetch(
-        `/api/scripture?reference=${encodeURIComponent(reference)}&translation=${translation}`,
+        `/api/scripture?reference=${encodeURIComponent(requestedRef)}&translation=${translation}`,
         { cache: 'no-store' }
       )
       const data = await response.json()
 
-      if (response.ok) {
-        setScriptureData(data)
-      } else {
-        setError(formatScriptureApiError(data) || 'Failed to fetch scripture text')
-      }
+      setFetchState((prev) => {
+        if (prev?.reference !== requestedRef || prev.translation !== translation) return prev
+        if (response.ok) {
+          return { translation, reference: requestedRef, data, error: null, loading: false }
+        }
+        return {
+          translation,
+          reference: requestedRef,
+          data: null,
+          error: formatScriptureApiError(data) || 'Failed to fetch scripture text',
+          loading: false,
+        }
+      })
     } catch {
-      setError('Network error while fetching scripture')
-    } finally {
-      setLoading(false)
+      setFetchState((prev) => {
+        if (prev?.reference !== requestedRef || prev.translation !== translation) return prev
+        return {
+          translation,
+          reference: requestedRef,
+          data: null,
+          error: 'Network error while fetching scripture',
+          loading: false,
+        }
+      })
     }
   }
 
@@ -232,11 +274,21 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
     const centerY = rect.top + rect.height / 2
     setPositionFromPoint(centerX, centerY)
 
+    const refAtHover = reference
     hoverTimeoutRef.current = setTimeout(() => {
-      setIsVisible(true)
-      setOpenedByLongPress(false)
-      if (!scriptureData && !loading) {
-        fetchScriptureText()
+      setVisibleForReference(refAtHover)
+      setOpenedByLongPressForReference(null)
+      const cached = fetchStateRef.current
+      const hasCachedForReference =
+        cached?.reference === refAtHover &&
+        cached.translation === translation &&
+        cached.data != null
+      const isLoadingForReference =
+        cached?.reference === refAtHover &&
+        cached.translation === translation &&
+        cached.loading
+      if (!hasCachedForReference && !isLoadingForReference) {
+        void fetchScriptureText(refAtHover)
       }
     }, hoverDelayMs)
   }
@@ -246,8 +298,8 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
       clearTimeout(hoverTimeoutRef.current)
       hoverTimeoutRef.current = null
     }
-    setIsVisible(false)
-    setOpenedByLongPress(false)
+    setVisibleForReference(null)
+    setOpenedByLongPressForReference(null)
   }
 
   const LONG_PRESS_MS = 500
@@ -260,14 +312,24 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
     if (longPressTimeoutRef.current) clearTimeout(longPressTimeoutRef.current)
     const clientX = touch.clientX
     const clientY = touch.clientY
+    const refAtTouch = reference
     longPressTimeoutRef.current = setTimeout(() => {
       longPressTimeoutRef.current = null
       longPressTriggeredRef.current = true
       setPositionFromPoint(clientX, clientY)
-      setIsVisible(true)
-      setOpenedByLongPress(true)
-      if (!scriptureData && !loading) {
-        fetchScriptureText()
+      setVisibleForReference(refAtTouch)
+      setOpenedByLongPressForReference(refAtTouch)
+      const cached = fetchStateRef.current
+      const hasCachedForReference =
+        cached?.reference === refAtTouch &&
+        cached.translation === translation &&
+        cached.data != null
+      const isLoadingForReference =
+        cached?.reference === refAtTouch &&
+        cached.translation === translation &&
+        cached.loading
+      if (!hasCachedForReference && !isLoadingForReference) {
+        void fetchScriptureText(refAtTouch)
       }
     }, LONG_PRESS_MS)
   }
@@ -282,8 +344,8 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
       e.stopPropagation()
       longPressTriggeredRef.current = false
       // Close verse when finger lifts after long-press
-      setIsVisible(false)
-      setOpenedByLongPress(false)
+      setVisibleForReference(null)
+      setOpenedByLongPressForReference(null)
     }
   }
 
@@ -297,8 +359,8 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
 
   const closeLongPressPopup = () => {
     if (openedByLongPress) {
-      setIsVisible(false)
-      setOpenedByLongPress(false)
+      setVisibleForReference(null)
+      setOpenedByLongPressForReference(null)
     }
   }
 
@@ -316,8 +378,8 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
     if (!isVisible || openedByLongPress) return
 
     const hide = () => {
-      setIsVisible(false)
-      setOpenedByLongPress(false)
+      setVisibleForReference(null)
+      setOpenedByLongPressForReference(null)
     }
 
     const handlePointerDown = (event: PointerEvent) => {
