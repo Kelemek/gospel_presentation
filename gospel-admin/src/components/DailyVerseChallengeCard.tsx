@@ -8,11 +8,11 @@ import {
   DAILY_VERSE_CHALLENGE_STORAGE_KEY,
   formatMaskedReference,
   stripLeadingVerseNumberMarker,
-  getLocalDateKey,
   getPromptAtIndex,
   getPromptIndexForDate,
   getTodayDailyVerseHuntEncouragementMessage,
   getTodayPrompt,
+  isTodayChallengeCompleted,
   loadDailyVerseChallengeCompletion,
   loadDailyVersePrompts,
   normalizePromptIndex,
@@ -98,10 +98,11 @@ export default function DailyVerseChallengeCard({
     () => ''
   )
 
-  const completed =
-    !previewEnabled &&
-    prompt != null &&
-    completionSnapshot === `${getLocalDateKey()}:${prompt.id}`
+  // Re-read storage on local completion (completedVersion) and remote sync (completionSnapshot).
+  void completedVersion
+  void completionSnapshot
+
+  const completed = prompt != null && isTodayChallengeCompleted(prompt.id)
 
   const encouragementMessage = completed
     ? getTodayDailyVerseHuntEncouragementMessage()

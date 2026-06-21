@@ -145,6 +145,51 @@ describe('DailyVerseChallengeCard', () => {
     )
   })
 
+  it('shows completed state for admins after today\'s hunt is solved', async () => {
+    const prompts = fixturePrompts.prompts
+    const dateKey = getLocalDateKey()
+    const index =
+      require('@/lib/dailyVerseChallenge').hashDateKey(dateKey) % prompts.length
+    const prompt = prompts[index]!
+
+    saveDailyVerseChallengeCompletion({
+      dateKey,
+      promptId: prompt.id,
+      encouragementMessage: 'Well done.',
+    })
+
+    render(<DailyVerseChallengeCard completedVersion={1} isAdmin />)
+
+    const subtitle = screen.getByText(prompt.reference)
+    expect(subtitle.closest('p')).toHaveTextContent(`✓ ${prompt.reference}`)
+    expect(
+      screen.queryByRole('button', { name: 'Previous Daily Verse Hunt prompt' })
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows completed state after local find bumps completedVersion', async () => {
+    const prompts = fixturePrompts.prompts
+    const dateKey = getLocalDateKey()
+    const index =
+      require('@/lib/dailyVerseChallenge').hashDateKey(dateKey) % prompts.length
+    const prompt = prompts[index]!
+
+    const { rerender } = render(<DailyVerseChallengeCard completedVersion={0} />)
+
+    await act(async () => {
+      saveDailyVerseChallengeCompletion({
+        dateKey,
+        promptId: prompt.id,
+        encouragementMessage: 'Well done.',
+      })
+    })
+
+    rerender(<DailyVerseChallengeCard completedVersion={1} />)
+
+    const subtitle = screen.getByText(prompt.reference)
+    expect(subtitle.closest('p')).toHaveTextContent(`✓ ${prompt.reference}`)
+  })
+
   it('shows completed state after remote sync without completedVersion bump', async () => {
     const prompts = fixturePrompts.prompts
     const dateKey = getLocalDateKey()
