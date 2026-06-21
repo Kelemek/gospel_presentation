@@ -1421,16 +1421,6 @@ body.capacitor-android .gospel-modal-safe-panel {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Device sync pairing code — iOS Safari vertically centers placeholder/value inconsistently without a fixed line-height. */
-.device-sync-pairing-code-input {
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-.device-sync-pairing-code-input:focus {
-  outline: none;
-}
-
 /* Help tour: larger tap targets on narrow viewports (driver.js defaults are ~12px text, tight padding). */
 @media (max-width: 767px) {
   /* Android often reports safe-area-bottom as 0; floor keeps the card above system nav / 3-button bar. */

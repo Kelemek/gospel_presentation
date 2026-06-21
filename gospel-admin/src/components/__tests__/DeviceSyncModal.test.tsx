@@ -111,7 +111,9 @@ describe('DeviceSyncModal', () => {
 
   it('portals the dialog to document.body (Safari slide-out overflow)', () => {
     renderModal(<DeviceSyncModal isOpen onClose={jest.fn()} initialMode="both" />)
-    expect(document.body.querySelector('[data-tour="device-sync-modal"]')).not.toBeNull()
+    const overlay = document.body.querySelector('[data-tour="device-sync-modal"]')
+    expect(overlay).not.toBeNull()
+    expect(overlay).toHaveClass('pt-[max(2.5rem,env(safe-area-inset-top,0))]')
   })
 
   it('shows manage actions when sync is already active', () => {
@@ -202,7 +204,22 @@ describe('DeviceSyncModal', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  it('claims when a full code is inserted via input (iOS autofill)', async () => {
+  it('claims when a full code is pasted', async () => {
+    const onClose = jest.fn()
+    const user = userEvent.setup()
+    renderModal(<DeviceSyncModal isOpen onClose={onClose} initialMode="enter" />)
+
+    const input = screen.getByLabelText(/6-digit pairing code/i)
+    await user.click(input)
+    await user.paste('998877')
+
+    await waitFor(() => {
+      expect(client.claimPairingCode).toHaveBeenCalledWith('998877')
+    })
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('claims when iOS autofill inserts a full code via input', async () => {
     const onClose = jest.fn()
     renderModal(<DeviceSyncModal isOpen onClose={onClose} initialMode="enter" />)
 
@@ -213,5 +230,11 @@ describe('DeviceSyncModal', () => {
       expect(client.claimPairingCode).toHaveBeenCalledWith('998877')
     })
     expect(onClose).toHaveBeenCalled()
+  })
+
+  it('uses scrollable body on the enter-code tab', () => {
+    renderModal(<DeviceSyncModal isOpen onClose={jest.fn()} initialMode="enter" />)
+    const panel = document.body.querySelector('[data-tour="device-sync-modal"] .gospel-modal-safe-panel')
+    expect(panel?.querySelector('.gospel-modal-safe-scroll')).not.toBeNull()
   })
 })

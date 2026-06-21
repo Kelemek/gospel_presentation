@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type MutableRefObject } from 'react'
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type MutableRefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import { PAIRING_CODE_CLAIM_POLL_MS, PAIRING_CODE_TTL_MS } from '@/lib/gospelDeviceSync/constants'
@@ -21,6 +21,8 @@ import {
   isDeviceSyncActive,
 } from '@/lib/gospelDeviceSync/dirty'
 import { usePostHogModalOpen } from '@/hooks/usePostHogModalOpen'
+import PairingCodeInput, { normalizePairingCodeInput } from '@/components/PairingCodeInput'
+import { lockDocumentScroll } from '@/lib/documentScrollLock'
 
 /** @deprecated Modal auto-detects sync state; kept for tests. */
 export type DeviceSyncModalMode = 'create' | 'enter' | 'both'
@@ -70,11 +72,6 @@ function formatCountdown(ms: number): string {
   const min = Math.floor(totalSec / 60)
   const sec = totalSec % 60
   return `${min}:${String(sec).padStart(2, '0')}`
-}
-
-/** Strip non-digits; iOS OTP autofill may include spaces or punctuation. */
-function normalizePairingCodeInput(raw: string): string {
-  return raw.replace(/\D/g, '').slice(0, 6)
 }
 
 function resetCreateFlowState(
@@ -128,6 +125,12 @@ export default function DeviceSyncModal({
       createStartedRef.current = false
       claimInFlightRef.current = false
     }
+  }, [isOpen])
+
+  // Lock document scroll before paint (matches ScriptureModal — avoids a visible scroll jump).
+  useLayoutEffect(() => {
+    if (!isOpen) return undefined
+    return lockDocumentScroll()
   }, [isOpen])
 
   const inLinkDeviceFlow = syncActive && manageView === 'link-device'
@@ -290,19 +293,15 @@ export default function DeviceSyncModal({
     [enterCode, onClose]
   )
 
-  const updateEnterCode = useCallback(
-    (raw: string, options?: { autoClaim?: boolean }) => {
-      const next = normalizePairingCodeInput(raw)
-      setEnterCode(next)
-      setError(null)
-      if (options?.autoClaim !== false && next.length === 6) {
-        void handleClaim(next)
-      }
-    },
-    [handleClaim]
-  )
+  const updateEnterCode = useCallback((raw: string) => {
+    setEnterCode(normalizePairingCodeInput(raw))
+    setError(null)
+  }, [])
 
   if (!isOpen || typeof document === 'undefined') return null
+
+  const useCompactEnterLayout =
+    !syncActive && !code && !codeClaimed && !inLinkDeviceFlow && setupPanel === 'enter'
 
   const codeExpired = expiresAt != null && countdownMs <= 0
   const showSetupCreatePrompt = inSetupCreate && !createRequested && !code && !busy
@@ -390,26 +389,11 @@ export default function DeviceSyncModal({
       <p className="text-sm text-slate-600 dark:text-slate-300">
         Enter the 6-digit code shown on your other device.
       </p>
-      <input
-        type="text"
-        name="one-time-code"
-        inputMode="numeric"
-        pattern="[0-9]*"
-        autoComplete="one-time-code"
-        autoCorrect="off"
-        autoCapitalize="off"
-        spellCheck={false}
-        enterKeyHint="go"
+      <PairingCodeInput
         value={enterCode}
-        onChange={(e) => updateEnterCode(e.target.value)}
-        onInput={(e) => updateEnterCode(e.currentTarget.value)}
-        onPaste={(e) => {
-          e.preventDefault()
-          updateEnterCode(e.clipboardData.getData('text'))
-        }}
+        onChange={updateEnterCode}
+        onComplete={(code) => void handleClaim(code)}
         disabled={busy}
-        className="device-sync-pairing-code-input w-full appearance-none rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 h-14 py-0 leading-[3.5rem] text-center text-2xl font-semibold tracking-[0.35em] tabular-nums text-slate-900 dark:text-slate-100 disabled:opacity-60"
-        aria-label="6-digit pairing code"
       />
       <button
         type="submit"
@@ -421,6 +405,75 @@ export default function DeviceSyncModal({
     </form>
   )
 
+  const renderSetupTabs = () => (
+    <div className="flex rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setSetupPanel('create')}
+        className={setupTabClass(setupPanel === 'create')}
+      >
+        Create a code
+      </button>
+      <button
+        type="button"
+        onClick={() => {
+          setEnterCode('')
+          setError(null)
+          setSetupPanel('enter')
+        }}
+        className={setupTabClass(setupPanel === 'enter')}
+      >
+        Enter a code
+      </button>
+    </div>
+  )
+
+  const renderPrivacyNote = () => (
+    <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug border-t border-slate-200 dark:border-slate-600 pt-3">
+      Your library is encrypted. Only devices you link can read it. Pairing codes expire in{' '}
+      {Math.round(PAIRING_CODE_TTL_MS / 60_000)} minutes.
+    </p>
+  )
+
+  const renderMainBody = () => {
+    if (codeClaimed) {
+      return renderPairingCodeClaimedPanel({ showBack: inLinkDeviceFlow })
+    }
+    if (code || inLinkDeviceFlow) {
+      return renderCreateCodePanel({ showBack: inLinkDeviceFlow })
+    }
+    if (syncActive) {
+      return (
+        <div className="space-y-4">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Your bookmarks, highlights, and other saved data sync in the background across linked
+            devices.
+          </p>
+          <button
+            type="button"
+            onClick={openLinkAnotherDevice}
+            className={`w-full ${primaryButtonClass}`}
+          >
+            Link another device
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleRemoveSync()}
+            className={secondaryButtonClass}
+          >
+            Remove sync on this device
+          </button>
+        </div>
+      )
+    }
+    return (
+      <>
+        {renderSetupTabs()}
+        {setupPanel === 'create' ? renderCreateCodePanel({}) : renderEnterCodePanel()}
+      </>
+    )
+  }
+
   return createPortal(
     <div
       className="gospel-modal-safe-overlay fixed inset-0 z-60 flex items-start justify-center overflow-x-hidden bg-black/50 dark:bg-black/70 pt-[max(2.5rem,env(safe-area-inset-top,0))] sm:pt-[max(3.5rem,env(safe-area-inset-top,0))] pb-[max(2rem,max(48px,env(safe-area-inset-bottom,0)))] pl-[max(1rem,env(safe-area-inset-left,0))] pr-[max(1rem,env(safe-area-inset-right,0))]"
@@ -429,7 +482,9 @@ export default function DeviceSyncModal({
       data-tour="device-sync-modal"
     >
       <div
-        className="gospel-modal-safe-panel min-w-0 bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full max-h-[calc(100dvh-max(2.5rem,env(safe-area-inset-top,0))-max(2rem,max(48px,env(safe-area-inset-bottom,0))))] sm:max-h-[calc(100dvh-max(3.5rem,env(safe-area-inset-top,0))-max(2rem,max(48px,env(safe-area-inset-bottom,0))))] overflow-hidden flex flex-col"
+        className={`gospel-modal-safe-panel min-w-0 bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-h-[calc(100dvh-max(2.5rem,env(safe-area-inset-top,0))-max(2rem,max(48px,env(safe-area-inset-bottom,0))))] sm:max-h-[calc(100dvh-max(3.5rem,env(safe-area-inset-top,0))-max(2rem,max(48px,env(safe-area-inset-bottom,0))))] overflow-hidden flex flex-col ${
+          useCompactEnterLayout ? 'max-w-md' : 'max-w-lg'
+        }`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -452,56 +507,7 @@ export default function DeviceSyncModal({
         </div>
 
         <div className="gospel-modal-safe-scroll flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-4">
-          {codeClaimed ? (
-            renderPairingCodeClaimedPanel({ showBack: inLinkDeviceFlow })
-          ) : code || inLinkDeviceFlow ? (
-            renderCreateCodePanel({ showBack: inLinkDeviceFlow })
-          ) : syncActive ? (
-            <div className="space-y-4">
-              <p className="text-sm text-slate-600 dark:text-slate-300">
-                Your bookmarks, highlights, and other saved data sync in the background across linked
-                devices.
-              </p>
-              <button
-                type="button"
-                onClick={openLinkAnotherDevice}
-                className={`w-full ${primaryButtonClass}`}
-              >
-                Link another device
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleRemoveSync()}
-                className={secondaryButtonClass}
-              >
-                Remove sync on this device
-              </button>
-            </div>
-          ) : (
-            <>
-              <div className="flex rounded-lg border border-slate-200 dark:border-slate-600 overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setSetupPanel('create')}
-                  className={setupTabClass(setupPanel === 'create')}
-                >
-                  Create a code
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEnterCode('')
-                    setError(null)
-                    setSetupPanel('enter')
-                  }}
-                  className={setupTabClass(setupPanel === 'enter')}
-                >
-                  Enter a code
-                </button>
-              </div>
-              {setupPanel === 'create' ? renderCreateCodePanel({}) : renderEnterCodePanel()}
-            </>
-          )}
+          {renderMainBody()}
 
           {error ? (
             <p className="text-sm text-red-600 dark:text-red-400" role="alert">
@@ -509,10 +515,7 @@ export default function DeviceSyncModal({
             </p>
           ) : null}
 
-          <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug border-t border-slate-200 dark:border-slate-600 pt-3">
-            Your library is encrypted. Only devices you link can read it. Pairing codes expire in{' '}
-            {Math.round(PAIRING_CODE_TTL_MS / 60_000)} minutes.
-          </p>
+          {renderPrivacyNote()}
         </div>
       </div>
     </div>,
