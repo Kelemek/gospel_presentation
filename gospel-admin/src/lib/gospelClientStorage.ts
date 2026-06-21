@@ -1,6 +1,21 @@
 import { idbGetItem, idbListKeys, idbRemoveItem, idbSetItem } from '@/lib/gospelClientKvStore'
 import { shouldUseIndexedDb } from '@/lib/gospelClientStoragePolicy'
-import { emitGospelClientStorageHydrated } from '@/lib/gospelClientStorageEvents'
+import {
+  emitGospelClientStorageChanged,
+  emitGospelClientStorageHydrated,
+} from '@/lib/gospelClientStorageEvents'
+import { markSyncKeyDirty } from '@/lib/gospelDeviceSync/dirty'
+
+function notifyStorageChanged(key: string): void {
+  emitGospelClientStorageChanged(key)
+}
+
+function notifySyncDirty(key: string): void {
+  if (!markSyncKeyDirty(key)) return
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('gospel-sync-dirty'))
+  }
+}
 
 const memoryCache = new Map<string, string>()
 /** Per-key chains so read-modify-write callers do not clobber each other. */
@@ -151,29 +166,48 @@ export function gospelStorageSetSync(key: string, value: string): boolean {
   if (typeof window === 'undefined') return false
   if (shouldUseIndexedDb(key)) {
     memoryCache.set(key, value)
+    notifyStorageChanged(key)
+    // Mark dirty immediately: push reads memory cache; tab-hide flush must not wait on IDB.
+    notifySyncDirty(key)
     void idbSetItem(key, value)
-      .then(() => tryRemoveLocalStorage(key))
+      .then(() => {
+        tryRemoveLocalStorage(key)
+      })
       .catch(() => {
-        trySetLocalStorage(key, value)
+        const ok = trySetLocalStorage(key, value)
+        if (ok) notifySyncDirty(key)
       })
     return true
   }
-  return trySetLocalStorage(key, value)
+  const ok = trySetLocalStorage(key, value)
+  if (ok) {
+    notifySyncDirty(key)
+    notifyStorageChanged(key)
+  }
+  return ok
 }
 
 export async function gospelStorageSet(key: string, value: string): Promise<boolean> {
   if (typeof window === 'undefined') return false
   if (!shouldUseIndexedDb(key)) {
-    return trySetLocalStorage(key, value)
+    const ok = trySetLocalStorage(key, value)
+    if (ok) {
+      notifySyncDirty(key)
+      notifyStorageChanged(key)
+    }
+    return ok
   }
   memoryCache.set(key, value)
+  notifyStorageChanged(key)
+  notifySyncDirty(key)
   try {
     await idbSetItem(key, value)
     tryRemoveLocalStorage(key)
     return true
   } catch {
-    trySetLocalStorage(key, value)
-    return false
+    const ok = trySetLocalStorage(key, value)
+    if (ok) notifySyncDirty(key)
+    return ok
   }
 }
 
@@ -209,6 +243,8 @@ export async function gospelStorageRemove(key: string): Promise<void> {
     }
   }
   tryRemoveLocalStorage(key)
+  notifySyncDirty(key)
+  notifyStorageChanged(key)
 }
 
 export function gospelStorageRemoveSync(key: string): void {
@@ -217,6 +253,8 @@ export function gospelStorageRemoveSync(key: string): void {
     void idbRemoveItem(key).catch(() => {})
   }
   tryRemoveLocalStorage(key)
+  notifySyncDirty(key)
+  notifyStorageChanged(key)
 }
 
 /** @deprecated Use `hydrateGospelClientStorage`. */

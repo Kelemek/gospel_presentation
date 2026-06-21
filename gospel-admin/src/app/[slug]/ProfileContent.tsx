@@ -104,9 +104,14 @@ import { getOrderedTocAnchorIds } from '@/lib/tocAnchorFromScroll'
 import {
   clearProfileReadingResume,
   loadProfileReadingResume,
+  profileReadingResumeStorageKey,
   saveProfileReadingResume,
   type ProfileReadingResumeV1,
 } from '@/lib/profileReadingResumeStorage'
+import { GOSPEL_CLIENT_STORAGE_CHANGED_EVENT } from '@/lib/gospelClientStorageEvents'
+import { DEVICE_SYNC_STATE_CHANGED_EVENT } from '@/lib/gospelDeviceSync/dirty'
+import { GOSPEL_SYNC_FLUSH_REQUEST_EVENT } from '@/lib/gospelDeviceSync/constants'
+import { waitForDeviceSyncStartupPull } from '@/lib/gospelDeviceSync/waitForStartupPull'
 import { runReadingResumeRestoreWithFingerprintRetry, readingResumeForScrollTopGuard } from '@/lib/profileReadingResumeRestore'
 import {
   GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT,
@@ -125,7 +130,10 @@ import {
   peekProfileResourceTabNavigation,
 } from '@/lib/profileResourceTabNavigation'
 import {
+  findScriptureCardInList,
+  indexOfScriptureCardInList,
   isProfileScriptureCardAnchors,
+  scriptureCardReferencesMatch,
   scriptureModalUsesHighlightPicker,
 } from '@/lib/scriptureModalOpenMode'
 import { isMcheyneProfileSlug } from '@/lib/mcheyne/mcheyneSlug'
@@ -297,6 +305,7 @@ function ProfileContent({
   const appVisibleRestoreCancelRef = useRef<(() => void) | null>(null)
   const profileSlugRef = useRef('')
   const tryAppResumeReadingRestoreRef = useRef<() => void>(() => {})
+  const trySyncReadingResumeRestoreRef = useRef<() => void>(() => {})
   type TabNavStagingRef =
     | { status: 'unset' }
     | { status: 'not-tab-nav' }
@@ -607,6 +616,7 @@ function ProfileContent({
         'visibility-hide',
         'pagehide',
         'beforeunload',
+        'window-blur',
       ])
       if (
         flushReason &&
@@ -739,10 +749,15 @@ function ProfileContent({
 
     window.addEventListener('scroll', scheduleSave, { passive: true })
 
+    const requestSyncFlush = () => {
+      window.dispatchEvent(new CustomEvent(GOSPEL_SYNC_FLUSH_REQUEST_EVENT))
+    }
+
     const onVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         readingResumeAppVisibleRestoreKeyRef.current = null
         persistReadingResumeBeforeLeave('visibility-hide')
+        requestSyncFlush()
         return
       }
       if (document.visibilityState === 'visible') {
@@ -751,20 +766,28 @@ function ProfileContent({
     }
     const onPageHide = () => {
       persistReadingResumeBeforeLeave('pagehide')
+      requestSyncFlush()
     }
     const onBeforeUnload = () => {
       persistReadingResumeBeforeLeave('beforeunload')
+      requestSyncFlush()
+    }
+    const onWindowBlur = () => {
+      persistReadingResumeBeforeLeave('window-blur')
+      requestSyncFlush()
     }
 
     document.addEventListener('visibilitychange', onVisibilityChange)
     window.addEventListener('pagehide', onPageHide)
     window.addEventListener('beforeunload', onBeforeUnload)
+    window.addEventListener('blur', onWindowBlur)
 
     return () => {
       window.removeEventListener('scroll', scheduleSave)
       document.removeEventListener('visibilitychange', onVisibilityChange)
       window.removeEventListener('pagehide', onPageHide)
       window.removeEventListener('beforeunload', onBeforeUnload)
+      window.removeEventListener('blur', onWindowBlur)
       // Do not persist on effect cleanup: scrollY is often 0 during route/tab transitions
       // and would overwrite a valid resume saved in tab-select-leave.
       cancelPendingReadingResumeSave()
@@ -833,29 +856,28 @@ function ProfileContent({
   const startReadingResumeRestoreRef = useRef(startReadingResumeRestore)
   const onReadingResumeSettledRef = useRef(onReadingResumeSettled)
 
-  const tryAppResumeReadingRestore = useCallback(() => {
-    if (!profileSlug || sectionCount === 0) return
-    if (typeof window === 'undefined' || window.scrollY > 8) return
-    if (selectedScripture.isOpen) return
-    if (studyRefParam) return
+  const shouldRestoreStoredReadingResume = useCallback(
+    (
+      saved: ProfileReadingResumeV1,
+      options: { allowWhenAheadOfViewport?: boolean }
+    ): boolean => {
+      if (typeof window === 'undefined') return false
+      if (window.scrollY <= 8) return true
+      if (!options.allowWhenAheadOfViewport || !sections) return false
+      try {
+        const current = captureReadingPositionAtViewport(sections, profileSlug)
+        if (!current) return false
+        const orderedIds = getOrderedTocAnchorIds(sections)
+        return isReadingPositionAheadOf(saved, current, orderedIds)
+      } catch {
+        return false
+      }
+    },
+    [profileSlug, sections]
+  )
 
-    const rawHash = window.location.hash.slice(1)
-    if (rawHash && rawHash.startsWith('section-')) return
-
-    if (isMcheyneProfileSlug(profileSlug)) {
-      if (resolveMcheynePlanDayFromNavigation(mcheynePlanDayParam) != null) return
-      if (resolveMcheyneResumePinFromNavigation(mcheyneResumePinParam)) return
-    }
-
-    const slugForRestore = profileSlug
-
-    void (async () => {
-      await hydrateGospelClientStorage()
-      if (profileSlugRef.current !== slugForRestore) return
-
-      const saved = loadProfileReadingResume(slugForRestore)
-      if (!saved) return
-
+  const runStoredReadingResumeRestore = useCallback(
+    (slugForRestore: string, saved: ProfileReadingResumeV1) => {
       const restoreKey = `${slugForRestore}:${saved.anchorId}:${saved.plainOffset}`
       if (readingResumeAppVisibleRestoreKeyRef.current === restoreKey) return
 
@@ -885,15 +907,62 @@ function ProfileContent({
           },
         }
       )
-    })()
-  }, [
-    profileSlug,
-    sectionCount,
-    selectedScripture.isOpen,
-    studyRefParam,
-    mcheynePlanDayParam,
-    mcheyneResumePinParam,
-  ])
+    },
+    []
+  )
+
+  const attemptStoredReadingResumeRestore = useCallback(
+    (options: { allowWhenAheadOfViewport?: boolean } = {}) => {
+      if (!profileSlug || sectionCount === 0) return
+      if (selectedScripture.isOpen) return
+      if (studyRefParam) return
+
+      if (options.allowWhenAheadOfViewport) {
+        readingResumeAppVisibleRestoreKeyRef.current = null
+      }
+
+      if (typeof window !== 'undefined') {
+        const rawHash = window.location.hash.slice(1)
+        if (rawHash && rawHash.startsWith('section-')) return
+
+        if (isMcheyneProfileSlug(profileSlug)) {
+          if (resolveMcheynePlanDayFromNavigation(mcheynePlanDayParam) != null) return
+          if (resolveMcheyneResumePinFromNavigation(mcheyneResumePinParam)) return
+        }
+      }
+
+      const slugForRestore = profileSlug
+
+      void (async () => {
+        await hydrateGospelClientStorage()
+        if (profileSlugRef.current !== slugForRestore) return
+
+        const saved = loadProfileReadingResume(slugForRestore)
+        if (!saved) return
+        if (!shouldRestoreStoredReadingResume(saved, options)) return
+
+        runStoredReadingResumeRestore(slugForRestore, saved)
+      })()
+    },
+    [
+      profileSlug,
+      sectionCount,
+      selectedScripture.isOpen,
+      studyRefParam,
+      mcheynePlanDayParam,
+      mcheyneResumePinParam,
+      shouldRestoreStoredReadingResume,
+      runStoredReadingResumeRestore,
+    ]
+  )
+
+  const tryAppResumeReadingRestore = useCallback(() => {
+    attemptStoredReadingResumeRestore()
+  }, [attemptStoredReadingResumeRestore])
+
+  const trySyncReadingResumeRestore = useCallback(() => {
+    attemptStoredReadingResumeRestore({ allowWhenAheadOfViewport: true })
+  }, [attemptStoredReadingResumeRestore])
 
   useLayoutEffect(() => {
     profileSlugRef.current = profileSlug
@@ -911,7 +980,34 @@ function ProfileContent({
     startReadingResumeRestoreRef.current = startReadingResumeRestore
     onReadingResumeSettledRef.current = onReadingResumeSettled
     tryAppResumeReadingRestoreRef.current = tryAppResumeReadingRestore
-  }, [startReadingResumeRestore, onReadingResumeSettled, tryAppResumeReadingRestore])
+    trySyncReadingResumeRestoreRef.current = trySyncReadingResumeRestore
+  }, [
+    startReadingResumeRestore,
+    onReadingResumeSettled,
+    tryAppResumeReadingRestore,
+    trySyncReadingResumeRestore,
+  ])
+
+  useEffect(() => {
+    if (!isHydrated || !profileSlug || sectionCount === 0) return undefined
+
+    const onClientStorageChanged = (event: Event) => {
+      const key = (event as CustomEvent<{ key: string }>).detail?.key
+      if (!key || key !== profileReadingResumeStorageKey(profileSlug)) return
+      trySyncReadingResumeRestoreRef.current()
+    }
+
+    const onDeviceSyncStateChanged = () => {
+      trySyncReadingResumeRestoreRef.current()
+    }
+
+    window.addEventListener(GOSPEL_CLIENT_STORAGE_CHANGED_EVENT, onClientStorageChanged)
+    window.addEventListener(DEVICE_SYNC_STATE_CHANGED_EVENT, onDeviceSyncStateChanged)
+    return () => {
+      window.removeEventListener(GOSPEL_CLIENT_STORAGE_CHANGED_EVENT, onClientStorageChanged)
+      window.removeEventListener(DEVICE_SYNC_STATE_CHANGED_EVENT, onDeviceSyncStateChanged)
+    }
+  }, [isHydrated, profileSlug, sectionCount])
 
   useEffect(() => {
     const slugOnMount = profileSlug
@@ -982,6 +1078,7 @@ function ProfileContent({
 
     const timer = window.setTimeout(() => {
       void (async () => {
+        await waitForDeviceSyncStartupPull()
         await hydrateGospelClientStorage()
         if (cancelled || profileReadingNavAppliedRef.current) return
         if (studyRefParam) {
@@ -1321,7 +1418,7 @@ function ProfileContent({
       let subsectionId = explicit?.subsectionId?.trim() ?? ''
       if (!sectionId || !subsectionId) {
         const pinned = modalOpenAnchors
-        if (pinned?.reference === reference) {
+        if (pinned && scriptureCardReferencesMatch(pinned.reference, reference)) {
           sectionId = pinned.sectionId
           subsectionId = pinned.subsectionId
         } else if (sections) {
@@ -1482,22 +1579,13 @@ function ProfileContent({
           }
         }
       }
-      const navEntry =
-        sectionId && subsectionId
-          ? allScriptureRefs.find(
-              r =>
-                r.reference === reference &&
-                r.sectionId === sectionId &&
-                r.subsectionId === subsectionId
-            )
-          : undefined
+      const anchorLookup =
+        sectionId && subsectionId ? { sectionId, subsectionId } : undefined
       if (favoriteReferences.length > 0) {
         const favIndex = favoriteReferences.indexOf(reference)
         if (favIndex !== -1) setCurrentReferenceIndex(favIndex)
       } else {
-        const allIndex = navEntry
-          ? allScriptureRefs.indexOf(navEntry)
-          : allScriptureRefs.findIndex(r => r.reference === reference)
+        const allIndex = indexOfScriptureCardInList(reference, allScriptureRefs, anchorLookup)
         if (allIndex !== -1) setCurrentReferenceIndex(allIndex)
       }
     },
@@ -1525,15 +1613,8 @@ function ProfileContent({
         }
       }
 
-      const navEntry =
-        sectionId && subsectionId
-          ? allScriptureRefs.find(
-              r =>
-                r.reference === reference &&
-                r.sectionId === sectionId &&
-                r.subsectionId === subsectionId
-            )
-          : undefined
+      const anchorLookup =
+        sectionId && subsectionId ? { sectionId, subsectionId } : undefined
 
       if (sectionId && subsectionId) {
         setModalOpenAnchors({ reference, sectionId, subsectionId })
@@ -1549,9 +1630,7 @@ function ProfileContent({
         const favIndex = favoriteReferences.indexOf(reference)
         if (favIndex !== -1) setCurrentReferenceIndex(favIndex)
       } else {
-        const allIndex = navEntry
-          ? allScriptureRefs.indexOf(navEntry)
-          : allScriptureRefs.findIndex(r => r.reference === reference)
+        const allIndex = indexOfScriptureCardInList(reference, allScriptureRefs, anchorLookup)
         if (allIndex !== -1) setCurrentReferenceIndex(allIndex)
       }
 
@@ -1581,7 +1660,7 @@ function ProfileContent({
           : {}),
         ...(usePickerNavigation
           ? { pickerNavigation: true as const, mcheynePlanCardPin: undefined }
-          : {}),
+          : { pickerNavigation: undefined }),
         ...(mcheynePlanCardPin && !usePickerNavigation
           ? { mcheynePlanCardPin: true as const }
           : {}),
@@ -1694,7 +1773,8 @@ function ProfileContent({
   const effectiveModalOpenAnchors = useMemo(() => {
     if (
       selectedScripture.isOpen &&
-      modalOpenAnchors?.reference === selectedScripture.reference
+      modalOpenAnchors &&
+      scriptureCardReferencesMatch(modalOpenAnchors.reference, selectedScripture.reference)
     ) {
       return modalOpenAnchors
     }
@@ -1716,8 +1796,11 @@ function ProfileContent({
         reference: activeScripture.reference,
         pickerNavigation: activeScripture.pickerNavigation,
         anchors:
-          effectiveModalOpenAnchors?.reference.trim().replace(/–/g, '-') ===
-          activeScripture.reference.trim().replace(/–/g, '-')
+          effectiveModalOpenAnchors &&
+          scriptureCardReferencesMatch(
+            effectiveModalOpenAnchors.reference,
+            activeScripture.reference
+          )
             ? effectiveModalOpenAnchors
             : null,
         scriptureCards: allScriptureRefs,
@@ -1736,7 +1819,8 @@ function ProfileContent({
     if (!reference) return
 
     const anchorsMatch =
-      effectiveModalOpenAnchors?.reference.trim() === reference
+      effectiveModalOpenAnchors &&
+      scriptureCardReferencesMatch(effectiveModalOpenAnchors.reference, reference)
     let sectionId = anchorsMatch ? (effectiveModalOpenAnchors?.sectionId?.trim() ?? '') : ''
     let subsectionId = anchorsMatch
       ? (effectiveModalOpenAnchors?.subsectionId?.trim() ?? '')
@@ -1791,7 +1875,7 @@ function ProfileContent({
       const favIndex = favoriteReferences.indexOf(reference)
       if (favIndex !== -1) return favIndex
     }
-    const allIndex = allScriptureRefs.findIndex((r) => r.reference === reference)
+    const allIndex = indexOfScriptureCardInList(reference, allScriptureRefs)
     return allIndex !== -1 ? allIndex : null
   }, [scriptureFromDeepLink, scriptureRefParam, favoriteReferences, allScriptureRefs])
 
@@ -1851,7 +1935,7 @@ function ProfileContent({
       const newIndex = (navReferenceIndex - 1 + navListLength) % navListLength
       setCurrentReferenceIndex(newIndex)
       const reference = favoriteReferences[newIndex]!
-      const entry = allScriptureRefs.find(r => r.reference === reference)
+      const entry = findScriptureCardInList(reference, allScriptureRefs)
       syncModalAnchorsForNav(
         reference,
         entry
@@ -1900,7 +1984,7 @@ function ProfileContent({
       const newIndex = (navReferenceIndex + 1) % navListLength
       setCurrentReferenceIndex(newIndex)
       const reference = favoriteReferences[newIndex]!
-      const entry = allScriptureRefs.find(r => r.reference === reference)
+      const entry = findScriptureCardInList(reference, allScriptureRefs)
       syncModalAnchorsForNav(
         reference,
         entry

@@ -2,6 +2,11 @@
 
 import React, { createContext, useContext, useSyncExternalStore, useCallback, useMemo } from 'react'
 import { THEME_STORAGE_KEY } from '@/lib/theme-init-script'
+import {
+  gospelStorageRemoveSync,
+  gospelStorageSetSync,
+} from '@/lib/gospelClientStorage'
+import { GOSPEL_CLIENT_STORAGE_CHANGED_EVENT } from '@/lib/gospelClientStorageEvents'
 
 const STORAGE_KEY = THEME_STORAGE_KEY
 
@@ -52,9 +57,9 @@ export function readThemePersistenceSnapshot(): ThemePersistenceSnapshot {
 export function applyThemePersistenceSnapshot(snapshot: ThemePersistenceSnapshot): void {
   if (typeof window === 'undefined') return
   if (snapshot.kind === 'explicit') {
-    localStorage.setItem(STORAGE_KEY, snapshot.theme)
+    gospelStorageSetSync(STORAGE_KEY, snapshot.theme)
   } else {
-    localStorage.removeItem(STORAGE_KEY)
+    gospelStorageRemoveSync(STORAGE_KEY)
   }
   notify()
 }
@@ -63,10 +68,16 @@ function onStorage() {
   notify()
 }
 
+function onClientStorageChanged(event: Event): void {
+  const key = (event as CustomEvent<{ key: string }>).detail?.key
+  if (key === STORAGE_KEY) notify()
+}
+
 function addStorageListeners() {
   if (typeof window === 'undefined' || storageListenerAdded) return
   storageListenerAdded = true
   window.addEventListener('storage', onStorage)
+  window.addEventListener(GOSPEL_CLIENT_STORAGE_CHANGED_EVENT, onClientStorageChanged)
   const media = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: dark)') : null
   if (media) media.addEventListener('change', onStorage)
 }
@@ -75,6 +86,7 @@ function removeStorageListeners() {
   if (typeof window === 'undefined' || !storageListenerAdded) return
   storageListenerAdded = false
   window.removeEventListener('storage', onStorage)
+  window.removeEventListener(GOSPEL_CLIENT_STORAGE_CHANGED_EVENT, onClientStorageChanged)
   const media = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: dark)') : null
   if (media) media.removeEventListener('change', onStorage)
 }
@@ -100,7 +112,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = useCallback((next: Theme) => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY, next)
+      gospelStorageSetSync(STORAGE_KEY, next)
       notify()
     }
   }, [])

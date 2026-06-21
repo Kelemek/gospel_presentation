@@ -9,6 +9,7 @@ import { CapacitorDeployNoticeController } from "@/components/CapacitorDeployNot
 import { CapacitorKeepLinksInApp } from "@/components/CapacitorKeepLinksInApp";
 import { CapacitorProfileHelpTourNavigation } from "@/components/CapacitorProfileHelpTourNavigation";
 import { GospelClientStorageHydration } from "@/components/GospelClientStorageHydration";
+import { GospelDeviceSyncEngine } from "@/components/GospelDeviceSyncEngine";
 import { ProfileAppLaunchResume } from "@/components/ProfileAppLaunchResume";
 import { NativeAppInstallBanner } from "@/components/NativeAppInstallBanner";
 import { SplashScreenController } from "@/components/SplashScreenController";
@@ -72,6 +73,7 @@ export default function RootLayout({
               <ApplyTextSize />
               <CapacitorKeepLinksInApp />
               <GospelClientStorageHydration />
+              <GospelDeviceSyncEngine />
               <ProfileAppLaunchResume />
               <CapacitorProfileHelpTourNavigation />
               <CapacitorBlankPageGuard />

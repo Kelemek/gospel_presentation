@@ -10,11 +10,14 @@ import {
   hydrateGospelClientStorage,
   gospelStorageGetSync,
   gospelStorageMutate,
+  gospelStorageRemove,
+  gospelStorageRemoveSync,
   gospelStorageSet,
   gospelStorageSetSync,
   resetGospelClientStorageForTests,
 } from '@/lib/gospelClientStorage'
 import { hydrateMemorizedVersesStorage, loadMemorizedVerses } from '@/lib/verseMemorizationStorage'
+import * as gospelDeviceSyncDirty from '@/lib/gospelDeviceSync/dirty'
 
 describe('gospelClientStorage', () => {
   beforeEach(async () => {
@@ -61,6 +64,46 @@ describe('gospelClientStorage', () => {
     expect(gospelStorageGetSync(key)).toBe('{"answers":[]}')
   })
 
+  it('gospelStorageSetSync marks sync dirty immediately for IndexedDB keys', () => {
+    const key = `${GOSPEL_ANSWERS_KEY_PREFIX}defer-dirty`
+    const markSpy = jest.spyOn(gospelDeviceSyncDirty, 'markSyncKeyDirty')
+    let resolveIdb!: () => void
+    const idbPromise = new Promise<void>((resolve) => {
+      resolveIdb = resolve
+    })
+    jest.spyOn(gospelClientKvStore, 'idbSetItem').mockReturnValue(idbPromise)
+
+    gospelStorageSetSync(key, '{"answers":[]}')
+    expect(markSpy).toHaveBeenCalledWith(key)
+
+    resolveIdb()
+  })
+
+  it('gospelStorageSetSync marks sync dirty after localStorage fallback when IndexedDB fails', async () => {
+    const key = `${GOSPEL_ANSWERS_KEY_PREFIX}fallback-dirty`
+    const markSpy = jest.spyOn(gospelDeviceSyncDirty, 'markSyncKeyDirty')
+    const idbSpy = jest
+      .spyOn(gospelClientKvStore, 'idbSetItem')
+      .mockRejectedValue(new Error('idb failed'))
+
+    gospelStorageSetSync(key, '{"answers":[]}')
+    await idbSpy.mock.results[0]?.value?.catch(() => {})
+
+    expect(markSpy).toHaveBeenCalledWith(key)
+  })
+
+  it('gospelStorageSetSync marks profile reading resume sync dirty', () => {
+    gospelDeviceSyncDirty.enableDeviceSyncLocal('dGVzdC1zeW5jLWtleS0xMjM0NTY3ODkwMTIzNDU2Nzg5MDE=')
+    const markSpy = jest.spyOn(gospelDeviceSyncDirty, 'markSyncKeyDirty')
+    gospelStorageSetSync(
+      'gospel-profile-reading-resume:default',
+      '{"v":1,"anchorId":"section-1-0","plainOffset":0,"fingerprint":"fp"}'
+    )
+    expect(markSpy).toHaveBeenCalledWith('gospel-profile-reading-resume:default')
+    expect(gospelDeviceSyncDirty.getDirtyKeys()).toContain('gospel-profile-reading-resume:default')
+    gospelDeviceSyncDirty.disableDeviceSyncLocal()
+  })
+
   it('gospelStorageSet returns false when IndexedDB and localStorage writes fail', async () => {
     const key = `${GOSPEL_ANSWERS_KEY_PREFIX}profile-b`
     jest.spyOn(gospelClientKvStore, 'idbSetItem').mockRejectedValue(new Error('idb failed'))
@@ -70,6 +113,68 @@ describe('gospelClientStorage', () => {
     })
 
     await expect(gospelStorageSet(key, '{"answers":[]}')).resolves.toBe(false)
+  })
+
+  it('gospelStorageSet marks sync dirty for localStorage-only keys', async () => {
+    gospelDeviceSyncDirty.enableDeviceSyncLocal('dGVzdC1zeW5jLWtleS0xMjM0NTY3ODkwMTIzNDU2Nzg5MDE=')
+    const markSpy = jest.spyOn(gospelDeviceSyncDirty, 'markSyncKeyDirty')
+    const dispatchSpy = jest.spyOn(window, 'dispatchEvent')
+
+    await expect(gospelStorageSet('gospel-profile-theme', 'dark')).resolves.toBe(true)
+    expect(markSpy).toHaveBeenCalledWith('gospel-profile-theme')
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'gospel-sync-dirty' }))
+
+    gospelDeviceSyncDirty.disableDeviceSyncLocal()
+  })
+
+  it('gospelStorageRemove marks sync dirty for removed syncable keys', async () => {
+    const markSpy = jest.spyOn(gospelDeviceSyncDirty, 'markSyncKeyDirty')
+    const key = `${GOSPEL_ANSWERS_KEY_PREFIX}remove-dirty`
+    await gospelStorageSet(key, '[]')
+    markSpy.mockClear()
+
+    await gospelStorageRemove(key)
+    expect(markSpy).toHaveBeenCalledWith(key)
+    expect(gospelStorageGetSync(key)).toBeNull()
+  })
+
+  it('gospelStorageRemoveSync marks sync dirty for removed syncable keys', () => {
+    const markSpy = jest.spyOn(gospelDeviceSyncDirty, 'markSyncKeyDirty')
+    const key = `${GOSPEL_ANSWERS_KEY_PREFIX}remove-sync-dirty`
+    gospelStorageSetSync(key, '[]')
+    markSpy.mockClear()
+
+    gospelStorageRemoveSync(key)
+    expect(markSpy).toHaveBeenCalledWith(key)
+    expect(gospelStorageGetSync(key)).toBeNull()
+  })
+
+  it('gospelStorageSet emits gospel-client-storage-changed', async () => {
+    const dispatchSpy = jest.spyOn(window, 'dispatchEvent')
+    await expect(gospelStorageSet('gospel-profile-theme', 'dark')).resolves.toBe(true)
+    expect(dispatchSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'gospel-client-storage-changed',
+        detail: { key: 'gospel-profile-theme' },
+      })
+    )
+  })
+
+  it('gospelStorageRemove does not dispatch gospel-sync-dirty while sync dirty is suppressed', async () => {
+    const key = `${GOSPEL_ANSWERS_KEY_PREFIX}pull-remove`
+    await gospelStorageSet(key, '[]')
+    const dispatchSpy = jest.spyOn(window, 'dispatchEvent')
+    dispatchSpy.mockClear()
+
+    await gospelDeviceSyncDirty.withSyncDirtySuppressed(async () => {
+      await gospelStorageRemove(key)
+    })
+
+    const dirtyEvents = dispatchSpy.mock.calls.filter(
+      (call) => call[0] instanceof CustomEvent && call[0].type === 'gospel-sync-dirty'
+    )
+    expect(dirtyEvents).toHaveLength(0)
+    expect(gospelStorageGetSync(key)).toBeNull()
   })
 
   it('gospelStorageMutate serializes concurrent updates for the same key', async () => {

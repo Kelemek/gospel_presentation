@@ -1,3 +1,5 @@
+import { gospelStorageSetSync } from '@/lib/gospelClientStorage'
+
 export const PROFILE_READ_ALONG_UNDERLINE_STYLE_STORAGE_KEY =
   'gospel-admin:profile-read-along-underline-style'
 
@@ -17,7 +19,7 @@ export function readProfileReadAlongUnderlineStyleFromStorage(): ProfileReadAlon
 export function writeProfileReadAlongUnderlineStyleToStorage(style: ProfileReadAlongUnderlineStyle): void {
   if (typeof window === 'undefined') return
   try {
-    window.localStorage.setItem(PROFILE_READ_ALONG_UNDERLINE_STYLE_STORAGE_KEY, style)
+    gospelStorageSetSync(PROFILE_READ_ALONG_UNDERLINE_STYLE_STORAGE_KEY, style)
   } catch {
     /* ignore */
   }

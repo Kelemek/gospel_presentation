@@ -5,6 +5,8 @@ import { logger } from '@/lib/logger'
 import { createClient } from '@/lib/supabase/client'
 import type { BibleTranslation } from '@/lib/bible-translations'
 import { isBibleTranslation } from '@/lib/bible-translations'
+import { gospelStorageSetSync } from '@/lib/gospelClientStorage'
+import { GOSPEL_CLIENT_STORAGE_CHANGED_EVENT } from '@/lib/gospelClientStorageEvents'
 
 export type { BibleTranslation }
 
@@ -153,11 +155,25 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    const onClientStorageChanged = (event: Event) => {
+      const key = (event as CustomEvent<{ key: string }>).detail?.key
+      if (key !== STORAGE_KEY) return
+      const fromStorage = localStorage.getItem(STORAGE_KEY)
+      if (isBibleTranslation(fromStorage)) {
+        setTranslationState(fromStorage)
+      }
+    }
+    window.addEventListener(GOSPEL_CLIENT_STORAGE_CHANGED_EVENT, onClientStorageChanged)
+    return () => window.removeEventListener(GOSPEL_CLIENT_STORAGE_CHANGED_EVENT, onClientStorageChanged)
+  }, [])
+
   // Save translation preference (always localStorage; API sync when logged in)
   const setTranslation = async (newTranslation: BibleTranslation) => {
     try {
       setTranslationState(newTranslation)
-      localStorage.setItem(STORAGE_KEY, newTranslation)
+      gospelStorageSetSync(STORAGE_KEY, newTranslation)
 
       const { data: { user }, error: userError } = await supabase.auth.getUser()
       if (!user || userError) return

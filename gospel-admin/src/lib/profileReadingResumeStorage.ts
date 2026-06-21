@@ -1,4 +1,4 @@
-/** Automatic per-profile reading position (scroll), device-only. */
+/** Automatic per-profile reading position (scroll); included in Save my data and device sync. */
 
 import {
   gospelStorageGetSync,

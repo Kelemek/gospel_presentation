@@ -85,6 +85,28 @@ describe('TranslationContext', () => {
     expect(localStorage.getItem('gospel-preferred-translation')).toBe('kjv')
   })
 
+  it('setTranslation marks device sync dirty when sync is enabled', async () => {
+    const gospelDeviceSyncDirty = await import('@/lib/gospelDeviceSync/dirty')
+    gospelDeviceSyncDirty.enableDeviceSyncLocal('dGVzdC1zeW5jLWtleS0xMjM0NTY3ODkwMTIzNDU2Nzg5MDE=')
+    const markSpy = jest.spyOn(gospelDeviceSyncDirty, 'markSyncKeyDirty')
+    ;(global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({ translations: [{ translation_code: 'esv' }, { translation_code: 'kjv' }] }),
+    })
+    render(
+      <TranslationProvider>
+        <TestConsumer />
+      </TranslationProvider>
+    )
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'))
+    markSpy.mockClear()
+    const user = userEvent.setup({ delay: null })
+    await user.click(screen.getByRole('button', { name: /Set KJV/i }))
+    await waitFor(() => expect(screen.getByTestId('translation')).toHaveTextContent('kjv'))
+    expect(markSpy).toHaveBeenCalledWith('gospel-preferred-translation')
+    gospelDeviceSyncDirty.disableDeviceSyncLocal()
+  })
+
   it('falls back to an enabled translation when localStorage prefers a disabled one', async () => {
     localStorage.setItem('gospel-preferred-translation', 'kjv')
     ;(global.fetch as jest.Mock).mockResolvedValue({

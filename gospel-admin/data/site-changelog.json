@@ -1363,5 +1363,10 @@
     "releasedAt": "2026-06-19",
     "committedAt": "2026-06-19T23:13:49.035Z",
     "message": "Presentation sections in the slide-out are now under Table of Contents—expand a section to jump to subsections."
+  },
+  {
+    "releasedAt": "2026-06-20",
+    "committedAt": "2026-06-20T22:25:28.900Z",
+    "message": "Sync across devices (BETA): link a phone and tablet with a short pairing code so bookmarks, highlights, and other saved data stay in sync—no account needed."
   }
 ]

@@ -1,3 +1,5 @@
+import { gospelStorageSetSync } from '@/lib/gospelClientStorage'
+
 export const SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY = 'gospel-scripture-show-verse-numbers'
 
 const listeners = new Set<() => void>()
@@ -38,7 +40,7 @@ export function readScriptureShowVerseNumbersFromStorage(): boolean {
 export function writeScriptureShowVerseNumbersToStorage(show: boolean): void {
   if (typeof window === 'undefined') return
   try {
-    localStorage.setItem(SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY, show ? 'true' : 'false')
+    gospelStorageSetSync(SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY, show ? 'true' : 'false')
     notify()
   } catch {
     /* ignore */

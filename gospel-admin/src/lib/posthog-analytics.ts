@@ -19,6 +19,7 @@ export type ModalAnalyticsName =
   | 'presentation_welcome'
   | 'memorize_listen_controls'
   | 'scripture_chapter_verse_picker'
+  | 'device_sync'
 
 export type ModalOpenedProperties = {
   modal: ModalAnalyticsName

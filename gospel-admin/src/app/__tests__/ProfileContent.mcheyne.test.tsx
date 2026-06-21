@@ -7,7 +7,7 @@ import { render, waitFor, fireEvent, screen } from '@testing-library/react'
 import { mcheyneCalendarShortTitleForPlanDay } from '@/lib/mcheyne/mcheyneCalendar'
 import { TextSizeProvider } from '@/contexts/TextSizeContext'
 import { assignYellowLastViewed, versePinStorageKey } from '@/lib/versePinStorage'
-import { resetGospelClientStorageForTests } from '@/lib/gospelClientStorage'
+import { resetGospelClientStorageForTests, gospelStorageGetSync } from '@/lib/gospelClientStorage'
 import {
   setPendingMcheynePlanDay,
   setPendingMcheyneResumePin,
@@ -183,7 +183,7 @@ describe('ProfileContent M\'Cheyne navigation', () => {
       sectionId: 'section-jan',
       subsectionId: 'section-jan-1',
     })
-    expect(localStorage.getItem(versePinStorageKey('mchy'))).toBeTruthy()
+    expect(gospelStorageGetSync(versePinStorageKey('mchy'))).toBeTruthy()
 
     const { ProfileContent } = await import('../[slug]/ProfileContent')
     renderWithTextSize(

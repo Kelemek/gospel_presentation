@@ -1,4 +1,5 @@
 import { findFirstScriptureCardAnchors } from '@/lib/findFirstScriptureCardAnchors'
+import { indexOfScriptureCardInList } from '@/lib/scriptureModalOpenMode'
 import type { GospelSection } from '@/lib/types'
 
 /** Mirrors ProfileContent.syncNavIndexForReference index resolution (Listen playlist nav sync). */
@@ -8,17 +9,11 @@ function navIndexForReference(
   sections: GospelSection[]
 ): number {
   const found = findFirstScriptureCardAnchors(sections, reference)
-  const navEntry = found
-    ? allScriptureRefs.find(
-        r =>
-          r.reference === reference &&
-          r.sectionId === found.sectionId &&
-          r.subsectionId === found.subsectionId
-      )
-    : undefined
-  return navEntry
-    ? allScriptureRefs.indexOf(navEntry)
-    : allScriptureRefs.findIndex(r => r.reference === reference)
+  return indexOfScriptureCardInList(
+    reference,
+    allScriptureRefs,
+    found ? { sectionId: found.sectionId, subsectionId: found.subsectionId } : undefined
+  )
 }
 
 const mchyDaySections: GospelSection[] = [
@@ -104,5 +99,14 @@ describe('syncScriptureNavIndexForReference (Listen playlist)', () => {
   it('maps the first day reading to index 0', () => {
     expect(navIndexForReference('Genesis 1', allRefs, mchyDaySections)).toBe(0)
     expect(allRefs[1]?.reference).toBe('Matthew 1')
+  })
+
+  it('resolves index when card uses en-dash and lookup uses hyphen', () => {
+    const enDashRefs = allRefs.map((r) =>
+      r.reference === 'Matthew 1'
+        ? { ...r, reference: 'Matthew 1:1–17' }
+        : r
+    )
+    expect(navIndexForReference('Matthew 1:1-17', enDashRefs, mchyDaySections)).toBe(1)
   })
 })

@@ -70,6 +70,7 @@ export function isProfileReadAlongPersistenceKey(key: string): boolean {
 /** Offline profile JSON blobs (`gospel-profile-{slug}`), not bookmarks/highlights/theme. */
 export function isProfileOfflineCacheKey(key: string): boolean {
   if (isProfileReadAlongPersistenceKey(key)) return false
+  if (key.startsWith(PROFILE_READING_RESUME_KEY_PREFIX)) return false
   if (key === PROFILE_LAST_OPEN_RESOURCE_STORAGE_KEY) return false
   if (!key.startsWith(PROFILE_OFFLINE_CACHE_KEY_PREFIX)) return false
   const rest = key.slice(PROFILE_OFFLINE_CACHE_KEY_PREFIX.length)

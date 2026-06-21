@@ -7,14 +7,21 @@ import { TextSizeProvider } from '@/contexts/TextSizeContext'
 import { resetGospelClientStorageForTests } from '@/lib/gospelClientStorage'
 import {
   loadProfileReadingResume,
+  profileReadingResumeStorageKey,
   saveProfileReadingResume,
 } from '@/lib/profileReadingResumeStorage'
+import { emitGospelClientStorageChanged } from '@/lib/gospelClientStorageEvents'
+import { emitDeviceSyncStateChanged } from '@/lib/gospelDeviceSync/dirty'
 import {
   captureReadingPositionAtViewport,
   isReadingPositionFingerprintValid,
   restoreReadingPosition,
 } from '@/lib/profileReadingPosition'
 import { installTestBrowserStorage } from '@/lib/testing/testLocalStorage'
+
+jest.mock('@/lib/gospelDeviceSync/waitForStartupPull', () => ({
+  waitForDeviceSyncStartupPull: jest.fn().mockResolvedValue(undefined),
+}))
 
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: jest.fn(), replace: jest.fn() }),
@@ -262,6 +269,97 @@ describe('ProfileContent reading resume lifecycle', () => {
       anchorId: 'section-1-0',
       plainOffset: 0,
       fingerprint: 'fp-shallow-p2',
+    })
+  })
+
+  test('client storage change for reading resume restores when scroll is at top', async () => {
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true })
+
+    renderWithTextSize(
+      <ProfileContent
+        sections={sectionsPayload as any}
+        profileInfo={{ title: 'Default', slug: 'default', favoriteScriptures: [] }}
+        profile={{ id: 'd', isDefault: true } as any}
+      />
+    )
+    await flushMountReadingResumeTimer()
+    jest.mocked(restoreReadingPosition).mockClear()
+
+    saveProfileReadingResume('default', 'section-2-0', 80, 'fp-synced')
+    await act(async () => {
+      emitGospelClientStorageChanged(profileReadingResumeStorageKey('default'))
+      await new Promise((resolve) => setTimeout(resolve, 50))
+    })
+
+    await waitFor(() => {
+      expect(restoreReadingPosition).toHaveBeenCalledWith(
+        'section-2-0',
+        80,
+        'fp-synced',
+        'default',
+        expect.anything()
+      )
+    })
+  })
+
+  test('client storage change restores synced resume ahead of current viewport', async () => {
+    saveProfileReadingResume('default', 'section-1-0', 0, 'fp-shallow')
+    Object.defineProperty(window, 'scrollY', { value: 200, configurable: true })
+    jest.mocked(captureReadingPositionAtViewport).mockReturnValue({
+      anchorId: 'section-1-0',
+      plainOffset: 0,
+      fingerprint: 'fp-shallow',
+      excerpt: '',
+    })
+
+    renderWithTextSize(
+      <ProfileContent
+        sections={sectionsPayload as any}
+        profileInfo={{ title: 'Default', slug: 'default', favoriteScriptures: [] }}
+        profile={{ id: 'd', isDefault: true } as any}
+      />
+    )
+    await flushMountReadingResumeTimer()
+    jest.mocked(restoreReadingPosition).mockClear()
+
+    saveProfileReadingResume('default', 'section-2-0', 80, 'fp-synced')
+    await act(async () => {
+      emitGospelClientStorageChanged(profileReadingResumeStorageKey('default'))
+      await new Promise((resolve) => setTimeout(resolve, 50))
+    })
+
+    await waitFor(() => {
+      expect(restoreReadingPosition).toHaveBeenCalledWith(
+        'section-2-0',
+        80,
+        'fp-synced',
+        'default',
+        expect.anything()
+      )
+    })
+  })
+
+  test('device sync state change attempts reading resume restore', async () => {
+    saveProfileReadingResume('default', 'section-2-0', 80, 'fp-synced')
+    Object.defineProperty(window, 'scrollY', { value: 0, configurable: true })
+
+    renderWithTextSize(
+      <ProfileContent
+        sections={sectionsPayload as any}
+        profileInfo={{ title: 'Default', slug: 'default', favoriteScriptures: [] }}
+        profile={{ id: 'd', isDefault: true } as any}
+      />
+    )
+    await flushMountReadingResumeTimer()
+    jest.mocked(restoreReadingPosition).mockClear()
+
+    await act(async () => {
+      emitDeviceSyncStateChanged()
+      await new Promise((resolve) => setTimeout(resolve, 50))
+    })
+
+    await waitFor(() => {
+      expect(restoreReadingPosition).toHaveBeenCalled()
     })
   })
 })

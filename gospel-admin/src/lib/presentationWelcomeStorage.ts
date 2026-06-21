@@ -1,3 +1,5 @@
+import { gospelStorageSetSync } from '@/lib/gospelClientStorage'
+
 /** Set when the reader dismisses the first-visit welcome or starts the full walkthrough from it. */
 export const PRESENTATION_FIRST_VISIT_WELCOME_KEY = 'gospel-presentation-first-visit-welcome-v1'
 
@@ -12,7 +14,7 @@ export function hasPresentationWelcomeBeenDismissed(): boolean {
 
 export function dismissPresentationWelcome(): void {
   try {
-    localStorage.setItem(PRESENTATION_FIRST_VISIT_WELCOME_KEY, '1')
+    gospelStorageSetSync(PRESENTATION_FIRST_VISIT_WELCOME_KEY, '1')
   } catch {
     /* private mode / quota */
   }

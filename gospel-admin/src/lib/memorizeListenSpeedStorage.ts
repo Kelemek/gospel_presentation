@@ -1,3 +1,5 @@
+import { gospelStorageSetSync } from '@/lib/gospelClientStorage'
+
 /** Pause between repeated plays (memorize listen + profile read-aloud). */
 export const MEMORIZE_LISTEN_REPEAT_GAP_MS = 650
 
@@ -45,7 +47,7 @@ export function writeMemorizeListenSpeedToStorage(rate: MemorizeListenSpeed): vo
     return
   }
   try {
-    window.localStorage.setItem(MEMORIZE_LISTEN_SPEED_STORAGE_KEY, String(rate))
+    gospelStorageSetSync(MEMORIZE_LISTEN_SPEED_STORAGE_KEY, String(rate))
   } catch {
     // ignore
   }

@@ -1,6 +1,8 @@
 'use client'
 
 import React, { createContext, useContext, useSyncExternalStore, useCallback, useMemo } from 'react'
+import { gospelStorageSetSync } from '@/lib/gospelClientStorage'
+import { GOSPEL_CLIENT_STORAGE_CHANGED_EVENT } from '@/lib/gospelClientStorageEvents'
 
 const STORAGE_KEY = 'gospel-profile-text-size'
 
@@ -37,16 +39,23 @@ function onStorage() {
   notify()
 }
 
+function onClientStorageChanged(event: Event): void {
+  const key = (event as CustomEvent<{ key: string }>).detail?.key
+  if (key === STORAGE_KEY) notify()
+}
+
 function addStorageListeners() {
   if (typeof window === 'undefined' || storageListenerAdded) return
   storageListenerAdded = true
   window.addEventListener('storage', onStorage)
+  window.addEventListener(GOSPEL_CLIENT_STORAGE_CHANGED_EVENT, onClientStorageChanged)
 }
 
 function removeStorageListeners() {
   if (typeof window === 'undefined' || !storageListenerAdded) return
   storageListenerAdded = false
   window.removeEventListener('storage', onStorage)
+  window.removeEventListener(GOSPEL_CLIENT_STORAGE_CHANGED_EVENT, onClientStorageChanged)
 }
 
 function subscribe(listener: () => void): () => void {
@@ -70,7 +79,7 @@ export function TextSizeProvider({ children }: { children: React.ReactNode }) {
 
   const setTextSize = useCallback((next: TextSize) => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY, next)
+      gospelStorageSetSync(STORAGE_KEY, next)
       notify()
     }
   }, [])

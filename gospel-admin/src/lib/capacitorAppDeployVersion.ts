@@ -1,3 +1,5 @@
+import { gospelStorageSetSync } from '@/lib/gospelClientStorage'
+
 export const CAPACITOR_DEPLOY_VERSION_STORAGE_KEY = 'gospel-capacitor-deploy-version'
 
 /** How many changelog entries the user has already been shown (localStorage). */
@@ -55,7 +57,7 @@ export function getSeenChangelogCount(): number {
 export function setSeenChangelogCount(count: number): void {
   if (!Number.isFinite(count) || count < 0) return
   try {
-    localStorage.setItem(CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY, String(Math.floor(count)))
+    gospelStorageSetSync(CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY, String(Math.floor(count)))
   } catch {
     // private mode / quota
   }
@@ -72,7 +74,7 @@ export function getAcknowledgedDeployVersion(): string | null {
 
 export function setAcknowledgedDeployVersion(version: string): void {
   try {
-    localStorage.setItem(CAPACITOR_DEPLOY_ACK_VERSION_KEY, version)
+    gospelStorageSetSync(CAPACITOR_DEPLOY_ACK_VERSION_KEY, version)
   } catch {
     // private mode / quota
   }

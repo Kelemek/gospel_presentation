@@ -1,4 +1,5 @@
 import type { GospelSection } from '@/lib/types'
+import { scriptureCardReferenceKey } from '@/lib/scriptureModalOpenMode'
 
 /**
  * First gospel subsection/nested block that lists this reference as a scripture *card* (pill list).
@@ -8,17 +9,27 @@ export function findFirstScriptureCardAnchors(
   sectionList: GospelSection[],
   reference: string
 ): { sectionId: string; subsectionId: string } | null {
+  const refKey = scriptureCardReferenceKey(reference)
+  if (!refKey) return null
   outer: for (const section of sectionList) {
     const sid = `section-${section.section}`
     for (let subIndex = 0; subIndex < section.subsections.length; subIndex++) {
       const subsection = section.subsections[subIndex]
-      if (subsection.scriptureReferences?.some(r => r.reference === reference)) {
+      if (
+        subsection.scriptureReferences?.some(
+          (r) => scriptureCardReferenceKey(r.reference) === refKey
+        )
+      ) {
         return { sectionId: sid, subsectionId: `${sid}-${subIndex}` }
       }
       if (subsection.nestedSubsections) {
         for (let n = 0; n < subsection.nestedSubsections.length; n++) {
           const nested = subsection.nestedSubsections[n]
-          if (nested.scriptureReferences?.some(r => r.reference === reference)) {
+          if (
+            nested.scriptureReferences?.some(
+              (r) => scriptureCardReferenceKey(r.reference) === refKey
+            )
+          ) {
             return { sectionId: sid, subsectionId: `${sid}-${subIndex}-${n}` }
           }
         }

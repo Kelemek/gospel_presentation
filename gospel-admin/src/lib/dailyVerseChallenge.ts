@@ -3,6 +3,7 @@ import {
   DAILY_VERSE_HUNT_ENCOURAGEMENT_MESSAGES,
   pickRandomDailyVerseHuntEncouragementMessage,
 } from '@/lib/dailyVerseHuntEncouragementMessages'
+import { gospelStorageSetSync } from '@/lib/gospelClientStorage'
 import { parseReference } from '@/lib/parse-scripture-reference'
 import { normalizeScriptureReferenceString } from '@/lib/scriptureReferenceNormalize'
 
@@ -118,7 +119,7 @@ export function saveDailyVerseChallengeCompletion(
 ): void {
   if (typeof window === 'undefined') return
   try {
-    window.localStorage.setItem(DAILY_VERSE_CHALLENGE_STORAGE_KEY, JSON.stringify(completion))
+    gospelStorageSetSync(DAILY_VERSE_CHALLENGE_STORAGE_KEY, JSON.stringify(completion))
   } catch {
     // Quota or private mode — completion is best-effort
   }

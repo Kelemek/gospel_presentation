@@ -1,7 +1,6 @@
 import { Capacitor } from '@capacitor/core'
 import { PROFILE_BOOKMARKS_STORAGE_KEY } from '@/lib/profileBookmarksStorage'
 import { PROFILE_HIGHLIGHTS_STORAGE_KEY } from '@/lib/profileHighlightsStorage'
-import { VERSE_MEMORIZATION_STORAGE_KEY, emitMemorizationChanged } from '@/lib/verseMemorizationStorage'
 import { VERSE_PIN_STORAGE_KEY_PREFIX, LEGACY_SCRIPTURE_PROGRESS_KEY_PREFIX } from '@/lib/versePinStorage'
 import { MEMORIZE_LISTEN_SPEED_STORAGE_KEY } from '@/lib/memorizeListenSpeedStorage'
 import { PROFILE_READ_ALONG_UNDERLINE_STYLE_STORAGE_KEY } from '@/lib/profileReadAlongUnderlineStyleStorage'
@@ -20,6 +19,7 @@ import {
   isProfileOfflineCacheKey,
   isProfileReadAlongPersistenceKey,
   shouldUseIndexedDb,
+  VERSE_MEMORIZATION_STORAGE_KEY,
 } from '@/lib/gospelClientStoragePolicy'
 import {
   CAPACITOR_DEPLOY_ACK_VERSION_KEY,
@@ -28,6 +28,7 @@ import {
 import { DAILY_VERSE_CHALLENGE_STORAGE_KEY } from '@/lib/dailyVerseChallenge'
 import { MCHEYNE_START_DATE_KEY_PREFIX } from '@/lib/mcheyne/mcheyneStartDateStorage'
 import { SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY } from '@/lib/scriptureVerseNumbersPreference'
+import { GOSPEL_SYNC_KEY_PREFIX } from '@/lib/gospelDeviceSync/constants'
 
 export { GOSPEL_ANSWERS_KEY_PREFIX }
 
@@ -82,6 +83,7 @@ export function isProfileReadingResumePersistenceKey(key: string): boolean {
 
 export function isGospelLocalUserDataImportKey(key: string): boolean {
   if (BLOCKED_EXACT_KEYS.has(key)) return false
+  if (key.startsWith(GOSPEL_SYNC_KEY_PREFIX)) return false
   if (isProfileReadAlongPersistenceKey(key)) return true
   if (isProfileReadingResumePersistenceKey(key)) return true
   if (isProfileOfflineCacheKey(key)) return false
@@ -229,9 +231,12 @@ export async function applyGospelLocalUserDataImport(
   storage: Storage
 ): Promise<void> {
   await hydrateGospelClientStorage()
+  const writesThroughClientStorage =
+    typeof window !== 'undefined' && storage === window.localStorage
   for (const [key, value] of Object.entries(payload.localStorage)) {
     if (!isGospelLocalUserDataImportKey(key)) continue
-    if (!shouldUseIndexedDb(key)) {
+    const saved = await gospelStorageSet(key, value)
+    if (!writesThroughClientStorage && !shouldUseIndexedDb(key)) {
       try {
         storage.setItem(key, value)
       } catch (e) {
@@ -240,7 +245,6 @@ export async function applyGospelLocalUserDataImport(
       }
       continue
     }
-    const saved = await gospelStorageSet(key, value)
     if (!saved) {
       try {
         storage.setItem(key, value)
@@ -250,6 +254,8 @@ export async function applyGospelLocalUserDataImport(
       }
     }
   }
+  // Runtime import avoids gospelClientStorage ↔ verseMemorizationStorage init cycle (device sync).
+  const { emitMemorizationChanged } = await import('@/lib/verseMemorizationStorage')
   emitMemorizationChanged()
 }
 

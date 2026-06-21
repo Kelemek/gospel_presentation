@@ -2,14 +2,16 @@
 
 import type { MutableRefObject } from 'react'
 import { Capacitor } from '@capacitor/core'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAlertModal } from '@/contexts/AlertModalContext'
+import DeviceSyncModal from '@/components/DeviceSyncModal'
 import {
   applyGospelLocalUserDataImport,
   buildGospelLocalUserDataPayload,
   downloadGospelLocalUserDataBackup,
   parseGospelLocalUserDataImport,
 } from '@/lib/gospelLocalUserDataBackup'
+
 const tocControlButtonClass =
   'inline-flex items-center justify-start w-full pl-12 pr-4 py-3 text-base md:text-lg font-medium text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:bg-slate-300 dark:active:bg-slate-500 border border-slate-300 dark:border-slate-600 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md min-h-[48px] cursor-pointer'
 
@@ -17,10 +19,14 @@ const iconSlotClass =
   'mr-3 inline-flex h-6 w-6 shrink-0 items-center justify-center text-slate-600 dark:text-slate-300'
 const iconSvgClass = 'h-5 w-5'
 
+const betaBadgeClass =
+  'ml-2 inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-amber-100 text-amber-900 border border-amber-200 dark:bg-amber-950/60 dark:text-amber-100 dark:border-amber-800'
+
 export interface MenuLocalDataBackupProps {
   /**
-   * When set, opening the restore file picker sets this to `true` so the profile slide-out
-   * can skip `onMouseLeave` auto-close (otherwise the menu unmounts before `change` fires—common on Edge/desktop).
+   * When set, opening the restore file picker or sync modal sets this to `true` so the profile
+   * slide-out can skip `onMouseLeave` auto-close (otherwise the menu unmounts before the flow
+   * finishes—common on Edge/desktop and when fixed overlays render inside the scroll panel).
    */
   deferCloseMenuForFilePickerRef?: MutableRefObject<boolean>
 }
@@ -30,6 +36,8 @@ export default function MenuLocalDataBackup(props: MenuLocalDataBackupProps = {}
   const { showAlert, showConfirm } = useAlertModal()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const endFilePickerWatchRef = useRef<(() => void) | null>(null)
+  const [syncModalOpen, setSyncModalOpen] = useState(false)
+  const [syncModalKey, setSyncModalKey] = useState(0)
 
   const clearFilePickerWatch = useCallback(() => {
     endFilePickerWatchRef.current?.()
@@ -39,7 +47,26 @@ export default function MenuLocalDataBackup(props: MenuLocalDataBackupProps = {}
     }
   }, [deferCloseMenuForFilePickerRef])
 
+  const setDeferMenuClose = useCallback(
+    (defer: boolean) => {
+      if (deferCloseMenuForFilePickerRef) {
+        deferCloseMenuForFilePickerRef.current = defer
+      }
+    },
+    [deferCloseMenuForFilePickerRef]
+  )
+
+  const closeSyncModal = useCallback(() => {
+    setSyncModalOpen(false)
+    setDeferMenuClose(false)
+  }, [setDeferMenuClose])
+
   useEffect(() => () => clearFilePickerWatch(), [clearFilePickerWatch])
+
+  useEffect(() => {
+    if (!syncModalOpen) return undefined
+    return () => setDeferMenuClose(false)
+  }, [syncModalOpen, setDeferMenuClose])
 
   const handleSave = useCallback(async () => {
     if (typeof window === 'undefined') return
@@ -115,10 +142,16 @@ export default function MenuLocalDataBackup(props: MenuLocalDataBackupProps = {}
     [clearFilePickerWatch, showAlert, showConfirm]
   )
 
+  const openSyncModal = useCallback(() => {
+    setDeferMenuClose(true)
+    setSyncModalKey((k) => k + 1)
+    setSyncModalOpen(true)
+  }, [setDeferMenuClose])
+
   return (
     <div className="mt-6 space-y-3 print-hide" data-tour="menu-local-data-backup">
       <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">
-        Bookmarks, highlights, memorized verses, pins, answers, Daily Verse Hunt progress, Listen and reading resume, M&apos;Cheyne start date, which What&apos;s new notes you&apos;ve already seen, read-to-end marks for presentations, and display options saved on this device only.
+        Bookmarks, highlights, memorized verses, pins, answers, Daily Verse Hunt progress, Listen and reading resume, M&apos;Cheyne start date, which What&apos;s new notes you&apos;ve already seen, read-to-end marks for presentations, and display options saved on this device only. You can also sync them across devices with an encrypted pairing code.
       </p>
       {Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android' ? (
         <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">
@@ -155,6 +188,25 @@ export default function MenuLocalDataBackup(props: MenuLocalDataBackupProps = {}
           </span>
           Restore my data
         </button>
+        <button
+          type="button"
+          onClick={openSyncModal}
+          className={tocControlButtonClass}
+          data-tour="menu-device-sync"
+        >
+          <span className={iconSlotClass} aria-hidden>
+            <svg className={iconSvgClass} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          </span>
+          Sync my data
+          <span className={betaBadgeClass}>Beta</span>
+        </button>
       </div>
       <input
         ref={fileInputRef}
@@ -165,6 +217,7 @@ export default function MenuLocalDataBackup(props: MenuLocalDataBackupProps = {}
         tabIndex={-1}
         onChange={handleFileChange}
       />
+      <DeviceSyncModal key={syncModalKey} isOpen={syncModalOpen} onClose={closeSyncModal} />
     </div>
   )
 }
