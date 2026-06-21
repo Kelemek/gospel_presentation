@@ -23,6 +23,10 @@ interface SyncRow {
   deleted: boolean
 }
 
+type SyncKeyListRow = Pick<SyncRow, 'storage_key'>
+
+type SyncKeyFetchRow = Pick<SyncRow, 'storage_key' | 'ciphertext' | 'content_hash' | 'updated_at' | 'deleted'>
+
 async function upsertEntries(
   storageId: string,
   entries: ReturnType<typeof parseSyncKeyEntries>,
@@ -84,8 +88,8 @@ async function upsertEntries(
       return NextResponse.json({ error: 'Could not save sync data' }, { status: 500 })
     }
 
-    const staleKeys = (remoteKeys ?? [])
-      .map((r: { storage_key: string }) => r.storage_key)
+    const staleKeys: string[] = ((remoteKeys ?? []) as SyncKeyListRow[])
+      .map((r) => r.storage_key)
       .filter((key) => !incomingKeys.has(key))
 
     if (staleKeys.length > 0) {
@@ -147,7 +151,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Could not load sync data' }, { status: 500 })
     }
 
-    const entries = (data ?? []).map((row) => ({
+    const entries = ((data ?? []) as SyncKeyFetchRow[]).map((row) => ({
       key: row.storage_key,
       ciphertext: row.ciphertext,
       contentHash: row.content_hash,
