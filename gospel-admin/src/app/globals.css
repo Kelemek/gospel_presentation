@@ -1413,6 +1413,15 @@ body.capacitor-android .gospel-modal-safe-panel {
   );
 }
 
+/* Profile slide-out menu — last items stay above system nav on Capacitor Android. */
+[data-tour='profile-slideout-menu'] {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
+}
+
+body.capacitor-android [data-tour='profile-slideout-menu'] {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px), 72px);
+}
+
 .gospel-modal-safe-scroll {
   min-height: 0;
   flex: 1 1 auto;
