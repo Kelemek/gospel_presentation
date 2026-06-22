@@ -318,9 +318,10 @@ async function fetchCorpusProfileIds(supabase: ServiceClient): Promise<Set<strin
   return ids;
 }
 
-/** Stable pagination order; `translation_settings` has no `id` (PK is `translation_code`). */
+/** Stable pagination order; some tables have no `id` or use composite PKs. */
 function orderColumnForBackupTable(tableName: string): string {
   if (tableName === "translation_settings") return "translation_code";
+  if (tableName === "sync_key_entries") return "updated_at";
   return "id";
 }
 
