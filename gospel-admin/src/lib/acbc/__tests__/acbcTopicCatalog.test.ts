@@ -7,9 +7,8 @@ import {
 import type { GospelSection } from '@/lib/types'
 
 describe('acbcTopicCatalog exclusions', () => {
-  it('lists the four admin-omitted section titles', () => {
+  it('lists the three admin-omitted section titles', () => {
     expect(ACBC_EXCLUDED_SECTION_TITLES).toEqual([
-      'Laziness',
       'Legal issues in counseling',
       'How to begin a counseling center',
       'Counseling practice',
@@ -17,7 +16,7 @@ describe('acbcTopicCatalog exclusions', () => {
   })
 
   it('isAcbcExcludedSectionTitle is case-insensitive', () => {
-    expect(isAcbcExcludedSectionTitle('laziness')).toBe(true)
+    expect(isAcbcExcludedSectionTitle('laziness')).toBe(false)
     expect(isAcbcExcludedSectionTitle('Counseling Practice')).toBe(true)
     expect(isAcbcExcludedSectionTitle('Anger')).toBe(false)
   })
@@ -37,8 +36,8 @@ describe('acbcTopicCatalog exclusions', () => {
       { section: '4', title: 'Counseling practice', subsections: [{ title: '', content: '' }] },
     ]
     const removed = removeExcludedAcbcSections(data)
-    expect(removed).toEqual(['Laziness', 'Counseling practice'])
-    expect(data.map((s) => s.title)).toEqual(['Anger', 'Church'])
-    expect(data.map((s) => s.section)).toEqual(['1', '2'])
+    expect(removed).toEqual(['Counseling practice'])
+    expect(data.map((s) => s.title)).toEqual(['Anger', 'Laziness', 'Church'])
+    expect(data.map((s) => s.section)).toEqual(['1', '2', '3'])
   })
 })

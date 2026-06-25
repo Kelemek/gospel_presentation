@@ -57,6 +57,7 @@
     "append-release-changelog": "tsx scripts/append-release-changelog.ts",
     "reimport-stepbible": "FORCE_STEPBIBLE_REIMPORT=1 node scripts/ensure-stepbible-data.js",
     "sync-acbc-links": "tsx scripts/sync-acbc-external-links.ts",
+    "import-jay-adams-topical-worklist": "tsx scripts/import-jay-adams-topical-worklist.ts",
     "add-acbc-sections": "tsx scripts/add-acbc-missing-sections.ts",
     "build-daily-verse-prompts": "node scripts/build-daily-verse-prompts.js"
   },

@@ -48,6 +48,14 @@ jest.mock('@/lib/supabase-data-service', () => ({
   }
 }))
 
+jest.mock('next/headers', () => ({
+  headers: jest.fn(() =>
+    Promise.resolve({
+      get: jest.fn((name: string) => (name === 'user-agent' ? 'Mozilla/5.0' : null)),
+    })
+  ),
+}))
+
 // Ensure next/navigation's notFound is available in the test environment
 jest.mock('next/navigation', () => ({
   notFound: jest.fn(),

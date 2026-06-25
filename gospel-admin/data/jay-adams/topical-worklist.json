@@ -1,0 +1,592 @@
+{
+  "source": "The Counselor's Topical Worklist",
+  "book": "The Christian Counselor's New Testament and Proverbs",
+  "pages": [628, 629, 630, 631, 632],
+  "topics": [
+    {
+      "title": "Adultery",
+      "lines": [
+        "Ex 20:14",
+        "2Sa 11:2-4",
+        "Pr 2:16-18; 5:1-23; 6:23-29, 32-35; 7:5-27; 9:13-16",
+        "Hosea, book of",
+        "Mal 2:13-16",
+        "Mt 5:28; 15:19; 19:9",
+        "1Co 6:9-11"
+      ]
+    },
+    {
+      "title": "Alcoholism",
+      "seeAlso": "Drunkenness",
+      "lines": []
+    },
+    {
+      "title": "Anger",
+      "lines": [
+        "Gen 4:5-7",
+        "Ps 7:11",
+        "Pr 14:17, 29; 15:1, 18; 19:11, 19; 20:3, 22; 22:24; 24:29; 25:15, 28; 29:11, 22",
+        "Mk 3:5",
+        "Eph 4:26-32",
+        "Jas 1:19, 20"
+      ]
+    },
+    {
+      "title": "Anxiety",
+      "seeAlso": "Worry",
+      "lines": []
+    },
+    {
+      "title": "Associations (bad/good)",
+      "lines": [
+        "Pr 9:6; 13:20; 14:9; 22:24; 23:20, 21; 29:24",
+        "Rm 16:17, 18",
+        "1Co 5:9-13",
+        "2Co 6:14-18",
+        "2Ti 3:5"
+      ]
+    },
+    {
+      "title": "Assurance",
+      "lines": [
+        "Heb 4:16; 6:11",
+        "1Pe 1:3-5",
+        "2Pe 1:10",
+        "1Jn 5:13, 18, 19"
+      ]
+    },
+    {
+      "title": "Avoidance",
+      "lines": [
+        "Gen 3:8",
+        "Pr 18:1",
+        "1 Tim. 6:11",
+        "2Ti 2:22"
+      ]
+    },
+    {
+      "title": "Bitterness",
+      "seeAlso": "Resentment",
+      "lines": []
+    },
+    {
+      "title": "Blame Shifting",
+      "lines": [
+        "Gen 3:12, 13",
+        "Pr 19:3"
+      ]
+    },
+    {
+      "title": "Body",
+      "lines": [
+        "Rm 12:1, 2",
+        "1Co 3:16, 17; 6:18-20; 15:35-57",
+        "2Co 5:1-4"
+      ]
+    },
+    {
+      "title": "Change",
+      "lines": [
+        "Eze 36:25-27",
+        "Mt 16:24",
+        "Eph 4:17-32",
+        "Col 3:1-14",
+        "1Th 1:9",
+        "2Ti 3:16-17",
+        "Heb 10:24-25",
+        "Jas 1:14, 15",
+        "1Pe 3:9"
+      ]
+    },
+    {
+      "title": "Children",
+      "seeAlso": "Family",
+      "lines": []
+    },
+    {
+      "title": "Church",
+      "lines": [
+        "Eph 4:1-16",
+        "Heb 10:25",
+        "Rev 2, 3"
+      ]
+    },
+    {
+      "title": "Commandment",
+      "lines": [
+        "Ex 20:1-17",
+        "Pr 13:13",
+        "Mt 22:35-40",
+        "Lk 17:3-10",
+        "Jn 13:34; 15:12",
+        "1Jn 5:2, 3"
+      ]
+    },
+    {
+      "title": "Communication",
+      "lines": [
+        "Eph 4:25, 29, 31"
+      ]
+    },
+    {
+      "title": "Confession",
+      "lines": [
+        "Pr 28:13",
+        "Jas 5:16",
+        "1Jn 1:9"
+      ]
+    },
+    {
+      "title": "Conscience",
+      "lines": [
+        "Mk 6:19",
+        "Ac 24:16",
+        "Rm 2:15",
+        "1Co 8:10, 12",
+        "1 Tim. 1:5, 19; 3:9",
+        "2Ti 1:3",
+        "Heb 13:18",
+        "1Pe 3:16, 21"
+      ]
+    },
+    {
+      "title": "Conviction",
+      "lines": [
+        "Jn 16:7-11",
+        "2Ti 3:16",
+        "Jude 15"
+      ]
+    },
+    {
+      "title": "Death",
+      "lines": [
+        "Ps 23:4",
+        "Pr 3:21-26; 14:32",
+        "1Co 15:54-58",
+        "Php 1:21, 23",
+        "Heb 2:14, 15"
+      ]
+    },
+    {
+      "title": "Decision Making",
+      "lines": [
+        "2Ti 3:15-17",
+        "Heb 11:23-27"
+      ]
+    },
+    {
+      "title": "Depression",
+      "lines": [
+        "Gen 4:6, 7",
+        "Ps 32, 38, 51",
+        "Pr 18:14",
+        "2Co 4:1-18"
+      ]
+    },
+    {
+      "title": "Desire",
+      "lines": [
+        "Gen 3:6",
+        "Ex 20:17",
+        "Pr 10:3, 24; 11:6; 28:25",
+        "Mt 6:21",
+        "Lk 12:31-34",
+        "Rm 13:14",
+        "Gal 5:16",
+        "Eph 2:3",
+        "Ti 2:12; 3:3",
+        "Jas 1:13-16; 4:2, 3",
+        "1Pe 1:14; 4:2, 3",
+        "1Jn 2:16",
+        "Jude 18"
+      ]
+    },
+    {
+      "title": "Discipline",
+      "lines": [
+        "Pr 3:11, 12; 13:24; 19:18; 22:6, 15; 23:13; 29:15",
+        "1Co 5:1-13; 11:29-34",
+        "2Co 2:1-11",
+        "Eph 6:1-4",
+        "I Tim. 4:7",
+        "Heb 12:7-11"
+      ]
+    },
+    {
+      "title": "Divorce",
+      "lines": [
+        "Gen 2:24",
+        "Dt 24:1-4",
+        "Is 50:1",
+        "Jer 3:1",
+        "Mal 2:14, 16",
+        "Mt 5:31, 32; 19:3-8",
+        "Mk 10:3-5",
+        "1Co 7:10-24, 33-34, 39-40"
+      ]
+    },
+    {
+      "title": "Doubt",
+      "lines": [
+        "Jas 1:6-8"
+      ]
+    },
+    {
+      "title": "Drunkenness",
+      "lines": [
+        "Pr 20:1; 23:20, 29-35; 31:4-6",
+        "Eph 5:18",
+        "1Pe 4:3"
+      ]
+    },
+    {
+      "title": "Envy",
+      "lines": [
+        "Ti 3:3",
+        "Jas 3:14-16",
+        "1Pe 2:1"
+      ]
+    },
+    {
+      "title": "Family",
+      "lines": [
+        "Gen 2:18, 24",
+        "Ex 20:12"
+      ],
+      "subsections": [
+        {
+          "label": "A. Husband/Wife",
+          "lines": [
+            "Gen 2:18, 24",
+            "Eph 5:22-33",
+            "Col 3:18, 19",
+            "I Tim. 2:11-15",
+            "1Pe 3:1-7"
+          ]
+        },
+        {
+          "label": "B. Parent/Child",
+          "lines": [
+            "Gen 2:24",
+            "2Co 12:14",
+            "Eph 6:1-4",
+            "I Tim. 3:4, 5"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Father",
+      "seeAlso": "Family",
+      "lines": []
+    },
+    {
+      "title": "Fear",
+      "lines": [
+        "Gen 3:10",
+        "Pr 10:24; 29:25",
+        "Mt 10:26-31",
+        "2Ti 1:7",
+        "Heb 2:14, 15",
+        "1Pe 3:6, 13, 14",
+        "1Jn 4:18"
+      ]
+    },
+    {
+      "title": "Forgiveness",
+      "lines": [
+        "Pr 17:9",
+        "Mt 6:14, 15; 18:15-17",
+        "Mk 11:25",
+        "Lk 17:3-10",
+        "Eph 4:32",
+        "Col 3:13",
+        "Jas 5:15",
+        "1Jn 1:8-10"
+      ]
+    },
+    {
+      "title": "Friendship",
+      "lines": [
+        "Pr 17:9, 17; 27:6, 10",
+        "Jn 15:13-15"
+      ]
+    },
+    {
+      "title": "Gifts",
+      "lines": [
+        "Rm 12:3-8",
+        "1Co 12-14",
+        "1Pe 4:10, 11"
+      ]
+    },
+    {
+      "title": "Gossip",
+      "lines": [
+        "Pr 10:18; 11:13; 18:8; 20:19; 26:20, 22",
+        "Jas 4:11"
+      ]
+    },
+    {
+      "title": "Grief",
+      "lines": [
+        "Pr 14:13; 15:13",
+        "Eph 4:30",
+        "1Th 4:13-18"
+      ]
+    },
+    {
+      "title": "Habit",
+      "lines": [
+        "Pr 19:19",
+        "Is 1:10-17",
+        "Jer 13:23; 22:21",
+        "Rm 6-7",
+        "Gal 5:16-21",
+        "I Tim. 1:19; 4:7-9; 6:11",
+        "Heb 5:13, 14",
+        "2Pe 2:14, 19"
+      ]
+    },
+    {
+      "title": "Homosexuality",
+      "lines": [
+        "Gen 19:4-9, 24, 25",
+        "Lev 18:22; 20:13",
+        "Rm 1:26-32",
+        "1Co 6:9-11",
+        "I Tim. 1:10"
+      ]
+    },
+    {
+      "title": "Hope",
+      "lines": [
+        "Pr 10:28; 13:12",
+        "Rm 15:4, 5",
+        "1Th 1:3; 4:13-18",
+        "Heb 6:11, 18, 19"
+      ]
+    },
+    {
+      "title": "Humility",
+      "lines": [
+        "Pr 3:34; 15:33; 16:19; 22:4; 29:23",
+        "Gal 6:1, 2",
+        "Php 2:1-11",
+        "Jas 4:6, 10",
+        "1Pe 5:6, 7"
+      ]
+    },
+    {
+      "title": "Imitation",
+      "lines": [
+        "1Co 11:1",
+        "Php 4:9",
+        "3Jn 11"
+      ]
+    },
+    {
+      "title": "Jealousy",
+      "seeAlso": "Envy",
+      "lines": []
+    },
+    {
+      "title": "Judging",
+      "lines": [
+        "Mt 7:1ff.",
+        "Jn 7:24"
+      ]
+    },
+    {
+      "title": "Laziness",
+      "lines": [
+        "Pr 12:24, 27; 13:4; 15:19; 18:9; 26:13-16",
+        "Mt 25:26"
+      ]
+    },
+    {
+      "title": "Lying",
+      "lines": [
+        "Ex 20:16",
+        "Pr 12:19, 22",
+        "Eph 4:25",
+        "Col 3:9"
+      ]
+    },
+    {
+      "title": "Life-dominating Problems",
+      "lines": [
+        "1Co 6:9-12",
+        "Eph 5:18",
+        "Rev 21:8; 22:15"
+      ]
+    },
+    {
+      "title": "Listening",
+      "lines": [
+        "Pr 5:1, 2, 13; 13:18; 15:31; 18:13"
+      ]
+    },
+    {
+      "title": "Love",
+      "lines": [
+        "Pr 10:12; 17:19",
+        "Mt 5:44; 22:37-40",
+        "Rm 13:10",
+        "1Co 13",
+        "1Pe 1:22",
+        "1Jn 4:10, 19; 5:2, 3",
+        "2Jn 5, 6"
+      ]
+    },
+    {
+      "title": "Lust",
+      "seeAlso": "Desire",
+      "lines": []
+    },
+    {
+      "title": "Mother",
+      "seeAlso": "Family",
+      "lines": []
+    },
+    {
+      "title": "Motives",
+      "lines": [
+        "1Sa 16:7",
+        "Jn 7:24",
+        "1Co 4:5",
+        "1Th 2:14"
+      ]
+    },
+    {
+      "title": "Obedience",
+      "lines": [
+        "1Sa 15:22",
+        "Lk 17:9, 10",
+        "Ac 4:19; 5:29",
+        "Eph 6:1",
+        "Heb 5:8; 13:17",
+        "1Pe 1:22"
+      ]
+    },
+    {
+      "title": "Peace",
+      "lines": [
+        "Pr 3:1, 2; 16:7",
+        "Jn 14:27",
+        "Rm 5:1; 12:18; 14:19",
+        "Php 4:6-9",
+        "Col 3:15",
+        "Heb 12:14"
+      ]
+    },
+    {
+      "title": "Pride",
+      "lines": [
+        "Pr 8:13; 11:2; 13:10; 16:18; 18:12; 21:24; 27:1; 29:23"
+      ]
+    },
+    {
+      "title": "Put-off/Put-on",
+      "seeAlso": "Change",
+      "lines": []
+    },
+    {
+      "title": "Reconciliation",
+      "lines": [
+        "Mt 5:23, 24; 18:15-17",
+        "Lk 17:3-10"
+      ]
+    },
+    {
+      "title": "Repentance",
+      "lines": [
+        "Lk 3:8-14; 17:3, 4; 24:47",
+        "Ac 3:19; 5:31; 17:30; 26:20",
+        "2Co 7:10; 12:21"
+      ]
+    },
+    {
+      "title": "Resentment",
+      "lines": [
+        "Pr 26:24-26",
+        "Mt 6:19",
+        "Heb 12:15"
+      ]
+    },
+    {
+      "title": "Reward/Punishment",
+      "lines": [
+        "Pr 13:24; 22:15; 29:15",
+        "2Co 2:6; 10:6",
+        "Heb 10:35; 11:26",
+        "2Jn 8"
+      ]
+    },
+    {
+      "title": "Scheduling",
+      "lines": [
+        "Gal 4:4",
+        "I Tim. 2:6"
+      ]
+    },
+    {
+      "title": "Sexuality",
+      "lines": [
+        "Gen 2:25",
+        "1Co 7:1-5"
+      ]
+    },
+    {
+      "title": "Shame",
+      "lines": [
+        "Gen 2:25",
+        "Pr 11:2; 13:18",
+        "1Co 4:14",
+        "1Pe 3:16"
+      ]
+    },
+    {
+      "title": "Slander",
+      "seeAlso": "Gossip",
+      "lines": []
+    },
+    {
+      "title": "Stealing",
+      "lines": [
+        "Ex 20:15",
+        "Pr 20:10, 23; 29:24; 30:7-9",
+        "Eph 4:28"
+      ]
+    },
+    {
+      "title": "Strength",
+      "lines": [
+        "Lk 21:36",
+        "Eph 6:10",
+        "Php 2:13; 4:13",
+        "Col 1:11, 29"
+      ]
+    },
+    {
+      "title": "Work",
+      "lines": [
+        "Gen 2:5-15; 3:17-19",
+        "Pr 14:23; 18:9; 21:5; 22:29; 24:27; 31:10-31",
+        "1Co 15:58",
+        "Col 3:22-24",
+        "1Th 4:11",
+        "2Th 3:6-15"
+      ]
+    },
+    {
+      "title": "Worry",
+      "lines": [
+        "Pr 12:25; 14:30; 17:22",
+        "Mt 6:24-34",
+        "Php 4:6, 7",
+        "1Pe 5:6, 7"
+      ]
+    }
+  ]
+}

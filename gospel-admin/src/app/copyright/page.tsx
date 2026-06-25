@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { AcbcExternalResourceLinksAttribution } from '@/components/AcbcExternalResourceLinksAttribution'
 import { CcelPublicDomainAttribution } from '@/components/CcelPublicDomainAttribution'
+import { JayAdamsCcntpAttribution } from '@/components/JayAdamsCcntpAttribution'
 import { McheyneReadingPlanAttribution } from '@/components/McheyneReadingPlanAttribution'
 import { PinkAttributesChapelAttribution } from '@/components/PinkAttributesChapelAttribution'
 import { CopyrightScriptureAttributionSections } from '@/components/CopyrightScriptureAttributionSections'
@@ -77,6 +78,8 @@ export default function CopyrightPage() {
                 <strong className="text-slate-800 dark:text-slate-100">The Conference Table:</strong> by Jay Adams
               </p>
             </div>
+
+            <JayAdamsCcntpAttribution className="mb-6" />
 
             <div className="bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-400 dark:border-blue-600 rounded-lg p-6 mb-6">
               <p className="text-slate-700 dark:text-slate-200 leading-relaxed text-base md:text-lg">

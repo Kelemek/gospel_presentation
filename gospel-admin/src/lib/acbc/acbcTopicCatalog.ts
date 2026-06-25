@@ -59,7 +59,6 @@ export const SECTION_TO_ACBC_SLUGS: Record<string, string[]> = {
 
 /** Profile sections omitted from ACBC sync and add-missing-sections (admin choice). */
 export const ACBC_EXCLUDED_SECTION_TITLES = [
-  'Laziness',
   'Legal issues in counseling',
   'How to begin a counseling center',
   'Counseling practice',

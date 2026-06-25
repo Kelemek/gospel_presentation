@@ -1,7 +1,10 @@
 import fs from 'fs'
 import path from 'path'
 
+import { mergeScriptureReferenceLists } from '@/lib/acbc/acbcScriptureIndexSync'
 import type { ScriptureReference } from '@/lib/types'
+
+import { loadJayAdamsScriptureRefsBySection } from '@/lib/jayAdams/loadJayAdamsWorklist'
 
 const DEFAULT_CURATED_SCRIPTURE_PATH = path.join(
   process.cwd(),
@@ -11,6 +14,11 @@ const DEFAULT_CURATED_SCRIPTURE_PATH = path.join(
 const DEFAULT_ELECTION_SCRIPTURE_PATH = path.join(
   process.cwd(),
   'data/templates/acbc-election-scripture-refs.json'
+)
+
+const DEFAULT_JAY_ADAMS_WORKLIST_PATH = path.join(
+  process.cwd(),
+  'data/jay-adams/topical-worklist.json'
 )
 
 export function normalizeAcbcSectionTitleKey(title: string): string {
@@ -37,16 +45,26 @@ function loadElectionCuratedScriptureRefs(filePath: string): ScriptureReference[
   return Array.isArray(raw) ? raw : []
 }
 
-/** Key-passage scripture cards for core counseling topics (admin backup + Election curated list). */
+/** Key-passage scripture cards for core counseling topics (admin backup + Election + Jay Adams worklist). */
 export function loadCuratedAcbcScriptureRefsBySection(
   filePath: string = DEFAULT_CURATED_SCRIPTURE_PATH,
-  electionScripturePath: string = DEFAULT_ELECTION_SCRIPTURE_PATH
+  electionScripturePath: string = DEFAULT_ELECTION_SCRIPTURE_PATH,
+  jayAdamsWorklistPath: string = DEFAULT_JAY_ADAMS_WORKLIST_PATH
 ): Map<string, ScriptureReference[]> {
   const map = loadCuratedRefsFromAdminBackupTemplate(filePath)
   const electionRefs = loadElectionCuratedScriptureRefs(electionScripturePath)
   if (electionRefs.length > 0) {
     map.set(normalizeAcbcSectionTitleKey('Election'), electionRefs)
   }
+
+  if (fs.existsSync(jayAdamsWorklistPath)) {
+    const { bySection: jayAdamsBySection } = loadJayAdamsScriptureRefsBySection(jayAdamsWorklistPath)
+    for (const [key, jayRefs] of jayAdamsBySection) {
+      const existing = map.get(key) ?? []
+      map.set(key, mergeScriptureReferenceLists(existing, jayRefs))
+    }
+  }
+
   return map
 }
 
