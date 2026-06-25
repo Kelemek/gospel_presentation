@@ -105,3 +105,21 @@ export function pickerPassageHasPrevious(reference: string): boolean {
 export function pickerPassageHasNext(reference: string): boolean {
   return adjacentPickerPassage(reference, 'next') !== null
 }
+
+/**
+ * Previous/next full chapter for the book containing `reference`.
+ * From `Acts 20:28`, next is `Acts 21` (not the next verse). Stays within the current book.
+ */
+export function adjacentChapterPassage(
+  reference: string,
+  direction: 'prev' | 'next'
+): string | null {
+  const resolved = canonBookForReference(reference)
+  if (!resolved) return null
+  const { parsed, book } = resolved
+  const displayName = referenceBookNameFromApiBook(book.id, book.name)
+  const chapterCount = book.versesPerChapter.length
+  const targetChapter = direction === 'next' ? parsed.chapter + 1 : parsed.chapter - 1
+  if (targetChapter < 1 || targetChapter > chapterCount) return null
+  return formatChapterRef(book.id, displayName, targetChapter)
+}

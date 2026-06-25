@@ -118,6 +118,37 @@ describe('CapacitorDeployNoticeController', () => {
       })
     })
 
+    it('does not show whats-new on Kindle; silently acknowledges deploy changelog', async () => {
+      const kindleUa =
+        'Mozilla/5.0 (Linux; U; en-US) AppleWebKit/535.19 (KHTML, like Gecko) Silk/3.13 Safari/535.19 Silk-Accelerated=true'
+      const originalUa = navigator.userAgent
+      Object.defineProperty(navigator, 'userAgent', { value: kindleUa, configurable: true })
+
+      try {
+        localStorage.setItem(PRESENTATION_FIRST_VISIT_WELCOME_KEY, '1')
+        global.fetch = jest.fn(async () => ({
+          ok: true,
+          json: async () => ({
+            version: 'deploy-kindle',
+            changelog: ['Kindle read mode update.'],
+          }),
+        })) as unknown as typeof fetch
+
+        render(<CapacitorDeployNoticeController />)
+
+        await waitFor(() => {
+          expect(global.fetch).toHaveBeenCalled()
+        })
+        await waitFor(() => {
+          expect(sessionStorage.getItem(CAPACITOR_DEPLOY_VERSION_STORAGE_KEY)).toBe('deploy-kindle')
+        })
+        expect(mockShowAlert).not.toHaveBeenCalled()
+        expect(localStorage.getItem(CAPACITOR_DEPLOY_CHANGELOG_SEEN_COUNT_KEY)).toBe('1')
+      } finally {
+        Object.defineProperty(navigator, 'userAgent', { value: originalUa, configurable: true })
+      }
+    })
+
     it('shows additional whats-new notes when a deploy changes mid-session after an earlier notice', async () => {
       localStorage.setItem(PRESENTATION_FIRST_VISIT_WELCOME_KEY, '1')
       global.fetch = jest.fn(async () => ({

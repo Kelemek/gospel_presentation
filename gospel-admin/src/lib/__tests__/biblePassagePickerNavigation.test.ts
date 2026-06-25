@@ -1,5 +1,6 @@
 import {
   adjacentPickerPassage,
+  adjacentChapterPassage,
   pickerAdjacentOpensInChapterView,
   pickerPassageHasNext,
   pickerPassageHasPrevious,
@@ -70,5 +71,13 @@ describe('biblePassagePickerNavigation', () => {
     expect(pickerPassageHasNext('John 3:16')).toBe(true)
     expect(pickerPassageHasPrevious('Genesis 1')).toBe(false)
     expect(pickerPassageHasNext('Revelation 22')).toBe(false)
+  })
+
+  it('adjacentChapterPassage moves by chapter from verse or chapter references', () => {
+    expect(adjacentChapterPassage('Acts 20:28', 'next')).toBe('Acts 21')
+    expect(adjacentChapterPassage('Acts 20:28', 'prev')).toBe('Acts 19')
+    expect(adjacentChapterPassage('Genesis 2', 'next')).toBe('Genesis 3')
+    expect(adjacentChapterPassage('Genesis 1', 'prev')).toBeNull()
+    expect(adjacentChapterPassage('Revelation 22', 'next')).toBeNull()
   })
 })

@@ -26,6 +26,7 @@ import {
 } from '@/lib/capacitorDeployNotice'
 import { hasPresentationWelcomeBeenDismissed } from '@/lib/presentationWelcomeStorage'
 import { attemptCapacitorRecoveryReload } from '@/lib/capacitorAppRecovery'
+import { isKindleBrowser } from '@/lib/kindleUserAgent'
 
 const subscribeClientMounted = () => () => {}
 
@@ -102,6 +103,19 @@ export function CapacitorDeployNoticeController() {
   const checkForDeployUpdate = useCallback(async () => {
     const { version: remoteVersion, changelog } = await fetchAppDeployInfo()
     if (!remoteVersion) return
+
+    if (isKindleBrowser()) {
+      if (!hasPresentationWelcomeBeenDismissed()) return
+
+      const acknowledgedCount = getSeenChangelogCount()
+      const { nextAcknowledgedCount } = selectChangelogMessagesToShow(
+        changelog,
+        acknowledgedCount
+      )
+      rememberDeployVersion(remoteVersion)
+      acknowledgeCapacitorDeployChangelog(nextAcknowledgedCount, remoteVersion)
+      return
+    }
 
     const isNative = Capacitor.isNativePlatform()
     const baselineVersion = baselineDeployVersion()
@@ -200,6 +214,7 @@ export function CapacitorDeployNoticeController() {
     const intervalId = window.setInterval(runCheck, CAPACITOR_DEPLOY_CHECK_INTERVAL_MS)
 
     const onStaleChunkError = () => {
+      if (isKindleBrowser()) return
       if (staleChunkNoticeInFlightRef.current) return
       staleChunkNoticeInFlightRef.current = true
 

@@ -1,8 +1,97 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { isBibleTranslation } from '@/lib/bible-translations'
+import {
+  GOSPEL_PREFERRED_TRANSLATION_COOKIE,
+  GOSPEL_PREFERRED_TRANSLATION_COOKIE_MAX_AGE_SECONDS,
+  isKindleReadTranslationPreferenceRoute,
+} from '@/lib/kindleReadTranslationPreference'
+import {
+  GOSPEL_PROFILE_TEXT_SIZE_COOKIE,
+  GOSPEL_PROFILE_TEXT_SIZE_COOKIE_MAX_AGE_SECONDS,
+  isKindleReadTextSize,
+  isKindleReadTextSizePreferenceRoute,
+} from '@/lib/kindleReadTextSizePreference'
 import { createClient } from '@/lib/supabase/server'
 
+function applyKindleReadTranslationCookie(request: NextRequest): NextResponse | null {
+  if (!isKindleReadTranslationPreferenceRoute(request.nextUrl.pathname)) {
+    return null
+  }
+
+  const translation = request.nextUrl.searchParams.get('translation')?.trim().toLowerCase()
+  if (!translation || !isBibleTranslation(translation)) {
+    return null
+  }
+
+  const response = NextResponse.next()
+  response.cookies.set(GOSPEL_PREFERRED_TRANSLATION_COOKIE, translation, {
+    path: '/',
+    maxAge: GOSPEL_PREFERRED_TRANSLATION_COOKIE_MAX_AGE_SECONDS,
+    sameSite: 'lax',
+  })
+  return response
+}
+
+function applyKindleReadTextSizeCookie(request: NextRequest): NextResponse | null {
+  if (!isKindleReadTextSizePreferenceRoute(request.nextUrl.pathname)) {
+    return null
+  }
+
+  const textSize = request.nextUrl.searchParams.get('textSize')?.trim().toLowerCase()
+  if (!textSize || !isKindleReadTextSize(textSize)) {
+    return null
+  }
+
+  const response = NextResponse.next()
+  response.cookies.set(GOSPEL_PROFILE_TEXT_SIZE_COOKIE, textSize, {
+    path: '/',
+    maxAge: GOSPEL_PROFILE_TEXT_SIZE_COOKIE_MAX_AGE_SECONDS,
+    sameSite: 'lax',
+  })
+  return response
+}
+
+function applyKindleReadPreferenceCookies(request: NextRequest): NextResponse | null {
+  const translationResponse = applyKindleReadTranslationCookie(request)
+  const textSizeResponse = applyKindleReadTextSizeCookie(request)
+
+  if (!translationResponse && !textSizeResponse) {
+    return null
+  }
+
+  const response = translationResponse ?? textSizeResponse!
+  const other = translationResponse ? textSizeResponse : null
+
+  if (other) {
+    const textSize = request.nextUrl.searchParams.get('textSize')?.trim().toLowerCase()
+    if (textSize && isKindleReadTextSize(textSize)) {
+      response.cookies.set(GOSPEL_PROFILE_TEXT_SIZE_COOKIE, textSize, {
+        path: '/',
+        maxAge: GOSPEL_PROFILE_TEXT_SIZE_COOKIE_MAX_AGE_SECONDS,
+        sameSite: 'lax',
+      })
+    }
+
+    const translation = request.nextUrl.searchParams.get('translation')?.trim().toLowerCase()
+    if (translation && isBibleTranslation(translation)) {
+      response.cookies.set(GOSPEL_PREFERRED_TRANSLATION_COOKIE, translation, {
+        path: '/',
+        maxAge: GOSPEL_PREFERRED_TRANSLATION_COOKIE_MAX_AGE_SECONDS,
+        sameSite: 'lax',
+      })
+    }
+  }
+
+  return response
+}
+
 export async function proxy(request: NextRequest) {
+  const kindlePreferenceResponse = applyKindleReadPreferenceCookies(request)
+  if (kindlePreferenceResponse) {
+    return kindlePreferenceResponse
+  }
+
   const { pathname } = request.nextUrl
 
   // Allow public routes

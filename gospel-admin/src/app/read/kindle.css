@@ -1,0 +1,616 @@
+/* Kindle / e-reader read mode — block layout for content; flex used in Menu tap rows only. */
+
+.kindle-read-root {
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  color: #111;
+  font-family: Georgia, 'Times New Roman', Times, serif;
+  font-size: 1.125rem;
+  line-height: 1.55;
+}
+
+.kindle-read-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 1rem 0 0.75rem;
+  border-bottom: 1px solid #333;
+  margin-bottom: 1rem;
+  background: #fff;
+  overflow: visible;
+}
+
+.kindle-read-header-inner {
+  max-width: 40em;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+.kindle-read-site-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.1rem;
+  font-weight: normal;
+  color: #444;
+}
+
+.kindle-read-profile-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.65rem;
+  line-height: 1.25;
+}
+
+.kindle-read-description {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
+  color: #333;
+}
+
+.kindle-read-nav {
+  margin: 0.75rem 0 0;
+  font-size: 0.95rem;
+}
+
+.kindle-read-nav a,
+.kindle-read-root a {
+  color: #0645ad;
+  text-decoration: none;
+}
+
+.kindle-read-scripture-link {
+  color: #0645ad;
+  text-decoration: none;
+}
+
+.kindle-read-scripture-cards {
+  margin: 0 0 0.75rem;
+  line-height: 1.55;
+}
+
+.kindle-read-scripture-card {
+  display: inline-block;
+  margin: 0 0.5rem 0.5rem 0;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid #93c5fd;
+  border-radius: 0.375rem;
+  background: transparent;
+  vertical-align: top;
+  max-width: 100%;
+  line-height: 1.35;
+}
+
+.kindle-read-scripture-card .kindle-read-scripture-link {
+  font-weight: 500;
+  color: #1e40af;
+}
+
+.kindle-read-scripture-card--yellow-pin {
+  border-color: #ca8a04;
+  border-width: 2px;
+  background: #fef9c3;
+}
+
+.kindle-read-scripture-card--yellow-pin .kindle-read-scripture-link {
+  font-weight: 600;
+  color: #713f12;
+}
+
+.kindle-read-scripture-card-with-text {
+  max-width: 100%;
+}
+
+.kindle-read-scripture-card-text {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: normal;
+  color: #333;
+  line-height: 1.45;
+}
+
+.kindle-read-main {
+  max-width: 40em;
+  margin: 0 auto;
+  padding: 0 1.25rem 2.5rem;
+}
+
+/* Combined Menu — Resources + Table of Contents (native <details>/<summary>). */
+.kindle-read-header-menu {
+  margin: 0.75rem 0 0;
+}
+
+.kindle-read-menu {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid #ccc;
+  background: #f9f9f9;
+}
+
+.kindle-read-menu-title {
+  margin: 0;
+  padding: 0.25rem 0;
+  font-size: 1.3rem;
+  font-weight: bold;
+  cursor: pointer;
+  list-style: none;
+  min-height: 3rem;
+  line-height: 1.3;
+  display: flex;
+  align-items: center;
+}
+
+.kindle-read-menu-title::-webkit-details-marker {
+  display: none;
+}
+
+.kindle-read-menu-title::before {
+  content: '▸ ';
+}
+
+.kindle-read-menu[open] > .kindle-read-menu-title::before {
+  content: '▾ ';
+}
+
+.kindle-read-menu-body {
+  margin-top: 0.5rem;
+}
+
+.kindle-read-menu[open] > .kindle-read-menu-body {
+  max-height: calc(100vh - 10rem);
+  max-height: calc(100dvh - 10rem);
+  overflow-x: hidden;
+  overflow-y: scroll;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+
+/* Expanded resource categories (e.g. Books) scroll inside the Menu on e-readers. */
+.kindle-read-menu .kindle-read-resources-category[open] > .kindle-read-resources-category-body,
+.kindle-read-resources-category[open] > .kindle-read-resources-category-body {
+  max-height: calc(100vh - 13rem);
+  max-height: calc(100dvh - 13rem);
+  overflow-x: hidden;
+  overflow-y: scroll;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+
+.kindle-read-menu .kindle-read-toc-section[open] > .kindle-read-toc-list,
+.kindle-read-menu .kindle-read-toc-subsection[open] > .kindle-read-toc-list {
+  max-height: calc(100vh - 13rem);
+  max-height: calc(100dvh - 13rem);
+  overflow-x: hidden;
+  overflow-y: scroll;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+
+.kindle-read-menu-section {
+  margin: 0 0 1rem;
+}
+
+.kindle-read-menu-section:last-child {
+  margin-bottom: 0;
+}
+
+.kindle-read-menu-section-title {
+  margin: 0;
+  padding: 0.25rem 0;
+  font-size: 1.2rem;
+  font-weight: bold;
+  line-height: 1.3;
+  cursor: pointer;
+  list-style: none;
+  min-height: 3rem;
+  display: flex;
+  align-items: center;
+}
+
+.kindle-read-menu-section-title::-webkit-details-marker {
+  display: none;
+}
+
+.kindle-read-menu-section-title::before {
+  content: '▸ ';
+}
+
+.kindle-read-menu-section[open] > .kindle-read-menu-section-title::before {
+  content: '▾ ';
+}
+
+.kindle-read-menu-resources,
+.kindle-read-menu-translations,
+.kindle-read-menu-toc {
+  margin-top: 0.65rem;
+}
+
+/* Larger type, tap targets, and vertical centering in the combined Menu. */
+.kindle-read-menu .kindle-read-translation-item,
+.kindle-read-menu .kindle-read-resources-item,
+.kindle-read-menu .kindle-read-toc-item {
+  margin: 0.65rem 0;
+}
+
+.kindle-read-menu .kindle-read-resources-category-item {
+  margin: 0.85rem 0;
+}
+
+.kindle-read-menu .kindle-read-toc-section-item,
+.kindle-read-menu .kindle-read-toc-subsection-item {
+  margin: 0.85rem 0;
+}
+
+.kindle-read-menu .kindle-read-translation-option,
+.kindle-read-menu .kindle-read-translation-option--current,
+.kindle-read-menu .kindle-read-resources-item a,
+.kindle-read-menu .kindle-read-toc-item a {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  padding: 0.35rem 0.25rem;
+  min-height: 3rem;
+  font-size: 1.15rem;
+  line-height: 1.35;
+  text-decoration: underline;
+}
+
+.kindle-read-menu .kindle-read-translation-option--current {
+  color: inherit;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.kindle-read-menu .kindle-read-resources-category-name,
+.kindle-read-menu .kindle-read-toc-section-name,
+.kindle-read-menu .kindle-read-toc-subsection-name {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: 0.35rem 0;
+  min-height: 3rem;
+  font-size: 1.15rem;
+  line-height: 1.35;
+}
+
+.kindle-read-menu .kindle-read-toc-subsection-name {
+  font-size: 1.1rem;
+}
+
+.kindle-read-translation-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kindle-read-translation-item {
+  margin: 0.35rem 0;
+}
+
+.kindle-read-translation-option {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #00e;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.kindle-read-translation-option--current {
+  display: inline;
+  color: inherit;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.kindle-read-resources {
+  margin: 0.75rem 0 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid #ccc;
+  background: #f9f9f9;
+}
+
+.kindle-read-resources-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  list-style: none;
+}
+
+.kindle-read-resources-title::-webkit-details-marker,
+.kindle-read-resources-category-name::-webkit-details-marker {
+  display: none;
+}
+
+.kindle-read-resources-title::before,
+.kindle-read-resources-category-name::before {
+  content: '▸ ';
+}
+
+.kindle-read-resources[open] > .kindle-read-resources-title::before,
+.kindle-read-resources-category[open] > .kindle-read-resources-category-name::before {
+  content: '▾ ';
+}
+
+.kindle-read-resources-body {
+  margin-top: 0.5rem;
+}
+
+/* Long Resources / TOC lists scroll inside the sticky header (summary stays visible). */
+.kindle-read-resources[open] > .kindle-read-resources-body,
+.kindle-read-toc[open] > .kindle-read-toc-body {
+  max-height: calc(100vh - 10rem);
+  max-height: calc(100dvh - 10rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.kindle-read-resources-list {
+  margin: 0.35rem 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.kindle-read-resources-item {
+  margin: 0.35rem 0;
+}
+
+.kindle-read-resources-note {
+  color: #555;
+  font-style: italic;
+}
+
+.kindle-read-resources-category-item {
+  margin: 0.5rem 0;
+  list-style: none;
+}
+
+.kindle-read-resources-category {
+  margin: 0;
+}
+
+.kindle-read-resources-category-name {
+  margin: 0.5rem 0 0.25rem;
+  font-weight: bold;
+  cursor: pointer;
+  list-style: none;
+}
+
+.kindle-read-toc {
+  margin: 0.75rem 0 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid #ccc;
+  background: #f9f9f9;
+}
+
+.kindle-read-toc-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  list-style: none;
+}
+
+.kindle-read-toc-title::-webkit-details-marker,
+.kindle-read-toc-section-name::-webkit-details-marker,
+.kindle-read-toc-subsection-name::-webkit-details-marker {
+  display: none;
+}
+
+.kindle-read-toc-title::before,
+.kindle-read-toc-section-name::before,
+.kindle-read-toc-subsection-name::before {
+  content: '▸ ';
+}
+
+.kindle-read-toc[open] > .kindle-read-toc-title::before,
+.kindle-read-toc-section[open] > .kindle-read-toc-section-name::before,
+.kindle-read-toc-subsection[open] > .kindle-read-toc-subsection-name::before {
+  content: '▾ ';
+}
+
+.kindle-read-toc-body {
+  margin-top: 0.5rem;
+}
+
+.kindle-read-toc-list {
+  margin: 0.35rem 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.kindle-read-toc-item {
+  margin: 0.35rem 0;
+}
+
+.kindle-read-toc-section-item,
+.kindle-read-toc-subsection-item {
+  margin: 0.5rem 0;
+  list-style: none;
+}
+
+.kindle-read-toc-section,
+.kindle-read-toc-subsection {
+  margin: 0;
+}
+
+.kindle-read-toc-section-name,
+.kindle-read-toc-subsection-name {
+  margin: 0.35rem 0 0.25rem;
+  font-weight: bold;
+  cursor: pointer;
+  list-style: none;
+}
+
+.kindle-read-toc-subsection-name {
+  font-weight: normal;
+}
+
+.kindle-read-library-list {
+  margin-top: 0.75rem;
+}
+
+.kindle-read-library-pager {
+  margin: 0.75rem 0;
+}
+
+.kindle-read-section {
+  margin: 0 0 2rem;
+  padding: 0 0 1rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.kindle-read-section-title {
+  margin: 0 0 1rem;
+  font-size: 1.5rem;
+  line-height: 1.3;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #999;
+}
+
+.kindle-read-subsection {
+  margin: 0 0 1.25rem;
+}
+
+.kindle-read-subsection-title {
+  margin: 0 0 0.65rem;
+  font-size: 1.2rem;
+  line-height: 1.35;
+}
+
+.kindle-read-nested {
+  margin: 0.75rem 0 0.75rem 1rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid #ddd;
+}
+
+.kindle-read-nested-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  font-weight: bold;
+}
+
+.kindle-read-body {
+  margin: 0 0 0.75rem;
+}
+
+.kindle-read-body [id],
+.kindle-read-question[id],
+.kindle-read-scripture-card[id] {
+  scroll-margin-top: 10rem;
+}
+
+.kindle-read-body p {
+  margin: 0 0 0.65rem;
+}
+
+.kindle-read-body ol,
+.kindle-read-body ul {
+  margin: 0 0 0.65rem;
+  padding-left: 1.5rem;
+}
+
+.kindle-read-external-link {
+  margin: 0 0 1rem;
+}
+
+.kindle-read-questions {
+  margin: 0.5rem 0 0.75rem;
+  padding-left: 2rem;
+  list-style-type: decimal;
+  list-style-position: outside;
+}
+
+.kindle-read-question {
+  display: list-item;
+  margin: 0.5rem 0;
+}
+
+.kindle-read-question-text p {
+  margin: 0 0 0.35rem;
+}
+
+.kindle-read-question-text p:last-child {
+  margin-bottom: 0;
+}
+
+.kindle-read-scripture-page .kindle-read-passage {
+  margin: 1rem 0;
+  white-space: pre-wrap;
+}
+
+.kindle-read-scripture-chapter-nav {
+  margin: 0.75rem 0 0;
+  font-size: 0.95rem;
+}
+
+.kindle-read-scripture-page .kindle-read-footer > .kindle-read-scripture-chapter-nav {
+  margin-top: 0;
+}
+
+.kindle-read-scripture-page .kindle-read-footer > .kindle-read-nav {
+  margin-top: 0.75rem;
+}
+
+.kindle-read-scripture-chapter-nav a + a {
+  margin-left: 1rem;
+}
+
+.kindle-read-scripture-attribution {
+  margin: 1.25rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid #ddd;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #555;
+}
+
+.kindle-read-scripture-attribution p {
+  margin: 0;
+}
+
+.kindle-read-error {
+  margin: 1rem 0;
+  padding: 0.75rem;
+  border: 1px solid #c00;
+  color: #600;
+  background: #fff5f5;
+}
+
+.kindle-read-footer {
+  margin-top: 2rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #ccc;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.kindle-read-attribution {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #ddd;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #555;
+}
+
+.kindle-read-footer-other-content {
+  margin: 0 0 1rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.kindle-read-attribution p {
+  margin: 0 0 0.65rem;
+}
+
+.kindle-read-attribution p:last-child {
+  margin-bottom: 0;
+}

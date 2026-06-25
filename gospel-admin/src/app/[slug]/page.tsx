@@ -2,10 +2,13 @@
 // This handles routes like /myprofile, /youthgroup, etc.
 // Uses cache-first: ProfilePageClient loads from localStorage first, only hits DB when admin updates
 import { notFound, redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { Metadata } from 'next'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import KindleReadModeBanner from '@/components/KindleReadModeBanner'
 import { createClient } from '@/lib/supabase/server'
 import { getProfileMeta } from '@/lib/supabase-data-service'
+import { isKindleUserAgent } from '@/lib/kindleUserAgent'
 import ProfilePageClient from './ProfilePageClient'
 
 // Configure dynamic routes
@@ -62,8 +65,12 @@ export default async function ProfilePage({ params }: ProfilePageProps) {
     notFound()
   }
 
+  const userAgent = (await headers()).get('user-agent') ?? ''
+  const showKindleBanner = isKindleUserAgent(userAgent)
+
   return (
     <ErrorBoundary>
+      {showKindleBanner ? <KindleReadModeBanner slug={slug} /> : null}
       <ProfilePageClient key={slug} slug={slug} />
     </ErrorBoundary>
   )

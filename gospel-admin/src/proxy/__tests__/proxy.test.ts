@@ -18,7 +18,10 @@ jest.mock('next/server', () => {
   }
 
   const NextResponse = {
-    next: () => ({ headers: { get: () => null } }),
+    next: () => ({
+      headers: { get: () => null },
+      cookies: { set: jest.fn() },
+    }),
     redirect: (url: any) => ({ headers: { get: (k: any) => (k === 'location' ? String(url) : null) } }),
     json: (data: any, init: any = {}) => ({ json: () => Promise.resolve(data), status: init.status || 200 }),
   }
@@ -35,8 +38,9 @@ const { createClient } = require('@/lib/supabase/server')
 const { proxy } = require('@/proxy')
 
 function makeReq(pathname: string, url = `https://example.com${pathname}`) {
+  const parsed = new URL(url)
   return {
-    nextUrl: { pathname },
+    nextUrl: { pathname, searchParams: parsed.searchParams },
     url,
   } as unknown as Request
 }
@@ -85,5 +89,62 @@ describe('proxy middleware', () => {
   test('allows other non-public, non-admin routes', async () => {
     const res = await proxy(makeReq('/some/other/path') as any)
     expect(res.headers.get('location')).toBeNull()
+  })
+
+  test('sets translation cookie on Kindle read profile URL with ?translation=', async () => {
+    const res = await proxy(
+      makeReq('/default/read/', 'https://example.com/default/read/?translation=kjv') as any
+    )
+    expect(res.headers.get('location')).toBeNull()
+    expect(res.cookies.set).toHaveBeenCalledWith(
+      'gospel-preferred-translation',
+      'kjv',
+      expect.objectContaining({ path: '/', sameSite: 'lax' })
+    )
+  })
+
+  test('sets translation cookie on Kindle scripture read URL', async () => {
+    const res = await proxy(
+      makeReq(
+        '/read/scripture/',
+        'https://example.com/read/scripture/?ref=John%203%3A16&translation=nasb'
+      ) as any
+    )
+    expect(res.cookies.set).toHaveBeenCalledWith(
+      'gospel-preferred-translation',
+      'nasb',
+      expect.objectContaining({ path: '/' })
+    )
+  })
+
+  test('sets text size cookie on Kindle read profile URL with ?textSize=', async () => {
+    const res = await proxy(
+      makeReq('/default/read/', 'https://example.com/default/read/?textSize=larger') as any
+    )
+    expect(res.headers.get('location')).toBeNull()
+    expect(res.cookies.set).toHaveBeenCalledWith(
+      'gospel-profile-text-size',
+      'larger',
+      expect.objectContaining({ path: '/', sameSite: 'lax' })
+    )
+  })
+
+  test('sets both preference cookies when translation and text size are in the URL', async () => {
+    const res = await proxy(
+      makeReq(
+        '/default/read/',
+        'https://example.com/default/read/?translation=kjv&textSize=largest'
+      ) as any
+    )
+    expect(res.cookies.set).toHaveBeenCalledWith(
+      'gospel-preferred-translation',
+      'kjv',
+      expect.objectContaining({ path: '/' })
+    )
+    expect(res.cookies.set).toHaveBeenCalledWith(
+      'gospel-profile-text-size',
+      'largest',
+      expect.objectContaining({ path: '/' })
+    )
   })
 })
