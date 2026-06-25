@@ -9,6 +9,10 @@ import {
   gospelStorageRemoveSync,
   gospelStorageSet,
 } from '@/lib/gospelClientStorage'
+import {
+  LEGACY_SCRIPTURE_PROGRESS_KEY_PREFIX,
+  VERSE_PIN_STORAGE_KEY_PREFIX,
+} from '@/lib/versePinStorageConstants'
 
 export const VERSE_PIN_COLOR_IDS = ['red', 'blue', 'yellow', 'green', 'violet'] as const
 export type VersePinColorId = (typeof VERSE_PIN_COLOR_IDS)[number]
@@ -17,10 +21,7 @@ export type VersePinColorId = (typeof VERSE_PIN_COLOR_IDS)[number]
 export const VERSE_BOOKMARK_COLOR_IDS = ['red', 'blue', 'green', 'violet'] as const
 export type VerseBookmarkColorId = (typeof VERSE_BOOKMARK_COLOR_IDS)[number]
 
-export const VERSE_PIN_STORAGE_KEY_PREFIX = 'gospel-verse-pins-'
-
-/** Removed hook `useScriptureProgress` — one-time migrate from this key into verse pins (`yellow`). */
-export const LEGACY_SCRIPTURE_PROGRESS_KEY_PREFIX = 'gospel-scripture-progress-'
+export { LEGACY_SCRIPTURE_PROGRESS_KEY_PREFIX, VERSE_PIN_STORAGE_KEY_PREFIX } from '@/lib/versePinStorageConstants'
 
 const STORAGE_VERSION = 2
 

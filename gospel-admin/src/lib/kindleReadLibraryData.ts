@@ -6,6 +6,7 @@ import {
 } from '@/lib/edwards/edwardsSlug'
 import { sortHenryBooksByCanonOrder } from '@/lib/henry/henrySlug'
 import { logger } from '@/lib/logger'
+import { normalizeLibrarySearchQuery } from '@/lib/normalizeLibrarySearchQuery'
 import { sortMorneveRowsByCalendar } from '@/lib/spurgeon/morneveSlug'
 import { createAdminClient } from '@/lib/supabase/server'
 import type { Json } from '@/lib/supabase/database.types'
@@ -23,6 +24,7 @@ export type KindleReadLibraryPage = {
   total: number
   page: number
   pageSize: number
+  query?: string
 }
 
 const LIBRARY_TITLES: Record<KindleReadLibraryKind, string> = {
@@ -44,11 +46,14 @@ export function kindleReadLibraryTitle(kind: KindleReadLibraryKind): string {
 export function kindleReadLibraryIndexUrl(
   kind: KindleReadLibraryKind,
   page = 1,
-  fromSlug?: string
+  fromSlug?: string,
+  query?: string
 ): string {
   const base = `/read/libraries/${kind}/`
   const params = new URLSearchParams()
   if (page > 1) params.set('page', String(page))
+  const normalizedQuery = query?.trim() ? normalizeLibrarySearchQuery(query) : null
+  if (normalizedQuery) params.set('q', normalizedQuery)
   if (fromSlug?.trim()) params.set('from', fromSlug.trim())
   const q = params.toString()
   return q ? `${base}?${q}` : base
@@ -81,11 +86,28 @@ function isSermonsRpcPayload(v: unknown): v is SermonsRpcPayload {
   })
 }
 
-async function fetchSpurgeonLibraryPage(page: number, pageSize: number): Promise<KindleReadLibraryPage> {
+function filterRowsByTitleQuery(
+  rows: KindleReadLibraryRow[],
+  query: string | null
+): KindleReadLibraryRow[] {
+  if (!query) return rows
+  const lower = query.toLowerCase()
+  return rows.filter((row) => {
+    const title = (row.title || row.slug).toLowerCase()
+    const slug = row.slug.toLowerCase()
+    return title.includes(lower) || slug.includes(lower)
+  })
+}
+
+async function fetchSpurgeonLibraryPage(
+  page: number,
+  pageSize: number,
+  query: string | null
+): Promise<KindleReadLibraryPage> {
   const from = (page - 1) * pageSize
   const admin = createAdminClient() as unknown as SupabaseClient<SpurgeonRpcDatabase>
   const { data, error } = await admin.rpc('spurgeon_public_sermons_page', {
-    p_q: null,
+    p_q: query,
     p_offset: from,
     p_limit: pageSize,
   })
@@ -99,6 +121,7 @@ async function fetchSpurgeonLibraryPage(page: number, pageSize: number): Promise
       total: 0,
       page,
       pageSize,
+      query: query ?? undefined,
     }
   }
 
@@ -109,6 +132,7 @@ async function fetchSpurgeonLibraryPage(page: number, pageSize: number): Promise
     total: data.total,
     page,
     pageSize,
+    query: query ?? undefined,
   }
 }
 
@@ -117,7 +141,8 @@ async function fetchSlugPrefixLibraryPage(
   slugPrefix: string,
   page: number,
   pageSize: number,
-  sortRows: (rows: KindleReadLibraryRow[]) => KindleReadLibraryRow[]
+  sortRows: (rows: KindleReadLibraryRow[]) => KindleReadLibraryRow[],
+  query: string | null
 ): Promise<KindleReadLibraryPage> {
   const admin = createAdminClient()
   const { data, error } = await admin
@@ -129,14 +154,17 @@ async function fetchSlugPrefixLibraryPage(
 
   if (error) {
     logger.error('[kindle-read] library fetch failed', { kind, error })
-    return { kind, title: LIBRARY_TITLES[kind], items: [], total: 0, page, pageSize }
+    return { kind, title: LIBRARY_TITLES[kind], items: [], total: 0, page, pageSize, query: query ?? undefined }
   }
 
   const sorted = sortRows(
-    ((data ?? []) as KindleReadLibraryRow[]).map((r) => ({
-      slug: r.slug,
-      title: r.title || r.slug,
-    }))
+    filterRowsByTitleQuery(
+      ((data ?? []) as KindleReadLibraryRow[]).map((r) => ({
+        slug: r.slug,
+        title: r.title || r.slug,
+      })),
+      query
+    )
   )
   const from = (page - 1) * pageSize
   return {
@@ -146,17 +174,29 @@ async function fetchSlugPrefixLibraryPage(
     total: sorted.length,
     page,
     pageSize,
+    query: query ?? undefined,
   }
 }
 
-async function fetchEdwardsLibraryPage(page: number, pageSize: number): Promise<KindleReadLibraryPage> {
+async function fetchEdwardsLibraryPage(
+  page: number,
+  pageSize: number,
+  query: string | null
+): Promise<KindleReadLibraryPage> {
   const admin = createAdminClient()
-  const { data, error } = await admin
+  let dbQuery = admin
     .from('profiles')
     .select('slug, title')
     .eq('is_template', true)
     .eq('is_public', true)
     .filter('slug', 'match', EDWARDS_SERMON_SLUG_POSTGREST_MATCH)
+
+  if (query) {
+    const pattern = `%${query.replace(/%/g, '').replace(/_/g, '')}%`
+    dbQuery = dbQuery.or(`title.ilike.${pattern},slug.ilike.${pattern}`)
+  }
+
+  const { data, error } = await dbQuery
 
   if (error) {
     logger.error('[kindle-read] edwards library fetch failed', { error })
@@ -167,6 +207,7 @@ async function fetchEdwardsLibraryPage(page: number, pageSize: number): Promise<
       total: 0,
       page,
       pageSize,
+      query: query ?? undefined,
     }
   }
 
@@ -182,26 +223,29 @@ async function fetchEdwardsLibraryPage(page: number, pageSize: number): Promise<
     total: sorted.length,
     page,
     pageSize,
+    query: query ?? undefined,
   }
 }
 
 export async function fetchKindleReadLibraryPage(
   kind: KindleReadLibraryKind,
   page: number,
-  pageSize = KINDLE_READ_LIBRARY_PAGE_SIZE
+  pageSize = KINDLE_READ_LIBRARY_PAGE_SIZE,
+  rawQuery?: string
 ): Promise<KindleReadLibraryPage> {
   const safePage = Math.max(1, page)
+  const query = rawQuery?.trim() ? normalizeLibrarySearchQuery(rawQuery) : null
   switch (kind) {
     case 'spurgeon':
-      return fetchSpurgeonLibraryPage(safePage, pageSize)
+      return fetchSpurgeonLibraryPage(safePage, pageSize, query)
     case 'morneve':
-      return fetchSlugPrefixLibraryPage('morneve', 'me', safePage, pageSize, sortMorneveRowsByCalendar)
+      return fetchSlugPrefixLibraryPage('morneve', 'me', safePage, pageSize, sortMorneveRowsByCalendar, query)
     case 'calvin':
-      return fetchSlugPrefixLibraryPage('calvin', 'cv', safePage, pageSize, sortCalvinBooksByCanonOrder)
+      return fetchSlugPrefixLibraryPage('calvin', 'cv', safePage, pageSize, sortCalvinBooksByCanonOrder, query)
     case 'henry':
-      return fetchSlugPrefixLibraryPage('henry', 'mh', safePage, pageSize, sortHenryBooksByCanonOrder)
+      return fetchSlugPrefixLibraryPage('henry', 'mh', safePage, pageSize, sortHenryBooksByCanonOrder, query)
     case 'edwards':
-      return fetchEdwardsLibraryPage(safePage, pageSize)
+      return fetchEdwardsLibraryPage(safePage, pageSize, query)
     default: {
       const _exhaustive: never = kind
       return _exhaustive

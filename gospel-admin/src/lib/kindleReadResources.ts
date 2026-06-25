@@ -2,12 +2,14 @@ import {
   groupPublicResourceItems,
   publicResourceItemsForResourcesMenu,
 } from '@/lib/groupPublicResourceItems'
+import { edwardsSermonTitleForModalDisplay } from '@/lib/edwards/edwardsSlug'
 import { kindleProfileReadUrl } from '@/lib/kindleReadHtml'
 import {
   kindleReadLibraryIndexUrl,
   type KindleReadLibraryKind,
   type KindleReadLibraryPage,
 } from '@/lib/kindleReadLibraryData'
+import { spurgeonSermonTitleForModalDisplay } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
 import type {
   PublicResourceCategoryChild,
   PublicResourceItem,
@@ -159,29 +161,65 @@ export function renderKindleReadLibraryListHtml(
   backHref: string,
   fromSlug?: string
 ): string {
+  const query = page.query?.trim() || ''
+  const displayTitle = (row: { slug: string; title: string }) => {
+    if (page.kind === 'spurgeon') return spurgeonSermonTitleForModalDisplay(row.title || row.slug)
+    if (page.kind === 'edwards') return edwardsSermonTitleForModalDisplay(row.title || row.slug)
+    return row.title || row.slug
+  }
+
   const items = page.items
-    .map((row) => resourceLinkHtml(row.title, kindleProfileReadUrl(row.slug)))
+    .map((row) => resourceLinkHtml(displayTitle(row), kindleProfileReadUrl(row.slug)))
     .join('')
 
   const totalPages = Math.max(1, Math.ceil(page.total / page.pageSize))
   const prev =
     page.page > 1
-      ? `<p class="kindle-read-library-pager"><a href="${escapeHtml(kindleReadLibraryIndexUrl(page.kind, page.page - 1, fromSlug))}">Previous page</a></p>`
+      ? `<p class="kindle-read-library-pager"><a href="${escapeHtml(kindleReadLibraryIndexUrl(page.kind, page.page - 1, fromSlug, query))}">Previous page</a></p>`
       : ''
   const next =
     page.page < totalPages
-      ? `<p class="kindle-read-library-pager"><a href="${escapeHtml(kindleReadLibraryIndexUrl(page.kind, page.page + 1, fromSlug))}">Next page</a></p>`
+      ? `<p class="kindle-read-library-pager"><a href="${escapeHtml(kindleReadLibraryIndexUrl(page.kind, page.page + 1, fromSlug, query))}">Next page</a></p>`
       : ''
 
-  return `<header class="kindle-read-header">
+  const fromHidden = fromSlug?.trim()
+    ? `<input type="hidden" name="from" value="${escapeHtml(fromSlug.trim())}" />`
+    : ''
+  const clearSearch = query
+    ? `<p class="kindle-read-library-clear"><a href="${escapeHtml(kindleReadLibraryIndexUrl(page.kind, 1, fromSlug))}">Clear search</a></p>`
+    : ''
+  const countLabel = query ? `${page.total} matches` : `${page.total} items`
+  const resultsFor = query
+    ? `<p class="kindle-read-description">Results for &ldquo;${escapeHtml(query)}&rdquo;</p>`
+    : ''
+
+  return `<header class="kindle-read-header kindle-read-library-header">
     <div class="kindle-read-header-inner">
       <p class="kindle-read-site-title">The Gospel Presentation</p>
       <h1 class="kindle-read-profile-title">${escapeHtml(page.title)}</h1>
       <p class="kindle-read-nav"><a href="${escapeHtml(backHref)}">Back</a></p>
+      <form class="kindle-read-library-search" method="get" action="/read/libraries/${escapeHtml(page.kind)}/">
+        <label class="kindle-read-library-search-label">
+          <span class="kindle-read-library-search-heading">Search by title</span>
+          <input
+            class="kindle-read-library-search-input"
+            type="search"
+            name="q"
+            value="${escapeHtml(query)}"
+            autocomplete="off"
+          />
+        </label>
+        ${fromHidden}
+        <p class="kindle-read-library-search-actions">
+          <button type="submit" class="kindle-read-library-search-submit">Search</button>
+        </p>
+      </form>
     </div>
   </header>
   <main class="kindle-read-main">
-    <p class="kindle-read-description">Page ${page.page} of ${totalPages} (${page.total} items)</p>
+    ${resultsFor}
+    ${clearSearch}
+    <p class="kindle-read-description">Page ${page.page} of ${totalPages} (${countLabel})</p>
     ${prev}
     <ul class="kindle-read-resources-list kindle-read-library-list">${items || '<li class="kindle-read-resources-note">No items found.</li>'}</ul>
     ${next}

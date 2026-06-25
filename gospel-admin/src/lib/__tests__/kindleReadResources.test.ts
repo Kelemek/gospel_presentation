@@ -1,4 +1,8 @@
-import { renderKindleReadResourcesNavHtml } from '@/lib/kindleReadResources'
+import {
+  renderKindleReadLibraryListHtml,
+  renderKindleReadResourcesNavHtml,
+} from '@/lib/kindleReadResources'
+import type { KindleReadLibraryPage } from '@/lib/kindleReadLibraryData'
 import type { PublicResourceItem } from '@/lib/supabase-data-service'
 
 const sampleItems: PublicResourceItem[] = [
@@ -31,5 +35,43 @@ describe('renderKindleReadResourcesNavHtml', () => {
 
   it('returns empty string when no menu items', () => {
     expect(renderKindleReadResourcesNavHtml([], 'default')).toBe('')
+  })
+})
+
+describe('renderKindleReadLibraryListHtml', () => {
+  const samplePage: KindleReadLibraryPage = {
+    kind: 'spurgeon',
+    title: 'Spurgeon sermons',
+    items: [{ slug: 'sg00042', title: 'Sermon 42. Grace Abounding' }],
+    total: 150,
+    page: 2,
+    pageSize: 50,
+    query: 'grace',
+  }
+
+  it('renders search form, results label, and q-aware pager links', () => {
+    const html = renderKindleReadLibraryListHtml(samplePage, '/default/read/', 'default')
+    expect(html).toContain('<form class="kindle-read-library-search" method="get"')
+    expect(html).toContain('action="/read/libraries/spurgeon/"')
+    expect(html).toContain('name="q"')
+    expect(html).toContain('value="grace"')
+    expect(html).toContain('name="from" value="default"')
+    expect(html).toContain('Results for &ldquo;grace&rdquo;')
+    expect(html).toContain('Clear search')
+    expect(html).toContain('150 matches')
+    expect(html).toContain('/read/libraries/spurgeon/?q=grace&amp;from=default">Previous page')
+    expect(html).toContain('/read/libraries/spurgeon/?page=3&amp;q=grace&amp;from=default">Next page')
+    expect(html).toContain('Grace Abounding')
+    expect(html).toContain('/sg00042/read/')
+  })
+
+  it('omits clear search and uses items label when not searching', () => {
+    const html = renderKindleReadLibraryListHtml(
+      { ...samplePage, query: undefined, page: 1 },
+      '/default/read/',
+      'default'
+    )
+    expect(html).not.toContain('Clear search')
+    expect(html).toContain('150 items')
   })
 })

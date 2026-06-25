@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import type { Json } from '@/lib/supabase/database.types'
 import { logger } from '@/lib/logger'
+import { normalizeLibrarySearchQuery } from '@/lib/normalizeLibrarySearchQuery'
 
 /**
  * postgrest-js requires `Database['public']` to extend `GenericSchema` (tables need `Relationships`, etc.).
@@ -51,21 +52,14 @@ function isSermonsRpcPayload(v: unknown): v is SermonsRpcPayload {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const rawQ = (searchParams.get('q') || '').trim()
+    const stripped = normalizeLibrarySearchQuery(searchParams.get('q') || '')
     const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1', 10) || 1)
     const pageSize = Math.min(1000, Math.max(1, Number.parseInt(searchParams.get('pageSize') || '100', 10) || 100))
     const from = (page - 1) * pageSize
 
-    const stripped = rawQ
-      .replace(/%/g, '')
-      .replace(/_/g, '')
-      .replace(/,/g, '')
-      .replace(/"/g, '')
-      .trim()
-
     const admin = createAdminClient() as unknown as SupabaseClient<SpurgeonPublicSermonsRpcDatabase>
     const { data, error } = await admin.rpc('spurgeon_public_sermons_page', {
-      p_q: stripped.length > 0 ? stripped : null,
+      p_q: stripped,
       p_offset: from,
       p_limit: pageSize,
     })

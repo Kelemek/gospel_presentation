@@ -16,7 +16,7 @@ export const revalidate = 0
 
 interface KindleLibraryPageProps {
   params: Promise<{ kind: string }>
-  searchParams: Promise<{ page?: string; from?: string }>
+  searchParams: Promise<{ page?: string; from?: string; q?: string }>
 }
 
 export async function generateMetadata({ params }: KindleLibraryPageProps): Promise<Metadata> {
@@ -35,15 +35,16 @@ export default async function KindleLibraryIndexPage({ params, searchParams }: K
     notFound()
   }
 
-  const { page: pageParam, from } = await searchParams
+  const { page: pageParam, from, q } = await searchParams
   const page = Math.max(1, Number.parseInt(pageParam || '1', 10) || 1)
   const fromSlug = from?.trim() || undefined
-  const libraryPage = await fetchKindleReadLibraryPage(kindParam, page)
+  const searchQuery = q?.trim() || undefined
+  const libraryPage = await fetchKindleReadLibraryPage(kindParam, page, undefined, searchQuery)
   const backHref = fromSlug ? kindleProfileReadUrl(fromSlug) : kindleProfileReadUrl('default')
   const html = renderKindleReadLibraryListHtml(libraryPage, backHref, fromSlug)
   const enabledTranslationCodes = await getEnabledTranslationCodes()
   const fullSiteUrl = fromSlug ? `/${encodeURIComponent(fromSlug)}/` : '/default/'
-  const refreshHref = kindleReadLibraryIndexUrl(kindParam, page, fromSlug)
+  const refreshHref = kindleReadLibraryIndexUrl(kindParam, page, fromSlug, searchQuery)
 
   return (
     <>
