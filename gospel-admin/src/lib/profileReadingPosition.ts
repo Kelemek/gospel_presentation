@@ -3,7 +3,7 @@
  */
 
 import type { GospelSection } from '@/lib/types'
-import { getCurrentTocAnchorId, getOrderedTocAnchorIds } from '@/lib/tocAnchorFromScroll'
+import { getCurrentTocAnchorId, getFirstTocAnchorIdInDocument, getOrderedTocAnchorIds } from '@/lib/tocAnchorFromScroll'
 import { readAlongTextFingerprint } from '@/lib/profileReadAlongProgressStorage'
 import type { ProfileListenTextOptions } from '@/lib/profileHighlightVisibleText'
 import { isListenPlainTextNodeExcluded } from '@/lib/profileHighlightVisibleText'
@@ -18,7 +18,11 @@ import {
   getCaretClientRectForReadAlongPlainOffset,
   scrollPlainOffsetToViewportY,
 } from '@/lib/scrollReadAlongPlain'
-import { getProfileHeaderScrollOffset, scrollToTocAnchorWhenReady } from '@/lib/scrollToTocAnchor'
+import {
+  getProfileHeaderScrollOffset,
+  scrollToProfileMenuReadingTopWhenReady,
+  scrollToTocAnchorWhenReady,
+} from '@/lib/scrollToTocAnchor'
 import {
   chunkIndexContainingPlainOffset,
   type TtsTextChunk,
@@ -393,6 +397,16 @@ export type RestoreReadingPositionOptions = {
   preferSubsectionTitle?: boolean
 }
 
+/**
+ * Menu-only top restore: first TOC anchor at subsection start (document-top reading resume).
+ * Other anchors with plainOffset 0 still need scrollToTocAnchor to reach that section.
+ */
+export function shouldRestoreProfileMenuReadingTop(anchorId: string, plainOffset: number): boolean {
+  if (plainOffset !== 0) return false
+  const firstAnchorId = getFirstTocAnchorIdInDocument()
+  return firstAnchorId !== null && anchorId === firstAnchorId
+}
+
 /** Scroll to TOC anchor, then align plain offset at the viewport read line when fingerprint matches. */
 export function restoreReadingPosition(
   anchorId: string,
@@ -405,6 +419,17 @@ export function restoreReadingPosition(
 
   const opts = listenTextOptionsForProfileSlug(profileSlug)
   const behavior = options?.behavior ?? 'auto'
+
+  // Document-top resume on the first anchor: menu at viewport top (site title fully scrolled away).
+  // scrollToTocAnchor would align below site + menu and often leaves the title half cut off.
+  if (shouldRestoreProfileMenuReadingTop(anchorId, plainOffset)) {
+    return scrollToProfileMenuReadingTopWhenReady({
+      behavior,
+      maxFrames: options?.maxFrames,
+      onGiveUp: options?.onGiveUp,
+      onDone: options?.onDone,
+    })
+  }
 
   return scrollToTocAnchorWhenReady(anchorId, {
     behavior,
@@ -427,8 +452,7 @@ export function restoreReadingPosition(
         options?.onDone?.()
         return
       }
-      // Offset 0 is the subsection start; scrollToTocAnchor already placed the anchor.
-      // Fine alignment scrolls down from the document top and fights manual scroll-up.
+      // Subsection start: scrollToTocAnchor placement is enough (no read-line fine align).
       if (plainOffset === 0) {
         options?.onDone?.()
         return

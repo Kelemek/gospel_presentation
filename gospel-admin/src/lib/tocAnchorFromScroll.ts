@@ -45,6 +45,14 @@ export function getOrderedTocAnchorIds(sections: GospelSection[]): string[] {
   return cached
 }
 
+/** First TOC anchor id in document order (matches `buildOrderedTocAnchorIds(sections)[0]` when rendered). */
+export function getFirstTocAnchorIdInDocument(): string | null {
+  if (typeof document === 'undefined') return null
+  const el = document.querySelector('[id^="section-"]')
+  if (!(el instanceof HTMLElement) || !el.id) return null
+  return el.id
+}
+
 function tocAnchorViewportTop(id: string): number | null {
   const el = document.getElementById(id)
   if (!el || typeof el.getBoundingClientRect !== 'function') return null

@@ -2,7 +2,10 @@ import {
   applyStickyHeaderVisualViewportTop,
   bindProfileIosKeyboardHeaderSync,
   clearProfileIosVisualViewportChrome,
+  getProfileSiteHeaderHeight,
   getSafeAreaInsetsPx,
+  PROFILE_SITE_HEADER_ATTR,
+  scrollToProfileMenuReadingTop,
   scrollToTocAnchor,
   scrollToTocAnchorWhenReady,
   SAFE_AREA_BAR_OFFSET_VAR,
@@ -387,5 +390,38 @@ describe('getSafeAreaInsetsPx', () => {
     } finally {
       window.getComputedStyle = original
     }
+  })
+})
+
+describe('scrollToProfileMenuReadingTop', () => {
+  beforeEach(() => {
+    document.body.innerHTML = ''
+    window.scrollTo = jest.fn()
+  })
+
+  it('scrolls past the site title header so the menu can stick at the top', () => {
+    const siteHeader = document.createElement('header')
+    siteHeader.setAttribute(PROFILE_SITE_HEADER_ATTR, '')
+    Object.defineProperty(siteHeader, 'offsetHeight', { value: 92, configurable: true })
+    document.body.appendChild(siteHeader)
+
+    const sticky = document.createElement('div')
+    sticky.setAttribute('data-profile-sticky-header', '')
+    document.body.appendChild(sticky)
+
+    scrollToProfileMenuReadingTop({ behavior: 'auto' })
+
+    expect(getProfileSiteHeaderHeight()).toBe(92)
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 92, behavior: 'auto' })
+  })
+
+  it('scrolls to 0 when the site title header is absent', () => {
+    const sticky = document.createElement('div')
+    sticky.setAttribute('data-profile-sticky-header', '')
+    document.body.appendChild(sticky)
+
+    scrollToProfileMenuReadingTop({ behavior: 'auto' })
+
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'auto' })
   })
 })

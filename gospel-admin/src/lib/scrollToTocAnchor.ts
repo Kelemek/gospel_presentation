@@ -4,6 +4,9 @@
 
 export const FALLBACK_HEADER_OFFSET = 80
 
+/** Site title block above the sticky profile menu (`ProfilePageClient`). */
+export const PROFILE_SITE_HEADER_ATTR = 'data-profile-site-header'
+
 /** Extra space below the sticky header when aligning to a subsection title. */
 export const SUBSECTION_TITLE_SCROLL_GAP_PX = 8
 
@@ -272,6 +275,72 @@ export function bindProfileIosKeyboardHeaderSync(options: {
     }
     clearProfileIosVisualViewportChrome(header)
   }
+}
+
+/** Height of the site title header above the sticky menu (0 when hidden or absent). */
+export function getProfileSiteHeaderHeight(): number {
+  if (typeof document === 'undefined') return 0
+  const header = document.querySelector(`[${PROFILE_SITE_HEADER_ATTR}]`)
+  if (header instanceof HTMLElement && header.offsetHeight > 0) {
+    return Math.ceil(header.offsetHeight)
+  }
+  const fallback = document.querySelector('[data-gospel-surface] > header')
+  if (fallback instanceof HTMLElement && fallback.offsetHeight > 0) {
+    return Math.ceil(fallback.offsetHeight)
+  }
+  return 0
+}
+
+/**
+ * Scroll so the site title is fully off-screen and the sticky profile menu sits at the top
+ * (reading resume / bookmark at subsection start).
+ */
+export function scrollToProfileMenuReadingTop(options?: {
+  behavior?: ScrollBehavior
+  onDone?: () => void
+}): void {
+  if (typeof window === 'undefined') return
+  const behavior = options?.behavior ?? 'auto'
+  const top = Math.max(0, getProfileSiteHeaderHeight())
+  window.scrollTo({ top, behavior })
+  scheduleScrollCompleteCallback(behavior, options?.onDone)
+}
+
+/**
+ * Retry {@link scrollToProfileMenuReadingTop} until the sticky menu header exists in the DOM.
+ */
+export function scrollToProfileMenuReadingTopWhenReady(options?: {
+  behavior?: ScrollBehavior
+  maxFrames?: number
+  onDone?: () => void
+  onGiveUp?: () => void
+}): () => void {
+  if (typeof window === 'undefined') return () => {}
+
+  const maxFrames = options?.maxFrames ?? DEFAULT_SCROLL_WHEN_READY_MAX_FRAMES
+  let frame = 0
+  let rafId = 0
+
+  const tick = () => {
+    const sticky = document.querySelector('[data-profile-sticky-header]')
+    if (!(sticky instanceof HTMLElement)) {
+      frame += 1
+      if (frame >= maxFrames) {
+        options?.onGiveUp?.()
+        return
+      }
+      rafId = window.requestAnimationFrame(tick)
+      return
+    }
+
+    scrollToProfileMenuReadingTop({
+      behavior: options?.behavior ?? 'auto',
+      onDone: options?.onDone,
+    })
+  }
+
+  rafId = window.requestAnimationFrame(tick)
+  return () => window.cancelAnimationFrame(rafId)
 }
 
 /** Pixel offset from top of viewport for scroll targets (sticky header + safe area). */

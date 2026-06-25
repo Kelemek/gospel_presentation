@@ -1383,5 +1383,10 @@
     "releasedAt": "2026-06-25",
     "committedAt": "2026-06-25T13:33:36.045Z",
     "message": "The Biblical Counseling Scripture Reference now includes many more counseling topics and scripture passages from Jay Adams's topical worklist. See Copyright & Attribution for the required notice and a link to his New Testament and Proverbs."
+  },
+  {
+    "releasedAt": "2026-06-25",
+    "committedAt": "2026-06-25T17:21:34.293Z",
+    "message": "Bug fix: Returning to a resource at the top of the page now restores with the menu at the top instead of the site title half cut off."
   }
 ]

@@ -99,6 +99,7 @@ import {
   isReadingPositionAheadOf,
   restoreReadingPosition,
   resolveReadingScope,
+  shouldRestoreProfileMenuReadingTop,
 } from '@/lib/profileReadingPosition'
 import { getOrderedTocAnchorIds } from '@/lib/tocAnchorFromScroll'
 import {
@@ -1041,27 +1042,47 @@ function ProfileContent({
     const tabNavResume = tabNavStagingRef.current.resume
 
     profileReadingNavAppliedRef.current = true
-    const settle = () => {
+    const finishTabNavRestore = (options?: { notifySettled?: boolean }) => {
       clearProfileResourceTabNavigationStaging(profileSlug)
-      onReadingResumeSettledRef.current?.()
+      if (options?.notifySettled !== false) {
+        onReadingResumeSettledRef.current?.()
+      }
     }
 
     if (tabNavResume === null) {
-      settle()
+      finishTabNavRestore()
       return
     }
 
     const cancelRetry = runReadingResumeRestoreWithFingerprintRetry(tabNavResume, profileSlug, {
       skipRestoreOnInvalidFingerprint: false,
       onRestore: (resume) => {
-        startReadingResumeRestoreRef.current(
+        const revealSiteHeaderBeforeScroll = shouldRestoreProfileMenuReadingTop(
           resume.anchorId,
-          resume.plainOffset,
-          resume.fingerprint,
-          () => {
-            settle()
-          }
+          resume.plainOffset
         )
+        if (revealSiteHeaderBeforeScroll) {
+          onReadingResumeSettledRef.current?.()
+        }
+        const startRestore = () => {
+          startReadingResumeRestoreRef.current(
+            resume.anchorId,
+            resume.plainOffset,
+            resume.fingerprint,
+            () => {
+              finishTabNavRestore({
+                notifySettled: !revealSiteHeaderBeforeScroll,
+              })
+            }
+          )
+        }
+        if (revealSiteHeaderBeforeScroll) {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(startRestore)
+          })
+          return
+        }
+        startRestore()
       },
     })
 

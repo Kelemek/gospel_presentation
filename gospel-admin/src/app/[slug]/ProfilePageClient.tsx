@@ -66,7 +66,10 @@ function ProfilePageBody({
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900" data-gospel-surface>
       {!siteHeaderHidden ? (
-        <header className="bg-linear-to-br from-slate-700 to-slate-800 text-white text-center py-5 shadow-lg">
+        <header
+          data-profile-site-header
+          className="bg-linear-to-br from-slate-700 to-slate-800 text-white text-center py-5 shadow-lg"
+        >
           <div className="container mx-auto px-5">
             <h1 className="text-4xl md:text-5xl font-bold mb-1">
               The Gospel Presentation
