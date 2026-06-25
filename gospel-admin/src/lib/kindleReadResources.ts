@@ -3,6 +3,7 @@ import {
   publicResourceItemsForResourcesMenu,
 } from '@/lib/groupPublicResourceItems'
 import { edwardsSermonTitleForModalDisplay } from '@/lib/edwards/edwardsSlug'
+import { kindleReadCalendarUrl } from '@/lib/kindleReadCalendar'
 import { kindleProfileReadUrl } from '@/lib/kindleReadHtml'
 import {
   kindleReadLibraryIndexUrl,
@@ -10,6 +11,7 @@ import {
   type KindleReadLibraryPage,
 } from '@/lib/kindleReadLibraryData'
 import { spurgeonSermonTitleForModalDisplay } from '@/lib/spurgeon/sortBySpurgeonSermonSlug'
+import { isMcheyneProfileSlug } from '@/lib/mcheyne/mcheyneSlug'
 import type {
   PublicResourceCategoryChild,
   PublicResourceItem,
@@ -46,23 +48,44 @@ function resourceLinkHtml(label: string, href: string): string {
   return `<li class="kindle-read-resources-item"><a href="${escapeHtml(href)}">${escapeHtml(label)}</a></li>`
 }
 
+function kindleReadResourceHref(
+  type: PublicResourceCategoryChild['type'] | PublicResourceItem['type'],
+  fromSlug: string
+): string | null {
+  if (type === 'morningEveningLibrary') {
+    return kindleReadCalendarUrl('morneve', undefined, fromSlug)
+  }
+  const kind = libraryKindFromResourceType(type)
+  if (kind) {
+    return kindleReadLibraryIndexUrl(kind, 1, fromSlug)
+  }
+  return null
+}
+
+function kindleReadTemplateHref(slug: string, fromSlug: string): string {
+  if (isMcheyneProfileSlug(slug)) {
+    return kindleReadCalendarUrl('mcheyne', undefined, fromSlug)
+  }
+  return kindleProfileReadUrl(slug)
+}
+
 function renderResourceChildHtml(child: PublicResourceCategoryChild, fromSlug: string): string {
   if (child.type === 'template') {
-    return resourceLinkHtml(child.title, kindleProfileReadUrl(child.slug))
+    return resourceLinkHtml(child.title, kindleReadTemplateHref(child.slug, fromSlug))
   }
   if (child.type === 'bibleReader') {
     return `<li class="kindle-read-resources-item kindle-read-resources-note">${escapeHtml(child.title)} (full site on phone or computer)</li>`
   }
-  const kind = libraryKindFromResourceType(child.type)
-  if (kind) {
-    return resourceLinkHtml(child.title, kindleReadLibraryIndexUrl(kind, 1, fromSlug))
+  const href = kindleReadResourceHref(child.type, fromSlug)
+  if (href) {
+    return resourceLinkHtml(child.title, href)
   }
   return ''
 }
 
 function renderTopLevelResourceHtml(item: PublicResourceItem, fromSlug: string): string {
   if (item.type === 'template') {
-    return resourceLinkHtml(item.title, kindleProfileReadUrl(item.slug))
+    return resourceLinkHtml(item.title, kindleReadTemplateHref(item.slug, fromSlug))
   }
   if (item.type === 'bibleReader') {
     return `<li class="kindle-read-resources-item kindle-read-resources-note">${escapeHtml(item.title)} (full site on phone or computer)</li>`
@@ -82,9 +105,9 @@ function renderTopLevelResourceHtml(item: PublicResourceItem, fromSlug: string):
       </details>
     </li>`
   }
-  const kind = libraryKindFromResourceType(item.type)
-  if (kind) {
-    return resourceLinkHtml(item.title, kindleReadLibraryIndexUrl(kind, 1, fromSlug))
+  const href = kindleReadResourceHref(item.type, fromSlug)
+  if (href) {
+    return resourceLinkHtml(item.title, href)
   }
   return ''
 }
@@ -103,7 +126,7 @@ export function renderKindleReadResourcesMenuInnerHtml(
   for (const group of groups) {
     if (group.kind === 'templates') {
       const links = group.items
-        .map((item) => resourceLinkHtml(item.title, kindleProfileReadUrl(item.slug)))
+        .map((item) => resourceLinkHtml(item.title, kindleReadTemplateHref(item.slug, fromSlug)))
         .join('')
       if (links) {
         blocks.push(`<ul class="kindle-read-resources-list">${links}</ul>`)
@@ -126,7 +149,11 @@ export function renderKindleReadResourcesMenuInnerHtml(
               ? 'henryLibrary'
               : 'edwardsLibrary'
     )
-    if (kind) {
+    if (group.kind === 'morningEveningLibrary') {
+      blocks.push(
+        resourceLinkHtml(group.title, kindleReadCalendarUrl('morneve', undefined, fromSlug))
+      )
+    } else if (kind) {
       blocks.push(resourceLinkHtml(group.title, kindleReadLibraryIndexUrl(kind, 1, fromSlug)))
     }
   }

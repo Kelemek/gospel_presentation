@@ -121,7 +121,15 @@ export function applyKindleReadVersePinHighlightsWithScroll(
   options?: { scrollIntoView?: boolean }
 ): void {
   const resumeElement = applyKindleReadVersePinHighlights(profileSlug)
-  if (options?.scrollIntoView && resumeElement && isMcheyneProfileSlug(profileSlug)) {
-    resumeElement.scrollIntoView({ block: 'center', behavior: 'auto' })
+  if (!options?.scrollIntoView || !resumeElement || !isMcheyneProfileSlug(profileSlug)) {
+    return
   }
+
+  const hash = typeof window !== 'undefined' ? window.location.hash.slice(1) : ''
+  // Calendar/TOC day links use subsection hashes — keep native hash scroll (scroll-margin-top).
+  if (hash && !isKindleReadScriptureCardAnchor(hash)) {
+    return
+  }
+
+  resumeElement.scrollIntoView({ block: 'center', behavior: 'auto' })
 }

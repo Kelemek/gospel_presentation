@@ -7,13 +7,16 @@ import type { PublicResourceItem } from '@/lib/supabase-data-service'
 
 const sampleItems: PublicResourceItem[] = [
   { type: 'template', slug: 'default', title: 'The Gospel in its Context' },
+  { type: 'template', slug: 'mchy', title: "M'Cheyne Bible Reading Plan" },
   { type: 'spurgeonLibrary', title: 'Spurgeon sermons' },
+  { type: 'morningEveningLibrary', title: "Spurgeon's Morning & Evening" },
   {
     type: 'category',
     id: 'books',
     name: 'Books',
     children: [
       { type: 'template', slug: 'lbst', title: 'Systematic Theology' },
+      { type: 'template', slug: 'mchy', title: "M'Cheyne Bible Reading Plan" },
       { type: 'henryLibrary', title: "Matthew Henry's Commentary" },
     ],
   },
@@ -30,6 +33,10 @@ describe('renderKindleReadResourcesNavHtml', () => {
     expect(html).toContain('/lbst/read/')
     expect(html).toContain('/read/libraries/spurgeon/')
     expect(html).toContain('/read/libraries/henry/')
+    expect(html).toContain('/read/calendar/morneve/?from=default')
+    expect(html).toContain('/read/calendar/mcheyne/?from=default')
+    expect(html).not.toContain('/mchy/read/')
+    expect(html).not.toContain('/read/libraries/morneve/')
     expect(html).toContain('from=default')
   })
 

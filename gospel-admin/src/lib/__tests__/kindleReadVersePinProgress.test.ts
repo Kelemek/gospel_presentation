@@ -9,6 +9,7 @@ import {
 } from '@/lib/kindleReadLastCardStorage'
 import {
   applyKindleReadVersePinHighlights,
+  applyKindleReadVersePinHighlightsWithScroll,
   isKindleReadScriptureCardAnchor,
   kindleReadProfileSlugFromPathname,
   saveKindleReadLastScriptureCard,
@@ -132,5 +133,30 @@ describe('kindleReadVersePinProgress', () => {
     expect(document.getElementById('section-jan-0-1-card-1')).not.toHaveClass(
       'kindle-read-scripture-card--yellow-pin'
     )
+  })
+
+  it('applyKindleReadVersePinHighlightsWithScroll skips resume scroll for subsection hash', () => {
+    saveKindleReadLastCard('mchy', {
+      reference: 'John 3:16',
+      sectionId: 'section-jan',
+      subsectionId: 'section-jan-0-1',
+    })
+
+    const card = document.createElement('span')
+    card.id = 'section-jan-0-1-card-0'
+    card.className = 'kindle-read-scripture-card'
+    card.innerHTML = '<a class="kindle-read-scripture-link" href="#">John 3:16</a>'
+    const scrollIntoView = jest.fn()
+    card.scrollIntoView = scrollIntoView
+    document.body.innerHTML = ''
+    document.body.appendChild(card)
+
+    window.location.hash = '#section-may-26'
+    applyKindleReadVersePinHighlightsWithScroll('mchy', { scrollIntoView: true })
+    expect(scrollIntoView).not.toHaveBeenCalled()
+
+    window.location.hash = '#section-jan-0-1-card-0'
+    applyKindleReadVersePinHighlightsWithScroll('mchy', { scrollIntoView: true })
+    expect(scrollIntoView).toHaveBeenCalled()
   })
 })
