@@ -9,7 +9,7 @@ import {
 } from '@/lib/supabase-data-service'
 import { getEnabledTranslationOptions } from '@/lib/enabledTranslationCodes'
 import { kindleProfileReadUrl, renderKindleReadArticleHtml } from '@/lib/kindleReadHtml'
-import { renderKindleReadMenuNavHtml } from '@/lib/kindleReadMenu'
+import { renderKindleReadMenuHtml } from '@/lib/kindleReadMenu'
 import { resolveKindleReadTranslationForRequest } from '@/lib/kindleReadTranslationPreference.server'
 import { resolveKindleReadTextSizeForRequest } from '@/lib/kindleReadTextSizePreference.server'
 
@@ -64,7 +64,7 @@ export default async function KindleReadPage({ params, searchParams }: KindleRea
   const textSize = await resolveKindleReadTextSizeForRequest(textSizeParam)
   const articleHtml = renderKindleReadArticleHtml(sections, slug, translation)
   const resourceItems = await getPublicResourcesStructure()
-  const menuNavHtml = renderKindleReadMenuNavHtml(
+  const menuHtml = renderKindleReadMenuHtml(
     resourceItems,
     sections,
     slug,
@@ -76,18 +76,24 @@ export default async function KindleReadPage({ params, searchParams }: KindleRea
 
   return (
     <>
-      <header className="kindle-read-header">
-        <div className="kindle-read-header-inner">
-          <p className="kindle-read-site-title">The Gospel Presentation</p>
-          <h1 className="kindle-read-profile-title">{profile.title}</h1>
-          {menuNavHtml ? (
-            <div
-              className="kindle-read-header-menu"
-              dangerouslySetInnerHTML={{ __html: menuNavHtml }}
-            />
-          ) : null}
-        </div>
-      </header>
+      <div className="kindle-read-toolbar">
+        <header className="kindle-read-header">
+          <div className="kindle-read-header-inner">
+            <p className="kindle-read-site-title">The Gospel Presentation</p>
+            <h1 className="kindle-read-profile-title">{profile.title}</h1>
+          </div>
+        </header>
+
+        {menuHtml ? (
+          <div className="kindle-read-menu-trigger-wrap">
+            <div dangerouslySetInnerHTML={{ __html: menuHtml.triggerHtml }} />
+          </div>
+        ) : null}
+      </div>
+
+      {menuHtml ? (
+        <div dangerouslySetInnerHTML={{ __html: menuHtml.panelHtml }} />
+      ) : null}
 
       <main className="kindle-read-main">
         <article

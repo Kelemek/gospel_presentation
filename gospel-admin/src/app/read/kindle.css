@@ -10,14 +10,23 @@
   line-height: 1.55;
 }
 
-.kindle-read-header {
+/* Title + Menu (closed) stick together while reading; menu open uses document scroll below. */
+.kindle-read-toolbar {
   position: sticky;
   top: 0;
   z-index: 10;
-  padding: 1rem 0 0.75rem;
-  border-bottom: 1px solid #333;
   margin-bottom: 1rem;
+  border-bottom: 1px solid #333;
   background: #fff;
+  overflow: visible;
+}
+
+.kindle-read-header {
+  position: static;
+  padding: 1rem 0 0;
+  border-bottom: none;
+  margin-bottom: 0;
+  background: transparent;
   overflow: visible;
 }
 
@@ -114,9 +123,45 @@
   padding: 0 1.25rem 2.5rem;
 }
 
-/* Combined Menu — Resources + Table of Contents (native <details>/<summary>). */
-.kindle-read-header-menu {
-  margin: 0.5rem 0 0;
+/* Menu trigger in the sticky toolbar; panel scrolls below (profile read pages). */
+.kindle-read-menu-trigger-wrap {
+  max-width: 40em;
+  margin: 0 auto;
+  padding: 0 1.25rem 0.75rem;
+}
+
+.kindle-read-menu-trigger {
+  margin: 0;
+  padding: 0.5rem 1rem;
+  border: 1px solid #ccc;
+  background: #f9f9f9;
+}
+
+.kindle-read-menu-trigger-btn {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.kindle-read-menu-panel {
+  display: none;
+  max-width: 40em;
+  margin: 0 auto 1rem;
+  padding: 0 1.25rem;
+}
+
+.kindle-read-menu-panel .kindle-read-menu-body {
+  margin-top: 0;
+  padding: 0.5rem 1rem;
+  border: 1px solid #ccc;
+  background: #f9f9f9;
 }
 
 .kindle-read-menu {
@@ -144,49 +189,21 @@
 }
 
 .kindle-read-menu-title::before {
-  content: '▸ ';
+  content: '▸';
+  margin-right: 0.4rem;
 }
 
-.kindle-read-menu[open] > .kindle-read-menu-title::before {
-  content: '▾ ';
+.kindle-read-menu[open] > .kindle-read-menu-title::before,
+.kindle-read-menu-trigger-btn[aria-expanded='true']::before,
+.kindle-read-root--menu-open .kindle-read-menu-trigger-btn::before {
+  content: '▾';
 }
 
 .kindle-read-menu-body {
   margin-top: 0.5rem;
 }
 
-.kindle-read-menu[open] > .kindle-read-menu-body {
-  max-height: calc(100vh - 10rem);
-  max-height: calc(100dvh - 10rem);
-  overflow-x: hidden;
-  overflow-y: scroll;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
-  overscroll-behavior: contain;
-}
-
-/* Expanded resource categories (e.g. Books) scroll inside the Menu on e-readers. */
-.kindle-read-menu .kindle-read-resources-category[open] > .kindle-read-resources-category-body,
-.kindle-read-resources-category[open] > .kindle-read-resources-category-body {
-  max-height: calc(100vh - 13rem);
-  max-height: calc(100dvh - 13rem);
-  overflow-x: hidden;
-  overflow-y: scroll;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
-  overscroll-behavior: contain;
-}
-
-.kindle-read-menu .kindle-read-toc-section[open] > .kindle-read-toc-list,
-.kindle-read-menu .kindle-read-toc-subsection[open] > .kindle-read-toc-list {
-  max-height: calc(100vh - 13rem);
-  max-height: calc(100dvh - 13rem);
-  overflow-x: hidden;
-  overflow-y: scroll;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
-  overscroll-behavior: contain;
-}
+/* Nested inner scroll for Menu sub-panels lives only outside profile read header (see end of file). */
 
 .kindle-read-menu-section {
   margin: 0 0 1rem;
@@ -214,11 +231,12 @@
 }
 
 .kindle-read-menu-section-title::before {
-  content: '▸ ';
+  content: '▸';
+  margin-right: 0.4rem;
 }
 
 .kindle-read-menu-section[open] > .kindle-read-menu-section-title::before {
-  content: '▾ ';
+  content: '▾';
 }
 
 .kindle-read-menu-resources,
@@ -229,24 +247,34 @@
 
 /* Larger type, tap targets, and vertical centering in the combined Menu. */
 .kindle-read-menu .kindle-read-translation-item,
+.kindle-read-menu-panel .kindle-read-translation-item,
 .kindle-read-menu .kindle-read-resources-item,
-.kindle-read-menu .kindle-read-toc-item {
+.kindle-read-menu-panel .kindle-read-resources-item,
+.kindle-read-menu .kindle-read-toc-item,
+.kindle-read-menu-panel .kindle-read-toc-item {
   margin: 0.65rem 0;
 }
 
-.kindle-read-menu .kindle-read-resources-category-item {
+.kindle-read-menu .kindle-read-resources-category-item,
+.kindle-read-menu-panel .kindle-read-resources-category-item {
   margin: 0.85rem 0;
 }
 
 .kindle-read-menu .kindle-read-toc-section-item,
-.kindle-read-menu .kindle-read-toc-subsection-item {
+.kindle-read-menu-panel .kindle-read-toc-section-item,
+.kindle-read-menu .kindle-read-toc-subsection-item,
+.kindle-read-menu-panel .kindle-read-toc-subsection-item {
   margin: 0.85rem 0;
 }
 
 .kindle-read-menu .kindle-read-translation-option,
+.kindle-read-menu-panel .kindle-read-translation-option,
 .kindle-read-menu .kindle-read-translation-option--current,
+.kindle-read-menu-panel .kindle-read-translation-option--current,
 .kindle-read-menu .kindle-read-resources-item a,
-.kindle-read-menu .kindle-read-toc-item a {
+.kindle-read-menu-panel .kindle-read-resources-item a,
+.kindle-read-menu .kindle-read-toc-item a,
+.kindle-read-menu-panel .kindle-read-toc-item a {
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -259,15 +287,19 @@
   text-decoration: underline;
 }
 
-.kindle-read-menu .kindle-read-translation-option--current {
+.kindle-read-menu .kindle-read-translation-option--current,
+.kindle-read-menu-panel .kindle-read-translation-option--current {
   color: inherit;
   font-weight: bold;
   text-decoration: none;
 }
 
 .kindle-read-menu .kindle-read-resources-category-name,
+.kindle-read-menu-panel .kindle-read-resources-category-name,
 .kindle-read-menu .kindle-read-toc-section-name,
-.kindle-read-menu .kindle-read-toc-subsection-name {
+.kindle-read-menu-panel .kindle-read-toc-section-name,
+.kindle-read-menu .kindle-read-toc-subsection-name,
+.kindle-read-menu-panel .kindle-read-toc-subsection-name {
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -277,7 +309,8 @@
   line-height: 1.35;
 }
 
-.kindle-read-menu .kindle-read-toc-subsection-name {
+.kindle-read-menu .kindle-read-toc-subsection-name,
+.kindle-read-menu-panel .kindle-read-toc-subsection-name {
   font-size: 1.1rem;
 }
 
@@ -332,12 +365,13 @@
 
 .kindle-read-resources-title::before,
 .kindle-read-resources-category-name::before {
-  content: '▸ ';
+  content: '▸';
+  margin-right: 0.4rem;
 }
 
 .kindle-read-resources[open] > .kindle-read-resources-title::before,
 .kindle-read-resources-category[open] > .kindle-read-resources-category-name::before {
-  content: '▾ ';
+  content: '▾';
 }
 
 .kindle-read-resources-body {
@@ -408,13 +442,14 @@
 .kindle-read-toc-title::before,
 .kindle-read-toc-section-name::before,
 .kindle-read-toc-subsection-name::before {
-  content: '▸ ';
+  content: '▸';
+  margin-right: 0.4rem;
 }
 
 .kindle-read-toc[open] > .kindle-read-toc-title::before,
 .kindle-read-toc-section[open] > .kindle-read-toc-section-name::before,
 .kindle-read-toc-subsection[open] > .kindle-read-toc-subsection-name::before {
-  content: '▾ ';
+  content: '▾';
 }
 
 .kindle-read-toc-body {
@@ -803,4 +838,34 @@
 
 .kindle-read-attribution p:last-child {
   margin-bottom: 0;
+}
+
+/*
+ * Profile read menu (Silk): sticky toolbar keeps title + Menu button; panel scrolls below.
+ * When Menu is open, hide the article so the full list uses one document scroll.
+ */
+.kindle-read-root--menu-open .kindle-read-main {
+  display: none;
+}
+
+.kindle-read-root--menu-open .kindle-read-menu-panel {
+  display: block;
+  margin-bottom: 0;
+  padding-bottom: 1.5rem;
+}
+
+.kindle-read-menu-panel .kindle-read-menu-section,
+.kindle-read-menu-panel .kindle-read-menu-resources,
+.kindle-read-menu-panel .kindle-read-menu-toc,
+.kindle-read-menu-panel .kindle-read-menu-translations,
+.kindle-read-menu-panel .kindle-read-menu-text-size,
+.kindle-read-menu-panel .kindle-read-resources-category[open] > .kindle-read-resources-category-body,
+.kindle-read-menu-panel .kindle-read-toc-section[open] > .kindle-read-toc-list,
+.kindle-read-menu-panel .kindle-read-toc-subsection[open] > .kindle-read-toc-list {
+  max-height: none;
+  overflow: visible;
+  overflow-x: visible;
+  overflow-y: visible;
+  touch-action: auto;
+  height: auto;
 }

@@ -1,4 +1,9 @@
-import { renderKindleReadMenuNavHtml } from '@/lib/kindleReadMenu'
+import {
+  renderKindleReadMenuHtml,
+  renderKindleReadMenuNavHtml,
+  renderKindleReadMenuPanelHtml,
+  renderKindleReadMenuTriggerHtml,
+} from '@/lib/kindleReadMenu'
 import type { EnabledTranslationOption } from '@/lib/enabledTranslationCodes'
 import type { GospelPresentationData } from '@/lib/types'
 import type { PublicResourceItem } from '@/lib/supabase-data-service'
@@ -27,7 +32,7 @@ const sampleTranslations: EnabledTranslationOption[] = [
 ]
 
 describe('renderKindleReadMenuNavHtml', () => {
-  it('renders combined Menu with Resources, Bible Translation, Text size, then Table of Contents', () => {
+  it('renders split trigger and panel with Resources, Bible Translation, Text size, then Table of Contents', () => {
     const html = renderKindleReadMenuNavHtml(
       sampleItems,
       sampleSections,
@@ -36,8 +41,10 @@ describe('renderKindleReadMenuNavHtml', () => {
       'esv',
       'normal'
     )
-    expect(html).toContain('<details class="kindle-read-menu">')
-    expect(html).toContain('<summary class="kindle-read-menu-title">Menu</summary>')
+    expect(html).toContain('kindle-read-menu-trigger-btn')
+    expect(html).toContain('aria-controls="kindle-read-menu-panel"')
+    expect(html).toContain('>Menu</button>')
+    expect(html).toContain('id="kindle-read-menu-panel"')
     expect(html).toContain('<details class="kindle-read-menu-section">')
     expect(html.indexOf('<summary class="kindle-read-menu-section-title">Resources</summary>')).toBeLessThan(
       html.indexOf('<summary class="kindle-read-menu-section-title">Bible Translation</summary>')
@@ -91,5 +98,39 @@ describe('renderKindleReadMenuNavHtml', () => {
     )
     expect(html).not.toContain('<summary class="kindle-read-menu-section-title">Bible Translation</summary>')
     expect(html).toContain('<summary class="kindle-read-menu-section-title">Text size</summary>')
+  })
+})
+
+describe('renderKindleReadMenuHtml', () => {
+  it('returns trigger and panel parts for profile read pages', () => {
+    const parts = renderKindleReadMenuHtml(
+      sampleItems,
+      sampleSections,
+      'default',
+      sampleTranslations,
+      'esv',
+      'normal'
+    )
+    expect(parts).not.toBeNull()
+    expect(parts?.triggerHtml).toBe(renderKindleReadMenuTriggerHtml())
+    expect(parts?.panelHtml).toContain('kindle-read-menu-panel')
+    expect(parts?.panelHtml).toContain('Table of Contents')
+  })
+
+  it('returns menu parts with text size when profile has no resources or sections', () => {
+    const parts = renderKindleReadMenuHtml(
+      [],
+      [],
+      'default',
+      [{ translation_code: 'esv', translation_name: 'ESV (English Standard Version)' }],
+      'esv',
+      'normal'
+    )
+    expect(parts).not.toBeNull()
+    expect(parts?.panelHtml).toContain('Text size')
+  })
+
+  it('renderKindleReadMenuPanelHtml returns empty string for empty body', () => {
+    expect(renderKindleReadMenuPanelHtml('')).toBe('')
   })
 })

@@ -2,6 +2,7 @@ import { renderKindleReadTocMenuInnerHtml } from '@/lib/kindleReadHtml'
 import { renderKindleReadResourcesMenuInnerHtml } from '@/lib/kindleReadResources'
 import type { EnabledTranslationOption } from '@/lib/enabledTranslationCodes'
 import type { BibleTranslation } from '@/lib/bible-translations'
+import { KINDLE_READ_MENU_PANEL_ID } from '@/lib/kindleReadMenuConstants'
 import {
   kindleReadTranslationSwitchUrl,
   shortTranslationMenuLabel,
@@ -66,8 +67,14 @@ export function renderKindleReadTextSizeMenuInnerHtml(
   return `<ul class="kindle-read-translation-list">${items}</ul>`
 }
 
-/** Combined Menu: Resources, Bible Translation, Text size, then Table of Contents (native <details>). */
-export function renderKindleReadMenuNavHtml(
+export { KINDLE_READ_MENU_PANEL_ID } from '@/lib/kindleReadMenuConstants'
+
+export interface KindleReadMenuHtml {
+  triggerHtml: string
+  panelHtml: string
+}
+
+function renderKindleReadMenuBodySectionsHtml(
   resourceItems: PublicResourceItem[],
   sections: GospelPresentationData,
   fromSlug: string,
@@ -118,13 +125,65 @@ export function renderKindleReadMenuNavHtml(
       </details>`
     : ''
 
-  return `<details class="kindle-read-menu">
-    <summary class="kindle-read-menu-title">Menu</summary>
-    <div class="kindle-read-menu-body">
-      ${resourcesBlock}
-      ${translationBlock}
-      ${textSizeBlock}
-      ${tocBlock}
-    </div>
-  </details>`
+  return `${resourcesBlock}${translationBlock}${textSizeBlock}${tocBlock}`
+}
+
+/** Sticky-toolbar Menu button (panel is a sibling below the toolbar; toggled via script on Silk). */
+export function renderKindleReadMenuTriggerHtml(): string {
+  return `<div class="kindle-read-menu-trigger">
+    <button type="button" class="kindle-read-menu-title kindle-read-menu-trigger-btn" aria-expanded="false" aria-controls="${KINDLE_READ_MENU_PANEL_ID}">Menu</button>
+  </div>`
+}
+
+/** Scrollable menu panel for profile read pages (not inside the sticky toolbar). */
+export function renderKindleReadMenuPanelHtml(bodySectionsHtml: string): string {
+  if (!bodySectionsHtml) return ''
+  return `<div id="${KINDLE_READ_MENU_PANEL_ID}" class="kindle-read-menu-panel"><div class="kindle-read-menu-body">${bodySectionsHtml}</div></div>`
+}
+
+/** Split Menu for profile read: trigger in sticky bar, panel scrolls below. */
+export function renderKindleReadMenuHtml(
+  resourceItems: PublicResourceItem[],
+  sections: GospelPresentationData,
+  fromSlug: string,
+  translationOptions: EnabledTranslationOption[],
+  currentTranslation: BibleTranslation,
+  currentTextSize: KindleReadTextSize
+): KindleReadMenuHtml | null {
+  const bodySectionsHtml = renderKindleReadMenuBodySectionsHtml(
+    resourceItems,
+    sections,
+    fromSlug,
+    translationOptions,
+    currentTranslation,
+    currentTextSize
+  )
+  if (!bodySectionsHtml) return null
+
+  return {
+    triggerHtml: renderKindleReadMenuTriggerHtml(),
+    panelHtml: renderKindleReadMenuPanelHtml(bodySectionsHtml),
+  }
+}
+
+/** Combined Menu: Resources, Bible Translation, Text size, then Table of Contents (native <details>). */
+export function renderKindleReadMenuNavHtml(
+  resourceItems: PublicResourceItem[],
+  sections: GospelPresentationData,
+  fromSlug: string,
+  translationOptions: EnabledTranslationOption[],
+  currentTranslation: BibleTranslation,
+  currentTextSize: KindleReadTextSize
+): string {
+  const parts = renderKindleReadMenuHtml(
+    resourceItems,
+    sections,
+    fromSlug,
+    translationOptions,
+    currentTranslation,
+    currentTextSize
+  )
+  if (!parts) return ''
+
+  return `${parts.triggerHtml}${parts.panelHtml}`
 }

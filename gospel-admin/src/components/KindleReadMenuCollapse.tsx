@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import {
-  closeKindleReadMenuDetails,
+  closeKindleReadProfileMenu,
   kindleReadMenuLinkFromClickTarget,
 } from '@/lib/kindleReadMenuCollapse'
 
@@ -15,9 +15,7 @@ export default function KindleReadMenuCollapse() {
     const onClick = (event: MouseEvent) => {
       const link = kindleReadMenuLinkFromClickTarget(event.target)
       if (!link) return
-      const menu = link.closest('.kindle-read-menu')
-      if (!menu) return
-      closeKindleReadMenuDetails(menu)
+      closeKindleReadProfileMenu()
     }
 
     document.addEventListener('click', onClick)
