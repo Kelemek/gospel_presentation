@@ -1,6 +1,7 @@
 import '@/app/read/kindle.css'
 import KindleReadMenuCollapse from '@/components/KindleReadMenuCollapse'
 import KindleReadMenuModeScript from '@/components/KindleReadMenuModeScript'
+import KindleReadPinHighlightsScript from '@/components/KindleReadPinHighlightsScript'
 import KindleReadTextSizePreference from '@/components/KindleReadTextSizePreference'
 import KindleReadTextSizeStorageScript from '@/components/KindleReadTextSizeStorageScript'
 import KindleReadTranslationPreference from '@/components/KindleReadTranslationPreference'
@@ -17,6 +18,7 @@ export default function KindleReadSegmentLayout({
       <KindleReadTextSizeStorageScript />
       <KindleReadTranslationStorageScript />
       <KindleReadMenuModeScript />
+      <KindleReadPinHighlightsScript />
       <KindleReadTextSizePreference />
       <KindleReadTranslationPreference />
       <KindleReadVersePinClient />

@@ -54,7 +54,7 @@ describe('kindleReadScriptureCardNav', () => {
       'default',
       'section-1-0-card-1'
     )
-    expect(nav.prev?.label).toBe('Previous passage (Deuteronomy 4:35)')
+    expect(nav.prev?.label).toBe('Previous (Deuteronomy 4:35)')
     expect(nav.prev?.href).toContain('ref=Deuteronomy+4%3A35')
     expect(nav.prev?.href).toContain('anchor=section-1-0-card-0')
     expect(nav.next).toBeNull()

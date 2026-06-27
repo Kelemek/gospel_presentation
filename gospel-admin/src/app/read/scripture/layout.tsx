@@ -1,3 +1,4 @@
+import KindleReadBluePinButtonScript from '@/components/KindleReadBluePinButtonScript'
 import KindleReadLastCardStorageScript from '@/components/KindleReadLastCardStorageScript'
 import KindleReadVersePinClient from '@/components/KindleReadVersePinClient'
 
@@ -12,6 +13,7 @@ export default function KindleScriptureReadSegmentLayout({
       <KindleReadLastCardStorageScript />
       <KindleReadVersePinClient />
       {children}
+      <KindleReadBluePinButtonScript />
     </div>
   )
 }

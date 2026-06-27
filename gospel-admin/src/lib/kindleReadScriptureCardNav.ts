@@ -46,6 +46,19 @@ export function kindleReadScriptureAnchorLookup(
   }
 }
 
+/** Gospel card reference for a Kindle scripture anchor id (matches profile read link text). */
+export function kindleReadCardReferenceForAnchor(
+  sections: GospelPresentationData,
+  anchor: string | null | undefined
+): string | null {
+  const anchorTrim = anchor?.trim()
+  if (!anchorTrim) return null
+  const entry = collectKindleReadScriptureCardNavEntries(sections).find(
+    (card) => card.kindleAnchor === anchorTrim
+  )
+  return entry?.reference ?? null
+}
+
 /** Scripture cards in profile order (same sequence as the main site modal), Kindle-visible only. */
 export function collectKindleReadScriptureCardNavEntries(
   sections: GospelPresentationData
@@ -115,13 +128,13 @@ export function kindleReadScriptureCardNav(
     prev: prevEntry
       ? {
           href: kindleScriptureReadUrl(prevEntry.reference, from, prevEntry.kindleAnchor, translation),
-          label: `Previous passage (${prevEntry.reference})`,
+          label: `Previous (${prevEntry.reference})`,
         }
       : null,
     next: nextEntry
       ? {
           href: kindleScriptureReadUrl(nextEntry.reference, from, nextEntry.kindleAnchor, translation),
-          label: `Next passage (${nextEntry.reference})`,
+          label: `Next (${nextEntry.reference})`,
         }
       : null,
   }

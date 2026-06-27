@@ -2,6 +2,7 @@
  * @jest-environment jsdom
  */
 
+import { toggleKindleReadBluePin } from '@/lib/kindleReadBluePinStorage'
 import {
   kindleReadLastCardStorageKey,
   loadKindleReadLastCard,
@@ -132,6 +133,74 @@ describe('kindleReadVersePinProgress', () => {
     )
     expect(document.getElementById('section-jan-0-1-card-1')).not.toHaveClass(
       'kindle-read-scripture-card--yellow-pin'
+    )
+  })
+
+  it('applyKindleReadVersePinHighlights marks blue-pinned cards', () => {
+    toggleKindleReadBluePin('mchy', {
+      reference: 'Romans 8:1',
+      sectionId: 'section-jan',
+      subsectionId: 'section-jan-0-1',
+    })
+
+    document.body.innerHTML = `
+      <span id="section-jan-0-1-card-0" class="kindle-read-scripture-card">
+        <a class="kindle-read-scripture-link" href="#">John 3:16</a>
+      </span>
+      <span id="section-jan-0-1-card-1" class="kindle-read-scripture-card">
+        <a class="kindle-read-scripture-link" href="#">Romans 8:1</a>
+      </span>
+    `
+
+    applyKindleReadVersePinHighlights('mchy')
+
+    expect(document.getElementById('section-jan-0-1-card-1')).toHaveClass(
+      'kindle-read-scripture-card--blue-pin'
+    )
+    expect(document.getElementById('section-jan-0-1-card-0')).not.toHaveClass(
+      'kindle-read-scripture-card--blue-pin'
+    )
+  })
+
+  it('applyKindleReadVersePinHighlights can mark yellow and blue on the same card', () => {
+    saveKindleReadLastCard('mchy', {
+      reference: 'John 3:16',
+      sectionId: 'section-jan',
+      subsectionId: 'section-jan-0-1',
+    })
+    toggleKindleReadBluePin('mchy', {
+      reference: 'John 3:16',
+      sectionId: 'section-jan',
+      subsectionId: 'section-jan-0-1',
+    })
+
+    document.body.innerHTML = `
+      <span id="section-jan-0-1-card-0" class="kindle-read-scripture-card">
+        <a class="kindle-read-scripture-link" href="#">John 3:16</a>
+      </span>
+    `
+
+    applyKindleReadVersePinHighlights('mchy')
+
+    const card = document.getElementById('section-jan-0-1-card-0')
+    expect(card).toHaveClass('kindle-read-scripture-card--yellow-pin')
+    expect(card).toHaveClass('kindle-read-scripture-card--blue-pin')
+  })
+
+  it('applyKindleReadVersePinHighlights clears stale pin classes before re-applying', () => {
+    document.body.innerHTML = `
+      <span id="section-jan-0-1-card-0" class="kindle-read-scripture-card kindle-read-scripture-card--yellow-pin kindle-read-scripture-card--blue-pin">
+        <a class="kindle-read-scripture-link" href="#">John 3:16</a>
+      </span>
+    `
+
+    applyKindleReadVersePinHighlights('mchy')
+
+    expect(document.getElementById('section-jan-0-1-card-0')).not.toHaveClass(
+      'kindle-read-scripture-card--yellow-pin'
+    )
+    expect(document.getElementById('section-jan-0-1-card-0')).not.toHaveClass(
+      'kindle-read-scripture-card--blue-pin'
     )
   })
 

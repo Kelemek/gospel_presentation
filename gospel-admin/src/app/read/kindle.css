@@ -104,6 +104,64 @@
   color: #713f12;
 }
 
+.kindle-read-scripture-card--blue-pin {
+  border-color: #3b82f6;
+  border-width: 2px;
+  background: #bfdbfe;
+}
+
+.kindle-read-scripture-card--blue-pin .kindle-read-scripture-link {
+  font-weight: 600;
+  color: #1e3a8a;
+}
+
+.kindle-read-scripture-card--yellow-pin.kindle-read-scripture-card--blue-pin {
+  border-color: #ca8a04;
+  border-width: 2px;
+  background: #fef9c3;
+}
+
+.kindle-read-scripture-card--yellow-pin.kindle-read-scripture-card--blue-pin .kindle-read-scripture-link {
+  color: #713f12;
+}
+
+.kindle-read-pin-button,
+.kindle-read-action-button,
+a.kindle-read-action-button,
+button.kindle-read-action-button,
+button.kindle-read-pin-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 2.75rem;
+  margin: 0.5rem 0 0;
+  padding: 0.55rem 0.85rem;
+  border: 2px solid #3b82f6;
+  border-radius: 0.35rem;
+  background: #eff6ff;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #1e40af;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+a.kindle-read-action-button:visited {
+  color: #1e40af;
+}
+
+.kindle-read-pin-button--active {
+  color: #1e3a8a;
+  background: #bfdbfe;
+  border-color: #2563eb;
+}
+
 .kindle-read-scripture-card-with-text {
   max-width: 100%;
 }
@@ -771,9 +829,39 @@
   white-space: pre-wrap;
 }
 
+.kindle-read-scripture-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+}
+
+.kindle-read-scripture-actions .kindle-read-action-button,
+.kindle-read-scripture-actions .kindle-read-pin-button {
+  margin: 0;
+}
+
+.kindle-read-scripture-actions > :not(:first-child) {
+  margin-left: 0.5rem;
+}
+
 .kindle-read-scripture-chapter-nav {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
   margin: 0.75rem 0 0;
   font-size: 0.95rem;
+}
+
+.kindle-read-scripture-chapter-nav-start {
+  justify-self: start;
+}
+
+.kindle-read-scripture-chapter-nav-end {
+  justify-self: end;
 }
 
 .kindle-read-scripture-page .kindle-read-footer > .kindle-read-scripture-chapter-nav {
@@ -782,10 +870,6 @@
 
 .kindle-read-scripture-page .kindle-read-footer > .kindle-read-nav {
   margin-top: 0.75rem;
-}
-
-.kindle-read-scripture-chapter-nav a + a {
-  margin-left: 1rem;
 }
 
 .kindle-read-scripture-attribution {

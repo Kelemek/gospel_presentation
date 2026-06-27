@@ -1,4 +1,5 @@
 import { kindleReadScriptureAnchorLookup } from '@/lib/kindleReadScriptureCardNav'
+import { kindleReadBluePinMatchesRow, loadKindleReadBluePins } from '@/lib/kindleReadBluePinStorage'
 import {
   kindleReadLastCardMatchesRow,
   loadKindleReadLastCard,
@@ -91,25 +92,41 @@ export function kindleReadScriptureCardRowFromElement(card: Element): VersePinSl
 }
 
 export const KINDLE_READ_YELLOW_PIN_CARD_CLASS = 'kindle-read-scripture-card--yellow-pin'
+export const KINDLE_READ_BLUE_PIN_CARD_CLASS = 'kindle-read-scripture-card--blue-pin'
 
-/** Mark the profile read page card that matches the saved last-card position. */
+function clearKindleReadPinCardClasses(): void {
+  document
+    .querySelectorAll(
+      `.${KINDLE_READ_YELLOW_PIN_CARD_CLASS}, .${KINDLE_READ_BLUE_PIN_CARD_CLASS}`
+    )
+    .forEach((el) => {
+      el.classList.remove(KINDLE_READ_YELLOW_PIN_CARD_CLASS, KINDLE_READ_BLUE_PIN_CARD_CLASS)
+    })
+}
+
+/** Mark profile read page cards for yellow last-read and blue manual pins. */
 export function applyKindleReadVersePinHighlights(profileSlug: string): HTMLElement | null {
   if (typeof document === 'undefined') return null
 
-  document
-    .querySelectorAll(`.${KINDLE_READ_YELLOW_PIN_CARD_CLASS}`)
-    .forEach((el) => el.classList.remove(KINDLE_READ_YELLOW_PIN_CARD_CLASS))
+  clearKindleReadPinCardClasses()
 
   const lastCard = loadKindleReadLastCard(profileSlug)
-  if (!lastCard) return null
+  const bluePins = loadKindleReadBluePins(profileSlug).pins
 
   let resumeElement: HTMLElement | null = null
   document.querySelectorAll('.kindle-read-scripture-card[id]').forEach((card) => {
     const row = kindleReadScriptureCardRowFromElement(card)
-    if (!row || !kindleReadLastCardMatchesRow(lastCard, row)) return
-    card.classList.add(KINDLE_READ_YELLOW_PIN_CARD_CLASS)
-    if (card instanceof HTMLElement) {
-      resumeElement = card
+    if (!row) return
+
+    if (lastCard && kindleReadLastCardMatchesRow(lastCard, row)) {
+      card.classList.add(KINDLE_READ_YELLOW_PIN_CARD_CLASS)
+      if (card instanceof HTMLElement) {
+        resumeElement = card
+      }
+    }
+
+    if (bluePins.some((pin) => kindleReadBluePinMatchesRow(pin, row, card.getAttribute('id')))) {
+      card.classList.add(KINDLE_READ_BLUE_PIN_CARD_CLASS)
     }
   })
 
@@ -121,7 +138,7 @@ export function applyKindleReadVersePinHighlightsWithScroll(
   options?: { scrollIntoView?: boolean }
 ): void {
   const resumeElement = applyKindleReadVersePinHighlights(profileSlug)
-  if (!options?.scrollIntoView || !resumeElement || !isMcheyneProfileSlug(profileSlug)) {
+  if (!options?.scrollIntoView || !resumeElement) {
     return
   }
 

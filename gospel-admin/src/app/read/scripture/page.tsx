@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import KindleReadScriptureBluePinButtonShell from '@/components/KindleReadScriptureBluePinButtonShell'
 import KindleReadScriptureChapterNavLinks from '@/components/KindleReadScriptureChapterNav'
 import { ScriptureFooterAttributionParagraphs } from '@/components/ScriptureFooterAttributionParagraphs'
 import { getEnabledTranslationOptions } from '@/lib/enabledTranslationCodes'
@@ -7,7 +8,10 @@ import {
   fetchScriptureForKindleRead,
   kindleReadScriptureBackHref,
 } from '@/lib/kindleReadScripture'
-import { kindleReadScriptureCardNav } from '@/lib/kindleReadScriptureCardNav'
+import {
+  kindleReadCardReferenceForAnchor,
+  kindleReadScriptureCardNav,
+} from '@/lib/kindleReadScriptureCardNav'
 import {
   getKindleReadTranslationFromCookies,
   resolveKindleReadTranslationForRequest,
@@ -51,10 +55,14 @@ export default async function KindleScriptureReadPage({ searchParams }: KindleSc
   const translationOptions = await getEnabledTranslationOptions()
   const enabledCodes = translationOptions.map((option) => option.translation_code)
   const translation = await resolveKindleReadTranslationForRequest(translationParam, enabledCodes)
-  const translationLabel = translationDisplayName(translationOptions, translation)
   const result = reference ? await fetchScriptureForKindleRead(reference, translation) : null
   const navReference = result?.ok ? result.reference : reference
   const profile = from?.trim() ? await getProfileBySlug(from.trim()) : null
+  const gospelCardReference =
+    profile?.gospelData?.length && anchor?.trim()
+      ? kindleReadCardReferenceForAnchor(profile.gospelData, anchor)
+      : null
+  const pinReference = gospelCardReference ?? navReference ?? reference
   const passageNav =
     navReference && profile?.gospelData?.length
       ? kindleReadScriptureCardNav(
@@ -74,9 +82,16 @@ export default async function KindleScriptureReadPage({ searchParams }: KindleSc
           <h1 className="kindle-read-profile-title">
             {result?.ok ? result.reference : reference || 'Scripture'}
           </h1>
-          <p className="kindle-read-nav">
-            <a href={backHref}>Back to reading</a>
-          </p>
+          <div className="kindle-read-scripture-actions">
+            <a className="kindle-read-action-button" href={backHref}>
+              Back
+            </a>
+            <KindleReadScriptureBluePinButtonShell
+              from={from}
+              reference={pinReference}
+              anchor={anchor}
+            />
+          </div>
           <KindleReadScriptureChapterNavLinks nav={passageNav} />
         </div>
       </header>
@@ -90,7 +105,6 @@ export default async function KindleScriptureReadPage({ searchParams }: KindleSc
 
         {result?.ok ? (
           <>
-            <p className="kindle-read-description">{translationLabel}</p>
             <div className="kindle-read-passage">{result.text}</div>
             <div className="kindle-read-scripture-attribution">
               <ScriptureFooterAttributionParagraphs
@@ -104,7 +118,9 @@ export default async function KindleScriptureReadPage({ searchParams }: KindleSc
         <footer className="kindle-read-footer">
           <KindleReadScriptureChapterNavLinks nav={passageNav} />
           <p className="kindle-read-nav">
-            <a href={backHref}>Back to reading</a>
+            <a className="kindle-read-action-button" href={backHref}>
+              Back
+            </a>
           </p>
         </footer>
       </main>

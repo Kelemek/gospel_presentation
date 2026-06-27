@@ -86,18 +86,25 @@ export default async function KindleReadPage({ params, searchParams }: KindleRea
 
         {menuHtml ? (
           <div className="kindle-read-menu-trigger-wrap">
-            <div dangerouslySetInnerHTML={{ __html: menuHtml.triggerHtml }} />
+            <div
+              suppressHydrationWarning
+              dangerouslySetInnerHTML={{ __html: menuHtml.triggerHtml }}
+            />
           </div>
         ) : null}
       </div>
 
       {menuHtml ? (
-        <div dangerouslySetInnerHTML={{ __html: menuHtml.panelHtml }} />
+        <div
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: menuHtml.panelHtml }}
+        />
       ) : null}
 
       <main className="kindle-read-main">
         <article
           className="kindle-read-article"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: articleHtml }}
         />
 
