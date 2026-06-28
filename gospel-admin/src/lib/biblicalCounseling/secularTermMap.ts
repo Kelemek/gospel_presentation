@@ -180,7 +180,7 @@ export function buildSecularTermMapSectionHtml(
       const topicHtml = anchor
         ? `<a href="#${escapeHtml(anchor)}">${escapeHtml(row.biblicalTopic.trim())}</a>`
         : escapeHtml(row.biblicalTopic.trim())
-      return `<tr><td>${termsLabel}</td><td class="secular-term-map-topic-cell"><span class="secular-term-map-topic">→&nbsp;${topicHtml}</span></td></tr>`
+      return `<tr><td class="secular-term-map-terms-cell">${termsLabel}</td><td class="secular-term-map-topic-cell"><span class="secular-term-map-topic">→&nbsp;${topicHtml}</span></td></tr>`
     })
     .join('')
 

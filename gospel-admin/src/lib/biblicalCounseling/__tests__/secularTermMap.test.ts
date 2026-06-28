@@ -51,6 +51,7 @@ describe('secularTermMap', () => {
     expect(html).toContain('self-esteem')
     expect(html).toContain('href="#section-5"')
     expect(html).toContain('Pride and humility')
+    expect(html).toContain('class="secular-term-map-terms-cell"')
     expect(html).toContain('class="secular-term-map-table-wrap"')
     expect(html).toContain('class="secular-term-map-topic">→&nbsp;')
   })
