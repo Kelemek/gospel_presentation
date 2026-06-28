@@ -143,26 +143,24 @@ export async function applySecularTermMapToProfile(
 
   const map = mapOverride ?? (await loadSecularTermMapFromSupabase())
   const admin = createAdminClient()
-  const { data: profile, error } = await admin
+  const { data, error } = await admin
     .from('profiles')
     .select('id, gospel_data')
     .eq('slug', slug)
     .maybeSingle()
 
-  if (error || !profile) {
+  if (error || !data) {
     throw new Error(`Profile not found: ${slug}`)
   }
 
-  const gospelData = JSON.parse(JSON.stringify(profile.gospel_data)) as GospelSection[]
+  const profileRow = data as { id: string; gospel_data: unknown }
+  const gospelData = JSON.parse(JSON.stringify(profileRow.gospel_data)) as GospelSection[]
   const validationIssues = applySecularTermMapToGospelData(gospelData, map)
 
-  const { error: updateError } = await admin
-    .from('profiles')
-    .update({
-      gospel_data: gospelData,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', (profile as { id: string }).id)
+  const { error: updateError } = await (admin.from('profiles') as ReturnType<typeof admin.from>).update({
+    gospel_data: gospelData as never,
+    updated_at: new Date().toISOString(),
+  }).eq('id', profileRow.id)
 
   if (updateError) {
     logger.error('[secularTermMapDb] Failed to apply map to profile:', updateError)

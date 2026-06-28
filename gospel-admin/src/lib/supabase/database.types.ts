@@ -112,6 +112,7 @@ export interface Database {
           last_visited?: string | null
           created_by?: string | null
         }
+        Relationships: []
       }
       spurgeon_passage_index: {
         Row: {
