@@ -1,22 +1,28 @@
 #!/usr/bin/env npx tsx
 /**
- * Sort top-level gospel_data sections alphabetically by title and renumber.
+ * Sync secular→biblical term mapping as the pinned first section on the Biblical Counseling profile.
  *
  * Usage (from gospel-admin/):
- *   npx tsx scripts/sort-profile-sections-alpha.ts [--slug 26b974ef] [--dry-run]
+ *   npm run sync-biblical-counseling-secular-map
+ *   npm run sync-biblical-counseling-secular-map -- --dry-run
+ *   npm run sync-biblical-counseling-secular-map -- --slug 26b974ef
  */
 import dotenv from 'dotenv'
-
 import { createClient } from '@supabase/supabase-js'
 
-import { sortGospelSectionsWithPinnedFirst } from '../src/lib/gospelDataSections'
-import { DEFAULT_PINNED_SECTION_TITLE } from '../src/lib/biblicalCounseling/secularTermMap'
+import { BIBLICAL_COUNSELING_REFERENCE_SLUG } from '../src/lib/biblicalCounseling/biblicalCounselingReference'
+import {
+  applySecularTermMapToGospelData,
+} from '../src/lib/biblicalCounseling/secularTermMap'
+import { loadSecularTermMapFromSupabase } from '../src/lib/biblicalCounseling/secularTermMapDb'
 import type { GospelSection } from '../src/lib/types'
 
 dotenv.config({ path: '.env.local' })
 
 const args = process.argv.slice(2)
-const PROFILE_SLUG = args.includes('--slug') ? args[args.indexOf('--slug') + 1] : '26b974ef'
+const PROFILE_SLUG = args.includes('--slug')
+  ? args[args.indexOf('--slug') + 1]
+  : BIBLICAL_COUNSELING_REFERENCE_SLUG
 const DRY_RUN = args.includes('--dry-run')
 
 async function main() {
@@ -27,6 +33,7 @@ async function main() {
     process.exit(1)
   }
 
+  const map = await loadSecularTermMapFromSupabase()
   const sb = createClient(supabaseUrl, supabaseServiceKey)
   const { data: profile, error } = await sb
     .from('profiles')
@@ -41,11 +48,18 @@ async function main() {
 
   const gospelData = profile.gospel_data as GospelSection[]
   console.log(`Profile: ${profile.title} (${PROFILE_SLUG})`)
-  console.log(`Sections before: ${gospelData.map((s) => s.title).join(' → ')}`)
+  console.log(`Mapping section: ${map.pinnedSectionTitle}`)
+  console.log(`Mappings: ${map.mappings.length}`)
 
-  sortGospelSectionsWithPinnedFirst(gospelData, [DEFAULT_PINNED_SECTION_TITLE])
+  const issues = applySecularTermMapToGospelData(gospelData, map)
+  if (issues.length > 0) {
+    console.warn('\nUnknown biblical topics (no matching section title):')
+    for (const issue of issues) {
+      console.warn(`  • ${issue.biblicalTopic}`)
+    }
+  }
 
-  console.log(`Sections after:  ${gospelData.map((s) => `${s.section}. ${s.title}`).join(' → ')}`)
+  console.log(`\nSections after sync: ${gospelData.map((s) => `${s.section}. ${s.title}`).join(' → ')}`)
 
   if (DRY_RUN) {
     console.log('\nDRY RUN — no database writes')

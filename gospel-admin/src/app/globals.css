@@ -1032,6 +1032,43 @@ ol.academic-style li > div {
   text-indent: 0;
 }
 
+.print-content table.secular-term-map-table {
+  width: 100%;
+  margin: 1rem 0;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.print-content table.secular-term-map-table th,
+.print-content table.secular-term-map-table td {
+  border: 1px solid rgb(203 213 225);
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.dark .print-content table.secular-term-map-table th,
+.dark .print-content table.secular-term-map-table td {
+  border-color: rgb(71 85 105);
+}
+
+.print-content table.secular-term-map-table th {
+  font-weight: 600;
+  background: rgb(248 250 252);
+}
+
+.dark .print-content table.secular-term-map-table th {
+  background: rgb(30 41 59);
+}
+
+.print-content table.secular-term-map-table .secular-term-map-topic {
+  display: inline;
+}
+
+.print-content table.secular-term-map-table .secular-term-map-topic a {
+  display: inline;
+}
+
 .print-content li p:not(.paragraph-no-indent) {
   text-indent: 0;
   margin-top: 0.25em;

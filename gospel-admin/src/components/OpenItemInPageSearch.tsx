@@ -1,11 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
+import { runBiblicalCounselingResourceSearch } from '@/lib/biblicalCounseling/biblicalCounselingResourceSearch'
+import type { BiblicalCounselingSearchMappingHint } from '@/lib/biblicalCounseling/biblicalCounselingResourceSearch'
+import { isBiblicalCounselingSecularMapProfile } from '@/lib/biblicalCounseling/biblicalCounselingReference'
+import { useSecularTermMap } from '@/hooks/useSecularTermMap'
 import { isProfileResourceSearchContentTouchBlurHost } from '@/lib/memorizationViewportPlatform'
 import {
   RESOURCE_SEARCH_INPUT_ARIA_LABEL,
-  runProfileResourceSearch,
-  type ProfileResourceSearchScrollOptions,
 } from '@/lib/profileResourceInPageSearch'
 
 const IN_PAGE_SEARCH_DEBOUNCE_MS = 250
@@ -21,6 +23,8 @@ export type OpenItemInPageSearchProps = {
   ariaLabel: string
   placeholder: string
   scrollMode?: 'window' | 'container'
+  /** Profile slug for secular→biblical mapping search on the counseling reference. */
+  profileSlug?: string
 }
 
 export default function OpenItemInPageSearch({
@@ -32,12 +36,16 @@ export default function OpenItemInPageSearch({
   ariaLabel,
   placeholder,
   scrollMode = 'window',
+  profileSlug,
 }: OpenItemInPageSearchProps) {
+  const secularMapEnabled = isBiblicalCounselingSecularMapProfile(profileSlug)
+  const secularTermMap = useSecularTermMap(secularMapEnabled)
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [matchCount, setMatchCount] = useState(0)
   const [activeIndex, setActiveIndex] = useState(0)
-  const searchHandleRef = useRef<ReturnType<typeof runProfileResourceSearch> | null>(null)
+  const [mappingHint, setMappingHint] = useState<BiblicalCounselingSearchMappingHint | null>(null)
+  const searchHandleRef = useRef<ReturnType<typeof runBiblicalCounselingResourceSearch> | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -92,15 +100,22 @@ export default function OpenItemInPageSearch({
     const searchQuery =
       trimmedDebounced.length >= IN_PAGE_SEARCH_MIN_LENGTH ? debouncedQuery : ''
 
-    let scroll: ProfileResourceSearchScrollOptions = { mode: 'window' }
+    let scroll: { mode: 'window' } | { mode: 'container'; scrollContainer: HTMLElement } = {
+      mode: 'window',
+    }
     if (scrollMode === 'container' && scope) {
       scroll = { mode: 'container', scrollContainer: scope }
     }
 
-    const handle = runProfileResourceSearch(scope, searchQuery, { activeIndex: 0, scroll })
+    const handle = runBiblicalCounselingResourceSearch(scope, searchQuery, profileSlug, {
+      activeIndex: 0,
+      scroll,
+      secularTermMap: secularMapEnabled ? secularTermMap : undefined,
+    })
     searchHandleRef.current = handle
     setMatchCount(handle.count)
     setActiveIndex(0)
+    setMappingHint(handle.mappingHint)
     onActiveMatchChange?.(0, handle.count)
 
     return () => {
@@ -114,6 +129,9 @@ export default function OpenItemInPageSearch({
     clearSearchDom,
     onActiveMatchChange,
     scrollMode,
+    profileSlug,
+    secularMapEnabled,
+    secularTermMap,
   ])
 
   const goToMatch = useCallback(
@@ -141,7 +159,7 @@ export default function OpenItemInPageSearch({
   return (
     <div
       className={`print-hide overflow-hidden border-t border-slate-200 bg-white transition-[max-height,opacity] duration-200 ease-out motion-reduce:transition-none dark:border-slate-600 dark:bg-slate-800 ${
-        open ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'
+        open ? 'max-h-32 opacity-100' : 'max-h-0 opacity-0'
       }`}
       aria-hidden={!open}
     >
@@ -204,6 +222,14 @@ export default function OpenItemInPageSearch({
           </svg>
         </button>
       </div>
+      {mappingHint ? (
+        <p className="border-t border-slate-100 px-3 pb-2 text-xs text-slate-600 dark:border-slate-700 dark:text-slate-300 md:px-4">
+          Secular term →{' '}
+          <span className="font-medium text-slate-800 dark:text-slate-100">
+            {mappingHint.biblicalTopic}
+          </span>
+        </p>
+      ) : null}
     </div>
   )
 }

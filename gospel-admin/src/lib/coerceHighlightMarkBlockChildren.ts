@@ -20,6 +20,12 @@ const MARK_MUST_NOT_WRAP = new Set([
   'PRE',
   'FIGURE',
   'TABLE',
+  'TBODY',
+  'THEAD',
+  'TFOOT',
+  'TR',
+  'TD',
+  'TH',
   'SECTION',
   'ARTICLE',
 ])

@@ -24,5 +24,6 @@
   "Bug fix: In the Bible passage picker, verse previews now update when you change chapter and show your full selected range when several verses are highlighted.",
   "Bug fix: Entering a device sync code on iPhone Safari now works with autofill, paste, and the keyboard Go button.",
   "The Biblical Counseling Scripture Reference now includes many more counseling topics and scripture passages from Jay Adams's topical worklist. See Copyright & Attribution for the required notice and a link to his New Testament and Proverbs.",
-  "Bug fix: Returning to a resource at the top of the page now restores with the menu at the top instead of the site title half cut off."
+  "Bug fix: Returning to a resource at the top of the page now restores with the menu at the top instead of the site title half cut off.",
+  "The Biblical Counseling Scripture Reference now starts with a table that maps common counseling terms to biblical topics. Search on that resource highlights the mapping and shows which biblical topic fits your term."
 ]

@@ -28,6 +28,7 @@ export interface Database {
           github_token: string | null
           github_repo_owner: string | null
           github_repo_name: string | null
+          secular_term_map: Json | null
         }
         Insert: {
           id?: number
@@ -41,6 +42,7 @@ export interface Database {
           github_token?: string | null
           github_repo_owner?: string | null
           github_repo_name?: string | null
+          secular_term_map?: Json | null
         }
         Update: {
           id?: number
@@ -54,6 +56,7 @@ export interface Database {
           github_token?: string | null
           github_repo_owner?: string | null
           github_repo_name?: string | null
+          secular_term_map?: Json | null
         }
         Relationships: []
       }

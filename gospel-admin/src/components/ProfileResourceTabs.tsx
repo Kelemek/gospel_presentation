@@ -65,6 +65,7 @@ export default function ProfileResourceTabs({
         }}
         contentRootRef={contentRootRef}
         searchPaused={searchPaused}
+        profileSlug={activeSlug}
       />
     </div>
   )

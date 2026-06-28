@@ -39,6 +39,7 @@ import type { ResourceOrderCategoryChild } from "@/lib/types";
 import { restoreNewProfileFromBackupFile } from "@/lib/createProfileFromBackup";
 import { useAlertModal } from "@/contexts/AlertModalContext";
 import GitHubFeedbackSettings from "@/components/GitHubFeedbackSettings";
+import SecularTermMapSettings from "@/components/SecularTermMapSettings";
 
 // ============================================================================
 // Types & Interfaces
@@ -53,6 +54,25 @@ function GripIcon() {
   return (
     <svg className="w-4 h-4 text-slate-400 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
       <path d="M7 2a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM7 10a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM7 18a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM13 2a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM13 10a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM13 18a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
+    </svg>
+  );
+}
+
+function SettingsSectionChevron({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`shrink-0 text-slate-500 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+      aria-hidden
+    >
+      <polyline points="6 9 12 15 18 9" />
     </svg>
   );
 }
@@ -83,6 +103,8 @@ export default function AdminSettingsPage() {
   const [dragSource, setDragSource] = useState<ResourceOrderDragSource | null>(null);
   const [dropTarget, setDropTarget] = useState<ResourceOrderDropTarget | null>(null);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
+  const [verificationCodeSectionExpanded, setVerificationCodeSectionExpanded] = useState(false);
+  const [resourcesOrderSectionExpanded, setResourcesOrderSectionExpanded] = useState(false);
 
   // ============================================================================
   // Load Settings
@@ -627,14 +649,26 @@ export default function AdminSettingsPage() {
 
           {/* Verification Code Authentication Settings */}
           <div className="bg-white rounded-xl shadow-md border border-slate-100 overflow-hidden">
-            <div className="border-b border-slate-200 px-6 sm:px-8 py-6">
-              <h2 className="text-2xl font-bold text-slate-900">Verification Code Authentication</h2>
-              <p className="text-slate-600 text-sm mt-2">
-                Configure email-based verification code login as an alternative to magic links.
-              </p>
-            </div>
+            <button
+              type="button"
+              id="verification-code-settings-trigger"
+              className="w-full text-left px-6 sm:px-8 py-6 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-50 transition-colors"
+              onClick={() => setVerificationCodeSectionExpanded((expanded) => !expanded)}
+              aria-expanded={verificationCodeSectionExpanded}
+              aria-controls="verification-code-settings-panel"
+            >
+              <div className="min-w-0">
+                <h2 className="text-2xl font-bold text-slate-900">Verification Code Authentication</h2>
+                <p className="text-slate-600 text-sm mt-2">
+                  Configure email-based verification code login as an alternative to magic links.
+                </p>
+              </div>
+              <SettingsSectionChevron expanded={verificationCodeSectionExpanded} />
+            </button>
 
-            <div className="px-6 sm:px-8 py-6 space-y-6">
+            {verificationCodeSectionExpanded ? (
+              <>
+                <div id="verification-code-settings-panel" className="border-t border-slate-200 px-6 sm:px-8 py-6 space-y-6">
               {/* Code Length */}
               <div>
                 <label htmlFor="code-length" className="block text-base font-semibold text-slate-900 mb-2">
@@ -684,38 +718,54 @@ export default function AdminSettingsPage() {
 
               {/* Divider */}
               <div className="border-t border-slate-200" />
-            </div>
+                </div>
 
-            {/* Action Buttons */}
-            <div className="border-t border-slate-200 px-6 sm:px-8 py-6 flex justify-end">
-              <button
-                onClick={handleSaveSettings}
-                disabled={isSaving}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white border border-blue-600 hover:border-blue-700 disabled:opacity-50 disabled:bg-slate-400 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium flex items-center gap-2"
-              >
-                {isSaving ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save Changes"
-                )}
-              </button>
-            </div>
+                {/* Action Buttons */}
+                <div className="border-t border-slate-200 px-6 sm:px-8 py-6 flex justify-end">
+                  <button
+                    onClick={handleSaveSettings}
+                    disabled={isSaving}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white border border-blue-600 hover:border-blue-700 disabled:opacity-50 disabled:bg-slate-400 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium flex items-center gap-2"
+                  >
+                    {isSaving ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </button>
+                </div>
+              </>
+            ) : null}
           </div>
 
           <GitHubFeedbackSettings />
 
+          {userRole === "admin" ? <SecularTermMapSettings /> : null}
+
           {/* Resources dropdown order */}
           <div className="bg-white rounded-xl shadow-md border border-slate-100 overflow-hidden">
-            <div className="border-b border-slate-200 px-6 sm:px-8 py-6">
-              <h2 className="text-2xl font-bold text-slate-900">Resources dropdown order</h2>
-              <p className="text-slate-600 text-sm mt-2">
-                Categories, Spurgeon sermons and Morning & Evening library rows, and templates in the Resources menu. Drag to reorder.
-              </p>
-            </div>
-            <div className="px-6 sm:px-8 py-6 space-y-4">
+            <button
+              type="button"
+              id="resources-order-settings-trigger"
+              className="w-full text-left px-6 sm:px-8 py-6 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-50 transition-colors"
+              onClick={() => setResourcesOrderSectionExpanded((expanded) => !expanded)}
+              aria-expanded={resourcesOrderSectionExpanded}
+              aria-controls="resources-order-settings-panel"
+            >
+              <div className="min-w-0">
+                <h2 className="text-2xl font-bold text-slate-900">Resources dropdown order</h2>
+                <p className="text-slate-600 text-sm mt-2">
+                  Categories, Spurgeon sermons and Morning & Evening library rows, and templates in the Resources menu. Drag to reorder.
+                </p>
+              </div>
+              <SettingsSectionChevron expanded={resourcesOrderSectionExpanded} />
+            </button>
+            {resourcesOrderSectionExpanded ? (
+              <>
+                <div id="resources-order-settings-panel" className="border-t border-slate-200 px-6 sm:px-8 py-6 space-y-4">
               {publicTemplates.length === 0 ? (
                 <div className="w-full max-w-xl border border-slate-200 rounded-lg bg-white shadow-sm overflow-hidden">
                   <div className="px-4 py-3 text-sm text-slate-500">
@@ -1243,26 +1293,28 @@ export default function AdminSettingsPage() {
                   </div>
                 </>
               )}
-            </div>
-            {publicTemplates.length > 0 && (
-              <div className="border-t border-slate-200 px-6 sm:px-8 py-6 flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleSaveOrder}
-                  disabled={isSavingOrder}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white border border-blue-600 hover:border-blue-700 disabled:opacity-50 disabled:bg-slate-400 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium flex items-center gap-2"
-                >
-                  {isSavingOrder ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    "Save order"
-                  )}
-                </button>
-              </div>
-            )}
+                </div>
+                {publicTemplates.length > 0 && (
+                  <div className="border-t border-slate-200 px-6 sm:px-8 py-6 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleSaveOrder}
+                      disabled={isSavingOrder}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white border border-blue-600 hover:border-blue-700 disabled:opacity-50 disabled:bg-slate-400 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md font-medium flex items-center gap-2"
+                    >
+                      {isSavingOrder ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        "Save order"
+                      )}
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : null}
           </div>
 
           {/* Restore from backup: new profile from JSON export */}

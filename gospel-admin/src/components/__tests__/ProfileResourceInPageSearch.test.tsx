@@ -1,6 +1,7 @@
 import React, { createRef } from 'react'
-import { act, render, screen, fireEvent } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import ProfileResourceInPageSearch from '../ProfileResourceInPageSearch'
+import { BIBLICAL_COUNSELING_REFERENCE_SLUG } from '@/lib/biblicalCounseling/biblicalCounselingReference'
 import { RESOURCE_SEARCH_MATCH_ATTR } from '@/lib/profileResourceInPageSearch'
 import { isProfileResourceSearchContentTouchBlurHost } from '@/lib/memorizationViewportPlatform'
 
@@ -199,6 +200,54 @@ describe('ProfileResourceInPageSearch', () => {
       jest.advanceTimersByTime(250)
     })
     expect(mainMarks()).toHaveLength(1)
+  })
+
+  it('shows secular term mapping hint on the counseling reference profile', async () => {
+    global.fetch = jest.fn((url: RequestInfo) => {
+      if (String(url).includes('/api/biblical-counseling/secular-term-map')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            pinnedSectionTitle: 'Find your topic (secular terms)',
+            introHtml: '',
+            mappings: [{ secularTerms: ['self-esteem'], biblicalTopic: 'Pride and Humility' }],
+          }),
+        })
+      }
+      return Promise.reject(new Error(`Unmocked fetch: ${String(url)}`))
+    }) as jest.Mock
+
+    const contentRootRef = createRef<HTMLElement>()
+    const main = document.createElement('main')
+    main.innerHTML =
+      '<section id="section-1"><p>self-esteem maps to Pride and humility</p></section>'
+    document.body.appendChild(main)
+    contentRootRef.current = main
+
+    render(
+      <ProfileResourceInPageSearch
+        open
+        onOpenChange={jest.fn()}
+        contentRootRef={contentRootRef}
+        profileSlug={BIBLICAL_COUNSELING_REFERENCE_SLUG}
+      />
+    )
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith('/api/biblical-counseling/secular-term-map')
+    })
+
+    const input = screen.getByRole('searchbox', { name: 'Search in resource' })
+    fireEvent.change(input, { target: { value: 'self-esteem' } })
+    await act(async () => {
+      jest.advanceTimersByTime(250)
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText(/Secular term →/)).toBeInTheDocument()
+    })
+    expect(screen.getByText('Pride and Humility')).toBeInTheDocument()
   })
 
   it('closes on Escape', () => {

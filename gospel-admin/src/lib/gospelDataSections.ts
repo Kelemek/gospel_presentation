@@ -13,3 +13,42 @@ export function sortGospelSectionsAlphabetically(gospelData: GospelSection[]): v
   )
   renumberGospelSections(gospelData)
 }
+
+function normalizeSectionTitleForPin(title: string): string {
+  return title.trim().toLowerCase()
+}
+
+/** Keep pinned titles first (in listed order), then sort remaining sections A→Z. */
+export function sortGospelSectionsWithPinnedFirst(
+  gospelData: GospelSection[],
+  pinnedTitles: string[]
+): void {
+  const pinnedOrder = pinnedTitles.map((t) => normalizeSectionTitleForPin(t)).filter(Boolean)
+  const pinnedSet = new Set(pinnedOrder)
+
+  const pinned: GospelSection[] = []
+  const pinnedByKey = new Map<string, GospelSection>()
+  const rest: GospelSection[] = []
+
+  for (const section of gospelData) {
+    const key = normalizeSectionTitleForPin(section.title || '')
+    if (pinnedSet.has(key)) {
+      pinnedByKey.set(key, section)
+    } else {
+      rest.push(section)
+    }
+  }
+
+  for (const key of pinnedOrder) {
+    const section = pinnedByKey.get(key)
+    if (section) pinned.push(section)
+  }
+
+  rest.sort((a, b) =>
+    (a.title || '').trim().localeCompare((b.title || '').trim(), undefined, { sensitivity: 'base' })
+  )
+
+  gospelData.length = 0
+  gospelData.push(...pinned, ...rest)
+  renumberGospelSections(gospelData)
+}

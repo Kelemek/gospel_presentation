@@ -12,6 +12,7 @@ export type ProfileResourceInPageSearchProps = {
   /** When true, skip running search (e.g. scripture modal open). */
   searchPaused?: boolean
   onActiveMatchChange?: (activeIndex: number, matchCount: number) => void
+  profileSlug?: string
 }
 
 export default function ProfileResourceInPageSearch(props: ProfileResourceInPageSearchProps) {

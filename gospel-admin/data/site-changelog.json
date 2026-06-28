@@ -1388,5 +1388,10 @@
     "releasedAt": "2026-06-25",
     "committedAt": "2026-06-25T17:21:34.293Z",
     "message": "Bug fix: Returning to a resource at the top of the page now restores with the menu at the top instead of the site title half cut off."
+  },
+  {
+    "releasedAt": "2026-06-27",
+    "committedAt": "2026-06-27T17:33:32.441Z",
+    "message": "The Biblical Counseling Scripture Reference now starts with a table that maps common counseling terms to biblical topics. Search on that resource highlights the mapping and shows which biblical topic fits your term."
   }
 ]

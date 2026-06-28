@@ -444,4 +444,26 @@ describe('profileResourceInPageSearch', () => {
     expect(result.count).toBe(3)
     expect(scrollBy).toHaveBeenCalled()
   })
+
+  it('highlights secular term map table matches inside cells without breaking table rows', () => {
+    const scope = mountScope(`
+      <div class="content">
+        <table class="secular-term-map-table">
+          <tbody>
+            <tr><td>spanking, child discipline</td><td>→ Discipline</td></tr>
+            <tr><td>divorce, separated, considering divorce</td><td>→ <a href="#section-5">Divorce</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+    `)
+
+    const result = runProfileResourceSearch(scope, 'divorce')
+    expect(result.count).toBeGreaterThan(0)
+
+    const mark = scope.querySelector(`mark[${RESOURCE_SEARCH_MATCH_ATTR}]`)
+    expect(mark).toBeTruthy()
+    expect(scope.querySelector('tbody > mark')).toBeNull()
+    expect(mark?.closest('td')).toBeTruthy()
+    expect(scope.querySelectorAll('table.secular-term-map-table tr')).toHaveLength(2)
+  })
 })

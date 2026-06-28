@@ -4,7 +4,7 @@ jest.mock("@/lib/supabase/client", () => ({
   createClient: () => mockCreateClient(),
 }));
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import AdminSettingsPage from "../page";
 
 function makeSupabaseClient(role: "admin" | "counselee") {
@@ -94,5 +94,24 @@ describe("AdminSettingsPage", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /github feedback settings/i })).toBeInTheDocument();
     });
+  });
+
+  it("collapses verification code and resources order sections by default", async () => {
+    mockCreateClient.mockImplementation(() => makeSupabaseClient("admin"));
+
+    render(<AdminSettingsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /verification code authentication/i })).toBeInTheDocument();
+    });
+
+    expect(screen.queryByLabelText(/verification code length/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /save order/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /verification code authentication/i }));
+    expect(screen.getByLabelText(/verification code length/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /resources dropdown order/i }));
+    expect(screen.getByText(/no public templates/i)).toBeInTheDocument();
   });
 });

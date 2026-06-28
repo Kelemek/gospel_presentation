@@ -214,6 +214,7 @@ function blockAncestorWithin(node: Node, scope: HTMLElement): HTMLElement | null
     if (tag === 'H1' || tag === 'H2' || tag === 'H3' || tag === 'H4' || tag === 'H5' || tag === 'H6')
       return cur
     if (tag === 'P' || tag === 'BLOCKQUOTE' || tag === 'LI') return cur
+    if (tag === 'TD' || tag === 'TH') return cur
     if (tag === 'A') {
       const tour = cur.getAttribute('data-tour')
       if (tour === 'external-resource-card' || tour === 'profile-section-external-link') return cur
@@ -536,10 +537,21 @@ export type ProfileResourceSearchHandle = {
   clear: () => void
 }
 
+export type RunProfileResourceSearchOptions = {
+  activeIndex?: number
+  scroll?: ProfileResourceSearchScrollOptions
+  /** Reorder valid match ranges before painting (e.g. pin mapping section first). */
+  reorderRanges?: (
+    ranges: PlainTextRange[],
+    textIndex: ProfileResourceSearchTextIndex,
+    scope: HTMLElement
+  ) => PlainTextRange[]
+}
+
 export function runProfileResourceSearch(
   scope: HTMLElement | null,
   query: string,
-  options?: { activeIndex?: number; scroll?: ProfileResourceSearchScrollOptions }
+  options?: RunProfileResourceSearchOptions
 ): ProfileResourceSearchHandle {
   const clear = () => clearProfileResourceSearchMarks(scope)
   const scrollOptions = options?.scroll ?? { mode: 'window' as const }
@@ -557,7 +569,10 @@ export function runProfileResourceSearch(
 
   const textIndex = buildProfileResourceSearchTextIndex(scope)
   const ranges = findProfileResourceSearchMatches(textIndex.plainText, trimmed)
-  const validRanges = filterValidProfileResourceSearchRanges(scope, ranges, textIndex)
+  let validRanges = filterValidProfileResourceSearchRanges(scope, ranges, textIndex)
+  if (options?.reorderRanges) {
+    validRanges = options.reorderRanges(validRanges, textIndex, scope)
+  }
   const activeIndex =
     validRanges.length === 0
       ? -1
