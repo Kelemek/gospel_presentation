@@ -3,6 +3,7 @@ import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
 import ProfileResourceInPageSearch from '../ProfileResourceInPageSearch'
 import { BIBLICAL_COUNSELING_REFERENCE_SLUG } from '@/lib/biblicalCounseling/biblicalCounselingReference'
 import { RESOURCE_SEARCH_MATCH_ATTR } from '@/lib/profileResourceInPageSearch'
+import { PROFILE_RESOURCE_SEARCH_PANEL_ATTR } from '@/lib/scrollToTocAnchor'
 import { isProfileResourceSearchContentTouchBlurHost } from '@/lib/memorizationViewportPlatform'
 
 jest.mock('@/lib/memorizationViewportPlatform', () => ({
@@ -27,6 +28,14 @@ describe('ProfileResourceInPageSearch', () => {
     mockIsProfileResourceSearchContentTouchBlurHost.mockReturnValue(false)
   })
 
+  function wrapSearchPanel(props: React.ComponentProps<typeof ProfileResourceInPageSearch>) {
+    return (
+      <div className="relative">
+        <ProfileResourceInPageSearch {...props} />
+      </div>
+    )
+  }
+
   function renderPanel(open = true, resourceKey = 'default') {
     const contentRootRef = createRef<HTMLElement>()
     const main = document.createElement('main')
@@ -36,15 +45,54 @@ describe('ProfileResourceInPageSearch', () => {
 
     const onOpenChange = jest.fn()
     const utils = render(
-      <ProfileResourceInPageSearch
-        key={resourceKey}
-        open={open}
-        onOpenChange={onOpenChange}
-        contentRootRef={contentRootRef}
-      />
+      wrapSearchPanel({
+        key: resourceKey,
+        open,
+        onOpenChange,
+        contentRootRef,
+      })
     )
     return { ...utils, contentRootRef, onOpenChange, main }
   }
+
+  it('marks the panel for profile header scroll offset', () => {
+    renderPanel()
+    expect(
+      document.querySelector(`[${PROFILE_RESOURCE_SEARCH_PANEL_ATTR}]`)
+    ).toBeInTheDocument()
+  })
+
+  it('focuses search input with preventScroll when opened', () => {
+    const focusSpy = jest.spyOn(HTMLInputElement.prototype, 'focus')
+    const contentRootRef = createRef<HTMLElement>()
+    const main = document.createElement('main')
+    document.body.appendChild(main)
+    contentRootRef.current = main
+    const onOpenChange = jest.fn()
+
+    const { rerender } = render(
+      wrapSearchPanel({
+        open: false,
+        onOpenChange: onOpenChange,
+        contentRootRef,
+      })
+    )
+
+    rerender(
+      wrapSearchPanel({
+        open: true,
+        onOpenChange: onOpenChange,
+        contentRootRef,
+      })
+    )
+
+    act(() => {
+      jest.runOnlyPendingTimers()
+    })
+
+    expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true })
+    focusSpy.mockRestore()
+  })
 
   it('does not search until at least three characters are typed', () => {
     renderPanel()
@@ -116,12 +164,12 @@ describe('ProfileResourceInPageSearch', () => {
     expect(mainMarks()).toHaveLength(1)
 
     rerender(
-      <ProfileResourceInPageSearch
-        key="default"
-        open={false}
-        onOpenChange={jest.fn()}
-        contentRootRef={contentRootRef}
-      />
+      wrapSearchPanel({
+        key: 'default',
+        open: false,
+        onOpenChange: jest.fn(),
+        contentRootRef,
+      })
     )
     expect(mainMarks()).toHaveLength(0)
   })
@@ -134,12 +182,12 @@ describe('ProfileResourceInPageSearch', () => {
     contentRootRef.current = mainA
 
     const { rerender } = render(
-      <ProfileResourceInPageSearch
-        key="profile-a"
-        open
-        onOpenChange={jest.fn()}
-        contentRootRef={contentRootRef}
-      />
+      wrapSearchPanel({
+        key: 'profile-a',
+        open: true,
+        onOpenChange: jest.fn(),
+        contentRootRef,
+      })
     )
     const input = screen.getByRole('searchbox', { name: 'Search in resource' })
     fireEvent.change(input, { target: { value: 'alpha' } })
@@ -154,12 +202,12 @@ describe('ProfileResourceInPageSearch', () => {
     contentRootRef.current = mainB
 
     rerender(
-      <ProfileResourceInPageSearch
-        key="profile-b"
-        open
-        onOpenChange={jest.fn()}
-        contentRootRef={contentRootRef}
-      />
+      wrapSearchPanel({
+        key: 'profile-b',
+        open: true,
+        onOpenChange: jest.fn(),
+        contentRootRef,
+      })
     )
 
     expect(screen.getByRole('searchbox', { name: 'Search in resource' })).toHaveValue('')
@@ -172,29 +220,30 @@ describe('ProfileResourceInPageSearch', () => {
 
   it('keeps query when closing and reopening the same resource profile', () => {
     const { rerender, contentRootRef } = renderPanel(true, 'profile-a')
-    const input = screen.getByRole('searchbox', { name: 'Search in resource' })
+    let input = screen.getByRole('searchbox', { name: 'Search in resource' })
     fireEvent.change(input, { target: { value: 'hello' } })
     act(() => {
       jest.advanceTimersByTime(250)
     })
 
     rerender(
-      <ProfileResourceInPageSearch
-        key="profile-a"
-        open={false}
-        onOpenChange={jest.fn()}
-        contentRootRef={contentRootRef}
-      />
+      wrapSearchPanel({
+        key: 'profile-a',
+        open: false,
+        onOpenChange: jest.fn(),
+        contentRootRef,
+      })
     )
     rerender(
-      <ProfileResourceInPageSearch
-        key="profile-a"
-        open
-        onOpenChange={jest.fn()}
-        contentRootRef={contentRootRef}
-      />
+      wrapSearchPanel({
+        key: 'profile-a',
+        open: true,
+        onOpenChange: jest.fn(),
+        contentRootRef,
+      })
     )
 
+    input = screen.getByRole('searchbox', { name: 'Search in resource' })
     expect(input).toHaveValue('hello')
     act(() => {
       jest.advanceTimersByTime(250)
@@ -225,12 +274,12 @@ describe('ProfileResourceInPageSearch', () => {
     contentRootRef.current = main
 
     render(
-      <ProfileResourceInPageSearch
-        open
-        onOpenChange={jest.fn()}
-        contentRootRef={contentRootRef}
-        profileSlug={BIBLICAL_COUNSELING_REFERENCE_SLUG}
-      />
+      wrapSearchPanel({
+        open: true,
+        onOpenChange: jest.fn(),
+        contentRootRef,
+        profileSlug: BIBLICAL_COUNSELING_REFERENCE_SLUG,
+      })
     )
 
     await waitFor(() => {

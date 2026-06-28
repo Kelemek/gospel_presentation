@@ -38,7 +38,7 @@ export default function ProfileResourceTabs({
   if (tabs.length === 0) return null
 
   return (
-    <div className="w-full min-w-0">
+    <div className="relative w-full min-w-0">
       <OpenItemTabBar
         dataTour="profile-resource-tabs"
         tablistAriaLabel="Open resources"

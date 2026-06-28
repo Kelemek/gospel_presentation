@@ -10,6 +10,10 @@ import {
   RESOURCE_SEARCH_INPUT_ARIA_LABEL,
 } from '@/lib/profileResourceInPageSearch'
 
+import {
+  PROFILE_RESOURCE_SEARCH_PANEL_ATTR,
+} from '@/lib/scrollToTocAnchor'
+
 const IN_PAGE_SEARCH_DEBOUNCE_MS = 250
 const IN_PAGE_SEARCH_MIN_LENGTH = 3
 
@@ -25,6 +29,8 @@ export type OpenItemInPageSearchProps = {
   scrollMode?: 'window' | 'container'
   /** Profile slug for secular→biblical mapping search on the counseling reference. */
   profileSlug?: string
+  /** Profile sticky header only: mark panel for scroll-offset measurement. */
+  profileHeaderScrollPanel?: boolean
 }
 
 export default function OpenItemInPageSearch({
@@ -37,6 +43,7 @@ export default function OpenItemInPageSearch({
   placeholder,
   scrollMode = 'window',
   profileSlug,
+  profileHeaderScrollPanel = false,
 }: OpenItemInPageSearchProps) {
   const secularMapEnabled = isBiblicalCounselingSecularMapProfile(profileSlug)
   const secularTermMap = useSecularTermMap(secularMapEnabled)
@@ -49,8 +56,13 @@ export default function OpenItemInPageSearch({
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (!open) return
-    const id = window.requestAnimationFrame(() => inputRef.current?.focus())
+    if (!open) {
+      inputRef.current?.blur()
+      return
+    }
+    const id = window.requestAnimationFrame(() =>
+      inputRef.current?.focus({ preventScroll: true })
+    )
     return () => window.cancelAnimationFrame(id)
   }, [open])
 
@@ -158,11 +170,13 @@ export default function OpenItemInPageSearch({
 
   return (
     <div
-      className={`print-hide overflow-hidden border-t border-slate-200 bg-white transition-[max-height,opacity] duration-200 ease-out motion-reduce:transition-none dark:border-slate-600 dark:bg-slate-800 ${
-        open ? 'max-h-32 opacity-100' : 'max-h-0 opacity-0'
+      {...(profileHeaderScrollPanel ? { [PROFILE_RESOURCE_SEARCH_PANEL_ATTR]: '' } : {})}
+      className={`print-hide absolute left-0 right-0 top-full z-10 overflow-hidden transition-[max-height] duration-300 ease-in-out motion-reduce:transition-none ${
+        open ? 'max-h-40' : 'pointer-events-none max-h-0'
       }`}
       aria-hidden={!open}
     >
+      <div className="border-t border-slate-200 bg-white shadow-md dark:border-slate-600 dark:bg-slate-800">
       <div className="flex items-center gap-2 px-3 py-2 md:px-4">
         <input
           ref={inputRef}
@@ -230,6 +244,7 @@ export default function OpenItemInPageSearch({
           </span>
         </p>
       ) : null}
+      </div>
     </div>
   )
 }

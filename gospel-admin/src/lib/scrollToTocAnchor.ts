@@ -71,6 +71,9 @@ export const STICKY_HEADER_KEYBOARD_FIXED_ATTR = 'data-sticky-header-keyboard-fi
 
 export const STICKY_HEADER_SPACER_ATTR = 'data-profile-sticky-header-spacer'
 
+/** Open resource in-page search clip (profile sticky header only; not scripture modal). */
+export const PROFILE_RESOURCE_SEARCH_PANEL_ATTR = 'data-profile-resource-search-panel'
+
 /** Tracks last applied keyboard offset so we skip redundant style writes (reduces iOS scroll jitter). */
 const STICKY_HEADER_APPLIED_OFFSET_ATTR = 'data-profile-sticky-kbd-offset-applied'
 
@@ -346,17 +349,28 @@ export function scrollToProfileMenuReadingTopWhenReady(options?: {
 /** Pixel offset from top of viewport for scroll targets (sticky header + safe area). */
 export function getProfileHeaderScrollOffset(): number {
   if (typeof document === 'undefined') return FALLBACK_HEADER_OFFSET
+  let offset = FALLBACK_HEADER_OFFSET
   const header = document.querySelector('[data-profile-sticky-header]')
   if (header instanceof HTMLElement) {
     const { bottom } = header.getBoundingClientRect()
     if (bottom > 0) {
-      // Live layout (menu + tabs + open search, site header above when at page top).
-      return Math.ceil(bottom)
+      // Live layout (menu + tabs; in-page search overlays below without growing the header).
+      offset = Math.ceil(bottom)
+    } else {
+      const safeAreaTop = getSafeAreaInsetTop()
+      offset = header.offsetHeight + safeAreaTop + (safeAreaTop > 0 ? 8 : 0)
     }
-    const safeAreaTop = getSafeAreaInsetTop()
-    return header.offsetHeight + safeAreaTop + (safeAreaTop > 0 ? 8 : 0)
+
+    const searchPanel = header.querySelector(`[${PROFILE_RESOURCE_SEARCH_PANEL_ATTR}]`)
+    if (searchPanel instanceof HTMLElement && searchPanel.getAttribute('aria-hidden') !== 'true') {
+      const searchBottom = searchPanel.getBoundingClientRect().bottom
+      if (searchBottom > offset) {
+        offset = Math.ceil(searchBottom)
+      }
+    }
   }
-  return FALLBACK_HEADER_OFFSET
+
+  return offset
 }
 
 const SMOOTH_SCROLL_ON_DONE_FALLBACK_MS = 900

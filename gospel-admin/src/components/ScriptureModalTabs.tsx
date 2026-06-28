@@ -52,7 +52,7 @@ export default function ScriptureModalTabs({
   if (tabs.length === 0) return null
 
   return (
-    <div className="w-full min-w-0">
+    <div className="relative w-full min-w-0">
       <OpenItemTabBar
         dataTour="scripture-modal-tabs"
         tablistAriaLabel="Open scripture passages"

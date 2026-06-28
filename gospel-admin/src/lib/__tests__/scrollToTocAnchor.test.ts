@@ -3,7 +3,9 @@ import {
   bindProfileIosKeyboardHeaderSync,
   clearProfileIosVisualViewportChrome,
   getProfileSiteHeaderHeight,
+  getProfileHeaderScrollOffset,
   getSafeAreaInsetsPx,
+  PROFILE_RESOURCE_SEARCH_PANEL_ATTR,
   PROFILE_SITE_HEADER_ATTR,
   scrollToProfileMenuReadingTop,
   scrollToTocAnchor,
@@ -423,5 +425,86 @@ describe('scrollToProfileMenuReadingTop', () => {
     scrollToProfileMenuReadingTop({ behavior: 'auto' })
 
     expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'auto' })
+  })
+})
+
+describe('getProfileHeaderScrollOffset', () => {
+  beforeEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('includes the open in-page search overlay below the sticky header', () => {
+    const header = document.createElement('div')
+    header.setAttribute('data-profile-sticky-header', '')
+    header.getBoundingClientRect = jest.fn(() => ({
+      bottom: 120,
+      top: 0,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 120,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })) as typeof header.getBoundingClientRect
+    document.body.appendChild(header)
+
+    const searchPanel = document.createElement('div')
+    searchPanel.setAttribute(PROFILE_RESOURCE_SEARCH_PANEL_ATTR, '')
+    searchPanel.setAttribute('aria-hidden', 'false')
+    searchPanel.getBoundingClientRect = jest.fn(() => ({
+      bottom: 176,
+      top: 120,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 56,
+      x: 0,
+      y: 120,
+      toJSON: () => ({}),
+    })) as typeof searchPanel.getBoundingClientRect
+    header.appendChild(searchPanel)
+
+    expect(getProfileHeaderScrollOffset()).toBe(176)
+  })
+
+  it('ignores open search panels outside the profile sticky header', () => {
+    const header = document.createElement('div')
+    header.setAttribute('data-profile-sticky-header', '')
+    header.getBoundingClientRect = jest.fn(() => ({
+      bottom: 120,
+      top: 0,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 120,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    })) as typeof header.getBoundingClientRect
+    document.body.appendChild(header)
+
+    const profileSearchPanel = document.createElement('div')
+    profileSearchPanel.setAttribute(PROFILE_RESOURCE_SEARCH_PANEL_ATTR, '')
+    profileSearchPanel.setAttribute('aria-hidden', 'true')
+    header.appendChild(profileSearchPanel)
+
+    const modalSearchPanel = document.createElement('div')
+    modalSearchPanel.setAttribute(PROFILE_RESOURCE_SEARCH_PANEL_ATTR, '')
+    modalSearchPanel.setAttribute('aria-hidden', 'false')
+    modalSearchPanel.getBoundingClientRect = jest.fn(() => ({
+      bottom: 300,
+      top: 244,
+      left: 0,
+      right: 400,
+      width: 400,
+      height: 56,
+      x: 0,
+      y: 244,
+      toJSON: () => ({}),
+    })) as typeof modalSearchPanel.getBoundingClientRect
+    document.body.appendChild(modalSearchPanel)
+
+    expect(getProfileHeaderScrollOffset()).toBe(120)
   })
 })

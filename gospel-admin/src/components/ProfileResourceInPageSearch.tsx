@@ -19,6 +19,7 @@ export default function ProfileResourceInPageSearch(props: ProfileResourceInPage
   return (
     <OpenItemInPageSearch
       {...props}
+      profileHeaderScrollPanel
       ariaLabel={RESOURCE_SEARCH_INPUT_ARIA_LABEL}
       placeholder={RESOURCE_SEARCH_INPUT_ARIA_LABEL}
       scrollMode="window"
