@@ -1032,19 +1032,113 @@ ol.academic-style li > div {
   text-indent: 0;
 }
 
+.print-content:has(table.secular-term-map-table) {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+}
+
+.print-content .secular-term-map-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 1rem 0;
+}
+
 .print-content table.secular-term-map-table {
   width: 100%;
-  margin: 1rem 0;
+  max-width: 100%;
+  min-width: 0;
+  margin: 0;
   border-collapse: collapse;
+  table-layout: fixed;
   font-size: 0.95rem;
+}
+
+.print-content .secular-term-map-table-wrap > table.secular-term-map-table {
+  display: table;
 }
 
 .print-content table.secular-term-map-table th,
 .print-content table.secular-term-map-table td {
+  box-sizing: border-box;
   border: 1px solid rgb(203 213 225);
   padding: 0.5rem 0.65rem;
   text-align: left;
   vertical-align: top;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  hyphens: auto;
+}
+
+.print-content table.secular-term-map-table th:first-child,
+.print-content table.secular-term-map-table td:first-child {
+  width: 58%;
+}
+
+.print-content table.secular-term-map-table th:last-child,
+.print-content table.secular-term-map-table td:last-child {
+  width: 42%;
+}
+
+@media (max-width: 640px) {
+  .print-content table.secular-term-map-table {
+    font-size: 0.875rem;
+  }
+
+  .print-content table.secular-term-map-table thead {
+    display: none;
+  }
+
+  .print-content table.secular-term-map-table tbody {
+    display: block;
+    width: 100%;
+  }
+
+  .print-content table.secular-term-map-table tr {
+    display: block;
+    width: 100%;
+    margin-bottom: 0.75rem;
+    border: 1px solid rgb(203 213 225);
+    border-radius: 0.375rem;
+    overflow: hidden;
+  }
+
+  .print-content table.secular-term-map-table td {
+    display: block;
+    width: 100% !important;
+    border: none;
+    border-bottom: 1px solid rgb(203 213 225);
+  }
+
+  .print-content table.secular-term-map-table td:last-child {
+    border-bottom: none;
+  }
+
+  .print-content table.secular-term-map-table td.secular-term-map-topic-cell::before {
+    content: 'Biblical topic';
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: rgb(100 116 139);
+  }
+
+  .dark .print-content table.secular-term-map-table tr {
+    border-color: rgb(71 85 105);
+  }
+
+  .dark .print-content table.secular-term-map-table td {
+    border-color: rgb(71 85 105);
+  }
+
+  .dark .print-content table.secular-term-map-table td.secular-term-map-topic-cell::before {
+    color: rgb(148 163 184);
+  }
 }
 
 .dark .print-content table.secular-term-map-table th,

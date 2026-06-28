@@ -184,7 +184,7 @@ export function buildSecularTermMapSectionHtml(
     })
     .join('')
 
-  return `${intro}<table class="secular-term-map-table"><thead><tr><th scope="col">Secular / common term</th><th scope="col">Biblical topic</th></tr></thead><tbody>${rows}</tbody></table>`
+  return `${intro}<div class="secular-term-map-table-wrap"><table class="secular-term-map-table"><thead><tr><th scope="col">Secular / common term</th><th scope="col">Biblical topic</th></tr></thead><tbody>${rows}</tbody></table></div>`
 }
 
 /** Insert or update the pinned mapping section and keep it first; renumber all sections. */

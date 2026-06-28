@@ -2580,10 +2580,10 @@ function ProfileContent({
 
         {/* Main Content Area — flex-1 so the column fills the viewport; click closes slide-out on desktop (mobile uses full-screen overlay) */}
         <div
-          className="flex-1 bg-gray-50 dark:bg-gray-900"
+          className="flex-1 min-w-0 bg-gray-50 dark:bg-gray-900"
           onClick={isMenuOpen ? closeMenu : undefined}
         >
-          <main ref={mainContentRef} className="container mx-auto px-5 py-10">
+          <main ref={mainContentRef} className="container mx-auto min-w-0 max-w-full px-5 py-10">
             <div className="space-y-12">
               {sections.map((section) => (
                 <div key={section.section} className="print-section">

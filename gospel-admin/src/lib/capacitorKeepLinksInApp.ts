@@ -23,8 +23,29 @@ export function capacitorInAppHref(url: URL): string {
   return `${url.pathname}${url.search}${url.hash}`
 }
 
+export function normalizeCapacitorPathname(pathname: string): string {
+  const path = pathname || '/'
+  return path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path
+}
+
+export function isSameDocumentCapacitorUrl(url: URL, current: URL): boolean {
+  return (
+    normalizeCapacitorPathname(url.pathname) === normalizeCapacitorPathname(current.pathname) &&
+    url.search === current.search
+  )
+}
+
+export type CapacitorKeepLinksInAppOptions = {
+  /** Same-document #anchors (Capacitor native opens Safari if left to the WebView). */
+  interceptSamePageHash?: boolean
+}
+
 /** Same-origin navigations that should stay in the Capacitor WebView (not Safari). */
-export function shouldKeepCapacitorLinkInApp(url: URL, currentHref: string): boolean {
+export function shouldKeepCapacitorLinkInApp(
+  url: URL,
+  currentHref: string,
+  options?: CapacitorKeepLinksInAppOptions
+): boolean {
   let current: URL
   try {
     current = new URL(currentHref)
@@ -35,16 +56,29 @@ export function shouldKeepCapacitorLinkInApp(url: URL, currentHref: string): boo
   if (!isCapacitorSameSiteHost(url.host, current.host)) return false
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return false
 
-  // Hash-only anchors on the current page: let the browser scroll.
-  if (
-    url.pathname === current.pathname &&
-    url.search === current.search &&
-    Boolean(url.hash)
-  ) {
-    return false
+  if (isSameDocumentCapacitorUrl(url, current) && url.hash) {
+    return options?.interceptSamePageHash === true
   }
 
   return true
+}
+
+export function capacitorHashAnchorIdFromInAppHref(href: string): string | null {
+  const hashIndex = href.indexOf('#')
+  if (hashIndex === -1) return null
+  const raw = href.slice(hashIndex + 1)
+  return raw ? decodeURIComponent(raw) : null
+}
+
+/** True when href is a same-document fragment link (e.g. profile section anchor). */
+export function isSameDocumentCapacitorInAppHref(href: string, currentHref: string): boolean {
+  try {
+    const url = new URL(href, currentHref)
+    const current = new URL(currentHref)
+    return isSameDocumentCapacitorUrl(url, current) && Boolean(url.hash)
+  } catch {
+    return false
+  }
 }
 
 export type CapacitorLinkInterceptResult = {
@@ -70,7 +104,8 @@ export function exceedsCapacitorLinkTapMoveThreshold(
 /** Resolve a same-origin in-app link from a DOM event, if any. */
 export function resolveCapacitorInAppLinkFromEvent(
   event: Event,
-  currentHref: string
+  currentHref: string,
+  options?: CapacitorKeepLinksInAppOptions
 ): CapacitorLinkInterceptResult | null {
   const target = event.target
   if (!(target instanceof Element)) return null
@@ -80,7 +115,7 @@ export function resolveCapacitorInAppLinkFromEvent(
 
   try {
     const url = new URL(anchor.href)
-    if (!shouldKeepCapacitorLinkInApp(url, currentHref)) return null
+    if (!shouldKeepCapacitorLinkInApp(url, currentHref, options)) return null
     return { href: capacitorInAppHref(url), anchor }
   } catch {
     return null

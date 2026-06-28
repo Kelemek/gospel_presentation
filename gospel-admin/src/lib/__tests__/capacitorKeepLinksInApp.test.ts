@@ -4,6 +4,7 @@
 
 import {
   exceedsCapacitorLinkTapMoveThreshold,
+  isSameDocumentCapacitorInAppHref,
   resolveCapacitorInAppLinkFromEvent,
   shouldKeepCapacitorLinkInApp,
 } from '@/lib/capacitorKeepLinksInApp'
@@ -23,6 +24,21 @@ describe('capacitorKeepLinksInApp', () => {
   it('shouldKeepCapacitorLinkInApp rejects external hosts', () => {
     const url = new URL('https://example.com/privacy')
     expect(shouldKeepCapacitorLinkInApp(url, currentHref)).toBe(false)
+  })
+
+  it('shouldKeepCapacitorLinkInApp skips same-page hash unless interceptSamePageHash is set', () => {
+    const url = new URL('https://cp-church.org/default#section-1')
+    expect(shouldKeepCapacitorLinkInApp(url, currentHref)).toBe(false)
+    expect(
+      shouldKeepCapacitorLinkInApp(url, currentHref, { interceptSamePageHash: true })
+    ).toBe(true)
+  })
+
+  it('isSameDocumentCapacitorInAppHref treats trailing-slash paths as the same document', () => {
+    window.history.replaceState({}, '', '/default/')
+    expect(isSameDocumentCapacitorInAppHref('/default#section-2', window.location.href)).toBe(
+      true
+    )
   })
 
   it('resolveCapacitorInAppLinkFromEvent returns href for same-site profile links', () => {

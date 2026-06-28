@@ -743,7 +743,7 @@ export default function GospelSection({
   const [showFourRulesModal, setShowFourRulesModal] = useState(false)
 
   return (
-    <section id={sectionId} className="scroll-mt-20 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-600 p-8 print-section">
+    <section id={sectionId} className="scroll-mt-20 min-w-0 max-w-full bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-600 p-8 print-section">
       <ComaModal isOpen={showComaModal} onClose={() => setShowComaModal(false)} />
       <FourRulesModal isOpen={showFourRulesModal} onClose={() => setShowFourRulesModal(false)} />
       <h3 

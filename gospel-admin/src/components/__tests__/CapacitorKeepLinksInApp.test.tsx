@@ -1,10 +1,16 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react'
 import { CapacitorKeepLinksInApp } from '../CapacitorKeepLinksInApp'
+import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
 
 const mockPush = jest.fn()
+const mockReplace = jest.fn()
 jest.mock('next/navigation', () => ({
-  useRouter: () => ({ push: mockPush }),
+  useRouter: () => ({ push: mockPush, replace: mockReplace }),
+}))
+
+jest.mock('@/lib/scrollToTocAnchor', () => ({
+  scrollToTocAnchor: jest.fn(() => true),
 }))
 
 jest.mock('@capacitor/core', () => ({
@@ -14,6 +20,8 @@ jest.mock('@capacitor/core', () => ({
 describe('CapacitorKeepLinksInApp', () => {
   beforeEach(() => {
     mockPush.mockClear()
+    mockReplace.mockClear()
+    ;(scrollToTocAnchor as jest.Mock).mockClear()
   })
 
   it('renders nothing (null)', () => {
@@ -108,7 +116,7 @@ describe('CapacitorKeepLinksInApp', () => {
       unmount()
     })
 
-    it('does not intercept hash-only anchor on the current page', () => {
+    it('intercepts same-page hash anchor and scrolls in-app on native', () => {
       const { unmount } = render(<CapacitorKeepLinksInApp />)
       const anchor = document.createElement('a')
       anchor.href = `${window.location.origin}${window.location.pathname}#section-1`
@@ -118,6 +126,30 @@ describe('CapacitorKeepLinksInApp', () => {
       fireEvent.click(anchor, { bubbles: true })
 
       expect(mockPush).not.toHaveBeenCalled()
+      expect(scrollToTocAnchor).toHaveBeenCalledWith('section-1', { behavior: 'auto' })
+      expect(mockReplace).toHaveBeenCalledWith(
+        `${window.location.pathname}#section-1`,
+        { scroll: false }
+      )
+      document.body.removeChild(anchor)
+      unmount()
+    })
+
+    it('intercepts same-page hash anchor on touch tap', () => {
+      const { unmount } = render(<CapacitorKeepLinksInApp />)
+      const anchor = document.createElement('a')
+      anchor.href = `${window.location.origin}${window.location.pathname}#section-5`
+      anchor.textContent = 'Topic'
+      document.body.appendChild(anchor)
+
+      fireEvent.touchStart(anchor, { touches: [{ clientX: 0, clientY: 0 }] })
+      fireEvent.touchEnd(anchor, { changedTouches: [{ clientX: 0, clientY: 0 }] })
+
+      expect(scrollToTocAnchor).toHaveBeenCalledWith('section-5', { behavior: 'auto' })
+      expect(mockReplace).toHaveBeenCalledWith(
+        `${window.location.pathname}#section-5`,
+        { scroll: false }
+      )
       document.body.removeChild(anchor)
       unmount()
     })

@@ -4,9 +4,13 @@ import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Capacitor } from '@capacitor/core'
 import {
+  capacitorHashAnchorIdFromInAppHref,
   exceedsCapacitorLinkTapMoveThreshold,
+  isSameDocumentCapacitorInAppHref,
   resolveCapacitorInAppLinkFromEvent,
+  type CapacitorKeepLinksInAppOptions,
 } from '@/lib/capacitorKeepLinksInApp'
+import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
 
 export { shouldKeepCapacitorLinkInApp } from '@/lib/capacitorKeepLinksInApp'
 
@@ -29,7 +33,20 @@ export function CapacitorKeepLinksInApp() {
   useEffect(() => {
     if (typeof window === 'undefined' || !Capacitor.isNativePlatform()) return
 
+    const linkOptions: CapacitorKeepLinksInAppOptions = { interceptSamePageHash: true }
+
     const navigateInApp = (href: string) => {
+      if (isSameDocumentCapacitorInAppHref(href, window.location.href)) {
+        const anchorId = capacitorHashAnchorIdFromInAppHref(href)
+        if (anchorId) {
+          scrollToTocAnchor(anchorId, { behavior: 'auto' })
+        }
+        const hashPart = href.includes('#') ? href.slice(href.indexOf('#')) : ''
+        if (hashPart && window.location.hash !== hashPart) {
+          router.replace(href, { scroll: false })
+        }
+        return
+      }
       router.push(href, { scroll: false })
     }
 
@@ -38,7 +55,7 @@ export function CapacitorKeepLinksInApp() {
     }
 
     const intercept = (e: Event): boolean => {
-      const resolved = resolveCapacitorInAppLinkFromEvent(e, window.location.href)
+      const resolved = resolveCapacitorInAppLinkFromEvent(e, window.location.href, linkOptions)
       if (!resolved) return false
 
       e.preventDefault()
@@ -52,7 +69,7 @@ export function CapacitorKeepLinksInApp() {
         clearPendingTouch()
         return
       }
-      const resolved = resolveCapacitorInAppLinkFromEvent(e, window.location.href)
+      const resolved = resolveCapacitorInAppLinkFromEvent(e, window.location.href, linkOptions)
       if (!resolved) {
         clearPendingTouch()
         return
@@ -101,7 +118,7 @@ export function CapacitorKeepLinksInApp() {
     }
 
     const handleClick = (e: MouseEvent) => {
-      const resolved = resolveCapacitorInAppLinkFromEvent(e, window.location.href)
+      const resolved = resolveCapacitorInAppLinkFromEvent(e, window.location.href, linkOptions)
       // Suppress only the synthetic click that follows touchstart on the same link.
       if (resolved && touchHandledHrefRef.current === resolved.href) {
         e.preventDefault()
