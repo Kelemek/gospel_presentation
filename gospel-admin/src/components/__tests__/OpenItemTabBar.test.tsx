@@ -6,8 +6,12 @@ import OpenItemTabBar, {
   type OpenItemTab,
 } from '../OpenItemTabBar'
 import {
+  isOpenItemTabVisibleInTabBar,
   loadOpenItemTabBarScrollLeft,
   PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY,
+  REVEAL_ACTIVE_OPEN_ITEM_TAB_EVENT,
+  restoreOpenItemTabBarScrollPosition,
+  revealActiveOpenItemTabIfOffScreen,
   saveOpenItemTabBarScrollLeft,
   scrollOpenItemTabIntoView,
 } from '@/lib/openItemTabBarScrollStorage'
@@ -19,6 +23,9 @@ jest.mock('@/lib/openItemTabBarScrollStorage', () => {
   return {
     ...actual,
     scrollOpenItemTabIntoView: jest.fn(actual.scrollOpenItemTabIntoView),
+    isOpenItemTabVisibleInTabBar: jest.fn(actual.isOpenItemTabVisibleInTabBar),
+    restoreOpenItemTabBarScrollPosition: jest.fn(actual.restoreOpenItemTabBarScrollPosition),
+    revealActiveOpenItemTabIfOffScreen: jest.fn(actual.revealActiveOpenItemTabIfOffScreen),
   }
 })
 
@@ -289,6 +296,128 @@ describe('OpenItemTabBar', () => {
     } finally {
       rafSpy.mockRestore()
     }
+  })
+
+  it('smooth-scrolls an off-screen active tab when navigation did not use the tab bar', () => {
+    const scrollMock = jest.mocked(scrollOpenItemTabIntoView)
+    const visibleMock = jest.mocked(isOpenItemTabVisibleInTabBar)
+    scrollMock.mockClear()
+    visibleMock.mockReturnValue(false)
+
+    const rafSpy = jest.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+      cb(0)
+      return 1
+    })
+
+    try {
+      render(
+        <OpenItemTabBar
+          tabs={resourceTabs}
+          activeId="sg"
+          onSelectTab={jest.fn()}
+          onCloseTab={jest.fn()}
+          tablistAriaLabel="Open resources"
+          persistScrollKey={PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY}
+          restorePersistedScrollWhen={() => false}
+        />
+      )
+
+      const tablist = screen.getByRole('tablist', { name: 'Open resources' })
+      expect(scrollMock).toHaveBeenCalledWith(
+        tablist,
+        'sg',
+        PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY,
+        expect.objectContaining({ behavior: expect.any(String) })
+      )
+    } finally {
+      rafSpy.mockRestore()
+      visibleMock.mockReset()
+    }
+  })
+
+  it('restores persisted scroll when navigation used the tab bar', () => {
+    const scrollMock = jest.mocked(scrollOpenItemTabIntoView)
+    const restoreMock = jest.mocked(restoreOpenItemTabBarScrollPosition)
+    scrollMock.mockClear()
+    restoreMock.mockClear()
+    saveOpenItemTabBarScrollLeft(PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY, 140)
+
+    const rafSpy = jest.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+      cb(0)
+      return 1
+    })
+
+    try {
+      render(
+        <OpenItemTabBar
+          tabs={resourceTabs}
+          activeId="sg"
+          onSelectTab={jest.fn()}
+          onCloseTab={jest.fn()}
+          tablistAriaLabel="Open resources"
+          persistScrollKey={PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY}
+          restorePersistedScrollWhen={() => true}
+        />
+      )
+
+      const tablist = screen.getByRole('tablist', { name: 'Open resources' })
+      expect(restoreMock).toHaveBeenCalledWith(tablist, PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY)
+      expect(scrollMock).not.toHaveBeenCalled()
+    } finally {
+      rafSpy.mockRestore()
+    }
+  })
+
+  it('reveals the active tab after a pointerdown outside the tab bar', () => {
+    const revealMock = jest.mocked(revealActiveOpenItemTabIfOffScreen)
+    revealMock.mockClear()
+    revealMock.mockReturnValue(true)
+
+    render(
+      <OpenItemTabBar
+        tabs={resourceTabs}
+        activeId="default"
+        onSelectTab={jest.fn()}
+        onCloseTab={jest.fn()}
+        tablistAriaLabel="Open resources"
+        persistScrollKey={PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY}
+      />
+    )
+
+    const tablist = screen.getByRole('tablist', { name: 'Open resources' })
+    fireEvent.pointerDown(document.body)
+    expect(revealMock).toHaveBeenCalledWith(
+      tablist,
+      'default',
+      PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY,
+      expect.objectContaining({ behavior: expect.any(String) })
+    )
+  })
+
+  it('reveals the active tab when the menu dispatches a reveal event', () => {
+    const revealMock = jest.mocked(revealActiveOpenItemTabIfOffScreen)
+    revealMock.mockClear()
+    revealMock.mockReturnValue(true)
+
+    render(
+      <OpenItemTabBar
+        tabs={resourceTabs}
+        activeId="default"
+        onSelectTab={jest.fn()}
+        onCloseTab={jest.fn()}
+        tablistAriaLabel="Open resources"
+        persistScrollKey={PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY}
+      />
+    )
+
+    const tablist = screen.getByRole('tablist', { name: 'Open resources' })
+    window.dispatchEvent(new CustomEvent(REVEAL_ACTIVE_OPEN_ITEM_TAB_EVENT))
+    expect(revealMock).toHaveBeenCalledWith(
+      tablist,
+      'default',
+      PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY,
+      expect.objectContaining({ behavior: expect.any(String) })
+    )
   })
 
   it('maps vertical wheel to horizontal scroll when the tab row overflows', () => {

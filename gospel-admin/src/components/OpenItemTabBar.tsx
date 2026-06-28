@@ -5,9 +5,12 @@ import { attachOpenItemTabBarDragScroll } from '@/lib/openItemTabBarDragScroll'
 import { getHorizontalScrollEdges } from '@/lib/horizontalScrollEdges'
 import {
   captureOpenItemTabBarScroll,
+  isOpenItemTabVisibleInTabBar,
   loadOpenItemTabBarScrollLeft,
   persistOpenItemTabBarScrollOnRelease,
+  REVEAL_ACTIVE_OPEN_ITEM_TAB_EVENT,
   restoreOpenItemTabBarScrollPosition,
+  revealActiveOpenItemTabIfOffScreen,
   saveOpenItemTabBarScrollLeft,
   scrollOpenItemTabIntoView,
 } from '@/lib/openItemTabBarScrollStorage'
@@ -88,6 +91,21 @@ export type OpenItemTabBarProps = {
   searchAriaLabel?: string
   /** data-tour on the spyglass button. Default: profile-resource-search */
   searchDataTour?: string
+  /**
+   * When this returns true for the active tab, restore persisted horizontal scroll
+   * (e.g. user switched tabs via the tab bar). Otherwise an off-screen active tab
+   * is smooth-scrolled into view (menu / TOC navigation).
+   */
+  restorePersistedScrollWhen?: (activeId: string) => boolean
+  /** When true, smooth-scroll the active tab into view after clicks outside the tab bar. Default true. */
+  revealActiveTabOnInteractOutside?: boolean
+}
+
+function openItemTabRevealScrollBehavior(): ScrollBehavior {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+    return 'auto'
+  }
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
 }
 
 export default function OpenItemTabBar({
@@ -106,9 +124,12 @@ export default function OpenItemTabBar({
   onToggleSearch,
   searchAriaLabel = 'Search in resource',
   searchDataTour = 'profile-resource-search',
+  restorePersistedScrollWhen,
+  revealActiveTabOnInteractOutside = true,
 }: OpenItemTabBarProps) {
   const active = activeId.trim()
   const isSingleExpandedTab = expandSingleTab && tabs.length === 1
+  const rootRef = useRef<HTMLDivElement | null>(null)
   const tablistScrollElRef = useRef<HTMLDivElement | null>(null)
   const scrollInteractionCleanupRef = useRef<(() => void) | null>(null)
   const [scrollEdges, setScrollEdges] = useState({ showStart: false, showEnd: false })
@@ -187,6 +208,44 @@ export default function OpenItemTabBar({
     captureOpenItemTabBarScroll(persistScrollKey, tablistScrollElRef.current)
   }, [persistScrollKey])
 
+  const revealActiveIfOffScreen = useCallback(() => {
+    if (isSingleExpandedTab || !active) return
+    const scrollEl = tablistScrollElRef.current
+    if (!scrollEl || scrollEl.hasAttribute('data-tab-bar-dragging')) return
+    if (
+      revealActiveOpenItemTabIfOffScreen(scrollEl, active, persistScrollKey, {
+        behavior: openItemTabRevealScrollBehavior(),
+      })
+    ) {
+      updateScrollEdges()
+    }
+  }, [active, isSingleExpandedTab, persistScrollKey, updateScrollEdges])
+
+  useEffect(() => {
+    if (!revealActiveTabOnInteractOutside) return
+
+    const onRevealRequest = () => {
+      revealActiveIfOffScreen()
+    }
+
+    const onPointerDown = (event: PointerEvent) => {
+      const root = rootRef.current
+      const scrollEl = tablistScrollElRef.current
+      if (!root || !scrollEl) return
+      if (scrollEl.hasAttribute('data-tab-bar-dragging')) return
+      const target = event.target
+      if (target instanceof Node && root.contains(target)) return
+      revealActiveIfOffScreen()
+    }
+
+    window.addEventListener(REVEAL_ACTIVE_OPEN_ITEM_TAB_EVENT, onRevealRequest)
+    document.addEventListener('pointerdown', onPointerDown, true)
+    return () => {
+      window.removeEventListener(REVEAL_ACTIVE_OPEN_ITEM_TAB_EVENT, onRevealRequest)
+      document.removeEventListener('pointerdown', onPointerDown, true)
+    }
+  }, [revealActiveIfOffScreen, revealActiveTabOnInteractOutside])
+
   useLayoutEffect(() => {
     const revealId = revealTabId?.trim()
     if (revealId && revealId === active) {
@@ -214,7 +273,70 @@ export default function OpenItemTabBar({
       }
     }
 
-    if (!persistScrollKey) return
+    const el = tablistScrollElRef.current
+    if (!el) return
+
+    const shouldRestorePersistedScroll = restorePersistedScrollWhen?.(active) ?? false
+
+    if (shouldRestorePersistedScroll && persistScrollKey) {
+      let cancelled = false
+      let attempts = 0
+      const maxAttempts = 8
+      const saved = loadOpenItemTabBarScrollLeft(persistScrollKey)
+      if (saved == null) return
+
+      const applyRestore = () => {
+        if (cancelled) return
+        const scrollEl = tablistScrollElRef.current
+        if (!scrollEl) return
+        const maxScroll = Math.max(0, scrollEl.scrollWidth - scrollEl.clientWidth)
+        if (maxScroll <= 0 && saved > 0 && attempts < maxAttempts) {
+          attempts += 1
+          window.requestAnimationFrame(applyRestore)
+          return
+        }
+        restoreOpenItemTabBarScrollPosition(scrollEl, persistScrollKey)
+        updateScrollEdges()
+      }
+
+      applyRestore()
+      return () => {
+        cancelled = true
+      }
+    }
+
+    if (
+      !isSingleExpandedTab &&
+      !isOpenItemTabVisibleInTabBar(el, active)
+    ) {
+      let cancelled = false
+      let attempts = 0
+      const maxAttempts = 8
+
+      const applyRevealActive = () => {
+        if (cancelled) return
+        const scrollEl = tablistScrollElRef.current
+        if (!scrollEl) return
+        const maxScroll = Math.max(0, scrollEl.scrollWidth - scrollEl.clientWidth)
+        if (maxScroll <= 0 && attempts < maxAttempts) {
+          attempts += 1
+          window.requestAnimationFrame(applyRevealActive)
+          return
+        }
+        scrollOpenItemTabIntoView(scrollEl, active, persistScrollKey, {
+          behavior: openItemTabRevealScrollBehavior(),
+        })
+        updateScrollEdges()
+      }
+
+      applyRevealActive()
+      return () => {
+        cancelled = true
+      }
+    }
+
+    if (!persistScrollKey || restorePersistedScrollWhen !== undefined) return
+
     const saved = loadOpenItemTabBarScrollLeft(persistScrollKey)
     if (saved == null) return
 
@@ -224,15 +346,15 @@ export default function OpenItemTabBar({
 
     const applyRestore = () => {
       if (cancelled) return
-      const el = tablistScrollElRef.current
-      if (!el) return
-      const maxScroll = Math.max(0, el.scrollWidth - el.clientWidth)
+      const scrollEl = tablistScrollElRef.current
+      if (!scrollEl) return
+      const maxScroll = Math.max(0, scrollEl.scrollWidth - scrollEl.clientWidth)
       if (maxScroll <= 0 && saved > 0 && attempts < maxAttempts) {
         attempts += 1
         window.requestAnimationFrame(applyRestore)
         return
       }
-      restoreOpenItemTabBarScrollPosition(el, persistScrollKey)
+      restoreOpenItemTabBarScrollPosition(scrollEl, persistScrollKey)
       updateScrollEdges()
     }
 
@@ -240,7 +362,15 @@ export default function OpenItemTabBar({
     return () => {
       cancelled = true
     }
-  }, [persistScrollKey, revealTabId, active, tabs.length, updateScrollEdges])
+  }, [
+    persistScrollKey,
+    revealTabId,
+    active,
+    tabs.length,
+    updateScrollEdges,
+    restorePersistedScrollWhen,
+    isSingleExpandedTab,
+  ])
 
   useEffect(() => {
     if (!persistScrollKey) return
@@ -259,6 +389,7 @@ export default function OpenItemTabBar({
 
   return (
     <div
+      ref={rootRef}
       {...(dataTour ? { 'data-tour': dataTour } : {})}
       className={`w-full min-w-0 border-t border-slate-200 dark:border-slate-600 overflow-hidden ${className}`.trim()}
     >

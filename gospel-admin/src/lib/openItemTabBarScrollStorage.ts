@@ -6,6 +6,14 @@ export const PROFILE_RESOURCE_TAB_BAR_SCROLL_KEY =
 export const SCRIPTURE_MODAL_TAB_BAR_SCROLL_KEY =
   'gospel-scripture-modal-tabs-scroll-left:v1'
 
+/** Ask open tab bars to smooth-scroll the active tab into view when it is off-screen. */
+export const REVEAL_ACTIVE_OPEN_ITEM_TAB_EVENT = 'gospel-reveal-active-open-item-tab'
+
+export function dispatchRevealActiveOpenItemTab(): void {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent(REVEAL_ACTIVE_OPEN_ITEM_TAB_EVENT))
+}
+
 export function loadOpenItemTabBarScrollLeft(storageKey: string): number | null {
   if (typeof window === 'undefined') return null
   try {
@@ -70,11 +78,36 @@ export function restoreOpenItemTabBarScrollPosition(
   return true
 }
 
+export type OpenItemTabScrollIntoViewOptions = {
+  behavior?: ScrollBehavior
+}
+
+/** Whether the tab label row is fully visible inside the horizontal tab list viewport. */
+export function isOpenItemTabVisibleInTabBar(
+  scrollEl: HTMLElement,
+  tabId: string
+): boolean {
+  const trimmed = tabId.trim()
+  if (!trimmed) return true
+  const tab = scrollEl.querySelector<HTMLElement>(
+    `[data-open-item-tab-id="${CSS.escape(trimmed)}"]`
+  )
+  if (!tab) return true
+  if (scrollEl.scrollWidth <= scrollEl.clientWidth + 1) return true
+  const scrollRect = scrollEl.getBoundingClientRect()
+  const tabRect = tab.getBoundingClientRect()
+  const padding = 2
+  return (
+    tabRect.left >= scrollRect.left - padding && tabRect.right <= scrollRect.right + padding
+  )
+}
+
 /** Scroll a tab row (label + close) fully into the horizontal tab list viewport. */
 export function scrollOpenItemTabIntoView(
   scrollEl: HTMLElement,
   tabId: string,
-  storageKey?: string
+  storageKey?: string,
+  options?: OpenItemTabScrollIntoViewOptions
 ): boolean {
   const trimmed = tabId.trim()
   if (!trimmed) return false
@@ -82,9 +115,27 @@ export function scrollOpenItemTabIntoView(
     `[data-open-item-tab-id="${CSS.escape(trimmed)}"]`
   )
   if (!tab) return false
-  tab.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  tab.scrollIntoView({
+    block: 'nearest',
+    inline: 'nearest',
+    behavior: options?.behavior ?? 'auto',
+  })
   if (storageKey) {
     saveOpenItemTabBarScrollLeft(storageKey, scrollEl.scrollLeft)
   }
   return true
+}
+
+/** Smooth-scroll the active tab into view when it is clipped by horizontal overflow. */
+export function revealActiveOpenItemTabIfOffScreen(
+  scrollEl: HTMLElement,
+  tabId: string,
+  storageKey?: string,
+  options?: OpenItemTabScrollIntoViewOptions
+): boolean {
+  const trimmed = tabId.trim()
+  if (!trimmed) return false
+  if (scrollEl.scrollWidth <= scrollEl.clientWidth + 1) return false
+  if (isOpenItemTabVisibleInTabBar(scrollEl, trimmed)) return false
+  return scrollOpenItemTabIntoView(scrollEl, trimmed, storageKey, options)
 }

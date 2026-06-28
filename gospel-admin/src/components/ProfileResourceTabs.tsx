@@ -8,6 +8,7 @@ import {
   consumeRevealResourceTabSlug,
   type ProfileRecentResourceEntry,
 } from '@/lib/profileLastOpenResourceStorage'
+import { isProfileResourceTabNavigationPending } from '@/lib/profileResourceTabNavigation'
 
 export type ProfileResourceTabsProps = {
   tabs: ProfileRecentResourceEntry[]
@@ -56,6 +57,7 @@ export default function ProfileResourceTabs({
         expandSingleTab
         searchOpen={searchOpen}
         onToggleSearch={onToggleSearch}
+        restorePersistedScrollWhen={isProfileResourceTabNavigationPending}
       />
       <ProfileResourceInPageSearch
         key={activeSlug}

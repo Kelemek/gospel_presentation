@@ -130,6 +130,7 @@ import {
   markProfileResourceTabNavigation,
   peekProfileResourceTabNavigation,
 } from '@/lib/profileResourceTabNavigation'
+import { dispatchRevealActiveOpenItemTab } from '@/lib/openItemTabBarScrollStorage'
 import {
   findScriptureCardInList,
   indexOfScriptureCardInList,
@@ -2356,6 +2357,7 @@ function ProfileContent({
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
+    dispatchRevealActiveOpenItemTab()
   }
 
   const closeMenu = () => {
