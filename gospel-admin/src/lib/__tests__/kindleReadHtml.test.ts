@@ -144,4 +144,49 @@ describe('kindleReadHtml', () => {
   it('returns empty toc html when there are no sections', () => {
     expect(renderKindleReadTocNavHtml([])).toBe('')
   })
+
+  it('preserves secular-term map hash links and decodes nbsp in topic column', () => {
+    const mapHtml = `<div class="secular-term-map-table-wrap"><table class="secular-term-map-table"><tbody><tr><td class="secular-term-map-terms-cell">self-esteem</td><td class="secular-term-map-topic-cell"><span class="secular-term-map-topic">→&nbsp;<a href="#section-5">Pride and humility</a></span></td></tr></tbody></table></div>`
+    const html = linkifyScriptureInBodyHtmlForKindleRead(mapHtml, '26b974ef', 'section-1-0')
+    expect(html).toContain('href="#section-5"')
+    expect(html).toContain('class="kindle-read-internal-link"')
+    expect(html).toContain('Pride and humility')
+    expect(html).not.toContain('&nbsp;')
+    expect(html).not.toContain('&amp;nbsp;')
+    expect(html).toContain('→\u00a0')
+  })
+
+  it('decodes double-encoded nbsp before re-escaping for Kindle output', () => {
+    const mapHtml = `<span class="secular-term-map-topic">→&amp;nbsp;Topic</span>`
+    const html = linkifyScriptureInBodyHtmlForKindleRead(mapHtml, '26b974ef', 'section-1-0')
+    expect(html).toContain('→\u00a0Topic')
+    expect(html).not.toMatch(/&\u00a0/)
+    expect(html).not.toContain('&amp;nbsp;')
+  })
+
+  it('renders secular-term map section in article with working topic links', () => {
+    const sections: GospelPresentationData = [
+      {
+        section: '1',
+        title: 'Find your topic (secular terms)',
+        subsections: [
+          {
+            title: '',
+            content:
+              '<div class="secular-term-map-table-wrap"><table class="secular-term-map-table"><tbody><tr><td class="secular-term-map-terms-cell">anxiety</td><td class="secular-term-map-topic-cell"><span class="secular-term-map-topic">→&nbsp;<a href="#section-2">Anxiety and Worry</a></span></td></tr></tbody></table></div>',
+          },
+        ],
+      },
+      {
+        section: '2',
+        title: 'Anxiety and Worry',
+        subsections: [{ title: 'Overview', content: '<p>Content here.</p>' }],
+      },
+    ]
+    const article = renderKindleReadArticleHtml(sections, '26b974ef')
+    expect(article).toContain('id="section-2"')
+    expect(article).toContain('kindle-read-internal-link')
+    expect(article).toContain('href="#section-2"')
+    expect(article).not.toContain('&nbsp;')
+  })
 })

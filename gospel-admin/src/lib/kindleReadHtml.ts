@@ -59,9 +59,29 @@ function escapeHtml(text: string): string {
     .replace(/"/g, '&quot;')
 }
 
-/** Drop stored `<a>` tags so Kindle linkify does not double-wrap scripture. */
+/** Decode entities in stored HTML text nodes before re-escaping for Kindle output. */
+function decodeCommonHtmlEntitiesForKindleRead(text: string): string {
+  return text
+    .replace(/&amp;/g, '&')
+    .replace(/&nbsp;/gi, '\u00a0')
+    .replace(/&#160;/g, '\u00a0')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+}
+
+/**
+ * Drop stored `<a>` tags so Kindle linkify does not double-wrap scripture.
+ * Preserves same-page hash links (e.g. secular-term map → topic section).
+ */
 function stripAnchorsForKindleRead(html: string): string {
-  return html.replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, '$1')
+  return html.replace(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi, (_match, attrs: string, inner: string) => {
+    const hrefMatch = /\bhref\s*=\s*["']#([^"']+)["']/i.exec(attrs)
+    if (hrefMatch) {
+      return `<a class="kindle-read-internal-link" href="#${hrefMatch[1]}">${inner}</a>`
+    }
+    return inner
+  })
 }
 
 function htmlPlainTextForKindleRead(html: string): string {
@@ -89,10 +109,10 @@ function segmentsToLinkedHtml(
   for (const seg of segments) {
     switch (seg.kind) {
       case 'text':
-        out += escapeHtml(seg.value)
+        out += escapeHtml(decodeCommonHtmlEntitiesForKindleRead(seg.value))
         break
       case 'coma':
-        out += escapeHtml(seg.label)
+        out += escapeHtml(decodeCommonHtmlEntitiesForKindleRead(seg.label))
         break
       case 'fourRules':
         out += 'Four Rules of Communication'

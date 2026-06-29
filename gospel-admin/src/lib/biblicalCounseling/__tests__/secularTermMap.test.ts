@@ -53,7 +53,7 @@ describe('secularTermMap', () => {
     expect(html).toContain('Pride and humility')
     expect(html).toContain('class="secular-term-map-terms-cell"')
     expect(html).toContain('class="secular-term-map-table-wrap"')
-    expect(html).toContain('class="secular-term-map-topic">→&nbsp;')
+    expect(html).toContain('class="secular-term-map-topic">→\u00a0')
   })
 
   it('validateSecularTermMapAgainstSections flags unknown topics', () => {
