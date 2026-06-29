@@ -2,7 +2,9 @@ import {
   applySecularTermMapToGospelData,
   buildSectionAnchorByTitle,
   buildSecularTermMapSectionHtml,
+  injectSecularTermMapRowIds,
   lookupSecularTermMap,
+  splitSecularTermMapIntroHtml,
   normalizeSecularTerm,
   parseSecularTermsInput,
   normalizeSecularTermMapForSave,
@@ -54,6 +56,24 @@ describe('secularTermMap', () => {
     expect(html).toContain('class="secular-term-map-terms-cell"')
     expect(html).toContain('class="secular-term-map-table-wrap"')
     expect(html).toContain('class="secular-term-map-topic">→\u00a0')
+    expect(html).toContain('id="secular-term-map-row-0"')
+    expect(html).toContain('id="secular-term-map-row-1"')
+    expect(html).toContain('<td id="secular-term-map-row-0" class="secular-term-map-terms-cell">')
+  })
+
+  it('injectSecularTermMapRowIds adds row ids to legacy table HTML', () => {
+    const legacy =
+      '<table class="secular-term-map-table"><tbody><tr><td>anxiety</td><td class="secular-term-map-topic-cell">topic</td></tr></tbody></table>'
+    const html = injectSecularTermMapRowIds(legacy)
+    expect(html).toContain('id="secular-term-map-row-0"')
+    expect(html).toContain('<td id="secular-term-map-row-0">anxiety</td>')
+  })
+
+  it('splitSecularTermMapIntroHtml splits table without wrap div', () => {
+    const html = '<p>Intro</p><table class="secular-term-map-table"><tbody></tbody></table>'
+    const split = splitSecularTermMapIntroHtml(html)
+    expect(split.introHtml).toBe('<p>Intro</p>')
+    expect(split.tableHtml).toContain('secular-term-map-table')
   })
 
   it('validateSecularTermMapAgainstSections flags unknown topics', () => {

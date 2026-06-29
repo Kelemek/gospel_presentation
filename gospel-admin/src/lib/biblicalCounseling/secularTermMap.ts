@@ -3,6 +3,88 @@ import { sortGospelSectionsWithPinnedFirst } from '@/lib/gospelDataSections'
 
 export const DEFAULT_PINNED_SECTION_TITLE = 'Find your topic (secular terms)'
 
+export const SECULAR_TERM_MAP_ROW_ID_PREFIX = 'secular-term-map-row-'
+
+/** Stable DOM id for a mapping table row (used for in-page search and scroll targets). */
+export function secularTermMapRowDomId(rowIndex: number): string {
+  return `${SECULAR_TERM_MAP_ROW_ID_PREFIX}${rowIndex}`
+}
+
+export function isSecularTermMapTableHtml(html: string): boolean {
+  return html.includes('secular-term-map-table')
+}
+
+export function isSecularTermMapTableDataRowHtml(rowHtml: string): boolean {
+  if (!/<td[\s>]/i.test(rowHtml)) return false
+  if (/<th[\s>]/i.test(rowHtml)) return false
+  return true
+}
+
+/** Read an existing row anchor from tr/td ids, or assign the next stable row id. */
+export function extractSecularTermMapRowAnchorId(rowHtml: string, fallbackIndex: number): string {
+  const idRe = new RegExp(
+    `\\bid\\s*=\\s*["'](${SECULAR_TERM_MAP_ROW_ID_PREFIX}[^"']+)["']`,
+    'i'
+  )
+  const match = idRe.exec(rowHtml)
+  return match?.[1] ?? secularTermMapRowDomId(fallbackIndex)
+}
+
+/** Split optional intro copy from the mapping table (with or without table-wrap div). */
+export function splitSecularTermMapIntroHtml(contentHtml: string): {
+  introHtml: string
+  tableHtml: string
+} {
+  const wrapSplit = contentHtml.split(/<div class="secular-term-map-table-wrap">/i)
+  if (wrapSplit.length > 1) {
+    return { introHtml: wrapSplit[0] ?? '', tableHtml: wrapSplit.slice(1).join('') }
+  }
+  const tableMatch = /<table\b[^>]*class=["'][^"']*secular-term-map-table/i.exec(contentHtml)
+  if (tableMatch?.index != null) {
+    return {
+      introHtml: contentHtml.slice(0, tableMatch.index),
+      tableHtml: contentHtml.slice(tableMatch.index),
+    }
+  }
+  return { introHtml: contentHtml, tableHtml: '' }
+}
+
+/** Add row ids on the first terms cell (reliable scroll targets; legacy rows may omit wrap/cell classes). */
+export function injectSecularTermMapRowIds(html: string): string {
+  if (!isSecularTermMapTableHtml(html)) return html
+  let rowIndex = 0
+  return html.replace(/<tbody>([\s\S]*?)<\/tbody>/i, (_full, tbodyInner: string) => {
+    const updated = tbodyInner.replace(
+      /<tr(\s[^>]*)?>([\s\S]*?)<\/tr>/gi,
+      (fullRow, trAttrs = '', rowContent: string) => {
+        if (!isSecularTermMapTableDataRowHtml(fullRow)) return fullRow
+        const rowId = extractSecularTermMapRowAnchorId(fullRow, rowIndex)
+        rowIndex += 1
+        if (new RegExp(`\\bid\\s*=\\s*["']${rowId}["']`, 'i').test(rowContent)) {
+          const trWithoutRowId = trAttrs.replace(
+            /\s*\bid\s*=\s*["']secular-term-map-row-[^"']*["']/gi,
+            ''
+          )
+          return `<tr${trWithoutRowId}>${rowContent}</tr>`
+        }
+        const updatedContent = rowContent.replace(
+          /(<td)(\s[^>]*)?(>)/i,
+          (_tdMatch, open: string, tdAttrs = '', close: string) => {
+            if (/\bid\s*=/.test(tdAttrs)) return `${open}${tdAttrs}${close}`
+            return `${open} id="${rowId}"${tdAttrs}${close}`
+          }
+        )
+        const trWithoutRowId = trAttrs.replace(
+          /\s*\bid\s*=\s*["']secular-term-map-row-[^"']*["']/gi,
+          ''
+        )
+        return `<tr${trWithoutRowId}>${updatedContent}</tr>`
+      }
+    )
+    return `<tbody>${updated}</tbody>`
+  })
+}
+
 export type SecularTermMapping = {
   secularTerms: string[]
   biblicalTopic: string
@@ -173,14 +255,15 @@ export function buildSecularTermMapSectionHtml(
 ): string {
   const intro = map.introHtml.trim()
   const rows = map.mappings
-    .map((row) => {
+    .map((row, rowIndex) => {
       const topicKey = normalizeSectionTitleKey(row.biblicalTopic)
       const anchor = sectionAnchorByTitle.get(topicKey)
       const termsLabel = row.secularTerms.map((t) => escapeHtml(t.trim())).join(', ')
       const topicHtml = anchor
         ? `<a href="#${escapeHtml(anchor)}">${escapeHtml(row.biblicalTopic.trim())}</a>`
         : escapeHtml(row.biblicalTopic.trim())
-      return `<tr><td class="secular-term-map-terms-cell">${termsLabel}</td><td class="secular-term-map-topic-cell"><span class="secular-term-map-topic">→\u00a0${topicHtml}</span></td></tr>`
+      const rowId = secularTermMapRowDomId(rowIndex)
+      return `<tr><td id="${rowId}" class="secular-term-map-terms-cell">${termsLabel}</td><td class="secular-term-map-topic-cell"><span class="secular-term-map-topic">→\u00a0${topicHtml}</span></td></tr>`
     })
     .join('')
 

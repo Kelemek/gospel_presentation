@@ -189,4 +189,23 @@ describe('kindleReadHtml', () => {
     expect(article).toContain('href="#section-2"')
     expect(article).not.toContain('&nbsp;')
   })
+
+  it('renders secular-term map rows with stable row ids for search anchors', () => {
+    const sections: GospelPresentationData = [
+      {
+        section: '1',
+        title: 'Find your topic (secular terms)',
+        subsections: [
+          {
+            title: '',
+            content:
+              '<div class="secular-term-map-table-wrap"><table class="secular-term-map-table"><tbody><tr><td class="secular-term-map-terms-cell">anxiety</td><td class="secular-term-map-topic-cell"><span class="secular-term-map-topic">→\u00a0<a href="#section-2">Anxiety and Worry</a></span></td></tr></tbody></table></div>',
+          },
+        ],
+      },
+    ]
+    const article = renderKindleReadArticleHtml(sections, '26b974ef')
+    expect(article).toContain('id="secular-term-map-row-0"')
+    expect(article).toContain('<td id="secular-term-map-row-0"')
+  })
 })

@@ -45,7 +45,12 @@ describe('renderKindleReadMenuNavHtml', () => {
     expect(html).toContain('aria-controls="kindle-read-menu-panel"')
     expect(html).toContain('>Menu</button>')
     expect(html).toContain('id="kindle-read-menu-panel"')
+    expect(html).toContain('<summary class="kindle-read-menu-section-title">Search</summary>')
+    expect(html).toContain('kindle-read-resource-search')
     expect(html).toContain('<details class="kindle-read-menu-section">')
+    expect(html.indexOf('<summary class="kindle-read-menu-section-title">Search</summary>')).toBeLessThan(
+      html.indexOf('<summary class="kindle-read-menu-section-title">Resources</summary>')
+    )
     expect(html.indexOf('<summary class="kindle-read-menu-section-title">Resources</summary>')).toBeLessThan(
       html.indexOf('<summary class="kindle-read-menu-section-title">Bible Translation</summary>')
     )
@@ -115,6 +120,20 @@ describe('renderKindleReadMenuHtml', () => {
     expect(parts?.triggerHtml).toBe(renderKindleReadMenuTriggerHtml())
     expect(parts?.panelHtml).toContain('kindle-read-menu-panel')
     expect(parts?.panelHtml).toContain('Table of Contents')
+    expect(parts?.panelHtml).toContain('Search this resource')
+  })
+
+  it('prefills the search form when searchQuery is provided', () => {
+    const parts = renderKindleReadMenuHtml(
+      sampleItems,
+      sampleSections,
+      'default',
+      sampleTranslations,
+      'esv',
+      'normal',
+      'anxiety'
+    )
+    expect(parts?.panelHtml).toContain('value="anxiety"')
   })
 
   it('returns menu parts with text size when profile has no resources or sections', () => {

@@ -1,4 +1,5 @@
 import { segmentPlainTextForGospelInlines } from '@/lib/injectGospelInlineMarkersInHtml'
+import { injectSecularTermMapRowIds } from '@/lib/biblicalCounseling/secularTermMap'
 import { scanCanonicalScriptureSpansInPlainText } from '@/lib/scriptureReferenceNormalize'
 import { stripHtmlTags } from '@/lib/stripHtmlTags'
 import type { BibleTranslation } from '@/lib/bible-translations'
@@ -243,8 +244,9 @@ export function renderKindleReadNestedSubsectionHtml(
 ): string {
   const nestedId = kindleReadNestedId(sectionKey, subsectionIndex, nestedIndex)
   const title = linkifyScriptureInHtmlForKindleRead(nested.title, fromSlug, nestedId, translation)
-  const content = nested.content
-    ? `<div class="kindle-read-body">${linkifyScriptureInBodyHtmlForKindleRead(nested.content, fromSlug, nestedId, translation)}</div>`
+  const bodyHtml = nested.content ? injectSecularTermMapRowIds(nested.content) : ''
+  const content = bodyHtml
+    ? `<div class="kindle-read-body">${linkifyScriptureInBodyHtmlForKindleRead(bodyHtml, fromSlug, nestedId, translation)}</div>`
     : ''
   const cards = renderKindleReadScriptureCards(
     nested.scriptureReferences,
@@ -271,8 +273,9 @@ export function renderKindleReadSubsectionHtml(
 ): string {
   const subsectionId = kindleReadSubsectionId(sectionKey, subsectionIndex)
   const title = linkifyScriptureInHtmlForKindleRead(subsection.title, fromSlug, subsectionId, translation)
-  const content = subsection.content
-    ? `<div class="kindle-read-body">${linkifyScriptureInBodyHtmlForKindleRead(subsection.content, fromSlug, subsectionId, translation)}</div>`
+  const bodyHtml = subsection.content ? injectSecularTermMapRowIds(subsection.content) : ''
+  const content = bodyHtml
+    ? `<div class="kindle-read-body">${linkifyScriptureInBodyHtmlForKindleRead(bodyHtml, fromSlug, subsectionId, translation)}</div>`
     : ''
   const cards = renderKindleReadScriptureCards(
     subsection.scriptureReferences,

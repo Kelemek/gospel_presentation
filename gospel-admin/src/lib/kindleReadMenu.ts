@@ -1,4 +1,5 @@
 import { renderKindleReadTocMenuInnerHtml } from '@/lib/kindleReadHtml'
+import { renderKindleReadResourceSearchFormHtml } from '@/lib/kindleReadResourceSearch'
 import { renderKindleReadResourcesMenuInnerHtml } from '@/lib/kindleReadResources'
 import type { EnabledTranslationOption } from '@/lib/enabledTranslationCodes'
 import type { BibleTranslation } from '@/lib/bible-translations'
@@ -80,8 +81,15 @@ function renderKindleReadMenuBodySectionsHtml(
   fromSlug: string,
   translationOptions: EnabledTranslationOption[],
   currentTranslation: BibleTranslation,
-  currentTextSize: KindleReadTextSize
+  currentTextSize: KindleReadTextSize,
+  searchQuery = ''
 ): string {
+  const searchInner = renderKindleReadResourceSearchFormHtml(
+    fromSlug,
+    searchQuery,
+    currentTranslation,
+    currentTextSize
+  )
   const resourcesInner = renderKindleReadResourcesMenuInnerHtml(resourceItems, fromSlug)
   const translationInner = renderKindleReadTranslationMenuInnerHtml(
     translationOptions,
@@ -95,7 +103,11 @@ function renderKindleReadMenuBodySectionsHtml(
     currentTranslation
   )
   const tocInner = renderKindleReadTocMenuInnerHtml(sections)
-  if (!resourcesInner && !translationInner && !textSizeInner && !tocInner) return ''
+
+  const searchBlock = `<details class="kindle-read-menu-section">
+        <summary class="kindle-read-menu-section-title">Search</summary>
+        <div class="kindle-read-menu-search">${searchInner}</div>
+      </details>`
 
   const resourcesBlock = resourcesInner
     ? `<details class="kindle-read-menu-section">
@@ -125,7 +137,7 @@ function renderKindleReadMenuBodySectionsHtml(
       </details>`
     : ''
 
-  return `${resourcesBlock}${translationBlock}${textSizeBlock}${tocBlock}`
+  return `${searchBlock}${resourcesBlock}${translationBlock}${textSizeBlock}${tocBlock}`
 }
 
 /** Sticky-toolbar Menu button (panel is a sibling below the toolbar; toggled via script on Silk). */
@@ -148,7 +160,8 @@ export function renderKindleReadMenuHtml(
   fromSlug: string,
   translationOptions: EnabledTranslationOption[],
   currentTranslation: BibleTranslation,
-  currentTextSize: KindleReadTextSize
+  currentTextSize: KindleReadTextSize,
+  searchQuery = ''
 ): KindleReadMenuHtml | null {
   const bodySectionsHtml = renderKindleReadMenuBodySectionsHtml(
     resourceItems,
@@ -156,7 +169,8 @@ export function renderKindleReadMenuHtml(
     fromSlug,
     translationOptions,
     currentTranslation,
-    currentTextSize
+    currentTextSize,
+    searchQuery
   )
   if (!bodySectionsHtml) return null
 
@@ -166,14 +180,15 @@ export function renderKindleReadMenuHtml(
   }
 }
 
-/** Combined Menu: Resources, Bible Translation, Text size, then Table of Contents (native <details>). */
+/** Combined Menu: Search, Resources, Bible Translation, Text size, then Table of Contents (native <details>). */
 export function renderKindleReadMenuNavHtml(
   resourceItems: PublicResourceItem[],
   sections: GospelPresentationData,
   fromSlug: string,
   translationOptions: EnabledTranslationOption[],
   currentTranslation: BibleTranslation,
-  currentTextSize: KindleReadTextSize
+  currentTextSize: KindleReadTextSize,
+  searchQuery = ''
 ): string {
   const parts = renderKindleReadMenuHtml(
     resourceItems,
@@ -181,7 +196,8 @@ export function renderKindleReadMenuNavHtml(
     fromSlug,
     translationOptions,
     currentTranslation,
-    currentTextSize
+    currentTextSize,
+    searchQuery
   )
   if (!parts) return ''
 

@@ -8,6 +8,11 @@
   font-family: Georgia, 'Times New Roman', Times, serif;
   font-size: 1.125rem;
   line-height: 1.55;
+  --kindle-read-sticky-offset: 14rem;
+}
+
+html:has(.kindle-read-root) {
+  scroll-padding-top: var(--kindle-read-sticky-offset);
 }
 
 /* Title + Menu (closed) stick together while reading; menu open uses document scroll below. */
@@ -548,7 +553,7 @@ a.kindle-read-action-button:visited {
 
 .kindle-read-library-list {
   margin-top: 0.75rem;
-  scroll-margin-top: 12rem;
+  scroll-margin-top: var(--kindle-read-sticky-offset, 14rem);
 }
 
 .kindle-read-library-pager {
@@ -787,7 +792,7 @@ a.kindle-read-action-button:visited {
 .kindle-read-nested[id],
 .kindle-read-question[id],
 .kindle-read-scripture-card[id] {
-  scroll-margin-top: 12rem;
+  scroll-margin-top: var(--kindle-read-sticky-offset, 14rem);
 }
 
 .kindle-read-body p {
@@ -1071,4 +1076,129 @@ a.kindle-read-action-button:visited {
   .kindle-read-body table.secular-term-map-table tr > td:nth-child(2)::before {
     content: 'Biblical topic';
   }
+}
+
+/* In-resource search (Menu form + results above article). */
+.kindle-read-menu-search .kindle-read-resource-search {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.kindle-read-resource-search {
+  margin: 0.75rem 0 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid #ccc;
+  background: #f9f9f9;
+}
+
+.kindle-read-resource-search-label {
+  display: block;
+}
+
+.kindle-read-resource-search-heading {
+  display: block;
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.kindle-read-resource-search-input {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  min-height: 2.5rem;
+  margin: 0;
+  padding: 0.35rem 0.5rem;
+  font-family: inherit;
+  font-size: 1.05rem;
+  line-height: 1.35;
+  border: 1px solid #999;
+  background: #fff;
+  color: #111;
+}
+
+.kindle-read-resource-search-actions {
+  margin: 0.65rem 0 0;
+}
+
+.kindle-read-resource-search-submit {
+  box-sizing: border-box;
+  min-height: 2.5rem;
+  padding: 0.35rem 1rem;
+  font-family: inherit;
+  font-size: 1.05rem;
+  line-height: 1.35;
+  border: 1px solid #666;
+  background: #fff;
+  color: #111;
+  cursor: pointer;
+}
+
+.kindle-read-resource-search-results {
+  max-width: 40em;
+  margin: 0 auto 1.25rem;
+  padding: 0 1.25rem;
+}
+
+.kindle-read-resource-search-results-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+  line-height: 1.3;
+}
+
+.kindle-read-resource-search-results-query,
+.kindle-read-resource-search-clear,
+.kindle-read-resource-search-mapping,
+.kindle-read-resource-search-pager,
+.kindle-read-resource-search-page-label {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+}
+
+.kindle-read-resource-search-mapping-topic {
+  font-weight: bold;
+}
+
+.kindle-read-resource-search-hit-list {
+  margin: 0 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.kindle-read-resource-search-hit {
+  margin: 0 0 0.65rem;
+  border: 1px solid #ddd;
+  border-radius: 0.25rem;
+  background: #fafafa;
+}
+
+.kindle-read-resource-search-hit-link {
+  display: block;
+  padding: 0.65rem 0.75rem;
+  color: #0645ad;
+  text-decoration: none;
+}
+
+.kindle-read-resource-search-hit-breadcrumb {
+  display: block;
+  margin: 0 0 0.25rem;
+  font-size: 0.85rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.kindle-read-resource-search-hit-snippet {
+  display: block;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: #111;
+}
+
+.kindle-read-resource-search-empty {
+  margin: 0;
+  padding: 0.65rem 0;
+  font-size: 0.95rem;
+  color: #555;
 }
