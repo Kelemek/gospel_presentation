@@ -1,27 +1,41 @@
 beforeAll(() => {
-  // Mock window.confirm globally for all tests
   window.confirm = jest.fn(() => true)
 })
-/** Mock auth module at the very top for correct test setup */
-// Mock using the TypeScript path alias so runtime imports match the mock
-jest.mock('@/lib/auth', () => ({
-  isAuthenticated: jest.fn(() => true),
-  logout: jest.fn()
-}))
 
 import { render, screen, waitFor } from '@testing-library/react'
 import AdminDashboard from '../admin/page'
-import * as auth from '@/lib/auth'
-const mockAuth = auth as jest.Mocked<typeof auth>
 
-// Mock Next.js router and pathname
 const mockPush = jest.fn()
-const mockPathname = '/admin'
+const mockReplace = jest.fn()
+const mockGetSession = jest.fn()
+const mockGetUser = jest.fn()
+
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
+    replace: mockReplace,
   }),
-  usePathname: () => mockPathname,
+  usePathname: () => '/admin',
+}))
+
+jest.mock('@/lib/supabase/client', () => ({
+  createClient: () => ({
+    auth: {
+      getSession: (...args: unknown[]) => mockGetSession(...args),
+      getUser: (...args: unknown[]) => mockGetUser(...args),
+      signOut: async () => ({ error: null }),
+    },
+    from: (table: string) => ({
+      select: () => ({
+        eq: () => ({
+          single: async () => ({
+            data: table === 'user_profiles' ? { role: 'admin' } : null,
+            error: null,
+          }),
+        }),
+      }),
+    }),
+  }),
 }))
 
 const mockProfiles = {
@@ -35,7 +49,7 @@ const mockProfiles = {
       visitCount: 5,
       lastVisited: '2025-10-24T12:00:00.000Z',
       createdAt: '2025-01-01T00:00:00.000Z',
-      updatedAt: '2025-10-23T00:00:00.000Z'
+      updatedAt: '2025-10-23T00:00:00.000Z',
     },
     {
       id: '2',
@@ -45,7 +59,7 @@ const mockProfiles = {
       isDefault: false,
       visitCount: 0,
       createdAt: '2025-01-01T00:00:00.000Z',
-      updatedAt: '2025-10-23T00:00:00.000Z'
+      updatedAt: '2025-10-23T00:00:00.000Z',
     },
     {
       id: '3',
@@ -55,14 +69,27 @@ const mockProfiles = {
       isDefault: false,
       visitCount: 3,
       createdAt: '2025-01-01T00:00:00.000Z',
-      updatedAt: '2025-10-20T00:00:00.000Z'
-    }
-  ]
+      updatedAt: '2025-10-20T00:00:00.000Z',
+    },
+  ],
+}
+
+function mockAuthenticatedSession() {
+  mockGetSession.mockResolvedValue({
+    data: {
+      session: {
+        user: { id: 'u-admin' },
+        expires_at: Math.floor(Date.now() / 1000) + 3600,
+      },
+    },
+    error: null,
+  })
+  mockGetUser.mockResolvedValue({ data: { user: { id: 'u-admin' } } })
 }
 
 beforeEach(() => {
   jest.clearAllMocks()
-  jest.spyOn(auth, 'isAuthenticated').mockReturnValue(true)
+  mockAuthenticatedSession()
   global.fetch = jest.fn().mockImplementation((input, init) => {
     const urlStr = typeof input === 'string' ? input : input.url
     if (urlStr && urlStr.includes('/api/profiles/templates') && (!init || init.method === 'GET')) {
@@ -129,9 +156,14 @@ describe('AdminDashboard', () => {
     expect(settingsLink).toHaveAttribute('href', '/admin/settings')
   })
 
-  it('should handle authentication redirect', () => {
-    mockAuth.isAuthenticated.mockReturnValue(false)
+  it('redirects to login when there is no session', async () => {
+    mockGetSession.mockResolvedValue({ data: { session: null }, error: null })
+    mockGetUser.mockResolvedValue({ data: { user: null } })
+
     render(<AdminDashboard />)
-    expect(mockAuth.isAuthenticated).toHaveBeenCalled()
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith('/login')
+    })
   })
 })
