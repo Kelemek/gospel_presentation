@@ -43,40 +43,50 @@ export function ProfileEditPage({ slug }: ProfileEditPageProps) {
     })
   }, [checkAuth])
 
+  const fetchProfile = useCallback(async (opts?: { showLoading?: boolean; isCancelled?: () => boolean }) => {
+    const showLoading = opts?.showLoading !== false
+    const isCancelled = opts?.isCancelled ?? (() => false)
+    if (showLoading) {
+      setIsLoading(true)
+    }
+    try {
+      const response = await fetch(`/api/profiles/${slug}`)
+      if (isCancelled()) return
+      if (response.ok) {
+        const data = await response.json()
+        if (isCancelled()) return
+        setProfile(data.profile)
+        setEditForm({
+          title: data.profile.title,
+          description: data.profile.description || ''
+        })
+      } else if (response.status === 404) {
+        if (!isCancelled()) setError('Profile not found')
+      } else {
+        if (!isCancelled()) setError('Failed to load profile')
+      }
+    } catch {
+      if (!isCancelled()) setError('Failed to load profile')
+    } finally {
+      if (showLoading && !isCancelled()) {
+        setIsLoading(false)
+      }
+    }
+  }, [slug])
+
   useEffect(() => {
     if (slug && isAuth) {
       let cancelled = false
       void (async () => {
         await Promise.resolve()
         if (cancelled) return
-        setIsLoading(true)
-        try {
-          const response = await fetch(`/api/profiles/${slug}`)
-          if (cancelled) return
-          if (response.ok) {
-            const data = await response.json()
-            if (cancelled) return
-            setProfile(data.profile)
-            setEditForm({
-              title: data.profile.title,
-              description: data.profile.description || ''
-            })
-          } else if (response.status === 404) {
-            if (!cancelled) setError('Profile not found')
-          } else {
-            if (!cancelled) setError('Failed to load profile')
-          }
-        } catch {
-          if (!cancelled) setError('Failed to load profile')
-        } finally {
-          if (!cancelled) setIsLoading(false)
-        }
+        await fetchProfile({ isCancelled: () => cancelled })
       })()
       return () => {
         cancelled = true
       }
     }
-  }, [slug, isAuth])
+  }, [slug, isAuth, fetchProfile])
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -211,7 +221,7 @@ export function ProfileEditPage({ slug }: ProfileEditPageProps) {
       })
 
       if (response.ok) {
-        await fetchProfile()
+        await fetchProfile({ showLoading: false })
         showAlert(`Successfully restored content for "${profile.title}" from "${file.name}"!`)
       } else {
         const errorData = await response.json().catch(() => ({}))
