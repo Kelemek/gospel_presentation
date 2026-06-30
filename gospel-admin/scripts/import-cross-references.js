@@ -12,7 +12,6 @@ const fs = require('fs')
 const path = require('path')
 const https = require('https')
 const zlib = require('zlib')
-const readline = require('readline')
 
 const ROOT = path.join(__dirname, '..', 'data', 'crossrefs')
 const ZIP_URL = 'https://a.openbible.info/data/cross-references.zip'

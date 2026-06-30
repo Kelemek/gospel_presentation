@@ -164,7 +164,6 @@ describe('buildMcheyneGospelData', () => {
 
 describe('full Mcheyne plan.json', () => {
   it('has 365 days with four readings each', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const full = require('../../../../data/mcheyne/plan.json') as McheynePlanFile
     expect(full.days).toHaveLength(365)
     for (const day of full.days) {

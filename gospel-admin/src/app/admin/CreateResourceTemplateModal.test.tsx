@@ -62,6 +62,27 @@ describe('CreateResourceTemplateModal', () => {
     })
   })
 
+  it('clone mode: resets form when source title changes for the same slug', () => {
+    const onClose = jest.fn()
+    const { rerender } = render(
+      <CreateResourceTemplateModal
+        mode={{ kind: 'clone', sourceSlug: 'original', sourceTitle: 'Original Title' }}
+        onClose={onClose}
+      />
+    )
+
+    expect(screen.getByDisplayValue('Copy of Original Title')).toBeInTheDocument()
+
+    rerender(
+      <CreateResourceTemplateModal
+        mode={{ kind: 'clone', sourceSlug: 'original', sourceTitle: 'Renamed Title' }}
+        onClose={onClose}
+      />
+    )
+
+    expect(screen.getByDisplayValue('Copy of Renamed Title')).toBeInTheDocument()
+  })
+
   it('clone mode: prefills Copy of title and sends cloneFromSlug', async () => {
     const onClose = jest.fn()
     render(

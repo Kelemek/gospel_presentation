@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createProfilePayload, generateSlug, isProfileSlugTakenError } from '@/app/admin/profileCreateHelpers'
 import { validateProfileSlug } from '@/lib/profile-service'
@@ -24,37 +24,45 @@ function copyTemplateTitle(sourceTitle: string, sourceSlug: string): string {
   return full.slice(0, PROFILE_VALIDATION.TITLE_MAX_LENGTH)
 }
 
-export function CreateResourceTemplateModal({ mode, onClose, onCreated }: CreateResourceTemplateModalProps) {
+function modeSessionKey(mode: ResourceTemplateModalMode): string {
+  if (mode.kind === 'blank') return 'blank'
+  return `clone:${mode.sourceSlug}:${mode.sourceTitle}`
+}
+
+function initialFormStateForMode(mode: ResourceTemplateModalMode): {
+  slug: string
+  title: string
+  description: string
+} {
+  if (mode.kind === 'blank') {
+    return { slug: '', title: '', description: '' }
+  }
+  const nextTitle = copyTemplateTitle(mode.sourceTitle, mode.sourceSlug)
+  const suggested = generateSlug(nextTitle)
+  return {
+    slug: suggested.length >= PROFILE_VALIDATION.SLUG_MIN_LENGTH ? suggested : '',
+    title: nextTitle,
+    description: '',
+  }
+}
+
+function CreateResourceTemplateModalForm({
+  mode,
+  onClose,
+  onCreated,
+}: {
+  mode: ResourceTemplateModalMode
+  onClose: () => void
+  onCreated?: () => void
+}) {
   const router = useRouter()
-  const [siteHost, setSiteHost] = useState('yoursite.com')
-  const [slug, setSlug] = useState('')
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
+  const siteHost = typeof window !== 'undefined' ? window.location.host : 'yoursite.com'
+  const initialForm = initialFormStateForMode(mode)
+  const [slug, setSlug] = useState(initialForm.slug)
+  const [title, setTitle] = useState(initialForm.title)
+  const [description, setDescription] = useState(initialForm.description)
   const [formError, setFormError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setSiteHost(window.location.host)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (mode === null) return
-    setFormError('')
-    setIsSubmitting(false)
-    if (mode.kind === 'blank') {
-      setSlug('')
-      setTitle('')
-      setDescription('')
-    } else {
-      const nextTitle = copyTemplateTitle(mode.sourceTitle, mode.sourceSlug)
-      setTitle(nextTitle)
-      setDescription('')
-      const suggested = generateSlug(nextTitle)
-      setSlug(suggested.length >= PROFILE_VALIDATION.SLUG_MIN_LENGTH ? suggested : '')
-    }
-  }, [mode])
 
   const handleSuggestSlugFromTitle = () => {
     const s = generateSlug(title)
@@ -69,7 +77,6 @@ export function CreateResourceTemplateModal({ mode, onClose, onCreated }: Create
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (mode === null) return
     setFormError('')
 
     const slugTrim = slug.trim().toLowerCase()
@@ -137,8 +144,6 @@ export function CreateResourceTemplateModal({ mode, onClose, onCreated }: Create
       setIsSubmitting(false)
     }
   }
-
-  if (mode === null) return null
 
   const heading = mode.kind === 'clone' ? 'Clone resource template' : 'New resource template'
   const footerHint =
@@ -261,5 +266,18 @@ export function CreateResourceTemplateModal({ mode, onClose, onCreated }: Create
         </form>
       </div>
     </div>
+  )
+}
+
+export function CreateResourceTemplateModal({ mode, onClose, onCreated }: CreateResourceTemplateModalProps) {
+  if (mode === null) return null
+
+  return (
+    <CreateResourceTemplateModalForm
+      key={modeSessionKey(mode)}
+      mode={mode}
+      onClose={onClose}
+      onCreated={onCreated}
+    />
   )
 }

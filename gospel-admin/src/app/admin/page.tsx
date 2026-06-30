@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import AdminHeader from '@/components/AdminHeader'
@@ -37,80 +37,100 @@ function AdminPageContent() {
     }
   })
 
-  useEffect(() => {
-    void checkAuth()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
+    setError('')
     const supabase = createClient()
 
-    let session: { user?: { id: string }; expires_at?: number | null } | null = null
-    let sessionError: unknown = null
-    let fetchedUser: { id: string } | null = null
+    try {
+      let session: { user?: { id: string }; expires_at?: number | null } | null = null
+      let sessionError: unknown = null
+      let fetchedUser: { id: string } | null = null
 
-    if (typeof (supabase.auth as { getSession?: () => Promise<{ data?: { session?: typeof session }; error?: unknown }> }).getSession === 'function') {
-      const res = await supabase.auth.getSession()
-      session = res?.data?.session ?? null
-      sessionError = res?.error
-    } else if (typeof (supabase.auth as { getUser?: () => Promise<{ data?: { user?: { id: string } }; error?: unknown }> }).getUser === 'function') {
-      const resUser = await supabase.auth.getUser()
-      fetchedUser = resUser?.data?.user ?? null
-      if (fetchedUser) {
-        session = { user: fetchedUser, expires_at: null }
-        sessionError = null
-      }
-    }
-
-    if (!session || sessionError) {
-      router.push('/login')
-      return
-    }
-
-    const expiresAt = session.expires_at ? session.expires_at * 1000 : 0
-    const now = Date.now()
-
-    if (expiresAt && expiresAt < now) {
-      if (typeof (supabase.auth as { refreshSession?: () => Promise<{ data?: { session?: typeof session }; error?: unknown }> }).refreshSession === 'function') {
-        const refreshRes = await supabase.auth.refreshSession()
-        const refreshedSession = refreshRes?.data?.session
-        const refreshError = refreshRes?.error
-        if (!refreshedSession || refreshError) {
-          router.push('/login')
-          return
+      if (typeof (supabase.auth as { getSession?: () => Promise<{ data?: { session?: typeof session }; error?: unknown }> }).getSession === 'function') {
+        const res = await supabase.auth.getSession()
+        session = res?.data?.session ?? null
+        sessionError = res?.error
+      } else if (typeof (supabase.auth as { getUser?: () => Promise<{ data?: { user?: { id: string } }; error?: unknown }> }).getUser === 'function') {
+        const resUser = await supabase.auth.getUser()
+        fetchedUser = resUser?.data?.user ?? null
+        if (fetchedUser) {
+          session = { user: fetchedUser, expires_at: null }
+          sessionError = null
         }
-      } else {
+      }
+
+      if (!session || sessionError) {
         router.push('/login')
+        setIsLoading(false)
         return
       }
+
+      const expiresAt = session.expires_at ? session.expires_at * 1000 : 0
+      const now = Date.now()
+
+      if (expiresAt && expiresAt < now) {
+        if (typeof (supabase.auth as { refreshSession?: () => Promise<{ data?: { session?: typeof session }; error?: unknown }> }).refreshSession === 'function') {
+          const refreshRes = await supabase.auth.refreshSession()
+          const refreshedSession = refreshRes?.data?.session
+          const refreshError = refreshRes?.error
+          if (!refreshedSession || refreshError) {
+            router.push('/login')
+            setIsLoading(false)
+            return
+          }
+        } else {
+          router.push('/login')
+          setIsLoading(false)
+          return
+        }
+      }
+
+      let authUser = fetchedUser
+      if (!authUser) {
+        const { data: { user: gotUser } = {} } = await supabase.auth.getUser()
+        authUser = gotUser ?? null
+      }
+
+      if (!authUser) {
+        router.push('/login')
+        setIsLoading(false)
+        return
+      }
+
+      const { data: userProfile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', authUser.id)
+        .single()
+
+      if (profileError) {
+        logger.error('Failed to load admin profile:', profileError)
+        setError('Failed to verify admin access. Please try again.')
+        setIsLoading(false)
+        return
+      }
+
+      const role = (userProfile as { role?: string } | null)?.role
+      if (role !== 'admin') {
+        router.replace('/')
+        setIsLoading(false)
+        return
+      }
+
+      setUser(authUser)
+      setIsLoading(false)
+    } catch (authError) {
+      logger.error('Admin auth check failed:', authError)
+      setError('Failed to load dashboard. Please try again.')
+      setIsLoading(false)
     }
+  }, [router])
 
-    let authUser = fetchedUser
-    if (!authUser) {
-      const { data: { user: gotUser } = {} } = await supabase.auth.getUser()
-      authUser = gotUser ?? null
-    }
-
-    if (!authUser) {
-      router.push('/login')
-      return
-    }
-
-    const { data: userProfile } = await supabase
-      .from('user_profiles')
-      .select('role')
-      .eq('id', authUser.id)
-      .single()
-
-    const role = (userProfile as { role?: string } | null)?.role
-    if (role !== 'admin') {
-      router.replace('/')
-      return
-    }
-
-    setUser(authUser)
-    setIsLoading(false)
-  }
+  useEffect(() => {
+    queueMicrotask(() => {
+      void checkAuth()
+    })
+  }, [checkAuth])
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -124,6 +144,28 @@ function AdminPageContent() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error && !user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="max-w-md w-full bg-white rounded-xl shadow-md border border-slate-100 p-6 text-center">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <div className="text-red-800">{error}</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setIsLoading(true)
+              void checkAuth()
+            }}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+          >
+            Try again
+          </button>
         </div>
       </div>
     )

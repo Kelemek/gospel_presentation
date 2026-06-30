@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 interface InlineRichTextEditorProps {
   value: string
@@ -53,12 +53,16 @@ export default function InlineRichTextEditor({
   variant = 'minimal',
 }: InlineRichTextEditorProps) {
   const [draft, setDraft] = useState(() => htmlToPlainText(value))
+  const isEditingRef = useRef(false)
 
   useEffect(() => {
-    setDraft(htmlToPlainText(value))
+    if (isEditingRef.current) return
+    const nextDraft = htmlToPlainText(value)
+    setDraft((prev) => (prev === nextDraft ? prev : nextDraft))
   }, [value])
 
   const commitIfChanged = () => {
+    isEditingRef.current = false
     const next = stripParagraphTags(plainTextToInlineHtml(draft))
     const prev = stripParagraphTags(value)
     if (next !== prev) {
@@ -78,6 +82,9 @@ export default function InlineRichTextEditor({
       className={variant === 'field' ? fieldInputClass : minimalInputClass}
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
+      onFocus={() => {
+        isEditingRef.current = true
+      }}
       onBlur={commitIfChanged}
       onKeyDown={(e) => {
         if (e.key === 'Enter') {

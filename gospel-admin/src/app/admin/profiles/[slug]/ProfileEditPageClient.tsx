@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { GospelProfile } from '@/lib/types'
@@ -27,13 +27,7 @@ export function ProfileEditPage({ slug }: ProfileEditPageProps) {
   const [isRestoringBackup, setIsRestoringBackup] = useState(false)
   const { showAlert, showConfirm } = useAlertModal()
 
-  // Check authentication on mount
-  useEffect(() => {
-    checkAuth()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     setIsAuth(!!user)
@@ -41,37 +35,48 @@ export function ProfileEditPage({ slug }: ProfileEditPageProps) {
       router.push('/login')
       setIsLoading(false)
     }
-  }
+  }, [router])
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      void checkAuth()
+    })
+  }, [checkAuth])
 
   useEffect(() => {
     if (slug && isAuth) {
-      void fetchProfile()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug, isAuth])
-
-  const fetchProfile = async () => {
-    setIsLoading(true)
-    try {
-      const response = await fetch(`/api/profiles/${slug}`)
-      if (response.ok) {
-        const data = await response.json()
-        setProfile(data.profile)
-        setEditForm({
-          title: data.profile.title,
-          description: data.profile.description || ''
-        })
-      } else if (response.status === 404) {
-        setError('Profile not found')
-      } else {
-        setError('Failed to load profile')
+      let cancelled = false
+      void (async () => {
+        await Promise.resolve()
+        if (cancelled) return
+        setIsLoading(true)
+        try {
+          const response = await fetch(`/api/profiles/${slug}`)
+          if (cancelled) return
+          if (response.ok) {
+            const data = await response.json()
+            if (cancelled) return
+            setProfile(data.profile)
+            setEditForm({
+              title: data.profile.title,
+              description: data.profile.description || ''
+            })
+          } else if (response.status === 404) {
+            if (!cancelled) setError('Profile not found')
+          } else {
+            if (!cancelled) setError('Failed to load profile')
+          }
+        } catch {
+          if (!cancelled) setError('Failed to load profile')
+        } finally {
+          if (!cancelled) setIsLoading(false)
+        }
+      })()
+      return () => {
+        cancelled = true
       }
-    } catch {
-      setError('Failed to load profile')
-    } finally {
-      setIsLoading(false)
     }
-  }
+  }, [slug, isAuth])
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   BIBLE_TRANSLATION_CODES,
@@ -42,7 +42,7 @@ export default function ReportsPage() {
   const [cacheStatsLoading, setCacheStatsLoading] = useState(true)
   const [cacheStatsError, setCacheStatsError] = useState<string | null>(null)
 
-  async function loadCacheStats() {
+  const loadCacheStats = useCallback(async () => {
     setCacheStatsLoading(true)
     setCacheStatsError(null)
     try {
@@ -63,7 +63,7 @@ export default function ReportsPage() {
     } finally {
       setCacheStatsLoading(false)
     }
-  }
+  }, [])
 
   // Fetch available translations from database on mount
   useEffect(() => {
@@ -95,8 +95,10 @@ export default function ReportsPage() {
   }, [])
 
   useEffect(() => {
-    loadCacheStats()
-  }, [])
+    queueMicrotask(() => {
+      void loadCacheStats()
+    })
+  }, [loadCacheStats])
 
   // Build report list from available translations and generic reports
   const buildReports = (): ReportDefinition[] => {
@@ -273,7 +275,7 @@ export default function ReportsPage() {
             </div>
             <button
               type="button"
-              onClick={() => loadCacheStats()}
+              onClick={() => void loadCacheStats()}
               disabled={cacheStatsLoading}
               className="shrink-0 px-3 py-1.5 text-sm font-medium bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-800 rounded-lg transition-colors"
             >

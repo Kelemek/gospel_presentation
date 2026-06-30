@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { logger } from '@/lib/logger'
 import AdminErrorBoundary from '@/components/AdminErrorBoundary'
@@ -30,12 +30,7 @@ export default function UsersPage() {
   const [editingName, setEditingName] = useState('')
   const { showAlert, showConfirm } = useAlertModal()
 
-  useEffect(() => {
-    void loadUsers()
-    void checkCurrentUserRole()
-  }, [])
-
-  const checkCurrentUserRole = async () => {
+  const checkCurrentUserRole = useCallback(async () => {
     try {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
@@ -52,9 +47,9 @@ export default function UsersPage() {
     } catch (err) {
       logger.error('Failed to check user role:', err)
     }
-  }
+  }, [])
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       setIsLoading(true)
       setError(null)
@@ -96,7 +91,24 @@ export default function UsersPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      await Promise.resolve()
+      if (cancelled) return
+      await loadUsers()
+    })()
+    void (async () => {
+      await Promise.resolve()
+      if (cancelled) return
+      await checkCurrentUserRole()
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [loadUsers, checkCurrentUserRole])
 
   const handlePromoteToAdmin = async (userId: string) => {
     try {

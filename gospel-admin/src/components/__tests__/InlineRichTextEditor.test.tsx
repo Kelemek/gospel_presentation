@@ -28,6 +28,30 @@ describe('InlineRichTextEditor', () => {
     expect(onChange).toHaveBeenCalledWith('New title')
   })
 
+  it('updates draft when value prop changes externally', async () => {
+    const onChange = jest.fn()
+    const { rerender } = render(<InlineRichTextEditor value="First" onChange={onChange} />)
+    expect(screen.getByRole('textbox')).toHaveValue('First')
+
+    rerender(<InlineRichTextEditor value="<p>Second</p>" onChange={onChange} />)
+    await screen.findByDisplayValue('Second')
+    expect(screen.getByRole('textbox')).toHaveValue('Second')
+  })
+
+  it('does not overwrite draft while the field is focused', async () => {
+    const user = userEvent.setup()
+    const onChange = jest.fn()
+    const { rerender } = render(<InlineRichTextEditor value="Saved" onChange={onChange} />)
+    const input = screen.getByRole('textbox')
+
+    await user.click(input)
+    await user.clear(input)
+    await user.type(input, 'Editing')
+
+    rerender(<InlineRichTextEditor value="Updated externally" onChange={onChange} />)
+    expect(input).toHaveValue('Editing')
+  })
+
   it('field variant wraps input in RichTextEditor-style chrome', () => {
     render(
       <InlineRichTextEditor value="T" onChange={jest.fn()} variant="field" placeholder="Title here" />

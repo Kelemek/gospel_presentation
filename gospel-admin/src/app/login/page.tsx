@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent, useEffect, Suspense } from "react";
+import { useState, FormEvent, useEffect, Suspense, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import VerificationCodeInput from "@/components/VerificationCodeInput";
@@ -28,27 +28,15 @@ function LoginCodeForm() {
   const [, setIsLoadingSettings] = useState(true);
   
   // UI state
-  const [error, setError] = useState<string | null>(null);
+  const urlErrorParam = searchParams.get("error");
+  const urlError = urlErrorParam ? decodeURIComponent(urlErrorParam) : null;
+  const [formError, setFormError] = useState<string | null>(null);
+  const error = formError ?? urlError;
   const [success, setSuccess] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
 
-  // Check for errors from URL parameters and load settings
-  useEffect(() => {
-    const urlError = searchParams.get("error");
-    if (urlError) {
-      setError(decodeURIComponent(urlError));
-    }
-    
-    // Fetch admin settings for code length
-    loadSettings();
-  }, [searchParams]);
-
-  // ============================================================================
-  // Load Admin Settings
-  // ============================================================================
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     try {
       const response = await fetch("/api/admin/settings");
       if (response.ok) {
@@ -57,12 +45,21 @@ function LoginCodeForm() {
       }
     } catch (err) {
       logger.warn("Failed to load verification code settings, using default:", err);
-      // Use default if fetch fails
       setCodeLength(6);
     } finally {
       setIsLoadingSettings(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      void loadSettings();
+    });
+  }, [loadSettings]);
+
+  // ============================================================================
+  // Load Admin Settings
+  // ============================================================================
 
   // ============================================================================
   // Step 1: Send Verification Code
@@ -70,7 +67,7 @@ function LoginCodeForm() {
 
   const handleSendCode = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError(null);
+    setFormError(null);
     setSuccess(null);
     setIsLoading(true);
 
@@ -92,7 +89,7 @@ function LoginCodeForm() {
 
       if (!exists) {
         logger.warn("Login attempt for non-existent user:", email);
-        setError(
+        setFormError(
           "This email is not authorized to access the system. Please contact your administrator for access."
         );
         return;
@@ -127,7 +124,7 @@ function LoginCodeForm() {
       logger.info("Verification code sent:", email);
     } catch (err) {
       logger.error("Failed to send verification code:", err);
-      setError(
+      setFormError(
         err instanceof Error ? err.message : "An unexpected error occurred"
       );
     } finally {
@@ -140,7 +137,7 @@ function LoginCodeForm() {
   // ============================================================================
 
   const handleVerifyCode = async (verificationCode: string) => {
-    setError(null);
+    setFormError(null);
     setIsLoading(true);
 
     try {
@@ -167,14 +164,14 @@ function LoginCodeForm() {
           USER_NOT_FOUND: "Account not found. Please contact support.",
         };
 
-        setError(errorMessages[data.errorCode] || data.error || "Verification failed");
+        setFormError(errorMessages[data.errorCode] || data.error || "Verification failed");
         setCode(""); // Clear the code input
         return;
       }
 
       // Check for new user requiring signup
       if (data.newUser) {
-        setError("Account setup required. Please contact your administrator.");
+        setFormError("Account setup required. Please contact your administrator.");
         return;
       }
 
@@ -194,7 +191,7 @@ function LoginCodeForm() {
       }, 1000);
     } catch (err) {
       logger.error("Verification error:", err);
-      setError(
+      setFormError(
         err instanceof Error ? err.message : "An unexpected error occurred"
       );
       setCode(""); // Clear the code input
@@ -208,7 +205,7 @@ function LoginCodeForm() {
   // ============================================================================
 
   const handleResendCode = async () => {
-    setError(null);
+    setFormError(null);
     setSuccess(null);
     setIsResending(true);
 
@@ -239,7 +236,7 @@ function LoginCodeForm() {
       logger.info("Verification code resent:", email);
     } catch (err) {
       logger.error("Failed to resend code:", err);
-      setError(
+      setFormError(
         err instanceof Error ? err.message : "Failed to resend code"
       );
     } finally {
@@ -252,7 +249,7 @@ function LoginCodeForm() {
   // ============================================================================
 
   const handleCodeExpired = () => {
-    setError("Your verification code has expired. Please request a new one.");
+    setFormError("Your verification code has expired. Please request a new one.");
     setCode("");
   };
 
@@ -334,7 +331,7 @@ function LoginCodeForm() {
                   type="button"
                   onClick={() => {
                     setStep("email");
-                    setError(null);
+                    setFormError(null);
                     setSuccess(null);
                     setCode("");
                   }}

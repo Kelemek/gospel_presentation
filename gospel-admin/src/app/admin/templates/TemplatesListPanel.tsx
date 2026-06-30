@@ -35,7 +35,7 @@ export function TemplatesListPanel({
 }: TemplatesListPanelProps) {
   const [templates, setTemplates] = useState<any[]>([])
   const [error, setError] = useState('')
-  const [siteUrl, setSiteUrl] = useState('yoursite.com')
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : 'https://yoursite.com'
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -48,19 +48,19 @@ export function TemplatesListPanel({
   const { showAlert, showConfirm } = useAlertModal()
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setSiteUrl(window.location.origin)
-    }
-  }, [])
-
-  useEffect(() => {
-    const t = window.setTimeout(() => setDebouncedSearch(searchInput.trim()), 400)
+    const t = window.setTimeout(() => {
+      const next = searchInput.trim()
+      let searchChanged = false
+      setDebouncedSearch((prev) => {
+        searchChanged = prev !== next
+        return next
+      })
+      if (searchChanged) {
+        setPage(1)
+      }
+    }, 400)
     return () => window.clearTimeout(t)
   }, [searchInput])
-
-  useEffect(() => {
-    setPage(1)
-  }, [debouncedSearch])
 
   const fetchTemplatesPage = useCallback(
     async (opts?: { page?: number }) => {
@@ -95,8 +95,44 @@ export function TemplatesListPanel({
 
   useEffect(() => {
     if (!authReady) return
-    void fetchTemplatesPage()
-  }, [authReady, fetchTemplatesPage, listRefreshKey])
+    let cancelled = false
+    void (async () => {
+      await Promise.resolve()
+      if (cancelled) return
+      const effectivePage = page
+      try {
+        setListLoading(true)
+        setError('')
+        const params = new URLSearchParams({
+          page: String(effectivePage),
+          pageSize: String(pageSize),
+        })
+        if (debouncedSearch) params.set('q', debouncedSearch)
+        const response = await fetch(`/api/profiles/templates?${params.toString()}`)
+        if (cancelled) return
+        if (response.ok) {
+          const data = await response.json()
+          setTemplates(Array.isArray(data.profiles) ? data.profiles : [])
+          setTotal(typeof data.total === 'number' ? data.total : 0)
+          setTotalPages(Math.max(1, typeof data.totalPages === 'number' ? data.totalPages : 1))
+        } else {
+          const errBody = await response.json().catch(() => ({}))
+          setError(errBody.error || 'Failed to fetch templates')
+        }
+      } catch (fetchError) {
+        if (cancelled) return
+        console.error('Error fetching templates:', fetchError)
+        setError('Error loading templates')
+      } finally {
+        if (!cancelled) {
+          setListLoading(false)
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [authReady, page, pageSize, debouncedSearch, listRefreshKey])
 
   const handleCopyProfileUrl = async (profile: any) => {
     const url = `${siteUrl}/${profile.slug}`
@@ -130,7 +166,7 @@ export function TemplatesListPanel({
         if (goPage !== page) {
           setPage(goPage)
         } else {
-          void fetchTemplatesPage()
+          void fetchTemplatesPage({ page: goPage })
         }
         showAlert(`Template "${title}" deleted successfully`)
       } else {

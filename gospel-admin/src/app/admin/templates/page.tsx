@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import AdminErrorBoundary from '@/components/AdminErrorBoundary'
@@ -18,12 +18,7 @@ function TemplatesPageContent() {
   const [resourceTemplateModal, setResourceTemplateModal] = useState<ResourceTemplateModalMode | null>(null)
   const [templatesListRefreshKey, setTemplatesListRefreshKey] = useState(0)
 
-  useEffect(() => {
-    void checkAuth()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     const supabase = createClient()
     const {
       data: { user },
@@ -48,7 +43,13 @@ function TemplatesPageContent() {
 
     setIsLoading(false)
     setAuthReady(true)
-  }
+  }, [router])
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      void checkAuth()
+    })
+  }, [checkAuth])
 
   const handleLogout = async () => {
     const supabase = createClient()

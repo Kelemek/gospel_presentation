@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, FormEvent, useEffect, Suspense } from 'react'
+import { useState, FormEvent, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -9,21 +9,16 @@ import { logger } from '@/lib/logger'
 function LoginForm() {
   const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const urlErrorParam = searchParams.get('error')
+  const urlError = urlErrorParam ? decodeURIComponent(urlErrorParam) : null
+  const [formError, setFormError] = useState<string | null>(null)
+  const error = formError ?? urlError
   const [success, setSuccess] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  // Check for errors from URL parameters (from auth callback)
-  useEffect(() => {
-    const urlError = searchParams.get('error')
-    if (urlError) {
-      setError(decodeURIComponent(urlError))
-    }
-  }, [searchParams])
-
   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setError(null)
+    setFormError(null)
     setSuccess(null)
     setIsLoading(true)
 
@@ -45,7 +40,7 @@ function LoginForm() {
 
       if (!exists) {
         logger.warn('Login attempt for non-existent user:', email)
-        setError('This email is not authorized to access the system. Please contact your administrator for access.')
+        setFormError('This email is not authorized to access the system. Please contact your administrator for access.')
         return
       }
 
@@ -61,7 +56,7 @@ function LoginForm() {
 
       if (signInError) {
         logger.warn('Magic link request failed:', signInError.message)
-        setError(signInError.message)
+        setFormError(signInError.message)
         return
       }
 
@@ -70,7 +65,7 @@ function LoginForm() {
       setEmail('') // Clear the email field
     } catch (err: any) {
       logger.error('Login error:', err)
-      setError('An unexpected error occurred. Please try again.')
+      setFormError('An unexpected error occurred. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -132,7 +127,7 @@ function LoginForm() {
               <button
                 onClick={() => {
                   setSuccess(null)
-                  setError(null)
+                  setFormError(null)
                 }}
                 className="text-sm text-blue-600 hover:text-blue-700 font-medium underline"
               >

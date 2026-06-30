@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import { logger } from '@/lib/logger'
@@ -20,9 +20,25 @@ export default function TranslationSettings() {
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { showAlert } = useAlertModal()
 
-  useEffect(() => {
-    loadSettings()
+  const loadSettings = useCallback(async () => {
+    try {
+      const response = await fetch('/api/admin/translation-settings')
+      const data = await response.json()
+      if (data.settings) {
+        setSettings(data.settings)
+      }
+    } catch (error) {
+      logger.error('Error loading translation settings:', error)
+    } finally {
+      setLoading(false)
+    }
   }, [])
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      void loadSettings()
+    })
+  }, [loadSettings])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -37,20 +53,6 @@ export default function TranslationSettings() {
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [isOpen])
-
-  async function loadSettings() {
-    try {
-      const response = await fetch('/api/admin/translation-settings')
-      const data = await response.json()
-      if (data.settings) {
-        setSettings(data.settings)
-      }
-    } catch (error) {
-      logger.error('Error loading translation settings:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   async function toggleTranslation(code: string, currentlyEnabled: boolean) {
     if (code === 'esv') {
