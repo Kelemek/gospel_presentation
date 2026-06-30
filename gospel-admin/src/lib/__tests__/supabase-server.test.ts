@@ -14,10 +14,9 @@ jest.mock('@supabase/ssr', () => ({
 }))
 jest.mock('next/headers', () => ({
   cookies: () => ({
-    get: () => ({ value: 'mock' }),
+    getAll: () => [{ name: 'mock', value: 'mock' }],
     set: () => {},
-    remove: () => {},
-  })
+  }),
 }))
 import { createClient, createAdminClient } from '../supabase/server'
 
@@ -49,9 +48,8 @@ describe('supabase server helpers', () => {
     jest.doMock('@supabase/ssr', () => ({ createServerClient: mockCreate }))
     jest.doMock('next/headers', () => ({
       cookies: () => ({
-        get: (name: string) => ({ value: `val-${name}` }),
+        getAll: () => [{ name: 'mock', value: 'mock' }],
         set: jest.fn(),
-        remove: jest.fn(),
       }),
     }))
 
@@ -67,16 +65,21 @@ describe('supabase server helpers', () => {
   expect(url).toBe(process.env.NEXT_PUBLIC_SUPABASE_URL)
   expect(key).toBe(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
   expect(opts).toBeDefined()
-  const cookies = (opts as any).cookies;
-  expect(typeof cookies.get).toBe('function')
-  expect(typeof cookies.set).toBe('function')
+  const cookies = (opts as any).cookies
+  expect(typeof cookies.getAll).toBe('function')
+  expect(typeof cookies.setAll).toBe('function')
   })
 
   it('createAdminClient calls createServerClient with service key', async () => {
     const mockCreate = jest.fn().mockReturnValue({ admin: true })
     jest.doMock('@supabase/ssr', () => ({ createServerClient: mockCreate }))
     // next/headers not needed for admin client
-    jest.doMock('next/headers', () => ({ cookies: () => ({ get: () => undefined, set: () => {}, remove: () => {} }) }))
+    jest.doMock('next/headers', () => ({
+      cookies: () => ({
+        getAll: () => [],
+        set: () => {},
+      }),
+    }))
 
     const mod = await import('../supabase/server')
     const { createAdminClient } = mod

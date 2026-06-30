@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect } from 'react'
-import { hydrateMemorizedVersesStorage } from '@/lib/verseMemorizationStorage'
+import { hydrateGospelClientStorage } from '@/lib/gospelClientStorage'
 
 /** Runs once on app load: migrates large localStorage keys into IndexedDB. */
 export function GospelClientStorageHydration() {
   useEffect(() => {
-    void hydrateMemorizedVersesStorage()
+    void hydrateGospelClientStorage()
   }, [])
   return null
 }

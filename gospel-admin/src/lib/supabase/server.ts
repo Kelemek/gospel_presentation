@@ -1,5 +1,5 @@
 // Supabase client for server-side operations (API routes, Server Components)
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import type { Database } from '@/lib/supabase/database.types'
 
@@ -11,21 +11,16 @@ export const createClient = async () => {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
+        getAll() {
+          return cookieStore.getAll()
         },
-        set(name: string, value: string, options: CookieOptions) {
+        setAll(cookiesToSet) {
           try {
-            cookieStore.set({ name, value, ...options })
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set({ name, value, ...options })
+            })
           } catch {
             // Server Components can't set cookies during render
-          }
-        },
-        remove(name: string, options: CookieOptions) {
-          try {
-            cookieStore.set({ name, value: '', ...options })
-          } catch {
-            // Server Components can't delete cookies during render
           }
         },
       },
@@ -40,9 +35,10 @@ export const createAdminClient = () => {
     process.env.SUPABASE_SERVICE_KEY!, // Service role key
     {
       cookies: {
-        get() { return undefined },
-        set() {},
-        remove() {},
+        getAll() {
+          return []
+        },
+        setAll() {},
       },
     }
   )

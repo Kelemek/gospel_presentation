@@ -11,6 +11,25 @@ Use this checklist to ensure all components are properly deployed and configured
 - [ ] Optional: run migration `20260516_drop_profile_access_table.sql` after deploying app/Edge changes that remove `profile_access` (drops table, auth trigger, and excludes it from `get_backup_tables()`)
 - [ ] After device sync is live: run migration `20260613_backup_exclude_device_sync_ephemeral.sql` (excludes ephemeral `pairing_sessions` / `sync_pairing_claim_rate_limits` from backups; keeps `sync_key_entries`)
 - [ ] Optional: run migration `20260515_drop_bible_verses_table.sql` only if you are removing the unused bulk-verse table (app scripture uses API.Bible + `scripture_cache`; backup verse data first if needed)
+- [ ] Run `gospel-admin/sql/increment_visit_count_no_updated_at.sql` so visit tracking does **not** bump `profiles.updated_at` (prevents false refetches on large templates like `lbst`). Verify in SQL Editor:
+
+```sql
+-- Should show no UPDATE of updated_at in the function body:
+SELECT pg_get_functiondef('public.increment_visit_count(text)'::regprocedure);
+```
+
+- [ ] After device sync backup migration, verify ephemeral tables are excluded:
+
+```sql
+SELECT * FROM get_backup_tables() WHERE table_name IN (
+  'pairing_sessions',
+  'sync_pairing_claim_rate_limits',
+  'sync_key_entries'
+);
+-- pairing_sessions and sync_pairing_claim_rate_limits should be absent; sync_key_entries should remain.
+```
+
+- [ ] Optional drops (only when app no longer references them): `20260516_drop_profile_access_table.sql`, `20260515_drop_bible_verses_table.sql`
 - [ ] Verify `verification_codes` table exists
 - [ ] Verify `admin_settings` has new columns:
   - `verification_code_length`

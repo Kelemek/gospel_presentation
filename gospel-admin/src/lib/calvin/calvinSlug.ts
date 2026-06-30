@@ -4,7 +4,7 @@ import { canonOrderIndexForUsfm, normalizeCalvinBookUsfm } from '@/lib/calvin/ca
 
 const CALVIN_SLUG_RE = /^cv([A-Z0-9]+)$/i
 
-/** Default label for the Resources menu row that opens {@link CalvinCommentariesModal}. */
+/** Default label for the Resources menu row that opens Calvin commentaries in {@link SpurgeonSermonsModal}. */
 export const CALVIN_LIBRARY_DEFAULT_TITLE = "Calvin's Commentaries"
 
 /** True when `slug` is a Calvin commentary book profile (`cv` + USFM book code). */

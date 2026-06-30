@@ -5,57 +5,13 @@ describe('supabase server cookie handlers - catch branches', () => {
     jest.resetModules()
   })
 
-  it('swallows error when cookieStore.set throws (set)', async () => {
-    // Mock next/headers cookies() to return a store whose set throws
+  it('swallows error when cookieStore.set throws in setAll', async () => {
     jest.doMock('next/headers', () => ({
       cookies: () => ({
-        get: (name: string) => undefined,
-        set: () => { throw new Error('set-failure') },
-      }),
-    }))
-
-    // Mock createServerClient to capture the cookies impl and return it
-    jest.doMock('@supabase/ssr', () => ({
-      createServerClient: (_: any, __: any, opts: any) => {
-        return { __cookieImpl: opts.cookies }
-      },
-    }))
-
-    const mod = await import('../server')
-    const { createClient } = mod
-
-  const client = await createClient()
-  // call the cookie impl's set which should trigger the internal try/catch
-  expect(() => (client as any).__cookieImpl.set('a', 'b', {})).not.toThrow()
-  })
-
-  it('swallows error when cookieStore.set throws (remove)', async () => {
-    jest.doMock('next/headers', () => ({
-      cookies: () => ({
-        get: (name: string) => undefined,
-        set: () => { throw new Error('remove-failure') },
-      }),
-    }))
-
-    jest.doMock('@supabase/ssr', () => ({
-      createServerClient: (_: any, __: any, opts: any) => {
-        return { __cookieImpl: opts.cookies }
-      },
-    }))
-
-    const mod = await import('../server')
-    const { createClient } = mod
-
-  const client = await createClient()
-  expect(() => (client as any).__cookieImpl.remove('a', {})).not.toThrow()
-  })
-
-  it('swallows non-Error throws from cookieStore (set/remove)', async () => {
-    jest.resetModules()
-    jest.doMock('next/headers', () => ({
-      cookies: () => ({
-        get: (name: string) => undefined,
-        set: () => { throw 'nope' },
+        getAll: () => [],
+        set: () => {
+          throw new Error('set-failure')
+        },
       }),
     }))
 
@@ -69,15 +25,42 @@ describe('supabase server cookie handlers - catch branches', () => {
     const { createClient } = mod
 
     const client = await createClient()
-    expect(() => (client as any).__cookieImpl.set('a', 'b', {})).not.toThrow()
-    expect(() => (client as any).__cookieImpl.remove('a', {})).not.toThrow()
+    expect(() =>
+      (client as any).__cookieImpl.setAll([{ name: 'a', value: 'b', options: {} }])
+    ).not.toThrow()
   })
 
-  it('get returns underlying cookie value when present', async () => {
+  it('swallows non-Error throws from cookieStore in setAll', async () => {
     jest.resetModules()
     jest.doMock('next/headers', () => ({
       cookies: () => ({
-        get: (name: string) => ({ value: 'cookie-value' }),
+        getAll: () => [],
+        set: () => {
+          throw 'nope'
+        },
+      }),
+    }))
+
+    jest.doMock('@supabase/ssr', () => ({
+      createServerClient: (_: any, __: any, opts: any) => {
+        return { __cookieImpl: opts.cookies }
+      },
+    }))
+
+    const mod = await import('../server')
+    const { createClient } = mod
+
+    const client = await createClient()
+    expect(() =>
+      (client as any).__cookieImpl.setAll([{ name: 'a', value: 'b', options: {} }])
+    ).not.toThrow()
+  })
+
+  it('getAll returns underlying cookies when present', async () => {
+    jest.resetModules()
+    jest.doMock('next/headers', () => ({
+      cookies: () => ({
+        getAll: () => [{ name: 'my', value: 'cookie-value' }],
         set: () => {},
       }),
     }))
@@ -92,14 +75,14 @@ describe('supabase server cookie handlers - catch branches', () => {
     const { createClient } = mod
 
     const client = await createClient()
-    expect((client as any).__cookieImpl.get('my')).toBe('cookie-value')
+    expect((client as any).__cookieImpl.getAll()).toEqual([{ name: 'my', value: 'cookie-value' }])
   })
 
-  it('get returns undefined when cookie missing', async () => {
+  it('getAll returns empty list when no cookies', async () => {
     jest.resetModules()
     jest.doMock('next/headers', () => ({
       cookies: () => ({
-        get: (name: string) => undefined,
+        getAll: () => [],
         set: () => {},
       }),
     }))
@@ -114,7 +97,7 @@ describe('supabase server cookie handlers - catch branches', () => {
     const { createClient } = mod
 
     const client = await createClient()
-    expect((client as any).__cookieImpl.get('missing')).toBeUndefined()
+    expect((client as any).__cookieImpl.getAll()).toEqual([])
   })
 
   it('createAdminClient cookie methods are no-ops', async () => {
@@ -127,11 +110,10 @@ describe('supabase server cookie handlers - catch branches', () => {
     const mod = await import('../server')
     const { createAdminClient } = mod
 
-  const admin = createAdminClient()
-  // get should be defined and return undefined
-  expect((admin as any).__cookieImpl.get()).toBeUndefined()
-  // set/remove should be callable
-  expect(() => (admin as any).__cookieImpl.set('a', 'b', {})).not.toThrow()
-  expect(() => (admin as any).__cookieImpl.remove('a', {})).not.toThrow()
+    const admin = createAdminClient()
+    expect((admin as any).__cookieImpl.getAll()).toEqual([])
+    expect(() =>
+      (admin as any).__cookieImpl.setAll([{ name: 'a', value: 'b', options: {} }])
+    ).not.toThrow()
   })
 })

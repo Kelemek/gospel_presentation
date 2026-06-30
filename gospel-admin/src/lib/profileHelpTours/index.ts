@@ -1024,7 +1024,6 @@ function prependSegmentIntroIfAny(
       popover: {
         title,
         description: `<p><strong>Full walkthrough</strong> — next tutorial</p>${descParagraphs}<p>Use <strong>Next</strong> to start.</p>`,
-        side: 'over',
         align: 'center',
       },
     },
@@ -2096,7 +2095,7 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
         title: 'Read aloud: Play or Pause',
         description:
           '**Play** (or <strong>Pause</strong> while it is running) the passage. ESV uses streamed audio; other translations use the device reader for your saved line. Use <strong>Next</strong> to continue.',
-        ...pop({ side: 'over', align: 'center' }),
+        ...pop({ side: 'top', align: 'center' }, { side: 'bottom', align: 'center' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           window.setTimeout(() => {
             drv.refresh()
@@ -2114,7 +2113,7 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
         title: 'Read aloud: Repeat',
         description:
           'Turn <strong>Repeat</strong> on to loop the read-aloud with a short pause between plays; turn it off to stop after the current one. Use <strong>Next</strong> to continue.',
-        ...pop({ side: 'over', align: 'center' }),
+        ...pop({ side: 'top', align: 'center' }, { side: 'bottom', align: 'center' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           window.setTimeout(() => {
             drv.refresh()
@@ -2132,7 +2131,7 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
         title: 'Read aloud: Speed',
         description:
           'Choose <strong>read-aloud speed</strong>; your last choice is remembered. Use <strong>Next</strong> to continue.',
-        ...pop({ side: 'over', align: 'center' }),
+        ...pop({ side: 'top', align: 'center' }, { side: 'bottom', align: 'center' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           window.setTimeout(() => {
             drv.refresh()
@@ -2150,7 +2149,7 @@ function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions
         title: 'Close read aloud',
         description:
           'When you are done, close this panel to return to practice. Use <strong>Next</strong> to close it for the tour and continue.',
-        ...pop({ side: 'over', align: 'center' }),
+        ...pop({ side: 'top', align: 'center' }, { side: 'bottom', align: 'center' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           void (async () => {
             const close = document.querySelector<HTMLElement>(MEMORIZE_LISTEN_CLOSE)
@@ -2651,7 +2650,6 @@ export function runScriptureHoverPreviewFeatureTour(options?: ProfileFeatureTour
         popover: {
           title: 'Quick verse preview',
           description: scriptureHoverPreviewTourIntroDescription(),
-          side: 'over',
           align: 'center',
         },
       },
@@ -3882,7 +3880,6 @@ export function runFullWalkthroughThankYouFinale(): void {
           title: 'Thank you',
           description:
             '<p>Thanks for watching.</p><p>May God bless your study of His Word.</p>',
-          side: 'over',
           align: 'center',
         },
       },

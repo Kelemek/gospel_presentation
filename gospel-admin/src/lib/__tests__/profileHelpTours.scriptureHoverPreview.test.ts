@@ -63,7 +63,8 @@ describe('scripture hover preview tour', () => {
     expect(desc0).not.toContain('Live preview uses your')
 
     expect(step0.popover?.title).toContain('Quick verse preview')
-    expect(step0.popover?.side).toBe('over')
+    expect(step0.popover?.align).toBe('center')
+    expect(step0.popover?.side).toBeUndefined()
   })
 
   it('uses finger pointer in demo when primary input has no hover', () => {

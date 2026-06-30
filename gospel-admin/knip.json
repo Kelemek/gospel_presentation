@@ -23,6 +23,7 @@
     "exports": "off",
     "types": "off",
     "nsExports": "off",
-    "nsTypes": "off"
+    "nsTypes": "off",
+    "duplicates": "warn"
   }
 }

@@ -43,3 +43,37 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ESV_API_TOKEN: ${{ secrets.ESV_API_TOKEN }}
+
+  quality:
+    name: Lint and build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Use Node.js from .nvmrc
+        uses: actions/setup-node@v5
+        with:
+          node-version-file: gospel-admin/.nvmrc
+          cache: npm
+          cache-dependency-path: gospel-admin/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd gospel-admin
+          npm ci
+
+      - name: Lint
+        run: |
+          cd gospel-admin
+          npm run lint
+
+      - name: Build
+        run: |
+          cd gospel-admin
+          npm run build
+        env:
+          CI: true
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://example.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'ci-anon-key' }}

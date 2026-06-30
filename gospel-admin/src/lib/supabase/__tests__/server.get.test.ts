@@ -1,31 +1,29 @@
 jest.mock('@supabase/ssr', () => ({
   createServerClient: jest.fn((url, key, opts) => {
-    return opts && opts.cookies ? opts.cookies : { get: () => undefined }
+    return opts && opts.cookies ? opts.cookies : { getAll: () => [] }
   }),
 }))
 
-describe('supabase server cookie helpers - get path', () => {
+describe('supabase server cookie helpers - getAll path', () => {
   beforeEach(() => {
     jest.resetModules()
     jest.clearAllMocks()
   })
 
-  it('returns cookie value via cookies.get helper', async () => {
+  it('returns cookies via cookies.getAll helper', async () => {
     jest.doMock('next/headers', () => ({
       cookies: jest.fn(() => ({
-        get: (name: string) => ({ value: `cookie-${name}` }),
+        getAll: () => [{ name: 'foo', value: 'cookie-foo' }],
         set: () => {},
-        remove: () => {}
       })),
     }))
 
     let createClient: any
     jest.isolateModules(() => {
-       
       createClient = require('../server').createClient
     })
 
     const clientCookies = await createClient()
-    expect(clientCookies.get('foo')).toBe('cookie-foo')
+    expect(clientCookies.getAll()).toEqual([{ name: 'foo', value: 'cookie-foo' }])
   })
 })

@@ -71,6 +71,19 @@ Tables use RLS appropriate to their sensitivity (see Supabase **Policies** and `
 - [ ] Scripture lookups working
 - [ ] Admin features accessible
 
+### Production Supabase migration audit
+
+Run periodically (or after major releases) in the Supabase SQL Editor:
+
+| Check | SQL / action |
+|-------|----------------|
+| Visit count does not touch `updated_at` | `SELECT pg_get_functiondef('public.increment_visit_count(text)'::regprocedure);` — body must not assign `updated_at` |
+| Device-sync backup exclusions | Confirm `20260613_backup_exclude_device_sync_ephemeral.sql` applied; `pairing_sessions` and `sync_pairing_claim_rate_limits` absent from `get_backup_tables()` |
+| Legacy tables dropped (optional) | `profile_access` and `bible_verses` absent if you ran optional drop migrations |
+| Regenerate TypeScript types | `supabase gen types typescript` — includes device-sync tables when added to schema |
+
+See also [docs/DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) database section.
+
 ## Monitoring (free tier)
 
 Observability uses **PostHog Cloud (free)** for errors, session replay, heatmaps, and traffic/geo analytics. **Sentry** and **Microsoft Clarity** are not used.
