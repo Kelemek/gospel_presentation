@@ -2,20 +2,16 @@ import { useCallback, useLayoutEffect, useRef, useState, type MutableRefObject }
 
 export interface UseMemorizationRoundErrorsResult {
   wrongAttemptsInRound: number
-  roundCompletedWithErrors: boolean
   wrongAttemptsInRoundRef: MutableRefObject<number>
   recordWrongAttempt: () => void
   resetRoundErrors: () => void
-  completeRoundAdvance: () => void
-  hydrateBetweenRounds: (wrongAttemptsInRound: number) => void
-  hydrateInRound: (wrongAttemptsInRound: number) => void
+  hydrateRoundErrors: (wrongAttemptsInRound: number) => void
 }
 
 export function useMemorizationRoundErrors(
   onSessionWrongAttempt: () => void
 ): UseMemorizationRoundErrorsResult {
   const [wrongAttemptsInRound, setWrongAttemptsInRound] = useState(0)
-  const [roundCompletedWithErrors, setRoundCompletedWithErrors] = useState(false)
   const wrongAttemptsInRoundRef = useRef(0)
 
   const recordWrongAttempt = useCallback(() => {
@@ -30,23 +26,11 @@ export function useMemorizationRoundErrors(
   const resetRoundErrors = useCallback(() => {
     wrongAttemptsInRoundRef.current = 0
     setWrongAttemptsInRound(0)
-    setRoundCompletedWithErrors(false)
   }, [])
 
-  const completeRoundAdvance = useCallback(() => {
-    setRoundCompletedWithErrors(wrongAttemptsInRoundRef.current > 0)
-  }, [])
-
-  const hydrateBetweenRounds = useCallback((errorsInRound: number) => {
+  const hydrateRoundErrors = useCallback((errorsInRound: number) => {
     wrongAttemptsInRoundRef.current = errorsInRound
     setWrongAttemptsInRound(errorsInRound)
-    setRoundCompletedWithErrors(errorsInRound > 0)
-  }, [])
-
-  const hydrateInRound = useCallback((errorsInRound: number) => {
-    wrongAttemptsInRoundRef.current = errorsInRound
-    setWrongAttemptsInRound(errorsInRound)
-    setRoundCompletedWithErrors(false)
   }, [])
 
   useLayoutEffect(() => {
@@ -55,12 +39,9 @@ export function useMemorizationRoundErrors(
 
   return {
     wrongAttemptsInRound,
-    roundCompletedWithErrors,
     wrongAttemptsInRoundRef,
     recordWrongAttempt,
     resetRoundErrors,
-    completeRoundAdvance,
-    hydrateBetweenRounds,
-    hydrateInRound,
+    hydrateRoundErrors,
   }
 }

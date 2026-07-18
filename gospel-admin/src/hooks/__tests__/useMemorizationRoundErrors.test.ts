@@ -24,26 +24,22 @@ describe('useMemorizationRoundErrors', () => {
 
     act(() => {
       result.current.recordWrongAttempt()
-      result.current.completeRoundAdvance()
     })
-    expect(result.current.roundCompletedWithErrors).toBe(true)
 
     act(() => {
       result.current.resetRoundErrors()
     })
     expect(result.current.wrongAttemptsInRound).toBe(0)
-    expect(result.current.roundCompletedWithErrors).toBe(false)
   })
 
-  it('hydrates between-round snapshots with stored errors', () => {
+  it('hydrates stored round errors', () => {
     const { result } = renderHook(() => useMemorizationRoundErrors(jest.fn()))
 
     act(() => {
-      result.current.hydrateBetweenRounds(3)
+      result.current.hydrateRoundErrors(3)
     })
 
     expect(result.current.wrongAttemptsInRound).toBe(3)
-    expect(result.current.roundCompletedWithErrors).toBe(true)
     expect(result.current.wrongAttemptsInRoundRef.current).toBe(3)
   })
 })

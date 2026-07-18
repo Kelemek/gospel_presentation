@@ -37,6 +37,7 @@ import { booksForScope, isBibleBooksMemorizationItem } from '@/lib/bibleBooksMem
 import { usePostHogModalMount } from '@/hooks/usePostHogModalOpen'
 import { useMemorizationStrictMode } from '@/hooks/useMemorizationStrictMode'
 import { useMemorizationRoundErrors } from '@/hooks/useMemorizationRoundErrors'
+import { useMemorizationPracticePhase } from '@/hooks/useMemorizationPracticePhase'
 import { MemorizeListenControlsDialog } from '@/components/MemorizeListenControlsDialog'
 import ScriptureModalToolbarMenu from '@/components/ScriptureModalToolbarMenu'
 import {
@@ -78,6 +79,17 @@ import {
   shouldAutoRevealAfterWrongAttempts,
   shouldBlockFinishPractice,
 } from '@/lib/memorizationRoundAdvancePolicy'
+import {
+  canShowPracticeListen,
+  isPracticePhaseActiveRound,
+  isPracticePhaseDone,
+  isPracticePhaseInSession,
+  isPracticePhaseIntro,
+  isPracticePhaseRoundComplete,
+  practicePhaseDoneMessage,
+  practicePhaseHadErrors,
+  practicePhaseRoundIndex,
+} from '@/lib/memorizationPracticePhase'
 
 export interface MemorizationPracticeSessionResult {
   wrongAttempts: number
@@ -99,8 +111,6 @@ interface MemorizationPracticeSessionProps {
    */
   onOpenSpurgeonStudy?: (reference: string) => void
 }
-
-type Phase = 'intro' | 'practicing' | 'done'
 
 const MEMORIZATION_WORD_CHOICE_COUNT_WORD = 8
 const MEMORIZATION_WORD_CHOICE_COUNT_DIGIT = 6
@@ -201,13 +211,24 @@ export default function MemorizationPracticeSession({
   /** Hide IME field outside the verse scroller so Android does not scrollTo focused input (top of column). */
   const memorizeAndroidHost = useMemo(() => isMemorizeAndroidWebHost(), [])
 
-  const [phase, setPhase] = useState<Phase>('intro')
+  const {
+    phase,
+    phaseRef,
+    resetIntro,
+    startActiveRound,
+    completeRound,
+    finish: finishPracticePhase,
+    hydrateRoundComplete,
+    hydrateActiveRound,
+  } = useMemorizationPracticePhase()
+  const roundIndex = practicePhaseRoundIndex(phase)
+  const isRoundComplete = isPracticePhaseRoundComplete(phase)
+  const isActiveRound = isPracticePhaseActiveRound(phase)
   /** Set when user picks from the start modal; restored from saved in-progress. Null on intro before starting. */
   const [practiceMode, setPracticeMode] = useState<MemorizationPracticeMode | null>(null)
   const [modePickerOpen, setModePickerOpen] = useState(false)
   /** Intro-only: which round to begin at (1…MEMORIZATION_FULL_HIDE_ROUND); chains forward to round 5. */
   const [startRoundChoice, setStartRoundChoice] = useState(1)
-  const [roundIndex, setRoundIndex] = useState(0)
   const [hasTypedInRound, setHasTypedInRound] = useState(false)
   const [hiddenIndices, setHiddenIndices] = useState<Set<number>>(new Set())
   const [revealed, setRevealed] = useState<Set<number>>(new Set())
@@ -222,13 +243,10 @@ export default function MemorizationPracticeSession({
   const [wrongAttemptsTotal, setWrongAttemptsTotal] = useState(0)
   const {
     wrongAttemptsInRound,
-    roundCompletedWithErrors,
     wrongAttemptsInRoundRef,
     recordWrongAttempt,
     resetRoundErrors,
-    completeRoundAdvance,
-    hydrateBetweenRounds,
-    hydrateInRound,
+    hydrateRoundErrors,
   } = useMemorizationRoundErrors(useCallback(() => {
     setWrongAttemptsTotal((w) => w + 1)
   }, []))
@@ -242,11 +260,7 @@ export default function MemorizationPracticeSession({
   const [hintHeld, setHintHeld] = useState(false)
   /** While hint is held: how many unrevealed blanks (left-to-right) to peek, starting at 1; +1 each tick. */
   const [hintPeekCount, setHintPeekCount] = useState(1)
-  /** Rounds 1–4: all blanks filled; show Repeat/Next in modal footer without leaving the verse view. */
-  const [awaitingRoundAdvance, setAwaitingRoundAdvance] = useState(false)
-  const awaitingRoundAdvanceRef = useRef(false)
   const [roundAffirmation, setRoundAffirmation] = useState('')
-  const [completionMessage, setCompletionMessage] = useState('')
   const completedRef = useRef(false)
   /** Avoid duplicate advance handling when the completion effect runs twice (e.g. Strict Mode). */
   const roundAdvanceHandledRef = useRef<number | null>(null)
@@ -280,8 +294,8 @@ export default function MemorizationPracticeSession({
   const listenInteractionAllowed = useMemo(
     () =>
       translationListenEnabled &&
-      (phase === 'intro' || (phase === 'practicing' && !awaitingRoundAdvance)),
-    [translationListenEnabled, phase, awaitingRoundAdvance]
+      (canShowPracticeListen(phase)),
+    [translationListenEnabled, phase]
   )
   const passageAudioRef = useRef<HTMLAudioElement | null>(null)
   /** Rate the current Web Speech utterance was started with (resume cannot change rate; restart if it differs). */
@@ -464,21 +478,21 @@ export default function MemorizationPracticeSession({
     () =>
       memorizationRoundAdvanceShowsNextRound({
         isFinalRound,
-        roundCompletedWithErrors,
+        roundCompletedWithErrors: practicePhaseHadErrors(phase),
         strictMode,
         wrongAttemptsInRound,
       }),
-    [isFinalRound, roundCompletedWithErrors, strictMode, wrongAttemptsInRound]
+    [isFinalRound, phase, strictMode, wrongAttemptsInRound]
   )
 
   const showFinishPracticeOption = useMemo(
     () =>
       memorizationRoundAdvanceShowsFinishPractice({
-        awaitingRoundAdvance,
+        isRoundComplete,
         isFinalRound,
         strictMode,
       }),
-    [awaitingRoundAdvance, isFinalRound, strictMode]
+    [isRoundComplete, isFinalRound, strictMode]
   )
 
   const showStrictErrorsBadge = useMemo(
@@ -486,19 +500,19 @@ export default function MemorizationPracticeSession({
       memorizationRoundAdvanceShowsStrictErrorsBadge({
         strictMode,
         wrongAttemptsInRound,
-        awaitingRoundAdvance,
+        isActiveRound,
       }),
-    [strictMode, wrongAttemptsInRound, awaitingRoundAdvance]
+    [strictMode, wrongAttemptsInRound, isActiveRound]
   )
 
   const roundCompleteInstruction = useMemo(() => {
-    if (!awaitingRoundAdvance) return null
+    if (!isRoundComplete) return null
     return getMemorizationRoundCompleteInstruction({
       isFinalRound,
       showFinishPracticeOption,
       roundIndex,
     })
-  }, [awaitingRoundAdvance, isFinalRound, showFinishPracticeOption, roundIndex])
+  }, [isRoundComplete, isFinalRound, showFinishPracticeOption, roundIndex])
 
   const flashErrorBriefly = useCallback(() => {
     setFlashError(true)
@@ -508,7 +522,7 @@ export default function MemorizationPracticeSession({
   const finishPracticeSession = useCallback(() => {
     if (
       shouldBlockFinishPractice(
-        awaitingRoundAdvanceRef.current,
+        isPracticePhaseRoundComplete(phaseRef.current),
         roundIndex >= MEMORIZATION_FULL_HIDE_ROUND,
         strictModeRef.current
       )
@@ -523,21 +537,19 @@ export default function MemorizationPracticeSession({
       completed: true,
     })
     startTransition(() => {
-      setCompletionMessage(pickRandomAllDoneMessage())
-      setPhase('done')
+      finishPracticePhase(pickRandomAllDoneMessage())
     })
-  }, [onComplete, roundIndex])
+  }, [onComplete, roundIndex, finishPracticePhase, phaseRef])
 
   useLayoutEffect(() => {
     wrongAttemptsRef.current = wrongAttemptsTotal
     correctKeystrokesRef.current = correctKeystrokesTotal
-    awaitingRoundAdvanceRef.current = awaitingRoundAdvance
     practiceModeRef.current = practiceMode
     strictModeRef.current = strictMode
   }, [
     wrongAttemptsTotal,
     correctKeystrokesTotal,
-    awaitingRoundAdvance,
+    isRoundComplete,
     practiceMode,
     strictMode,
   ])
@@ -577,15 +589,12 @@ export default function MemorizationPracticeSession({
     completedRef.current = false
     roundAdvanceHandledRef.current = null
     startTransition(() => {
-      setAwaitingRoundAdvance(false)
+      resetIntro()
       setRoundAffirmation('')
-      setCompletionMessage('')
     })
     sessionSeedRef.current = ''
     startTransition(() => {
-      setPhase('intro')
       setStartRoundChoice(1)
-      setRoundIndex(0)
       setHasTypedInRound(false)
       setHiddenIndices(new Set())
       setRevealed(new Set())
@@ -595,7 +604,7 @@ export default function MemorizationPracticeSession({
       setPracticeMode(null)
       setModePickerOpen(false)
     })
-  }, [verse.id, verse.inProgressPractice])
+  }, [verse.id, verse.inProgressPractice, resetIntro])
 
   const lastAudioResetVerseIdRef = useRef<string | null>(null)
   useEffect(() => {
@@ -657,7 +666,7 @@ export default function MemorizationPracticeSession({
    * a stray scroll position sticking around.
    */
   useLayoutEffect(() => {
-    if (phase !== 'done') return
+    if (!isPracticePhaseDone(phase)) return
     const el = practiceScrollRef.current
     if (!el) return
     el.scrollTop = 0
@@ -667,7 +676,7 @@ export default function MemorizationPracticeSession({
   }, [phase])
 
   /** Raw pointer state; use hintActive for gameplay so we do not sync hintHeld in an effect when phase changes. */
-  const hintActive = hintHeld && phase === 'practicing'
+  const hintActive = hintHeld && isPracticePhaseInSession(phase)
 
   const hiddenSorted = useMemo(() => [...hiddenIndices].sort((a, b) => a - b), [hiddenIndices])
 
@@ -708,7 +717,7 @@ export default function MemorizationPracticeSession({
     currentTargetIndex !== null ? (tokens[currentTargetIndex] ?? null) : null
 
   const firstLetterCueHiddenSlots = useMemo(() => {
-    if (practiceMode !== 'firstLetters' || phase !== 'practicing') return new Set<number>()
+    if (practiceMode !== 'firstLetters' || !isPracticePhaseInSession(phase)) return new Set<number>()
     const seed = sessionSeedRef.current || verse.id
     return pickHiddenCueTypableSlotIndices(typableIndices.length, roundIndex, seed)
   }, [practiceMode, phase, typableIndices.length, roundIndex, verse.id])
@@ -717,7 +726,7 @@ export default function MemorizationPracticeSession({
   firstLetterCueHiddenSlotsRef.current = firstLetterCueHiddenSlots
 
   useLayoutEffect(() => {
-    if (practiceMode !== 'firstLetters' || phase !== 'practicing' || awaitingRoundAdvance) return
+    if (practiceMode !== 'firstLetters' || !isPracticePhaseActiveRound(phase)) return
     scrollActiveFirstLetterCueIntoView(
       firstLetterCuesViewportRef.current,
       currentTargetIndex,
@@ -726,7 +735,7 @@ export default function MemorizationPracticeSession({
   }, [
     practiceMode,
     phase,
-    awaitingRoundAdvance,
+    isRoundComplete,
     currentTargetIndex,
     typableIndices,
     roundIndex,
@@ -737,7 +746,7 @@ export default function MemorizationPracticeSession({
 
   useEffect(() => {
     if (typeof ResizeObserver === 'undefined') return
-    if (practiceMode !== 'firstLetters' || phase !== 'practicing' || awaitingRoundAdvance) return
+    if (practiceMode !== 'firstLetters' || !isPracticePhaseActiveRound(phase)) return
     const root = firstLetterCuesViewportRef.current
     if (!root) return
     let raf = 0
@@ -758,13 +767,13 @@ export default function MemorizationPracticeSession({
   }, [
     practiceMode,
     phase,
-    awaitingRoundAdvance,
+    isRoundComplete,
     currentTargetIndex,
     typableIndices,
   ])
 
   useEffect(() => {
-    if (!memorizeAndroidHost || phase !== 'practicing') return
+    if (!memorizeAndroidHost || !isPracticePhaseInSession(phase)) return
     const scrollEl = practiceScrollRef.current
     if (!scrollEl) return
     const onScroll = () => {
@@ -788,7 +797,6 @@ export default function MemorizationPracticeSession({
         if (memorizeAndroidHost) {
           androidScrollClampUntilRef.current = Date.now() + ANDROID_SCROLL_CLAMP_MS
         }
-        setRoundIndex(r)
         setHasTypedInRound(false)
         setReorderSlotChunkIds(assignment)
         setReorderRoundMovableIndices(new Set(movableArr))
@@ -797,25 +805,22 @@ export default function MemorizationPracticeSession({
         setFirstLetterCueRevealedSlots(new Set())
         setConsecutiveWrong(0)
         resetRoundErrors()
-        setAwaitingRoundAdvance(false)
         setRoundAffirmation('')
-        setPhase('practicing')
+        startActiveRound(r)
         return
       }
       const hidden = hiddenTypingTokenIndices(practiceModeRef.current, r, seed, typableIndices)
       if (memorizeAndroidHost) androidScrollClampUntilRef.current = Date.now() + ANDROID_SCROLL_CLAMP_MS
-      setRoundIndex(r)
       setHasTypedInRound(false)
       setHiddenIndices(hidden)
       setRevealed(new Set())
       setFirstLetterCueRevealedSlots(new Set())
       setConsecutiveWrong(0)
       resetRoundErrors()
-      setAwaitingRoundAdvance(false)
       setRoundAffirmation('')
-      setPhase('practicing')
+      startActiveRound(r)
     },
-    [memorizeAndroidHost, reorderChunks, typableIndices, verse.id, resetRoundErrors]
+    [memorizeAndroidHost, reorderChunks, typableIndices, verse.id, resetRoundErrors, startActiveRound]
   )
 
   useLayoutEffect(() => {
@@ -836,7 +841,7 @@ export default function MemorizationPracticeSession({
       const r = ip.phase.completedRoundIndex
       roundAdvanceHandledRef.current = r
       const hydratedRoundErrors = ip.wrongAttemptsInRound ?? 0
-      hydrateBetweenRounds(hydratedRoundErrors)
+      hydrateRoundErrors(hydratedRoundErrors)
       const seed = sessionSeedRef.current || verse.id
       const modeRaw = ip.practiceMode ?? 'type'
       if (modeRaw === 'reorder') {
@@ -845,7 +850,6 @@ export default function MemorizationPracticeSession({
         startTransition(() => {
           setWrongAttemptsTotal(ip.wrongAttempts)
           setCorrectKeystrokesTotal(ip.correctKeystrokes)
-          setRoundIndex(r)
           setHasTypedInRound(false)
           setHiddenIndices(new Set())
           setRevealed(new Set())
@@ -853,9 +857,8 @@ export default function MemorizationPracticeSession({
           setReorderSlotChunkIds(identitySlots)
           setReorderRoundMovableIndices(new Set())
           setConsecutiveWrong(0)
-          setAwaitingRoundAdvance(true)
           setRoundAffirmation(pickRandomRoundAffirmation())
-          setPhase('practicing')
+          hydrateRoundComplete(r, hydratedRoundErrors > 0)
           setPracticeMode('reorder')
         })
       } else {
@@ -863,15 +866,13 @@ export default function MemorizationPracticeSession({
         startTransition(() => {
           setWrongAttemptsTotal(ip.wrongAttempts)
           setCorrectKeystrokesTotal(ip.correctKeystrokes)
-          setRoundIndex(r)
           setHasTypedInRound(false)
           setHiddenIndices(hidden)
           setRevealed(new Set())
           setFirstLetterCueRevealedSlots(new Set())
           setConsecutiveWrong(0)
-          setAwaitingRoundAdvance(true)
           setRoundAffirmation(pickRandomRoundAffirmation())
-          setPhase('practicing')
+          hydrateRoundComplete(r, hydratedRoundErrors > 0)
           setPracticeMode(modeRaw)
         })
       }
@@ -879,7 +880,7 @@ export default function MemorizationPracticeSession({
       roundAdvanceHandledRef.current = null
       const r = ip.phase.roundIndex
       const hydratedRoundErrors = ip.wrongAttemptsInRound ?? 0
-      hydrateInRound(hydratedRoundErrors)
+      hydrateRoundErrors(hydratedRoundErrors)
       const modeRaw = ip.practiceMode ?? 'type'
       if (modeRaw === 'reorder') {
         const seed = sessionSeedRef.current
@@ -891,7 +892,6 @@ export default function MemorizationPracticeSession({
         startTransition(() => {
           setWrongAttemptsTotal(ip.wrongAttempts)
           setCorrectKeystrokesTotal(ip.correctKeystrokes)
-          setRoundIndex(r)
           setHasTypedInRound(false)
           setReorderSlotChunkIds(assignment)
           setReorderRoundMovableIndices(new Set(movableArr))
@@ -899,9 +899,8 @@ export default function MemorizationPracticeSession({
           setRevealed(new Set())
           setFirstLetterCueRevealedSlots(new Set())
           setConsecutiveWrong(0)
-          setAwaitingRoundAdvance(false)
           setRoundAffirmation('')
-          setPhase('practicing')
+          hydrateActiveRound(r)
           setPracticeMode('reorder')
         })
       } else {
@@ -915,15 +914,13 @@ export default function MemorizationPracticeSession({
         startTransition(() => {
           setWrongAttemptsTotal(ip.wrongAttempts)
           setCorrectKeystrokesTotal(ip.correctKeystrokes)
-          setRoundIndex(r)
           setHasTypedInRound(false)
           setHiddenIndices(hidden)
           setRevealed(new Set())
           setFirstLetterCueRevealedSlots(new Set())
           setConsecutiveWrong(0)
-          setAwaitingRoundAdvance(false)
           setRoundAffirmation('')
-          setPhase('practicing')
+          hydrateActiveRound(r)
           setPracticeMode(modeRaw)
         })
       }
@@ -942,8 +939,9 @@ export default function MemorizationPracticeSession({
     verse.id,
     verse.inProgressPractice,
     typableIndices,
-    hydrateBetweenRounds,
-    hydrateInRound,
+    hydrateRoundErrors,
+    hydrateRoundComplete,
+    hydrateActiveRound,
   ])
 
   /**
@@ -1016,7 +1014,7 @@ export default function MemorizationPracticeSession({
    * Skip when the interaction started on **Hint** so hold-to-peek and pointer capture work on desktop.
    */
   const keepPracticeInputOnPointerCapture = useCallback((e: PointerEvent | TouchEvent) => {
-    if (awaitingRoundAdvanceRef.current) return
+    if (isPracticePhaseRoundComplete(phaseRef.current)) return
     if (!isKeyboardPracticeMode(practiceModeRef.current)) return
     const t = e.target
     if (t instanceof Element && t.closest('[data-testid="memorize-hint-button"]')) {
@@ -1029,7 +1027,7 @@ export default function MemorizationPracticeSession({
       return
     }
     input.focus({ preventScroll: true })
-  }, [])
+  }, [phaseRef])
 
   /**
    * Verse area:
@@ -1040,11 +1038,11 @@ export default function MemorizationPracticeSession({
    * - Mouse/pen: pointerdown capture keeps focus when tapping the verse.
    */
   useLayoutEffect(() => {
-    if (phase !== 'practicing' || !isKeyboardPracticeMode(practiceMode)) return
+    if (!isPracticePhaseInSession(phase) || !isKeyboardPracticeMode(practiceMode)) return
     const el = practiceWordsTypeRef.current
     if (!el) return
     const onTouchStartCaptureVerse = (e: TouchEvent) => {
-      if (awaitingRoundAdvanceRef.current) return
+      if (isPracticePhaseRoundComplete(phaseRef.current)) return
       const input = practiceInputRef.current
       if (!input) return
       if (document.activeElement === input) {
@@ -1061,10 +1059,10 @@ export default function MemorizationPracticeSession({
       el.removeEventListener('touchstart', onTouchStartCaptureVerse, { capture: true })
       el.removeEventListener('pointerdown', onPointerDownCapture, { capture: true })
     }
-  }, [phase, practiceMode, keepPracticeInputOnPointerCapture])
+  }, [phase, practiceMode, keepPracticeInputOnPointerCapture, phaseRef])
 
   useLayoutEffect(() => {
-    if (phase !== 'practicing' || awaitingRoundAdvance || !isKeyboardPracticeMode(practiceMode)) return
+    if (!isPracticePhaseActiveRound(phase) || !isKeyboardPracticeMode(practiceMode)) return
     const el = hintButtonRef.current
     if (!el) return
     el.addEventListener('touchstart', keepPracticeInputOnPointerCapture, { capture: true, passive: false })
@@ -1073,17 +1071,17 @@ export default function MemorizationPracticeSession({
       el.removeEventListener('touchstart', keepPracticeInputOnPointerCapture, { capture: true })
       el.removeEventListener('pointerdown', keepPracticeInputOnPointerCapture, { capture: true })
     }
-  }, [phase, awaitingRoundAdvance, practiceMode, keepPracticeInputOnPointerCapture])
+  }, [phase, practiceMode, keepPracticeInputOnPointerCapture])
 
   /** After releasing Hint, WebKit may leave focus on the button — put it back on the hidden field. */
   const restorePracticeInputFocusAfterHint = useCallback(() => {
     requestAnimationFrame(() => {
-      if (awaitingRoundAdvanceRef.current) return
-      if (phase !== 'practicing') return
+      if (isPracticePhaseRoundComplete(phaseRef.current)) return
+      if (!isPracticePhaseInSession(phase)) return
       if (!isKeyboardPracticeMode(practiceModeRef.current)) return
       practiceInputRef.current?.focus({ preventScroll: true })
     })
-  }, [phase])
+  }, [phase, phaseRef])
 
   const beginPracticeWithMode = useCallback(
     (mode: MemorizationPracticeMode) => {
@@ -1158,8 +1156,8 @@ export default function MemorizationPracticeSession({
   const handleClose = useCallback(() => {
     setListenPanelOpen(false)
     stopPassageAudio()
-    if (onPersistInProgress && sessionSeedRef.current && phase === 'practicing') {
-      if (awaitingRoundAdvance) {
+    if (onPersistInProgress && sessionSeedRef.current && isPracticePhaseInSession(phase)) {
+      if (isRoundComplete) {
         persistPracticeSnapshot(
           { kind: 'betweenRounds', completedRoundIndex: roundIndex },
           { wrongAttemptsInRound: wrongAttemptsInRoundRef.current }
@@ -1173,7 +1171,7 @@ export default function MemorizationPracticeSession({
     onClose,
     onPersistInProgress,
     phase,
-    awaitingRoundAdvance,
+    isRoundComplete,
     roundIndex,
     persistPracticeSnapshot,
     stopPassageAudio,
@@ -1190,9 +1188,8 @@ export default function MemorizationPracticeSession({
     openedLayoutOnceForVerseIdRef.current = null
     lastVerseIdForLayoutRef.current = verse.id
     startTransition(() => {
-      setPhase('intro')
+      resetIntro()
       setStartRoundChoice(1)
-      setRoundIndex(0)
       setHasTypedInRound(false)
       setHiddenIndices(new Set())
       setRevealed(new Set())
@@ -1201,20 +1198,18 @@ export default function MemorizationPracticeSession({
       setReorderRoundMovableIndices(new Set())
       setWrongAttemptsTotal(0)
       setCorrectKeystrokesTotal(0)
-      setAwaitingRoundAdvance(false)
       setRoundAffirmation('')
-      setCompletionMessage('')
       setPracticeMode(null)
       setModePickerOpen(false)
     })
-  }, [verse.id, onClearInProgress, stopPassageAudio])
+  }, [verse.id, onClearInProgress, stopPassageAudio, resetIntro])
 
   /** Stops ESV + TTS listen when leaving intro, between rounds, or when complete — not only on manual buttons. */
   useEffect(() => {
-    if (awaitingRoundAdvance || phase !== 'intro') {
+    if (isRoundComplete || !isPracticePhaseIntro(phase)) {
       stopPassageAudio()
     }
-  }, [awaitingRoundAdvance, phase, stopPassageAudio])
+  }, [isRoundComplete, phase, stopPassageAudio])
 
   const handlePassageAudioPlay = useCallback(() => {
     const el = passageAudioRef.current
@@ -1448,7 +1443,8 @@ export default function MemorizationPracticeSession({
 
     if (roundAdvanceHandledRef.current === roundIndex) return
     roundAdvanceHandledRef.current = roundIndex
-    completeRoundAdvance()
+    const hadErrors = wrongAttemptsInRoundRef.current > 0
+    completeRound(roundIndex, hadErrors)
     if (onPersistInProgress && sessionSeedRef.current) {
       persistPracticeSnapshot(
         { kind: 'betweenRounds', completedRoundIndex: roundIndex },
@@ -1457,7 +1453,6 @@ export default function MemorizationPracticeSession({
     }
     startTransition(() => {
       setRoundAffirmation(pickRandomRoundAffirmation())
-      setAwaitingRoundAdvance(true)
     })
     stopPassageAudio()
   }, [
@@ -1467,12 +1462,12 @@ export default function MemorizationPracticeSession({
     onPersistInProgress,
     persistPracticeSnapshot,
     stopPassageAudio,
-    completeRoundAdvance,
+    completeRound,
     wrongAttemptsInRoundRef,
   ])
 
   useEffect(() => {
-    if (phase !== 'practicing' || awaitingRoundAdvance) return
+    if (!isPracticePhaseActiveRound(phase)) return
 
     if (practiceMode === 'reorder') {
       const n = reorderChunks.length
@@ -1488,7 +1483,7 @@ export default function MemorizationPracticeSession({
     onRoundComplete()
   }, [
     phase,
-    awaitingRoundAdvance,
+    isRoundComplete,
     practiceMode,
     reorderChunks,
     reorderSlotChunkIds,
@@ -1500,7 +1495,7 @@ export default function MemorizationPracticeSession({
   const processWordGuess = useCallback(
     (picked: string) => {
       if (hintActive) return
-      if (phase !== 'practicing' || currentTargetIndex === null) return
+      if (!isPracticePhaseInSession(phase) || currentTargetIndex === null) return
       const token = tokens[currentTargetIndex]
       if (!token || token.kind === 'punct') return
 
@@ -1557,7 +1552,7 @@ export default function MemorizationPracticeSession({
 
   const wordChoiceLabels = useMemo(() => {
     if (practiceMode !== 'word') return []
-    if (phase !== 'practicing' || awaitingRoundAdvance) return []
+    if (!isPracticePhaseActiveRound(phase)) return []
     if (currentTargetIndex === null) return []
     const seed = sessionSeedRef.current
     if (!seed) return []
@@ -1579,7 +1574,6 @@ export default function MemorizationPracticeSession({
   }, [
     practiceMode,
     phase,
-    awaitingRoundAdvance,
     currentTargetIndex,
     roundIndex,
     tokens,
@@ -1589,7 +1583,7 @@ export default function MemorizationPracticeSession({
   const processKeystroke = useCallback(
     (key: string) => {
       if (hintActive) return
-      if (phase !== 'practicing' || currentTargetIndex === null) return
+      if (!isPracticePhaseInSession(phase) || currentTargetIndex === null) return
       if (key.length !== 1) return
       const token = tokens[currentTargetIndex]
       if (!token || token.kind === 'punct') return
@@ -1685,7 +1679,7 @@ export default function MemorizationPracticeSession({
   const handlePracticeInputKeyDown = useCallback(
     (e: ReactKeyboardEvent<HTMLInputElement>) => {
       if (hintActive) return
-      if (phase !== 'practicing' || currentTargetIndex === null) return
+      if (!isPracticePhaseInSession(phase) || currentTargetIndex === null) return
       if (e.ctrlKey || e.metaKey || e.altKey) return
       const key = e.key
       if (key.length !== 1) return
@@ -1715,7 +1709,7 @@ export default function MemorizationPracticeSession({
         e.currentTarget.value = ''
         return
       }
-      if (phase !== 'practicing' || currentTargetIndex === null) {
+      if (!isPracticePhaseInSession(phase) || currentTargetIndex === null) {
         e.currentTarget.value = ''
         return
       }
@@ -1736,13 +1730,13 @@ export default function MemorizationPracticeSession({
 
   useEffect(() => {
     if (
-      phase !== 'practicing' ||
-      awaitingRoundAdvance ||
+      !isPracticePhaseInSession(phase) ||
+      isRoundComplete ||
       currentTargetIndex === null ||
       hintActive ||
       !isKeyboardPracticeMode(practiceMode)
     ) {
-      if (phase !== 'practicing' || awaitingRoundAdvance) {
+      if (!isPracticePhaseActiveRound(phase)) {
         practiceInputRef.current?.blur()
       }
       return
@@ -1754,7 +1748,7 @@ export default function MemorizationPracticeSession({
     return () => window.clearTimeout(id)
   }, [
     phase,
-    awaitingRoundAdvance,
+    isRoundComplete,
     roundIndex,
     currentTargetIndex,
     hintActive,
@@ -1765,12 +1759,12 @@ export default function MemorizationPracticeSession({
 
   /** Word mode: pinned choice strip below — scroll verse whenever the active blank changes. */
   useEffect(() => {
-    if (phase !== 'practicing' || awaitingRoundAdvance || currentTargetIndex === null) return
+    if (!isPracticePhaseActiveRound(phase) || currentTargetIndex === null) return
     if (practiceMode !== 'word') return
     scrollCurrentBlankIntoView()
   }, [
     phase,
-    awaitingRoundAdvance,
+    isRoundComplete,
     currentTargetIndex,
     roundIndex,
     practiceMode,
@@ -1780,13 +1774,13 @@ export default function MemorizationPracticeSession({
 
   /** Type mode: after first keystroke, keep the active blank in view as it advances. */
   useEffect(() => {
-    if (phase !== 'practicing' || awaitingRoundAdvance || currentTargetIndex === null) return
+    if (!isPracticePhaseActiveRound(phase) || currentTargetIndex === null) return
     if (practiceMode === 'word') return
     if (!hasTypedInRound) return
     scrollCurrentBlankIntoView()
   }, [
     phase,
-    awaitingRoundAdvance,
+    isRoundComplete,
     currentTargetIndex,
     roundIndex,
     hasTypedInRound,
@@ -1797,7 +1791,7 @@ export default function MemorizationPracticeSession({
   /** When the keyboard resizes the visual viewport, re-nudge so the current blank stays above it (keyboard modes). */
   useEffect(() => {
     if (!isKeyboardPracticeMode(practiceMode)) return
-    if (phase !== 'practicing' || awaitingRoundAdvance || currentTargetIndex === null) return
+    if (!isPracticePhaseActiveRound(phase) || currentTargetIndex === null) return
     if (!hasTypedInRound) return
     const delayMs = isMemorizeAndroidWebHost() ? 120 : 80
     const id = window.setTimeout(() => scrollCurrentBlankIntoView(), delayMs)
@@ -1805,7 +1799,7 @@ export default function MemorizationPracticeSession({
   }, [
     keyboardInsetPx,
     phase,
-    awaitingRoundAdvance,
+    isRoundComplete,
     currentTargetIndex,
     hasTypedInRound,
     scrollCurrentBlankIntoView,
@@ -1855,7 +1849,7 @@ export default function MemorizationPracticeSession({
 
   const showStartOver =
     typeof onClearInProgress === 'function' &&
-    (phase === 'practicing' || (phase === 'intro' && !!verse.inProgressPractice))
+    (isPracticePhaseInSession(phase) || (isPracticePhaseIntro(phase) && !!verse.inProgressPractice))
 
   if (typableIndices.length === 0) {
     return (
@@ -1977,8 +1971,8 @@ export default function MemorizationPracticeSession({
                 Start over
               </button>
             )}
-            {phase === 'practicing' &&
-              !awaitingRoundAdvance &&
+            {isPracticePhaseInSession(phase) &&
+              !isRoundComplete &&
               (practiceMode === 'type' ||
                 practiceMode === 'firstLetters' ||
                 practiceMode === 'word' ||
@@ -2057,7 +2051,7 @@ export default function MemorizationPracticeSession({
         </div>
 
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          {phase === 'practicing' && isKeyboardPracticeMode(practiceMode) && memorizeAndroidHost && (
+          {isPracticePhaseInSession(phase) && isKeyboardPracticeMode(practiceMode) && memorizeAndroidHost && (
             <input
               id={practiceInputDomId}
               ref={assignPracticeInputRef}
@@ -2068,16 +2062,16 @@ export default function MemorizationPracticeSession({
               autoCapitalize="off"
               spellCheck={false}
               enterKeyHint="done"
-              disabled={awaitingRoundAdvance}
+              disabled={isRoundComplete}
               aria-label="Type the first letter of each blank word, or each digit for number blanks. In Initials mode, dots in the initials row fill in when you type correctly."
               data-testid="memorize-practice-input"
-              tabIndex={awaitingRoundAdvance ? -1 : 0}
+              tabIndex={isRoundComplete ? -1 : 0}
               className="pointer-events-none fixed top-[25vh] left-1/2 z-110 h-10 w-32 max-w-[min(12rem,45vw)] -translate-x-1/2 border-0 bg-transparent p-0 opacity-[0.02] text-transparent caret-transparent"
               onKeyDown={handlePracticeInputKeyDown}
               onInput={handlePracticeInput}
             />
           )}
-          {phase !== 'done' && listenViaEsvPassageUrl && (
+          {!isPracticePhaseDone(phase) && listenViaEsvPassageUrl && (
             <audio
               ref={passageAudioRef}
               preload="none"
@@ -2091,7 +2085,7 @@ export default function MemorizationPracticeSession({
               }}
             />
           )}
-          {phase === 'intro' ? (
+          {isPracticePhaseIntro(phase) ? (
             <>
               <div
                 ref={practiceScrollRef}
@@ -2154,7 +2148,7 @@ export default function MemorizationPracticeSession({
             <div
               ref={practiceScrollRef}
               className={`relative isolate bg-white dark:bg-slate-800 px-4 pt-0 pb-4 flex-1 min-h-0 overscroll-y-contain touch-pan-y ${
-                phase === 'done'
+                isPracticePhaseDone(phase)
                   ? 'overflow-y-hidden flex flex-col justify-center'
                   : 'overflow-y-auto'
               }`}
@@ -2164,7 +2158,7 @@ export default function MemorizationPracticeSession({
                   : undefined
               }
             >
-          {phase === 'practicing' && isKeyboardPracticeMode(practiceMode) && !memorizeAndroidHost && (
+          {isPracticePhaseInSession(phase) && isKeyboardPracticeMode(practiceMode) && !memorizeAndroidHost && (
             <input
               id={practiceInputDomId}
               ref={assignPracticeInputRef}
@@ -2175,25 +2169,25 @@ export default function MemorizationPracticeSession({
               autoCapitalize="off"
               spellCheck={false}
               enterKeyHint="done"
-              disabled={awaitingRoundAdvance}
+              disabled={isRoundComplete}
               aria-label="Type the first letter of each blank word, or each digit for number blanks. In Initials mode, dots in the initials row fill in when you type correctly."
               data-testid="memorize-practice-input"
-              tabIndex={awaitingRoundAdvance ? -1 : 0}
+              tabIndex={isRoundComplete ? -1 : 0}
               className="absolute left-0 top-0 z-0 h-px w-full max-w-full border-0 bg-transparent p-0 opacity-[0.02] text-transparent caret-transparent"
               onKeyDown={handlePracticeInputKeyDown}
               onInput={handlePracticeInput}
             />
           )}
-          {phase === 'practicing' && (
+          {isPracticePhaseInSession(phase) && (
             <div>
               <div
                 className={
-                  practiceMode === 'firstLetters' && !awaitingRoundAdvance
+                  practiceMode === 'firstLetters' && !isRoundComplete
                     ? 'sticky top-0 z-20 -mx-4 mb-2 border-b border-slate-200 bg-white px-4 pt-4 pb-2 shadow-[0_6px_12px_-8px_rgba(15,23,42,0.35)] dark:border-slate-600 dark:bg-slate-800 dark:shadow-[0_8px_16px_-10px_rgba(0,0,0,0.65)]'
                     : 'pt-4 mb-2'
                 }
               >
-                <div className={practiceMode === 'firstLetters' && !awaitingRoundAdvance ? 'mb-2' : ''}>
+                <div className={practiceMode === 'firstLetters' && !isRoundComplete ? 'mb-2' : ''}>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <p className="text-sm text-slate-600 dark:text-slate-400">
                       {roundCompleteInstruction ??
@@ -2225,7 +2219,7 @@ export default function MemorizationPracticeSession({
                     )}
                   </div>
                 </div>
-                {practiceMode === 'firstLetters' && !awaitingRoundAdvance && (
+                {practiceMode === 'firstLetters' && !isRoundComplete && (
                   <>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
                       Cues below line up with blanks in order (first letter of each word or each reference digit); dots
@@ -2276,7 +2270,7 @@ export default function MemorizationPracticeSession({
                 )}
               </div>
               <div className="relative z-0 min-w-0">
-              {!awaitingRoundAdvance && practiceMode !== 'firstLetters' && (
+              {!isRoundComplete && practiceMode !== 'firstLetters' && (
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">
                   {practiceMode === 'reorder' ? (
                     <>
@@ -2400,7 +2394,7 @@ export default function MemorizationPracticeSession({
                     verseTouchMovedRef.current = false
                   }}
                   onTouchEnd={() => {
-                    if (awaitingRoundAdvance) return
+                    if (isRoundComplete) return
                     const wasScroll = verseTouchMovedRef.current
                     verseTouchMovedRef.current = false
                     if (wasScroll) return
@@ -2469,13 +2463,13 @@ export default function MemorizationPracticeSession({
             </div>
           )}
 
-          {phase === 'done' && (
+          {isPracticePhaseDone(phase) && (
             <div className="text-center py-6">
               <p
                 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-3"
                 data-testid="memorize-completion-message"
               >
-                {completionMessage}
+                {practicePhaseDoneMessage(phase)}
               </p>
               <button
                 type="button"
@@ -2489,9 +2483,9 @@ export default function MemorizationPracticeSession({
             </div>
           )}
 
-          {phase === 'practicing' &&
+          {isPracticePhaseInSession(phase) &&
             practiceMode === 'word' &&
-            !awaitingRoundAdvance &&
+            !isRoundComplete &&
             wordChoiceLabels.length > 0 && (
               <MemorizationWordChoicesFooter
                 labels={wordChoiceLabels}
@@ -2500,7 +2494,7 @@ export default function MemorizationPracticeSession({
               />
             )}
 
-          {phase === 'practicing' && awaitingRoundAdvance && (
+          {isPracticePhaseRoundComplete(phase) && (
             <MemorizationRoundAdvanceFooter
               roundAffirmation={roundAffirmation}
               showNextRoundOption={showNextRoundOption}
@@ -2526,7 +2520,7 @@ export default function MemorizationPracticeSession({
       </div>
     </div>
 
-    {modePickerOpen && phase === 'intro' && (
+    {modePickerOpen && isPracticePhaseIntro(phase) && (
       <div
         className="fixed inset-0 z-110 flex items-center justify-center bg-black/40 dark:bg-black/50 p-4"
         role="presentation"

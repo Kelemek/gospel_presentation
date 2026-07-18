@@ -13,19 +13,19 @@ export function shouldAutoCompleteFinalRound(wrongAttemptsInRound: number): bool
 }
 
 export function canFinishPracticeFromAwaiting(
-  awaitingRoundAdvance: boolean,
+  isRoundComplete: boolean,
   isFinalRound: boolean,
   strictMode: boolean
 ): boolean {
-  return awaitingRoundAdvance && isFinalRound && !strictMode
+  return isRoundComplete && isFinalRound && !strictMode
 }
 
 export function shouldBlockFinishPractice(
-  awaitingRoundAdvance: boolean,
+  isRoundComplete: boolean,
   isFinalRound: boolean,
   strictMode: boolean
 ): boolean {
-  return awaitingRoundAdvance && !canFinishPracticeFromAwaiting(awaitingRoundAdvance, isFinalRound, strictMode)
+  return isRoundComplete && !canFinishPracticeFromAwaiting(isRoundComplete, isFinalRound, strictMode)
 }
 
 export function memorizationRoundAdvanceShowsNextRound(params: {
@@ -41,19 +41,19 @@ export function memorizationRoundAdvanceShowsNextRound(params: {
 }
 
 export function memorizationRoundAdvanceShowsFinishPractice(params: {
-  awaitingRoundAdvance: boolean
+  isRoundComplete: boolean
   isFinalRound: boolean
   strictMode: boolean
 }): boolean {
-  return params.awaitingRoundAdvance && params.isFinalRound && !params.strictMode
+  return params.isRoundComplete && params.isFinalRound && !params.strictMode
 }
 
 export function memorizationRoundAdvanceShowsStrictErrorsBadge(params: {
   strictMode: boolean
   wrongAttemptsInRound: number
-  awaitingRoundAdvance: boolean
+  isActiveRound: boolean
 }): boolean {
-  return params.strictMode && params.wrongAttemptsInRound > 0 && !params.awaitingRoundAdvance
+  return params.strictMode && params.wrongAttemptsInRound > 0 && params.isActiveRound
 }
 
 export function getMemorizationRoundCompleteInstruction(params: {

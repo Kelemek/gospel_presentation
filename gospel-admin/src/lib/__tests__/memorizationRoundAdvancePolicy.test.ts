@@ -48,14 +48,14 @@ describe('memorizationRoundAdvancePolicy', () => {
   it('memorizationRoundAdvanceShowsFinishPractice only in normal final advance', () => {
     expect(
       memorizationRoundAdvanceShowsFinishPractice({
-        awaitingRoundAdvance: true,
+        isRoundComplete: true,
         isFinalRound: true,
         strictMode: false,
       })
     ).toBe(true)
     expect(
       memorizationRoundAdvanceShowsFinishPractice({
-        awaitingRoundAdvance: true,
+        isRoundComplete: true,
         isFinalRound: true,
         strictMode: true,
       })
@@ -67,14 +67,14 @@ describe('memorizationRoundAdvancePolicy', () => {
       memorizationRoundAdvanceShowsStrictErrorsBadge({
         strictMode: true,
         wrongAttemptsInRound: 1,
-        awaitingRoundAdvance: false,
+        isActiveRound: true,
       })
     ).toBe(true)
     expect(
       memorizationRoundAdvanceShowsStrictErrorsBadge({
         strictMode: true,
         wrongAttemptsInRound: 1,
-        awaitingRoundAdvance: true,
+        isActiveRound: false,
       })
     ).toBe(false)
   })
