@@ -8,6 +8,10 @@ import MemorizeDropdown from '@/components/MemorizeDropdown'
 import { resetGospelClientStorageForTests } from '@/lib/gospelClientStorage'
 import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
 import {
+  MEMORIZATION_STRICT_MODE_STORAGE_KEY,
+  readMemorizationStrictModeFromStorage,
+} from '@/lib/memorizationStrictModeStorage'
+import {
   addMemorizedVerse,
   loadMemorizedVerses,
   tryAddMemorizedBibleBooks,
@@ -85,6 +89,30 @@ describe('MemorizeDropdown', () => {
     await user.click(screen.getByRole('button', { name: /memorize/i }))
     await user.click(screen.getByRole('button', { name: /^\+ Bible Books$/i }))
     expect(screen.getByTestId('add-memorized-bible-books-modal')).toBeInTheDocument()
+  })
+
+  it('shows Normal Mode and Strict Mode buttons and persists strict selection', async () => {
+    const user = userEvent.setup()
+    render(<MemorizeDropdown />)
+    await user.click(screen.getByRole('button', { name: /memorize/i }))
+    const normal = screen.getByRole('button', { name: /Normal Mode/i })
+    const strict = screen.getByRole('button', { name: /Strict Mode/i })
+    expect(normal).toHaveAttribute('aria-pressed', 'true')
+    expect(strict).toHaveAttribute('aria-pressed', 'false')
+    await user.click(strict)
+    expect(strict).toHaveAttribute('aria-pressed', 'true')
+    expect(normal).toHaveAttribute('aria-pressed', 'false')
+    expect(window.localStorage.getItem(MEMORIZATION_STRICT_MODE_STORAGE_KEY)).toBe('true')
+    expect(readMemorizationStrictModeFromStorage()).toBe(true)
+    expect(screen.getByTestId('memorize-mode-toast')).toHaveTextContent(/no errors before you can advance/i)
+  })
+
+  it('shows normal mode explanation toast when Normal Mode is chosen', async () => {
+    const user = userEvent.setup()
+    render(<MemorizeDropdown />)
+    await user.click(screen.getByRole('button', { name: /memorize/i }))
+    await user.click(screen.getByRole('button', { name: /Normal Mode/i }))
+    expect(screen.getByTestId('memorize-mode-toast')).toHaveTextContent(/auto-reveals blanks/i)
   })
 
   it('lists bible books item with book count instead of translation', async () => {

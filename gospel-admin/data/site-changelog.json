@@ -1393,5 +1393,10 @@
     "releasedAt": "2026-06-27",
     "committedAt": "2026-06-27T17:33:32.441Z",
     "message": "The Biblical Counseling Scripture Reference now starts with a table that maps common counseling terms to biblical topics. Search on that resource highlights the mapping and shows which biblical topic fits your term."
+  },
+  {
+    "releasedAt": "2026-07-18",
+    "committedAt": "2026-07-18T22:29:03.965Z",
+    "message": "Memorize now offers Normal and Strict practice modes, with a short explanation when you choose. Word-mode choices use a steadier layout and six number options for chapter and verse blanks. Finishing or resuming the last round after mistakes now works correctly, including saved error counts."
   }
 ]

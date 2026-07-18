@@ -20,9 +20,15 @@ import {
   referenceTextsForMemorizationReorder,
   reorderReferenceColonAfterSlotIndex,
   reorderMovableCountForRound,
+  reorderSlotsBecameCorrectAfterSwap,
   seedRandom,
+  splitMemorizationChoiceRows,
+  memorizationWordChoiceRowCount,
+  memorizationWordChoicesPanelMinHeight,
   stringToSeed,
   MEMORIZATION_FULL_HIDE_ROUND,
+  MEMORIZATION_WORD_CHOICE_ROW_COUNT_COMPACT,
+  MEMORIZATION_WORD_CHOICE_ROW_COUNT_COMFORTABLE,
 } from '@/lib/memorizationPracticeUtils'
 
 describe('memorizationPracticeUtils', () => {
@@ -283,5 +289,37 @@ describe('memorizationPracticeUtils', () => {
     for (const s of movable) {
       expect(assign[s]).not.toBe(s)
     }
+  })
+
+  it('reorderSlotsBecameCorrectAfterSwap returns slots fixed by a swap', () => {
+    expect(reorderSlotsBecameCorrectAfterSwap([0, 3, 2, 1], [0, 1, 2, 3])).toEqual([1, 3])
+  })
+
+  it('splitMemorizationChoiceRows balances labels across rows', () => {
+    expect(splitMemorizationChoiceRows(['a', 'b', 'c', 'd'], 2)).toEqual([
+      ['a', 'b'],
+      ['c', 'd'],
+    ])
+    expect(splitMemorizationChoiceRows(['a', 'b', 'c', 'd', 'e'], 3)).toEqual([
+      ['a', 'b'],
+      ['c', 'd'],
+      ['e'],
+    ])
+    expect(splitMemorizationChoiceRows([], 3)).toEqual([[], [], []])
+  })
+
+  it('memorizationWordChoiceRowCount switches at comfortable width', () => {
+    expect(memorizationWordChoiceRowCount(false)).toBe(MEMORIZATION_WORD_CHOICE_ROW_COUNT_COMPACT)
+    expect(memorizationWordChoiceRowCount(true)).toBe(MEMORIZATION_WORD_CHOICE_ROW_COUNT_COMFORTABLE)
+  })
+
+  it('memorizationWordChoicesPanelMinHeight varies by row count', () => {
+    const compact = memorizationWordChoicesPanelMinHeight(MEMORIZATION_WORD_CHOICE_ROW_COUNT_COMPACT)
+    const comfortable = memorizationWordChoicesPanelMinHeight(
+      MEMORIZATION_WORD_CHOICE_ROW_COUNT_COMFORTABLE
+    )
+    expect(compact).toContain('* 3 + 2rem')
+    expect(comfortable).toContain('* 2 + 1rem')
+    expect(compact).not.toEqual(comfortable)
   })
 })

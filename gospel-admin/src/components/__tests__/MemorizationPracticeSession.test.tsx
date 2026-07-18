@@ -35,6 +35,17 @@ jest.mock('@/lib/memorizationViewportPlatform', () => ({
   isMemorizeIosWebHost: jest.fn(() => false),
 }))
 
+let memorizationStrictModeEnabled = false
+
+jest.mock('@/hooks/useMemorizationStrictMode', () => ({
+  useMemorizationStrictMode: () => [
+    memorizationStrictModeEnabled,
+    (next: boolean) => {
+      memorizationStrictModeEnabled = next
+    },
+  ],
+}))
+
 import { MEMORIZE_LISTEN_SPEED_STORAGE_KEY } from '@/lib/memorizeListenSpeedStorage'
 import * as memorizationUtils from '@/lib/memorizationPracticeUtils'
 import { isMemorizeAndroidWebHost } from '@/lib/memorizationViewportPlatform'
@@ -64,10 +75,16 @@ function chooseTypeModeSync() {
   fireEvent.click(screen.getByTestId('memorize-practice-mode-type'))
 }
 
+async function chooseWordModeAfterStart(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole('button', { name: /Start practice/i }))
+  await user.click(screen.getByTestId('memorize-practice-mode-word'))
+}
+
 describe('MemorizationPracticeSession', () => {
   let playSpy: jest.SpiedFunction<() => Promise<void>>
 
   beforeEach(() => {
+    memorizationStrictModeEnabled = false
     ;(isMemorizeAndroidWebHost as jest.Mock).mockReturnValue(false)
     playSpy = jest
       .spyOn(HTMLMediaElement.prototype, 'play')
@@ -724,5 +741,176 @@ describe('MemorizationPracticeSession', () => {
     expect(screen.getByText('Genesis')).toBeInTheDocument()
     expect(screen.queryByTestId('memorize-practice-spurgeon-study')).not.toBeInTheDocument()
     expect(screen.queryByTestId('memorize-intro-text')).not.toBeInTheDocument()
+  })
+
+  it('does not auto-reveal after three wrong word guesses in strict mode', async () => {
+    memorizationStrictModeEnabled = true
+    const user = userEvent.setup()
+    render(
+      <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
+    )
+    await chooseWordModeAfterStart(user)
+    const choices = screen.getByTestId('memorize-word-choices').querySelectorAll('button')
+    const wrongChoice = Array.from(choices).find((b) => b.textContent !== 'For')
+    expect(wrongChoice).toBeTruthy()
+    await user.click(wrongChoice!)
+    await user.click(wrongChoice!)
+    await user.click(wrongChoice!)
+    const hiddenFor = screen
+      .getByTestId('memorize-practice-words')
+      .querySelector('[data-memorize-current-blank="true"] .text-transparent')
+    expect(hiddenFor).toBeTruthy()
+  })
+
+  it('hides Next round in strict mode when the round had errors', async () => {
+    memorizationStrictModeEnabled = true
+    const user = userEvent.setup()
+    render(
+      <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
+    )
+    await chooseWordModeAfterStart(user)
+    const choices = screen.getByTestId('memorize-word-choices').querySelectorAll('button')
+    const wrongChoice = Array.from(choices).find((b) => b.textContent !== 'For')
+    await user.click(wrongChoice!)
+    const rightChoice = Array.from(choices).find((b) => b.textContent === 'For')
+    await user.click(rightChoice!)
+    expect(screen.getByTestId('memorize-round-advance-footer')).toBeInTheDocument()
+    expect(screen.queryByTestId('memorize-next-round')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Repeat this round/i })).toBeInTheDocument()
+  })
+
+  it('shows errors count in strict mode after a wrong attempt', async () => {
+    memorizationStrictModeEnabled = true
+    const user = userEvent.setup()
+    render(
+      <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
+    )
+    await chooseWordModeAfterStart(user)
+    const choices = screen.getByTestId('memorize-word-choices').querySelectorAll('button')
+    const wrongChoice = Array.from(choices).find((b) => b.textContent !== 'For')
+    await user.click(wrongChoice!)
+    expect(screen.getByTestId('memorize-errors-count')).toHaveTextContent('Errors: 1')
+  })
+
+  it('strict final round with errors shows repeat instead of completing', async () => {
+    memorizationStrictModeEnabled = true
+    ;(memorizationUtils.pickHiddenWordIndices as jest.Mock).mockImplementation(
+      () => new Set([0])
+    )
+    const user = userEvent.setup()
+    const onComplete = jest.fn()
+    render(
+      <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={onComplete} />
+    )
+    await user.click(screen.getByRole('button', { name: /Starting round/i }))
+    await user.click(screen.getByRole('option', { name: /Round 5/i }))
+    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    await user.click(screen.getByTestId('memorize-practice-mode-word'))
+    const choices = screen.getByTestId('memorize-word-choices').querySelectorAll('button')
+    const wrongChoice = Array.from(choices).find((b) => b.textContent !== 'For')
+    await user.click(wrongChoice!)
+    const rightChoice = Array.from(choices).find((b) => b.textContent === 'For')
+    await user.click(rightChoice!)
+    expect(screen.getByTestId('memorize-round-advance-footer')).toBeInTheDocument()
+    expect(onComplete).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('memorize-finish-practice')).not.toBeInTheDocument()
+  })
+
+  it('normal final round with errors shows Finish practice instead of auto-completing', async () => {
+    memorizationStrictModeEnabled = false
+    ;(memorizationUtils.pickHiddenWordIndices as jest.Mock).mockImplementation(
+      () => new Set([0])
+    )
+    const user = userEvent.setup()
+    const onComplete = jest.fn()
+    render(
+      <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={onComplete} />
+    )
+    await user.click(screen.getByRole('button', { name: /Starting round/i }))
+    await user.click(screen.getByRole('option', { name: /Round 5/i }))
+    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    await user.click(screen.getByTestId('memorize-practice-mode-word'))
+    const choices = screen.getByTestId('memorize-word-choices').querySelectorAll('button')
+    const wrongChoice = Array.from(choices).find((b) => b.textContent !== 'For')
+    await user.click(wrongChoice!)
+    const rightChoice = Array.from(choices).find((b) => b.textContent === 'For')
+    await user.click(rightChoice!)
+    expect(screen.getByTestId('memorize-round-advance-footer')).toBeInTheDocument()
+    expect(onComplete).not.toHaveBeenCalled()
+    expect(screen.getByTestId('memorize-finish-practice')).toBeInTheDocument()
+    await user.click(screen.getByTestId('memorize-finish-practice'))
+    expect(onComplete).toHaveBeenCalledWith(expect.objectContaining({ completed: true }))
+  })
+
+  it('repeat this round persists zero wrongAttemptsInRound', async () => {
+    const user = userEvent.setup()
+    const onPersistInProgress = jest.fn()
+    render(
+      <MemorizationPracticeSession
+        verse={baseVerse}
+        onClose={jest.fn()}
+        onComplete={jest.fn()}
+        onPersistInProgress={onPersistInProgress}
+      />
+    )
+    await chooseTypeModeAfterStart(user)
+    await user.keyboard('f')
+    await user.click(screen.getByRole('button', { name: /Repeat this round/i }))
+    expect(onPersistInProgress).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        phase: { kind: 'inRound', roundIndex: 1 },
+        wrongAttemptsInRound: 0,
+      })
+    )
+  })
+
+  it('resuming inRound without wrongAttemptsInRound does not treat session wrongAttempts as round errors', () => {
+    const verseWithProgress: MemorizedVerse = {
+      ...baseVerse,
+      inProgressPractice: {
+        sessionSeed: 'resume-seed',
+        wrongAttempts: 3,
+        correctKeystrokes: 1,
+        updatedAt: 99,
+        phase: { kind: 'inRound', roundIndex: 2 },
+        practiceMode: 'word',
+      },
+    }
+    render(
+      <MemorizationPracticeSession verse={verseWithProgress} onClose={jest.fn()} onComplete={jest.fn()} />
+    )
+    expect(screen.queryByTestId('memorize-errors-count')).not.toBeInTheDocument()
+  })
+
+  it('closing resumed betweenRounds preserves wrongAttemptsInRound', async () => {
+    const user = userEvent.setup()
+    const onPersistInProgress = jest.fn()
+    const verseWithProgress: MemorizedVerse = {
+      ...baseVerse,
+      inProgressPractice: {
+        sessionSeed: 'resume-seed',
+        wrongAttempts: 2,
+        wrongAttemptsInRound: 2,
+        correctKeystrokes: 1,
+        updatedAt: 99,
+        phase: { kind: 'betweenRounds', completedRoundIndex: 1 },
+        practiceMode: 'type',
+      },
+    }
+    render(
+      <MemorizationPracticeSession
+        verse={verseWithProgress}
+        onClose={jest.fn()}
+        onComplete={jest.fn()}
+        onPersistInProgress={onPersistInProgress}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+    expect(onPersistInProgress).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        phase: { kind: 'betweenRounds', completedRoundIndex: 1 },
+        wrongAttemptsInRound: 2,
+      })
+    )
   })
 })

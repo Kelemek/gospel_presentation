@@ -14,6 +14,7 @@ import {
 import { VERSE_MEMORIZATION_STORAGE_KEY as MEMORIZATION_KEY } from '@/lib/gospelClientStoragePolicy'
 import { idbGetItem, isIndexedDbWritable } from '@/lib/gospelClientKvStore'
 import { stripHtmlTags } from '@/lib/stripHtmlTags'
+import { MEMORIZATION_FULL_HIDE_ROUND } from '@/lib/memorizationPracticeUtils'
 
 export const VERSE_MEMORIZATION_STORAGE_KEY = MEMORIZATION_KEY
 export const VERSE_MEMORIZATION_SCHEMA_VERSION = 1
@@ -44,6 +45,8 @@ export interface MemorizationInProgress {
   updatedAt: number
   phase: MemorizationInProgressPhase
   practiceMode?: MemorizationPracticeMode
+  /** Wrong attempts in the current round (strict-mode resume). */
+  wrongAttemptsInRound?: number
 }
 
 /** Payload from the practice UI (storage sets `updatedAt`). */
@@ -109,6 +112,11 @@ function normalizeInProgress(raw: unknown): MemorizationInProgress | undefined {
     practiceModeRaw === 'firstLetters'
       ? practiceModeRaw
       : undefined
+  const wrongAttemptsInRoundRaw = o.wrongAttemptsInRound
+  const wrongAttemptsInRound: number | undefined =
+    typeof wrongAttemptsInRoundRaw === 'number' && wrongAttemptsInRoundRaw >= 0
+      ? wrongAttemptsInRoundRaw
+      : undefined
   const p = phase as Record<string, unknown>
   const kind = p.kind
   if (kind === 'betweenRounds') {
@@ -116,7 +124,7 @@ function normalizeInProgress(raw: unknown): MemorizationInProgress | undefined {
     if (
       typeof completedRoundIndex !== 'number' ||
       completedRoundIndex < 1 ||
-      completedRoundIndex > 4
+      completedRoundIndex > MEMORIZATION_FULL_HIDE_ROUND
     ) {
       return undefined
     }
@@ -127,6 +135,7 @@ function normalizeInProgress(raw: unknown): MemorizationInProgress | undefined {
       updatedAt,
       phase: { kind: 'betweenRounds', completedRoundIndex },
       ...(practiceMode ? { practiceMode } : {}),
+      ...(wrongAttemptsInRound !== undefined ? { wrongAttemptsInRound } : {}),
     }
   }
   if (kind === 'inRound') {
@@ -141,6 +150,7 @@ function normalizeInProgress(raw: unknown): MemorizationInProgress | undefined {
       updatedAt,
       phase: { kind: 'inRound', roundIndex },
       ...(practiceMode ? { practiceMode } : {}),
+      ...(wrongAttemptsInRound !== undefined ? { wrongAttemptsInRound } : {}),
     }
   }
   return undefined

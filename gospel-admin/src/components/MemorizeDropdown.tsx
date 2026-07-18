@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import AddMemorizedBibleBooksModal from '@/components/AddMemorizedBibleBooksModal'
 import AddMemorizedVerseModal from '@/components/AddMemorizedVerseModal'
@@ -8,6 +8,7 @@ import { bibleBooksCountLabel, isBibleBooksMemorizationItem } from '@/lib/bibleB
 import MemorizationPracticeSession from '@/components/MemorizationPracticeSession'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import { useTranslation } from '@/contexts/TranslationContext'
+import { useMemorizationStrictMode } from '@/hooks/useMemorizationStrictMode'
 import {
   GOSPEL_MEMORIZATION_CHANGED_EVENT,
   clearMemorizationInProgress,
@@ -50,12 +51,24 @@ function groupByLevel(verses: MemorizedVerse[]) {
   return { learning, practicing, mastered }
 }
 
+const MEMORIZATION_MODE_TOAST_MS = 9000
+
+const MEMORIZATION_MODE_MESSAGES = {
+  normal:
+    'Normal mode auto-reveals blanks after three wrong guesses. You can advance to the next round even if you made mistakes.',
+  strict:
+    'Strict mode keeps blanks hidden until you answer correctly. Finish each round with no errors before you can advance.',
+} as const
+
 export default function MemorizeDropdown({
   onNavigate,
   onMemorizationPracticeStart,
 }: MemorizeDropdownProps) {
   const { showConfirm } = useAlertModal()
   const { translation } = useTranslation()
+  const [strictMode, setStrictMode] = useMemorizationStrictMode()
+  const [modeToast, setModeToast] = useState<'normal' | 'strict' | null>(null)
+  const modeToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [addVerseOpen, setAddVerseOpen] = useState(false)
   const [addBibleBooksOpen, setAddBibleBooksOpen] = useState(false)
@@ -76,6 +89,25 @@ export default function MemorizeDropdown({
     }
   }, [refresh])
 
+  const showModeToast = useCallback((mode: 'normal' | 'strict') => {
+    if (modeToastTimerRef.current) {
+      clearTimeout(modeToastTimerRef.current)
+    }
+    setModeToast(mode)
+    modeToastTimerRef.current = setTimeout(() => {
+      setModeToast(null)
+      modeToastTimerRef.current = null
+    }, MEMORIZATION_MODE_TOAST_MS)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (modeToastTimerRef.current) {
+        clearTimeout(modeToastTimerRef.current)
+      }
+    }
+  }, [])
+
   const handleRemove = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
     const item = verses.find((v) => v.id === id)
@@ -91,6 +123,11 @@ export default function MemorizeDropdown({
   }
 
   const { learning, practicing, mastered } = groupByLevel(verses)
+
+  const memorizeModeActiveClass =
+    'border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-100 hover:bg-blue-100 dark:hover:bg-blue-900/50'
+  const memorizeModeInactiveClass =
+    'border-2 border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:border-blue-300 dark:hover:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20'
 
   const renderGroup = (label: string, list: MemorizedVerse[]) => {
     if (list.length === 0) return null
@@ -214,6 +251,48 @@ export default function MemorizeDropdown({
             >
               + Bible Books
             </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                data-tour="memorize-mode-normal"
+                aria-pressed={!strictMode}
+                title="Auto-reveal blanks after three wrong attempts"
+                onClick={() => {
+                  setStrictMode(false)
+                  showModeToast('normal')
+                }}
+                className={`min-h-[44px] cursor-pointer rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                  !strictMode ? memorizeModeActiveClass : memorizeModeInactiveClass
+                }`}
+              >
+                Normal Mode
+              </button>
+              <button
+                type="button"
+                data-tour="memorize-mode-strict"
+                aria-pressed={strictMode}
+                title="Keep practicing until you get each blank right"
+                onClick={() => {
+                  setStrictMode(true)
+                  showModeToast('strict')
+                }}
+                className={`min-h-[44px] cursor-pointer rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
+                  strictMode ? memorizeModeActiveClass : memorizeModeInactiveClass
+                }`}
+              >
+                Strict Mode
+              </button>
+            </div>
+            {modeToast && (
+              <p
+                role="status"
+                aria-live="polite"
+                data-testid="memorize-mode-toast"
+                className="rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-950/40 px-3 py-2.5 text-xs sm:text-sm text-blue-900 dark:text-blue-100 leading-snug"
+              >
+                {MEMORIZATION_MODE_MESSAGES[modeToast]}
+              </p>
+            )}
           </div>
         )}
         {isOpen && (

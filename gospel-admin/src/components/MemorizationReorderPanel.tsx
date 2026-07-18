@@ -13,6 +13,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import type { MemorizationReorderChunk } from '@/lib/memorizationPracticeUtils'
+import { reorderSlotsBecameCorrectAfterSwap } from '@/lib/memorizationPracticeUtils'
 
 export interface MemorizationReorderPanelProps {
   chunks: MemorizationReorderChunk[]
@@ -22,6 +23,8 @@ export interface MemorizationReorderPanelProps {
   /** Slots that were shuffled this round; others stay fixed at identity. */
   roundMovableIndices: ReadonlySet<number>
   onInvalidDrop: () => void
+  /** Strict mode: swap that fixed no slot. */
+  onWrongSwap?: () => void
   /** Notifies parent so it can increment metrics when a slot first becomes correct. */
   onSlotsBecameCorrect?: (slots: number[]) => void
   /** Parent-driven red flash (e.g. shared with word-mode timing). */
@@ -91,6 +94,7 @@ export function MemorizationReorderPanel({
   onSlotChunkIdsChange,
   roundMovableIndices,
   onInvalidDrop,
+  onWrongSwap,
   onSlotsBecameCorrect,
   listFlashError = false,
   holdHintPeekFirstWrong = false,
@@ -144,14 +148,15 @@ export function MemorizationReorderPanel({
       }
       const next = [...prev]
       ;[next[src], next[dst]] = [next[dst]!, next[src]!]
-      const became: number[] = []
-      for (let i = 0; i < next.length; i++) {
-        if (next[i] === i && prev[i] !== i) became.push(i)
-      }
+      const became = reorderSlotsBecameCorrectAfterSwap(prev, next)
       onSlotChunkIdsChange(next)
-      if (became.length > 0) onSlotsBecameCorrect?.(became)
+      if (became.length > 0) {
+        onSlotsBecameCorrect?.(became)
+      } else {
+        onWrongSwap?.()
+      }
     },
-    [onInvalidDrop, onSlotChunkIdsChange, onSlotsBecameCorrect]
+    [onInvalidDrop, onSlotChunkIdsChange, onSlotsBecameCorrect, onWrongSwap]
   )
 
   const firstWrongSlotIndex = useMemo(() => {
@@ -431,6 +436,7 @@ export function MemorizationReorderPanel({
         e.preventDefault()
         return
       }
+      draggedSlotRef.current = slotIndex
       setDraggedSlot(slotIndex)
       e.dataTransfer.effectAllowed = 'move'
       try {
@@ -461,7 +467,8 @@ export function MemorizationReorderPanel({
   const handleDrop = useCallback(
     (e: DragEvent, dst: number) => {
       e.preventDefault()
-      const src = draggedSlot
+      const src = draggedSlotRef.current
+      draggedSlotRef.current = null
       setDraggedSlot(null)
       setDragOverSlot(null)
       if (src === null) return
@@ -472,7 +479,7 @@ export function MemorizationReorderPanel({
       }
       applySwap(src, dst, slotChunkIds)
     },
-    [draggedSlot, applySwap, onInvalidDrop, slotChunkIds]
+    [applySwap, onInvalidDrop, slotChunkIds]
   )
 
   const handleDragEnd = useCallback(() => {

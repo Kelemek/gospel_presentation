@@ -209,6 +209,39 @@ describe('verseMemorizationStorage', () => {
     expect(raw).toContain('"practiceMode":"word"')
   })
 
+  it('saveMemorizationInProgress persists wrongAttemptsInRound', () => {
+    addMemorizedVerse('Ps 23:1', 'The Lord is my shepherd', 'esv')
+    const id = loadMemorizedVerses()[0].id
+    saveMemorizationInProgress(id, {
+      sessionSeed: 'seed-err',
+      wrongAttempts: 2,
+      wrongAttemptsInRound: 2,
+      correctKeystrokes: 4,
+      phase: { kind: 'betweenRounds', completedRoundIndex: 2 },
+      practiceMode: 'type',
+    })
+    expect(loadMemorizedVerses()[0].inProgressPractice?.wrongAttemptsInRound).toBe(2)
+    const raw = gospelStorageGetSync(VERSE_MEMORIZATION_STORAGE_KEY)
+    expect(raw).toContain('"wrongAttemptsInRound":2')
+  })
+
+  it('saveMemorizationInProgress accepts final-round betweenRounds resume', () => {
+    addMemorizedVerse('Ps 23:1', 'The Lord is my shepherd', 'esv')
+    const id = loadMemorizedVerses()[0].id
+    saveMemorizationInProgress(id, {
+      sessionSeed: 'seed-final',
+      wrongAttempts: 1,
+      wrongAttemptsInRound: 1,
+      correctKeystrokes: 8,
+      phase: { kind: 'betweenRounds', completedRoundIndex: 5 },
+      practiceMode: 'word',
+    })
+    expect(loadMemorizedVerses()[0].inProgressPractice?.phase).toEqual({
+      kind: 'betweenRounds',
+      completedRoundIndex: 5,
+    })
+  })
+
   it('saveMemorizationInProgress persists practiceMode reorder', () => {
     addMemorizedVerse('Ps 23:1', 'The Lord is my shepherd', 'esv')
     const id = loadMemorizedVerses()[0].id

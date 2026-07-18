@@ -257,6 +257,15 @@ export function buildInitialReorderSlotAssignment(
   return assignment
 }
 
+/** Slot indices that became correct after a reorder swap (used for strict-mode wrong-swap detection). */
+export function reorderSlotsBecameCorrectAfterSwap(prev: number[], next: number[]): number[] {
+  const became: number[] = []
+  for (let i = 0; i < next.length; i++) {
+    if (next[i] === i && prev[i] !== i) became.push(i)
+  }
+  return became
+}
+
 /** Permutation of chunk ids for movable slots so no id sits in its home slot. */
 function derangeMovableChunkIds(sortedSlots: number[], rng: () => number): number[] {
   const n = sortedSlots.length
@@ -449,4 +458,56 @@ export function buildMemorizationChoiceLabels(
     ;[labels[i], labels[j]] = [labels[j]!, labels[i]!]
   }
   return labels
+}
+
+/** Word-choice footer rows on narrow viewports (below Tailwind `sm`). */
+export const MEMORIZATION_WORD_CHOICE_ROW_COUNT_COMPACT = 3
+
+/** Word-choice footer rows on `sm` and wider viewports. */
+export const MEMORIZATION_WORD_CHOICE_ROW_COUNT_COMFORTABLE = 2
+
+/** Tailwind `sm` — word-choice footer switches to fewer rows at this width and above. */
+export const MEMORIZATION_WORD_CHOICE_SM_MIN_WIDTH_PX = 640
+
+export const MEMORIZATION_WORD_CHOICE_COMFORTABLE_MEDIA_QUERY =
+  `(min-width: ${MEMORIZATION_WORD_CHOICE_SM_MIN_WIDTH_PX}px)` as const
+
+export function memorizationWordChoiceRowCount(isComfortableWidth: boolean): number {
+  return isComfortableWidth
+    ? MEMORIZATION_WORD_CHOICE_ROW_COUNT_COMFORTABLE
+    : MEMORIZATION_WORD_CHOICE_ROW_COUNT_COMPACT
+}
+
+/** Split word-mode choices into balanced rows for a stable footer layout. */
+export function splitMemorizationChoiceRows(
+  labels: readonly string[],
+  rowCount = MEMORIZATION_WORD_CHOICE_ROW_COUNT_COMPACT
+): readonly string[][] {
+  if (rowCount <= 0) return []
+  if (labels.length === 0) {
+    return Array.from({ length: rowCount }, () => [] as string[])
+  }
+  const base = Math.floor(labels.length / rowCount)
+  let remainder = labels.length % rowCount
+  const rows: string[][] = []
+  let offset = 0
+  for (let i = 0; i < rowCount; i++) {
+    const size = base + (remainder > 0 ? 1 : 0)
+    if (remainder > 0) remainder -= 1
+    rows.push(labels.slice(offset, offset + size))
+    offset += size
+  }
+  return rows
+}
+
+const MEMORIZATION_WORD_CHOICE_ROW_HEIGHT =
+  'calc(0.75rem * 2 + 1.375 * 0.875rem + 2px)' as const
+
+/** Reserve footer height so the passage above does not jump when choices change. */
+export function memorizationWordChoicesPanelMinHeight(rowCount: number): string {
+  const verticalPadding = '0.75rem * 2'
+  if (rowCount <= MEMORIZATION_WORD_CHOICE_ROW_COUNT_COMFORTABLE) {
+    return `calc(${verticalPadding} + (${MEMORIZATION_WORD_CHOICE_ROW_HEIGHT}) * ${MEMORIZATION_WORD_CHOICE_ROW_COUNT_COMFORTABLE} + 1rem)`
+  }
+  return `calc(${verticalPadding} + (${MEMORIZATION_WORD_CHOICE_ROW_HEIGHT}) * ${MEMORIZATION_WORD_CHOICE_ROW_COUNT_COMPACT} + 2rem)`
 }
