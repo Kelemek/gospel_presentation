@@ -14,7 +14,6 @@ import {
 } from 'react'
 import { flushSync } from 'react-dom'
 import type {
-  MemorizationInProgress,
   MemorizationInProgressSavePayload,
   MemorizationPracticeMode,
   MemorizedVerse,
@@ -32,10 +31,12 @@ import { getMemorizationListenUtteranceText } from '@/lib/memorizationListenUtte
 import { studyResourcesAvailableFromPayload } from '@/lib/studyResourcesAvailability'
 import BibleBooksMemorizationList from '@/components/BibleBooksMemorizationList'
 import { MemorizationReorderPanel } from '@/components/MemorizationReorderPanel'
+import { MemorizationRoundAdvanceFooter } from '@/components/MemorizationRoundAdvanceFooter'
 import { MemorizationWordChoicesFooter } from '@/components/MemorizationWordChoicesFooter'
 import { booksForScope, isBibleBooksMemorizationItem } from '@/lib/bibleBooksMemorization'
 import { usePostHogModalMount } from '@/hooks/usePostHogModalOpen'
 import { useMemorizationStrictMode } from '@/hooks/useMemorizationStrictMode'
+import { useMemorizationRoundErrors } from '@/hooks/useMemorizationRoundErrors'
 import { MemorizeListenControlsDialog } from '@/components/MemorizeListenControlsDialog'
 import ScriptureModalToolbarMenu from '@/components/ScriptureModalToolbarMenu'
 import {
@@ -68,6 +69,15 @@ import {
   seedRandom,
   stringToSeed,
 } from '@/lib/memorizationPracticeUtils'
+import {
+  getMemorizationRoundCompleteInstruction,
+  memorizationRoundAdvanceShowsFinishPractice,
+  memorizationRoundAdvanceShowsNextRound,
+  memorizationRoundAdvanceShowsStrictErrorsBadge,
+  shouldAutoCompleteFinalRound,
+  shouldAutoRevealAfterWrongAttempts,
+  shouldBlockFinishPractice,
+} from '@/lib/memorizationRoundAdvancePolicy'
 
 export interface MemorizationPracticeSessionResult {
   wrongAttempts: number
@@ -91,12 +101,6 @@ interface MemorizationPracticeSessionProps {
 }
 
 type Phase = 'intro' | 'practicing' | 'done'
-
-const MAX_WRONG_BEFORE_REVEAL = 3
-
-function resolveHydratedWrongAttemptsInRound(ip: MemorizationInProgress): number {
-  return ip.wrongAttemptsInRound ?? 0
-}
 
 const MEMORIZATION_WORD_CHOICE_COUNT_WORD = 8
 const MEMORIZATION_WORD_CHOICE_COUNT_DIGIT = 6
@@ -216,13 +220,21 @@ export default function MemorizationPracticeSession({
   )
   const [, setConsecutiveWrong] = useState(0)
   const [wrongAttemptsTotal, setWrongAttemptsTotal] = useState(0)
-  const [wrongAttemptsInRound, setWrongAttemptsInRound] = useState(0)
-  const [roundCompletedWithErrors, setRoundCompletedWithErrors] = useState(false)
+  const {
+    wrongAttemptsInRound,
+    roundCompletedWithErrors,
+    wrongAttemptsInRoundRef,
+    recordWrongAttempt,
+    resetRoundErrors,
+    completeRoundAdvance,
+    hydrateBetweenRounds,
+    hydrateInRound,
+  } = useMemorizationRoundErrors(useCallback(() => {
+    setWrongAttemptsTotal((w) => w + 1)
+  }, []))
   const [correctKeystrokesTotal, setCorrectKeystrokesTotal] = useState(0)
   /** Latest totals for persist / onComplete without churning callbacks on every wrong key. */
   const wrongAttemptsRef = useRef(0)
-  const wrongAttemptsInRoundRef = useRef(0)
-  const pendingBetweenRoundsErrorsRef = useRef(0)
   const strictModeRef = useRef(false)
   const correctKeystrokesRef = useRef(0)
   const practiceModeRef = useRef<MemorizationPracticeMode | null>(null)
@@ -448,25 +460,45 @@ export default function MemorizationPracticeSession({
 
   const isFinalRound = roundIndex >= MEMORIZATION_FULL_HIDE_ROUND
 
-  const mustRepeatDueToErrors = useMemo(() => {
-    if (wrongAttemptsInRound <= 0) return false
-    return strictMode
-  }, [wrongAttemptsInRound, strictMode])
+  const showNextRoundOption = useMemo(
+    () =>
+      memorizationRoundAdvanceShowsNextRound({
+        isFinalRound,
+        roundCompletedWithErrors,
+        strictMode,
+        wrongAttemptsInRound,
+      }),
+    [isFinalRound, roundCompletedWithErrors, strictMode, wrongAttemptsInRound]
+  )
 
-  const showNextRoundOption = useMemo(() => {
-    if (isFinalRound) return false
-    if (!roundCompletedWithErrors) return true
-    return !mustRepeatDueToErrors
-  }, [isFinalRound, roundCompletedWithErrors, mustRepeatDueToErrors])
+  const showFinishPracticeOption = useMemo(
+    () =>
+      memorizationRoundAdvanceShowsFinishPractice({
+        awaitingRoundAdvance,
+        isFinalRound,
+        strictMode,
+      }),
+    [awaitingRoundAdvance, isFinalRound, strictMode]
+  )
 
-  const showFinishPracticeOption = useMemo(() => {
-    return awaitingRoundAdvance && isFinalRound && !strictMode
-  }, [awaitingRoundAdvance, isFinalRound, strictMode])
+  const showStrictErrorsBadge = useMemo(
+    () =>
+      memorizationRoundAdvanceShowsStrictErrorsBadge({
+        strictMode,
+        wrongAttemptsInRound,
+        awaitingRoundAdvance,
+      }),
+    [strictMode, wrongAttemptsInRound, awaitingRoundAdvance]
+  )
 
-  const recordWrongAttempt = useCallback(() => {
-    setWrongAttemptsTotal((w) => w + 1)
-    setWrongAttemptsInRound((w) => w + 1)
-  }, [])
+  const roundCompleteInstruction = useMemo(() => {
+    if (!awaitingRoundAdvance) return null
+    return getMemorizationRoundCompleteInstruction({
+      isFinalRound,
+      showFinishPracticeOption,
+      roundIndex,
+    })
+  }, [awaitingRoundAdvance, isFinalRound, showFinishPracticeOption, roundIndex])
 
   const flashErrorBriefly = useCallback(() => {
     setFlashError(true)
@@ -474,11 +506,15 @@ export default function MemorizationPracticeSession({
   }, [])
 
   const finishPracticeSession = useCallback(() => {
-    const canFinishFromAwaiting =
-      awaitingRoundAdvanceRef.current &&
-      roundIndex >= MEMORIZATION_FULL_HIDE_ROUND &&
-      !strictModeRef.current
-    if (awaitingRoundAdvanceRef.current && !canFinishFromAwaiting) return
+    if (
+      shouldBlockFinishPractice(
+        awaitingRoundAdvanceRef.current,
+        roundIndex >= MEMORIZATION_FULL_HIDE_ROUND,
+        strictModeRef.current
+      )
+    ) {
+      return
+    }
     if (completedRef.current) return
     completedRef.current = true
     onComplete({
@@ -494,25 +530,18 @@ export default function MemorizationPracticeSession({
 
   useLayoutEffect(() => {
     wrongAttemptsRef.current = wrongAttemptsTotal
-    wrongAttemptsInRoundRef.current = wrongAttemptsInRound
     correctKeystrokesRef.current = correctKeystrokesTotal
     awaitingRoundAdvanceRef.current = awaitingRoundAdvance
     practiceModeRef.current = practiceMode
     strictModeRef.current = strictMode
   }, [
     wrongAttemptsTotal,
-    wrongAttemptsInRound,
     correctKeystrokesTotal,
     awaitingRoundAdvance,
     practiceMode,
     strictMode,
   ])
 
-  useEffect(() => {
-    if (strictMode && awaitingRoundAdvance && wrongAttemptsInRound > 0) {
-      setRoundCompletedWithErrors(true)
-    }
-  }, [strictMode, awaitingRoundAdvance, wrongAttemptsInRound])
   /**
    * On Android, Chrome scrolls the overflow column during the keyboard-open animation,
    * overriding our scrollTop=0. This timestamp lets a scroll-event listener clamp the
@@ -767,9 +796,7 @@ export default function MemorizationPracticeSession({
         setRevealed(new Set())
         setFirstLetterCueRevealedSlots(new Set())
         setConsecutiveWrong(0)
-        wrongAttemptsInRoundRef.current = 0
-        setWrongAttemptsInRound(0)
-        setRoundCompletedWithErrors(false)
+        resetRoundErrors()
         setAwaitingRoundAdvance(false)
         setRoundAffirmation('')
         setPhase('practicing')
@@ -783,14 +810,12 @@ export default function MemorizationPracticeSession({
       setRevealed(new Set())
       setFirstLetterCueRevealedSlots(new Set())
       setConsecutiveWrong(0)
-      wrongAttemptsInRoundRef.current = 0
-      setWrongAttemptsInRound(0)
-      setRoundCompletedWithErrors(false)
+      resetRoundErrors()
       setAwaitingRoundAdvance(false)
       setRoundAffirmation('')
       setPhase('practicing')
     },
-    [memorizeAndroidHost, reorderChunks, typableIndices, verse.id]
+    [memorizeAndroidHost, reorderChunks, typableIndices, verse.id, resetRoundErrors]
   )
 
   useLayoutEffect(() => {
@@ -810,9 +835,8 @@ export default function MemorizationPracticeSession({
     if (ip.phase.kind === 'betweenRounds') {
       const r = ip.phase.completedRoundIndex
       roundAdvanceHandledRef.current = r
-      const hydratedRoundErrors = resolveHydratedWrongAttemptsInRound(ip)
-      pendingBetweenRoundsErrorsRef.current = hydratedRoundErrors
-      wrongAttemptsInRoundRef.current = hydratedRoundErrors
+      const hydratedRoundErrors = ip.wrongAttemptsInRound ?? 0
+      hydrateBetweenRounds(hydratedRoundErrors)
       const seed = sessionSeedRef.current || verse.id
       const modeRaw = ip.practiceMode ?? 'type'
       if (modeRaw === 'reorder') {
@@ -820,8 +844,6 @@ export default function MemorizationPracticeSession({
         const identitySlots = n === 0 ? [] : Array.from({ length: n }, (_, i) => i)
         startTransition(() => {
           setWrongAttemptsTotal(ip.wrongAttempts)
-          setWrongAttemptsInRound(hydratedRoundErrors)
-          setRoundCompletedWithErrors(hydratedRoundErrors > 0)
           setCorrectKeystrokesTotal(ip.correctKeystrokes)
           setRoundIndex(r)
           setHasTypedInRound(false)
@@ -840,8 +862,6 @@ export default function MemorizationPracticeSession({
         const hidden = hiddenTypingTokenIndices(modeRaw, r, seed, typableIndices)
         startTransition(() => {
           setWrongAttemptsTotal(ip.wrongAttempts)
-          setWrongAttemptsInRound(hydratedRoundErrors)
-          setRoundCompletedWithErrors(hydratedRoundErrors > 0)
           setCorrectKeystrokesTotal(ip.correctKeystrokes)
           setRoundIndex(r)
           setHasTypedInRound(false)
@@ -858,7 +878,8 @@ export default function MemorizationPracticeSession({
     } else {
       roundAdvanceHandledRef.current = null
       const r = ip.phase.roundIndex
-      const hydratedRoundErrors = resolveHydratedWrongAttemptsInRound(ip)
+      const hydratedRoundErrors = ip.wrongAttemptsInRound ?? 0
+      hydrateInRound(hydratedRoundErrors)
       const modeRaw = ip.practiceMode ?? 'type'
       if (modeRaw === 'reorder') {
         const seed = sessionSeedRef.current
@@ -869,8 +890,6 @@ export default function MemorizationPracticeSession({
         if (memorizeAndroidHost) androidScrollClampUntilRef.current = Date.now() + ANDROID_SCROLL_CLAMP_MS
         startTransition(() => {
           setWrongAttemptsTotal(ip.wrongAttempts)
-          setWrongAttemptsInRound(hydratedRoundErrors)
-          setRoundCompletedWithErrors(false)
           setCorrectKeystrokesTotal(ip.correctKeystrokes)
           setRoundIndex(r)
           setHasTypedInRound(false)
@@ -895,8 +914,6 @@ export default function MemorizationPracticeSession({
         if (memorizeAndroidHost) androidScrollClampUntilRef.current = Date.now() + ANDROID_SCROLL_CLAMP_MS
         startTransition(() => {
           setWrongAttemptsTotal(ip.wrongAttempts)
-          setWrongAttemptsInRound(hydratedRoundErrors)
-          setRoundCompletedWithErrors(false)
           setCorrectKeystrokesTotal(ip.correctKeystrokes)
           setRoundIndex(r)
           setHasTypedInRound(false)
@@ -925,6 +942,8 @@ export default function MemorizationPracticeSession({
     verse.id,
     verse.inProgressPractice,
     typableIndices,
+    hydrateBetweenRounds,
+    hydrateInRound,
   ])
 
   /**
@@ -1118,7 +1137,10 @@ export default function MemorizationPracticeSession({
   )
 
   const persistPracticeSnapshot = useCallback(
-    (phasePayload: MemorizationInProgressSavePayload['phase']) => {
+    (
+      phasePayload: MemorizationInProgressSavePayload['phase'],
+      options?: { wrongAttemptsInRound?: number }
+    ) => {
       if (!onPersistInProgress || !sessionSeedRef.current) return
       const mode = practiceModeRef.current ?? 'type'
       onPersistInProgress({
@@ -1127,13 +1149,10 @@ export default function MemorizationPracticeSession({
         correctKeystrokes: correctKeystrokesRef.current,
         phase: phasePayload,
         practiceMode: mode,
-        wrongAttemptsInRound:
-          phasePayload.kind === 'betweenRounds'
-            ? pendingBetweenRoundsErrorsRef.current
-            : wrongAttemptsInRoundRef.current,
+        wrongAttemptsInRound: options?.wrongAttemptsInRound ?? wrongAttemptsInRoundRef.current,
       })
     },
-    [onPersistInProgress]
+    [onPersistInProgress, wrongAttemptsInRoundRef]
   )
 
   const handleClose = useCallback(() => {
@@ -1141,7 +1160,10 @@ export default function MemorizationPracticeSession({
     stopPassageAudio()
     if (onPersistInProgress && sessionSeedRef.current && phase === 'practicing') {
       if (awaitingRoundAdvance) {
-        persistPracticeSnapshot({ kind: 'betweenRounds', completedRoundIndex: roundIndex })
+        persistPracticeSnapshot(
+          { kind: 'betweenRounds', completedRoundIndex: roundIndex },
+          { wrongAttemptsInRound: wrongAttemptsInRoundRef.current }
+        )
       } else {
         persistPracticeSnapshot({ kind: 'inRound', roundIndex })
       }
@@ -1155,6 +1177,7 @@ export default function MemorizationPracticeSession({
     roundIndex,
     persistPracticeSnapshot,
     stopPassageAudio,
+    wrongAttemptsInRoundRef,
   ])
 
   const handleStartOver = useCallback(() => {
@@ -1418,17 +1441,19 @@ export default function MemorizationPracticeSession({
   ])
 
   const onRoundComplete = useCallback(() => {
-    if (isFinalRound && wrongAttemptsInRoundRef.current === 0) {
+    if (isFinalRound && shouldAutoCompleteFinalRound(wrongAttemptsInRoundRef.current)) {
       finishPracticeSession()
       return
     }
 
     if (roundAdvanceHandledRef.current === roundIndex) return
     roundAdvanceHandledRef.current = roundIndex
-    pendingBetweenRoundsErrorsRef.current = wrongAttemptsInRoundRef.current
-    setRoundCompletedWithErrors(wrongAttemptsInRoundRef.current > 0)
+    completeRoundAdvance()
     if (onPersistInProgress && sessionSeedRef.current) {
-      persistPracticeSnapshot({ kind: 'betweenRounds', completedRoundIndex: roundIndex })
+      persistPracticeSnapshot(
+        { kind: 'betweenRounds', completedRoundIndex: roundIndex },
+        { wrongAttemptsInRound: wrongAttemptsInRoundRef.current }
+      )
     }
     startTransition(() => {
       setRoundAffirmation(pickRandomRoundAffirmation())
@@ -1442,6 +1467,8 @@ export default function MemorizationPracticeSession({
     onPersistInProgress,
     persistPracticeSnapshot,
     stopPassageAudio,
+    completeRoundAdvance,
+    wrongAttemptsInRoundRef,
   ])
 
   useEffect(() => {
@@ -1494,7 +1521,7 @@ export default function MemorizationPracticeSession({
         recordWrongAttempt()
         setConsecutiveWrong((c) => {
           const n = c + 1
-          if (!strictMode && n >= MAX_WRONG_BEFORE_REVEAL) {
+          if (shouldAutoRevealAfterWrongAttempts(strictMode, n)) {
             const idx = currentTargetIndex
             setRevealed((prev) => {
               const next = new Set(prev)
@@ -1600,7 +1627,7 @@ export default function MemorizationPracticeSession({
           recordWrongAttempt()
           setConsecutiveWrong((c) => {
             const n = c + 1
-            if (!strictMode && n >= MAX_WRONG_BEFORE_REVEAL) {
+            if (shouldAutoRevealAfterWrongAttempts(strictMode, n)) {
               const idx = currentTargetIndex
               setRevealed((prev) => {
                 const next = new Set(prev)
@@ -1637,7 +1664,7 @@ export default function MemorizationPracticeSession({
         recordWrongAttempt()
         setConsecutiveWrong((c) => {
           const n = c + 1
-          if (!strictMode && n >= MAX_WRONG_BEFORE_REVEAL) {
+          if (shouldAutoRevealAfterWrongAttempts(strictMode, n)) {
             const idx = currentTargetIndex
             setRevealed((prev) => {
               const next = new Set(prev)
@@ -2169,26 +2196,8 @@ export default function MemorizationPracticeSession({
                 <div className={practiceMode === 'firstLetters' && !awaitingRoundAdvance ? 'mb-2' : ''}>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     <p className="text-sm text-slate-600 dark:text-slate-400">
-                      {awaitingRoundAdvance ? (
-                        <>
-                          {isFinalRound ? (
-                            showFinishPracticeOption ? (
-                              <>
-                                Round {roundIndex} complete — repeat this round or finish practice.
-                              </>
-                            ) : (
-                              <>
-                                Round {roundIndex} complete — repeat this round until you finish with no
-                                errors.
-                              </>
-                            )
-                          ) : (
-                            <>
-                              Round {roundIndex} complete — repeat or continue to round {roundIndex + 1}.
-                            </>
-                          )}
-                        </>
-                      ) : practiceMode === 'reorder' ? (
+                      {roundCompleteInstruction ??
+                        (practiceMode === 'reorder' ? (
                         <>
                           Round {roundIndex} of {MEMORIZATION_FULL_HIDE_ROUND} — reorder about{' '}
                           {reorderMovableCountForRound(roundIndex, reorderChunks.length)} of{' '}
@@ -2204,9 +2213,9 @@ export default function MemorizationPracticeSession({
                           Round {roundIndex} of {MEMORIZATION_FULL_HIDE_ROUND} — about{' '}
                           {Math.round(hiddenFractionForRound(roundIndex) * 100)}% hidden
                         </>
-                      )}
+                      ))}
                     </p>
-                    {strictMode && wrongAttemptsInRound > 0 && !awaitingRoundAdvance && (
+                    {showStrictErrorsBadge && (
                       <p
                         className="text-sm font-medium text-red-700 dark:text-red-300"
                         data-testid="memorize-errors-count"
@@ -2492,52 +2501,26 @@ export default function MemorizationPracticeSession({
             )}
 
           {phase === 'practicing' && awaitingRoundAdvance && (
-            <div
-              className="shrink-0 border-t border-slate-200 dark:border-slate-600 px-4 py-3 bg-slate-50 dark:bg-slate-900/60"
-              data-testid="memorize-round-advance-footer"
-            >
-              <p
-                className="text-sm font-medium text-emerald-900 dark:text-emerald-100 text-center sm:text-left mb-3"
-                data-testid="memorize-round-affirmation"
-              >
-                {roundAffirmation}
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    startRoundAndFocusInput(roundIndex)
-                    persistPracticeSnapshot({ kind: 'inRound', roundIndex })
-                  }}
-                  className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium border-2 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600"
-                >
-                  Repeat this round
-                </button>
-                {showNextRoundOption && (
-                  <button
-                    type="button"
-                    data-testid="memorize-next-round"
-                    onClick={() => {
-                      startRoundAndFocusInput(roundIndex + 1)
-                      persistPracticeSnapshot({ kind: 'inRound', roundIndex: roundIndex + 1 })
-                    }}
-                    className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600"
-                  >
-                    Next round
-                  </button>
-                )}
-                {showFinishPracticeOption && (
-                  <button
-                    type="button"
-                    data-testid="memorize-finish-practice"
-                    onClick={() => finishPracticeSession()}
-                    className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600"
-                  >
-                    Finish practice
-                  </button>
-                )}
-              </div>
-            </div>
+            <MemorizationRoundAdvanceFooter
+              roundAffirmation={roundAffirmation}
+              showNextRoundOption={showNextRoundOption}
+              showFinishPracticeOption={showFinishPracticeOption}
+              onRepeatRound={() => {
+                startRoundAndFocusInput(roundIndex)
+                persistPracticeSnapshot(
+                  { kind: 'inRound', roundIndex },
+                  { wrongAttemptsInRound: 0 }
+                )
+              }}
+              onNextRound={() => {
+                startRoundAndFocusInput(roundIndex + 1)
+                persistPracticeSnapshot(
+                  { kind: 'inRound', roundIndex: roundIndex + 1 },
+                  { wrongAttemptsInRound: 0 }
+                )
+              }}
+              onFinishPractice={() => finishPracticeSession()}
+            />
           )}
         </div>
       </div>

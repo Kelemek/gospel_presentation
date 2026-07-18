@@ -1,4 +1,4 @@
-import { gospelStorageSetSync } from '@/lib/gospelClientStorage'
+import { gospelStorageGetSync, gospelStorageSetSync } from '@/lib/gospelClientStorage'
 
 export const MEMORIZATION_STRICT_MODE_STORAGE_KEY = 'gospel-admin:memorization-strict-mode'
 
@@ -15,7 +15,7 @@ export function readMemorizationStrictModeFromStorage(): boolean {
   }
   try {
     return normalizeMemorizationStrictMode(
-      window.localStorage.getItem(MEMORIZATION_STRICT_MODE_STORAGE_KEY)
+      gospelStorageGetSync(MEMORIZATION_STRICT_MODE_STORAGE_KEY)
     )
   } catch {
     return false

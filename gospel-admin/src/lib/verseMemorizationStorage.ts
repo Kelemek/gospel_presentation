@@ -140,7 +140,7 @@ function normalizeInProgress(raw: unknown): MemorizationInProgress | undefined {
   }
   if (kind === 'inRound') {
     const roundIndex = p.roundIndex
-    if (typeof roundIndex !== 'number' || roundIndex < 1 || roundIndex > 5) {
+    if (typeof roundIndex !== 'number' || roundIndex < 1 || roundIndex > MEMORIZATION_FULL_HIDE_ROUND) {
       return undefined
     }
     return {
