@@ -6,14 +6,41 @@ import type { GospelSection } from '@/lib/types'
 function navIndexForReference(
   reference: string,
   allScriptureRefs: { reference: string; sectionId: string; subsectionId: string }[],
-  sections: GospelSection[]
+  sections: GospelSection[],
+  explicit?: { sectionId: string; subsectionId: string },
+  favoriteReferences: string[] = [],
+  pinnedAnchors?: { reference: string; sectionId: string; subsectionId: string } | null
 ): number {
-  const found = findFirstScriptureCardAnchors(sections, reference)
-  return indexOfScriptureCardInList(
-    reference,
-    allScriptureRefs,
-    found ? { sectionId: found.sectionId, subsectionId: found.subsectionId } : undefined
-  )
+  let sectionId = explicit?.sectionId?.trim() ?? ''
+  let subsectionId = explicit?.subsectionId?.trim() ?? ''
+  if (!sectionId || !subsectionId) {
+    if (pinnedAnchors && pinnedAnchors.reference === reference) {
+      sectionId = pinnedAnchors.sectionId
+      subsectionId = pinnedAnchors.subsectionId
+    } else {
+      const found = findFirstScriptureCardAnchors(sections, reference)
+      if (found) {
+        sectionId = found.sectionId
+        subsectionId = found.subsectionId
+      }
+    }
+  }
+  const anchorLookup = sectionId && subsectionId ? { sectionId, subsectionId } : undefined
+  const allIndex = indexOfScriptureCardInList(reference, allScriptureRefs, anchorLookup)
+  if (allIndex === -1) return -1
+
+  if (explicit?.sectionId && explicit?.subsectionId) {
+    return allIndex
+  }
+
+  if (favoriteReferences.length > 0) {
+    const favIndex = favoriteReferences.indexOf(reference)
+    if (favIndex !== -1) return favIndex
+    if (anchorLookup) return allIndex
+    return -1
+  }
+
+  return allIndex
 }
 
 const mchyDaySections: GospelSection[] = [
@@ -107,6 +134,55 @@ describe('syncScriptureNavIndexForReference (Listen playlist)', () => {
         ? { ...r, reference: 'Matthew 1:1–17' }
         : r
     )
-    expect(navIndexForReference('Matthew 1:1-17', enDashRefs, mchyDaySections)).toBe(1)
+    const found = findFirstScriptureCardAnchors(mchyDaySections, 'Matthew 1:1-17')
+    expect(
+      navIndexForReference(
+        'Matthew 1:1-17',
+        enDashRefs,
+        mchyDaySections,
+        found ? { sectionId: found.sectionId, subsectionId: found.subsectionId } : undefined
+      )
+    ).toBe(1)
+  })
+
+  it('prefers explicit anchors over favorites when the reference string matches a favorite', () => {
+    const favorites = ['Matthew 1', 'Genesis 1']
+    const day172Matthew = {
+      reference: 'Matthew 1',
+      sectionId: 'section-jun',
+      subsectionId: 'section-jun-21-1',
+    }
+    const refsWithDay172 = [...allRefs, day172Matthew]
+    expect(
+      navIndexForReference('Matthew 1', refsWithDay172, mchyDaySections, {
+        sectionId: day172Matthew.sectionId,
+        subsectionId: day172Matthew.subsectionId,
+      }, favorites)
+    ).toBe(refsWithDay172.length - 1)
+    expect(
+      navIndexForReference('Matthew 1', refsWithDay172, mchyDaySections, undefined, favorites)
+    ).toBe(0)
+  })
+
+  it('uses pinned modal anchors before the first profile match for duplicate references', () => {
+    const day172Matthew = {
+      reference: 'Matthew 1',
+      sectionId: 'section-jun',
+      subsectionId: 'section-jun-21-1',
+    }
+    const refsWithDay172 = [...allRefs, day172Matthew]
+    expect(
+      navIndexForReference(
+        'Matthew 1',
+        refsWithDay172,
+        mchyDaySections,
+        undefined,
+        [],
+        { reference: 'Matthew 1', sectionId: day172Matthew.sectionId, subsectionId: day172Matthew.subsectionId }
+      )
+    ).toBe(refsWithDay172.length - 1)
+    expect(
+      navIndexForReference('Matthew 1', refsWithDay172, mchyDaySections, undefined, [])
+    ).toBe(1)
   })
 })

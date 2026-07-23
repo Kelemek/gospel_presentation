@@ -172,6 +172,23 @@ export function mcheyneDayChapterReferences(planDay: number): string[] {
   return [...day.family, ...day.secret].flatMap(expandMcheyneReadingToChapterCards)
 }
 
+export type McheyneScriptureCardNav = {
+  reference: string
+  sectionId: string
+  subsectionId: string
+}
+
+/** Scripture cards for one plan day in profile order (Family then Secret, expanded chapters). */
+export function mcheyneDayScriptureCardsFromRefs(
+  allScriptureRefs: readonly McheyneScriptureCardNav[],
+  daySubsectionId: string
+): McheyneScriptureCardNav[] {
+  const dayId = mcheyneDaySubsectionIdFromAnchor(daySubsectionId)
+  if (!dayId || mcheynePlanDayFromDaySubsectionId(dayId) == null) return []
+  const nestedPrefix = `${dayId}-`
+  return allScriptureRefs.filter((card) => card.subsectionId.startsWith(nestedPrefix))
+}
+
 /** Day playlist for M'Cheyne modal Listen, or null (e.g. January intro). */
 export function mcheyneDayChapterReferencesForAnchor(subsectionId: string): string[] | null {
   const planDay = mcheynePlanDayFromDaySubsectionId(subsectionId)

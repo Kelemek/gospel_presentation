@@ -142,6 +142,7 @@ import { isMcheyneProfileSlug } from '@/lib/mcheyne/mcheyneSlug'
 import {
   findMcheyneDayAnchor,
   mcheyneDayChapterReferencesForAnchor,
+  mcheyneDayScriptureCardsFromRefs,
   mcheyneDaySubsectionIdFromAnchor,
 } from '@/lib/mcheyne/mcheyneReadingDay'
 import {
@@ -1593,7 +1594,11 @@ function ProfileContent({
       let sectionId = explicit?.sectionId?.trim() ?? ''
       let subsectionId = explicit?.subsectionId?.trim() ?? ''
       if (!sectionId || !subsectionId) {
-        if (sections) {
+        const pinned = modalOpenAnchors
+        if (pinned && scriptureCardReferencesMatch(pinned.reference, reference)) {
+          sectionId = pinned.sectionId
+          subsectionId = pinned.subsectionId
+        } else if (sections) {
           const found = findFirstScriptureCardAnchors(sections, reference)
           if (found) {
             sectionId = found.sectionId
@@ -1603,15 +1608,32 @@ function ProfileContent({
       }
       const anchorLookup =
         sectionId && subsectionId ? { sectionId, subsectionId } : undefined
+      const allIndex = indexOfScriptureCardInList(reference, allScriptureRefs, anchorLookup)
+      if (allIndex === -1) return
+
+      const hasExplicitAnchors = Boolean(
+        explicit?.sectionId?.trim() && explicit?.subsectionId?.trim()
+      )
+      if (hasExplicitAnchors) {
+        setCurrentReferenceIndex(allIndex)
+        return
+      }
+
       if (favoriteReferences.length > 0) {
         const favIndex = favoriteReferences.indexOf(reference)
-        if (favIndex !== -1) setCurrentReferenceIndex(favIndex)
-      } else {
-        const allIndex = indexOfScriptureCardInList(reference, allScriptureRefs, anchorLookup)
-        if (allIndex !== -1) setCurrentReferenceIndex(allIndex)
+        if (favIndex !== -1) {
+          setCurrentReferenceIndex(favIndex)
+          return
+        }
+        if (anchorLookup) {
+          setCurrentReferenceIndex(allIndex)
+        }
+        return
       }
+
+      setCurrentReferenceIndex(allIndex)
     },
-    [sections, allScriptureRefs, favoriteReferences, syncModalAnchorsForNav]
+    [sections, allScriptureRefs, favoriteReferences, modalOpenAnchors, syncModalAnchorsForNav]
   )
 
   const handleScriptureClick = useCallback(
@@ -1638,6 +1660,14 @@ function ProfileContent({
       const anchorLookup =
         sectionId && subsectionId ? { sectionId, subsectionId } : undefined
 
+      const openingMcheynePlanCard =
+        !options?.pickerNavigation &&
+        isMcheynePlanScriptureCardOpen(
+          profileInfo?.slug ?? '',
+          anchorSectionId,
+          anchorSubsectionId
+        )
+
       if (sectionId && subsectionId) {
         setModalOpenAnchors({ reference, sectionId, subsectionId })
       } else {
@@ -1649,20 +1679,22 @@ function ProfileContent({
       }
 
       if (favoriteReferences.length > 0) {
-        const favIndex = favoriteReferences.indexOf(reference)
-        if (favIndex !== -1) setCurrentReferenceIndex(favIndex)
+        const cardIndex = anchorLookup
+          ? indexOfScriptureCardInList(reference, allScriptureRefs, anchorLookup)
+          : -1
+        if (openingMcheynePlanCard && cardIndex !== -1) {
+          setCurrentReferenceIndex(cardIndex)
+        } else {
+          const favIndex = favoriteReferences.indexOf(reference)
+          if (favIndex !== -1) setCurrentReferenceIndex(favIndex)
+          else if (cardIndex !== -1) setCurrentReferenceIndex(cardIndex)
+        }
       } else {
         const allIndex = indexOfScriptureCardInList(reference, allScriptureRefs, anchorLookup)
         if (allIndex !== -1) setCurrentReferenceIndex(allIndex)
       }
 
-      const mcheynePlanCardPin =
-        !options?.pickerNavigation &&
-        isMcheynePlanScriptureCardOpen(
-          profileInfo?.slug ?? '',
-          anchorSectionId,
-          anchorSubsectionId
-        )
+      const mcheynePlanCardPin = openingMcheynePlanCard
 
       const resolvedSectionId = sectionId || 'modal-view'
       const resolvedSubsectionId = subsectionId || 'modal-view'
@@ -1713,6 +1745,7 @@ function ProfileContent({
       meta?: {
         initialChapterView?: boolean
         fromPassagePicker?: boolean
+        anchors?: { sectionId: string; subsectionId: string }
       }
     ) => {
       const chapterView =
@@ -1725,7 +1758,7 @@ function ProfileContent({
           subsectionId: 'modal-view',
         })
       } else {
-        syncNavIndexForReference(ref)
+        syncNavIndexForReference(ref, meta?.anchors)
       }
       setSelectedScripture((prev) => {
         const pickerNavigation =
@@ -1835,6 +1868,11 @@ function ProfileContent({
     ]
   )
 
+  const useMcheynePlanCardNav = useMemo(
+    () => activeScripture.isOpen && activeScripture.mcheynePlanCardPin === true,
+    [activeScripture.isOpen, activeScripture.mcheynePlanCardPin]
+  )
+
   useEffect(() => {
     if (!profileSlug || !activeScripture.isOpen) return
     const reference = activeScripture.reference.trim()
@@ -1884,6 +1922,21 @@ function ProfileContent({
 
   const mcheyneDayListenSubsectionId = effectiveModalOpenAnchors?.subsectionId?.trim() || ''
 
+  const syncMcheynePlaylistChapter = useCallback(
+    (playlistIndex: number) => {
+      const daySubsectionId = mcheyneDaySubsectionIdFromAnchor(mcheyneDayListenSubsectionId)
+      if (!daySubsectionId) return
+      const dayCards = mcheyneDayScriptureCardsFromRefs(allScriptureRefs, daySubsectionId)
+      const card = dayCards[playlistIndex]
+      if (!card) return
+      navigateScriptureInReader(card.reference, {
+        initialChapterView: true,
+        anchors: { sectionId: card.sectionId, subsectionId: card.subsectionId },
+      })
+    },
+    [allScriptureRefs, mcheyneDayListenSubsectionId, navigateScriptureInReader]
+  )
+
   const mcheyneDayListenReferences = useMemo(() => {
     if (!profileSlug || !isMcheyneProfileSlug(profileSlug)) return undefined
     if (!mcheyneDayListenSubsectionId) return undefined
@@ -1921,8 +1974,11 @@ function ProfileContent({
     setTranslation,
   ])
 
-  const navListLength =
-    favoriteReferences.length > 0 ? favoriteReferences.length : allScriptureRefs.length
+  const navListLength = useMcheynePlanCardNav
+    ? allScriptureRefs.length
+    : favoriteReferences.length > 0
+      ? favoriteReferences.length
+      : allScriptureRefs.length
   
   const navigatePickerPassage = useCallback((direction: 'prev' | 'next') => {
     const ref = activeScripture.reference.trim()
@@ -1945,6 +2001,34 @@ function ProfileContent({
     completeDailyVerseChallengeIfMatch(adjacent.reference)
   }, [activeScripture.reference, completeDailyVerseChallengeIfMatch])
 
+  const navigateToNextProfileScriptureCard = useCallback(() => {
+    if (scriptureModalHighlightPicker) {
+      navigatePickerPassage('next')
+      return
+    }
+    if (allScriptureRefs.length === 0) return
+
+    const newIndex = (navReferenceIndex + 1) % allScriptureRefs.length
+    setCurrentReferenceIndex(newIndex)
+    const item = allScriptureRefs[newIndex]!
+    syncModalAnchorsForNav(item.reference, {
+      sectionId: item.sectionId,
+      subsectionId: item.subsectionId,
+    })
+    setSelectedScripture({
+      reference: item.reference,
+      isOpen: true,
+      ...(activeScripture.mcheynePlanCardPin ? { mcheynePlanCardPin: true as const } : {}),
+    })
+  }, [
+    scriptureModalHighlightPicker,
+    activeScripture.mcheynePlanCardPin,
+    navReferenceIndex,
+    allScriptureRefs,
+    syncModalAnchorsForNav,
+    navigatePickerPassage,
+  ])
+
   // Navigation functions for favorite references or all references if no favorites
   const navigateToPrevious = useCallback(() => {
     if (scriptureModalHighlightPicker) {
@@ -1953,7 +2037,7 @@ function ProfileContent({
     }
     if (navListLength === 0) return
 
-    if (favoriteReferences.length > 0) {
+    if (!useMcheynePlanCardNav && favoriteReferences.length > 0) {
       const newIndex = (navReferenceIndex - 1 + navListLength) % navListLength
       setCurrentReferenceIndex(newIndex)
       const reference = favoriteReferences[newIndex]!
@@ -1987,6 +2071,7 @@ function ProfileContent({
   }, [
     scriptureModalHighlightPicker,
     activeScripture.mcheynePlanCardPin,
+    useMcheynePlanCardNav,
     favoriteReferences,
     navListLength,
     navReferenceIndex,
@@ -2002,7 +2087,7 @@ function ProfileContent({
     }
     if (navListLength === 0) return
 
-    if (favoriteReferences.length > 0) {
+    if (!useMcheynePlanCardNav && favoriteReferences.length > 0) {
       const newIndex = (navReferenceIndex + 1) % navListLength
       setCurrentReferenceIndex(newIndex)
       const reference = favoriteReferences[newIndex]!
@@ -2021,27 +2106,18 @@ function ProfileContent({
       return
     }
 
-    const newIndex = (navReferenceIndex + 1) % allScriptureRefs.length
-    setCurrentReferenceIndex(newIndex)
-    const item = allScriptureRefs[newIndex]!
-    syncModalAnchorsForNav(item.reference, {
-      sectionId: item.sectionId,
-      subsectionId: item.subsectionId,
-    })
-    setSelectedScripture({
-      reference: item.reference,
-      isOpen: true,
-      ...(activeScripture.mcheynePlanCardPin ? { mcheynePlanCardPin: true as const } : {}),
-    })
+    navigateToNextProfileScriptureCard()
   }, [
     scriptureModalHighlightPicker,
     activeScripture.mcheynePlanCardPin,
+    useMcheynePlanCardNav,
     favoriteReferences,
     navListLength,
     navReferenceIndex,
     allScriptureRefs,
     syncModalAnchorsForNav,
     navigatePickerPassage,
+    navigateToNextProfileScriptureCard,
   ])
 
   const pickerNavRef = activeScripture.isOpen ? activeScripture.reference.trim() : ''
@@ -2801,6 +2877,7 @@ function ProfileContent({
             : undefined
         }
         mcheyneDayChapterReferences={mcheyneDayListenReferences}
+        onMcheynePlaylistChapterSync={syncMcheynePlaylistChapter}
         initialChapterView={activeScripture.initialChapterView ?? false}
         onClose={closeModal}
         onScriptureTabActivate={(entry) => {

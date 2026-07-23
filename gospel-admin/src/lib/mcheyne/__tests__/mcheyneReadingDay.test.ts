@@ -6,14 +6,40 @@ import {
   findFirstMcheynePlanDayScriptureNav,
   mcheyneDayChapterReferences,
   mcheyneDayChapterReferencesForAnchor,
+  mcheyneDayScriptureCardsFromRefs,
   mcheyneDaySubsectionIdFromAnchor,
   mcheynePlanDayForDates,
   mcheynePlanDayFromDaySubsectionId,
   parseLocalIsoDate,
   startOfLocalDay,
 } from '@/lib/mcheyne/mcheyneReadingDay'
+import type { GospelSection } from '@/lib/types'
 import type { McheynePlanFile } from '@/lib/mcheyne/mcheynePlanTypes'
+import fullPlan from '../../../../data/mcheyne/plan.json'
 import planThreeDays from './fixtures/plan-three-days.json'
+
+function buildAllScriptureRefs(sections: GospelSection[]) {
+  return sections.flatMap((section) => {
+    const sid = `section-${section.section}`
+    return section.subsections.flatMap((subsection, subIndex) => {
+      const subId = `${sid}-${subIndex}`
+      const main = (subsection.scriptureReferences || []).map((ref) => ({
+        reference: ref.reference,
+        sectionId: sid,
+        subsectionId: subId,
+      }))
+      const nested = (subsection.nestedSubsections || []).flatMap((nested, n) => {
+        const nestedId = `${sid}-${subIndex}-${n}`
+        return (nested.scriptureReferences || []).map((ref) => ({
+          reference: ref.reference,
+          sectionId: sid,
+          subsectionId: nestedId,
+        }))
+      })
+      return [...main, ...nested]
+    })
+  })
+}
 
 describe('mcheyneReadingDay', () => {
   const plan = planThreeDays as McheynePlanFile
@@ -125,6 +151,45 @@ describe('mcheyneReadingDay', () => {
 
     it('returns null for invalid plan days', () => {
       expect(findFirstMcheynePlanDayScriptureNav(sections, 0)).toBeNull()
+    })
+  })
+
+  describe('mcheyneDayScriptureCardsFromRefs', () => {
+    it('returns only cards for the requested plan day', () => {
+      const allRefs = buildAllScriptureRefs(sections)
+      const dayCards = mcheyneDayScriptureCardsFromRefs(allRefs, 'section-jan-1')
+      expect(dayCards.map((card) => card.reference)).toEqual([
+        'Genesis 1',
+        'Matthew 1',
+        'Ezra 1',
+        'Acts 1',
+      ])
+    })
+
+    it('resolves nested Family/Secret anchors to the parent day cards', () => {
+      const allRefs = buildAllScriptureRefs(sections)
+      const dayCards = mcheyneDayScriptureCardsFromRefs(allRefs, 'section-jan-1-1')
+      expect(dayCards).toHaveLength(4)
+      expect(dayCards[3]?.reference).toBe('Acts 1')
+    })
+
+    it('keeps Day 172 Matthew 1 separate from Day 1 Matthew 1', () => {
+      const fullSections = buildMcheyneGospelData(fullPlan as McheynePlanFile)
+      const allRefs = buildAllScriptureRefs(fullSections)
+      const day172 = findMcheyneDayAnchor(fullSections, 172)
+      expect(day172).not.toBeNull()
+
+      const day172Cards = mcheyneDayScriptureCardsFromRefs(
+        allRefs,
+        day172!.subsectionId
+      )
+      const matthewOn172 = day172Cards.find((card) => card.reference === 'Matthew 1')
+      expect(matthewOn172?.subsectionId).toMatch(/^section-jun-\d+-1$/)
+
+      const day1Cards = mcheyneDayScriptureCardsFromRefs(allRefs, 'section-jan-1')
+      const matthewOn1 = day1Cards.find((card) => card.reference === 'Matthew 1')
+      expect(matthewOn1?.subsectionId).toBe('section-jan-1-0')
+      expect(matthewOn172?.subsectionId).not.toBe(matthewOn1?.subsectionId)
     })
   })
 

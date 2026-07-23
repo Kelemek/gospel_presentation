@@ -292,6 +292,32 @@ describe('useChapterStreamingAudioListen', () => {
     expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(2)
   })
 
+  it('syncs the reader to the playlist index that actually starts after skipped tracks', async () => {
+    const onTrackIndexChange = jest.fn()
+    const play = HTMLMediaElement.prototype.play as jest.Mock
+    play
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('unavailable'))
+      .mockResolvedValueOnce(undefined)
+
+    const urls = [
+      '/api/scripture/audio?reference=Genesis%201&translation=esv',
+      '/api/scripture/audio?reference=Matthew%201&translation=esv',
+      '/api/scripture/audio?reference=Ezra%201&translation=esv',
+    ]
+    const user = userEvent.setup()
+    render(<Harness audioUrls={urls} enabled onTrackIndexChange={onTrackIndexChange} />)
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+    expect(onTrackIndexChange).toHaveBeenCalledWith(0)
+
+    await act(async () => {
+      el.dispatchEvent(new Event('ended'))
+    })
+    expect(onTrackIndexChange).toHaveBeenCalledWith(2)
+    expect(el.src).toContain('Ezra')
+  })
+
   it('calls onAutoAdvanceAfterPlayback when a single track ends and auto-plays after URL change', async () => {
     const onAutoAdvance = jest.fn(() => true)
     const user = userEvent.setup()

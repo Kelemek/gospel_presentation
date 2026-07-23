@@ -20,8 +20,8 @@ interface ScriptureModalChapterListenProps {
   enabled: boolean
   /** M'Cheyne: all four chapter refs for the day (Family then Secret); plays in order then stops. */
   dayChapterReferences?: readonly string[]
-  /** When the playlist advances, switch the scripture reader to this chapter reference. */
-  onPlaylistChapterChange?: (reference: string) => void
+  /** When Play starts on a day playlist track, sync the reader to that playlist index. */
+  onPlaylistChapterSync?: (playlistIndex: number) => void
   /** Same as scripture modal header Next — used to auto-advance audio when a track ends. */
   hasNext?: boolean
   onNext?: () => void
@@ -45,7 +45,7 @@ export default function ScriptureModalChapterListen({
   translation,
   enabled,
   dayChapterReferences,
-  onPlaylistChapterChange,
+  onPlaylistChapterSync,
   hasNext = false,
   onNext,
   passageScopeRef,
@@ -85,11 +85,10 @@ export default function ScriptureModalChapterListen({
 
   const onTrackIndexChange = useCallback(
     (index: number) => {
-      if (!onPlaylistChapterChange || playlistChapterRefs.length <= 1) return
-      const ref = playlistChapterRefs[index]
-      if (ref) onPlaylistChapterChange(ref)
+      if (!onPlaylistChapterSync || playlistChapterRefs.length <= 1) return
+      onPlaylistChapterSync(index)
     },
-    [onPlaylistChapterChange, playlistChapterRefs]
+    [onPlaylistChapterSync, playlistChapterRefs]
   )
 
   const onAutoAdvanceAfterPlayback = useCallback((): boolean => {

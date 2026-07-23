@@ -140,8 +140,8 @@ describe('ScriptureModalChapterListen', () => {
     expect(secondAudio).toBe(firstAudio)
   })
 
-  it('notifies onPlaylistChapterChange when the playlist advances', async () => {
-    const onPlaylistChapterChange = jest.fn()
+  it('notifies onPlaylistChapterSync when Play starts on a day playlist track', async () => {
+    const onPlaylistChapterSync = jest.fn()
     const user = userEvent.setup()
     render(
       <ScriptureModalChapterListen
@@ -151,18 +151,37 @@ describe('ScriptureModalChapterListen', () => {
         enabled
         {...defaultAutoScrollProps()}
         dayChapterReferences={['Genesis 1', 'Matthew 1']}
-        onPlaylistChapterChange={onPlaylistChapterChange}
+        onPlaylistChapterSync={onPlaylistChapterSync}
       />
     )
     await user.click(screen.getByRole('button', { name: /listen to today's readings/i }))
     await user.click(screen.getByTestId('memorize-listen-passage'))
-    expect(onPlaylistChapterChange).toHaveBeenCalledWith('Genesis 1')
+    expect(onPlaylistChapterSync).toHaveBeenCalledWith(0)
+  })
+
+  it('notifies onPlaylistChapterSync when the day playlist advances after a track ends', async () => {
+    const onPlaylistChapterSync = jest.fn()
+    const user = userEvent.setup()
+    render(
+      <ScriptureModalChapterListen
+        passageReference="Genesis 1"
+        chapterReference="Genesis 1"
+        translation="esv"
+        enabled
+        {...defaultAutoScrollProps()}
+        dayChapterReferences={['Genesis 1', 'Matthew 1']}
+        onPlaylistChapterSync={onPlaylistChapterSync}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /listen to today's readings/i }))
+    await user.click(screen.getByTestId('memorize-listen-passage'))
+    expect(onPlaylistChapterSync).toHaveBeenCalledWith(0)
 
     const audio = document.querySelector('audio') as HTMLAudioElement
     await act(async () => {
       audio.dispatchEvent(new Event('ended'))
     })
-    expect(onPlaylistChapterChange).toHaveBeenCalledWith('Matthew 1')
+    expect(onPlaylistChapterSync).toHaveBeenCalledWith(1)
   })
 
   it('uses verse reference in audio URL when not on a day playlist', async () => {

@@ -207,6 +207,8 @@ interface ScriptureModalProps {
   onScriptureTabCloseActive?: (next: ProfileRecentScriptureEntry | null) => void
   /** M'Cheyne: four chapter refs for the open day (Family + Secret); Listen plays all in order. */
   mcheyneDayChapterReferences?: readonly string[]
+  /** M'Cheyne day Listen: sync reader to a playlist track by index within the open day. */
+  onMcheynePlaylistChapterSync?: (playlistIndex: number) => void
 }
 
 export default function ScriptureModal({ 
@@ -230,6 +232,7 @@ export default function ScriptureModal({
   onScriptureTabActivate,
   onScriptureTabCloseActive,
   mcheyneDayChapterReferences,
+  onMcheynePlaylistChapterSync,
 }: ScriptureModalProps) {
   usePostHogModalOpen('scripture', isOpen, {
     reference,
@@ -1504,8 +1507,8 @@ export default function ScriptureModal({
                 translation={translation}
                 enabled={showScriptureListen}
                 dayChapterReferences={mcheyneDayChapterReferences}
-                onPlaylistChapterChange={
-                  isMcheyneDayPlaylist ? onNavigateReference : undefined
+                onPlaylistChapterSync={
+                  isMcheyneDayPlaylist ? onMcheynePlaylistChapterSync : undefined
                 }
                 hasNext={hasNext}
                 onNext={onNext}
