@@ -113,6 +113,31 @@ describe('ScriptureModalChapterListen', () => {
     expect(audio.src).not.toContain('Genesis')
   })
 
+  it('starts at the exact verse-range reading when the day has multiple refs in one chapter', async () => {
+    const dayRefs = [
+      'Deuteronomy 28:20',
+      'Psalms 119:25-48',
+      'Isaiah 55',
+      'Matthew 3',
+    ] as const
+    const user = userEvent.setup()
+    render(
+      <ScriptureModalChapterListen
+        passageReference="Psalms 119:25-48"
+        chapterReference="Psalms 119:25-48"
+        translation="esv"
+        enabled
+        {...defaultAutoScrollProps()}
+        dayChapterReferences={dayRefs}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: /listen to today's readings/i }))
+    await user.click(screen.getByTestId('memorize-listen-passage'))
+    const audio = document.querySelector('audio') as HTMLAudioElement
+    expect(audio.src).toContain('119%3A25')
+    expect(audio.src).not.toContain('Deuteronomy')
+  })
+
   it('keeps stable playlist URLs when chapterReference changes during playback', () => {
     const dayRefs = ['Genesis 1', 'Matthew 1', 'Ezra 1', 'Acts 1'] as const
     const { rerender } = render(

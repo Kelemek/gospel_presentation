@@ -5,6 +5,7 @@ import { MemorizeListenControlsDialog } from '@/components/MemorizeListenControl
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import { useChapterStreamingAudioListen } from '@/hooks/useChapterStreamingAudioListen'
 import { scriptureChapterReferenceKey } from '@/lib/parse-scripture-reference'
+import { normalizeScriptureReferenceString } from '@/lib/scriptureReferenceNormalize'
 import type { BibleTranslation } from '@/contexts/TranslationContext'
 import { scriptureModalHeaderIconButtonClass } from '@/components/scriptureModalHeaderButtons'
 
@@ -14,7 +15,7 @@ const SCRIPTURE_MODAL_LISTEN_TITLE_ID = 'scripture-modal-listen-controls-title'
 interface ScriptureModalChapterListenProps {
   /** Reference sent to `/api/scripture/audio` (verse in verse view, chapter in chapter view). */
   passageReference: string
-  /** Chapter form of the open reference (playlist index for M'Cheyne day). */
+  /** Open reference for playlist index (full verse range on M'Cheyne day playlists). */
   chapterReference: string
   translation: BibleTranslation
   enabled: boolean
@@ -71,6 +72,11 @@ export default function ScriptureModalChapterListen({
 
   const playlistStartIndex = useMemo(() => {
     if (playlistChapterRefs.length <= 1) return 0
+    const normalizedCurrent = normalizeScriptureReferenceString(chapterReference)
+    const exactIdx = playlistChapterRefs.findIndex(
+      (ref) => normalizeScriptureReferenceString(ref) === normalizedCurrent
+    )
+    if (exactIdx >= 0) return exactIdx
     const key = scriptureChapterReferenceKey(chapterReference)
     if (!key) return 0
     const idx = playlistChapterRefs.findIndex(

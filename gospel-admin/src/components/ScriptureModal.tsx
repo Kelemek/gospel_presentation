@@ -1503,7 +1503,9 @@ export default function ScriptureModal({
               ) : null}
               <ScriptureModalChapterListen
                 passageReference={passageAudioReference}
-                chapterReference={getChapterReference(reference)}
+                chapterReference={
+                  isMcheyneDayPlaylist ? reference.trim() : getChapterReference(reference)
+                }
                 translation={translation}
                 enabled={showScriptureListen}
                 dayChapterReferences={mcheyneDayChapterReferences}

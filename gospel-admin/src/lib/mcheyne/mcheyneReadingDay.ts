@@ -189,6 +189,16 @@ export function mcheyneDayScriptureCardsFromRefs(
   return allScriptureRefs.filter((card) => card.subsectionId.startsWith(nestedPrefix))
 }
 
+/** M'Cheyne Listen playlist refs from live profile cards (editor changes), or null. */
+export function mcheyneDayListenReferencesFromCards(
+  allScriptureRefs: readonly McheyneScriptureCardNav[],
+  subsectionId: string
+): string[] | null {
+  const cards = mcheyneDayScriptureCardsFromRefs(allScriptureRefs, subsectionId)
+  if (cards.length === 0) return null
+  return cards.map((card) => card.reference)
+}
+
 /** Day playlist for M'Cheyne modal Listen, or null (e.g. January intro). */
 export function mcheyneDayChapterReferencesForAnchor(subsectionId: string): string[] | null {
   const planDay = mcheynePlanDayFromDaySubsectionId(subsectionId)

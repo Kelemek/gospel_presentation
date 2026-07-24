@@ -1,6 +1,7 @@
 import {
   formatScriptureChapterHtml,
   formatScripturePassageHtml,
+  isolatePsalm119AcrosticHeadings,
   verseSupHtml,
 } from '@/lib/scripturePassageHtml'
 
@@ -17,6 +18,25 @@ describe('verseSupHtml', () => {
 
   it('renders hidden sup when showVerseNumbers is false', () => {
     expect(verseSupHtml(16, false)).toBe('<sup class="hidden" aria-hidden="true">16</sup>')
+  })
+})
+
+describe('isolatePsalm119AcrosticHeadings', () => {
+  it('breaks inline acrostic titles onto their own line before the next verse', () => {
+    const text =
+      'Daleth\n\n[25] My soul clings. [32] I run in the way of your commandments; enlarge my heart! He [33] Teach me, O LORD. [40] Behold, I long for your precepts; in your righteousness give me life! Waw [41] Let your steadfast love come'
+  const isolated = isolatePsalm119AcrosticHeadings(text)
+    expect(isolated).toContain('enlarge my heart!\n\nHe\n\n[33]')
+    expect(isolated).toContain('give me life!\n\nWaw\n\n[41]')
+    expect(isolated).toContain('Daleth\n\n[25]')
+  })
+
+  it('renders acrostic titles as separate paragraphs in passage HTML', () => {
+    const text =
+      '[32] enlarge my heart! He [33] Teach me, O LORD, the way of your statutes!'
+    const html = formatScripturePassageHtml(text, { showVerseNumbers: true })
+    expect(html).toContain('enlarge my heart!</p><p>He</p><p>')
+    expect(html).toContain('>33</sup> Teach me')
   })
 })
 

@@ -141,7 +141,7 @@ import {
 import { isMcheyneProfileSlug } from '@/lib/mcheyne/mcheyneSlug'
 import {
   findMcheyneDayAnchor,
-  mcheyneDayChapterReferencesForAnchor,
+  mcheyneDayListenReferencesFromCards,
   mcheyneDayScriptureCardsFromRefs,
   mcheyneDaySubsectionIdFromAnchor,
 } from '@/lib/mcheyne/mcheyneReadingDay'
@@ -1930,7 +1930,9 @@ function ProfileContent({
       const card = dayCards[playlistIndex]
       if (!card) return
       navigateScriptureInReader(card.reference, {
-        initialChapterView: true,
+        ...(!isChapterOnlyScriptureReference(card.reference)
+          ? { initialChapterView: false as const }
+          : {}),
         anchors: { sectionId: card.sectionId, subsectionId: card.subsectionId },
       })
     },
@@ -1940,8 +1942,11 @@ function ProfileContent({
   const mcheyneDayListenReferences = useMemo(() => {
     if (!profileSlug || !isMcheyneProfileSlug(profileSlug)) return undefined
     if (!mcheyneDayListenSubsectionId) return undefined
-    return mcheyneDayChapterReferencesForAnchor(mcheyneDayListenSubsectionId) ?? undefined
-  }, [profileSlug, mcheyneDayListenSubsectionId])
+    return (
+      mcheyneDayListenReferencesFromCards(allScriptureRefs, mcheyneDayListenSubsectionId) ??
+      undefined
+    )
+  }, [profileSlug, mcheyneDayListenSubsectionId, allScriptureRefs])
 
   const deepLinkNavIndex = useMemo(() => {
     if (!scriptureFromDeepLink) return null

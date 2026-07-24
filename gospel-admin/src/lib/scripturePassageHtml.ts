@@ -4,6 +4,54 @@ import type { ScriptureHighlightColorId } from '@/lib/scriptureHighlightStyles'
 const SCRIPTURE_VERSE_NUMBER_CLICKABLE_CLASS =
   'scripture-verse-number cursor-pointer hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 rounded-sm'
 
+/** ESV Psalm 119 acrostic section titles (longest first for safe matching). */
+const PSALM_119_ACROSTIC_HEADINGS = [
+  'Sin and Shin',
+  'Aleph',
+  'Beth',
+  'Gimel',
+  'Daleth',
+  'He',
+  'Waw',
+  'Zayin',
+  'Heth',
+  'Teth',
+  'Yodh',
+  'Kaph',
+  'Lamedh',
+  'Mem',
+  'Nun',
+  'Samekh',
+  'Ayin',
+  'Pe',
+  'Tsadhe',
+  'Qoph',
+  'Resh',
+  'Taw',
+] as const
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * Psalm 119 acrostic titles after the first often sit inline before the next verse
+ * (e.g. "...heart! He [33]"). Break them onto their own paragraph like Daleth at v25.
+ */
+export function isolatePsalm119AcrosticHeadings(text: string): string {
+  let out = text
+  for (const heading of PSALM_119_ACROSTIC_HEADINGS) {
+    const escaped = escapeRegExp(heading).replace(/ /g, '\\s+')
+    const beforeVerse = new RegExp(`(\\S)\\s+(${escaped})(?=\\s*\\[\\d{1,3}\\])`, 'g')
+    out = out.replace(beforeVerse, `$1\n\n$2\n\n`)
+  }
+  return out.replace(/\n\n[ \t]+(?=\[\d{1,3}\])/g, '\n\n')
+}
+
+function prepareScripturePassageText(text: string): string {
+  return isolatePsalm119AcrosticHeadings(text)
+}
+
 export function verseSupHtml(n: number, showVerseNumbers: boolean, clickable = false): string {
   if (showVerseNumbers) {
     if (clickable) {
@@ -98,7 +146,9 @@ export function formatScripturePassageHtml(
     savedHighlight?: ScripturePassageSavedHighlightOption
   }
 ): string {
-  let html = replaceParagraphBreaks(replaceVerseMarkers(text, options.showVerseNumbers))
+  let html = replaceParagraphBreaks(
+    replaceVerseMarkers(prepareScripturePassageText(text), options.showVerseNumbers)
+  )
   if (options.savedHighlight) {
     const attrs = markAttrsForHighlight(options.savedHighlight.id, options.savedHighlight.colorId)
     html = `<mark ${attrs}>${html}</mark>`
@@ -123,7 +173,7 @@ export function formatScriptureChapterHtml(
   } = options
 
   let processedText = replaceParagraphBreaks(
-    replaceVerseMarkers(text, showVerseNumbers, clickableVerseNumbers)
+    replaceVerseMarkers(prepareScripturePassageText(text), showVerseNumbers, clickableVerseNumbers)
   )
 
   if (savedHighlights.length > 0) {

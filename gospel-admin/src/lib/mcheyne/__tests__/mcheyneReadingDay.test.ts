@@ -6,6 +6,7 @@ import {
   findFirstMcheynePlanDayScriptureNav,
   mcheyneDayChapterReferences,
   mcheyneDayChapterReferencesForAnchor,
+  mcheyneDayListenReferencesFromCards,
   mcheyneDayScriptureCardsFromRefs,
   mcheyneDaySubsectionIdFromAnchor,
   mcheynePlanDayForDates,
@@ -190,6 +191,27 @@ describe('mcheyneReadingDay', () => {
       const matthewOn1 = day1Cards.find((card) => card.reference === 'Matthew 1')
       expect(matthewOn1?.subsectionId).toBe('section-jan-1-0')
       expect(matthewOn172?.subsectionId).not.toBe(matthewOn1?.subsectionId)
+    })
+
+    it('uses live card references for Listen playlist (not plan.json defaults)', () => {
+      const allRefs = buildAllScriptureRefs(sections)
+      const edited = allRefs.map((card) =>
+        card.subsectionId === 'section-jan-1-0' && card.reference === 'Genesis 1'
+          ? { ...card, reference: 'Genesis 1:1-5' }
+          : card
+      )
+      expect(mcheyneDayListenReferencesFromCards(edited, 'section-jan-1')).toEqual([
+        'Genesis 1:1-5',
+        'Matthew 1',
+        'Ezra 1',
+        'Acts 1',
+      ])
+      expect(mcheyneDayChapterReferencesForAnchor('section-jan-1')).toEqual([
+        'Genesis 1',
+        'Matthew 1',
+        'Ezra 1',
+        'Acts 1',
+      ])
     })
   })
 
