@@ -35,6 +35,30 @@ jest.mock('@/lib/memorizationViewportPlatform', () => ({
   isMemorizeIosWebHost: jest.fn(() => false),
 }))
 
+jest.mock('@/lib/isWhisperReciteSupported', () => ({
+  isWhisperReciteSupported: jest.fn(() => true),
+}))
+
+const mockReciteStartRecording = jest.fn()
+const mockReciteStopRecordingCapture = jest.fn()
+const mockReciteTranscribe = jest.fn()
+const mockReciteCancelRecording = jest.fn()
+
+jest.mock('@/hooks/useMemorizationRecite', () => {
+  const actual = jest.requireActual<typeof import('@/hooks/useMemorizationRecite')>(
+    '@/hooks/useMemorizationRecite'
+  )
+  return {
+    ...actual,
+    useMemorizationRecite: () => ({
+      startRecording: mockReciteStartRecording,
+      stopRecordingCapture: mockReciteStopRecordingCapture,
+      transcribeCapturedRecording: mockReciteTranscribe,
+      cancelRecording: mockReciteCancelRecording,
+    }),
+  }
+})
+
 let memorizationStrictModeEnabled = false
 
 jest.mock('@/hooks/useMemorizationStrictMode', () => ({
@@ -86,6 +110,17 @@ describe('MemorizationPracticeSession', () => {
   beforeEach(() => {
     memorizationStrictModeEnabled = false
     ;(isMemorizeAndroidWebHost as jest.Mock).mockReturnValue(false)
+    mockReciteStartRecording.mockReset()
+    mockReciteStopRecordingCapture.mockReset()
+    mockReciteTranscribe.mockReset()
+    mockReciteCancelRecording.mockReset()
+    mockReciteStartRecording.mockResolvedValue(undefined)
+    mockReciteStopRecordingCapture.mockResolvedValue({
+      blob: new Blob(['audio'], { type: 'audio/webm' }),
+      audioSeconds: 2,
+    })
+    mockReciteTranscribe.mockResolvedValue('For God so loved the world John 3 16')
+    mockReciteCancelRecording.mockResolvedValue(undefined)
     playSpy = jest
       .spyOn(HTMLMediaElement.prototype, 'play')
       .mockImplementation(() => Promise.resolve())
@@ -912,5 +947,51 @@ describe('MemorizationPracticeSession', () => {
         wrongAttemptsInRound: 2,
       })
     )
+  })
+})
+
+describe('recite mode', () => {
+  async function chooseReciteModeAfterStart(user: ReturnType<typeof userEvent.setup>) {
+    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    await user.click(screen.getByTestId('memorize-practice-mode-recite'))
+  }
+
+  it('exposes recite in mode picker for supported single-verse items', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
+    )
+    await user.click(screen.getByRole('button', { name: /Start practice/i }))
+    expect(screen.getByTestId('memorize-practice-mode-recite')).toBeInTheDocument()
+  })
+
+  it('shows verse-limit message when recite is blocked for long passages', async () => {
+    const user = userEvent.setup()
+    const longVerse: MemorizedVerse = {
+      ...baseVerse,
+      reference: 'John 1:1-7',
+      text: 'In the beginning was the Word',
+    }
+    render(
+      <MemorizationPracticeSession verse={longVerse} onClose={jest.fn()} onComplete={jest.fn()} />
+    )
+    await chooseReciteModeAfterStart(user)
+    expect(screen.getByTestId('memorize-recite-blocked-message')).toBeInTheDocument()
+    expect(screen.queryByTestId('memorize-recite-panel')).not.toBeInTheDocument()
+  })
+
+  it('can start recite practice and record', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemorizationPracticeSession verse={baseVerse} onClose={jest.fn()} onComplete={jest.fn()} />
+    )
+    await chooseReciteModeAfterStart(user)
+    expect(screen.getByTestId('memorize-recite-panel')).toBeInTheDocument()
+    await user.click(screen.getByTestId('memorize-recite-record'))
+    await waitFor(() => expect(mockReciteStartRecording).toHaveBeenCalled())
+    await user.click(screen.getByTestId('memorize-recite-stop'))
+    await waitFor(() => expect(screen.getByTestId('memorize-recite-score')).toBeInTheDocument())
+    expect(mockReciteStopRecordingCapture).toHaveBeenCalled()
+    expect(mockReciteTranscribe).toHaveBeenCalled()
   })
 })

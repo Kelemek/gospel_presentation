@@ -9,6 +9,7 @@ import {
   firstLetterGlyphOfWord,
   firstLetterOfWord,
   formatMemorizationTokensPlain,
+  formatMemorizationReciteWhisperPrompt,
   generateMemorizationSessionSeed,
   getTypableTokenIndices,
   getWordsForMemorization,
@@ -321,5 +322,19 @@ describe('memorizationPracticeUtils', () => {
     expect(compact).toContain('* 3 + 2rem')
     expect(comfortable).toContain('* 2 + 1rem')
     expect(compact).not.toEqual(comfortable)
+  })
+})
+
+describe('formatMemorizationReciteWhisperPrompt', () => {
+  it('includes spoken reference and uncommon vocabulary hints without the full verse', () => {
+    const tokens = buildMemorizationTokens(
+      'A Song of Ascents. Of David. O LORD, my heart is not lifted up;',
+      'Psalm 131:1'
+    )
+    const prompt = formatMemorizationReciteWhisperPrompt(tokens, 'Psalm 131:1', 'esv')
+    expect(prompt).toContain('Contemporary English Bible recitation.')
+    expect(prompt).toContain('Psalm 131 1')
+    expect(prompt).toContain('Ascents')
+    expect(prompt).not.toContain('lifted up')
   })
 })

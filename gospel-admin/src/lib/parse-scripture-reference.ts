@@ -37,6 +37,43 @@ export function isChapterOnlyScriptureReference(reference: string): boolean {
   return parsed !== null && parsed.verseStart === null
 }
 
+/** True when the reference is exactly one verse (e.g. John 3:16, not a range or chapter-only). */
+export function isSingleVerseScriptureReference(reference: string): boolean {
+  const parsed = parseReference(reference.trim())
+  if (!parsed || parsed.verseStart === null) return false
+  return parsed.verseEnd === null || parsed.verseEnd === parsed.verseStart
+}
+
+/**
+ * Inclusive verse count for a verse or verse-range reference.
+ * Returns null for chapter-only refs (e.g. Psalm 23) and unparseable strings.
+ */
+export function scriptureReferenceVerseCount(reference: string): number | null {
+  const parsed = parseReference(reference.trim())
+  if (!parsed || parsed.verseStart === null) return null
+  const end = parsed.verseEnd ?? parsed.verseStart
+  const lo = Math.min(parsed.verseStart, end)
+  const hi = Math.max(parsed.verseStart, end)
+  return hi - lo + 1
+}
+
+/**
+ * Spoken form for Whisper prompts and STT hints — no colon (users say "3 16", not "3:16").
+ * Example: `2 Timothy 3:16` → `2 Timothy 3 16`.
+ */
+export function formatSpokenScriptureReference(reference: string): string {
+  const parsed = parseReference(reference.trim())
+  if (!parsed) return reference.trim()
+  const parts = [parsed.book, String(parsed.chapter)]
+  if (parsed.verseStart !== null) {
+    parts.push(String(parsed.verseStart))
+    if (parsed.verseEnd !== null && parsed.verseEnd !== parsed.verseStart) {
+      parts.push(String(parsed.verseEnd))
+    }
+  }
+  return parts.join(' ')
+}
+
 /** Build a verse reference from a chapter-level reference and verse number (`Genesis 1` + `16` → `Genesis 1:16`). */
 export function buildVerseReferenceFromChapter(
   chapterReference: string,

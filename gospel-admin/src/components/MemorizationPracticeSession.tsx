@@ -31,6 +31,12 @@ import { getMemorizationListenUtteranceText } from '@/lib/memorizationListenUtte
 import { studyResourcesAvailableFromPayload } from '@/lib/studyResourcesAvailability'
 import BibleBooksMemorizationList from '@/components/BibleBooksMemorizationList'
 import { MemorizationReorderPanel } from '@/components/MemorizationReorderPanel'
+import {
+  MemorizationRecitePractice,
+  type MemorizationRecitePracticeHandle,
+  type ReciteAttemptMetrics,
+  type RecitePhase,
+} from '@/components/MemorizationRecitePractice'
 import { MemorizationRoundAdvanceFooter } from '@/components/MemorizationRoundAdvanceFooter'
 import { MemorizationWordChoicesFooter } from '@/components/MemorizationWordChoicesFooter'
 import { booksForScope, isBibleBooksMemorizationItem } from '@/lib/bibleBooksMemorization'
@@ -90,6 +96,12 @@ import {
   practicePhaseHadErrors,
   practicePhaseRoundIndex,
 } from '@/lib/memorizationPracticePhase'
+import {
+  computeReciteModeAvailable,
+  computeReciteModeVisible,
+  isRecitePracticeMode,
+  RECITE_VERSE_LIMIT_MESSAGE,
+} from '@/lib/memorizationReciteIntegration'
 
 export interface MemorizationPracticeSessionResult {
   wrongAttempts: number
@@ -227,6 +239,14 @@ export default function MemorizationPracticeSession({
   /** Set when user picks from the start modal; restored from saved in-progress. Null on intro before starting. */
   const [practiceMode, setPracticeMode] = useState<MemorizationPracticeMode | null>(null)
   const [modePickerOpen, setModePickerOpen] = useState(false)
+  const recitePracticeRef = useRef<MemorizationRecitePracticeHandle | null>(null)
+  const [recitePhase, setRecitePhase] = useState<RecitePhase>('ready')
+  const [reciteModeBlockedMessage, setReciteModeBlockedMessage] = useState<string | null>(null)
+  const [roundCompletedWithErrors, setRoundCompletedWithErrors] = useState(false)
+  const [, bumpReciteUi] = useState(0)
+  const onReciteUiStateChange = useCallback(() => {
+    bumpReciteUi((n) => n + 1)
+  }, [])
   /** Intro-only: which round to begin at (1…MEMORIZATION_FULL_HIDE_ROUND); chains forward to round 5. */
   const [startRoundChoice, setStartRoundChoice] = useState(1)
   const [hasTypedInRound, setHasTypedInRound] = useState(false)
@@ -474,6 +494,30 @@ export default function MemorizationPracticeSession({
 
   const isFinalRound = roundIndex >= MEMORIZATION_FULL_HIDE_ROUND
 
+  const reciteModeVisible = useMemo(
+    () => computeReciteModeVisible({ isBibleBooks }),
+    [isBibleBooks]
+  )
+  const reciteModeAvailable = useMemo(
+    () =>
+      computeReciteModeAvailable({
+        isBibleBooks,
+        reference: verse.reference,
+      }),
+    [isBibleBooks, verse.reference]
+  )
+
+  const showReciteNextRoundOption =
+    practiceMode === 'recite' && recitePhase === 'results'
+      ? (recitePracticeRef.current?.showNextRoundOption ?? false)
+      : false
+  const showReciteFinishOption =
+    practiceMode === 'recite' && recitePhase === 'results'
+      ? (recitePracticeRef.current?.showFinishOption ?? false)
+      : false
+  const reciteStarting =
+    practiceMode === 'recite' ? (recitePracticeRef.current?.starting ?? false) : false
+
   const showNextRoundOption = useMemo(
     () =>
       memorizationRoundAdvanceShowsNextRound({
@@ -513,6 +557,17 @@ export default function MemorizationPracticeSession({
       roundIndex,
     })
   }, [isRoundComplete, isFinalRound, showFinishPracticeOption, roundIndex])
+
+  const reciteRoundAdvanceHeaderCopy = useMemo(() => {
+    if (!isRoundComplete || practiceMode !== 'recite') return ''
+    if (isFinalRound) {
+      if (showFinishPracticeOption) {
+        return `Round ${roundIndex} complete — repeat this round or finish practice.`
+      }
+      return `Round ${roundIndex} complete — repeat this round until you finish with no errors.`
+    }
+    return `Round ${roundIndex} complete — repeat or continue to round ${roundIndex + 1}.`
+  }, [isRoundComplete, practiceMode, isFinalRound, showFinishPracticeOption, roundIndex])
 
   const flashErrorBriefly = useCallback(() => {
     setFlashError(true)
@@ -818,6 +873,10 @@ export default function MemorizationPracticeSession({
       setConsecutiveWrong(0)
       resetRoundErrors()
       setRoundAffirmation('')
+      setRoundCompletedWithErrors(false)
+      if (isRecitePracticeMode(practiceModeRef.current)) {
+        recitePracticeRef.current?.resetAttemptState()
+      }
       startActiveRound(r)
     },
     [memorizeAndroidHost, reorderChunks, typableIndices, verse.id, resetRoundErrors, startActiveRound]
@@ -1085,6 +1144,15 @@ export default function MemorizationPracticeSession({
 
   const beginPracticeWithMode = useCallback(
     (mode: MemorizationPracticeMode) => {
+      if (isRecitePracticeMode(mode)) {
+        if (!reciteModeAvailable) {
+          setReciteModeBlockedMessage(RECITE_VERSE_LIMIT_MESSAGE)
+          return
+        }
+        setReciteModeBlockedMessage(null)
+      } else {
+        setReciteModeBlockedMessage(null)
+      }
       stopPassageAudio()
       setModePickerOpen(false)
       completedRef.current = false
@@ -1113,7 +1181,24 @@ export default function MemorizationPracticeSession({
         practiceMode: mode,
       })
     },
-    [onPersistInProgress, startRound, startRoundChoice, stopPassageAudio]
+    [onPersistInProgress, reciteModeAvailable, startRound, startRoundChoice, stopPassageAudio]
+  )
+
+  const onReciteClearHint = useCallback(() => {
+    setHintPeekCount(1)
+    setHintHeld(false)
+  }, [])
+
+  const onReciteAttemptMetrics = useCallback(
+    (metrics: ReciteAttemptMetrics) => {
+      for (let i = 0; i < metrics.wrong; i++) {
+        recordWrongAttempt()
+      }
+      setCorrectKeystrokesTotal((c) => c + metrics.correct)
+      setRoundCompletedWithErrors(metrics.hadErrors)
+      setHasTypedInRound(true)
+    },
+    [recordWrongAttempt]
   )
 
   /** flushSync + optional focus keeps iOS / Capacitor WebView keyboard in the same user gesture as type-mode start. */
@@ -1153,9 +1238,12 @@ export default function MemorizationPracticeSession({
     [onPersistInProgress, wrongAttemptsInRoundRef]
   )
 
-  const handleClose = useCallback(() => {
+  const handleClose = useCallback(async () => {
     setListenPanelOpen(false)
     stopPassageAudio()
+    if (isRecitePracticeMode(practiceModeRef.current)) {
+      await recitePracticeRef.current?.prepareClose()
+    }
     if (onPersistInProgress && sessionSeedRef.current && isPracticePhaseInSession(phase)) {
       if (isRoundComplete) {
         persistPracticeSnapshot(
@@ -1181,6 +1269,7 @@ export default function MemorizationPracticeSession({
   const handleStartOver = useCallback(() => {
     setListenPanelOpen(false)
     stopPassageAudio()
+    recitePracticeRef.current?.cancel()
     onClearInProgress?.()
     sessionSeedRef.current = ''
     completedRef.current = false
@@ -1201,6 +1290,9 @@ export default function MemorizationPracticeSession({
       setRoundAffirmation('')
       setPracticeMode(null)
       setModePickerOpen(false)
+      setReciteModeBlockedMessage(null)
+      setRecitePhase('ready')
+      setRoundCompletedWithErrors(false)
     })
   }, [verse.id, onClearInProgress, stopPassageAudio, resetIntro])
 
@@ -1466,8 +1558,63 @@ export default function MemorizationPracticeSession({
     wrongAttemptsInRoundRef,
   ])
 
+  const onReciteRepeatRound = useCallback(() => {
+    startRoundAndFocusInput(roundIndex)
+    persistPracticeSnapshot({ kind: 'inRound', roundIndex }, { wrongAttemptsInRound: 0 })
+  }, [roundIndex, startRoundAndFocusInput, persistPracticeSnapshot])
+
+  const onReciteNextRound = useCallback(() => {
+    recitePracticeRef.current?.applyAttemptMetrics()
+    onRoundComplete()
+    if (completedRef.current) return
+    const nextAllowed = memorizationRoundAdvanceShowsNextRound({
+      isFinalRound: roundIndex >= MEMORIZATION_FULL_HIDE_ROUND,
+      roundCompletedWithErrors: wrongAttemptsInRoundRef.current > 0,
+      strictMode: strictModeRef.current,
+      wrongAttemptsInRound: wrongAttemptsInRoundRef.current,
+    })
+    if (nextAllowed) {
+      startRoundAndFocusInput(roundIndex + 1)
+      persistPracticeSnapshot(
+        { kind: 'inRound', roundIndex: roundIndex + 1 },
+        { wrongAttemptsInRound: 0 }
+      )
+    }
+  }, [
+    onRoundComplete,
+    persistPracticeSnapshot,
+    roundIndex,
+    startRoundAndFocusInput,
+    wrongAttemptsInRoundRef,
+  ])
+
+  const onReciteFinishPractice = useCallback(() => {
+    recitePracticeRef.current?.applyAttemptMetrics()
+    onRoundComplete()
+    if (!completedRef.current) {
+      finishPracticeSession()
+    }
+  }, [finishPracticeSession, onRoundComplete])
+
+  const startReciteRecording = useCallback(async () => {
+    await recitePracticeRef.current?.startRecording()
+  }, [])
+
+  const stopReciteRecording = useCallback(async () => {
+    await recitePracticeRef.current?.stopRecording()
+  }, [])
+
+  useEffect(() => {
+    if (practiceMode !== 'recite' || !isPracticePhaseInSession(phase)) return
+    if (isRoundComplete) {
+      recitePracticeRef.current?.resetAttemptState()
+    }
+  }, [practiceMode, phase, isRoundComplete, roundIndex])
+
   useEffect(() => {
     if (!isPracticePhaseActiveRound(phase)) return
+
+    if (practiceMode === 'recite') return
 
     if (practiceMode === 'reorder') {
       const n = reorderChunks.length
@@ -1976,7 +2123,8 @@ export default function MemorizationPracticeSession({
               (practiceMode === 'type' ||
                 practiceMode === 'firstLetters' ||
                 practiceMode === 'word' ||
-                practiceMode === 'reorder') && (
+                practiceMode === 'reorder' ||
+                (practiceMode === 'recite' && recitePhase === 'ready')) && (
               <button
                 ref={hintButtonRef}
                 type="button"
@@ -2041,7 +2189,7 @@ export default function MemorizationPracticeSession({
             <button
               type="button"
               data-tour="memorize-practice-close"
-              onClick={handleClose}
+              onClick={() => void handleClose()}
               className="text-slate-600 dark:text-slate-200 text-xl font-bold min-h-[36px] min-w-[36px] rounded-md flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-600"
               aria-label="Close"
             >
@@ -2122,6 +2270,7 @@ export default function MemorizationPracticeSession({
                     type="button"
                     data-tour="memorize-start-practice"
                     onClick={() => {
+                      setReciteModeBlockedMessage(null)
                       setModePickerOpen(true)
                     }}
                     className="min-w-0 flex-1 px-4 py-3 text-center sm:flex-none sm:w-auto sm:shrink-0 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 hover:border-blue-300 dark:hover:border-blue-600"
@@ -2178,7 +2327,32 @@ export default function MemorizationPracticeSession({
               onInput={handlePracticeInput}
             />
           )}
-          {isPracticePhaseInSession(phase) && (
+          {isPracticePhaseInSession(phase) && practiceMode === 'recite' ? (
+            <MemorizationRecitePractice
+              ref={recitePracticeRef}
+              active={isPracticePhaseActiveRound(phase)}
+              tokens={tokens}
+              typableIndices={typableIndices}
+              reference={verse.reference}
+              translation={verse.translation}
+              itemId={verse.id}
+              roundIndex={roundIndex}
+              awaitingRoundAdvance={isRoundComplete}
+              roundAdvanceHeaderCopy={reciteRoundAdvanceHeaderCopy}
+              isBibleBooks={isBibleBooks}
+              wrongAttemptsInRound={wrongAttemptsInRound}
+              roundCompletedWithErrors={roundCompletedWithErrors}
+              strictModeEnabled={strictMode}
+              isFinalRound={isFinalRound}
+              hiddenIndices={hiddenIndices}
+              revealed={revealed}
+              hintPeekIndices={hintPeekIndices}
+              onClearHint={onReciteClearHint}
+              onAttemptMetrics={onReciteAttemptMetrics}
+              onPhaseChange={setRecitePhase}
+              onUiStateChange={onReciteUiStateChange}
+            />
+          ) : isPracticePhaseInSession(phase) ? (
             <div>
               <div
                 className={
@@ -2461,7 +2635,7 @@ export default function MemorizationPracticeSession({
               )}
               </div>
             </div>
-          )}
+          ) : null}
 
           {isPracticePhaseDone(phase) && (
             <div className="text-center py-6">
@@ -2484,6 +2658,91 @@ export default function MemorizationPracticeSession({
           )}
 
           {isPracticePhaseInSession(phase) &&
+            practiceMode === 'recite' &&
+            !isRoundComplete && (
+              <div
+                className="shrink-0 border-t border-slate-200 dark:border-slate-600 px-4 py-3 bg-slate-50 dark:bg-slate-900/60"
+                data-testid="memorize-recite-footer"
+              >
+                <div className="flex flex-col sm:flex-row gap-3 sm:justify-end">
+                  {recitePhase === 'ready' && (
+                    <button
+                      type="button"
+                      data-testid="memorize-recite-record"
+                      onClick={() => void startReciteRecording()}
+                      disabled={reciteStarting}
+                      aria-busy={reciteStarting}
+                      className={`w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-700 ${
+                        reciteStarting
+                          ? 'cursor-not-allowed opacity-80'
+                          : 'cursor-pointer hover:bg-red-200 dark:hover:bg-red-900/60'
+                      }`}
+                    >
+                      {reciteStarting ? 'Starting…' : 'Record'}
+                    </button>
+                  )}
+                  {recitePhase === 'recording' && (
+                    <button
+                      type="button"
+                      data-testid="memorize-recite-stop"
+                      onClick={() => void stopReciteRecording()}
+                      className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer bg-red-100 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-900/60 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-700"
+                    >
+                      Stop
+                    </button>
+                  )}
+                  {(recitePhase === 'stopping' || recitePhase === 'transcribing') && (
+                    <button
+                      type="button"
+                      data-testid="memorize-recite-checking"
+                      disabled
+                      aria-busy="true"
+                      className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-not-allowed bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-700 inline-flex items-center justify-center gap-2 opacity-80"
+                    >
+                      <span
+                        className="animate-spin rounded-full h-4 w-4 border-2 border-red-800 border-t-transparent dark:border-red-200 dark:border-t-transparent"
+                        aria-hidden="true"
+                      />
+                      Checking…
+                    </button>
+                  )}
+                  {recitePhase === 'results' && (
+                    <>
+                      <button
+                        type="button"
+                        data-testid="memorize-recite-retry"
+                        onClick={onReciteRepeatRound}
+                        className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium border-2 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-600 cursor-pointer"
+                      >
+                        Repeat this round
+                      </button>
+                      {showReciteNextRoundOption && (
+                        <button
+                          type="button"
+                          data-testid="memorize-recite-next-round"
+                          onClick={onReciteNextRound}
+                          className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700"
+                        >
+                          Next round
+                        </button>
+                      )}
+                      {showReciteFinishOption && (
+                        <button
+                          type="button"
+                          data-testid="memorize-recite-finish"
+                          onClick={onReciteFinishPractice}
+                          className="w-full sm:w-auto px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700"
+                        >
+                          Finish practice
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+          {isPracticePhaseInSession(phase) &&
             practiceMode === 'word' &&
             !isRoundComplete &&
             wordChoiceLabels.length > 0 && (
@@ -2494,7 +2753,7 @@ export default function MemorizationPracticeSession({
               />
             )}
 
-          {isPracticePhaseRoundComplete(phase) && (
+          {isPracticePhaseRoundComplete(phase) && practiceMode !== 'recite' && (
             <MemorizationRoundAdvanceFooter
               roundAffirmation={roundAffirmation}
               showNextRoundOption={showNextRoundOption}
@@ -2548,7 +2807,22 @@ export default function MemorizationPracticeSession({
             initials with dots on the cue row—typing correctly reveals your hidden dots there too.{' '}
             <strong>Word mode:</strong> tap choices in the bottom bar (no keyboard).{' '}
             <strong>Reorder mode:</strong> drag chunks into reading order.
+            {reciteModeVisible && (
+              <>
+                {' '}
+                <strong>Recite mode:</strong> record the verse, then see word-by-word accuracy.
+              </>
+            )}
           </p>
+          {reciteModeBlockedMessage && (
+            <p
+              className="text-sm text-amber-700 dark:text-amber-400 mb-4"
+              data-testid="memorize-recite-blocked-message"
+              role="alert"
+            >
+              {reciteModeBlockedMessage}
+            </p>
+          )}
           <div className="flex flex-col gap-3">
             <button
               type="button"
@@ -2586,6 +2860,23 @@ export default function MemorizationPracticeSession({
             >
               Reorder mode
             </button>
+            {reciteModeVisible && (
+              <button
+                type="button"
+                data-testid="memorize-practice-mode-recite"
+                onClick={() => beginPracticeWithMode('recite')}
+                className="w-full px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700"
+              >
+                <span className="inline-flex items-center justify-center gap-2">
+                  Recite mode
+                  <span
+                    className="text-[0.65rem] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 border border-amber-200 dark:border-amber-700"
+                  >
+                    Beta
+                  </span>
+                </span>
+              </button>
+            )}
             <button
               type="button"
               data-testid="memorize-practice-mode-cancel"

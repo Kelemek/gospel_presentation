@@ -1,4 +1,5 @@
-import { parseReference } from '@/lib/parse-scripture-reference'
+import { parseReference, formatSpokenScriptureReference } from '@/lib/parse-scripture-reference'
+import type { BibleTranslation } from '@/lib/bible-translations'
 
 /** Seeded PRNG (mulberry32). */
 export function seedRandom(seed: number): () => number {
@@ -109,6 +110,104 @@ export function hiddenFractionForRound(roundIndex: number): number {
 
 /** How many practice rounds until 100% hidden (inclusive). */
 export const MEMORIZATION_FULL_HIDE_ROUND = 5
+
+export function reciteWhisperTranslationStylePrefix(translation: BibleTranslation): string {
+  if (translation === 'kjv') {
+    return 'King James Bible recitation.'
+  }
+  return 'Contemporary English Bible recitation.'
+}
+
+const RECITE_WHISPER_HINT_STOP_WORDS = new Set([
+  'a',
+  'an',
+  'and',
+  'are',
+  'as',
+  'at',
+  'be',
+  'been',
+  'but',
+  'by',
+  'for',
+  'from',
+  'had',
+  'has',
+  'have',
+  'he',
+  'her',
+  'him',
+  'his',
+  'i',
+  'if',
+  'in',
+  'is',
+  'it',
+  'its',
+  'lord',
+  'my',
+  'not',
+  'o',
+  'of',
+  'on',
+  'or',
+  'our',
+  'she',
+  'so',
+  'that',
+  'the',
+  'their',
+  'them',
+  'they',
+  'this',
+  'to',
+  'unto',
+  'was',
+  'we',
+  'were',
+  'will',
+  'with',
+  'ye',
+  'you',
+  'your',
+])
+
+/**
+ * Uncommon words from the passage (not the full verse) to steer Whisper spelling
+ * without biasing it to insert omitted words.
+ */
+export function reciteWhisperVocabularyHints(tokens: MemorizationToken[]): string {
+  const seen = new Set<string>()
+  const hints: string[] = []
+  for (const token of tokens) {
+    if (token.kind !== 'word') continue
+    const word = token.text.trim()
+    const lower = word.toLowerCase()
+    if (word.length < 5 || RECITE_WHISPER_HINT_STOP_WORDS.has(lower)) continue
+    if (seen.has(lower)) continue
+    seen.add(lower)
+    hints.push(word)
+    if (hints.length >= 10) break
+  }
+  if (hints.length === 0) return ''
+  return ` Terms include: ${hints.join(', ')}.`
+}
+
+/**
+ * Whisper prompt: translation style + spoken-style reference only (not the verse body).
+ * Feeding the full verse biases Whisper to insert omitted words that appear in the prompt.
+ */
+export function formatMemorizationReciteWhisperPrompt(
+  tokens: MemorizationToken[],
+  reference: string,
+  translation: BibleTranslation = 'esv'
+): string {
+  const spokenRef = formatSpokenScriptureReference(reference.trim())
+  const refPart = spokenRef || reference.trim()
+  if (!refPart) return ''
+  const vocabulary = reciteWhisperVocabularyHints(tokens)
+  return `${reciteWhisperTranslationStylePrefix(translation)} ${refPart}${vocabulary}`
+}
 
 /** One draggable unit for reorder mode (verse clauses / word groups plus reference pieces when enabled). */
 export type MemorizationReorderChunk = {

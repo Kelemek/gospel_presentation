@@ -272,6 +272,21 @@ describe('verseMemorizationStorage', () => {
     expect(raw).toContain('"practiceMode":"firstLetters"')
   })
 
+  it('saveMemorizationInProgress persists practiceMode recite', () => {
+    addMemorizedVerse('Ps 23:1', 'The Lord is my shepherd', 'esv')
+    const id = loadMemorizedVerses()[0].id
+    saveMemorizationInProgress(id, {
+      sessionSeed: 'seed-recite',
+      wrongAttempts: 0,
+      correctKeystrokes: 1,
+      phase: { kind: 'inRound', roundIndex: 2 },
+      practiceMode: 'recite',
+    })
+    expect(loadMemorizedVerses()[0].inProgressPractice?.practiceMode).toBe('recite')
+    const raw = gospelStorageGetSync(VERSE_MEMORIZATION_STORAGE_KEY)
+    expect(raw).toContain('"practiceMode":"recite"')
+  })
+
   it('updatePracticeStats clears inProgressPractice when a session completes', () => {
     addMemorizedVerse('Ps 119:1', 'Blessed are they', 'esv')
     const id = loadMemorizedVerses()[0].id

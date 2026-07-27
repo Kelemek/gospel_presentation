@@ -1403,5 +1403,15 @@
     "releasedAt": "2026-07-23",
     "committedAt": "2026-07-23T12:49:01.841Z",
     "message": "Bug fix: M'Cheyne Listen now stays on the correct day when advancing to a chapter that also appears earlier in the plan (for example, Matthew 1 on day 172)."
+  },
+  {
+    "releasedAt": "2026-07-26",
+    "committedAt": "2026-07-26T12:31:36.682Z",
+    "message": "Memorize now has Recite mode: record a memorized passage and see word-by-word accuracy feedback."
+  },
+  {
+    "releasedAt": "2026-07-27",
+    "committedAt": "2026-07-27T12:25:37.212Z",
+    "message": "Bug fix: Recite mode now recognizes “Song of Ascents” when speech-to-text hears “a sense.”"
   }
 ]
