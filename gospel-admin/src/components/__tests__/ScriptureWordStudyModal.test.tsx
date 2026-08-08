@@ -164,4 +164,46 @@ describe('ScriptureWordStudyModal', () => {
     })
     expect(onClose).not.toHaveBeenCalled()
   })
+
+  it('adds drop shadows at the scroll edges of the word list', async () => {
+    renderInScrollPane(
+      <ScriptureWordStudyModal reference="Romans 12:2" isOpen onClose={jest.fn()} />
+    )
+    await waitFor(() => {
+      expect(screen.getByText('μεταμορφοῦσθε')).toBeInTheDocument()
+    })
+
+    const header = document.querySelector('[data-tour="scripture-modal-word-study-header"]')
+    const panel = document.querySelector('[data-tour="scripture-modal-word-study-panel"]')
+    const scroll = document.querySelector(
+      '[data-tour="scripture-modal-word-study-scroll"]'
+    ) as HTMLDivElement | null
+    expect(header).toBeTruthy()
+    expect(panel).toBeTruthy()
+    expect(scroll).toBeTruthy()
+    expect(header?.className).not.toMatch(/shadow-\[0_10px_28px/)
+    expect(panel?.className).not.toMatch(/shadow-\[inset_0_-28px/)
+    expect(document.querySelector('[data-tour="scripture-modal-word-study-footer"]')).toBeNull()
+    expect(scroll?.className).toMatch(/overscroll-y-contain/)
+    expect(scroll?.className).toMatch(/pb-\[max\(1\.5rem/)
+    expect(scroll?.className).toMatch(/4\.5rem/)
+
+    Object.defineProperty(scroll!, 'scrollTop', { configurable: true, writable: true, value: 24 })
+    Object.defineProperty(scroll!, 'clientHeight', { configurable: true, value: 200 })
+    Object.defineProperty(scroll!, 'scrollHeight', { configurable: true, value: 800 })
+    scroll!.dispatchEvent(new Event('scroll', { bubbles: true }))
+
+    await waitFor(() => {
+      expect(header?.className).toMatch(/shadow-\[0_10px_28px/)
+      expect(panel?.className).toMatch(/shadow-\[inset_0_-28px/)
+    })
+
+    Object.defineProperty(scroll!, 'scrollTop', { configurable: true, writable: true, value: 0 })
+    scroll!.dispatchEvent(new Event('scroll', { bubbles: true }))
+
+    await waitFor(() => {
+      expect(header?.className).not.toMatch(/shadow-\[0_10px_28px/)
+      expect(panel?.className).not.toMatch(/shadow-\[inset_0_-28px/)
+    })
+  })
 })

@@ -1508,15 +1508,18 @@ body.capacitor-android .profile-help-tour-popover.driver-popover {
 }
 
 /* Scripture modal — STEP word study overlay (floats over verse pane).
-   Capacitor Android often reports safe-area-bottom as 0 while 3-button / gesture nav overlaps the WebView. */
-.scripture-word-study-card {
-  margin-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
-  max-height: calc(100% - max(0.5rem, env(safe-area-inset-bottom, 0px)));
+   Card is full width of the reader pane at all breakpoints (no side inset).
+   Android often reports safe-area-bottom as 0; floor keeps the last word chips clear of the
+   3-button / gesture nav. Skip when the lexicon sheet is open (large sheet pad already). */
+body.capacitor-android
+  [data-tour='scripture-modal-word-study-scroll']:not(
+    :has(+ [data-tour='scripture-modal-word-study-lexicon'])
+  ) {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px), 72px);
 }
 
-body.capacitor-android .scripture-word-study-card {
-  margin-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px), 96px);
-  max-height: calc(100% - max(0.5rem, env(safe-area-inset-bottom, 0px), 96px));
+body.capacitor-android [data-tour='scripture-modal-word-study-lexicon-scroll'] {
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px), 72px);
 }
 
 /* Centered app modals (What's new alert, Help → Change log) — stay above system nav on Capacitor Android. */
@@ -1577,12 +1580,8 @@ body.capacitor-android [data-tour='profile-slideout-menu'] {
     );
   }
 
-  .scripture-word-study-card {
-    margin-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px), 72px);
-    max-height: calc(100% - max(0.5rem, env(safe-area-inset-bottom, 0px), 72px));
-  }
-
-  body.capacitor-android [data-tour='scripture-modal-scroll-area'] {
+  body.capacitor-android
+    [data-tour='scripture-modal-scroll-area']:not(:has([data-tour='scripture-modal-word-study-overlay'])) {
     padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px), 72px);
   }
 

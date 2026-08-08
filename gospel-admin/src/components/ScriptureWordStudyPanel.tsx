@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type UIEvent } from 'react'
 import ScriptureHoverModal from '@/components/ScriptureHoverModal'
 import {
   formatStrongsChipLabel,
@@ -24,7 +24,19 @@ interface ScriptureWordStudyPanelProps {
   embedded?: boolean
   /** Open a verse in the parent ScriptureModal (concordance links). */
   onOpenReference?: (reference: string) => void
+  /** Fired when embedded word-list scroll edges change (header/footer drop shadows). */
+  onContentScrollEdgesChange?: (edges: WordStudyScrollEdges) => void
 }
+
+/** Scroll-edge flags for word-study chrome shadows. */
+export type WordStudyScrollEdges = {
+  /** True when content is scrolled away from the top. */
+  fromTop: boolean
+  /** True when more content remains below the fold. */
+  fromBottom: boolean
+}
+
+const INITIAL_SCROLL_EDGES: WordStudyScrollEdges = { fromTop: false, fromBottom: false }
 
 type LexiconDetail = 'brief' | 'full' | 'concordance'
 
@@ -78,10 +90,12 @@ function ScriptureWordStudyPanelContent({
   reference,
   embedded = false,
   onOpenReference,
+  onContentScrollEdgesChange,
 }: {
   reference: string
   embedded?: boolean
   onOpenReference?: (reference: string) => void
+  onContentScrollEdgesChange?: (edges: WordStudyScrollEdges) => void
 }) {
   const [study, setStudy] = useState<StepBibleWordStudyResult | null>(null)
   const [loading, setLoading] = useState(true)
@@ -91,6 +105,46 @@ function ScriptureWordStudyPanelContent({
   const [lexicon, setLexicon] = useState<LexiconState>({ status: 'idle' })
   const [concordance, setConcordance] = useState<ConcordanceState>({ status: 'idle' })
   const [detail, setDetail] = useState<LexiconDetail>('brief')
+  const onContentScrollEdgesChangeRef = useRef(onContentScrollEdgesChange)
+  const scrollEdgesRef = useRef<WordStudyScrollEdges>(INITIAL_SCROLL_EDGES)
+  const scrollElRef = useRef<HTMLDivElement | null>(null)
+  const lexiconOpenRef = useRef(false)
+
+  useEffect(() => {
+    onContentScrollEdgesChangeRef.current = onContentScrollEdgesChange
+  }, [onContentScrollEdgesChange])
+
+  const reportScrollEdges = (edges: WordStudyScrollEdges) => {
+    if (
+      scrollEdgesRef.current.fromTop === edges.fromTop &&
+      scrollEdgesRef.current.fromBottom === edges.fromBottom
+    ) {
+      return
+    }
+    scrollEdgesRef.current = edges
+    onContentScrollEdgesChangeRef.current?.(edges)
+  }
+
+  const updateScrollEdgesFromEl = (el: HTMLDivElement) => {
+    const fromTop = el.scrollTop > 0
+    const fromBottom =
+      !lexiconOpenRef.current &&
+      el.scrollTop + el.clientHeight < el.scrollHeight - 1
+    reportScrollEdges({ fromTop, fromBottom })
+  }
+
+  useEffect(() => {
+    return () => {
+      if (scrollEdgesRef.current.fromTop || scrollEdgesRef.current.fromBottom) {
+        scrollEdgesRef.current = INITIAL_SCROLL_EDGES
+        onContentScrollEdgesChangeRef.current?.(INITIAL_SCROLL_EDGES)
+      }
+    }
+  }, [])
+
+  const onEmbeddedContentScroll = (e: UIEvent<HTMLDivElement>) => {
+    updateScrollEdgesFromEl(e.currentTarget)
+  }
 
   const currentPassageKeys = useMemo(() => {
     if (!study) return new Set<string>()
@@ -262,6 +316,30 @@ function ScriptureWordStudyPanelContent({
     : 'Original'
   const lexiconOpen = Boolean(expandedStrongs || selectedWord)
 
+  useEffect(() => {
+    lexiconOpenRef.current = lexiconOpen
+  }, [lexiconOpen])
+
+  useEffect(() => {
+    if (!embedded) return
+    const el = scrollElRef.current
+    if (!el) return
+
+    const measure = () => {
+      const fromTop = el.scrollTop > 0
+      const fromBottom =
+        !lexiconOpenRef.current &&
+        el.scrollTop + el.clientHeight < el.scrollHeight - 1
+      reportScrollEdges({ fromTop, fromBottom })
+    }
+
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    if (el.firstElementChild) ro.observe(el.firstElementChild)
+    return () => ro.disconnect()
+  }, [embedded, loading, study, lexiconOpen])
+
   const lexiconDetail = lexiconOpen ? (
     <div className="flex flex-col min-h-0 h-full bg-white dark:bg-slate-800">
       <div className="sticky top-0 z-10 shrink-0 flex flex-wrap items-center gap-2 px-3 py-2 border-b border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800">
@@ -328,7 +406,10 @@ function ScriptureWordStudyPanelContent({
           ×
         </button>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3">
+      <div
+        data-tour="scripture-modal-word-study-lexicon-scroll"
+        className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y px-3 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom,0px),4.5rem)]"
+      >
       {detail !== 'concordance' && lexicon.status === 'loading' && (
         <p className="text-sm text-slate-600 dark:text-slate-300">Loading definition…</p>
       )}
@@ -548,9 +629,16 @@ function ScriptureWordStudyPanelContent({
 
   if (embedded) {
     return (
-      <div className="flex flex-col h-full min-h-0 relative px-3 py-3">
+      <div className="relative flex flex-col h-full min-h-0">
         <div
-          className={`flex-1 min-h-0 overflow-y-auto ${lexiconOpen ? 'pb-[min(48vh,360px)]' : ''}`}
+          ref={scrollElRef}
+          data-tour="scripture-modal-word-study-scroll"
+          className={`flex-1 min-h-0 overflow-y-auto overscroll-y-contain touch-pan-y px-3 pt-3 ${
+            lexiconOpen
+              ? 'pb-[min(48vh,360px)]'
+              : 'pb-[max(1.5rem,env(safe-area-inset-bottom,0px),4.5rem)]'
+          }`}
+          onScroll={onEmbeddedContentScroll}
         >
           {wordSections}
         </div>
@@ -581,6 +669,7 @@ export default function ScriptureWordStudyPanel({
   enabled = true,
   embedded = false,
   onOpenReference,
+  onContentScrollEdgesChange,
 }: ScriptureWordStudyPanelProps) {
   const fetchKey = enabled && reference.trim() ? reference.trim() : null
   if (!fetchKey) return null
@@ -591,6 +680,7 @@ export default function ScriptureWordStudyPanel({
       reference={fetchKey}
       embedded={embedded}
       onOpenReference={onOpenReference}
+      onContentScrollEdgesChange={onContentScrollEdgesChange}
     />
   )
 }
