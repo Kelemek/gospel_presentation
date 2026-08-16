@@ -9,7 +9,18 @@ import {
   writeMemorizeListenSpeedToStorage,
   type MemorizeListenSpeed,
 } from '@/lib/memorizeListenSpeedStorage'
-import { isMemorizeAndroidWebHost, isMemorizeIosWebHost } from '@/lib/memorizationViewportPlatform'
+import {
+  dispatchGospelExclusiveListenOwner,
+  GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT,
+  type GospelWebSpeechExclusiveOwnerDetail,
+} from '@/lib/exclusiveWebSpeechListen'
+import {
+  cancelProfileReadAloudSpeech,
+  GOSPEL_PROFILE_READ_ALOUD_CANCELLED_EVENT,
+  getProfileReadAloudSpeechEngine,
+  isProfileReadAloudSpeechAvailable,
+} from '@/lib/profileReadAloudSpeechEngine'
+import { isMemorizeIosWebHost } from '@/lib/memorizationViewportPlatform'
 import { getCurrentTocAnchorId } from '@/lib/tocAnchorFromScroll'
 import type { ProfileListenTextOptions } from '@/lib/profileHighlightVisibleText'
 import {
@@ -48,10 +59,6 @@ import {
   displayCharIndexInChunkForSpeakIndex,
   displayCharRangeInChunkForSpeakRange,
 } from '@/lib/bibleReferenceSpeechTransform'
-import {
-  GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT,
-  type GospelWebSpeechExclusiveOwnerDetail,
-} from '@/lib/exclusiveWebSpeechListen'
 import {
   readProfileReadAlongUnderlineStyleFromStorage,
   writeProfileReadAlongUnderlineStyleToStorage,
@@ -141,8 +148,6 @@ export function useProfileResourceReadAloud({
   /** Invalidates delayed boundary UI when clearing session or superseding with a newer boundary. */
   const readAlongBoundaryLagSeqRef = useRef(0)
 
-  const androidHost = useMemo(() => isMemorizeAndroidWebHost(), [])
-
   useLayoutEffect(() => {
     profileSlugRef.current = profileSlug
     listenTextOptionsRef.current = {
@@ -163,7 +168,6 @@ export function useProfileResourceReadAloud({
       clearTimeout(persistTimerRef.current)
       persistTimerRef.current = null
     }
-    if (androidHost) return
     const slug = profileSlugRef.current
     if (!slug) return
     const anchor = readAlongAnchorIdRef.current
@@ -174,27 +178,27 @@ export function useProfileResourceReadAloud({
     if (off >= plainLen) return
     saveProfileReadAlongProgress(slug, anchor, off, fp)
     saveProfileReadAlongLastSession(slug, anchor, off, fp)
-  }, [androidHost])
+  }, [])
 
   const scheduleReadAlongProgressPersist = useCallback(() => {
-    if (androidHost || !profileSlugRef.current) return
+    if (!profileSlugRef.current) return
     if (persistTimerRef.current) clearTimeout(persistTimerRef.current)
     persistTimerRef.current = setTimeout(() => {
       persistTimerRef.current = null
       flushReadAlongProgressPersist()
     }, 450)
-  }, [androidHost, flushReadAlongProgressPersist])
+  }, [flushReadAlongProgressPersist])
 
   const recordReadAlongProgressPlainOffset = useCallback(
     (plainOffset: number) => {
-      if (androidHost || !profileSlugRef.current || !ttsActiveRef.current) return
+      if (!profileSlugRef.current || !ttsActiveRef.current) return
       const plainLen = readAlongPlainLenRef.current
       if (plainLen <= 0) return
       const clamped = Math.max(0, Math.min(plainOffset, plainLen - 1))
       lastPersistedPlainOffsetRef.current = Math.max(lastPersistedPlainOffsetRef.current, clamped)
       scheduleReadAlongProgressPersist()
     },
-    [androidHost, scheduleReadAlongProgressPersist]
+    [scheduleReadAlongProgressPersist]
   )
 
   const cancelReadAlongUiScheduling = useCallback(() => {
@@ -286,6 +290,19 @@ export function useProfileResourceReadAloud({
     readAlongBoundaryLagSeqRef.current += 1
   }, [cancelReadAlongUiScheduling])
 
+  const stopProfileReadAloudFromExternalSource = useCallback(() => {
+    ttsCancelGenerationRef.current += 1
+    ttsActiveRef.current = false
+    ttsChunkIndexRef.current = 0
+    memorizeListenTtsRateAtStartRef.current = null
+    memorizeListenTtsUserPausedRef.current = false
+    memorizeListenTtsPostResumeRef.current = false
+    flushReadAlongProgressPersist()
+    clearReadAlongSession()
+    setControlsOpen(false)
+    bumpListen()
+  }, [bumpListen, clearReadAlongSession, flushReadAlongProgressPersist])
+
   useEffect(() => {
     if (typeof window === 'undefined') return
     let raf = 0
@@ -329,24 +346,32 @@ export function useProfileResourceReadAloud({
     if (typeof window === 'undefined') return
     const onExclusive = (ev: Event) => {
       const ce = ev as CustomEvent<GospelWebSpeechExclusiveOwnerDetail>
-      if (!ce.detail || ce.detail.owner !== 'memorize-practice') return
-      ttsCancelGenerationRef.current += 1
-      ttsActiveRef.current = false
-      ttsChunkIndexRef.current = 0
-      memorizeListenTtsRateAtStartRef.current = null
-      memorizeListenTtsUserPausedRef.current = false
-      memorizeListenTtsPostResumeRef.current = false
-      flushReadAlongProgressPersist()
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel()
+      if (!ce.detail) return
+      switch (ce.detail.owner) {
+        case 'profile-resource-read-aloud':
+          return
+        case 'memorize-practice':
+        case 'scripture-chapter-audio':
+          break
+        default: {
+          const _exhaustive: never = ce.detail.owner
+          return _exhaustive
+        }
       }
-      clearReadAlongSession()
-      setControlsOpen(false)
-      bumpListen()
+      stopProfileReadAloudFromExternalSource()
     }
     window.addEventListener(GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT, onExclusive)
     return () => window.removeEventListener(GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT, onExclusive)
-  }, [bumpListen, clearReadAlongSession, flushReadAlongProgressPersist])
+  }, [stopProfileReadAloudFromExternalSource])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const onCancelled = () => {
+      stopProfileReadAloudFromExternalSource()
+    }
+    window.addEventListener(GOSPEL_PROFILE_READ_ALOUD_CANCELLED_EVENT, onCancelled)
+    return () => window.removeEventListener(GOSPEL_PROFILE_READ_ALOUD_CANCELLED_EVENT, onCancelled)
+  }, [stopProfileReadAloudFromExternalSource])
 
   useEffect(() => {
     return () => {
@@ -354,9 +379,7 @@ export function useProfileResourceReadAloud({
       flushReadAlongProgressPersist()
       cancelReadAlongUiScheduling()
       if (typeof document !== 'undefined') clearReadAlongDomHighlight(document)
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
-        window.speechSynthesis.cancel()
-      }
+      cancelProfileReadAloudSpeech()
     }
   }, [cancelReadAlongUiScheduling, flushReadAlongProgressPersist])
 
@@ -385,9 +408,9 @@ export function useProfileResourceReadAloud({
 
   const speakChunkInternal = useCallback(
     (chunkIndex: number) => {
-      if (androidHost) return
-      if (typeof window === 'undefined' || !window.speechSynthesis) return
+      if (typeof window === 'undefined' || !isProfileReadAloudSpeechAvailable()) return
 
+      const engine = getProfileReadAloudSpeechEngine()
       const chunks = ttsChunksRef.current
       if (chunkIndex >= chunks.length) {
         const slug = profileSlugRef.current
@@ -451,7 +474,6 @@ export function useProfileResourceReadAloud({
         return
       }
 
-      const syn = window.speechSynthesis
       const displayChunk = chunks[chunkIndex]
       if (!displayChunk) {
         speakChunkInternalRef.current(chunkIndex + 1)
@@ -478,187 +500,182 @@ export function useProfileResourceReadAloud({
       memorizeListenTtsUserPausedRef.current = false
       memorizeListenTtsPostResumeRef.current = false
 
-      const u = new SpeechSynthesisUtterance(speakChunk)
-      u.lang = 'en-US'
       const rate = listenPlaybackRateRef.current
-      u.rate = toMemorizeWebSpeechUtteranceRate(rate, isMemorizeIosWebHost())
+      const utteranceRate = toMemorizeWebSpeechUtteranceRate(rate, isMemorizeIosWebHost())
       memorizeListenTtsRateAtStartRef.current = rate
 
-      u.onstart = () => {
-        memorizeListenTtsPostResumeRef.current = false
-        bumpListen()
-        const scope = readAlongScopeRef.current
-        const plainLen = readAlongPlainLenRef.current
-        const chunkStart = ttsChunkPlainStartsRef.current[chunkIndex] ?? 0
-        recordReadAlongProgressPlainOffset(chunkStart)
-        if (!scope || plainLen <= 0) return
+      engine.speak(speakChunk, utteranceRate, {
+        onstart: () => {
+          memorizeListenTtsPostResumeRef.current = false
+          bumpListen()
+          const scope = readAlongScopeRef.current
+          const plainLen = readAlongPlainLenRef.current
+          const chunkStart = ttsChunkPlainStartsRef.current[chunkIndex] ?? 0
+          recordReadAlongProgressPlainOffset(chunkStart)
+          if (!scope || plainLen <= 0) return
 
-        if (prefersReducedMotionReadAlong()) {
-          scheduleReadAlongUi({
-            scroll: chunkStart,
-            highlight: readAlongUnderlineEnabledRef.current
-              ? {
+          if (prefersReducedMotionReadAlong()) {
+            scheduleReadAlongUi({
+                scroll: chunkStart,
+                highlight: readAlongUnderlineEnabledRef.current
+                ? {
                   kind: 'word',
                   start: chunkStart,
                   endExclusive: chunkStart + displayChunk.length,
                 }
-              : null,
-          })
-          return
-        }
-
-        const fw = firstWordRangeInChunk(speakChunk)
-        if (fw) {
-          const dr = displayCharRangeInChunkForSpeakRange(
-            fw.relStart,
-            fw.relEndExclusive,
-            speakMap,
-            displayChunk.length
-          )
-          const plainWordStart = chunkStart + dr.displayStart
-          const plainWordEnd = chunkStart + dr.displayEndExclusive
-          recordReadAlongProgressPlainOffset(plainWordStart)
-          const mid = Math.floor((plainWordStart + plainWordEnd - 1) / 2)
-          const plainOffset = Math.min(Math.max(0, plainLen - 1), Math.max(chunkStart, mid))
-          const lineMode = readAlongUnderlineStyleRef.current === 'line'
-          scheduleReadAlongUi({
-            scroll: plainOffset,
-            highlight: readAlongUnderlineEnabledRef.current
-              ? lineMode
-                ? { kind: 'line', plainCaret: plainOffset }
-                : { kind: 'word', start: plainWordStart, endExclusive: plainWordEnd }
-              : null,
-          })
-        } else {
-          scheduleReadAlongUi({ scroll: chunkStart })
-        }
-      }
-
-      u.onboundary = (ev: SpeechSynthesisEvent) => {
-        if (birthGen !== ttsCancelGenerationRef.current) return
-        if (window.speechSynthesis.paused) return
-        const scope = readAlongScopeRef.current
-        const plainLen = readAlongPlainLenRef.current
-        if (!scope || plainLen <= 0) return
-        const chunkStart = ttsChunkPlainStartsRef.current[chunkIndex] ?? 0
-        const ci = typeof ev.charIndex === 'number' ? ev.charIndex : 0
-        const inChunkSpeak = Math.max(0, Math.min(ci, speakChunk.length))
-        const displayInChunk = displayCharIndexInChunkForSpeakIndex(inChunkSpeak, speakMap, displayChunk.length)
-        const target = chunkStart + displayInChunk
-        const clampedTarget = Math.min(Math.max(0, plainLen - 1), target)
-
-        const lagMs = prefersReducedMotionReadAlong() ? 0 : getReadAlongBoundaryUiLagMs()
-
-        const applyBoundaryUi = () => {
-          if (birthGen !== ttsCancelGenerationRef.current) return
-          if (!ttsActiveRef.current) return
-          if (typeof window !== 'undefined' && window.speechSynthesis.paused) return
-          if (ttsChunkIndexRef.current !== chunkIndex) return
-
-          const wr = currentWordRangeInChunk(speakChunk, ev)
-          let progressPlain: number
-          if (wr) {
-            const drp = displayCharRangeInChunkForSpeakRange(
-              wr.relStart,
-              wr.relEndExclusive,
-              speakMap,
-              displayChunk.length
-            )
-            progressPlain = Math.min(Math.max(0, plainLen - 1), chunkStart + drp.displayStart)
-          } else {
-            progressPlain = clampedTarget
-          }
-          recordReadAlongProgressPlainOffset(progressPlain)
-
-          if (prefersReducedMotionReadAlong()) {
-            scheduleReadAlongUi({ scroll: progressPlain, scrollBehavior: 'auto' })
+                : null,
+            })
             return
           }
 
-          if (wr) {
+          const fw = firstWordRangeInChunk(speakChunk)
+          if (fw) {
             const dr = displayCharRangeInChunkForSpeakRange(
-              wr.relStart,
-              wr.relEndExclusive,
+              fw.relStart,
+              fw.relEndExclusive,
               speakMap,
               displayChunk.length
             )
             const plainWordStart = chunkStart + dr.displayStart
             const plainWordEnd = chunkStart + dr.displayEndExclusive
-            const speakMid = Math.floor((wr.relStart + wr.relEndExclusive - 1) / 2)
-            const dispMid = displayCharIndexInChunkForSpeakIndex(speakMid, speakMap, displayChunk.length)
-            const scrollMid = Math.min(Math.max(0, plainLen - 1), chunkStart + dispMid)
+            recordReadAlongProgressPlainOffset(plainWordStart)
+            const mid = Math.floor((plainWordStart + plainWordEnd - 1) / 2)
+            const plainOffset = Math.min(Math.max(0, plainLen - 1), Math.max(chunkStart, mid))
             const lineMode = readAlongUnderlineStyleRef.current === 'line'
             scheduleReadAlongUi({
-              scroll: scrollMid,
-              highlight: readAlongUnderlineEnabledRef.current
+                scroll: plainOffset,
+                highlight: readAlongUnderlineEnabledRef.current
                 ? lineMode
-                  ? { kind: 'line', plainCaret: scrollMid }
-                  : { kind: 'word', start: plainWordStart, endExclusive: plainWordEnd }
+                ? { kind: 'line', plainCaret: plainOffset }
+                : { kind: 'word', start: plainWordStart, endExclusive: plainWordEnd }
                 : null,
-              scrollBehavior: 'auto',
             })
           } else {
-            const lineMode = readAlongUnderlineStyleRef.current === 'line'
-            scheduleReadAlongUi({
-              scroll: progressPlain,
-              scrollBehavior: 'auto',
-              ...(readAlongUnderlineEnabledRef.current && lineMode
-                ? { highlight: { kind: 'line', plainCaret: progressPlain } as const }
-                : {}),
-            })
+            scheduleReadAlongUi({ scroll: chunkStart })
           }
-        }
-
-        if (lagMs <= 0) {
-          applyBoundaryUi()
-          return
-        }
-
-        readAlongBoundaryLagSeqRef.current += 1
-        const seq = readAlongBoundaryLagSeqRef.current
-        window.setTimeout(() => {
-          if (seq !== readAlongBoundaryLagSeqRef.current) return
-          applyBoundaryUi()
-        }, lagMs)
-      }
-
-      u.onend = () => {
-        if (birthGen !== ttsCancelGenerationRef.current) return
-        memorizeListenTtsRateAtStartRef.current = null
-        bumpListen()
-        const nextIndex = chunkIndex + 1
-        const runNext = () => {
+        },
+        onboundary: (ev) => {
           if (birthGen !== ttsCancelGenerationRef.current) return
-          speakChunkInternalRef.current(nextIndex)
-        }
-        const trimmedEnd = displayChunk.trimEnd()
-        const hasMore = nextIndex < chunks.length
-        const afterFullStop = hasMore && /[.!?]['"]?$/.test(trimmedEnd)
-        const segmentPause = hasMore && ttsPauseBeforeChunkRef.current[nextIndex] === true
-        const gapMs = Math.max(
-          afterFullStop ? READ_ALONG_AFTER_SENTENCE_GAP_MS : 0,
-          segmentPause ? READ_ALONG_AFTER_SEGMENT_GAP_MS : 0
-        )
-        if (gapMs > 0 && typeof window !== 'undefined') {
-          window.setTimeout(runNext, gapMs)
-        } else {
-          runNext()
-        }
-      }
-      u.onerror = () => {
-        if (birthGen !== ttsCancelGenerationRef.current) return
-        ttsActiveRef.current = false
-        ttsChunkIndexRef.current = 0
-        memorizeListenTtsRateAtStartRef.current = null
-        clearReadAlongSession()
-        bumpListen()
-      }
+          if (engine.isPaused()) return
+          const scope = readAlongScopeRef.current
+          const plainLen = readAlongPlainLenRef.current
+          if (!scope || plainLen <= 0) return
+          const chunkStart = ttsChunkPlainStartsRef.current[chunkIndex] ?? 0
+          const ci = typeof ev.charIndex === 'number' ? ev.charIndex : 0
+          const inChunkSpeak = Math.max(0, Math.min(ci, speakChunk.length))
+          const displayInChunk = displayCharIndexInChunkForSpeakIndex(inChunkSpeak, speakMap, displayChunk.length)
+          const target = chunkStart + displayInChunk
+          const clampedTarget = Math.min(Math.max(0, plainLen - 1), target)
 
-      syn.speak(u)
+          const lagMs = prefersReducedMotionReadAlong() ? 0 : getReadAlongBoundaryUiLagMs()
+
+          const applyBoundaryUi = () => {
+            if (birthGen !== ttsCancelGenerationRef.current) return
+            if (!ttsActiveRef.current) return
+            if (engine.isPaused()) return
+            if (ttsChunkIndexRef.current !== chunkIndex) return
+
+            const wr = currentWordRangeInChunk(speakChunk, ev)
+            let progressPlain: number
+            if (wr) {
+              const drp = displayCharRangeInChunkForSpeakRange(
+                wr.relStart,
+                wr.relEndExclusive,
+                speakMap,
+                displayChunk.length
+              )
+              progressPlain = Math.min(Math.max(0, plainLen - 1), chunkStart + drp.displayStart)
+            } else {
+              progressPlain = clampedTarget
+            }
+            recordReadAlongProgressPlainOffset(progressPlain)
+
+            if (prefersReducedMotionReadAlong()) {
+              scheduleReadAlongUi({ scroll: progressPlain, scrollBehavior: 'auto' })
+              return
+            }
+
+            if (wr) {
+              const dr = displayCharRangeInChunkForSpeakRange(
+                wr.relStart,
+                wr.relEndExclusive,
+                speakMap,
+                displayChunk.length
+              )
+              const plainWordStart = chunkStart + dr.displayStart
+              const plainWordEnd = chunkStart + dr.displayEndExclusive
+              const speakMid = Math.floor((wr.relStart + wr.relEndExclusive - 1) / 2)
+              const dispMid = displayCharIndexInChunkForSpeakIndex(speakMid, speakMap, displayChunk.length)
+              const scrollMid = Math.min(Math.max(0, plainLen - 1), chunkStart + dispMid)
+              const lineMode = readAlongUnderlineStyleRef.current === 'line'
+              scheduleReadAlongUi({
+                  scroll: scrollMid,
+                  highlight: readAlongUnderlineEnabledRef.current
+                  ? lineMode
+                  ? { kind: 'line', plainCaret: scrollMid }
+                  : { kind: 'word', start: plainWordStart, endExclusive: plainWordEnd }
+                  : null,
+                  scrollBehavior: 'auto',
+              })
+            } else {
+              const lineMode = readAlongUnderlineStyleRef.current === 'line'
+              scheduleReadAlongUi({
+                  scroll: progressPlain,
+                  scrollBehavior: 'auto',
+                  ...(readAlongUnderlineEnabledRef.current && lineMode
+                    ? { highlight: { kind: 'line', plainCaret: progressPlain } as const }
+                    : {}),
+              })
+            }
+          }
+
+          if (lagMs <= 0) {
+            applyBoundaryUi()
+            return
+          }
+
+          readAlongBoundaryLagSeqRef.current += 1
+          const seq = readAlongBoundaryLagSeqRef.current
+          window.setTimeout(() => {
+              if (seq !== readAlongBoundaryLagSeqRef.current) return
+              applyBoundaryUi()
+            }, lagMs)
+        },
+        onend: () => {
+          if (birthGen !== ttsCancelGenerationRef.current) return
+          memorizeListenTtsRateAtStartRef.current = null
+          bumpListen()
+          const nextIndex = chunkIndex + 1
+          const runNext = () => {
+            if (birthGen !== ttsCancelGenerationRef.current) return
+            speakChunkInternalRef.current(nextIndex)
+          }
+          const trimmedEnd = displayChunk.trimEnd()
+          const hasMore = nextIndex < chunks.length
+          const afterFullStop = hasMore && /[.!?]['"]?$/.test(trimmedEnd)
+          const segmentPause = hasMore && ttsPauseBeforeChunkRef.current[nextIndex] === true
+          const gapMs = Math.max(
+            afterFullStop ? READ_ALONG_AFTER_SENTENCE_GAP_MS : 0,
+            segmentPause ? READ_ALONG_AFTER_SEGMENT_GAP_MS : 0
+          )
+          if (gapMs > 0 && typeof window !== 'undefined') {
+            window.setTimeout(runNext, gapMs)
+          } else {
+            runNext()
+          }
+        },
+        onerror: () => {
+          if (birthGen !== ttsCancelGenerationRef.current) return
+          ttsActiveRef.current = false
+          ttsChunkIndexRef.current = 0
+          memorizeListenTtsRateAtStartRef.current = null
+          clearReadAlongSession()
+          bumpListen()
+        },
+      })
       bumpListen()
     },
     [
-      androidHost,
       bumpListen,
       clearReadAlongSession,
       recordReadAlongProgressPlainOffset,
@@ -681,8 +698,7 @@ export function useProfileResourceReadAloud({
       forcedResolved?: { scope: HTMLElement; text: string },
       forcedStartPlainOffset?: number
     ) => {
-      if (androidHost) return
-      if (typeof window === 'undefined' || !window.speechSynthesis) return
+      if (typeof window === 'undefined' || !isProfileReadAloudSpeechAvailable()) return
 
       const resolvedScroll = forcedResolved ?? resolveListenScopeAndText()
       if (!resolvedScroll) return
@@ -732,8 +748,8 @@ export function useProfileResourceReadAloud({
         clearProfileReadAlongProgress(slug, anchorId)
       }
 
-      const syn = window.speechSynthesis
-      syn.cancel()
+      getProfileReadAloudSpeechEngine().cancel()
+      dispatchGospelExclusiveListenOwner({ owner: 'profile-resource-read-aloud' })
       cancelReadAlongUiScheduling()
       readAlongHighlightPaintRef.current = null
       if (typeof document !== 'undefined') clearReadAlongDomHighlight(document)
@@ -775,11 +791,10 @@ export function useProfileResourceReadAloud({
       ttsActiveRef.current = true
       speakChunkInternal(startChunk)
     },
-    [androidHost, cancelReadAlongUiScheduling, resolveListenScopeAndText, speakChunkInternal]
+    [cancelReadAlongUiScheduling, resolveListenScopeAndText, speakChunkInternal]
   )
 
   const restartReadAloudFromBeginning = useCallback(() => {
-    if (androidHost) return
     if (persistTimerRef.current) {
       clearTimeout(persistTimerRef.current)
       persistTimerRef.current = null
@@ -788,9 +803,7 @@ export function useProfileResourceReadAloud({
     if (slug && typeof document !== 'undefined') {
       clearAllProfileReadAlongProgressForSlug(slug, sections)
     }
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel()
-    }
+    getProfileReadAloudSpeechEngine().cancel()
     ttsCancelGenerationRef.current += 1
     cancelReadAlongUiScheduling()
     clearReadAlongSession()
@@ -809,7 +822,6 @@ export function useProfileResourceReadAloud({
     })
     startReadAloudSession(true, { scope: first.scope, text: first.text })
   }, [
-    androidHost,
     cancelReadAlongUiScheduling,
     clearReadAlongSession,
     onNothingToRead,
@@ -818,7 +830,6 @@ export function useProfileResourceReadAloud({
   ])
 
   const startReadAloudFromHere = useCallback(() => {
-    if (androidHost) return
     const resolved = resolveListenScopeAndText()
     if (!resolved) return
 
@@ -834,36 +845,36 @@ export function useProfileResourceReadAloud({
       listenTextOptionsRef.current
     )
     startReadAloudSession(false, resolved, offset)
-  }, [androidHost, resolveListenScopeAndText, startReadAloudSession])
+  }, [resolveListenScopeAndText, startReadAloudSession])
 
   const handlePrimaryClick = useCallback(() => {
-    if (androidHost) return
-    if (typeof window === 'undefined' || !window.speechSynthesis) {
+    if (typeof window === 'undefined' || !isProfileReadAloudSpeechAvailable()) {
       onNothingToRead?.('Listen is not supported in this browser.')
       return
     }
-    const syn = window.speechSynthesis
+    const engine = getProfileReadAloudSpeechEngine()
 
-    if (syn.speaking) {
-      if (syn.paused) {
+    if (engine.isSpeaking()) {
+      if (engine.isPaused()) {
         memorizeListenTtsUserPausedRef.current = false
         const atStart = memorizeListenTtsRateAtStartRef.current
         if (atStart != null && listenPlaybackRateRef.current !== atStart) {
           ttsCancelGenerationRef.current += 1
-          syn.cancel()
+          engine.cancel()
           memorizeListenTtsRateAtStartRef.current = null
           memorizeListenTtsPostResumeRef.current = false
           speakChunkInternalRef.current(ttsChunkIndexRef.current)
         } else {
           memorizeListenTtsPostResumeRef.current = true
-          syn.resume()
+          dispatchGospelExclusiveListenOwner({ owner: 'profile-resource-read-aloud' })
+          engine.resume()
           window.setTimeout(bumpListen, 24)
           window.setTimeout(bumpListen, 72)
         }
       } else {
         memorizeListenTtsUserPausedRef.current = true
         memorizeListenTtsPostResumeRef.current = false
-        syn.pause()
+        engine.pause()
         flushReadAlongProgressPersist()
       }
       bumpListen()
@@ -876,7 +887,6 @@ export function useProfileResourceReadAloud({
     }
     bumpListen()
   }, [
-    androidHost,
     bumpListen,
     flushReadAlongProgressPersist,
     onNothingToRead,
@@ -885,24 +895,22 @@ export function useProfileResourceReadAloud({
 
   const listenButtonLabel = useMemo(() => {
     void listenUiTick
-    if (androidHost) return 'Play'
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return 'Play'
-    const syn = window.speechSynthesis
+    if (typeof window === 'undefined' || !isProfileReadAloudSpeechAvailable()) return 'Play'
+    const engine = getProfileReadAloudSpeechEngine()
     if (memorizeListenTtsUserPausedRef.current) return 'Play'
-    if (memorizeListenTtsPostResumeRef.current && syn.speaking) return 'Pause'
-    if (syn.speaking && !syn.paused) return 'Pause'
+    if (memorizeListenTtsPostResumeRef.current && engine.isSpeaking()) return 'Pause'
+    if (engine.isSpeaking() && !engine.isPaused()) return 'Pause'
     return 'Play'
-  }, [listenUiTick, androidHost])
+  }, [listenUiTick])
 
   const listenAriaPressed = useMemo(() => {
     void listenUiTick
-    if (androidHost) return false
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return false
-    const syn = window.speechSynthesis
+    if (typeof window === 'undefined' || !isProfileReadAloudSpeechAvailable()) return false
+    const engine = getProfileReadAloudSpeechEngine()
     if (memorizeListenTtsUserPausedRef.current) return false
-    if (memorizeListenTtsPostResumeRef.current && syn.speaking) return true
-    return syn.speaking && !syn.paused
-  }, [listenUiTick, androidHost])
+    if (memorizeListenTtsPostResumeRef.current && engine.isSpeaking()) return true
+    return engine.isSpeaking() && !engine.isPaused()
+  }, [listenUiTick])
 
   const readAloudDialogPrimaryLabel = listenButtonLabel
   const readAloudDialogPrimaryAriaLabel =
@@ -944,19 +952,19 @@ export function useProfileResourceReadAloud({
       writeMemorizeListenSpeedToStorage(r)
       bumpListen()
 
-      if (androidHost || !ttsActiveRef.current) return
-      const syn = window.speechSynthesis
+      if (!ttsActiveRef.current) return
+      const engine = getProfileReadAloudSpeechEngine()
       /** Paused: wait for Resume so we don't unpause by surprise (refs already updated). */
-      if (!syn.speaking || syn.paused) return
+      if (!engine.isSpeaking() || engine.isPaused()) return
 
       const i = ttsChunkIndexRef.current
       ttsCancelGenerationRef.current += 1
-      syn.cancel()
+      engine.cancel()
       memorizeListenTtsUserPausedRef.current = false
       memorizeListenTtsPostResumeRef.current = false
       queueMicrotask(() => speakChunkInternalRef.current(i))
     },
-    [androidHost, bumpListen]
+    [bumpListen]
   )
 
   return {

@@ -13,6 +13,7 @@ dependencies {
     implementation project(':capacitor-share')
     implementation project(':capacitor-splash-screen')
     implementation project(':capgo-capacitor-printer')
+    implementation project(':capgo-capacitor-speech-synthesis')
 
 }
 

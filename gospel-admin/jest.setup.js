@@ -157,6 +157,18 @@ if (typeof global.SpeechSynthesisUtterance === 'undefined') {
   }
 }
 
+jest.mock('@capgo/capacitor-speech-synthesis', () => ({
+  SpeechSynthesis: {
+    speak: jest.fn(async () => ({ utteranceId: 'test-utt' })),
+    cancel: jest.fn(async () => undefined),
+    pause: jest.fn(async () => undefined),
+    resume: jest.fn(async () => undefined),
+    addListener: jest.fn(async () => ({ remove: jest.fn() })),
+    removeAllListeners: jest.fn(async () => undefined),
+    initialize: jest.fn(async () => undefined),
+  },
+}))
+
 // Mock localStorage
 const localStorageMock = {
   getItem: jest.fn(),

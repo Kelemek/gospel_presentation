@@ -43,7 +43,7 @@ CI runs tests on Ubuntu, Windows, and macOS, plus lint and production build on U
 
 ## Capacitor (iOS / Android)
 
-Presentation backup **Save my data** on **Android** uses **`@capacitor/filesystem`** and **`@capacitor/share`**. **Share this resource** uses **`@capacitor/share`** on native when available. After Capacitor or native plugin bumps, run `npx cap sync` and ship new App Store / Play Store builds.
+Presentation backup **Save my data** on **Android** uses **`@capacitor/filesystem`** and **`@capacitor/share`**. **Share this resource** uses **`@capacitor/share`** on native when available. Resource **Listen** on the Android app uses **`@capgo/capacitor-speech-synthesis`**. After Capacitor or native plugin bumps, run `npx cap sync` and ship new App Store / Play Store builds.
 
 **Deploy update notice** polls for missed release notes; append plain-language notes with `npm run append-release-changelog` (see `.cursor/rules/deploy-update-message.mdc`).
 

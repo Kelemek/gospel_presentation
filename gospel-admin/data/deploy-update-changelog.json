@@ -29,5 +29,6 @@
   "Memorize now offers Normal and Strict practice modes, with a short explanation when you choose. Word-mode choices use a steadier layout and six number options for chapter and verse blanks. Finishing or resuming the last round after mistakes now works correctly, including saved error counts.",
   "Bug fix: M'Cheyne Listen now stays on the correct day when advancing to a chapter that also appears earlier in the plan (for example, Matthew 1 on day 172).",
   "Memorize now has Recite mode: record a memorized passage and see word-by-word accuracy feedback.",
-  "Bug fix: Recite mode now recognizes “Song of Ascents” when speech-to-text hears “a sense.”"
+  "Bug fix: Recite mode now recognizes “Song of Ascents” when speech-to-text hears “a sense.”",
+  "You can now use Listen to hear resources read aloud on Android, including in the browser. The Android app needs an update from the store for Listen to appear there."
 ]

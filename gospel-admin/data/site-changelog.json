@@ -1413,5 +1413,10 @@
     "releasedAt": "2026-07-27",
     "committedAt": "2026-07-27T12:25:37.212Z",
     "message": "Bug fix: Recite mode now recognizes “Song of Ascents” when speech-to-text hears “a sense.”"
+  },
+  {
+    "releasedAt": "2026-08-16",
+    "committedAt": "2026-08-16T11:52:32.169Z",
+    "message": "You can now use Listen to hear resources read aloud on Android, including in the browser. The Android app needs an update from the store for Listen to appear there."
   }
 ]

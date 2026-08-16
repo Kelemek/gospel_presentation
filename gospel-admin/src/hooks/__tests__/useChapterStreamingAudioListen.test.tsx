@@ -5,6 +5,10 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useChapterStreamingAudioListen } from '@/hooks/useChapterStreamingAudioListen'
+import {
+  dispatchGospelExclusiveListenOwner,
+  GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT,
+} from '@/lib/exclusiveWebSpeechListen'
 import { applyMemorizeListenPlaybackRateToMediaElement } from '@/lib/memorizeListenSpeedStorage'
 import { computeScriptureListenAutoScrollStartDelaySec } from '@/lib/scriptureListenPlainText'
 
@@ -177,6 +181,34 @@ describe('useChapterStreamingAudioListen', () => {
     await user.click(screen.getByRole('button', { name: 'primary' }))
     expect(cancel).toHaveBeenCalled()
     delete (window as { speechSynthesis?: unknown }).speechSynthesis
+  })
+
+  it('stops profile read-aloud when starting playback even without Web Speech', async () => {
+    delete (window as { speechSynthesis?: unknown }).speechSynthesis
+    const onExclusive = jest.fn()
+    window.addEventListener(GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT, onExclusive)
+    const user = userEvent.setup()
+    render(<Harness audioUrls={[audioUrl]} enabled />)
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    expect(onExclusive).toHaveBeenCalled()
+    const ev = onExclusive.mock.calls[0][0] as CustomEvent
+    expect(ev.detail).toEqual({ owner: 'scripture-chapter-audio' })
+    window.removeEventListener(GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT, onExclusive)
+  })
+
+  it('stops passage audio when profile read-aloud claims exclusive listen', async () => {
+    const user = userEvent.setup()
+    render(<Harness audioUrls={[audioUrl]} enabled />)
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+    Object.defineProperty(el, 'paused', { configurable: true, get: () => false })
+    expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled()
+
+    dispatchGospelExclusiveListenOwner({ owner: 'profile-resource-read-aloud' })
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(HTMLMediaElement.prototype.pause).toHaveBeenCalledTimes(2)
   })
 
   it('switches audio when audioUrls change during playback', async () => {

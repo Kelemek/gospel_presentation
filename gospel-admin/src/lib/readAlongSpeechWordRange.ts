@@ -63,9 +63,14 @@ export function firstWordRangeInChunk(chunk: string): { relStart: number; relEnd
   return { relStart: m.index, relEndExclusive: m.index + m[0].length }
 }
 
+export type ReadAlongSpeechBoundaryLike = {
+  charIndex?: number
+  charLength?: number
+}
+
 export function currentWordRangeInChunk(
   chunk: string,
-  ev: SpeechSynthesisEvent
+  ev: ReadAlongSpeechBoundaryLike
 ): { relStart: number; relEndExclusive: number } | null {
   const ci = typeof ev.charIndex === 'number' ? ev.charIndex : 0
   return wordRangeTrailingBehindCharIndex(chunk, ci, getReadAlongWordsTrail())

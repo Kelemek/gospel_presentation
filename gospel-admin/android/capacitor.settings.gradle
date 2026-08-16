@@ -13,3 +13,6 @@ project(':capacitor-splash-screen').projectDir = new File('../node_modules/@capa
 
 include ':capgo-capacitor-printer'
 project(':capgo-capacitor-printer').projectDir = new File('../node_modules/@capgo/capacitor-printer/android')
+
+include ':capgo-capacitor-speech-synthesis'
+project(':capgo-capacitor-speech-synthesis').projectDir = new File('../node_modules/@capgo/capacitor-speech-synthesis/android')

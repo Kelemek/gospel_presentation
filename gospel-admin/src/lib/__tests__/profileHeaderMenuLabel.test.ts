@@ -6,7 +6,7 @@ import {
 } from '../profileHeaderMenuLabel'
 
 describe('profileMenuLabelMinViewportPx', () => {
-  it('uses the lower threshold on Android (no Listen control)', () => {
+  it('uses the lower threshold for the compact Android header (Listen omitted)', () => {
     expect(profileMenuLabelMinViewportPx(true)).toBe(PROFILE_MENU_LABEL_MIN_VIEWPORT_ANDROID_PX)
     expect(profileMenuLabelMinViewportPx(false)).toBe(PROFILE_MENU_LABEL_MIN_VIEWPORT_PX)
   })

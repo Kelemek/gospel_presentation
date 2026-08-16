@@ -3,6 +3,7 @@
  */
 
 import {
+  dispatchGospelExclusiveListenOwner,
   dispatchWebSpeechExclusiveOwner,
   GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT,
 } from '@/lib/exclusiveWebSpeechListen'
@@ -15,6 +16,26 @@ describe('exclusiveWebSpeechListen', () => {
     expect(fn).toHaveBeenCalledTimes(1)
     const ev = fn.mock.calls[0][0] as CustomEvent
     expect(ev.detail).toEqual({ owner: 'memorize-practice' })
+    window.removeEventListener(GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT, fn)
+  })
+
+  it('dispatches scripture-chapter-audio as an exclusive owner', () => {
+    const fn = jest.fn()
+    window.addEventListener(GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT, fn)
+    dispatchWebSpeechExclusiveOwner({ owner: 'scripture-chapter-audio' })
+    expect(fn).toHaveBeenCalledTimes(1)
+    const ev = fn.mock.calls[0][0] as CustomEvent
+    expect(ev.detail).toEqual({ owner: 'scripture-chapter-audio' })
+    window.removeEventListener(GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT, fn)
+  })
+
+  it('dispatchGospelExclusiveListenOwner does not require canceling profile speech first', () => {
+    const fn = jest.fn()
+    window.addEventListener(GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT, fn)
+    dispatchGospelExclusiveListenOwner({ owner: 'profile-resource-read-aloud' })
+    expect(fn).toHaveBeenCalledTimes(1)
+    const ev = fn.mock.calls[0][0] as CustomEvent
+    expect(ev.detail).toEqual({ owner: 'profile-resource-read-aloud' })
     window.removeEventListener(GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT, fn)
   })
 })

@@ -48,9 +48,10 @@ describe('buildProfileTutorialMenuItems', () => {
       configurable: true,
       value: originalUserAgent,
     })
+    delete (window as unknown as { speechSynthesis?: unknown }).speechSynthesis
   })
 
-  it('includes Listen only when not an Android Web user agent', () => {
+  it('includes Listen on desktop and on Android Chrome when speechSynthesis exists', () => {
     Object.defineProperty(navigator, 'userAgent', {
       configurable: true,
       value:
@@ -65,8 +66,12 @@ describe('buildProfileTutorialMenuItems', () => {
       configurable: true,
       value: 'Mozilla/5.0 (Linux; Android 14; Pixel) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36',
     })
+    Object.defineProperty(window, 'speechSynthesis', {
+      configurable: true,
+      value: { speak: jest.fn(), cancel: jest.fn() },
+    })
     const idsAndroid = buildProfileTutorialMenuItems().map((i) => i.id)
-    expect(idsAndroid).not.toContain('listen')
+    expect(idsAndroid).toContain('listen')
     expect(idsAndroid).toContain('highlights')
     expect(idsAndroid).toContain('share')
   })
@@ -94,7 +99,7 @@ describe('buildProfileTutorialMenuItems', () => {
     expect(resourcesIdx).toBe(6)
   })
 
-  it('on Android Web omits Listen but keeps theme → share → bookmarks → highlights before resources', () => {
+  it('on Android without speechSynthesis omits Listen but keeps theme → share → bookmarks → highlights before resources', () => {
     Object.defineProperty(navigator, 'userAgent', {
       configurable: true,
       value: 'Mozilla/5.0 (Linux; Android 14; Pixel) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36',

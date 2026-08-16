@@ -72,6 +72,7 @@
     "@capacitor/share": "8.0.1",
     "@capacitor/splash-screen": "8.0.1",
     "@capgo/capacitor-printer": "8.1.0",
+    "@capgo/capacitor-speech-synthesis": "8.0.20",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
     "@tiptap/extension-placeholder": "^3.27.1",

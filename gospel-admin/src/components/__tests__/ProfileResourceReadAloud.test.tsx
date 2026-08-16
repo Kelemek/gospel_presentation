@@ -1,7 +1,17 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { Capacitor } from '@capacitor/core'
 import ProfileResourceReadAloud from '@/components/ProfileResourceReadAloud'
+import { cancelProfileReadAloudSpeech } from '@/lib/profileReadAloudSpeechEngine'
 import type { GospelSection } from '@/lib/types'
+
+jest.mock('@capacitor/core', () => ({
+  Capacitor: {
+    isNativePlatform: jest.fn(() => false),
+    getPlatform: jest.fn(() => 'web'),
+    isPluginAvailable: jest.fn(() => false),
+  },
+}))
 
 function getAlertModalMocks() {
   return (globalThis as unknown as { __alertModalMocks: { showConfirm: jest.Mock; showAlert: jest.Mock } })
@@ -22,6 +32,9 @@ describe('ProfileResourceReadAloud', () => {
   beforeEach(() => {
     document.body.innerHTML = ''
     localStorage.clear()
+    ;(Capacitor.isNativePlatform as jest.Mock).mockReturnValue(false)
+    ;(Capacitor.getPlatform as jest.Mock).mockReturnValue('web')
+    ;(Capacitor.isPluginAvailable as jest.Mock).mockReturnValue(false)
     const synthState = { speaking: false, paused: false }
     const speak = jest.fn(() => {
       synthState.speaking = true
@@ -67,13 +80,38 @@ describe('ProfileResourceReadAloud', () => {
     })
   })
 
-  it('renders nothing on Android user agents', () => {
+  it('renders Listen on Android Chrome when speechSynthesis exists', () => {
     Object.defineProperty(navigator, 'userAgent', {
       configurable: true,
       value: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36',
     })
     render(<ProfileResourceReadAloud sections={sections} profileSlug="p1" />)
+    expect(screen.getByRole('button', { name: /listen/i })).toBeInTheDocument()
+  })
+
+  it('renders nothing on native Android when the speech plugin is unavailable', () => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36',
+    })
+    ;(Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true)
+    ;(Capacitor.getPlatform as jest.Mock).mockReturnValue('android')
+    ;(Capacitor.isPluginAvailable as jest.Mock).mockReturnValue(false)
+    delete (window as unknown as { speechSynthesis?: unknown }).speechSynthesis
+    render(<ProfileResourceReadAloud sections={sections} profileSlug="p1" />)
     expect(screen.queryByRole('button', { name: /listen/i })).not.toBeInTheDocument()
+  })
+
+  it('renders Listen on native Android when the speech plugin is available', () => {
+    Object.defineProperty(navigator, 'userAgent', {
+      configurable: true,
+      value: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36',
+    })
+    ;(Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true)
+    ;(Capacitor.getPlatform as jest.Mock).mockReturnValue('android')
+    ;(Capacitor.isPluginAvailable as jest.Mock).mockReturnValue(true)
+    render(<ProfileResourceReadAloud sections={sections} profileSlug="p1" />)
+    expect(screen.getByRole('button', { name: /listen/i })).toBeInTheDocument()
   })
 
   it('opens Listen dialog when trigger is clicked', async () => {
@@ -103,6 +141,32 @@ describe('ProfileResourceReadAloud', () => {
     expect(speak).toHaveBeenCalled()
     const utterance = speak.mock.calls[0][0] as SpeechSynthesisUtterance
     expect(utterance.text).toContain('Paragraph for TTS.')
+  })
+
+  it('allows Play again after an external cancel while a session was active', async () => {
+    document.body.innerHTML += `
+      <section id="section-1" class="scroll-mt-20">
+        <div id="section-1-0" class="scroll-mt-20"><p>Paragraph for TTS.</p></div>
+      </section>
+    `
+    const speak = window.speechSynthesis.speak as jest.Mock
+    render(<ProfileResourceReadAloud sections={sections} profileSlug="p1" />)
+
+    fireEvent.click(screen.getByRole('button', { name: /listen/i }))
+    fireEvent.click(screen.getByTestId('memorize-listen-passage'))
+    expect(speak).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      cancelProfileReadAloudSpeech()
+    })
+    fireEvent.click(screen.getByRole('button', { name: /listen/i }))
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('memorize-listen-passage'))
+    })
+
+    await waitFor(() => {
+      expect(speak).toHaveBeenCalledTimes(2)
+    })
   })
 
   it('replays the active chunk at a new rate when speed changes mid-chunk', async () => {

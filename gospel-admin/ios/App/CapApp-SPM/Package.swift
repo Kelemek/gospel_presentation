@@ -15,7 +15,8 @@ let package = Package(
         .package(name: "CapacitorFilesystem", path: "../../../node_modules/@capacitor/filesystem"),
         .package(name: "CapacitorShare", path: "../../../node_modules/@capacitor/share"),
         .package(name: "CapacitorSplashScreen", path: "../../../node_modules/@capacitor/splash-screen"),
-        .package(name: "CapgoCapacitorPrinter", path: "../../../node_modules/@capgo/capacitor-printer")
+        .package(name: "CapgoCapacitorPrinter", path: "../../../node_modules/@capgo/capacitor-printer"),
+        .package(name: "CapgoCapacitorSpeechSynthesis", path: "../../../node_modules/@capgo/capacitor-speech-synthesis")
     ],
     targets: [
         .target(
@@ -26,7 +27,8 @@ let package = Package(
                 .product(name: "CapacitorFilesystem", package: "CapacitorFilesystem"),
                 .product(name: "CapacitorShare", package: "CapacitorShare"),
                 .product(name: "CapacitorSplashScreen", package: "CapacitorSplashScreen"),
-                .product(name: "CapgoCapacitorPrinter", package: "CapgoCapacitorPrinter")
+                .product(name: "CapgoCapacitorPrinter", package: "CapgoCapacitorPrinter"),
+                .product(name: "CapgoCapacitorSpeechSynthesis", package: "CapgoCapacitorSpeechSynthesis")
             ]
         )
     ]

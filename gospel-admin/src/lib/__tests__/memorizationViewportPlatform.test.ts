@@ -2,12 +2,21 @@
  * @jest-environment jsdom
  */
 
+import { Capacitor } from '@capacitor/core'
 import {
   isMemorizeAndroidWebHost,
   isMemorizeIosWebHost,
   isProfileResourceListenControlAvailable,
   isProfileResourceSearchContentTouchBlurHost,
 } from '@/lib/memorizationViewportPlatform'
+
+jest.mock('@capacitor/core', () => ({
+  Capacitor: {
+    isNativePlatform: jest.fn(() => false),
+    getPlatform: jest.fn(() => 'web'),
+    isPluginAvailable: jest.fn(() => false),
+  },
+}))
 
 describe('memorizationViewportPlatform', () => {
   const defineUA = (ua: string) => {
@@ -38,8 +47,44 @@ describe('isProfileResourceListenControlAvailable', () => {
     })
   }
 
-  it('is false on Android Web hosts (Listen control hidden)', () => {
+  beforeEach(() => {
+    ;(Capacitor.isNativePlatform as jest.Mock).mockReturnValue(false)
+    ;(Capacitor.getPlatform as jest.Mock).mockReturnValue('web')
+    ;(Capacitor.isPluginAvailable as jest.Mock).mockReturnValue(false)
+    delete (window as unknown as { speechSynthesis?: unknown }).speechSynthesis
+  })
+
+  it('is false on Android without Web Speech and without the native plugin', () => {
     defineUA('Mozilla/5.0 (Linux; Android 14; Pixel) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36')
+    expect(isProfileResourceListenControlAvailable()).toBe(false)
+  })
+
+  it('is true on Android Chrome when speechSynthesis exists', () => {
+    defineUA('Mozilla/5.0 (Linux; Android 14; Pixel) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36')
+    Object.defineProperty(window, 'speechSynthesis', {
+      configurable: true,
+      value: { speak: jest.fn(), cancel: jest.fn() },
+    })
+    expect(isProfileResourceListenControlAvailable()).toBe(true)
+  })
+
+  it('is true on native Android when the speech plugin is available', () => {
+    defineUA('Mozilla/5.0 (Linux; Android 14; Pixel) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36')
+    ;(Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true)
+    ;(Capacitor.getPlatform as jest.Mock).mockReturnValue('android')
+    ;(Capacitor.isPluginAvailable as jest.Mock).mockReturnValue(true)
+    expect(isProfileResourceListenControlAvailable()).toBe(true)
+  })
+
+  it('is false on native Android without the plugin even when speechSynthesis exists', () => {
+    defineUA('Mozilla/5.0 (Linux; Android 14; Pixel) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36')
+    ;(Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true)
+    ;(Capacitor.getPlatform as jest.Mock).mockReturnValue('android')
+    ;(Capacitor.isPluginAvailable as jest.Mock).mockReturnValue(false)
+    Object.defineProperty(window, 'speechSynthesis', {
+      configurable: true,
+      value: { speak: jest.fn(), cancel: jest.fn() },
+    })
     expect(isProfileResourceListenControlAvailable()).toBe(false)
   })
 

@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import {
+  dispatchWebSpeechExclusiveOwner,
+  GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT,
+  type GospelWebSpeechExclusiveOwnerDetail,
+} from '@/lib/exclusiveWebSpeechListen'
+import {
   applyMemorizeListenPlaybackRateToMediaElement,
   readMemorizeListenSpeedFromStorage,
   writeMemorizeListenSpeedToStorage,
@@ -254,9 +259,6 @@ export function useChapterStreamingAudioListen({
   }, [cancelAutoScrollLoop, resetAutoScrollClock])
 
   const stopAudio = useCallback(() => {
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel()
-    }
     const el = passageAudioRef.current
     if (el) {
       el.pause()
@@ -279,6 +281,29 @@ export function useChapterStreamingAudioListen({
       }
     }
   }, [enabled, stopAudio])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const onExclusive = (ev: Event) => {
+      const ce = ev as CustomEvent<GospelWebSpeechExclusiveOwnerDetail>
+      if (!ce.detail) return
+      switch (ce.detail.owner) {
+        case 'profile-resource-read-aloud':
+        case 'memorize-practice':
+          stopAudio()
+          setControlsOpen(false)
+          break
+        case 'scripture-chapter-audio':
+          break
+        default: {
+          const _exhaustive: never = ce.detail.owner
+          return _exhaustive
+        }
+      }
+    }
+    window.addEventListener(GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT, onExclusive)
+    return () => window.removeEventListener(GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT, onExclusive)
+  }, [stopAudio])
 
   const openControls = useCallback(() => setControlsOpen(true), [])
   const closeControls = useCallback(() => setControlsOpen(false), [])
@@ -304,9 +329,7 @@ export function useChapterStreamingAudioListen({
       if (!el) return false
       playlistIndexRef.current = index
       try {
-        if (typeof window !== 'undefined' && window.speechSynthesis?.speaking) {
-          window.speechSynthesis.cancel()
-        }
+        dispatchWebSpeechExclusiveOwner({ owner: 'scripture-chapter-audio' })
         el.src = urls[index]
         applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRateRef.current)
         await el.play()

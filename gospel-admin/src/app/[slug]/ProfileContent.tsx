@@ -66,7 +66,11 @@ import {
   profileMenuLabelMinViewportPx,
   showProfileMenuLabelForViewport,
 } from '@/lib/profileHeaderMenuLabel'
-import { isMemorizeAndroidWebHost, isMemorizeIosWebHost } from '@/lib/memorizationViewportPlatform'
+import {
+  isMemorizeIosWebHost,
+  isMemorizeAndroidWebHost,
+  isProfileResourceListenControlAvailable,
+} from '@/lib/memorizationViewportPlatform'
 import { shareResourceUrl } from '@/lib/shareResourceUrl'
 import { createClient } from '@/lib/supabase/client'
 import { useAlertModal } from '@/contexts/AlertModalContext'
@@ -364,8 +368,11 @@ function ProfileContent({
   const { translation, enabledTranslations, isLoading: translationsLoading, setTranslation } =
     useTranslation()
   const footerAttributionEnabledCodes = translationsLoading ? null : enabledTranslations
-  /** Matches `ProfileResourceReadAloud` (Listen hidden on Android Web hosts). */
-  const profileHeaderAndroidHost = useMemo(() => isMemorizeAndroidWebHost(), [])
+  /** Compact header Menu label only when Listen is omitted (native Android without speech plugin). */
+  const profileHeaderCompactMenu = useMemo(
+    () => isMemorizeAndroidWebHost() && !isProfileResourceListenControlAvailable(),
+    []
+  )
 
   const router = useRouter()
   const pathname = usePathname()
@@ -386,7 +393,7 @@ function ProfileContent({
   const showMenuLabel = useSyncExternalStore(
     (onStoreChange) => {
       if (typeof window === 'undefined') return () => {}
-      const minPx = profileMenuLabelMinViewportPx(profileHeaderAndroidHost)
+      const minPx = profileMenuLabelMinViewportPx(profileHeaderCompactMenu)
       if (typeof window.matchMedia !== 'function') {
         window.addEventListener('resize', onStoreChange)
         return () => window.removeEventListener('resize', onStoreChange)
@@ -398,9 +405,9 @@ function ProfileContent({
     () =>
       typeof window !== 'undefined'
         ? typeof window.matchMedia === 'function'
-          ? window.matchMedia(`(min-width: ${profileMenuLabelMinViewportPx(profileHeaderAndroidHost)}px)`)
+          ? window.matchMedia(`(min-width: ${profileMenuLabelMinViewportPx(profileHeaderCompactMenu)}px)`)
               .matches
-          : showProfileMenuLabelForViewport(window.innerWidth, profileHeaderAndroidHost)
+          : showProfileMenuLabelForViewport(window.innerWidth, profileHeaderCompactMenu)
         : true,
     () => true
   )

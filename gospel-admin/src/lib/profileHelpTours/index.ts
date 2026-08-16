@@ -1337,7 +1337,7 @@ export function runThemeFeatureTour(options?: ProfileFeatureTourOptions): void {
   d.drive()
 }
 
-/** Header **Listen**: read-aloud for the presentation body. No-op when the control is not rendered (Android Web). */
+/** Header **Listen**: read-aloud for the presentation body. No-op when the control is not rendered. */
 export function runProfileListenFeatureTour(options?: ProfileFeatureTourOptions): void {
   const finish = (): void => {
     closeProfileResourceListenDialogIfOpen()
