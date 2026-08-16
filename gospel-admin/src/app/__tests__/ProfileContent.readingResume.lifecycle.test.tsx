@@ -1,6 +1,7 @@
 /**
  * Reading resume lifecycle: visibility hide/show, scroll-top save guard.
  */
+import '@/lib/testing/profileContentTestMocks'
 import React, { type ReactElement } from 'react'
 import { act, render, waitFor } from '@testing-library/react'
 import { TextSizeProvider } from '@/contexts/TextSizeContext'
@@ -57,23 +58,7 @@ jest.mock('@/lib/gospelClientStorage', () => {
   }
 })
 
-jest.mock('@/components/ThemeToggle', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/BookmarksDropdown', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/SidebarAuthNav', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/ProfileHelpMenu', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/PresentationFirstVisitWelcome', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/TableOfContents', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/MemorizationPracticeSession', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/ProfileResourceTabs', () => ({ __esModule: true, default: () => null }))
-
-jest.mock('@/lib/supabase/client', () => ({
-  __esModule: true,
-  createClient: () => ({
-    auth: {
-      getUser: async () => ({ data: { user: null } }),
-    },
-  }),
-}))
 
 import ProfileContent from '@/app/[slug]/ProfileContent'
 

@@ -1,11 +1,8 @@
 'use client'
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
-import {
-  dispatchWebSpeechExclusiveOwner,
-  GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT,
-  type GospelWebSpeechExclusiveOwnerDetail,
-} from '@/lib/exclusiveWebSpeechListen'
+import { claimExclusiveListenOwner } from '@/lib/gospelExclusiveListen'
+import { useExclusiveListenPreemption } from '@/hooks/useExclusiveListenPreemption'
 import {
   applyMemorizeListenPlaybackRateToMediaElement,
   readMemorizeListenSpeedFromStorage,
@@ -74,8 +71,6 @@ export function useChapterStreamingAudioListen({
   const [passageAudioPlaying, setPassageAudioPlaying] = useState(false)
   /** True while waiting for the next passage URL / `enabled` after auto-advance. */
   const [awaitingContinuousPlay, setAwaitingContinuousPlay] = useState(false)
-  const [, bumpListenUi] = useState(0)
-  const bumpListen = useCallback(() => bumpListenUi((n) => n + 1), [])
 
   const passageAudioRef = useRef<HTMLAudioElement | null>(null)
   const listenPlaybackRateRef = useRef(listenPlaybackRate)
@@ -132,8 +127,7 @@ export function useChapterStreamingAudioListen({
     const el = passageAudioRef.current
     if (!el) return
     applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRate)
-    bumpListen()
-  }, [bumpListen, listenPlaybackRate])
+  }, [listenPlaybackRate])
 
   const clearPendingContinuousPlay = useCallback(() => {
     autoPlayAfterNavRef.current = false
@@ -270,8 +264,7 @@ export function useChapterStreamingAudioListen({
     clearPendingContinuousPlay()
     setPassageAudioPlaying(false)
     stopAutoScrollLoop()
-    bumpListen()
-  }, [bumpListen, clearPendingContinuousPlay, stopAutoScrollLoop])
+  }, [clearPendingContinuousPlay, stopAutoScrollLoop])
 
   useEffect(() => {
     if (!enabled) {
@@ -282,28 +275,10 @@ export function useChapterStreamingAudioListen({
     }
   }, [enabled, stopAudio])
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const onExclusive = (ev: Event) => {
-      const ce = ev as CustomEvent<GospelWebSpeechExclusiveOwnerDetail>
-      if (!ce.detail) return
-      switch (ce.detail.owner) {
-        case 'profile-resource-read-aloud':
-        case 'memorize-practice':
-          stopAudio()
-          setControlsOpen(false)
-          break
-        case 'scripture-chapter-audio':
-          break
-        default: {
-          const _exhaustive: never = ce.detail.owner
-          return _exhaustive
-        }
-      }
-    }
-    window.addEventListener(GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT, onExclusive)
-    return () => window.removeEventListener(GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT, onExclusive)
-  }, [stopAudio])
+  useExclusiveListenPreemption(() => {
+    stopAudio()
+    setControlsOpen(false)
+  }, 'scripture-chapter-audio')
 
   const openControls = useCallback(() => setControlsOpen(true), [])
   const closeControls = useCallback(() => setControlsOpen(false), [])
@@ -316,9 +291,8 @@ export function useChapterStreamingAudioListen({
       if (el) {
         applyMemorizeListenPlaybackRateToMediaElement(el, rate)
       }
-      bumpListen()
     },
-    [bumpListen]
+    []
   )
 
   const playUrlAtIndex = useCallback(
@@ -329,21 +303,19 @@ export function useChapterStreamingAudioListen({
       if (!el) return false
       playlistIndexRef.current = index
       try {
-        dispatchWebSpeechExclusiveOwner({ owner: 'scripture-chapter-audio' })
+        claimExclusiveListenOwner('scripture-chapter-audio')
         el.src = urls[index]
         applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRateRef.current)
         await el.play()
         onTrackIndexChangeRef.current?.(index)
         setPassageAudioPlaying(true)
-        bumpListen()
         return true
       } catch {
         setPassageAudioPlaying(false)
-        bumpListen()
         return false
       }
     },
-    [bumpListen]
+    []
   )
 
   const playNextInPlaylist = useCallback(
@@ -441,8 +413,7 @@ export function useChapterStreamingAudioListen({
   const handlePassageAudioPause = useCallback(() => {
     setPassageAudioPlaying(false)
     stopAutoScrollLoop()
-    bumpListen()
-  }, [bumpListen, stopAutoScrollLoop])
+  }, [stopAutoScrollLoop])
 
   const handlePassageAudioLoadedMetadata = useCallback(() => {
     invalidateAutoScrollTracking()
@@ -466,13 +437,11 @@ export function useChapterStreamingAudioListen({
       } else {
         continuousPlaybackRef.current = false
         setPassageAudioPlaying(false)
-        bumpListen()
       }
       return
     }
     setPassageAudioPlaying(false)
-    bumpListen()
-  }, [bumpListen, playNextInPlaylist, schedulePendingContinuousPlay])
+  }, [playNextInPlaylist, schedulePendingContinuousPlay])
 
   const handlePassageAudioError = useCallback(() => {
     const urls = audioUrlsRef.current
@@ -481,9 +450,8 @@ export function useChapterStreamingAudioListen({
       return
     }
     setPassageAudioPlaying(false)
-    bumpListen()
     onPlaybackErrorRef.current?.()
-  }, [bumpListen, playNextInPlaylist])
+  }, [playNextInPlaylist])
 
   const listenButtonLabel = passageAudioPlaying ? 'Pause' : 'Listen'
   const listenAriaPressed = passageAudioPlaying
@@ -511,8 +479,6 @@ export function useChapterStreamingAudioListen({
       continuousPlaybackRef.current = false
       clearPendingContinuousPlay()
       setPassageAudioPlaying(false)
-      bumpListen()
-      queueMicrotask(bumpListen)
       return
     }
     const urls = audioUrlsRef.current
@@ -532,7 +498,6 @@ export function useChapterStreamingAudioListen({
           continuousPlaybackRef.current = true
         }
         setPassageAudioPlaying(true)
-        bumpListen()
       })
       return
     }
@@ -540,7 +505,7 @@ export function useChapterStreamingAudioListen({
       continuousPlaybackRef.current = true
     }
     void playNextInPlaylist(startIdx)
-  }, [bumpListen, clearPendingContinuousPlay, enabled, isPlaylist, playNextInPlaylist])
+  }, [clearPendingContinuousPlay, enabled, isPlaylist, playNextInPlaylist])
 
   const keepAudioMounted = enabled || awaitingContinuousPlay
 

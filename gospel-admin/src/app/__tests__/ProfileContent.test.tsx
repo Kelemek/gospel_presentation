@@ -1,7 +1,19 @@
+import '@/lib/testing/profileContentComponentTestMocks'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import ProfileContent from '../[slug]/ProfileContent'
+import type { ComponentProps } from 'react'
+import { TextSizeProvider } from '@/contexts/TextSizeContext'
 import { GospelSection } from '@/lib/types'
+import { installProfileContentFetchMock } from '@/lib/testing/profileContentFetchTestMock'
+
+jest.mock('@/lib/supabase/client', () => ({
+  __esModule: true,
+  createClient: () => ({
+    auth: {
+      getUser: async () => ({ data: { user: null } }),
+    },
+  }),
+}))
 
 // Mock components
 jest.mock('@/components/GospelSection', () => {
@@ -41,26 +53,35 @@ jest.mock('@/components/ScriptureModal', () => {
   }
 })
 
-jest.mock('@/components/TableOfContents', () => {
-  return function MockTableOfContents({ sections }: any) {
+jest.mock('@/components/TableOfContents', () => ({
+  __esModule: true,
+  default: function MockTableOfContents({ sections }: { sections: { title: string }[] }) {
     return (
       <div data-testid="table-of-contents">
-        {sections.map((section: any) => (
-          <div key={section.section} data-testid={`toc-section-${section.section}`}>
-            {section.title}
-          </div>
+        {sections.map((section) => (
+          <div key={section.title}>{section.title}</div>
         ))}
       </div>
     )
-  }
-})
+  },
+}))
 
-jest.mock('@/components/ThemeToggle', () => ({ __esModule: true, default: () => null }))
+import ProfileContent from '../[slug]/ProfileContent'
 
-jest.mock('@/components/BookmarksDropdown', () => ({ __esModule: true, default: () => null }))
+function renderProfileContent(
+  props: ComponentProps<typeof ProfileContent>
+) {
+  return render(
+    <TextSizeProvider>
+      <ProfileContent {...props} />
+    </TextSizeProvider>
+  )
+}
 
 // Mock fetch for visit tracking
-global.fetch = jest.fn()
+beforeAll(() => {
+  installProfileContentFetchMock()
+})
 
 describe('ProfileContent Component - Responsive Layout', () => {
   const mockSections: GospelSection[] = [
@@ -120,7 +141,7 @@ describe('ProfileContent Component - Responsive Layout', () => {
     })
   })
 
-  it('should render desktop layout with persistent sidebar on large screens', () => {
+  it('should render desktop layout with persistent sidebar on large screens', async () => {
     // Mock large screen
     Object.defineProperty(window, 'innerWidth', {
       writable: true,
@@ -128,18 +149,15 @@ describe('ProfileContent Component - Responsive Layout', () => {
       value: 1200
     })
 
-    render(
-      <ProfileContent 
-        sections={mockSections} 
-        profileInfo={mockProfileInfo} 
-      />
-    )
+    renderProfileContent({
+      sections: mockSections,
+      profileInfo: mockProfileInfo,
+    })
 
-    // Should show desktop layout elements. Open the menu to reveal the
-    // table-of-contents (the aside/panel is toggled by the Menu button).
     fireEvent.click(screen.getByRole('button', { name: /menu/i }))
-    // The Table of Contents is rendered by a component; check for its test id
-    expect(screen.getByTestId('table-of-contents')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByTestId('table-of-contents')).toBeInTheDocument()
+    })
     // Titles/descriptions may appear once or twice depending on layout; assert
     // at-least-one to avoid brittle counts.
     expect(screen.getAllByText('Test Gospel Profile').length).toBeGreaterThanOrEqual(1)
@@ -147,12 +165,10 @@ describe('ProfileContent Component - Responsive Layout', () => {
   })
 
   it('should render mobile layout with hamburger menu on small screens', () => {
-    render(
-      <ProfileContent 
-        sections={mockSections} 
-        profileInfo={mockProfileInfo} 
-      />
-    )
+    renderProfileContent({
+      sections: mockSections,
+      profileInfo: mockProfileInfo,
+    })
 
     // Hamburger control (accessible name includes "menu")
     expect(screen.getByRole('button', { name: /menu/i })).toBeInTheDocument()
@@ -161,32 +177,26 @@ describe('ProfileContent Component - Responsive Layout', () => {
   it('should handle hamburger menu toggle', async () => {
     const user = userEvent.setup()
     
-    render(
-      <ProfileContent 
-        sections={mockSections} 
-        profileInfo={mockProfileInfo} 
-      />
-    )
+    renderProfileContent({
+      sections: mockSections,
+      profileInfo: mockProfileInfo,
+    })
 
-  const menuButton = screen.getByRole('button', { name: /menu/i })
-    
-    // Click to open menu
+    const menuButton = screen.getByRole('button', { name: /menu/i })
     await user.click(menuButton)
-    
-    // Should show overlay menu (in mobile view)
-    // The menu content should be visible
-  expect(screen.getAllByTestId('table-of-contents').length).toBeGreaterThanOrEqual(1) // Desktop + mobile
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId('table-of-contents').length).toBeGreaterThanOrEqual(1)
+    })
   })
 
   it('should close mobile menu when overlay is clicked', async () => {
     const user = userEvent.setup()
     
-    render(
-      <ProfileContent 
-        sections={mockSections} 
-        profileInfo={mockProfileInfo} 
-      />
-    )
+    renderProfileContent({
+      sections: mockSections,
+      profileInfo: mockProfileInfo,
+    })
 
   const menuButton = screen.getByRole('button', { name: /menu/i })
     await user.click(menuButton)
@@ -205,12 +215,10 @@ describe('ProfileContent Component - Responsive Layout', () => {
   })
 
   it('should track visit when component mounts', async () => {
-    render(
-      <ProfileContent 
-        sections={mockSections} 
-        profileInfo={mockProfileInfo} 
-      />
-    )
+    renderProfileContent({
+      sections: mockSections,
+      profileInfo: mockProfileInfo,
+    })
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
@@ -231,12 +239,10 @@ describe('ProfileContent Component - Responsive Layout', () => {
       slug: 'admin'
     }
 
-    render(
-      <ProfileContent 
-        sections={mockSections} 
-        profileInfo={adminProfileInfo} 
-      />
-    )
+    renderProfileContent({
+      sections: mockSections,
+      profileInfo: adminProfileInfo,
+    })
 
     expect(global.fetch).not.toHaveBeenCalled()
   })
@@ -244,12 +250,10 @@ describe('ProfileContent Component - Responsive Layout', () => {
   it('should handle scripture click and open modal', async () => {
     const user = userEvent.setup()
     
-    render(
-      <ProfileContent 
-        sections={mockSections} 
-        profileInfo={mockProfileInfo} 
-      />
-    )
+    renderProfileContent({
+      sections: mockSections,
+      profileInfo: mockProfileInfo,
+    })
 
   const scriptureButtons = screen.getAllByTestId('scripture-ref-Isaiah 6:3')
   await user.click(scriptureButtons[0])
@@ -261,12 +265,10 @@ describe('ProfileContent Component - Responsive Layout', () => {
   it('should close scripture modal', async () => {
     const user = userEvent.setup()
     
-    render(
-      <ProfileContent 
-        sections={mockSections} 
-        profileInfo={mockProfileInfo} 
-      />
-    )
+    renderProfileContent({
+      sections: mockSections,
+      profileInfo: mockProfileInfo,
+    })
 
     // Open modal
   const scriptureButtons = screen.getAllByTestId('scripture-ref-Isaiah 6:3')
@@ -280,12 +282,10 @@ describe('ProfileContent Component - Responsive Layout', () => {
   })
 
   it('should display favorite scriptures count in sidebar', () => {
-    render(
-      <ProfileContent 
-        sections={mockSections} 
-        profileInfo={mockProfileInfo} 
-      />
-    )
+    renderProfileContent({
+      sections: mockSections,
+      profileInfo: mockProfileInfo,
+    })
 
     // Open the menu to reveal the sidebar where favorites are shown
     fireEvent.click(screen.getByRole('button', { name: /menu/i }))
@@ -299,12 +299,10 @@ describe('ProfileContent Component - Responsive Layout', () => {
   it('should handle favorite scripture navigation', async () => {
     const user = userEvent.setup()
     
-    render(
-      <ProfileContent 
-        sections={mockSections} 
-        profileInfo={mockProfileInfo} 
-      />
-    )
+    renderProfileContent({
+      sections: mockSections,
+      profileInfo: mockProfileInfo,
+    })
 
     // Open modal with a favorite scripture
   const scriptureButtons = screen.getAllByTestId('scripture-ref-Isaiah 6:3')
@@ -315,12 +313,10 @@ describe('ProfileContent Component - Responsive Layout', () => {
   })
 
   it('should render all gospel sections', () => {
-    render(
-      <ProfileContent 
-        sections={mockSections} 
-        profileInfo={mockProfileInfo} 
-      />
-    )
+    renderProfileContent({
+      sections: mockSections,
+      profileInfo: mockProfileInfo,
+    })
 
     expect(screen.getAllByTestId('gospel-section-1').length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByTestId('gospel-section-2').length).toBeGreaterThanOrEqual(1)
@@ -328,14 +324,12 @@ describe('ProfileContent Component - Responsive Layout', () => {
     expect(screen.getAllByText('Man').length).toBeGreaterThanOrEqual(1)
   })
 
-  it('should handle loading state when props are missing', () => {
-    render(
-      <ProfileContent 
-        sections={undefined as any} 
-        profileInfo={undefined as any} 
-      />
-    )
+  it('should render nothing when props are missing', () => {
+    const { container } = renderProfileContent({
+      sections: undefined as any,
+      profileInfo: undefined as any,
+    })
 
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
+    expect(container).toBeEmptyDOMElement()
   })
 })

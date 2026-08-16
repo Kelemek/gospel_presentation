@@ -70,7 +70,9 @@ jest.mock('@/hooks/useMemorizationStrictMode', () => ({
   ],
 }))
 
+import { claimExclusiveListenOwner } from '@/lib/gospelExclusiveListen'
 import { MEMORIZE_LISTEN_SPEED_STORAGE_KEY } from '@/lib/memorizeListenSpeedStorage'
+import { resetGospelListenSpeechEngineForTests } from '@/lib/gospelListenSpeechEngine'
 import * as memorizationUtils from '@/lib/memorizationPracticeUtils'
 import { isMemorizeAndroidWebHost } from '@/lib/memorizationViewportPlatform'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
@@ -109,6 +111,8 @@ describe('MemorizationPracticeSession', () => {
 
   beforeEach(() => {
     memorizationStrictModeEnabled = false
+    resetGospelListenSpeechEngineForTests()
+    delete (window as unknown as { speechSynthesis?: unknown }).speechSynthesis
     ;(isMemorizeAndroidWebHost as jest.Mock).mockReturnValue(false)
     mockReciteStartRecording.mockReset()
     mockReciteStopRecordingCapture.mockReset()
@@ -215,11 +219,76 @@ describe('MemorizationPracticeSession', () => {
     }
   })
 
-  it('hides Listen for non-ESV on Android', () => {
+  it('stops TTS and closes the listen dialog when another owner claims exclusive listen', async () => {
+    const user = userEvent.setup()
+    const speak = jest.fn()
+    let speaking = false
+    const cancel = jest.fn(() => {
+      speaking = false
+    })
+    const tts = {
+      speak: (utt: SpeechSynthesisUtterance) => {
+        speaking = true
+        speak(utt)
+      },
+      cancel,
+      pause: jest.fn(),
+      resume: jest.fn(),
+      get speaking() {
+        return speaking
+      },
+      get paused() {
+        return false
+      },
+    }
+    const speechSynthesisDesc = Object.getOwnPropertyDescriptor(window, 'speechSynthesis')
+    try {
+      Object.defineProperty(window, 'speechSynthesis', {
+        value: tts as unknown as SpeechSynthesis,
+        configurable: true,
+        writable: true,
+      })
+      const niv: MemorizedVerse = { ...baseVerse, translation: 'niv' }
+      render(
+        <MemorizationPracticeSession verse={niv} onClose={jest.fn()} onComplete={jest.fn()} />
+      )
+      await user.click(screen.getByTestId('memorize-listen-open'))
+      expect(screen.getByTestId('memorize-listen-speed')).toBeInTheDocument()
+      await user.click(screen.getByTestId('memorize-listen-passage'))
+      expect(speak).toHaveBeenCalledTimes(1)
+
+      await act(async () => {
+        claimExclusiveListenOwner('profile-resource-read-aloud')
+      })
+
+      expect(cancel).toHaveBeenCalled()
+      expect(screen.queryByTestId('memorize-listen-speed')).not.toBeInTheDocument()
+    } finally {
+      if (speechSynthesisDesc) {
+        Object.defineProperty(window, 'speechSynthesis', speechSynthesisDesc)
+      } else {
+        Reflect.deleteProperty(window, 'speechSynthesis')
+      }
+    }
+  })
+
+  it('hides Listen for non-ESV on Android without device speech', () => {
     ;(isMemorizeAndroidWebHost as jest.Mock).mockReturnValue(true)
+    delete (window as unknown as { speechSynthesis?: unknown }).speechSynthesis
     const niv: MemorizedVerse = { ...baseVerse, translation: 'niv' }
     render(<MemorizationPracticeSession verse={niv} onClose={jest.fn()} onComplete={jest.fn()} />)
     expect(screen.queryByTestId('memorize-listen-open')).not.toBeInTheDocument()
+  })
+
+  it('shows Listen for non-ESV on Android when device speech is available', () => {
+    ;(isMemorizeAndroidWebHost as jest.Mock).mockReturnValue(true)
+    Object.defineProperty(window, 'speechSynthesis', {
+      configurable: true,
+      value: { speak: jest.fn(), cancel: jest.fn(), pause: jest.fn(), resume: jest.fn() },
+    })
+    const niv: MemorizedVerse = { ...baseVerse, translation: 'niv' }
+    render(<MemorizationPracticeSession verse={niv} onClose={jest.fn()} onComplete={jest.fn()} />)
+    expect(screen.getByTestId('memorize-listen-open')).toBeInTheDocument()
   })
 
   it('still shows Listen for ESV on Android', () => {

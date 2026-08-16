@@ -2,7 +2,8 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Capacitor } from '@capacitor/core'
 import ProfileResourceReadAloud from '@/components/ProfileResourceReadAloud'
-import { cancelProfileReadAloudSpeech } from '@/lib/profileReadAloudSpeechEngine'
+import { claimExclusiveListenOwner } from '@/lib/gospelExclusiveListen'
+import { resetGospelListenSpeechEngineForTests } from '@/lib/gospelListenSpeechEngine'
 import type { GospelSection } from '@/lib/types'
 
 jest.mock('@capacitor/core', () => ({
@@ -32,6 +33,7 @@ describe('ProfileResourceReadAloud', () => {
   beforeEach(() => {
     document.body.innerHTML = ''
     localStorage.clear()
+    resetGospelListenSpeechEngineForTests()
     ;(Capacitor.isNativePlatform as jest.Mock).mockReturnValue(false)
     ;(Capacitor.getPlatform as jest.Mock).mockReturnValue('web')
     ;(Capacitor.isPluginAvailable as jest.Mock).mockReturnValue(false)
@@ -157,7 +159,7 @@ describe('ProfileResourceReadAloud', () => {
     expect(speak).toHaveBeenCalledTimes(1)
 
     await act(async () => {
-      cancelProfileReadAloudSpeech()
+      claimExclusiveListenOwner('memorize-practice')
     })
     fireEvent.click(screen.getByRole('button', { name: /listen/i }))
     await act(async () => {

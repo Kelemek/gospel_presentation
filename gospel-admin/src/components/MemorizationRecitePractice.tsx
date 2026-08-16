@@ -27,27 +27,17 @@ import {
 } from '@/lib/memorizationReciteAlignment'
 import { computeReciteModeAvailable } from '@/lib/memorizationReciteIntegration'
 import { useMemorizationRecite } from '@/hooks/useMemorizationRecite'
+import type {
+  MemorizationRecitePracticeHandle,
+  ReciteAttemptMetrics,
+  RecitePhase,
+} from '@/lib/memorizationRecitePracticeTypes'
 
-export type RecitePhase = 'ready' | 'recording' | 'stopping' | 'transcribing' | 'results'
-
-export type ReciteAttemptMetrics = {
-  wrong: number
-  correct: number
-  hadErrors: boolean
-}
-
-export type MemorizationRecitePracticeHandle = {
-  phase: RecitePhase
-  starting: boolean
-  showNextRoundOption: boolean
-  showFinishOption: boolean
-  startRecording: () => Promise<void>
-  stopRecording: () => Promise<void>
-  applyAttemptMetrics: () => void
-  prepareClose: () => Promise<void>
-  resetAttemptState: () => void
-  cancel: () => void
-}
+export type {
+  MemorizationRecitePracticeHandle,
+  ReciteAttemptMetrics,
+  RecitePhase,
+} from '@/lib/memorizationRecitePracticeTypes'
 
 type MemorizationRecitePracticeProps = {
   active: boolean
@@ -71,7 +61,11 @@ type MemorizationRecitePracticeProps = {
   onAttemptMetrics?: (metrics: ReciteAttemptMetrics) => void
   onPhaseChange?: (phase: RecitePhase) => void
   /** Fires when phase or starting state changes so the parent can refresh footer controls. */
-  onUiStateChange?: () => void
+  onUiStateChange?: (state: {
+    showNextRoundOption: boolean
+    showFinishOption: boolean
+    starting: boolean
+  }) => void
 }
 
 function formatReciteDuration(ms: number): string {
@@ -129,10 +123,6 @@ export const MemorizationRecitePractice = forwardRef<
     onPhaseChange?.(phase)
   }, [phase, onPhaseChange])
 
-  useEffect(() => {
-    onUiStateChange?.()
-  }, [phase, starting, onUiStateChange])
-
   const activeRef = useRef(active)
   activeRef.current = active
 
@@ -170,6 +160,14 @@ export const MemorizationRecitePractice = forwardRef<
       if (effectiveRoundErrors <= 0) return true
       return !strictModeEnabled
     })()
+
+  useEffect(() => {
+    onUiStateChange?.({
+      showNextRoundOption,
+      showFinishOption,
+      starting,
+    })
+  }, [phase, starting, showNextRoundOption, showFinishOption, onUiStateChange])
 
   const scoreSummary = useMemo(() => {
     if (!alignment) return ''

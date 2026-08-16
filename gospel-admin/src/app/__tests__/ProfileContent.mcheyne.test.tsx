@@ -2,6 +2,7 @@
  * @jest-environment jsdom
  */
 
+import '@/lib/testing/profileContentTestMocks'
 import React, { type ReactElement } from 'react'
 import { render, waitFor, fireEvent, screen } from '@testing-library/react'
 import { mcheyneCalendarShortTitleForPlanDay } from '@/lib/mcheyne/mcheyneCalendar'
@@ -54,19 +55,6 @@ jest.mock('@/contexts/TranslationContext', () => ({
   TranslationProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
 
-jest.mock('@/lib/supabase/client', () => ({
-  __esModule: true,
-  createClient: () => ({
-    auth: { getUser: async () => ({ data: { user: null } }) },
-  }),
-}))
-
-jest.mock('@/components/ThemeToggle', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/BookmarksDropdown', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/SidebarAuthNav', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/ProfileHelpMenu', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/PresentationFirstVisitWelcome', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/MemorizationPracticeSession', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/TableOfContents', () => ({
   __esModule: true,
   default: () => <div data-testid="toc" />,

@@ -87,7 +87,6 @@ function ProfilePageBody({
           favoriteScriptures,
           savedAnswers: profile.savedAnswers,
         }}
-        profile={profile}
         allowVisitTracking={profileLoadSettled}
         onReadingResumeSettled={handleReadingResumeSettled}
       />

@@ -99,23 +99,25 @@ describe('buildProfileTutorialMenuItems', () => {
     expect(resourcesIdx).toBe(6)
   })
 
-  it('on Android without speechSynthesis omits Listen but keeps theme → share → bookmarks → highlights before resources', () => {
+  it('on Android without speechSynthesis includes Listen (native TTS) before resources', () => {
     Object.defineProperty(navigator, 'userAgent', {
       configurable: true,
       value: 'Mozilla/5.0 (Linux; Android 14; Pixel) AppleWebKit/537.36 Chrome/120.0.0.0 Mobile Safari/537.36',
     })
     const labels = buildProfileTutorialMenuItems().map((i) => i.label)
-    expect(labels.some((l) => /listen \(read aloud\)/i.test(l))).toBe(false)
+    expect(labels.some((l) => /listen \(read aloud\)/i.test(l))).toBe(true)
     const themeIdx = labels.findIndex((l) => /light and dark mode/i.test(l))
     const shareIdx = labels.findIndex((l) => /share this resource/i.test(l))
     const bookmarksIdx = labels.findIndex((l) => /using bookmarks/i.test(l))
     const highlightsIdx = labels.findIndex((l) => /^highlights$/i.test(l))
+    const listenIdx = labels.findIndex((l) => /listen \(read aloud\)/i.test(l))
     const resourcesIdx = labels.findIndex((l) => /resources menu/i.test(l))
     expect(themeIdx).toBe(1)
     expect(shareIdx).toBe(2)
     expect(bookmarksIdx).toBe(3)
     expect(highlightsIdx).toBe(4)
-    expect(resourcesIdx).toBe(5)
+    expect(listenIdx).toBe(5)
+    expect(resourcesIdx).toBe(6)
   })
 })
 

@@ -6,9 +6,11 @@ import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useChapterStreamingAudioListen } from '@/hooks/useChapterStreamingAudioListen'
 import {
-  dispatchGospelExclusiveListenOwner,
-  GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT,
-} from '@/lib/exclusiveWebSpeechListen'
+  announceExclusiveListenOwner,
+  claimExclusiveListenOwner,
+  GOSPEL_EXCLUSIVE_LISTEN_OWNER_EVENT,
+} from '@/lib/gospelExclusiveListen'
+import { resetGospelListenSpeechEngineForTests } from '@/lib/gospelListenSpeechEngine'
 import { applyMemorizeListenPlaybackRateToMediaElement } from '@/lib/memorizeListenSpeedStorage'
 import { computeScriptureListenAutoScrollStartDelaySec } from '@/lib/scriptureListenPlainText'
 
@@ -121,6 +123,8 @@ describe('useChapterStreamingAudioListen', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    resetGospelListenSpeechEngineForTests()
+    delete (window as { speechSynthesis?: unknown }).speechSynthesis
     mockAutoScrollStartDelay.mockImplementation(() => 2)
     localStorage.clear()
     HTMLMediaElement.prototype.play = jest.fn().mockResolvedValue(undefined)
@@ -172,6 +176,7 @@ describe('useChapterStreamingAudioListen', () => {
 
   it('cancels speech synthesis when starting playback', async () => {
     const cancel = jest.fn()
+    resetGospelListenSpeechEngineForTests()
     Object.defineProperty(window, 'speechSynthesis', {
       configurable: true,
       value: { speaking: true, cancel },
@@ -186,14 +191,14 @@ describe('useChapterStreamingAudioListen', () => {
   it('stops profile read-aloud when starting playback even without Web Speech', async () => {
     delete (window as { speechSynthesis?: unknown }).speechSynthesis
     const onExclusive = jest.fn()
-    window.addEventListener(GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT, onExclusive)
+    window.addEventListener(GOSPEL_EXCLUSIVE_LISTEN_OWNER_EVENT, onExclusive)
     const user = userEvent.setup()
     render(<Harness audioUrls={[audioUrl]} enabled />)
     await user.click(screen.getByRole('button', { name: 'primary' }))
     expect(onExclusive).toHaveBeenCalled()
     const ev = onExclusive.mock.calls[0][0] as CustomEvent
     expect(ev.detail).toEqual({ owner: 'scripture-chapter-audio' })
-    window.removeEventListener(GOSPEL_WEB_SPEECH_EXCLUSIVE_OWNER_EVENT, onExclusive)
+    window.removeEventListener(GOSPEL_EXCLUSIVE_LISTEN_OWNER_EVENT, onExclusive)
   })
 
   it('stops passage audio when profile read-aloud claims exclusive listen', async () => {
@@ -204,9 +209,8 @@ describe('useChapterStreamingAudioListen', () => {
     Object.defineProperty(el, 'paused', { configurable: true, get: () => false })
     expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled()
 
-    dispatchGospelExclusiveListenOwner({ owner: 'profile-resource-read-aloud' })
     await act(async () => {
-      await Promise.resolve()
+      announceExclusiveListenOwner('profile-resource-read-aloud')
     })
     expect(HTMLMediaElement.prototype.pause).toHaveBeenCalledTimes(2)
   })

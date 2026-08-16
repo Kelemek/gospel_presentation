@@ -1418,5 +1418,10 @@
     "releasedAt": "2026-08-16",
     "committedAt": "2026-08-16T11:52:32.169Z",
     "message": "You can now use Listen to hear resources read aloud on Android, including in the browser. The Android app needs an update from the store for Listen to appear there."
+  },
+  {
+    "releasedAt": "2026-08-16",
+    "committedAt": "2026-08-16T17:21:38.036Z",
+    "message": "Memorize practice Listen for non-ESV translations now uses the same device speech as profile Listen, including in the Android app when speech is available."
   }
 ]

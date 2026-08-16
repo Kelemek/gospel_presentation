@@ -4,7 +4,7 @@ import type { GospelSection } from '@/lib/types'
 import { MemorizeListenControlsDialog } from '@/components/MemorizeListenControlsDialog'
 import { useAlertModal } from '@/contexts/AlertModalContext'
 import { useProfileResourceReadAloud } from '@/hooks/useProfileResourceReadAloud'
-import { isProfileResourceListenControlAvailable } from '@/lib/memorizationViewportPlatform'
+import { isProfileResourceListenControlAvailable } from '@/lib/profileListenAvailability'
 import { useCallback } from 'react'
 
 const TRIGGER_CLASS =

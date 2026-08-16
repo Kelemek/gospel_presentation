@@ -6,14 +6,13 @@ import { waitFor } from '@testing-library/react'
 import { Capacitor } from '@capacitor/core'
 import { SpeechSynthesis } from '@capgo/capacitor-speech-synthesis'
 import {
-  cancelProfileReadAloudSpeech,
-  GOSPEL_PROFILE_READ_ALOUD_CANCELLED_EVENT,
-  getProfileReadAloudSpeechEngine,
-  isProfileReadAloudSpeechAvailable,
-  nativeReadAloudResumeOffset,
-  resetProfileReadAloudSpeechEngineForTests,
-  shouldUseNativeAndroidReadAloudSpeech,
-} from '@/lib/profileReadAloudSpeechEngine'
+  getGospelListenSpeechEngine,
+  getGospelListenSpeechEngineSnapshot,
+  isGospelListenSpeechAvailable,
+  resetGospelListenSpeechEngineForTests,
+  shouldUseNativeAndroidListenSpeech,
+  subscribeGospelListenSpeechEngine,
+} from '@/lib/gospelListenSpeechEngine'
 
 jest.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -38,11 +37,11 @@ function mockNativeAndroidPlugin(available = true) {
   ;(Capacitor.isPluginAvailable as jest.Mock).mockReturnValue(available)
 }
 
-describe('profileReadAloudSpeechEngine', () => {
+describe('gospelListenSpeechEngine', () => {
   const originalUserAgent = navigator.userAgent
 
   beforeEach(() => {
-    resetProfileReadAloudSpeechEngineForTests()
+    resetGospelListenSpeechEngineForTests()
     ;(Capacitor.isNativePlatform as jest.Mock).mockReturnValue(false)
     ;(Capacitor.getPlatform as jest.Mock).mockReturnValue('web')
     ;(Capacitor.isPluginAvailable as jest.Mock).mockReturnValue(false)
@@ -68,12 +67,12 @@ describe('profileReadAloudSpeechEngine', () => {
   })
 
   it('uses Web Speech when not native Android', () => {
-    expect(shouldUseNativeAndroidReadAloudSpeech()).toBe(false)
+    expect(shouldUseNativeAndroidListenSpeech()).toBe(false)
     Object.defineProperty(window, 'speechSynthesis', {
       configurable: true,
       value: { speak: jest.fn(), cancel: jest.fn(), speaking: false, paused: false },
     })
-    expect(isProfileReadAloudSpeechAvailable()).toBe(true)
+    expect(isGospelListenSpeechAvailable()).toBe(true)
   })
 
   it('speaks via SpeechSynthesisUtterance on web', () => {
@@ -83,13 +82,34 @@ describe('profileReadAloudSpeechEngine', () => {
       value: { speak, cancel: jest.fn(), speaking: false, paused: false },
     })
     const onstart = jest.fn()
-    getProfileReadAloudSpeechEngine().speak('Hello verse 16', 1, { onstart })
+    getGospelListenSpeechEngine().speak('Hello verse 16', 1, { onstart })
     expect(speak).toHaveBeenCalledTimes(1)
     const utt = speak.mock.calls[0][0] as SpeechSynthesisUtterance
     expect(utt.text).toBe('Hello verse 16')
     expect(utt.lang).toBe('en-US')
     utt.onstart?.(new Event('start') as SpeechSynthesisEvent)
     expect(onstart).toHaveBeenCalled()
+  })
+
+  it('notifies engine subscribers on speak lifecycle changes', () => {
+    const speak = jest.fn()
+    Object.defineProperty(window, 'speechSynthesis', {
+      configurable: true,
+      value: { speak, cancel: jest.fn(), speaking: false, paused: false },
+    })
+    const listener = jest.fn()
+    const unsubscribe = subscribeGospelListenSpeechEngine(listener)
+    const revisionBefore = getGospelListenSpeechEngineSnapshot().revision
+
+    getGospelListenSpeechEngine().speak('Hello', 1, {})
+    expect(listener).toHaveBeenCalled()
+    expect(getGospelListenSpeechEngineSnapshot().revision).toBeGreaterThan(revisionBefore)
+
+    const utterance = speak.mock.calls[0][0] as SpeechSynthesisUtterance
+    utterance.onstart?.(new Event('start') as SpeechSynthesisEvent)
+    utterance.onend?.(new Event('end') as SpeechSynthesisEvent)
+    expect(listener.mock.calls.length).toBeGreaterThanOrEqual(3)
+    unsubscribe()
   })
 
   it('forwards Web Speech boundary charIndex', () => {
@@ -99,7 +119,7 @@ describe('profileReadAloudSpeechEngine', () => {
       value: { speak, cancel: jest.fn(), speaking: false, paused: false },
     })
     const onboundary = jest.fn()
-    getProfileReadAloudSpeechEngine().speak('Hello world', 1, { onboundary })
+    getGospelListenSpeechEngine().speak('Hello world', 1, { onboundary })
     const utt = speak.mock.calls[0][0] as SpeechSynthesisUtterance
     utt.onboundary?.({ charIndex: 6, charLength: 5 } as SpeechSynthesisEvent)
     expect(onboundary).toHaveBeenCalledWith({ charIndex: 6, charLength: 5 })
@@ -107,14 +127,14 @@ describe('profileReadAloudSpeechEngine', () => {
 
   it('is true for native Android when the speech plugin is available', () => {
     mockNativeAndroidPlugin(true)
-    expect(shouldUseNativeAndroidReadAloudSpeech()).toBe(true)
-    expect(isProfileReadAloudSpeechAvailable()).toBe(true)
+    expect(shouldUseNativeAndroidListenSpeech()).toBe(true)
+    expect(isGospelListenSpeechAvailable()).toBe(true)
   })
 
   it('is false for native Android without the speech plugin and without Web Speech', () => {
     mockNativeAndroidPlugin(false)
-    expect(shouldUseNativeAndroidReadAloudSpeech()).toBe(false)
-    expect(isProfileReadAloudSpeechAvailable()).toBe(false)
+    expect(shouldUseNativeAndroidListenSpeech()).toBe(false)
+    expect(isGospelListenSpeechAvailable()).toBe(false)
   })
 
   it('is false for native Android without the plugin even when speechSynthesis exists', () => {
@@ -123,7 +143,7 @@ describe('profileReadAloudSpeechEngine', () => {
       configurable: true,
       value: { speak: jest.fn(), cancel: jest.fn(), speaking: false, paused: false },
     })
-    expect(isProfileReadAloudSpeechAvailable()).toBe(false)
+    expect(isGospelListenSpeechAvailable()).toBe(false)
   })
 
   it('speaks through the Capgo plugin on native Android and maps boundary events', async () => {
@@ -131,7 +151,7 @@ describe('profileReadAloudSpeechEngine', () => {
     const onstart = jest.fn()
     const onend = jest.fn()
     const onboundary = jest.fn()
-    getProfileReadAloudSpeechEngine().speak('Hello world', 1.25, { onstart, onend, onboundary })
+    getGospelListenSpeechEngine().speak('Hello world', 1.25, { onstart, onend, onboundary })
 
     await waitFor(() => {
       expect(SpeechSynthesis.speak).toHaveBeenCalledWith(
@@ -150,15 +170,7 @@ describe('profileReadAloudSpeechEngine', () => {
     expect(onboundary).toHaveBeenCalledWith({ charIndex: 6, charLength: 5 })
     listeners.end?.({ utteranceId: 'utt-1' })
     expect(onend).toHaveBeenCalled()
-    expect(getProfileReadAloudSpeechEngine().isSpeaking()).toBe(false)
-  })
-
-  it('snaps native resume offset to the current word start', () => {
-    expect(nativeReadAloudResumeOffset('Hello world', 0)).toBe(0)
-    expect(nativeReadAloudResumeOffset('Hello world', 3)).toBe(0)
-    expect(nativeReadAloudResumeOffset('Hello world', 6)).toBe(6)
-    expect(nativeReadAloudResumeOffset('Hello world', 8)).toBe(6)
-    expect(nativeReadAloudResumeOffset('Hello  world', 6)).toBe(7)
+    expect(getGospelListenSpeechEngine().isSpeaking()).toBe(false)
   })
 
   it('pause on native Android stops audio and resume continues from the current word', async () => {
@@ -169,7 +181,7 @@ describe('profileReadAloudSpeechEngine', () => {
       return { utteranceId: `utt-${speakCount}` }
     })
     const handlers = { onstart: jest.fn(), onend: jest.fn(), onboundary: jest.fn() }
-    const engine = getProfileReadAloudSpeechEngine()
+    const engine = getGospelListenSpeechEngine()
     engine.speak('Hello world again', 1, handlers)
     await waitFor(() => expect(SpeechSynthesis.speak).toHaveBeenCalledTimes(1))
     listeners.start?.({ utteranceId: 'utt-1' })
@@ -197,17 +209,13 @@ describe('profileReadAloudSpeechEngine', () => {
     expect(handlers.onend).toHaveBeenCalledTimes(1)
   })
 
-  it('cancelProfileReadAloudSpeech stops native TTS', async () => {
+  it('cancel stops native TTS', async () => {
     mockNativeAndroidPlugin(true)
-    getProfileReadAloudSpeechEngine().speak('Hi', 1, {})
+    getGospelListenSpeechEngine().speak('Hi', 1, {})
     await Promise.resolve()
-    const onCancelled = jest.fn()
-    window.addEventListener(GOSPEL_PROFILE_READ_ALOUD_CANCELLED_EVENT, onCancelled)
-    cancelProfileReadAloudSpeech()
-    expect(onCancelled).toHaveBeenCalled()
-    window.removeEventListener(GOSPEL_PROFILE_READ_ALOUD_CANCELLED_EVENT, onCancelled)
+    getGospelListenSpeechEngine().cancel()
     expect(SpeechSynthesis.cancel).toHaveBeenCalled()
-    expect(getProfileReadAloudSpeechEngine().isSpeaking()).toBe(false)
+    expect(getGospelListenSpeechEngine().isSpeaking()).toBe(false)
   })
 
   it('does not treat a cancelled utterance end as the new chunk finishing', async () => {
@@ -219,7 +227,7 @@ describe('profileReadAloudSpeechEngine', () => {
     })
     const firstEnd = jest.fn()
     const secondEnd = jest.fn()
-    const engine = getProfileReadAloudSpeechEngine()
+    const engine = getGospelListenSpeechEngine()
     engine.speak('First chunk.', 1, { onend: firstEnd })
     await waitFor(() => expect(SpeechSynthesis.speak).toHaveBeenCalledTimes(1))
 
@@ -250,7 +258,7 @@ describe('profileReadAloudSpeechEngine', () => {
       }
     )
     const firstError = jest.fn()
-    getProfileReadAloudSpeechEngine().speak('Hello', 1, { onerror: firstError })
+    getGospelListenSpeechEngine().speak('Hello', 1, { onerror: firstError })
     await waitFor(() => expect(firstError).toHaveBeenCalled())
     expect(SpeechSynthesis.speak).not.toHaveBeenCalled()
     expect(removed).toHaveBeenCalled()
@@ -265,7 +273,7 @@ describe('profileReadAloudSpeechEngine', () => {
       }
     )
     const onend = jest.fn()
-    getProfileReadAloudSpeechEngine().speak('Hello', 1, { onend })
+    getGospelListenSpeechEngine().speak('Hello', 1, { onend })
     await waitFor(() => expect(SpeechSynthesis.speak).toHaveBeenCalled())
     listeners.end?.({ utteranceId: 'utt-1' })
     expect(onend).toHaveBeenCalled()

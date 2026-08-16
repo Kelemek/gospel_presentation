@@ -5,6 +5,8 @@ import { TextSizeProvider } from '@/contexts/TextSizeContext'
 import { gospelStorageGetSync, resetGospelClientStorageForTests } from '@/lib/gospelClientStorage'
 import { loadVersePins, versePinStorageKey } from '@/lib/versePinStorage'
 import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
+import '@/lib/testing/profileContentComponentTestMocks'
+import { installProfileContentFetchMock } from '@/lib/testing/profileContentTestMocks'
 
 const mockSetTranslation = jest.fn(() => Promise.resolve())
 let mockTranslationsLoading = false
@@ -39,13 +41,6 @@ jest.mock('@/lib/supabase/client', () => ({
   }),
 }))
 
-jest.mock('@/components/ThemeToggle', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/BookmarksDropdown', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/SidebarAuthNav', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/ProfileHelpMenu', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/PresentationFirstVisitWelcome', () => ({ __esModule: true, default: () => null }))
-jest.mock('@/components/MemorizationPracticeSession', () => ({ __esModule: true, default: () => null }))
-
 jest.mock('@/components/TableOfContents', () => ({
   __esModule: true,
   default: () => <div data-testid="toc" />,
@@ -67,25 +62,7 @@ beforeEach(() => {
   syncProfileNavigationTestGlobals()
   resetGospelClientStorageForTests()
   installTestLocalStorage()
-  global.fetch = jest.fn((input: Parameters<typeof fetch>[0]) => {
-    const url = typeof input === 'string' ? input : String(input)
-    if (url.includes('/visit')) {
-      return Promise.resolve({ ok: true, json: async () => ({}) }) as unknown as Response
-    }
-    if (url.includes('/api/scripture/spurgeon-links')) {
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({ items: [] }),
-      }) as unknown as Response
-    }
-    if (url.includes('/api/scripture')) {
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({ text: '[1] In the beginning' }),
-      }) as unknown as Response
-    }
-    return Promise.resolve({ ok: true, json: async () => ({}) }) as unknown as Response
-  }) as unknown as typeof fetch
+  installProfileContentFetchMock({ scriptureText: '[1] In the beginning' })
 })
 
 afterEach(() => {

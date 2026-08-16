@@ -30,5 +30,6 @@
   "Bug fix: M'Cheyne Listen now stays on the correct day when advancing to a chapter that also appears earlier in the plan (for example, Matthew 1 on day 172).",
   "Memorize now has Recite mode: record a memorized passage and see word-by-word accuracy feedback.",
   "Bug fix: Recite mode now recognizes “Song of Ascents” when speech-to-text hears “a sense.”",
-  "You can now use Listen to hear resources read aloud on Android, including in the browser. The Android app needs an update from the store for Listen to appear there."
+  "You can now use Listen to hear resources read aloud on Android, including in the browser. The Android app needs an update from the store for Listen to appear there.",
+  "Memorize practice Listen for non-ESV translations now uses the same device speech as profile Listen, including in the Android app when speech is available."
 ]

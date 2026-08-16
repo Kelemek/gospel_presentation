@@ -1,42 +1,29 @@
+import '@/lib/testing/profileContentTestMocks'
 import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
+import { installProfileContentFetchMock } from '@/lib/testing/profileContentTestMocks'
 
-// Mock child components to keep test focused
 jest.mock('@/components/GospelSection', () => ({
   __esModule: true,
-  default: ({ section }: any) => <div data-testid="gospel-section">Section: {section.title}</div>
+  default: ({ section }: { section: { title: string } }) => (
+    <div data-testid="gospel-section">Section: {section.title}</div>
+  ),
 }))
 jest.mock('@/components/TableOfContents', () => ({
   __esModule: true,
-  default: ({ sections }: any) => <div data-testid="toc">TOC {sections?.length || 0}</div>
+  default: ({ sections }: { sections?: unknown[] }) => (
+    <div data-testid="toc">TOC {sections?.length || 0}</div>
+  ),
 }))
 jest.mock('@/components/ScriptureModal', () => ({
   __esModule: true,
-  default: ({ isOpen }: any) => <div data-testid="scripture-modal">Modal open: {String(!!isOpen)}</div>
+  default: ({ isOpen }: { isOpen: boolean }) => (
+    <div data-testid="scripture-modal">Modal open: {String(!!isOpen)}</div>
+  ),
 }))
-
-// Mock supabase client used in auth checks
-jest.mock('@/lib/supabase/client', () => ({
-  __esModule: true,
-  createClient: () => ({
-    auth: { getUser: async () => ({ data: { user: null } }) },
-  })
-}))
-
-jest.mock('@/components/ThemeToggle', () => ({ __esModule: true, default: () => null }))
-
-jest.mock('@/components/BookmarksDropdown', () => ({ __esModule: true, default: () => null }))
 
 beforeAll(() => {
-  global.fetch = jest.fn((input: RequestInfo) => {
-    // Accept visit tracking and profile fetches
-    return Promise.resolve({ ok: true, json: async () => ({}) } as any)
-  }) as any
-})
-
-afterAll(() => {
-  // @ts-expect-error mocking incompatible types
-  global.fetch = undefined
+  installProfileContentFetchMock()
 })
 
 test('ProfileContent renders sections and tracks visit', async () => {
@@ -51,15 +38,15 @@ test('ProfileContent renders sections and tracks visit', async () => {
           title: 'What is the Gospel?',
           content: 'Short content',
           scriptureReferences: [{ reference: 'John 3:16', favorite: true }],
-          nestedSubsections: []
-        }
-      ]
-    }
+          nestedSubsections: [],
+        },
+      ],
+    },
   ]
 
   const profileInfo = { title: 'Test Profile', slug: 'test-profile', favoriteScriptures: [] }
 
-  render(<ProfileContent sections={sections as any} profileInfo={profileInfo as any} profile={null} />)
+  render(<ProfileContent sections={sections as never} profileInfo={profileInfo} />)
 
   await waitFor(() => expect(screen.getByTestId('gospel-section')).toBeInTheDocument())
   expect(screen.getByTestId('gospel-section')).toHaveTextContent('Introduction')
