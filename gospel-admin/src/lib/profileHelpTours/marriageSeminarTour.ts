@@ -1,4 +1,6 @@
 import type { DriveStep } from 'driver.js'
+import type { PublicResourceItem } from '@/lib/supabase-data-service'
+import { scrollToTocAnchor } from '@/lib/scrollToTocAnchor'
 import type { ProfileFeatureTourOptions } from './tourShared'
 import {
   MARRIAGE_SEMINAR_PROFILE_SLUG,
@@ -29,6 +31,7 @@ import {
   resourcesListPanelReady,
   serializeMarriageSeminarTourResumeForNavigation,
   templateSlugInTopLevelBlocks,
+  waitUntil,
 } from './tourShared'
 import { runFullWalkthroughThankYouFinale } from './fullWalkthroughFinale'
 

@@ -18,7 +18,7 @@ export type MemorizationPracticeReciteRoundPanelProps = {
   phase: MemorizationPracticePhase
   roundIndex: number
   isRoundComplete: boolean
-  reciteRoundAdvanceHeaderCopy: string | null
+  reciteRoundAdvanceHeaderCopy: string
   hiddenIndices: Set<number>
   revealed: Set<number>
   hintPeekIndices: Set<number>

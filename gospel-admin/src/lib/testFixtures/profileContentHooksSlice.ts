@@ -16,7 +16,7 @@ export function makeProfileContentHooksSlice(
     sections: [{ id: 's1', title: 'Section', subsections: [] } as never],
     profileSlug: 'default',
     profileTitle: 'Default',
-    footerAttributionEnabledCodes: ['ESV'],
+    footerAttributionEnabledCodes: ['esv'],
     fromEditor: false,
     canEdit: false,
     isMenuOpen: false,

@@ -1,3 +1,5 @@
+import type { Alignment, DriveStep, Driver, Side } from 'driver.js'
+import { loadMemorizedVerses } from '@/lib/verseMemorizationStorage'
 import type { ProfileFeatureTourOptions } from './tourShared'
 import {
   ALERT_MODAL_CONFIRM,
@@ -41,6 +43,7 @@ import {
   reopenMemorizeMenuAndPanelForTour,
   resolveMemorizeTourTargetVerseIdAfterAdd,
   scriptureReaderTourNavigation,
+  waitUntil,
 } from './tourShared'
 import { getFullWalkthroughIndexAfterMemorize } from './fullWalkthroughSegments'
 

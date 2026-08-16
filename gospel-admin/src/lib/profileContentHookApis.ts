@@ -2,11 +2,12 @@ import type { MutableRefObject } from 'react'
 import type { StudyLibraryFocus } from '@/components/SpurgeonSermonsModal'
 import type { BibleTranslation } from '@/contexts/TranslationContext'
 import type { ScriptureModalState } from '@/lib/profileContentDomHelpers'
+import type { ProfileRecentScriptureEntry } from '@/lib/profileLastOpenResourceStorage'
 import type { ScriptureModalPresentationLocation } from '@/lib/presentationLocationFromAnchors'
 import type { ProfileContentProfileInfo } from '@/lib/profileContentTypes'
 import type { GospelSection } from '@/lib/types'
 import type { MemorizedVerse } from '@/lib/verseMemorizationStorage'
-import type { VerseBookmarkColorId, VersePinAnchoredEntry } from '@/lib/versePinStorage'
+import type { VerseBookmarkColorId, VersePinAnchoredEntry, VersePinColorId } from '@/lib/versePinStorage'
 
 /** Scripture modal surface used by profile layout and modals. */
 export type ProfileScriptureModalApi = {
@@ -19,8 +20,8 @@ export type ProfileScriptureModalApi = {
   scriptureModalPresentationLocation: ScriptureModalPresentationLocation | undefined
   scriptureModalHighlightPicker: boolean
   mcheyneDayListenReferences: string[] | undefined
-  syncMcheynePlaylistChapter: (chapterReference: string) => void
-  modalPinDraftColor: VerseBookmarkColorId
+  syncMcheynePlaylistChapter: (playlistIndex: number) => void
+  modalPinDraftColor: VersePinColorId
   modalPinSyncedKey: string | null
   modalPinDropdownColors: VerseBookmarkColorId[]
   setModalPinUserOverride: (
@@ -42,11 +43,7 @@ export type ProfileScriptureModalApi = {
   ) => void
   clearMcheynePlanCardPinSession: () => void
   closeModal: () => void
-  openScriptureFromTabEntry: (entry: {
-    reference: string
-    sectionId: string
-    subsectionId: string
-  }) => void | Promise<void>
+  openScriptureFromTabEntry: (entry: ProfileRecentScriptureEntry) => void | Promise<void>
   hasPrevious: boolean
   hasNext: boolean
   navigateToPrevious: () => void
@@ -115,7 +112,7 @@ export type ProfileContentHooksSlice = {
   presentationMarkedReadComplete: boolean
   handleMarkPresentationUnread: () => void
   versePinsList: VersePinAnchoredEntry[]
-  handleRemoveVersePin: (bookmarkId: string) => void
+  handleRemoveVersePin: (pin: Pick<VersePinAnchoredEntry, 'bookmarkId' | 'colorId'>) => void
   handleClearAllVersePins: () => void
   highlightRevision: number
   bumpHighlights: () => void

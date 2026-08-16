@@ -2,8 +2,8 @@ import { shouldAutoRevealAfterWrongAttempts } from '@/lib/memorizationRoundAdvan
 
 export type ApplyMemorizationTypableGuessActions = {
   setRevealed: (update: (prev: Set<number>) => Set<number>) => void
-  setConsecutiveWrong: (update: (prev: number) => number) => void
-  setCorrectKeystrokesTotal: (update: (prev: number) => number) => void
+  setConsecutiveWrong: (update: number | ((prev: number) => number)) => void
+  setCorrectKeystrokesTotal: (update: number | ((prev: number) => number)) => void
   recordWrongAttempt: () => void
   flashErrorBriefly: () => void
 }

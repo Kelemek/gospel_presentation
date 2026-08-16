@@ -20,7 +20,7 @@ interface TranslationContextType {
   translation: BibleTranslation
   setTranslation: (translation: BibleTranslation) => Promise<void>
   isLoading: boolean
-  enabledTranslations: string[]
+  enabledTranslations: BibleTranslation[]
   enabledTranslationOptions: EnabledTranslationOption[]
 }
 
@@ -55,10 +55,11 @@ export function TranslationProvider({ children }: { children: ReactNode }) {
     useState<EnabledTranslationOption[]>(DEFAULT_ENABLED_OPTIONS)
   const supabase = createClient()
 
-  const enabledTranslations = useMemo(
-    () => enabledTranslationOptions.map((o) => o.translation_code),
-    [enabledTranslationOptions]
-  )
+  const enabledTranslations = useMemo((): BibleTranslation[] => {
+    return enabledTranslationOptions
+      .map((o) => o.translation_code.trim().toLowerCase())
+      .filter(isBibleTranslation)
+  }, [enabledTranslationOptions])
 
   // Load enabled translations
   useEffect(() => {

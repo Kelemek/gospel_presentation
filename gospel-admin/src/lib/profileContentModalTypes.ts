@@ -4,7 +4,7 @@ import type { ComponentProps } from 'react'
 import type { StudyLibraryFocus } from '@/components/SpurgeonSermonsModal'
 import type { ScriptureModalState } from '@/lib/profileContentDomHelpers'
 import type { ScriptureModalPresentationLocation } from '@/lib/presentationLocationFromAnchors'
-import type { VersePinColorId } from '@/lib/versePinStorage'
+import type { VerseBookmarkColorId, VersePinColorId } from '@/lib/versePinStorage'
 import type { MemorizedVerse } from '@/lib/verseMemorizationStorage'
 import ScriptureModal from '@/components/ScriptureModal'
 
@@ -44,8 +44,10 @@ export type ProfileContentScriptureModalCluster = {
   bumpHighlights: () => void
   modalPinDraftColor: VersePinColorId
   modalPinSyncedKey: string | null
-  modalPinDropdownColors: VersePinColorId[]
-  setModalPinUserOverride: (override: { key: string; color: VersePinColorId }) => void
+  modalPinDropdownColors: VerseBookmarkColorId[]
+  setModalPinUserOverride: (
+    override: { key: string; color: VerseBookmarkColorId } | null
+  ) => void
   onOpenSpurgeonStudy: (reference: string) => void
 }
 

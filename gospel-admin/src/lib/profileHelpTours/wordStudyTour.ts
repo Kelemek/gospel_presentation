@@ -1,3 +1,4 @@
+import type { Alignment, DriveStep, Side } from 'driver.js'
 import type { ProfileFeatureTourOptions } from './tourShared'
 import {
   MEMORIZE_TOUR_RESUME_STORAGE_KEY,
@@ -21,6 +22,7 @@ import {
   prependSegmentIntroIfAny,
   scriptureReaderTourNavigation,
   wordStudyLexiconHasEntryBody,
+  waitUntil,
 } from './tourShared'
 import { getFullWalkthroughIndexAfterWordStudy } from './fullWalkthroughSegments'
 

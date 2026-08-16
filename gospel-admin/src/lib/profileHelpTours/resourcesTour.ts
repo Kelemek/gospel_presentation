@@ -1,4 +1,4 @@
-import type { DriveStep } from 'driver.js'
+import type { Alignment, DriveStep, Side } from 'driver.js'
 import {
   groupPublicResourceItems,
   publicResourceItemsForResourcesMenu,
@@ -25,6 +25,7 @@ import {
   resourceTemplatesBlockTitle,
   resourcesListOverviewCopy,
   resourcesListPanelReady,
+  waitUntil,
 } from './tourShared'
 
 export function runResourcesFeatureTour(options?: ProfileFeatureTourOptions): void {

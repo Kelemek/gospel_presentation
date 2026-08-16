@@ -20,6 +20,7 @@ import {
   openProfileMenuIfClosed,
   prefersReducedMotion,
   prependSegmentIntroIfAny,
+  waitUntil,
 } from './tourShared'
 
 export function runAddCustomMemorizationFeatureTour(options?: ProfileFeatureTourOptions): void {

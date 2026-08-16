@@ -16,7 +16,7 @@ export type UseProfileChromeStateOptions = {
   profileTitle: string
   sections: GospelSection[]
   showAlert: (content: ReactNode) => void
-  showConfirm: (message: string) => boolean | Promise<boolean>
+  showConfirm: (message: string) => Promise<boolean>
 }
 
 export function useProfileChromeState({

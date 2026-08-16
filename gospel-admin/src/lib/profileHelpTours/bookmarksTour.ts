@@ -16,6 +16,7 @@ import {
   prependSegmentIntroIfAny,
   queryBookmarkTourScrollTarget,
   scrollBookmarkTourSampleIntoView,
+  waitUntil,
 } from './tourShared'
 
 export function runBookmarksFeatureTour(options?: ProfileFeatureTourOptions): void {

@@ -47,5 +47,5 @@ export function installProfileContentFetchMock(options: ProfileContentFetchMockO
       }
       return Promise.resolve({ ok: true, json: async () => ({}) }) as unknown as Response
     }
-  ) as typeof fetch
+  ) as unknown as typeof fetch
 }

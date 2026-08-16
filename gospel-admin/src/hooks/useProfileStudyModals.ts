@@ -5,15 +5,11 @@ import {
   STUDY_MODAL_DEFAULT_TITLE,
   type StudyLibraryFocus,
 } from '@/components/SpurgeonSermonsModal'
-import { resolveScriptureModalTabToRestore } from '@/lib/profileLastOpenResourceStorage'
+import { resolveScriptureModalTabToRestore, type ProfileRecentScriptureEntry } from '@/lib/profileLastOpenResourceStorage'
 import { isChapterOnlyScriptureReference } from '@/lib/parse-scripture-reference'
 import type { MemorizedVerse } from '@/lib/verseMemorizationStorage'
 
-type OpenScriptureFromTabEntry = (entry: {
-  reference: string
-  sectionId: string
-  subsectionId: string
-}) => void | Promise<void>
+type OpenScriptureFromTabEntry = (entry: ProfileRecentScriptureEntry) => void | Promise<void>
 
 type NavigateScriptureInReader = (
   ref: string,
