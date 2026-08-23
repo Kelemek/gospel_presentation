@@ -1423,5 +1423,10 @@
     "releasedAt": "2026-08-16",
     "committedAt": "2026-08-16T17:21:38.036Z",
     "message": "Memorize practice Listen for non-ESV translations now uses the same device speech as profile Listen, including in the Android app when speech is available."
+  },
+  {
+    "releasedAt": "2026-08-23",
+    "committedAt": "2026-08-23T12:43:02.730Z",
+    "message": "Greek word study now stays on Full until you switch back to Brief."
   }
 ]

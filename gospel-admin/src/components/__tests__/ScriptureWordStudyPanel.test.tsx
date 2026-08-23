@@ -1,6 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import ScriptureWordStudyPanel from '@/components/ScriptureWordStudyPanel'
+import {
+  readWordStudyLexiconDetailFromStorage,
+  writeWordStudyLexiconDetailToStorage,
+} from '@/lib/wordStudyLexiconDetailStorage'
 
 jest.mock('@/components/ScriptureHoverModal', () => {
   return function MockScriptureHoverModal({
@@ -14,8 +18,15 @@ jest.mock('@/components/ScriptureHoverModal', () => {
   }
 })
 
+function lexiconFetchUrls(): string[] {
+  return (global.fetch as jest.Mock).mock.calls
+    .map((args) => String(args[0]))
+    .filter((url) => url.includes('/api/scripture/lexicon'))
+}
+
 describe('ScriptureWordStudyPanel', () => {
   beforeEach(() => {
+    localStorage.clear()
     global.fetch = jest.fn(async (url: string | URL) => {
       const u = String(url)
       if (u.includes('/api/scripture/word-study')) {
@@ -55,6 +66,7 @@ describe('ScriptureWordStudyPanel', () => {
         } as Response
       }
       if (u.includes('/api/scripture/lexicon')) {
+        const detail = u.includes('detail=full') ? 'full' : 'brief'
         return {
           ok: true,
           json: async () => ({
@@ -62,8 +74,8 @@ describe('ScriptureWordStudyPanel', () => {
             language: 'grc',
             gloss: 'to transform',
             definition: 'to transform',
-            source: 'TBESG',
-            detail: 'brief',
+            source: detail === 'full' ? 'TFLSJ' : 'TBESG',
+            detail,
           }),
         } as Response
       }
@@ -387,6 +399,285 @@ describe('ScriptureWordStudyPanel', () => {
     await waitFor(() => {
       expect(screen.getByRole('region', { name: 'Lexicon definition' })).toBeInTheDocument()
       expect(screen.getByText('Source: TBESG (brief)')).toBeInTheDocument()
+    })
+  })
+
+  it('reopens Greek lexicon on Full after Full is chosen', async () => {
+    const user = userEvent.setup()
+    render(<ScriptureWordStudyPanel reference="Romans 12:2" enabled />)
+    await waitFor(() => expect(screen.getByText('G3339')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /G3339/i }))
+    await waitFor(() => expect(screen.getByText('Source: TBESG (brief)')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /^Full$/i }))
+    await waitFor(() => expect(screen.getByText('Source: TFLSJ (full)')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Close definition' }))
+    await user.click(screen.getByRole('button', { name: /G3339/i }))
+    await waitFor(() => expect(screen.getByText('Source: TFLSJ (full)')).toBeInTheDocument())
+    expect(lexiconFetchUrls().at(-1)).toContain('detail=full')
+  })
+
+  it('returns to Brief for the next Greek word after switching back', async () => {
+    const user = userEvent.setup()
+    render(<ScriptureWordStudyPanel reference="Romans 12:2" enabled />)
+    await waitFor(() => expect(screen.getByText('G3339')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /G3339/i }))
+    await user.click(await screen.findByRole('button', { name: /^Full$/i }))
+    await waitFor(() => expect(screen.getByText('Source: TFLSJ (full)')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /^Brief$/i }))
+    await waitFor(() => expect(screen.getByText('Source: TBESG (brief)')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Close definition' }))
+    await user.click(screen.getByRole('button', { name: /G3339/i }))
+    await waitFor(() => expect(screen.getByText('Source: TBESG (brief)')).toBeInTheDocument())
+    expect(lexiconFetchUrls().at(-1)).toContain('detail=brief')
+  })
+
+  it('opens the next Greek word on last Brief/Full after Concordance', async () => {
+    ;(global.fetch as jest.Mock).mockImplementation(async (url: string | URL) => {
+      const u = String(url)
+      if (u.includes('/api/scripture/word-study')) {
+        return {
+          ok: true,
+          json: async () => ({
+            reference: 'Romans 12:2',
+            passageKey: 'ROM.12.2',
+            stepRef: 'Rom.12.2',
+            language: 'grc',
+            words: [
+              {
+                position: 1,
+                text: 'καὶ',
+                transliteration: 'kai',
+                strongs: 'G2532',
+                gloss: 'and',
+              },
+              {
+                position: 8,
+                text: 'μεταμορφοῦσθε',
+                transliteration: 'metamorphousthe',
+                strongs: 'G3339',
+                gloss: 'do be transformed',
+              },
+            ],
+            verses: [
+              {
+                verse: 2,
+                passageKey: 'ROM.12.2',
+                stepRef: 'Rom.12.2',
+                words: [
+                  {
+                    position: 1,
+                    text: 'καὶ',
+                    transliteration: 'kai',
+                    strongs: 'G2532',
+                    gloss: 'and',
+                  },
+                  {
+                    position: 8,
+                    text: 'μεταμορφοῦσθε',
+                    transliteration: 'metamorphousthe',
+                    strongs: 'G3339',
+                    gloss: 'do be transformed',
+                  },
+                ],
+              },
+            ],
+          }),
+        } as Response
+      }
+      if (u.includes('/api/scripture/lexicon')) {
+        const detail = u.includes('detail=full') ? 'full' : 'brief'
+        const strongs = u.includes('G2532') ? 'G2532' : 'G3339'
+        return {
+          ok: true,
+          json: async () => ({
+            strongs,
+            language: 'grc',
+            gloss: 'gloss',
+            definition: 'definition',
+            source: detail === 'full' ? 'TFLSJ' : 'TBESG',
+            detail,
+          }),
+        } as Response
+      }
+      if (u.includes('/api/scripture/concordance')) {
+        return {
+          ok: true,
+          json: async () => ({
+            strongs: 'G3339',
+            language: 'grc',
+            total: 1,
+            offset: 0,
+            limit: 50,
+            occurrences: [{ passageKey: 'ROM.12.3', reference: 'Romans 12:3', position: 1 }],
+          }),
+        } as Response
+      }
+      return { ok: false, json: async () => ({}) } as Response
+    })
+    const user = userEvent.setup()
+    render(<ScriptureWordStudyPanel reference="Romans 12:2" enabled />)
+    await waitFor(() => expect(screen.getByText('G3339')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /G3339/i }))
+    await user.click(await screen.findByRole('button', { name: /^Full$/i }))
+    await waitFor(() => expect(screen.getByText('Source: TFLSJ (full)')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /^Concordance$/i }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /Romans 12:3/i })).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /G2532/i }))
+    await waitFor(() => expect(screen.getByText('Source: TFLSJ (full)')).toBeInTheDocument())
+    expect(lexiconFetchUrls().at(-1)).toContain('strongs=G2532')
+    expect(lexiconFetchUrls().at(-1)).toContain('detail=full')
+  })
+
+  it('opens Hebrew on Brief even when Full is stored from Greek', async () => {
+    writeWordStudyLexiconDetailToStorage('full')
+    const hebrewWord = {
+      position: 1,
+      text: 'אֱלֹהִים',
+      transliteration: 'elohim',
+      strongs: 'H430',
+      gloss: 'God',
+    }
+    ;(global.fetch as jest.Mock).mockImplementation(async (url: string | URL) => {
+      const u = String(url)
+      if (u.includes('/api/scripture/word-study')) {
+        return {
+          ok: true,
+          json: async () => ({
+            reference: 'Genesis 1:1',
+            passageKey: 'GEN.1.1',
+            stepRef: 'Gen.1.1',
+            language: 'heb',
+            words: [hebrewWord],
+            verses: [
+              {
+                verse: 1,
+                passageKey: 'GEN.1.1',
+                stepRef: 'Gen.1.1',
+                words: [hebrewWord],
+              },
+            ],
+          }),
+        } as Response
+      }
+      if (u.includes('/api/scripture/lexicon')) {
+        return {
+          ok: true,
+          json: async () => ({
+            strongs: 'H430',
+            language: 'heb',
+            gloss: 'God',
+            definition: 'God, gods',
+            source: 'TBESH',
+            detail: 'brief',
+          }),
+        } as Response
+      }
+      return { ok: false, json: async () => ({}) } as Response
+    })
+    const user = userEvent.setup()
+    render(<ScriptureWordStudyPanel reference="Genesis 1:1" enabled />)
+    await waitFor(() => expect(screen.getByText('H430')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /H430/i }))
+    await waitFor(() => {
+      expect(screen.getByText('Source: TBESH (brief)')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /^Full$/i })).not.toBeInTheDocument()
+    })
+    expect(lexiconFetchUrls().at(-1)).toContain('detail=brief')
+    expect(readWordStudyLexiconDetailFromStorage()).toBe('full')
+  })
+
+  it('shows no-Strong’s error after Concordance when a chip has no lookup key', async () => {
+    const noStrongsWord = {
+      position: 1,
+      text: 'καὶ',
+      transliteration: 'kai',
+      strongs: 'not-a-strongs',
+      gloss: 'and',
+    }
+    ;(global.fetch as jest.Mock).mockImplementation(async (url: string | URL) => {
+      const u = String(url)
+      if (u.includes('/api/scripture/word-study')) {
+        return {
+          ok: true,
+          json: async () => ({
+            reference: 'Romans 12:2',
+            passageKey: 'ROM.12.2',
+            stepRef: 'Rom.12.2',
+            language: 'grc',
+            words: [
+              noStrongsWord,
+              {
+                position: 8,
+                text: 'μεταμορφοῦσθε',
+                transliteration: 'metamorphousthe',
+                strongs: 'G3339',
+                gloss: 'do be transformed',
+              },
+            ],
+            verses: [
+              {
+                verse: 2,
+                passageKey: 'ROM.12.2',
+                stepRef: 'Rom.12.2',
+                words: [
+                  noStrongsWord,
+                  {
+                    position: 8,
+                    text: 'μεταμορφοῦσθε',
+                    strongs: 'G3339',
+                    gloss: 'do be transformed',
+                  },
+                ],
+              },
+            ],
+          }),
+        } as Response
+      }
+      if (u.includes('/api/scripture/lexicon')) {
+        const detail = u.includes('detail=full') ? 'full' : 'brief'
+        return {
+          ok: true,
+          json: async () => ({
+            strongs: 'G3339',
+            language: 'grc',
+            gloss: 'to transform',
+            definition: 'to transform',
+            source: detail === 'full' ? 'TFLSJ' : 'TBESG',
+            detail,
+          }),
+        } as Response
+      }
+      if (u.includes('/api/scripture/concordance')) {
+        return {
+          ok: true,
+          json: async () => ({
+            strongs: 'G3339',
+            language: 'grc',
+            total: 1,
+            offset: 0,
+            limit: 50,
+            occurrences: [{ passageKey: 'ROM.12.3', reference: 'Romans 12:3', position: 1 }],
+          }),
+        } as Response
+      }
+      return { ok: false, json: async () => ({}) } as Response
+    })
+    const user = userEvent.setup()
+    render(<ScriptureWordStudyPanel reference="Romans 12:2" enabled />)
+    await waitFor(() => expect(screen.getByText('G3339')).toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: /G3339/i }))
+    await user.click(await screen.findByRole('button', { name: /^Concordance$/i }))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Romans 12:3/i })).toBeInTheDocument()
+    )
+    await user.click(screen.getByRole('button', { name: 'Close definition' }))
+    await user.click(screen.getByRole('button', { name: /not-a-strongs/i }))
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          'No Strong’s number for this token. The English gloss on the chip is from STEP word data only.'
+        )
+      ).toBeInTheDocument()
     })
   })
 })

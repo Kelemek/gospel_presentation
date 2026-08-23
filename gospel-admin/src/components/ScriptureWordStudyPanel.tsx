@@ -9,6 +9,10 @@ import {
 } from '@/lib/step-bible-text'
 import { wordStudyLanguageLabelFromPassageKey } from '@/lib/step-bible-reference'
 import { dedupeConcordanceOccurrencesByPassage } from '@/lib/step-bible-concordance-dedupe'
+import {
+  readWordStudyLexiconDetailForLanguage,
+  writeWordStudyLexiconDetailToStorage,
+} from '@/lib/wordStudyLexiconDetailStorage'
 import type {
   StepBibleConcordanceOccurrence,
   StepBibleLexiconResult,
@@ -272,7 +276,6 @@ function ScriptureWordStudyPanelContent({
     setSelectedWord(null)
     setLexicon({ status: 'idle' })
     setConcordance({ status: 'idle' })
-    setDetail('brief')
   }
 
   const onWordClick = (raw: StepBibleWord) => {
@@ -286,6 +289,7 @@ function ScriptureWordStudyPanelContent({
     setConcordance({ status: 'idle' })
     if (!key) {
       setExpandedStrongs(null)
+      setDetail(readWordStudyLexiconDetailForLanguage(study?.language))
       setLexicon({
         status: 'error',
         strongs: '',
@@ -294,9 +298,10 @@ function ScriptureWordStudyPanelContent({
       })
       return
     }
+    const lexiconDetail = readWordStudyLexiconDetailForLanguage(study?.language)
     setExpandedStrongs(key)
-    setDetail('brief')
-    void loadLexicon(key, 'brief')
+    setDetail(lexiconDetail)
+    void loadLexicon(key, lexiconDetail)
   }
 
   const concordanceCountLabel =
@@ -360,6 +365,9 @@ function ScriptureWordStudyPanelContent({
             <button
               type="button"
               onClick={() => {
+                if (study?.language === 'grc') {
+                  writeWordStudyLexiconDetailToStorage('brief')
+                }
                 setDetail('brief')
                 void loadLexicon(expandedStrongs, 'brief')
               }}
@@ -371,6 +379,7 @@ function ScriptureWordStudyPanelContent({
               <button
                 type="button"
                 onClick={() => {
+                  writeWordStudyLexiconDetailToStorage('full')
                   setDetail('full')
                   void loadLexicon(expandedStrongs, 'full')
                 }}
