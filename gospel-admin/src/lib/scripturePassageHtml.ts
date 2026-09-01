@@ -77,6 +77,20 @@ function replaceParagraphBreaks(text: string): string {
   return `<p>${text.replace(/\n\n/g, '</p><p>')}</p>`
 }
 
+/**
+ * Liturgical pause marks (Psalms/Habakkuk Selah; NLT Interlude; Psalm 9:16 Higgaion. Selah).
+ * Applied after highlight wrapping so verse-range regexes still see plain text after the last `<sup>`.
+ */
+const SCRIPTURE_PAUSE_MARK_HTML =
+  '<span class="scripture-pause-mark">$1</span><span class="scripture-pause-break" aria-hidden="true"></span>'
+
+export function wrapScriptureSelahHtml(html: string): string {
+  return html.replace(
+    /\b((?:Higgaion\.?\s+)?(?:Selah|Interlude)\.?)(?=[\s<]|$)/gi,
+    SCRIPTURE_PAUSE_MARK_HTML
+  )
+}
+
 /** Tailwind typography wrapper for scripture HTML (`<p>` blocks from {@link replaceParagraphBreaks}). */
 export const SCRIPTURE_READER_PROSE_CLASS =
   'prose max-w-none prose-p:my-0 prose-p:first:mt-0 [&_p+p]:mt-2'
@@ -153,7 +167,7 @@ export function formatScripturePassageHtml(
     const attrs = markAttrsForHighlight(options.savedHighlight.id, options.savedHighlight.colorId)
     html = `<mark ${attrs}>${html}</mark>`
   }
-  return html
+  return wrapScriptureSelahHtml(html)
 }
 
 export function formatScriptureChapterHtml(
@@ -181,7 +195,7 @@ export function formatScriptureChapterHtml(
   }
 
   if (highlightVerses.length === 0) {
-    return processedText
+    return wrapScriptureSelahHtml(processedText)
   }
 
   const firstVerse = highlightVerses[0]
@@ -211,5 +225,5 @@ export function formatScriptureChapterHtml(
     )
   }
 
-  return processedText
+  return wrapScriptureSelahHtml(processedText)
 }

@@ -126,6 +126,8 @@ On profile gospel pages, **ScriptureModal** includes a **Greek**, **Hebrew**, or
 
 **Headings vs. verse text**: ESV requests use `include-headings=false`. API.Bible passage requests use **`content-type=json`** with **`include-titles=false`** so section titles are not requested; `formatApiBiblePassageContent` maps each JSON `para` node to a paragraph (`\n\n` between blocks) and `[n]` verse markers for display. Search snippets and legacy cached plain text still use the string normalizer in `formatApiBiblePassageText`.
 
+**Selah**: `formatScripturePassageHtml` / `formatScriptureChapterHtml` wrap **Selah**, NLT **Interlude**, and **Higgaion. Selah** as a right-aligned italic mark with a line break before the next verse (`wrapScriptureSelahHtml` in [`scripturePassageHtml.ts`](../gospel-admin/src/lib/scripturePassageHtml.ts)).
+
 ### Verse Range Handling
 Scripture references can include verse ranges using hyphens or en-dashes:
 - `John 3:16-18` → Returns verses 16, 17, 18

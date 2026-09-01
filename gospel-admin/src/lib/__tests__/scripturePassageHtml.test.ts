@@ -3,6 +3,7 @@ import {
   formatScripturePassageHtml,
   isolatePsalm119AcrosticHeadings,
   verseSupHtml,
+  wrapScriptureSelahHtml,
 } from '@/lib/scripturePassageHtml'
 
 describe('verseSupHtml', () => {
@@ -40,6 +41,33 @@ describe('isolatePsalm119AcrosticHeadings', () => {
   })
 })
 
+describe('wrapScriptureSelahHtml', () => {
+  it('wraps Selah and starts the next verse after a break', () => {
+    const html = wrapScriptureSelahHtml(
+      'though the mountains tremble at its swelling. Selah <sup>4</sup> There is a river'
+    )
+    expect(html).toContain('<span class="scripture-pause-mark">Selah</span>')
+    expect(html).toContain('<span class="scripture-pause-break" aria-hidden="true"></span>')
+    expect(html).toContain('</span> <sup>4</sup> There is a river')
+  })
+
+  it('wraps Higgaion. Selah as one mark', () => {
+    const html = wrapScriptureSelahHtml('the work of their own hands. Higgaion. Selah')
+    expect(html).toContain('<span class="scripture-pause-mark">Higgaion. Selah</span>')
+    expect(html).not.toMatch(/Higgaion\. <span class="scripture-pause-mark">Selah/)
+  })
+
+  it('wraps NLT Interlude the same way', () => {
+    const html = wrapScriptureSelahHtml('at its swelling. Interlude <sup>4</sup> There is a river')
+    expect(html).toContain('<span class="scripture-pause-mark">Interlude</span>')
+  })
+
+  it('keeps a trailing period with Selah', () => {
+    const html = wrapScriptureSelahHtml('our fortress. Selah.')
+    expect(html).toContain('<span class="scripture-pause-mark">Selah.</span>')
+  })
+})
+
 describe('formatScripturePassageHtml', () => {
   it('converts verse markers and paragraph breaks', () => {
     const html = formatScripturePassageHtml('[1] First verse\n\n[2] Second verse', {
@@ -72,6 +100,16 @@ describe('formatScripturePassageHtml', () => {
       savedHighlight: { id: 'h2', colorId: 'yellow' },
     })
     expect(html).toContain('scripture-highlight-mark-yellow')
+  })
+
+  it('places Selah after the verse and before the next verse number', () => {
+    const html = formatScripturePassageHtml(
+      '[3] though the mountains tremble at its swelling. Selah [4] There is a river whose streams make glad the city of God.',
+      { showVerseNumbers: true }
+    )
+    expect(html).toContain('swelling. <span class="scripture-pause-mark">Selah</span>')
+    expect(html).toContain('scripture-pause-break')
+    expect(html).toMatch(/scripture-pause-break[^>]*>[\s\S]*<sup class="text-blue-600 font-medium">4<\/sup>/)
   })
 })
 
@@ -162,5 +200,19 @@ describe('formatScriptureChapterHtml', () => {
     })
     expect(html).toContain('data-scripture-highlight-id="h1"')
     expect(html).not.toMatch(/<mark[^>]*>[\s\S]*Verse fifteen/)
+  })
+
+  it('keeps Selah inside a saved highlight that ends on that verse', () => {
+    const psalmText =
+      '[3] though the mountains tremble at its swelling. Selah [4] There is a river whose streams make glad the city of God.'
+    const html = formatScriptureChapterHtml(psalmText, {
+      showVerseNumbers: true,
+      highlightVerses: [],
+      savedHighlights: [{ id: 'h1', verseStart: 3, verseEnd: 3, colorId: 'blue' }],
+    })
+    expect(html).toMatch(
+      /<mark[^>]*data-scripture-highlight-id="h1"[^>]*>[\s\S]*scripture-pause-mark">Selah<\/span>/
+    )
+    expect(html).toContain('<sup class="text-blue-600 font-medium">4</sup>')
   })
 })

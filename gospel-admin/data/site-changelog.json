@@ -1428,5 +1428,10 @@
     "releasedAt": "2026-08-23",
     "committedAt": "2026-08-23T12:43:02.730Z",
     "message": "Greek word study now stays on Full until you switch back to Brief."
+  },
+  {
+    "releasedAt": "2026-09-01",
+    "committedAt": "2026-09-01T11:47:57.199Z",
+    "message": "Selah in the Psalms now sits on the right of the line in italics, and the next verse starts on a new line."
   }
 ]

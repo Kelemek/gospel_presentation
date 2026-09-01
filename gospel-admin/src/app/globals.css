@@ -198,6 +198,21 @@ body.dark mark.scripture-highlight-mark-violet {
   color: rgb(237 233 254) !important;
 }
 
+/* Selah / Interlude: sit on the right of the current line (ESV-style), then start the next verse below. */
+span.scripture-pause-mark {
+  float: right;
+  clear: right;
+  font-style: italic;
+  margin-left: 1.5rem;
+  white-space: nowrap;
+}
+
+span.scripture-pause-break {
+  display: block;
+  clear: both;
+  height: 0.65em;
+}
+
 /* Highlighted excerpt text should stay readable even if TipTap/HTML nested spans pin a dark ink. */
 mark[data-resource-highlight-id] *,
 mark[data-resource-highlight-id] strong,
