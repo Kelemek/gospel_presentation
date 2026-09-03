@@ -31,6 +31,11 @@ jobs:
           cd gospel-admin
           npm ci
 
+      - name: Import cross-reference test fixtures
+        run: |
+          cd gospel-admin
+          npm run import-cross-references:fixtures
+
       - name: Run tests
         run: |
           cd gospel-admin

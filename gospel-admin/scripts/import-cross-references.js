@@ -185,7 +185,9 @@ async function main() {
     imported++
   }
 
-  if (fs.existsSync(ROOT)) {
+  // Full import replaces the tree. Fixtures-only overlays ROM/GEN shards so a parallel
+  // Jest worker cannot observe an empty `data/crossrefs` mid-wipe.
+  if (!fixturesOnly && fs.existsSync(ROOT)) {
     for (const entry of fs.readdirSync(ROOT)) {
       if (entry.startsWith('.')) continue
       fs.rmSync(path.join(ROOT, entry), { recursive: true, force: true })
