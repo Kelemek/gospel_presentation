@@ -1508,6 +1508,7 @@ export default function ScriptureModal({
                 }
                 translation={translation}
                 enabled={showScriptureListen}
+                playbackReady={passageSwipeContentReady && !passageSwipeLoading}
                 dayChapterReferences={mcheyneDayChapterReferences}
                 onPlaylistChapterSync={
                   isMcheyneDayPlaylist ? onMcheynePlaylistChapterSync : undefined

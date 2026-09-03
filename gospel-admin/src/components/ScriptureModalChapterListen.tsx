@@ -21,7 +21,7 @@ interface ScriptureModalChapterListenProps {
   enabled: boolean
   /** M'Cheyne: all four chapter refs for the day (Family then Secret); plays in order then stops. */
   dayChapterReferences?: readonly string[]
-  /** When Play starts on a day playlist track, sync the reader to that playlist index. */
+  /** Sync the reader to a day-playlist index (on Play, and before each later track starts). */
   onPlaylistChapterSync?: (playlistIndex: number) => void
   /** Same as scripture modal header Next — used to auto-advance audio when a track ends. */
   hasNext?: boolean
@@ -31,6 +31,11 @@ interface ScriptureModalChapterListenProps {
   scrollContainerRef: RefObject<HTMLElement | null>
   /** Invalidates auto-scroll when visible passage DOM changes without audio URL change. */
   passageScopeKey?: string
+  /**
+   * When false, the next playlist track / auto-advance wait until passage text is on screen.
+   * Defaults to `enabled` when omitted.
+   */
+  playbackReady?: boolean
 }
 
 function scriptureAudioUrl(reference: string, translation: BibleTranslation): string {
@@ -52,6 +57,7 @@ export default function ScriptureModalChapterListen({
   passageScopeRef,
   scrollContainerRef,
   passageScopeKey,
+  playbackReady,
 }: ScriptureModalChapterListenProps) {
   const { showAlert } = useAlertModal()
 
@@ -123,6 +129,7 @@ export default function ScriptureModalChapterListen({
   } = useChapterStreamingAudioListen({
     audioUrls,
     enabled,
+    playbackReady: playbackReady ?? enabled,
     onPlaybackError,
     onTrackIndexChange,
     playlistStartIndex,
