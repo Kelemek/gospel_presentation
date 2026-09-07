@@ -108,7 +108,8 @@ export function useChapterStreamingAudioListen({
   const pendingPlaylistIndexRef = useRef<number | null>(null)
   /** True after we already used header/swipe Next because playlist sync did not move the reader. */
   const playlistNavFallbackRef = useRef(false)
-  const playbackWaitFallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** `window.setTimeout` id in the browser (differs from Node `Timeout` typing). */
+  const playbackWaitFallbackTimerRef = useRef<number | null>(null)
   const ignorePlaybackReadyOnceRef = useRef(false)
 
   useLayoutEffect(() => {

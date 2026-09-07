@@ -462,6 +462,54 @@ describe('useChapterStreamingAudioListen', () => {
     expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(2)
   })
 
+  it('does not call onAutoAdvanceAfterPlayback when the last playlist track ends', async () => {
+    const onAutoAdvanceAfterPlayback = jest.fn(() => true)
+    const onTrackIndexChange = jest.fn()
+    const urls = [
+      '/api/scripture/audio?reference=Genesis%201&translation=esv',
+      '/api/scripture/audio?reference=Matthew%201&translation=esv',
+    ]
+    const user = userEvent.setup()
+    const { rerender } = render(
+      <Harness
+        audioUrls={urls}
+        enabled
+        playlistStartIndex={0}
+        onTrackIndexChange={onTrackIndexChange}
+        onAutoAdvanceAfterPlayback={onAutoAdvanceAfterPlayback}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+    await act(async () => {
+      el.dispatchEvent(new Event('ended'))
+    })
+    expect(onTrackIndexChange).toHaveBeenCalledWith(1)
+
+    rerender(
+      <Harness
+        audioUrls={urls}
+        enabled
+        playlistStartIndex={1}
+        onTrackIndexChange={onTrackIndexChange}
+        onAutoAdvanceAfterPlayback={onAutoAdvanceAfterPlayback}
+      />
+    )
+    await waitFor(() => {
+      expect(el.src).toContain('Matthew')
+    })
+
+    await act(async () => {
+      el.dispatchEvent(new Event('ended'))
+    })
+    await act(async () => {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0)
+      })
+    })
+    expect(onAutoAdvanceAfterPlayback).not.toHaveBeenCalled()
+  })
+
   it('syncs the reader to the playlist index that actually starts after skipped tracks', async () => {
     const onTrackIndexChange = jest.fn()
     const play = HTMLMediaElement.prototype.play as jest.Mock
