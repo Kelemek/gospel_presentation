@@ -55,6 +55,31 @@ describe('ScriptureModal additional behaviors', () => {
     )
   })
 
+  it('shows chapter-only text from the passage fetch without a second chapter request', async () => {
+    let scripturePassageFetches = 0
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (url.includes('/api/scripture?')) {
+        scripturePassageFetches += 1
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ text: '[1] Since we have these promises' }),
+        } as unknown as Response)
+      }
+      return Promise.resolve(defaultFetchSuccess)
+    })
+
+    renderWithTextSize(
+      <ScriptureModal reference="2 Corinthians 7" isOpen onClose={jest.fn()} />
+    )
+
+    await waitFor(() =>
+      expect(screen.getByText(/Since we have these promises/)).toBeInTheDocument()
+    )
+    expect(screen.getByRole('button', { name: /^Verse$/i })).toBeInTheDocument()
+    expect(scripturePassageFetches).toBe(1)
+  })
+
   it('keeps chapter-only scroll area at top after chapter text loads', async () => {
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString()

@@ -34,5 +34,6 @@
   "Memorize practice Listen for non-ESV translations now uses the same device speech as profile Listen, including in the Android app when speech is available.",
   "Greek word study now stays on Full until you switch back to Brief.",
   "Selah in the Psalms now sits on the right of the line in italics, and the next verse starts on a new line.",
-  "When listening to a day’s Bible reading plan, the next chapter’s audio waits until the text is on screen before it starts."
+  "When listening to a day’s Bible reading plan, the next chapter’s audio waits until the text is on screen before it starts.",
+  "Bug fix: Listen now continues to the next reading-plan chapter after a chapter ends, instead of stopping until you swipe or reopen the app."
 ]

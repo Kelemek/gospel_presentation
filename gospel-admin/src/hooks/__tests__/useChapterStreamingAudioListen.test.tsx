@@ -359,6 +359,39 @@ describe('useChapterStreamingAudioListen', () => {
     expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(2)
   })
 
+  it('falls back to onAutoAdvanceAfterPlayback when playlist sync does not change the open chapter', async () => {
+    const onTrackIndexChange = jest.fn()
+    const onAutoAdvanceAfterPlayback = jest.fn(() => true)
+    const urls = [
+      '/api/scripture/audio?reference=Genesis%201&translation=esv',
+      '/api/scripture/audio?reference=Matthew%201&translation=esv',
+    ]
+    const user = userEvent.setup()
+    render(
+      <Harness
+        audioUrls={urls}
+        enabled
+        playlistStartIndex={0}
+        onTrackIndexChange={onTrackIndexChange}
+        onAutoAdvanceAfterPlayback={onAutoAdvanceAfterPlayback}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+    await act(async () => {
+      el.dispatchEvent(new Event('ended'))
+    })
+    expect(onTrackIndexChange).toHaveBeenCalledWith(1)
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, 0)
+      })
+    })
+    expect(onAutoAdvanceAfterPlayback).toHaveBeenCalled()
+  })
+
   it('does not reset playback when audioUrls array identity changes but URLs are unchanged', async () => {
     const urls = [
       '/api/scripture/audio?reference=Genesis%201&translation=esv',

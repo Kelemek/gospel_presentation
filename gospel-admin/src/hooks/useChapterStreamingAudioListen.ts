@@ -51,6 +51,9 @@ export interface UseChapterStreamingAudioListenOptions {
   autoScroll?: ScriptureAudioAutoScrollConfig
 }
 
+/** If the reader never reports the next chapter ready, start audio anyway so Listen cannot stick on Pause. */
+const PLAYBACK_WAIT_FALLBACK_MS = 6000
+
 function audioSrcMatchesUrl(elementSrc: string, relativeUrl: string): boolean {
   try {
     const expected = new URL(relativeUrl, window.location.origin).href
@@ -103,6 +106,10 @@ export function useChapterStreamingAudioListen({
   const playbackReadyRef = useRef(playbackReady)
   /** Next playlist index to play after the reader shows that chapter. */
   const pendingPlaylistIndexRef = useRef<number | null>(null)
+  /** True after we already used header/swipe Next because playlist sync did not move the reader. */
+  const playlistNavFallbackRef = useRef(false)
+  const playbackWaitFallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const ignorePlaybackReadyOnceRef = useRef(false)
 
   useLayoutEffect(() => {
     listenPlaybackRateRef.current = listenPlaybackRate
@@ -144,6 +151,12 @@ export function useChapterStreamingAudioListen({
     autoPlayAfterNavRef.current = false
     pendingAdvanceUrlsKeyRef.current = null
     pendingPlaylistIndexRef.current = null
+    playlistNavFallbackRef.current = false
+    ignorePlaybackReadyOnceRef.current = false
+    if (playbackWaitFallbackTimerRef.current !== null) {
+      clearTimeout(playbackWaitFallbackTimerRef.current)
+      playbackWaitFallbackTimerRef.current = null
+    }
     setAwaitingContinuousPlay(false)
   }, [])
 
@@ -331,7 +344,9 @@ export function useChapterStreamingAudioListen({
         el.src = urls[index]
         applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRateRef.current)
         await el.play()
-        onTrackIndexChangeRef.current?.(index)
+        if (pendingPlaylistIndexRef.current !== index) {
+          onTrackIndexChangeRef.current?.(index)
+        }
         setPassageAudioPlaying(true)
         return true
       } catch {
@@ -359,7 +374,9 @@ export function useChapterStreamingAudioListen({
   const tryPendingContinuousPlay = useCallback(async () => {
     if (tryPendingInFlightRef.current) return false
     if (!autoPlayAfterNavRef.current || !enabled) return false
-    if (!playbackReadyRef.current) return false
+    const ignoreReady = ignorePlaybackReadyOnceRef.current
+    ignorePlaybackReadyOnceRef.current = false
+    if (!playbackReadyRef.current && !ignoreReady) return false
     const urls = audioUrlsRef.current
     if (urls.length === 0) return false
 
@@ -367,12 +384,13 @@ export function useChapterStreamingAudioListen({
       const pendingIdx = pendingPlaylistIndexRef.current
       if (pendingIdx == null || pendingIdx < 0 || pendingIdx >= urls.length) return false
       if (
+        !ignoreReady &&
         onTrackIndexChangeRef.current &&
         playlistStartIndexRef.current !== pendingIdx
       ) {
         return false
       }
-    } else if (pendingAdvanceUrlsKeyRef.current === audioUrlsKey) {
+    } else if (!ignoreReady && pendingAdvanceUrlsKeyRef.current === audioUrlsKey) {
       return false
     }
 
@@ -450,6 +468,24 @@ export function useChapterStreamingAudioListen({
   ])
 
   useEffect(() => {
+    if (!awaitingContinuousPlay || !enabled || !isPlaylist) return
+    const pendingIdx = pendingPlaylistIndexRef.current
+    if (pendingIdx == null) return
+    if (playlistStartIndex === pendingIdx) return
+    if (playlistNavFallbackRef.current) return
+
+    const id = window.setTimeout(() => {
+      if (!autoPlayAfterNavRef.current) return
+      if (playlistStartIndexRef.current === pendingPlaylistIndexRef.current) return
+      if (playlistNavFallbackRef.current) return
+      playlistNavFallbackRef.current = true
+      onAutoAdvanceAfterPlaybackRef.current?.()
+    }, 0)
+
+    return () => clearTimeout(id)
+  }, [awaitingContinuousPlay, enabled, isPlaylist, playlistStartIndex])
+
+  useEffect(() => {
     if (autoPlayAfterNavRef.current && enabled && playbackReady) {
       void tryPendingContinuousPlay()
     }
@@ -461,6 +497,22 @@ export function useChapterStreamingAudioListen({
     playlistStartIndex,
     tryPendingContinuousPlay,
   ])
+
+  useEffect(() => {
+    if (!awaitingContinuousPlay || !enabled) return
+    const timer = window.setTimeout(() => {
+      if (!autoPlayAfterNavRef.current) return
+      ignorePlaybackReadyOnceRef.current = true
+      void tryPendingContinuousPlay()
+    }, PLAYBACK_WAIT_FALLBACK_MS)
+    playbackWaitFallbackTimerRef.current = timer
+    return () => {
+      window.clearTimeout(timer)
+      if (playbackWaitFallbackTimerRef.current === timer) {
+        playbackWaitFallbackTimerRef.current = null
+      }
+    }
+  }, [awaitingContinuousPlay, enabled, tryPendingContinuousPlay])
 
   const handlePassageAudioPlay = useCallback(() => {
     setPassageAudioPlaying(true)
@@ -485,6 +537,10 @@ export function useChapterStreamingAudioListen({
     const urls = audioUrlsRef.current
     if (urls.length > 1 && playlistIndexRef.current < urls.length - 1) {
       schedulePlaylistAdvanceFrom(playlistIndexRef.current + 1)
+      return
+    }
+    if (urls.length > 1) {
+      setPassageAudioPlaying(false)
       return
     }
     const advance = onAutoAdvanceAfterPlaybackRef.current

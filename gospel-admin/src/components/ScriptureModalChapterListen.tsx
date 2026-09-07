@@ -61,9 +61,6 @@ export default function ScriptureModalChapterListen({
 }: ScriptureModalChapterListenProps) {
   const { showAlert } = useAlertModal()
 
-  const isDayPlaylist =
-    dayChapterReferences != null && dayChapterReferences.length > 1
-
   const playlistChapterRefs = useMemo((): readonly string[] => {
     if (dayChapterReferences && dayChapterReferences.length > 0) {
       return dayChapterReferences
@@ -133,7 +130,7 @@ export default function ScriptureModalChapterListen({
     onPlaybackError,
     onTrackIndexChange,
     playlistStartIndex,
-    onAutoAdvanceAfterPlayback: isDayPlaylist ? undefined : onAutoAdvanceAfterPlayback,
+    onAutoAdvanceAfterPlayback,
     autoScroll: enabled
       ? { scopeRef: passageScopeRef, scrollContainerRef, passageScopeKey }
       : undefined,

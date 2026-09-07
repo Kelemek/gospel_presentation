@@ -252,6 +252,7 @@ export default function ScriptureModal({
   const passageScopeRef = useRef<HTMLDivElement>(null)
   const verseTabButtonRef = useRef<HTMLButtonElement>(null)
   const initialChapterViewFetchedRef = useRef(false)
+  const chapterFetchAbortRef = useRef<AbortController | null>(null)
   const scriptureModalTitleId = useId()
 
   const scriptureTabUiKey = useMemo(() => {
@@ -807,15 +808,19 @@ export default function ScriptureModal({
     if (!verseViewSessionKey) return
     const chapterRef = getChapterReference(reference)
     const sessionKey = verseViewSessionKey
+    chapterFetchAbortRef.current?.abort()
+    const abortController = new AbortController()
+    chapterFetchAbortRef.current = abortController
     setContextLoading(true)
     setChapterContextError(null)
 
     try {
       const response = await fetch(
         `/api/scripture?reference=${encodeURIComponent(chapterRef)}&translation=${translation}`,
-        { cache: 'no-store' }
+        { signal: abortController.signal, cache: 'no-store' }
       )
       const data = await response.json()
+      if (abortController.signal.aborted) return
 
       const errMsg = formatScriptureApiError(data)
       if (errMsg) {
@@ -825,14 +830,19 @@ export default function ScriptureModal({
         setChapterView({ sessionKey, text: typeof data.text === 'string' ? data.text : '' })
         setChapterContextError(null)
       }
-    } catch {
+    } catch (err: unknown) {
+      const name = err && typeof err === 'object' && 'name' in err ? String(err.name) : ''
+      if (name === 'AbortError') return
       setChapterView(null)
       setChapterContextError({
         sessionKey,
         error: 'Failed to load chapter context',
       })
     } finally {
-      setContextLoading(false)
+      if (chapterFetchAbortRef.current === abortController) {
+        setContextLoading(false)
+        chapterFetchAbortRef.current = null
+      }
     }
   }, [verseViewSessionKey, reference, translation])
 
@@ -845,6 +855,7 @@ export default function ScriptureModal({
       initialChapterViewFetchedRef.current = false
       return
     }
+    if (isChapterOnlyScriptureReference(reference)) return
     if (
       !preferChapterView ||
       showingContext ||
@@ -863,7 +874,34 @@ export default function ScriptureModal({
     contextLoading,
     verseViewSessionKey,
     fetchChapterContext,
+    reference,
   ])
+
+  useEffect(() => {
+    if (!isOpen || !preferChapterView || !verseViewSessionKey) return
+    if (!isChapterOnlyScriptureReference(reference)) return
+    if (loading || error || !scriptureText) return
+    if (showingContext) return
+    if (initialChapterViewFetchedRef.current) return
+    initialChapterViewFetchedRef.current = true
+    setChapterView({ sessionKey: verseViewSessionKey, text: scriptureText })
+    setChapterContextError(null)
+  }, [
+    isOpen,
+    preferChapterView,
+    verseViewSessionKey,
+    reference,
+    loading,
+    error,
+    scriptureText,
+    showingContext,
+  ])
+
+  useEffect(() => {
+    return () => {
+      chapterFetchAbortRef.current?.abort()
+    }
+  }, [])
 
   const resetScriptureModalScrollTop = useCallback(() => {
     const pane = scrollAreaRef.current
@@ -1220,9 +1258,8 @@ export default function ScriptureModal({
   const isComparing = !!activeCompareTranslation
 
   const passageSwipeContentReady = useMemo(() => {
-    if (error) return false
+    if (error || (isComparing && compareError)) return true
     if (isComparing) {
-      if (compareError) return false
       if (showingContext) return !!chapterText && !!compareChapterText
       return !!scriptureText && !!compareText
     }
@@ -1262,8 +1299,7 @@ export default function ScriptureModal({
 
   const showPassageSwipeLayer = passageSwipeContentReady || isPassageReload
 
-  const showInitialPassageLoading =
-    passageSwipeLoading && !passageSwipeContentReady && !showPassageSwipeLayer
+  const showPassageBodyLoading = passageSwipeLoading && !passageSwipeContentReady
 
   if (!isOpen) return null
 
@@ -1508,7 +1544,7 @@ export default function ScriptureModal({
                 }
                 translation={translation}
                 enabled={showScriptureListen}
-                playbackReady={passageSwipeContentReady && !passageSwipeLoading}
+                playbackReady={passageSwipeContentReady}
                 dayChapterReferences={mcheyneDayChapterReferences}
                 onPlaylistChapterSync={
                   isMcheyneDayPlaylist ? onMcheynePlaylistChapterSync : undefined
@@ -1845,7 +1881,7 @@ export default function ScriptureModal({
                     </p>
                   </div>
                 )}
-                {showInitialPassageLoading ? (
+                {showPassageBodyLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                     <span className="ml-3 text-slate-600 dark:text-slate-300 text-base md:text-lg">
@@ -1931,7 +1967,7 @@ export default function ScriptureModal({
                     </p>
                   </div>
                 )}
-                {showInitialPassageLoading ? (
+                {showPassageBodyLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                     <span className="ml-3 text-slate-600 text-base md:text-lg">
