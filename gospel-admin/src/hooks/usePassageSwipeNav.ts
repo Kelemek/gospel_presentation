@@ -16,8 +16,6 @@ export const PASSAGE_SWIPE_HORIZONTAL_RATIO = 1.2
 /** Vertical scroll when |dy| dominates |dx| by this factor (higher = harder to steal a horizontal swipe). */
 export const PASSAGE_SWIPE_VERTICAL_RATIO = 1.65
 export const PASSAGE_SWIPE_ANIMATION_MS = 280
-/** Give the next passage time to load after a swipe before dropping the loading placeholder. */
-export const PASSAGE_SWIPE_CONTENT_WAIT_MS = 6000
 /** iOS-style deceleration curve (similar to Mail row animations). */
 export const PASSAGE_SWIPE_EASING = 'cubic-bezier(0.22, 0.61, 0.36, 1)'
 const RUBBER_BAND_FACTOR = 0.35
@@ -335,23 +333,6 @@ export function usePassageSwipeNav({
 
     return () => clearTimeout(id)
   }, [pendingNav, contentReady, contentKey, setOffsets, setPendingNav, setPhaseSync])
-
-  /** If the next passage never becomes ready, drop the swipe placeholder so the reader is not stuck. */
-  useEffect(() => {
-    if (!pendingNav || !exitCompletedRef.current) return
-    if (contentReady && contentKey !== contentKeyAtCommitRef.current) return
-
-    const id = window.setTimeout(() => {
-      if (!pendingNavRef.current || !exitCompletedRef.current) return
-      setPendingNav(null)
-      exitCompletedRef.current = false
-      setTransitionEnabled(false)
-      setOffsets(0, null, null)
-      setPhaseSync('idle')
-    }, PASSAGE_SWIPE_CONTENT_WAIT_MS)
-
-    return () => clearTimeout(id)
-  }, [pendingNav, contentReady, contentKey, phase, setOffsets, setPendingNav, setPhaseSync])
 
   useEffect(() => () => clearExitFallback(), [clearExitFallback])
 

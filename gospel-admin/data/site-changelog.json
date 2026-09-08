@@ -1443,5 +1443,10 @@
     "releasedAt": "2026-09-07",
     "committedAt": "2026-09-07T12:38:07.827Z",
     "message": "Bug fix: Listen now continues to the next reading-plan chapter after a chapter ends, instead of stopping until you swipe or reopen the app."
+  },
+  {
+    "releasedAt": "2026-09-08",
+    "committedAt": "2026-09-08T11:26:18.297Z",
+    "message": "Bug fix: Listening to a day’s Bible reading plan now moves to the next chapter the way it did before a recent timing change that could leave the next reading stuck on loading."
   }
 ]

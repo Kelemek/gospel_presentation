@@ -272,10 +272,7 @@ export function useProfileScriptureModal({
           isOpen: true,
           ...(pickerNavigation
             ? { pickerNavigation: true as const, mcheynePlanCardPin: undefined }
-            : {
-                pickerNavigation: undefined,
-                ...(prev.mcheynePlanCardPin ? { mcheynePlanCardPin: true as const } : {}),
-              }),
+            : { pickerNavigation: undefined }),
           ...(chapterView ? { initialChapterView: true as const } : { initialChapterView: undefined }),
         }
       })

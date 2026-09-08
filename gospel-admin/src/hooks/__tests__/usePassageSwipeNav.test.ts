@@ -1,7 +1,6 @@
 import { renderHook, act, waitFor } from '@testing-library/react'
 import {
   PASSAGE_SWIPE_COMMIT_RATIO,
-  PASSAGE_SWIPE_CONTENT_WAIT_MS,
   PASSAGE_SWIPE_DIRECTION_LOCK_PX,
   resolvePassageSwipeAxis,
   usePassageSwipeNav,
@@ -376,44 +375,6 @@ describe('usePassageSwipeNav', () => {
     })
 
     expect(onNext).toHaveBeenCalledTimes(1)
-  })
-
-  it('drops the swipe placeholder if the next passage never becomes ready', () => {
-    const { result } = renderHook(() =>
-      usePassageSwipeNav({
-        containerWidth: width,
-        canGoNext: true,
-        canGoPrevious: true,
-        onNext,
-        onPrevious,
-        contentReady: false,
-        contentKey: 'Genesis 1|chapter|esv|',
-      })
-    )
-
-    const { onPointerDown, onPointerMove, onPointerUp } = result.current.pointerHandlers
-    const commitDx = width * PASSAGE_SWIPE_COMMIT_RATIO + 5
-
-    act(() => {
-      onPointerDown(pointerAt(200, 100, captureTarget))
-      onPointerMove(pointerAt(200 - commitDx, 100, captureTarget))
-      onPointerUp(pointerAt(200 - commitDx, 100, captureTarget))
-    })
-
-    act(() => {
-      result.current.onTransitionEnd('transform')
-    })
-
-    expect(onNext).toHaveBeenCalledTimes(1)
-    expect(result.current.isSwipeActive).toBe(true)
-
-    act(() => {
-      jest.advanceTimersByTime(PASSAGE_SWIPE_CONTENT_WAIT_MS)
-    })
-
-    expect(result.current.isSwipeActive).toBe(false)
-    expect(result.current.phase).toBe('idle')
-    expect(result.current.currentOffsetX).toBe(0)
   })
 
   it('commits previous at 50% and calls onPrevious after exit transition', () => {

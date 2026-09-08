@@ -2,9 +2,9 @@
  * @jest-environment jsdom
  */
 
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { createRef, useState } from 'react'
+import { createRef } from 'react'
 import ScriptureModalChapterListen from '@/components/ScriptureModalChapterListen'
 
 function defaultAutoScrollProps() {
@@ -207,67 +207,6 @@ describe('ScriptureModalChapterListen', () => {
       audio.dispatchEvent(new Event('ended'))
     })
     expect(onPlaylistChapterSync).toHaveBeenCalledWith(1)
-    expect(audio.src).toContain('Genesis')
-    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1)
-  })
-
-  it('starts the next day-playlist track after the open chapter text is ready', async () => {
-    const onPlaylistChapterSync = jest.fn()
-    const dayRefs = ['Genesis 1', 'Matthew 1'] as const
-    const user = userEvent.setup()
-    const { rerender } = render(
-      <ScriptureModalChapterListen
-        passageReference="Genesis 1"
-        chapterReference="Genesis 1"
-        translation="esv"
-        enabled
-        playbackReady={false}
-        {...defaultAutoScrollProps()}
-        dayChapterReferences={dayRefs}
-        onPlaylistChapterSync={onPlaylistChapterSync}
-      />
-    )
-    await user.click(screen.getByRole('button', { name: /listen to today's readings/i }))
-    await user.click(screen.getByTestId('memorize-listen-passage'))
-    const audio = document.querySelector('audio') as HTMLAudioElement
-    await act(async () => {
-      audio.dispatchEvent(new Event('ended'))
-    })
-    expect(onPlaylistChapterSync).toHaveBeenCalledWith(1)
-    expect(audio.src).toContain('Genesis')
-
-    rerender(
-      <ScriptureModalChapterListen
-        passageReference="Matthew 1"
-        chapterReference="Matthew 1"
-        translation="esv"
-        enabled
-        playbackReady={false}
-        {...defaultAutoScrollProps()}
-        dayChapterReferences={dayRefs}
-        onPlaylistChapterSync={onPlaylistChapterSync}
-      />
-    )
-    await act(async () => {
-      await Promise.resolve()
-    })
-    expect(audio.src).toContain('Genesis')
-
-    rerender(
-      <ScriptureModalChapterListen
-        passageReference="Matthew 1"
-        chapterReference="Matthew 1"
-        translation="esv"
-        enabled
-        playbackReady
-        {...defaultAutoScrollProps()}
-        dayChapterReferences={dayRefs}
-        onPlaylistChapterSync={onPlaylistChapterSync}
-      />
-    )
-    await waitFor(() => {
-      expect(audio.src).toContain('Matthew')
-    })
   })
 
   it('uses verse reference in audio URL when not on a day playlist', async () => {
@@ -314,30 +253,18 @@ describe('ScriptureModalChapterListen', () => {
   it('does not call onNext when M\'Cheyne day playlist finishes', async () => {
     const onNext = jest.fn()
     const user = userEvent.setup()
-    const dayChapterReferences = ['Genesis 1', 'Matthew 1'] as const
-    const autoScrollProps = defaultAutoScrollProps()
-
-    function PlaylistHarness() {
-      const [chapterReference, setChapterReference] = useState(dayChapterReferences[0])
-      return (
-        <ScriptureModalChapterListen
-          passageReference={chapterReference}
-          chapterReference={chapterReference}
-          translation="esv"
-          enabled
-          {...autoScrollProps}
-          hasNext
-          onNext={onNext}
-          dayChapterReferences={dayChapterReferences}
-          onPlaylistChapterSync={(index) => {
-            const next = dayChapterReferences[index]
-            if (next) setChapterReference(next)
-          }}
-        />
-      )
-    }
-
-    render(<PlaylistHarness />)
+    render(
+      <ScriptureModalChapterListen
+        passageReference="Genesis 1"
+        chapterReference="Genesis 1"
+        translation="esv"
+        enabled
+        {...defaultAutoScrollProps()}
+        hasNext
+        onNext={onNext}
+        dayChapterReferences={['Genesis 1', 'Matthew 1']}
+      />
+    )
     await user.click(screen.getByRole('button', { name: /listen to today's readings/i }))
     await user.click(screen.getByTestId('memorize-listen-passage'))
     const audio = document.querySelector('audio') as HTMLAudioElement
@@ -345,18 +272,7 @@ describe('ScriptureModalChapterListen', () => {
       audio.dispatchEvent(new Event('ended'))
     })
     await act(async () => {
-      await new Promise<void>((resolve) => {
-        setTimeout(resolve, 0)
-      })
-    })
-    expect(onNext).not.toHaveBeenCalled()
-    await act(async () => {
       audio.dispatchEvent(new Event('ended'))
-    })
-    await act(async () => {
-      await new Promise<void>((resolve) => {
-        setTimeout(resolve, 0)
-      })
     })
     expect(onNext).not.toHaveBeenCalled()
   })
