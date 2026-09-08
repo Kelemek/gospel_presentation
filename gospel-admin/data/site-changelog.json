@@ -1448,5 +1448,10 @@
     "releasedAt": "2026-09-08",
     "committedAt": "2026-09-08T11:26:18.297Z",
     "message": "Bug fix: Listening to a day’s Bible reading plan now moves to the next chapter the way it did before a recent timing change that could leave the next reading stuck on loading."
+  },
+  {
+    "releasedAt": "2026-09-08",
+    "committedAt": "2026-09-08T11:35:49.057Z",
+    "message": "When listening to a day’s Bible reading plan, the next chapter’s audio waits until the text is on screen before it starts."
   }
 ]

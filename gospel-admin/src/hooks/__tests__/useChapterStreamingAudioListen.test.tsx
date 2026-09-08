@@ -4,7 +4,7 @@
 
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useChapterStreamingAudioListen } from '@/hooks/useChapterStreamingAudioListen'
+import { useChapterStreamingAudioListen, PLAYLIST_ADVANCE_LOAD_FALLBACK_MS } from '@/hooks/useChapterStreamingAudioListen'
 import {
   announceExclusiveListenOwner,
   claimExclusiveListenOwner,
@@ -55,6 +55,7 @@ const mockApplyRate = applyMemorizeListenPlaybackRateToMediaElement as jest.Mock
 function Harness({
   audioUrls,
   enabled,
+  playbackReady,
   onEnded,
   onTrackIndexChange,
   playlistStartIndex,
@@ -63,6 +64,7 @@ function Harness({
 }: {
   audioUrls: string[]
   enabled: boolean
+  playbackReady?: boolean
   onEnded?: () => void
   onTrackIndexChange?: (index: number) => void
   playlistStartIndex?: number
@@ -84,6 +86,7 @@ function Harness({
   } = useChapterStreamingAudioListen({
     audioUrls,
     enabled,
+    playbackReady,
     onTrackIndexChange,
     playlistStartIndex,
     onAutoAdvanceAfterPlayback,
@@ -256,6 +259,151 @@ describe('useChapterStreamingAudioListen', () => {
       el.dispatchEvent(new Event('ended'))
     })
     expect(onTrackIndexChange).toHaveBeenCalledWith(1)
+  })
+
+  it('starts the next playlist track only after the reader shows that chapter and text is ready', async () => {
+    const onTrackIndexChange = jest.fn()
+    const urls = [
+      '/api/scripture/audio?reference=Genesis%201&translation=esv',
+      '/api/scripture/audio?reference=Matthew%201&translation=esv',
+    ]
+    const user = userEvent.setup()
+    const { rerender } = render(
+      <Harness
+        audioUrls={urls}
+        enabled
+        playbackReady
+        playlistStartIndex={0}
+        onTrackIndexChange={onTrackIndexChange}
+      />
+    )
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+    expect(el.src).toContain('Genesis')
+
+    await act(async () => {
+      el.dispatchEvent(new Event('ended'))
+    })
+    expect(onTrackIndexChange).toHaveBeenCalledWith(1)
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1)
+
+    rerender(
+      <Harness
+        audioUrls={urls}
+        enabled
+        playbackReady={false}
+        playlistStartIndex={1}
+        onTrackIndexChange={onTrackIndexChange}
+      />
+    )
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1)
+    expect(el.src).toContain('Genesis')
+
+    rerender(
+      <Harness
+        audioUrls={urls}
+        enabled
+        playbackReady
+        playlistStartIndex={1}
+        onTrackIndexChange={onTrackIndexChange}
+      />
+    )
+    await waitFor(() => {
+      expect(el.src).toContain('Matthew')
+    })
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(2)
+  })
+
+  it('starts the next playlist track if the reader never catches up', async () => {
+    jest.useFakeTimers()
+    try {
+      const urls = [
+        '/api/scripture/audio?reference=Genesis%201&translation=esv',
+        '/api/scripture/audio?reference=Matthew%201&translation=esv',
+      ]
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
+      render(<Harness audioUrls={urls} enabled playbackReady playlistStartIndex={0} />)
+      await user.click(screen.getByRole('button', { name: 'primary' }))
+      const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+
+      await act(async () => {
+        el.dispatchEvent(new Event('ended'))
+      })
+      expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1)
+
+      await act(async () => {
+        jest.advanceTimersByTime(800)
+        await Promise.resolve()
+      })
+      expect(el.src).toContain('Matthew')
+      expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(2)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('starts the next playlist track if the next chapter never becomes ready', async () => {
+    jest.useFakeTimers()
+    try {
+      const urls = [
+        '/api/scripture/audio?reference=Genesis%201&translation=esv',
+        '/api/scripture/audio?reference=Matthew%201&translation=esv',
+      ]
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime })
+      const { rerender } = render(
+        <Harness audioUrls={urls} enabled playbackReady playlistStartIndex={0} />
+      )
+      await user.click(screen.getByRole('button', { name: 'primary' }))
+      const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+
+      await act(async () => {
+        el.dispatchEvent(new Event('ended'))
+      })
+      rerender(
+        <Harness audioUrls={urls} enabled playbackReady={false} playlistStartIndex={1} />
+      )
+      expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1)
+
+      await act(async () => {
+        jest.advanceTimersByTime(PLAYLIST_ADVANCE_LOAD_FALLBACK_MS)
+        await Promise.resolve()
+      })
+      expect(el.src).toContain('Matthew')
+      expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(2)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('cancels a pending playlist advance when Pause is pressed while waiting', async () => {
+    const urls = [
+      '/api/scripture/audio?reference=Genesis%201&translation=esv',
+      '/api/scripture/audio?reference=Matthew%201&translation=esv',
+    ]
+    const user = userEvent.setup()
+    const { rerender } = render(
+      <Harness audioUrls={urls} enabled playbackReady playlistStartIndex={0} />
+    )
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+    await act(async () => {
+      el.dispatchEvent(new Event('ended'))
+    })
+    expect(screen.getByTestId('primary-label')).toHaveTextContent('Pause')
+
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    expect(screen.getByTestId('primary-label')).toHaveTextContent('Play')
+
+    rerender(
+      <Harness audioUrls={urls} enabled playbackReady playlistStartIndex={1} />
+    )
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1)
   })
 
   it('does not reset playback when audioUrls array identity changes but URLs are unchanged', async () => {

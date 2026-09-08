@@ -36,5 +36,6 @@
   "Selah in the Psalms now sits on the right of the line in italics, and the next verse starts on a new line.",
   "When listening to a day’s Bible reading plan, the next chapter’s audio waits until the text is on screen before it starts.",
   "Bug fix: Listen now continues to the next reading-plan chapter after a chapter ends, instead of stopping until you swipe or reopen the app.",
-  "Bug fix: Listening to a day’s Bible reading plan now moves to the next chapter the way it did before a recent timing change that could leave the next reading stuck on loading."
+  "Bug fix: Listening to a day’s Bible reading plan now moves to the next chapter the way it did before a recent timing change that could leave the next reading stuck on loading.",
+  "When listening to a day’s Bible reading plan, the next chapter’s audio waits until the text is on screen before it starts."
 ]

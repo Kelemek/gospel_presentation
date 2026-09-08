@@ -31,6 +31,11 @@ interface ScriptureModalChapterListenProps {
   scrollContainerRef: RefObject<HTMLElement | null>
   /** Invalidates auto-scroll when visible passage DOM changes without audio URL change. */
   passageScopeKey?: string
+  /**
+   * When set, the next day-playlist track waits until this is true (passage text on screen).
+   * Omit to start the next track as soon as the current one ends.
+   */
+  playbackReady?: boolean
 }
 
 function scriptureAudioUrl(reference: string, translation: BibleTranslation): string {
@@ -52,6 +57,7 @@ export default function ScriptureModalChapterListen({
   passageScopeRef,
   scrollContainerRef,
   passageScopeKey,
+  playbackReady,
 }: ScriptureModalChapterListenProps) {
   const { showAlert } = useAlertModal()
 
@@ -123,6 +129,7 @@ export default function ScriptureModalChapterListen({
   } = useChapterStreamingAudioListen({
     audioUrls,
     enabled,
+    playbackReady: isDayPlaylist ? playbackReady : undefined,
     onPlaybackError,
     onTrackIndexChange,
     playlistStartIndex,

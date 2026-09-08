@@ -1220,9 +1220,8 @@ export default function ScriptureModal({
   const isComparing = !!activeCompareTranslation
 
   const passageSwipeContentReady = useMemo(() => {
-    if (error) return false
+    if (error || (isComparing && compareError)) return true
     if (isComparing) {
-      if (compareError) return false
       if (showingContext) return !!chapterText && !!compareChapterText
       return !!scriptureText && !!compareText
     }
@@ -1508,6 +1507,11 @@ export default function ScriptureModal({
                 }
                 translation={translation}
                 enabled={showScriptureListen}
+                playbackReady={
+                  isMcheyneDayPlaylist
+                    ? passageSwipeContentReady && !passageSwipeLoading
+                    : undefined
+                }
                 dayChapterReferences={mcheyneDayChapterReferences}
                 onPlaylistChapterSync={
                   isMcheyneDayPlaylist ? onMcheynePlaylistChapterSync : undefined
