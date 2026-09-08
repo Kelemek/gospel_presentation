@@ -66,7 +66,7 @@ To copy Kelemek `main` onto the fork (on demand only):
 npm run sync-prod
 ```
 
-That runs `gh repo sync gp-cp-church/gospel_presentation --branch main`. In Cursor you can also say **push to prod**. On GitHub: open the fork → **Sync fork**.
+That runs `gh repo sync gp-cp-church/gospel_presentation --branch main`. In Cursor you can also say **push to prod**; after the fork updates, the agent waits for the production build on Vercel team **gp-cp-churchs-projects**, project **gospel-presentation** (Git-connected to this fork — not the Kelemek Vercel account). It polls the **Vercel** GitHub status on `gp-cp-church/gospel_presentation` and reports success or failure. On GitHub: open the fork → **Sync fork**.
 
 ### Production Setup
 - [ ] Supabase production project created

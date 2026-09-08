@@ -16,13 +16,19 @@ Do **not** sync, push to, or update the church fork when the user asks to commit
 Only when they explicitly say **push to prod**, **sync prod**, **deploy to prod git**, or **sync the church fork**:
 
 1. Confirm `origin/main` (Kelemek) has the commits they intend. If this clone is behind or has unpushed work, say so and stop unless they still want to proceed.
-2. Run:
+2. Update church `main` to that SHA. Prefer `git push https://github.com/gp-cp-church/gospel_presentation.git main` (same git login as `origin`). Fallback: `npm run sync-prod` / `gh repo sync gp-cp-church/gospel_presentation --branch main`. Do **not** pass `--force` unless they ask. Request approval if the tool blocks the production push.
+3. Confirm the fork’s `main` SHA matches Kelemek `main`.
+4. **Wait for the Vercel production build** of that SHA on the **church** Vercel team — the one Git-connected to `gp-cp-church/gospel_presentation`, **not** a Kelemek or personal Vercel project.
+
+   Team/project: [gp-cp-churchs-projects/gospel-presentation](https://vercel.com/gp-cp-churchs-projects/gospel-presentation)
+
+   Poll the **church repo** commit status (Vercel’s GitHub integration posts here):
 
    ```bash
-   gh repo sync gp-cp-church/gospel_presentation --branch main
+   gh api repos/gp-cp-church/gospel_presentation/commits/<sha>/status \
+     --jq '{state, vercel: [.statuses[] | select(.context=="Vercel") | {state, description, target_url}]}'
    ```
 
-   (same as `npm run sync-prod` from the repo root.) Do **not** pass `--force` unless they ask.
-3. Confirm the fork’s `main` SHA matches `Kelemek/gospel_presentation` `main`. Tell them production’s next Vercel build will use that SHA.
+   Do **not** poll `Kelemek/gospel_presentation` or any other Vercel account. Poll about every 20s. `pending` means still building. Stop on `success` or `failure`/`error`. If still pending after ~20 minutes, report that it is still building and include the `target_url` (should be under `vercel.com/gp-cp-churchs-projects/`). On success, say production is live and include that dashboard URL.
 
-If `gh` is not authenticated for the church org, give them that command and the GitHub UI path: open the fork → **Sync fork**.
+If git/`gh` cannot write the church fork, say so and point them to the fork → **Sync fork**.
