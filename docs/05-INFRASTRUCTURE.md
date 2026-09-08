@@ -56,6 +56,18 @@ Tables use RLS appropriate to their sensitivity (see Supabase **Policies** and `
 - [ ] Database migrations completed
 - [ ] Supabase RLS policies verified
 
+### Production GitHub
+
+Vercel production builds from the **church fork** [gp-cp-church/gospel_presentation](https://github.com/gp-cp-church/gospel_presentation), not from [Kelemek/gospel_presentation](https://github.com/Kelemek/gospel_presentation). Pushing to the Kelemek repo does **not** update production.
+
+To copy Kelemek `main` onto the fork (on demand only):
+
+```bash
+npm run sync-prod
+```
+
+That runs `gh repo sync gp-cp-church/gospel_presentation --branch main`. In Cursor you can also say **push to prod**. On GitHub: open the fork → **Sync fork**.
+
 ### Production Setup
 - [ ] Supabase production project created
 - [ ] Custom SMTP configured (email)

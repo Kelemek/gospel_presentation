@@ -7,7 +7,8 @@
     "build": "cd gospel-admin && npm run build",
     "start": "cd gospel-admin && npm run start",
     "install-deps": "cd gospel-admin && npm install",
-    "resize-appstore": "node scripts/resize-appstore-images.js"
+    "resize-appstore": "node scripts/resize-appstore-images.js",
+    "sync-prod": "gh repo sync gp-cp-church/gospel_presentation --branch main"
   },
   "devDependencies": {
     "sharp": "^0.33.5"

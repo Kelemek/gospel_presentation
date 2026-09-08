@@ -1,0 +1,28 @@
+---
+description: On-demand sync of the production GitHub fork; never after a Kelemek-only push
+alwaysApply: true
+---
+
+# Push to production git (church fork)
+
+Production is built from **[gp-cp-church/gospel_presentation](https://github.com/gp-cp-church/gospel_presentation)**, a fork of **[Kelemek/gospel_presentation](https://github.com/Kelemek/gospel_presentation)** (`origin`).
+
+## Never automatic
+
+Do **not** sync, push to, or update the church fork when the user asks to commit or push to `origin` / the Kelemek repo. Shipping to `Kelemek/gospel_presentation` does not go to production.
+
+## When the user asks
+
+Only when they explicitly say **push to prod**, **sync prod**, **deploy to prod git**, or **sync the church fork**:
+
+1. Confirm `origin/main` (Kelemek) has the commits they intend. If this clone is behind or has unpushed work, say so and stop unless they still want to proceed.
+2. Run:
+
+   ```bash
+   gh repo sync gp-cp-church/gospel_presentation --branch main
+   ```
+
+   (same as `npm run sync-prod` from the repo root.) Do **not** pass `--force` unless they ask.
+3. Confirm the fork’s `main` SHA matches `Kelemek/gospel_presentation` `main`. Tell them production’s next Vercel build will use that SHA.
+
+If `gh` is not authenticated for the church org, give them that command and the GitHub UI path: open the fork → **Sync fork**.
