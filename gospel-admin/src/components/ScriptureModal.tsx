@@ -1261,8 +1261,7 @@ export default function ScriptureModal({
 
   const showPassageSwipeLayer = passageSwipeContentReady || isPassageReload
 
-  const showInitialPassageLoading =
-    passageSwipeLoading && !passageSwipeContentReady && !showPassageSwipeLayer
+  const showPassageBodyLoading = passageSwipeLoading && !passageSwipeContentReady
 
   if (!isOpen) return null
 
@@ -1848,7 +1847,7 @@ export default function ScriptureModal({
                     </p>
                   </div>
                 )}
-                {showInitialPassageLoading ? (
+                {showPassageBodyLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                     <span className="ml-3 text-slate-600 dark:text-slate-300 text-base md:text-lg">
@@ -1934,7 +1933,7 @@ export default function ScriptureModal({
                     </p>
                   </div>
                 )}
-                {showInitialPassageLoading ? (
+                {showPassageBodyLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                     <span className="ml-3 text-slate-600 text-base md:text-lg">

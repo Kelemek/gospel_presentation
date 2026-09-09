@@ -381,6 +381,56 @@ describe('ScriptureModal additional behaviors', () => {
     await waitFor(() => expect(screen.getByText(/Compare column text/)).toBeInTheDocument())
   })
 
+  it('shows body Loading spinner on passage reload while swipe layer stays mounted', async () => {
+    let resolveNext!: (value: Response) => void
+    const nextFetch = new Promise<Response>((resolve) => {
+      resolveNext = resolve
+    })
+
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (url.includes('reference=John%203%3A16&')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ text: 'For God so loved' }),
+        } as unknown as Response)
+      }
+      if (url.includes('reference=John%203%3A17&')) {
+        return nextFetch
+      }
+      return Promise.resolve(defaultFetchSuccess)
+    })
+
+    const { rerender } = renderWithTextSize(
+      <ScriptureModal reference="John 3:16" isOpen onClose={jest.fn()} />
+    )
+
+    await waitFor(() => expect(screen.getByText(/For God so loved/)).toBeInTheDocument())
+    expect(
+      document.querySelector('[data-tour="scripture-modal-passage-swipe"]')
+    ).toBeTruthy()
+
+    rerender(
+      <TextSizeProvider>
+        <ScriptureModal reference="John 3:17" isOpen onClose={jest.fn()} />
+      </TextSizeProvider>
+    )
+
+    expect(
+      document.querySelector('[data-tour="scripture-modal-passage-swipe"]')
+    ).toBeTruthy()
+    expect(screen.getByText(/Loading scripture/)).toBeInTheDocument()
+
+    await act(async () => {
+      resolveNext({
+        ok: true,
+        json: () => Promise.resolve({ text: 'For God did not send' }),
+      } as unknown as Response)
+    })
+
+    await waitFor(() => expect(screen.getByText(/For God did not send/)).toBeInTheDocument())
+  })
+
   function dispatchPointer(
     target: HTMLElement,
     type: 'pointerdown' | 'pointermove' | 'pointerup',

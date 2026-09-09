@@ -1453,5 +1453,10 @@
     "releasedAt": "2026-09-08",
     "committedAt": "2026-09-08T11:35:49.057Z",
     "message": "When listening to a day’s Bible reading plan, the next chapter’s audio waits until the text is on screen before it starts."
+  },
+  {
+    "releasedAt": "2026-09-09",
+    "committedAt": "2026-09-09T12:39:03.836Z",
+    "message": "Bug fix: Listen now shows the usual loading spinner while the next verse or chapter text is loading."
   }
 ]
