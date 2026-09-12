@@ -41,7 +41,8 @@ SELECT * FROM get_backup_tables() WHERE table_name IN (
   - `notion_token`
   - `notion_database_id`
 - [ ] Create a Notion **internal integration** with insert access to the Gospel Presentation **Site issues** database
-- [ ] In **Admin → Settings → Notion Feedback Settings**: paste the integration token and Site issues database/data-source ID (`5c7d52ea-16a5-4471-914f-cac7baf28add`), enable feedback, **Test Connection**, optionally **Test Create Row**, **Save Settings**
+- [ ] In Notion, open **Site issues** → **•••** → **Connections** and add that integration. Also connect the parent **Gospel Presentation** page. Inviting the integration as a person does not grant API access.
+- [ ] In **Admin → Settings → Notion Feedback Settings**: paste the integration token and either the Site issues URL ID (`1fc7f85d-baca-4a05-aef5-5c724ce07ecd`) or data-source ID (`5c7d52ea-16a5-4471-914f-cac7baf28add`), enable feedback, **Test Connection**, optionally **Test Create Row**, **Save Settings**
 - [ ] Optional: set `NOTION_FEEDBACK_TOKEN` (and `NOTION_FEEDBACK_DATABASE_ID`) on Vercel instead of storing the token in `admin_settings`
 - [ ] Optional: add a Notion Automation on Site issues — **page added → notify me**
 - [ ] Test cleanup function: `SELECT cleanup_expired_verification_codes();`

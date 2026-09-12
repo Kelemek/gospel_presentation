@@ -5,6 +5,7 @@ import {
   createNotionFeedbackPage,
   createNotionTestRow,
   DEFAULT_NOTION_DATABASE_ID,
+  DEFAULT_NOTION_DATABASE_PAGE_ID,
   formatFeedbackPagePlainText,
   isFeedbackType,
   isNotionFeedbackConfigured,
@@ -12,7 +13,9 @@ import {
   mapFeedbackTypeToNotion,
   maskNotionToken,
   normalizeFeedbackEmail,
+  normalizeNotionId,
   resolveNotionFeedbackConfig,
+  resolveNotionParent,
   TEST_CREATE_ROW_TITLE,
   testNotionConnection,
 } from '@/lib/notionFeedback'
@@ -57,6 +60,17 @@ describe('notionFeedback', () => {
     it('rejects invalid types', () => {
       expect(isFeedbackType('other')).toBe(false)
       expect(isFeedbackType(null)).toBe(false)
+    })
+  })
+
+  describe('normalizeNotionId', () => {
+    it('hyphenates compact IDs and extracts them from Notion URLs', () => {
+      expect(normalizeNotionId('1fc7f85dbaca4a05aef55c724ce07ecd')).toBe(
+        DEFAULT_NOTION_DATABASE_PAGE_ID
+      )
+      expect(
+        normalizeNotionId('https://app.notion.com/p/1fc7f85dbaca4a05aef55c724ce07ecd?pvs=204')
+      ).toBe(DEFAULT_NOTION_DATABASE_PAGE_ID)
     })
   })
 
@@ -234,9 +248,11 @@ describe('notionFeedback', () => {
     })
 
     it('posts to Notion with a data_source parent when configured', async () => {
-      ;(global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => ({ url: 'https://www.notion.so/page' }),
+      ;(global.fetch as jest.Mock).mockImplementation(async (url: string) => {
+        if (String(url).includes('/data_sources/')) {
+          return { ok: true, json: async () => ({ id: DEFAULT_NOTION_DATABASE_ID, name: 'Site issues' }) }
+        }
+        return { ok: true, json: async () => ({ url: 'https://www.notion.so/page' }) }
       })
 
       const result = await createNotionFeedbackPage(
@@ -255,11 +271,11 @@ describe('notionFeedback', () => {
       )
 
       expect(result).toEqual({ success: true, url: 'https://www.notion.so/page' })
-      expect(global.fetch).toHaveBeenCalledWith(
-        'https://api.notion.com/v1/pages',
-        expect.objectContaining({ method: 'POST' })
+      const pageCall = (global.fetch as jest.Mock).mock.calls.find(([url]: [string]) =>
+        String(url).endsWith('/pages')
       )
-      const body = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body as string) as {
+      expect(pageCall).toBeDefined()
+      const body = JSON.parse(pageCall[1].body as string) as {
         parent: { data_source_id?: string }
         properties: { Type: { select: { name: string } } }
       }
@@ -267,23 +283,28 @@ describe('notionFeedback', () => {
       expect(body.properties.Type.select.name).toBe('Idea')
     })
 
-    it('retries with database_id when the data source parent is rejected', async () => {
-      ;(global.fetch as jest.Mock)
-        .mockResolvedValueOnce({
-          ok: false,
-          status: 400,
-          json: async () => ({ message: 'Invalid data_source_id' }),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ url: 'https://www.notion.so/db-page' }),
-        })
+    it('resolves a database page ID to its data source before creating', async () => {
+      ;(global.fetch as jest.Mock).mockImplementation(async (url: string) => {
+        if (String(url).includes('/data_sources/')) {
+          return { ok: false, status: 404, json: async () => ({ message: 'not a data source' }) }
+        }
+        if (String(url).includes('/databases/')) {
+          return {
+            ok: true,
+            json: async () => ({
+              id: DEFAULT_NOTION_DATABASE_PAGE_ID,
+              data_sources: [{ id: DEFAULT_NOTION_DATABASE_ID, name: 'Site issues' }],
+            }),
+          }
+        }
+        return { ok: true, json: async () => ({ url: 'https://www.notion.so/db-page' }) }
+      })
 
       const result = await createNotionFeedbackPage(
         {
           notion_feedback_enabled: true,
           notion_token: 'secret_test',
-          notion_database_id: '1fc7f85d-baca-4a05-aef5-5c724ce07ecd',
+          notion_database_id: DEFAULT_NOTION_DATABASE_PAGE_ID,
           token_from_env: false,
           database_id_from_env: false,
         },
@@ -295,11 +316,13 @@ describe('notionFeedback', () => {
       )
 
       expect(result).toEqual({ success: true, url: 'https://www.notion.so/db-page' })
-      expect(global.fetch).toHaveBeenCalledTimes(2)
-      const retryBody = JSON.parse((global.fetch as jest.Mock).mock.calls[1][1].body as string) as {
-        parent: { database_id?: string }
+      const pageCall = (global.fetch as jest.Mock).mock.calls.find(([url]: [string]) =>
+        String(url).endsWith('/pages')
+      )
+      const body = JSON.parse(pageCall[1].body as string) as {
+        parent: { data_source_id?: string }
       }
-      expect(retryBody.parent.database_id).toBe('1fc7f85d-baca-4a05-aef5-5c724ce07ecd')
+      expect(body.parent.data_source_id).toBe(DEFAULT_NOTION_DATABASE_ID)
     })
   })
 
@@ -324,6 +347,51 @@ describe('notionFeedback', () => {
       expect(result.success).toBe(true)
       expect(result.message).toContain('Site issues')
     })
+
+    it('explains how to connect the integration when Notion cannot see the ID', async () => {
+      ;(global.fetch as jest.Mock).mockResolvedValue({
+        ok: false,
+        status: 404,
+        json: async () => ({
+          message: 'Could not find database with ID: 5c7d52ea-16a5-4471-914f-cac7baf28add.',
+        }),
+      })
+      const result = await testNotionConnection('secret_test', DEFAULT_NOTION_DATABASE_ID)
+      expect(result.success).toBe(false)
+      expect(result.message).toContain('Connections')
+      expect(result.message).toContain('cannot see any databases yet')
+    })
+  })
+
+  describe('resolveNotionParent', () => {
+    beforeEach(() => {
+      global.fetch = jest.fn()
+    })
+
+    it('uses retrieve-database data_sources when the pasted ID is the database page', async () => {
+      ;(global.fetch as jest.Mock).mockImplementation(async (url: string) => {
+        if (String(url).includes('/data_sources/')) {
+          return { ok: false, status: 404, json: async () => ({ message: 'not a data source' }) }
+        }
+        return {
+          ok: true,
+          json: async () => ({
+            id: DEFAULT_NOTION_DATABASE_PAGE_ID,
+            data_sources: [{ id: DEFAULT_NOTION_DATABASE_ID, name: 'Site issues' }],
+          }),
+        }
+      })
+
+      const result = await resolveNotionParent('secret_test', DEFAULT_NOTION_DATABASE_PAGE_ID)
+      expect(result).toEqual({
+        ok: true,
+        parent: {
+          dataSourceId: DEFAULT_NOTION_DATABASE_ID,
+          databaseId: DEFAULT_NOTION_DATABASE_PAGE_ID,
+          title: 'Site issues',
+        },
+      })
+    })
   })
 
   describe('createNotionTestRow', () => {
@@ -332,16 +400,21 @@ describe('notionFeedback', () => {
     })
 
     it('creates an archived Polish test row', async () => {
-      ;(global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: async () => ({ url: 'https://www.notion.so/test-row' }),
+      ;(global.fetch as jest.Mock).mockImplementation(async (url: string) => {
+        if (String(url).includes('/data_sources/')) {
+          return { ok: true, json: async () => ({ id: DEFAULT_NOTION_DATABASE_ID, name: 'Site issues' }) }
+        }
+        return { ok: true, json: async () => ({ url: 'https://www.notion.so/test-row' }) }
       })
 
       const result = await createNotionTestRow('secret_test', DEFAULT_NOTION_DATABASE_ID)
       expect(result.success).toBe(true)
       expect(result.url).toBe('https://www.notion.so/test-row')
 
-      const body = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body as string) as {
+      const pageCall = (global.fetch as jest.Mock).mock.calls.find(([url]: [string]) =>
+        String(url).endsWith('/pages')
+      )
+      const body = JSON.parse(pageCall[1].body as string) as {
         properties: {
           'Task name': { title: Array<{ text: { content: string } }> }
           Type: { select: { name: string } }
