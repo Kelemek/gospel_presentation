@@ -1,7 +1,7 @@
 import { logger } from '@/lib/logger'
 
 export type FeedbackType = 'suggestion' | 'feature' | 'bug'
-export type NotionIssueType = 'Bug' | 'Idea' | 'Polish' | 'Content'
+export type NotionIssueType = 'Bug' | 'Feature' | 'Suggestion' | 'Idea' | 'Polish' | 'Content'
 export type NotionIssueStatus = 'Not started' | 'In progress' | 'Done' | 'Archived'
 export type NotionIssuePriority = 'High' | 'Medium' | 'Low'
 export type NotionFeedbackTestAction = 'connection' | 'create'
@@ -94,8 +94,24 @@ export function mapFeedbackTypeToNotion(type: FeedbackType): NotionIssueType {
     case 'bug':
       return 'Bug'
     case 'feature':
+      return 'Feature'
     case 'suggestion':
-      return 'Idea'
+      return 'Suggestion'
+    default: {
+      const _exhaustive: never = type
+      return _exhaustive
+    }
+  }
+}
+
+export function mapFeedbackTypeToPriority(type: FeedbackType): NotionIssuePriority {
+  switch (type) {
+    case 'bug':
+      return 'High'
+    case 'feature':
+      return 'Medium'
+    case 'suggestion':
+      return 'Low'
     default: {
       const _exhaustive: never = type
       return _exhaustive
@@ -241,7 +257,8 @@ export function buildNotionPageProperties(
 ): Record<string, unknown> {
   const type = options?.type ?? mapFeedbackTypeToNotion(payload.type)
   const status = options?.status ?? 'Not started'
-  const priority = options && 'priority' in options ? options.priority : 'Medium'
+  const priority =
+    options && 'priority' in options ? options.priority : mapFeedbackTypeToPriority(payload.type)
 
   const properties: Record<string, unknown> = {
     'Task name': {
@@ -253,6 +270,11 @@ export function buildNotionPageProperties(
 
   if (priority) {
     properties.Priority = { select: { name: priority } }
+  }
+
+  const email = normalizeFeedbackEmail(payload.userEmail)
+  if (email && isValidFeedbackEmail(email)) {
+    properties.Email = { email }
   }
 
   return properties
@@ -405,8 +427,10 @@ export async function resolveNotionParent(
     ok: false,
     message:
       `Notion accepted the token, but cannot see ID ${id}. ` +
-      'Open Site issues → ••• → Connections → add “The Gospel Presentation Feedback”. ' +
-      'Also connect the parent page “Gospel Presentation”. Inviting the integration as a person does not work. ' +
+      'A new integration cannot see any pages until you grant access. ' +
+      'Open https://www.notion.so/profile/integrations → The Gospel Presentation Feedback → Content access → Edit access, ' +
+      'and select the Gospel Presentation page (or Site issues). ' +
+      'You can also add it from Site issues → ••• → Connections. ' +
       visibleText,
   }
 }

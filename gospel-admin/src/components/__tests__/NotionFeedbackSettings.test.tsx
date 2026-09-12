@@ -23,7 +23,11 @@ describe('NotionFeedbackSettings', () => {
     const user = userEvent.setup()
     render(<NotionFeedbackSettings />)
 
-    expect(screen.getByRole('button', { name: /notion feedback settings/i })).toBeInTheDocument()
+    const trigger = screen.getByRole('button', { name: /notion feedback settings/i })
+    expect(trigger).toBeInTheDocument()
+    expect(trigger.className).not.toMatch(/dark:/)
+    expect(trigger.closest('div')).toHaveClass('bg-white')
+    expect(trigger.closest('div')?.className).not.toMatch(/dark:/)
     await user.click(screen.getByRole('button', { name: /notion feedback settings/i }))
 
     expect(await screen.findByLabelText(/enable notion feedback/i)).toBeChecked()
@@ -32,7 +36,7 @@ describe('NotionFeedbackSettings', () => {
     )
     expect(screen.getByRole('button', { name: /test connection/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /test create row/i })).toBeInTheDocument()
-    expect(screen.getByText(/open site issues/i)).toBeInTheDocument()
+    expect(screen.getByText(/content access/i)).toBeInTheDocument()
     expect(screen.getByText(/the gospel presentation feedback/i)).toBeInTheDocument()
   })
 

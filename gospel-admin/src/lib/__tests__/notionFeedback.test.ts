@@ -11,6 +11,7 @@ import {
   isNotionFeedbackConfigured,
   isValidFeedbackEmail,
   mapFeedbackTypeToNotion,
+  mapFeedbackTypeToPriority,
   maskNotionToken,
   normalizeFeedbackEmail,
   normalizeNotionId,
@@ -75,10 +76,18 @@ describe('notionFeedback', () => {
   })
 
   describe('mapFeedbackTypeToNotion', () => {
-    it('maps bug to Bug and other types to Idea', () => {
+    it('maps each feedback type to a matching Notion type', () => {
       expect(mapFeedbackTypeToNotion('bug')).toBe('Bug')
-      expect(mapFeedbackTypeToNotion('feature')).toBe('Idea')
-      expect(mapFeedbackTypeToNotion('suggestion')).toBe('Idea')
+      expect(mapFeedbackTypeToNotion('feature')).toBe('Feature')
+      expect(mapFeedbackTypeToNotion('suggestion')).toBe('Suggestion')
+    })
+  })
+
+  describe('mapFeedbackTypeToPriority', () => {
+    it('sets bugs high, features medium, and suggestions low', () => {
+      expect(mapFeedbackTypeToPriority('bug')).toBe('High')
+      expect(mapFeedbackTypeToPriority('feature')).toBe('Medium')
+      expect(mapFeedbackTypeToPriority('suggestion')).toBe('Low')
     })
   })
 
@@ -190,7 +199,7 @@ describe('notionFeedback', () => {
   })
 
   describe('buildNotionPageProperties', () => {
-    it('sets Task name, Type Bug, Status Not started, and Priority Medium', () => {
+    it('sets Task name, Type Bug, Status Not started, and Priority High', () => {
       const properties = buildNotionPageProperties({
         title: 'Reader crash',
         description: 'It broke',
@@ -201,8 +210,20 @@ describe('notionFeedback', () => {
         'Task name': { title: [{ type: 'text', text: { content: 'Reader crash' } }] },
         Type: { select: { name: 'Bug' } },
         Status: { status: { name: 'Not started' } },
-        Priority: { select: { name: 'Medium' } },
+        Priority: { select: { name: 'High' } },
       })
+      expect(properties.Email).toBeUndefined()
+    })
+
+    it('sets the Email column when the submitter left a valid address', () => {
+      const properties = buildNotionPageProperties({
+        title: 'Reader crash',
+        description: 'It broke',
+        type: 'bug',
+        userEmail: '  Reader@Example.COM ',
+      })
+
+      expect(properties.Email).toEqual({ email: 'reader@example.com' })
     })
   })
 
@@ -280,7 +301,7 @@ describe('notionFeedback', () => {
         properties: { Type: { select: { name: string } } }
       }
       expect(body.parent.data_source_id).toBe(DEFAULT_NOTION_DATABASE_ID)
-      expect(body.properties.Type.select.name).toBe('Idea')
+      expect(body.properties.Type.select.name).toBe('Feature')
     })
 
     it('resolves a database page ID to its data source before creating', async () => {
@@ -358,7 +379,7 @@ describe('notionFeedback', () => {
       })
       const result = await testNotionConnection('secret_test', DEFAULT_NOTION_DATABASE_ID)
       expect(result.success).toBe(false)
-      expect(result.message).toContain('Connections')
+      expect(result.message).toContain('Content access')
       expect(result.message).toContain('cannot see any databases yet')
     })
   })

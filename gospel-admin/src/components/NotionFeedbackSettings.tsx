@@ -162,21 +162,21 @@ export default function NotionFeedbackSettings() {
     : 'secret_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-100 dark:border-slate-700 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-md border border-slate-100 overflow-hidden">
       <button
         type="button"
         id="notion-feedback-settings-trigger"
-        className="w-full text-left px-6 sm:px-8 py-6 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+        className="w-full text-left px-6 sm:px-8 py-6 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-50 transition-colors"
         onClick={onSectionToggle}
         aria-expanded={sectionExpanded}
         aria-controls="notion-feedback-settings-panel"
       >
         <div className="min-w-0">
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <NotionMark className="text-slate-900 dark:text-slate-100 shrink-0" />
+          <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <NotionMark className="text-slate-900 shrink-0" />
             Notion Feedback Settings
           </h2>
-          <p className="text-slate-600 dark:text-slate-400 text-sm mt-2">
+          <p className="text-slate-600 text-sm mt-2">
             Send Help menu feedback to the Site issues database in Notion
           </p>
         </div>
@@ -189,7 +189,7 @@ export default function NotionFeedbackSettings() {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className={`shrink-0 text-slate-500 dark:text-slate-400 transition-transform duration-200 ${sectionExpanded ? 'rotate-180' : ''}`}
+          className={`shrink-0 text-slate-500 transition-transform duration-200 ${sectionExpanded ? 'rotate-180' : ''}`}
           aria-hidden
         >
           <polyline points="6 9 12 15 18 9" />
@@ -199,31 +199,31 @@ export default function NotionFeedbackSettings() {
       {sectionExpanded ? (
         <div
           id="notion-feedback-settings-panel"
-          className="border-t border-slate-200 dark:border-slate-700 px-6 sm:px-8 py-6 space-y-6"
+          className="border-t border-slate-200 px-6 sm:px-8 py-6 space-y-6"
         >
           {isLoading ? (
-            <div className="flex items-center justify-center py-8 text-slate-600 dark:text-slate-400">
+            <div className="flex items-center justify-center py-8 text-slate-600">
               Loading Notion feedback settings…
             </div>
           ) : (
             <>
-              <div className="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-600 rounded-lg">
+              <div className="flex items-start gap-3 p-4 bg-slate-50 border border-slate-200 rounded-lg">
                 <input
                   type="checkbox"
                   id="enable-notion-feedback"
                   checked={enabled}
                   onChange={(e) => setEnabled(e.target.checked)}
                   disabled={isSaving}
-                  className="mt-1 h-4 w-4 text-slate-900 border-slate-300 dark:border-slate-500 rounded focus:ring-slate-500 cursor-pointer shrink-0 disabled:opacity-50"
+                  className="mt-1 h-4 w-4 text-slate-900 border-slate-300 rounded focus:ring-slate-500 cursor-pointer shrink-0 disabled:opacity-50"
                 />
                 <div className="flex-1">
                   <label
                     htmlFor="enable-notion-feedback"
-                    className="font-medium text-slate-900 dark:text-slate-100 text-sm cursor-pointer"
+                    className="font-medium text-slate-900 text-sm cursor-pointer"
                   >
                     Enable Notion Feedback
                   </label>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
+                  <p className="text-xs text-slate-600 mt-1">
                     Allow users to submit feedback from Help → Support as Site issues rows
                   </p>
                 </div>
@@ -232,7 +232,7 @@ export default function NotionFeedbackSettings() {
               <div>
                 <label
                   htmlFor="notion-database-id"
-                  className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2"
+                  className="block text-sm font-medium text-slate-700 mb-2"
                 >
                   Database or data source ID
                 </label>
@@ -243,21 +243,32 @@ export default function NotionFeedbackSettings() {
                   onChange={(e) => setDatabaseId(e.target.value)}
                   placeholder={DEFAULT_NOTION_DATABASE_ID}
                   disabled={isSaving || !enabled}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                <p className="text-xs text-slate-500 mt-1">
                   Use the Site issues ID from the Notion URL (
                   <code className="text-[11px]">{DEFAULT_NOTION_DATABASE_PAGE_ID}</code>) or the data
-                  source ID already filled in. Then open Site issues → ••• → Connections and add{' '}
-                  <strong>The Gospel Presentation Feedback</strong>. Sharing as a person does not
-                  work. Also connect the parent <strong>Gospel Presentation</strong> page.
+                  source ID already filled in. Then grant page access:{' '}
+                  <a
+                    href="https://www.notion.so/profile/integrations"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    Notion integrations
+                  </a>
+                  {' → '}
+                  <strong>The Gospel Presentation Feedback</strong> → <strong>Content access</strong>{' '}
+                  → <strong>Edit access</strong> → select <strong>Gospel Presentation</strong> or{' '}
+                  <strong>Site issues</strong>. Site issues → ••• → Connections also works. Inviting
+                  the integration as a person does not.
                 </p>
               </div>
 
               <div>
                 <label
                   htmlFor="notion-token"
-                  className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2"
+                  className="block text-sm font-medium text-slate-700 mb-2"
                 >
                   Integration token
                 </label>
@@ -269,14 +280,14 @@ export default function NotionFeedbackSettings() {
                   placeholder={tokenPlaceholder}
                   disabled={isSaving || !enabled}
                   autoComplete="new-password"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                <p className="text-xs text-slate-500 mt-2">
                   <a
                     href="https://www.notion.so/profile/integrations"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 dark:text-blue-400 hover:underline"
+                    className="text-blue-600 hover:underline"
                   >
                     Create a Notion internal integration
                   </a>{' '}
@@ -285,20 +296,20 @@ export default function NotionFeedbackSettings() {
                 </p>
               </div>
 
-              <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
-                <p className="text-sm text-amber-800 dark:text-amber-200">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p className="text-sm text-amber-800">
                   <strong>Security note:</strong> The Notion token is stored in the database (or a
                   server environment variable) and is only used from server-side API routes. Never
                   put the token in client code or share it.
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-200 dark:border-slate-700 justify-end">
+              <div className="flex flex-wrap gap-3 pt-4 border-t border-slate-200 justify-end">
                 <button
                   type="button"
                   onClick={() => void runTest('connection')}
                   disabled={isSaving || isTestingConnection || isTestingCreate || !canTest}
-                  className="flex items-center gap-2 px-4 py-2 bg-slate-600 dark:bg-slate-500 text-white rounded-lg hover:bg-slate-700 dark:hover:bg-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-sm font-medium"
+                  className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-sm font-medium"
                 >
                   {isTestingConnection ? 'Testing…' : 'Test Connection'}
                 </button>
@@ -306,7 +317,7 @@ export default function NotionFeedbackSettings() {
                   type="button"
                   onClick={() => void runTest('create')}
                   disabled={isSaving || isTestingConnection || isTestingCreate || !canTest}
-                  className="flex items-center gap-2 px-4 py-2 bg-slate-600 dark:bg-slate-500 text-white rounded-lg hover:bg-slate-700 dark:hover:bg-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-sm font-medium"
+                  className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-sm font-medium"
                 >
                   {isTestingCreate ? 'Creating…' : 'Test Create Row'}
                 </button>
@@ -321,35 +332,23 @@ export default function NotionFeedbackSettings() {
               </div>
 
               {successMessage ? (
-                <div
-                  className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-3"
-                  role="alert"
-                >
-                  <p className="text-sm text-green-800 dark:text-green-200">{successMessage}</p>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3" role="alert">
+                  <p className="text-sm text-green-800">{successMessage}</p>
                 </div>
               ) : null}
               {errorMessage ? (
-                <div
-                  className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3"
-                  role="alert"
-                >
-                  <p className="text-sm text-red-800 dark:text-red-200">{errorMessage}</p>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3" role="alert">
+                  <p className="text-sm text-red-800">{errorMessage}</p>
                 </div>
               ) : null}
               {testMessage ? (
-                <div
-                  className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3"
-                  role="alert"
-                >
-                  <p className="text-sm text-blue-800 dark:text-blue-200">{testMessage}</p>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3" role="alert">
+                  <p className="text-sm text-blue-800">{testMessage}</p>
                 </div>
               ) : null}
               {testError ? (
-                <div
-                  className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3"
-                  role="alert"
-                >
-                  <p className="text-sm text-red-800 dark:text-red-200">{testError}</p>
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3" role="alert">
+                  <p className="text-sm text-red-800">{testError}</p>
                 </div>
               ) : null}
             </>
