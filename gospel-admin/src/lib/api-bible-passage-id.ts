@@ -7,6 +7,7 @@ import { parseReference } from '@/lib/parse-scripture-reference'
 const BOOK_ALIAS_TO_USFM: Record<string, string> = {
   genesis: 'GEN',
   ge: 'GEN',
+  gen: 'GEN',
   ac: 'ACT',
   habak: 'HAB',
   exodus: 'EXO',
@@ -147,7 +148,13 @@ const BOOK_ALIAS_TO_USFM: Record<string, string> = {
 }
 
 function normalizeBookKey(book: string): string {
-  return book.toLowerCase().trim().replace(/\s+/g, ' ')
+  return book
+    .toLowerCase()
+    .trim()
+    // Abbreviation periods ("Phil.", "Matt.", "1 Cor.") are not part of aliases.
+    .replace(/\./g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 /** CCEL Matthew Henry div1 titles use "First Samuel" / "Third John" instead of "1 Samuel". */

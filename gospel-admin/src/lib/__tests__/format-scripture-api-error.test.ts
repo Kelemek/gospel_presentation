@@ -1,4 +1,7 @@
-import { formatScriptureApiError } from '@/lib/format-scripture-api-error'
+import {
+  formatScriptureApiError,
+  scriptureLookupErrorHint,
+} from '@/lib/format-scripture-api-error'
 
 describe('formatScriptureApiError', () => {
   it('returns details when error is the generic fetch message', () => {
@@ -32,5 +35,17 @@ describe('formatScriptureApiError', () => {
         details: 'extra',
       })
     ).toBe('Something went wrong: extra')
+  })
+})
+
+describe('scriptureLookupErrorHint', () => {
+  it('names the selected translation instead of always blaming ESV', () => {
+    expect(scriptureLookupErrorHint('niv')).toBe(
+      'NIV may be unavailable or the reference format is incorrect'
+    )
+    expect(scriptureLookupErrorHint('esv')).toBe(
+      'ESV may be unavailable or the reference format is incorrect'
+    )
+    expect(scriptureLookupErrorHint('niv')).not.toMatch(/ESV API/)
   })
 })

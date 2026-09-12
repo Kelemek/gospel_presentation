@@ -15,6 +15,10 @@ describe('api-bible-passage-id', () => {
     expect(bookNameToUsfm('First Samuel')).toBe('1SA')
     expect(bookNameToUsfm('Second Kings')).toBe('2KI')
     expect(bookNameToUsfm('Third John')).toBe('3JN')
+    expect(bookNameToUsfm('Phil.')).toBe('PHP')
+    expect(bookNameToUsfm('Matt.')).toBe('MAT')
+    expect(bookNameToUsfm('Gen.')).toBe('GEN')
+    expect(bookNameToUsfm('1 Cor.')).toBe('1CO')
   })
 
   it('builds passage ids for verse, range, and chapter', () => {
@@ -22,6 +26,10 @@ describe('api-bible-passage-id', () => {
     expect(referenceToApiBiblePassageId('John 3:16-18')).toBe('JHN.3.16-JHN.3.18')
     expect(referenceToApiBiblePassageId('Psalm 23')).toBe('PSA.23')
     expect(referenceToApiBiblePassageId('Rom 8:28')).toBe('ROM.8.28')
+    expect(referenceToApiBiblePassageId('Phil. 4:8')).toBe('PHP.4.8')
+    expect(referenceToApiBiblePassageId('Matt. 5:1-3')).toBe('MAT.5.1-MAT.5.3')
+    expect(referenceToApiBiblePassageId('Gen. 1:1')).toBe('GEN.1.1')
+    expect(referenceToApiBiblePassageId('1 Cor. 13:4')).toBe('1CO.13.4')
   })
 
   it('returns null for unknown books or invalid references', () => {
@@ -34,6 +42,7 @@ describe('api-bible-passage-id', () => {
       expect(usfmBookPrefixesForSearchQuery('John').sort()).toEqual(['JHN'])
       expect(usfmBookPrefixesForSearchQuery('john').sort()).toEqual(['JHN'])
       expect(usfmBookPrefixesForSearchQuery('rom').sort()).toEqual(['ROM'])
+      expect(usfmBookPrefixesForSearchQuery('phil.').sort()).toEqual(['PHP'])
       expect(usfmBookPrefixesForSearchQuery('1 joh').sort()).toEqual(['1JN'])
       expect(usfmBookPrefixesForSearchQuery('1 john').sort()).toEqual(['1JN'])
     })
@@ -69,6 +78,7 @@ describe('api-bible-passage-id', () => {
       expect(canonicalScriptureCacheReference('Psalm 23:4')).toBe('PSA.23.4')
       expect(canonicalScriptureCacheReference('John 3:16b')).toBe('JHN.3.16')
       expect(canonicalScriptureCacheReference('Isaiah 40:25–26')).toBe('ISA.40.25-ISA.40.26')
+      expect(canonicalScriptureCacheReference('Phil. 4:8')).toBe('PHP.4.8')
     })
 
     it('falls back to suffix-stripped text when passage id cannot be built', () => {

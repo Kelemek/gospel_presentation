@@ -56,7 +56,7 @@ curl --request GET \
 
 In the JSON response, each item in `data` includes `id` (use this in URLs as `bibles/{id}/passages/...`), plus `name` and `abbreviation` / `abbreviationLocal` so you can pick the right edition. If a translation does not appear, add it to your API.Bible account/plan first, then call the endpoint again.
 
-Passage requests use USFM-style IDs (e.g. `JHN.3.16`); mapping lives in `gospel-admin/src/lib/api-bible-passage-id.ts`.
+Passage requests use USFM-style IDs (e.g. `JHN.3.16`); mapping lives in `gospel-admin/src/lib/api-bible-passage-id.ts`. Book abbreviations with a trailing period (`Phil. 4:8`, `Matt. 5:1`, `Gen. 1:1`) normalize to the same USFM ids as the period-less aliases.
 
 ## Scripture API
 
