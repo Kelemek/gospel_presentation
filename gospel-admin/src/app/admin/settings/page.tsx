@@ -38,7 +38,7 @@ import {
 import type { ResourceOrderCategoryChild } from "@/lib/types";
 import { restoreNewProfileFromBackupFile } from "@/lib/createProfileFromBackup";
 import { useAlertModal } from "@/contexts/AlertModalContext";
-import GitHubFeedbackSettings from "@/components/GitHubFeedbackSettings";
+import NotionFeedbackSettings from "@/components/NotionFeedbackSettings";
 import SecularTermMapSettings from "@/components/SecularTermMapSettings";
 
 // ============================================================================
@@ -741,7 +741,7 @@ export default function AdminSettingsPage() {
             ) : null}
           </div>
 
-          <GitHubFeedbackSettings />
+          <NotionFeedbackSettings />
 
           {userRole === "admin" ? <SecularTermMapSettings /> : null}
 

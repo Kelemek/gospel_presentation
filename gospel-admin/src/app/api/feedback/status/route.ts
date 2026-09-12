@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
-import { isGitHubFeedbackConfigured, normalizeGitHubFeedbackConfig } from '@/lib/githubFeedback'
+import {
+  isNotionFeedbackConfigured,
+  NOTION_FEEDBACK_COLUMNS,
+  resolveNotionFeedbackConfig,
+} from '@/lib/notionFeedback'
 import { logger } from '@/lib/logger'
 
 export async function GET() {
@@ -8,7 +12,7 @@ export async function GET() {
     const admin = createAdminClient()
     const { data, error } = await admin
       .from('admin_settings')
-      .select('github_feedback_enabled, github_token, github_repo_owner, github_repo_name')
+      .select(NOTION_FEEDBACK_COLUMNS)
       .eq('id', 1)
       .maybeSingle()
 
@@ -17,8 +21,8 @@ export async function GET() {
       return NextResponse.json({ enabled: false })
     }
 
-    const config = normalizeGitHubFeedbackConfig(data)
-    return NextResponse.json({ enabled: isGitHubFeedbackConfigured(config) })
+    const config = resolveNotionFeedbackConfig(data)
+    return NextResponse.json({ enabled: isNotionFeedbackConfigured(config) })
   } catch (error) {
     logger.error('[feedback/status] Unexpected error:', error)
     return NextResponse.json({ enabled: false })

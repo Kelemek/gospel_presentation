@@ -1,22 +1,24 @@
 import { NextRequest } from 'next/server'
 import { POST } from '../route'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
-import { createGitHubIssue } from '@/lib/githubFeedback'
+import { createNotionFeedbackPage } from '@/lib/notionFeedback'
 
 jest.mock('@/lib/supabase/server', () => ({
   createAdminClient: jest.fn(),
   createClient: jest.fn(),
 }))
 
-jest.mock('@/lib/githubFeedback', () => {
-  const actual = jest.requireActual<typeof import('@/lib/githubFeedback')>('@/lib/githubFeedback')
+jest.mock('@/lib/notionFeedback', () => {
+  const actual = jest.requireActual<typeof import('@/lib/notionFeedback')>('@/lib/notionFeedback')
   return {
     ...actual,
-    createGitHubIssue: jest.fn(),
+    createNotionFeedbackPage: jest.fn(),
   }
 })
 
-const mockCreateGitHubIssue = createGitHubIssue as jest.MockedFunction<typeof createGitHubIssue>
+const mockCreateNotionFeedbackPage = createNotionFeedbackPage as jest.MockedFunction<
+  typeof createNotionFeedbackPage
+>
 
 function makeAdminMock(data: unknown, error: unknown = null) {
   return {
@@ -64,10 +66,9 @@ describe('/api/feedback POST', () => {
   it('returns 503 when feedback is disabled', async () => {
     ;(createAdminClient as jest.Mock).mockReturnValue(
       makeAdminMock({
-        github_feedback_enabled: false,
-        github_token: null,
-        github_repo_owner: '',
-        github_repo_name: '',
+        notion_feedback_enabled: false,
+        notion_token: null,
+        notion_database_id: '',
       })
     )
 
@@ -79,16 +80,18 @@ describe('/api/feedback POST', () => {
     expect(response.status).toBe(503)
   })
 
-  it('creates issue when configured', async () => {
+  it('creates a Notion page when configured', async () => {
     ;(createAdminClient as jest.Mock).mockReturnValue(
       makeAdminMock({
-        github_feedback_enabled: true,
-        github_token: 'ghp_test',
-        github_repo_owner: 'owner',
-        github_repo_name: 'repo',
+        notion_feedback_enabled: true,
+        notion_token: 'secret_test',
+        notion_database_id: '5c7d52ea-16a5-4471-914f-cac7baf28add',
       })
     )
-    mockCreateGitHubIssue.mockResolvedValue({ success: true, url: 'https://github.com/o/r/issues/1' })
+    mockCreateNotionFeedbackPage.mockResolvedValue({
+      success: true,
+      url: 'https://www.notion.so/page',
+    })
 
     const req = new NextRequest('http://localhost/api/feedback', {
       method: 'POST',
@@ -104,20 +107,22 @@ describe('/api/feedback POST', () => {
     const data = await response.json()
 
     expect(response.status).toBe(200)
-    expect(data).toEqual({ success: true, url: 'https://github.com/o/r/issues/1' })
-    expect(mockCreateGitHubIssue).toHaveBeenCalled()
+    expect(data).toEqual({ success: true, url: 'https://www.notion.so/page' })
+    expect(mockCreateNotionFeedbackPage).toHaveBeenCalled()
   })
 
-  it('passes optional form email to GitHub issue payload', async () => {
+  it('passes optional form email to the Notion page payload', async () => {
     ;(createAdminClient as jest.Mock).mockReturnValue(
       makeAdminMock({
-        github_feedback_enabled: true,
-        github_token: 'ghp_test',
-        github_repo_owner: 'owner',
-        github_repo_name: 'repo',
+        notion_feedback_enabled: true,
+        notion_token: 'secret_test',
+        notion_database_id: '5c7d52ea-16a5-4471-914f-cac7baf28add',
       })
     )
-    mockCreateGitHubIssue.mockResolvedValue({ success: true, url: 'https://github.com/o/r/issues/2' })
+    mockCreateNotionFeedbackPage.mockResolvedValue({
+      success: true,
+      url: 'https://www.notion.so/page-2',
+    })
 
     const req = new NextRequest('http://localhost/api/feedback', {
       method: 'POST',
@@ -131,7 +136,7 @@ describe('/api/feedback POST', () => {
     const response = await POST(req)
 
     expect(response.status).toBe(200)
-    expect(mockCreateGitHubIssue).toHaveBeenCalledWith(
+    expect(mockCreateNotionFeedbackPage).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         userEmail: 'reader@example.com',
@@ -142,13 +147,15 @@ describe('/api/feedback POST', () => {
   it('posts Anonymous when form email is omitted', async () => {
     ;(createAdminClient as jest.Mock).mockReturnValue(
       makeAdminMock({
-        github_feedback_enabled: true,
-        github_token: 'ghp_test',
-        github_repo_owner: 'owner',
-        github_repo_name: 'repo',
+        notion_feedback_enabled: true,
+        notion_token: 'secret_test',
+        notion_database_id: '5c7d52ea-16a5-4471-914f-cac7baf28add',
       })
     )
-    mockCreateGitHubIssue.mockResolvedValue({ success: true, url: 'https://github.com/o/r/issues/3' })
+    mockCreateNotionFeedbackPage.mockResolvedValue({
+      success: true,
+      url: 'https://www.notion.so/page-3',
+    })
 
     const req = new NextRequest('http://localhost/api/feedback', {
       method: 'POST',
@@ -161,7 +168,7 @@ describe('/api/feedback POST', () => {
     const response = await POST(req)
 
     expect(response.status).toBe(200)
-    expect(mockCreateGitHubIssue).toHaveBeenCalledWith(
+    expect(mockCreateNotionFeedbackPage).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         userEmail: null,

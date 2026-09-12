@@ -24,10 +24,9 @@ export interface Database {
           verification_code_expiry_minutes: number | null
           enable_verification_code_login: boolean | null
           public_template_order: Json | null
-          github_feedback_enabled: boolean
-          github_token: string | null
-          github_repo_owner: string | null
-          github_repo_name: string | null
+          notion_feedback_enabled: boolean
+          notion_token: string | null
+          notion_database_id: string | null
           secular_term_map: Json | null
         }
         Insert: {
@@ -38,10 +37,9 @@ export interface Database {
           verification_code_expiry_minutes?: number | null
           enable_verification_code_login?: boolean | null
           public_template_order?: Json | null
-          github_feedback_enabled?: boolean
-          github_token?: string | null
-          github_repo_owner?: string | null
-          github_repo_name?: string | null
+          notion_feedback_enabled?: boolean
+          notion_token?: string | null
+          notion_database_id?: string | null
           secular_term_map?: Json | null
         }
         Update: {
@@ -52,10 +50,9 @@ export interface Database {
           verification_code_expiry_minutes?: number | null
           enable_verification_code_login?: boolean | null
           public_template_order?: Json | null
-          github_feedback_enabled?: boolean
-          github_token?: string | null
-          github_repo_owner?: string | null
-          github_repo_name?: string | null
+          notion_feedback_enabled?: boolean
+          notion_token?: string | null
+          notion_database_id?: string | null
           secular_term_map?: Json | null
         }
         Relationships: []
