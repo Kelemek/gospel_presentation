@@ -1458,5 +1458,10 @@
     "releasedAt": "2026-09-09",
     "committedAt": "2026-09-09T12:39:03.836Z",
     "message": "Bug fix: Listen now shows the usual loading spinner while the next verse or chapter text is loading."
+  },
+  {
+    "releasedAt": "2026-09-12",
+    "committedAt": "2026-09-12T14:28:53.368Z",
+    "message": "Bug fix: Looking up verses with book abbreviations that end in a period, such as Phil. 4:8, now works in NIV and other translations. Error messages no longer mention ESV when another translation is selected."
   }
 ]

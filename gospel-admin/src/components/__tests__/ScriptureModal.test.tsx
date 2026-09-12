@@ -6,6 +6,7 @@ import ScriptureModal from '../ScriptureModal'
 import { resetDocumentScrollLockForTests } from '@/lib/documentScrollLock'
 import { DEFAULT_LONG_PRESS_MS } from '@/hooks/useLongPress'
 import { SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY } from '@/lib/scriptureVerseNumbersPreference'
+import * as TranslationContext from '@/contexts/TranslationContext'
 
 const mockShareScripturePassage = jest.fn((_options?: unknown) => Promise.resolve('shared' as const))
 
@@ -297,6 +298,43 @@ describe('ScriptureModal Component', () => {
     await waitFor(() => {
       expect(screen.getByText(/Failed to load scripture/)).toBeInTheDocument()
     })
+    expect(
+      screen.getByText(/ESV may be unavailable or the reference format is incorrect/)
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/ESV API/)).not.toBeInTheDocument()
+  })
+
+  it('does not blame ESV when a non-ESV translation fails to load', async () => {
+    const useTranslationSpy = jest.spyOn(TranslationContext, 'useTranslation').mockReturnValue({
+      translation: 'niv',
+      setTranslation: jest.fn(),
+      isLoading: false,
+      enabledTranslations: ['esv', 'niv'],
+      enabledTranslationOptions: [
+        { translation_code: 'esv', translation_name: 'ESV (English Standard Version)' },
+        { translation_code: 'niv', translation_name: 'NIV (New International Version)' },
+      ],
+    })
+
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = fetchUrl(input)
+      if (url.includes('/api/scripture?')) {
+        return Promise.reject(new Error('API Error'))
+      }
+      return Promise.reject(new Error(`Unexpected fetch: ${url}`))
+    })
+
+    renderWithTextSize(<ScriptureModal {...defaultProps} />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/Failed to load scripture/)).toBeInTheDocument()
+    })
+    expect(
+      screen.getByText(/NIV may be unavailable or the reference format is incorrect/)
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/ESV API/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/ESV may be unavailable/)).not.toBeInTheDocument()
+    useTranslationSpy.mockRestore()
   })
 
   it('should show loading state', () => {

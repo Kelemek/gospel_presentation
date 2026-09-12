@@ -18,3 +18,8 @@ export function formatScriptureApiError(data: {
   if (det && err) return `${err}: ${det}`
   return err || det
 }
+
+/** Secondary hint under a failed scripture lookup — names the selected translation, not ESV. */
+export function scriptureLookupErrorHint(translationCode: string): string {
+  return `${translationCode.trim().toUpperCase()} may be unavailable or the reference format is incorrect`
+}

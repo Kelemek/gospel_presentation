@@ -25,7 +25,10 @@ import {
   scriptureReferenceForPassageQuery,
 } from '@/lib/parse-scripture-reference'
 import { splitScriptureReferenceForHeader } from '@/lib/splitScriptureReferenceForHeader'
-import { formatScriptureApiError } from '@/lib/format-scripture-api-error'
+import {
+  formatScriptureApiError,
+  scriptureLookupErrorHint,
+} from '@/lib/format-scripture-api-error'
 import {
   memorizeAddBookFromReference,
   writeMemorizeAddTestament,
@@ -1835,7 +1838,7 @@ export default function ScriptureModal({
                   <div className="text-red-600 text-center py-8">
                     <p className="mb-2 text-base md:text-lg">⚠️ {error}</p>
                     <p className="text-sm md:text-base text-slate-500">
-                      ESV API may be unavailable or reference format incorrect
+                      {scriptureLookupErrorHint(translation)}
                     </p>
                   </div>
                 )}
@@ -1929,7 +1932,7 @@ export default function ScriptureModal({
                   <div className="text-red-600 text-center py-8">
                     <p className="mb-2 text-base md:text-lg">⚠️ {error}</p>
                     <p className="text-sm md:text-base text-slate-500">
-                      ESV API may be unavailable or reference format incorrect
+                      {scriptureLookupErrorHint(translation)}
                     </p>
                   </div>
                 )}
