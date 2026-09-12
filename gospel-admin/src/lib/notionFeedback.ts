@@ -53,7 +53,13 @@ export type NotionBlock = NotionParagraphBlock | NotionDividerBlock
 export const DEFAULT_NOTION_DATABASE_ID = '5c7d52ea-16a5-4471-914f-cac7baf28add'
 export const NOTION_FEEDBACK_TOKEN_ENV = 'NOTION_FEEDBACK_TOKEN'
 export const NOTION_FEEDBACK_DATABASE_ID_ENV = 'NOTION_FEEDBACK_DATABASE_ID'
-export const NOTION_FEEDBACK_COLUMNS = 'notion_feedback_enabled, notion_token, notion_database_id'
+export const NOTION_FEEDBACK_COLUMNS =
+  'notion_feedback_enabled, notion_token, notion_database_id' as const
+
+export function asNotionFeedbackConfigRow(data: unknown): NotionFeedbackConfigRow | null {
+  if (!data || typeof data !== 'object') return null
+  return data as NotionFeedbackConfigRow
+}
 export const TEST_CREATE_ROW_TITLE = '[Test] Feedback connection'
 
 const FETCH_TIMEOUT_MS = 10_000
@@ -101,9 +107,10 @@ export function normalizeNotionId(value: string): string {
 }
 
 export function resolveNotionFeedbackConfig(
-  row: NotionFeedbackConfigRow | null,
+  data: unknown,
   env: NodeJS.Dict<string> = process.env
 ): NotionFeedbackConfig {
+  const row = asNotionFeedbackConfigRow(data)
   const rowToken = row?.notion_token?.trim() || null
   const envToken = env[NOTION_FEEDBACK_TOKEN_ENV]?.trim() || null
   const rowDatabaseId = row?.notion_database_id ? normalizeNotionId(row.notion_database_id) : ''

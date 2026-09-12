@@ -1,4 +1,5 @@
 import {
+  asNotionFeedbackConfigRow,
   buildFeedbackPageChildren,
   buildNotionPageProperties,
   createNotionFeedbackPage,
@@ -98,6 +99,14 @@ describe('notionFeedback', () => {
       expect(config.notion_token).toBe('secret_env')
       expect(config.token_from_env).toBe(true)
       expect(config.notion_database_id).toBe(DEFAULT_NOTION_DATABASE_ID)
+    })
+
+    it('treats missing or non-object rows as empty stored config', () => {
+      const config = resolveNotionFeedbackConfig(null, { NOTION_FEEDBACK_TOKEN: 'secret_env' })
+      expect(config.notion_feedback_enabled).toBe(false)
+      expect(config.notion_token).toBe('secret_env')
+      expect(asNotionFeedbackConfigRow(null)).toBeNull()
+      expect(asNotionFeedbackConfigRow('not-a-row')).toBeNull()
     })
   })
 
