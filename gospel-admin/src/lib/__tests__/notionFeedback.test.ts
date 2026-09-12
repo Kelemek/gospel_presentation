@@ -1,12 +1,10 @@
 import {
   asNotionFeedbackConfigRow,
-  buildFeedbackPageChildren,
   buildNotionPageProperties,
   createNotionFeedbackPage,
   createNotionTestRow,
   DEFAULT_NOTION_DATABASE_ID,
   DEFAULT_NOTION_DATABASE_PAGE_ID,
-  formatFeedbackPagePlainText,
   isFeedbackType,
   isNotionFeedbackConfigured,
   isValidFeedbackEmail,
@@ -167,37 +165,6 @@ describe('notionFeedback', () => {
     })
   })
 
-  describe('formatFeedbackPagePlainText', () => {
-    it('includes email and page context', () => {
-      const body = formatFeedbackPagePlainText({
-        title: 'Title',
-        description: 'Details here',
-        type: 'bug',
-        userEmail: 'user@example.com',
-        pageUrl: 'https://example.com/default',
-        profileSlug: 'default',
-        profileTitle: 'Default',
-      })
-
-      expect(body).toContain('Type: bug')
-      expect(body).toContain('user@example.com')
-      expect(body).toContain('Profile: Default')
-      expect(body).toContain('https://example.com/default')
-      expect(body).toContain('Details here')
-    })
-
-    it('uses Anonymous when email is empty', () => {
-      const body = formatFeedbackPagePlainText({
-        title: 'Title',
-        description: 'Details here',
-        type: 'suggestion',
-        userEmail: null,
-      })
-
-      expect(body).toContain('User Email: Anonymous')
-    })
-  })
-
   describe('buildNotionPageProperties', () => {
     it('sets Task name, Type Bug, Status Not started, and Priority High', () => {
       const properties = buildNotionPageProperties({
@@ -211,37 +178,35 @@ describe('notionFeedback', () => {
         Type: { select: { name: 'Bug' } },
         Status: { status: { name: 'Not started' } },
         Priority: { select: { name: 'High' } },
+        Description: { rich_text: [{ type: 'text', text: { content: 'It broke' } }] },
       })
       expect(properties.Email).toBeUndefined()
+      expect(properties.Profile).toBeUndefined()
+      expect(properties['Page URL']).toBeUndefined()
     })
 
-    it('sets the Email column when the submitter left a valid address', () => {
+    it('puts description, profile, page URL, and email in columns', () => {
       const properties = buildNotionPageProperties({
         title: 'Reader crash',
-        description: 'It broke',
+        description: 'Please fix this',
         type: 'bug',
         userEmail: '  Reader@Example.COM ',
-      })
-
-      expect(properties.Email).toEqual({ email: 'reader@example.com' })
-    })
-  })
-
-  describe('buildFeedbackPageChildren', () => {
-    it('puts description and page URL into page body blocks', () => {
-      const children = buildFeedbackPageChildren({
-        title: 'Title',
-        description: 'Please fix this',
-        type: 'feature',
         pageUrl: 'https://example.com/default',
         profileSlug: 'default',
         profileTitle: 'Default',
       })
 
-      const texts = JSON.stringify(children)
-      expect(texts).toContain('Please fix this')
-      expect(texts).toContain('https://example.com/default')
-      expect(texts).toContain('Profile: Default')
+      expect(properties.Email).toEqual({ email: 'reader@example.com' })
+      expect(properties.Description).toEqual({
+        rich_text: [{ type: 'text', text: { content: 'Please fix this' } }],
+      })
+      expect(properties.Profile).toEqual({
+        rich_text: [{ type: 'text', text: { content: 'Default' } }],
+      })
+      expect(properties['Profile slug']).toEqual({
+        rich_text: [{ type: 'text', text: { content: 'default' } }],
+      })
+      expect(properties['Page URL']).toEqual({ url: 'https://example.com/default' })
     })
   })
 
@@ -302,6 +267,7 @@ describe('notionFeedback', () => {
       }
       expect(body.parent.data_source_id).toBe(DEFAULT_NOTION_DATABASE_ID)
       expect(body.properties.Type.select.name).toBe('Feature')
+      expect(body).not.toHaveProperty('children')
     })
 
     it('resolves a database page ID to its data source before creating', async () => {

@@ -30,26 +30,6 @@ export interface NotionFeedbackConfigRow {
   notion_database_id?: string | null
 }
 
-export interface NotionRichText {
-  type: 'text'
-  text: { content: string; link?: { url: string } | null }
-  annotations?: { italic?: boolean }
-}
-
-export interface NotionParagraphBlock {
-  object: 'block'
-  type: 'paragraph'
-  paragraph: { rich_text: NotionRichText[] }
-}
-
-export interface NotionDividerBlock {
-  object: 'block'
-  type: 'divider'
-  divider: Record<string, never>
-}
-
-export type NotionBlock = NotionParagraphBlock | NotionDividerBlock
-
 export const DEFAULT_NOTION_DATABASE_ID = '5c7d52ea-16a5-4471-914f-cac7baf28add'
 export const DEFAULT_NOTION_DATABASE_PAGE_ID = '1fc7f85d-baca-4a05-aef5-5c724ce07ecd'
 export const NOTION_FEEDBACK_TOKEN_ENV = 'NOTION_FEEDBACK_TOKEN'
@@ -68,7 +48,14 @@ const NOTION_API_BASE = 'https://api.notion.com/v1'
 const NOTION_VERSION_DATA_SOURCE = '2025-09-03'
 const NOTION_VERSION_DATABASE = '2022-06-28'
 const MAX_FEEDBACK_EMAIL_LEN = 254
+const MAX_NOTION_TEXT_LEN = 2000
 const FEEDBACK_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function richTextProperty(content: string): { rich_text: Array<{ type: 'text'; text: { content: string } }> } {
+  return {
+    rich_text: [{ type: 'text', text: { content: content.slice(0, MAX_NOTION_TEXT_LEN) } }],
+  }
+}
 
 export function isFeedbackType(value: unknown): value is FeedbackType {
   return value === 'suggestion' || value === 'feature' || value === 'bug'
@@ -175,78 +162,6 @@ export function maskNotionToken(token: string | null | undefined): string {
   return `${trimmed.slice(0, 4)}****${trimmed.slice(-4)}`
 }
 
-export function formatFeedbackPagePlainText(payload: CreateFeedbackPayload): string {
-  const emailLabel = normalizeFeedbackEmail(payload.userEmail) ?? 'Anonymous'
-  const contextLines: string[] = []
-  if (payload.profileSlug) {
-    contextLines.push(
-      `Profile: ${payload.profileTitle?.trim() || payload.profileSlug} (/${payload.profileSlug})`
-    )
-  }
-  if (payload.pageUrl?.trim()) {
-    contextLines.push(`Page URL: ${payload.pageUrl.trim()}`)
-  }
-
-  const contextBlock = contextLines.length > 0 ? `\n${contextLines.join('\n')}\n` : '\n'
-
-  return `
-Type: ${payload.type}
-User Email: ${emailLabel}
-${contextBlock}
-${payload.description.trim()}
-
-This page was created from the in-app feedback form.
-`.trim()
-}
-
-function paragraph(content: string, italic = false): NotionParagraphBlock {
-  return {
-    object: 'block',
-    type: 'paragraph',
-    paragraph: {
-      rich_text: [
-        {
-          type: 'text',
-          text: { content },
-          ...(italic ? { annotations: { italic: true } } : {}),
-        },
-      ],
-    },
-  }
-}
-
-export function buildFeedbackPageChildren(payload: CreateFeedbackPayload): NotionBlock[] {
-  const emailLabel = normalizeFeedbackEmail(payload.userEmail) ?? 'Anonymous'
-  const blocks: NotionBlock[] = [
-    paragraph(`Type: ${payload.type}`),
-    paragraph(`User Email: ${emailLabel}`),
-  ]
-
-  if (payload.profileSlug) {
-    const label = payload.profileTitle?.trim() || payload.profileSlug
-    blocks.push(paragraph(`Profile: ${label} (/${payload.profileSlug})`))
-  }
-
-  if (payload.pageUrl?.trim()) {
-    const url = payload.pageUrl.trim()
-    blocks.push({
-      object: 'block',
-      type: 'paragraph',
-      paragraph: {
-        rich_text: [
-          { type: 'text', text: { content: 'Page URL: ' } },
-          { type: 'text', text: { content: url, link: { url } } },
-        ],
-      },
-    })
-  }
-
-  blocks.push({ object: 'block', type: 'divider', divider: {} })
-  blocks.push(paragraph(payload.description.trim()))
-  blocks.push(paragraph('This page was created from the in-app feedback form.', true))
-  return blocks
-}
-
 export function buildNotionPageProperties(
   payload: CreateFeedbackPayload,
   options?: {
@@ -275,6 +190,26 @@ export function buildNotionPageProperties(
   const email = normalizeFeedbackEmail(payload.userEmail)
   if (email && isValidFeedbackEmail(email)) {
     properties.Email = { email }
+  }
+
+  const description = payload.description.trim()
+  if (description) {
+    properties.Description = richTextProperty(description)
+  }
+
+  const profileTitle = payload.profileTitle?.trim()
+  const profileSlug = payload.profileSlug?.trim()
+  const profileLabel = profileTitle || profileSlug
+  if (profileLabel) {
+    properties.Profile = richTextProperty(profileLabel)
+  }
+  if (profileSlug) {
+    properties['Profile slug'] = richTextProperty(profileSlug)
+  }
+
+  const pageUrl = payload.pageUrl?.trim()
+  if (pageUrl) {
+    properties['Page URL'] = { url: pageUrl.slice(0, MAX_NOTION_TEXT_LEN) }
   }
 
   return properties
@@ -439,7 +374,7 @@ async function postNotionPage(
   token: string,
   version: string,
   parent: Record<string, string>,
-  pageBody: { properties: Record<string, unknown>; children: NotionBlock[] }
+  pageBody: { properties: Record<string, unknown> }
 ): Promise<Response> {
   return fetchWithTimeout(`${NOTION_API_BASE}/pages`, {
     method: 'POST',
@@ -464,7 +399,6 @@ export async function createNotionFeedbackPage(
   const token = config.notion_token
   const pageBody = {
     properties: buildNotionPageProperties(payload, options),
-    children: buildFeedbackPageChildren(payload),
   }
 
   try {
