@@ -51,6 +51,7 @@ export interface NotionDividerBlock {
 export type NotionBlock = NotionParagraphBlock | NotionDividerBlock
 
 export const DEFAULT_NOTION_DATABASE_ID = '5c7d52ea-16a5-4471-914f-cac7baf28add'
+export const DEFAULT_NOTION_DATABASE_PAGE_ID = '1fc7f85d-baca-4a05-aef5-5c724ce07ecd'
 export const NOTION_FEEDBACK_TOKEN_ENV = 'NOTION_FEEDBACK_TOKEN'
 export const NOTION_FEEDBACK_DATABASE_ID_ENV = 'NOTION_FEEDBACK_DATABASE_ID'
 export const NOTION_FEEDBACK_COLUMNS =
@@ -103,7 +104,27 @@ export function mapFeedbackTypeToNotion(type: FeedbackType): NotionIssueType {
 }
 
 export function normalizeNotionId(value: string): string {
-  return value.trim().replace(/[{}]/g, '')
+  const trimmed = value.trim()
+  const dashed = trimmed.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i)
+  const compact = trimmed.match(/[0-9a-f]{32}/i)
+  const raw = (dashed?.[0] || compact?.[0] || trimmed.replace(/[{}]/g, '')).replace(/-/g, '').toLowerCase()
+  if (/^[0-9a-f]{32}$/.test(raw)) {
+    return `${raw.slice(0, 8)}-${raw.slice(8, 12)}-${raw.slice(12, 16)}-${raw.slice(16, 20)}-${raw.slice(20)}`
+  }
+  return trimmed.replace(/[{}]/g, '')
+}
+
+export interface ResolvedNotionParent {
+  dataSourceId?: string
+  databaseId?: string
+  title: string
+}
+
+function notionCandidateIds(id: string): string[] {
+  const ids = [id]
+  if (id === DEFAULT_NOTION_DATABASE_ID) ids.push(DEFAULT_NOTION_DATABASE_PAGE_ID)
+  if (id === DEFAULT_NOTION_DATABASE_PAGE_ID) ids.push(DEFAULT_NOTION_DATABASE_ID)
+  return [...new Set(ids)]
 }
 
 export function resolveNotionFeedbackConfig(
@@ -286,6 +307,123 @@ function shouldRetryAsDatabaseParent(status: number): boolean {
   return status === 400 || status === 404
 }
 
+type NotionDatabasePayload = {
+  id?: string
+  title?: unknown
+  name?: unknown
+  data_sources?: Array<{ id?: string; name?: string }>
+}
+
+async function notionGet(
+  token: string,
+  path: string,
+  version: string
+): Promise<Response> {
+  return fetchWithTimeout(`${NOTION_API_BASE}${path}`, {
+    method: 'GET',
+    headers: notionHeaders(token, version),
+  })
+}
+
+async function listVisibleNotionTitles(token: string): Promise<string[]> {
+  try {
+    const response = await fetchWithTimeout(`${NOTION_API_BASE}/search`, {
+      method: 'POST',
+      headers: notionHeaders(token, NOTION_VERSION_DATA_SOURCE),
+      body: JSON.stringify({ page_size: 20 }),
+    })
+    if (!response.ok) return []
+    const data = (await response.json()) as {
+      results?: Array<{ name?: unknown; title?: unknown }>
+    }
+    return (data.results || [])
+      .map((item) => notionObjectTitle(item))
+      .filter((title) => title.length > 0)
+  } catch {
+    return []
+  }
+}
+
+async function resolveIdAsParent(
+  token: string,
+  id: string
+): Promise<ResolvedNotionParent | null> {
+  const dataSourceResponse = await notionGet(token, `/data_sources/${id}`, NOTION_VERSION_DATA_SOURCE)
+  if (dataSourceResponse.ok) {
+    const data = (await dataSourceResponse.json()) as NotionDatabasePayload
+    return {
+      dataSourceId: data.id || id,
+      title: notionObjectTitle(data) || 'Site issues',
+    }
+  }
+
+  const databaseV2Response = await notionGet(token, `/databases/${id}`, NOTION_VERSION_DATA_SOURCE)
+  if (databaseV2Response.ok) {
+    const data = (await databaseV2Response.json()) as NotionDatabasePayload
+    const dataSource = data.data_sources?.find((item) => item.id)
+    return {
+      dataSourceId: dataSource?.id,
+      databaseId: data.id || id,
+      title: dataSource?.name || notionObjectTitle(data) || 'Site issues',
+    }
+  }
+
+  const databaseV1Response = await notionGet(token, `/databases/${id}`, NOTION_VERSION_DATABASE)
+  if (databaseV1Response.ok) {
+    const data = (await databaseV1Response.json()) as NotionDatabasePayload
+    return {
+      databaseId: data.id || id,
+      title: notionObjectTitle(data) || 'Site issues',
+    }
+  }
+
+  return null
+}
+
+export async function resolveNotionParent(
+  token: string,
+  rawId: string
+): Promise<{ ok: true; parent: ResolvedNotionParent } | { ok: false; message: string }> {
+  const id = normalizeNotionId(rawId)
+  if (!token.trim()) {
+    return { ok: false, message: 'Notion token is not configured' }
+  }
+  if (!id) {
+    return { ok: false, message: 'Database or data source ID is required' }
+  }
+
+  for (const candidate of notionCandidateIds(id)) {
+    const parent = await resolveIdAsParent(token.trim(), candidate)
+    if (parent) return { ok: true, parent }
+  }
+
+  const visible = await listVisibleNotionTitles(token.trim())
+  const visibleText = visible.length
+    ? `This integration can currently see: ${visible.join(', ')}.`
+    : 'This integration cannot see any databases yet.'
+  return {
+    ok: false,
+    message:
+      `Notion accepted the token, but cannot see ID ${id}. ` +
+      'Open Site issues → ••• → Connections → add “The Gospel Presentation Feedback”. ' +
+      'Also connect the parent page “Gospel Presentation”. Inviting the integration as a person does not work. ' +
+      visibleText,
+  }
+}
+
+async function postNotionPage(
+  token: string,
+  version: string,
+  parent: Record<string, string>,
+  pageBody: { properties: Record<string, unknown>; children: NotionBlock[] }
+): Promise<Response> {
+  return fetchWithTimeout(`${NOTION_API_BASE}/pages`, {
+    method: 'POST',
+    headers: notionHeaders(token, version),
+    body: JSON.stringify({ parent, ...pageBody }),
+  })
+}
+
 export async function createNotionFeedbackPage(
   config: NotionFeedbackConfig,
   payload: CreateFeedbackPayload,
@@ -300,32 +438,41 @@ export async function createNotionFeedbackPage(
   }
 
   const token = config.notion_token
-  const databaseId = normalizeNotionId(config.notion_database_id)
   const pageBody = {
     properties: buildNotionPageProperties(payload, options),
     children: buildFeedbackPageChildren(payload),
   }
 
   try {
-    const dataSourceResponse = await fetchWithTimeout(`${NOTION_API_BASE}/pages`, {
-      method: 'POST',
-      headers: notionHeaders(token, NOTION_VERSION_DATA_SOURCE),
-      body: JSON.stringify({
-        parent: { type: 'data_source_id', data_source_id: databaseId },
-        ...pageBody,
-      }),
-    })
+    const resolved = await resolveNotionParent(token, config.notion_database_id)
+    if (!resolved.ok) {
+      return { success: false, error: resolved.message }
+    }
 
-    let response = dataSourceResponse
-    if (!dataSourceResponse.ok && shouldRetryAsDatabaseParent(dataSourceResponse.status)) {
-      response = await fetchWithTimeout(`${NOTION_API_BASE}/pages`, {
-        method: 'POST',
-        headers: notionHeaders(token, NOTION_VERSION_DATABASE),
-        body: JSON.stringify({
-          parent: { type: 'database_id', database_id: databaseId },
-          ...pageBody,
-        }),
-      })
+    let response: Response | null = null
+    if (resolved.parent.dataSourceId) {
+      response = await postNotionPage(
+        token,
+        NOTION_VERSION_DATA_SOURCE,
+        { type: 'data_source_id', data_source_id: resolved.parent.dataSourceId },
+        pageBody
+      )
+    }
+
+    if (
+      (!response || (!response.ok && shouldRetryAsDatabaseParent(response.status))) &&
+      resolved.parent.databaseId
+    ) {
+      response = await postNotionPage(
+        token,
+        NOTION_VERSION_DATABASE,
+        { type: 'database_id', database_id: resolved.parent.databaseId },
+        pageBody
+      )
+    }
+
+    if (!response) {
+      return { success: false, error: 'Notion feedback is not configured' }
     }
 
     if (!response.ok) {
@@ -349,42 +496,16 @@ export async function testNotionConnection(
   token: string,
   databaseId: string
 ): Promise<{ success: boolean; message: string }> {
-  if (!token.trim()) {
-    return { success: false, message: 'Notion token is not configured' }
-  }
-  const id = normalizeNotionId(databaseId)
-  if (!id) {
-    return { success: false, message: 'Database or data source ID is required' }
-  }
-
   try {
-    const dataSourceResponse = await fetchWithTimeout(`${NOTION_API_BASE}/data_sources/${id}`, {
-      method: 'GET',
-      headers: notionHeaders(token.trim(), NOTION_VERSION_DATA_SOURCE),
-    })
-
-    if (dataSourceResponse.ok) {
-      const data = (await dataSourceResponse.json()) as { title?: unknown; name?: unknown }
-      const title = notionObjectTitle(data) || 'Site issues'
-      return { success: true, message: `Successfully connected to Notion data source “${title}”` }
+    const resolved = await resolveNotionParent(token, databaseId)
+    if (!resolved.ok) {
+      return { success: false, message: resolved.message }
     }
-
-    const databaseResponse = await fetchWithTimeout(`${NOTION_API_BASE}/databases/${id}`, {
-      method: 'GET',
-      headers: notionHeaders(token.trim(), NOTION_VERSION_DATABASE),
-    })
-
-    if (databaseResponse.ok) {
-      const data = (await databaseResponse.json()) as { title?: unknown; name?: unknown }
-      const title = notionObjectTitle(data) || 'Site issues'
-      return { success: true, message: `Successfully connected to Notion database “${title}”` }
+    const kind = resolved.parent.dataSourceId ? 'data source' : 'database'
+    return {
+      success: true,
+      message: `Successfully connected to Notion ${kind} “${resolved.parent.title}”`,
     }
-
-    const message = await readNotionError(
-      dataSourceResponse.ok ? databaseResponse : dataSourceResponse,
-      'Failed to access Notion database'
-    )
-    return { success: false, message }
   } catch (err) {
     logger.error('[notionFeedback] Connection test error:', err)
     return {

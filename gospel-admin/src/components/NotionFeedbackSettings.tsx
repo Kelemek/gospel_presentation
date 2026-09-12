@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react'
 import { logger } from '@/lib/logger'
 
 const DEFAULT_NOTION_DATABASE_ID = '5c7d52ea-16a5-4471-914f-cac7baf28add'
+const DEFAULT_NOTION_DATABASE_PAGE_ID = '1fc7f85d-baca-4a05-aef5-5c724ce07ecd'
 
 interface NotionFeedbackSettingsState {
   notion_feedback_enabled: boolean
@@ -245,8 +246,11 @@ export default function NotionFeedbackSettings() {
                   className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Site issues collection under the Gospel Presentation hub. The default ID is already
-                  filled in.
+                  Use the Site issues ID from the Notion URL (
+                  <code className="text-[11px]">{DEFAULT_NOTION_DATABASE_PAGE_ID}</code>) or the data
+                  source ID already filled in. Then open Site issues → ••• → Connections and add{' '}
+                  <strong>The Gospel Presentation Feedback</strong>. Sharing as a person does not
+                  work. Also connect the parent <strong>Gospel Presentation</strong> page.
                 </p>
               </div>
 

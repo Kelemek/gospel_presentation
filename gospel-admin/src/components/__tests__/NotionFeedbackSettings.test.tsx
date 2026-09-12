@@ -32,9 +32,8 @@ describe('NotionFeedbackSettings', () => {
     )
     expect(screen.getByRole('button', { name: /test connection/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /test create row/i })).toBeInTheDocument()
-    expect(
-      screen.getByText(/site issues collection under the gospel presentation hub/i)
-    ).toBeInTheDocument()
+    expect(screen.getByText(/open site issues/i)).toBeInTheDocument()
+    expect(screen.getByText(/the gospel presentation feedback/i)).toBeInTheDocument()
   })
 
   it('posts a create-row test without sending a raw saved token', async () => {
