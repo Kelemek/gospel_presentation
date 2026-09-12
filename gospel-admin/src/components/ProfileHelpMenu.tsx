@@ -23,7 +23,7 @@ import {
   runTextSizeFeatureTour,
   runThemeFeatureTour,
 } from '@/lib/profileHelpTours'
-import GitHubFeedbackModal from '@/components/GitHubFeedbackModal'
+import FeedbackModal from '@/components/FeedbackModal'
 import SiteChangelogModal from '@/components/SiteChangelogModal'
 import { isProfileResourceListenControlAvailable } from '@/lib/profileListenAvailability'
 
@@ -364,7 +364,7 @@ export default function ProfileHelpMenu({ profileSlug, profileTitle }: ProfileHe
           document.body
         )}
 
-      <GitHubFeedbackModal
+      <FeedbackModal
         isOpen={feedbackOpen}
         onClose={() => setFeedbackOpen(false)}
         profileSlug={profileSlug}

@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/server'
 import {
-  createGitHubIssue,
+  createNotionFeedbackPage,
   isFeedbackType,
-  isGitHubFeedbackConfigured,
+  isNotionFeedbackConfigured,
   isValidFeedbackEmail,
+  NOTION_FEEDBACK_COLUMNS,
   normalizeFeedbackEmail,
-  normalizeGitHubFeedbackConfig,
-} from '@/lib/githubFeedback'
+  resolveNotionFeedbackConfig,
+} from '@/lib/notionFeedback'
 import { logger } from '@/lib/logger'
 
 const MAX_TITLE_LEN = 100
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
     const admin = createAdminClient()
     const { data, error } = await admin
       .from('admin_settings')
-      .select('github_feedback_enabled, github_token, github_repo_owner, github_repo_name')
+      .select(NOTION_FEEDBACK_COLUMNS)
       .eq('id', 1)
       .maybeSingle()
 
@@ -52,22 +53,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Feedback is unavailable' }, { status: 503 })
     }
 
-    const config = normalizeGitHubFeedbackConfig(data)
-    if (!isGitHubFeedbackConfigured(config)) {
+    const config = resolveNotionFeedbackConfig(data)
+    if (!isNotionFeedbackConfigured(config)) {
       return NextResponse.json({ error: 'Feedback is not enabled' }, { status: 503 })
     }
-
-    const userEmail = formEmail
 
     const pageUrl = typeof body.pageUrl === 'string' ? body.pageUrl.trim() : null
     const profileSlug = typeof body.profileSlug === 'string' ? body.profileSlug.trim() : null
     const profileTitle = typeof body.profileTitle === 'string' ? body.profileTitle.trim() : null
 
-    const result = await createGitHubIssue(config, {
+    const result = await createNotionFeedbackPage(config, {
       title,
       description,
       type,
-      userEmail,
+      userEmail: formEmail,
       pageUrl,
       profileSlug,
       profileTitle,

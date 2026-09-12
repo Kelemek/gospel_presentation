@@ -2,17 +2,17 @@
 
 import { useState } from 'react'
 import ScriptureModalToolbarMenu from '@/components/ScriptureModalToolbarMenu'
-import type { FeedbackType } from '@/lib/githubFeedback'
+import type { FeedbackType } from '@/lib/notionFeedback'
 
-export interface GitHubFeedbackFormValues {
+export interface FeedbackFormValues {
   type: FeedbackType
   title: string
   description: string
   email?: string | null
 }
 
-export interface GitHubFeedbackFormProps {
-  onSubmit: (values: GitHubFeedbackFormValues) => Promise<boolean>
+export interface FeedbackFormProps {
+  onSubmit: (values: FeedbackFormValues) => Promise<boolean>
   isSubmitting?: boolean
   successMessage?: string
   errorMessage?: string
@@ -28,12 +28,12 @@ function feedbackTypeLabel(type: FeedbackType): string {
   return FEEDBACK_TYPE_OPTIONS.find((opt) => opt.value === type)?.label ?? type
 }
 
-export default function GitHubFeedbackForm({
+export default function FeedbackForm({
   onSubmit,
   isSubmitting = false,
   successMessage = '',
   errorMessage = '',
-}: GitHubFeedbackFormProps) {
+}: FeedbackFormProps) {
   const [feedbackType, setFeedbackType] = useState<FeedbackType>('suggestion')
   const [title, setTitle] = useState('')
   const [email, setEmail] = useState('')

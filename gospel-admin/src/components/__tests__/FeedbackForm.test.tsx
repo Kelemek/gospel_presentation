@@ -1,10 +1,10 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import GitHubFeedbackForm from '../GitHubFeedbackForm'
+import FeedbackForm from '../FeedbackForm'
 
-describe('GitHubFeedbackForm', () => {
+describe('FeedbackForm', () => {
   it('renders fields and disables submit until filled', () => {
-    render(<GitHubFeedbackForm onSubmit={jest.fn().mockResolvedValue(true)} />)
+    render(<FeedbackForm onSubmit={jest.fn().mockResolvedValue(true)} />)
     expect(screen.getByLabelText(/feedback type/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/^title$/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/^email/i)).toBeInTheDocument()
@@ -15,7 +15,7 @@ describe('GitHubFeedbackForm', () => {
   it('submits values when valid', async () => {
     const onSubmit = jest.fn().mockResolvedValue(true)
     const user = userEvent.setup()
-    render(<GitHubFeedbackForm onSubmit={onSubmit} />)
+    render(<FeedbackForm onSubmit={onSubmit} />)
 
     await user.type(screen.getByLabelText(/^title$/i), 'Improve reader')
     await user.type(screen.getByLabelText(/^description$/i), 'Please add feature X')
@@ -32,7 +32,7 @@ describe('GitHubFeedbackForm', () => {
   it('submits selected feedback type from custom listbox', async () => {
     const onSubmit = jest.fn().mockResolvedValue(true)
     const user = userEvent.setup()
-    render(<GitHubFeedbackForm onSubmit={onSubmit} />)
+    render(<FeedbackForm onSubmit={onSubmit} />)
 
     await user.click(screen.getByRole('button', { name: /feedback type/i }))
     await user.click(screen.getByRole('option', { name: /bug report/i }))
@@ -51,7 +51,7 @@ describe('GitHubFeedbackForm', () => {
   it('submits optional email when provided', async () => {
     const onSubmit = jest.fn().mockResolvedValue(true)
     const user = userEvent.setup()
-    render(<GitHubFeedbackForm onSubmit={onSubmit} />)
+    render(<FeedbackForm onSubmit={onSubmit} />)
 
     await user.type(screen.getByLabelText(/^title$/i), 'Follow up')
     await user.type(screen.getByLabelText(/^email/i), 'reader@example.com')
@@ -68,7 +68,7 @@ describe('GitHubFeedbackForm', () => {
 
   it('shows success message', () => {
     render(
-      <GitHubFeedbackForm
+      <FeedbackForm
         onSubmit={jest.fn().mockResolvedValue(true)}
         successMessage="Thank you!"
       />

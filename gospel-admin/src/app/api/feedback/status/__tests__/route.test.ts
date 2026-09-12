@@ -6,8 +6,16 @@ jest.mock('@/lib/supabase/server', () => ({
 }))
 
 describe('/api/feedback/status', () => {
+  const originalToken = process.env.NOTION_FEEDBACK_TOKEN
+
   beforeEach(() => {
     jest.clearAllMocks()
+    delete process.env.NOTION_FEEDBACK_TOKEN
+  })
+
+  afterAll(() => {
+    if (originalToken === undefined) delete process.env.NOTION_FEEDBACK_TOKEN
+    else process.env.NOTION_FEEDBACK_TOKEN = originalToken
   })
 
   it('returns enabled true when fully configured', async () => {
@@ -17,10 +25,9 @@ describe('/api/feedback/status', () => {
           eq: jest.fn(() => ({
             maybeSingle: jest.fn().mockResolvedValue({
               data: {
-                github_feedback_enabled: true,
-                github_token: 'ghp_test',
-                github_repo_owner: 'owner',
-                github_repo_name: 'repo',
+                notion_feedback_enabled: true,
+                notion_token: 'secret_test',
+                notion_database_id: '5c7d52ea-16a5-4471-914f-cac7baf28add',
               },
               error: null,
             }),
@@ -42,10 +49,9 @@ describe('/api/feedback/status', () => {
           eq: jest.fn(() => ({
             maybeSingle: jest.fn().mockResolvedValue({
               data: {
-                github_feedback_enabled: true,
-                github_token: null,
-                github_repo_owner: 'owner',
-                github_repo_name: 'repo',
+                notion_feedback_enabled: true,
+                notion_token: null,
+                notion_database_id: '5c7d52ea-16a5-4471-914f-cac7baf28add',
               },
               error: null,
             }),

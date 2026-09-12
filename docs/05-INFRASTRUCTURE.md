@@ -135,7 +135,7 @@ Modals do not change the URL, so they are **not** tracked as Web Analytics paths
 | `scripture_word_study` | Word study overlay in scripture reader |
 | `mcheyne_reading_plan` | M'Cheyne reading plan calendar |
 | `morneve_devotions` | Morning & Evening devotions calendar |
-| `github_feedback` | Feedback form |
+| `send_feedback` | Feedback form |
 | `presentation_welcome` | First-visit welcome |
 | `memorize_listen_controls` | Memorize listen controls (modal presentation only) |
 

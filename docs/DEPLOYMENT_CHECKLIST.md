@@ -35,13 +35,15 @@ SELECT * FROM get_backup_tables() WHERE table_name IN (
   - `verification_code_length`
   - `verification_code_expiry_minutes`
   - `enable_verification_code_login`
-- [ ] Run migration: `20260529_github_feedback.sql`
-- [ ] Verify `admin_settings` has GitHub feedback columns:
-  - `github_feedback_enabled`
-  - `github_token`
-  - `github_repo_owner`
-  - `github_repo_name`
-- [ ] In **Admin → Settings → GitHub Feedback Settings**: set repo owner/name, PAT (`repo` + issues scopes), enable feedback, **Test Connection**, **Save Settings**
+- [ ] Run migration: `20260912_notion_feedback.sql` (replaces GitHub feedback columns with Notion columns)
+- [ ] Verify `admin_settings` has Notion feedback columns:
+  - `notion_feedback_enabled`
+  - `notion_token`
+  - `notion_database_id`
+- [ ] Create a Notion **internal integration** with insert access to the Gospel Presentation **Site issues** database
+- [ ] In **Admin → Settings → Notion Feedback Settings**: paste the integration token and Site issues database/data-source ID (`5c7d52ea-16a5-4471-914f-cac7baf28add`), enable feedback, **Test Connection**, optionally **Test Create Row**, **Save Settings**
+- [ ] Optional: set `NOTION_FEEDBACK_TOKEN` (and `NOTION_FEEDBACK_DATABASE_ID`) on Vercel instead of storing the token in `admin_settings`
+- [ ] Optional: add a Notion Automation on Site issues — **page added → notify me**
 - [ ] Test cleanup function: `SELECT cleanup_expired_verification_codes();`
 
 ### Azure AD / Microsoft Graph API

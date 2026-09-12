@@ -2,23 +2,23 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import GitHubFeedbackForm, { type GitHubFeedbackFormValues } from '@/components/GitHubFeedbackForm'
+import FeedbackForm, { type FeedbackFormValues } from '@/components/FeedbackForm'
 import { usePostHogModalOpen } from '@/hooks/usePostHogModalOpen'
 
-export interface GitHubFeedbackModalProps {
+export interface FeedbackModalProps {
   isOpen: boolean
   onClose: () => void
   profileSlug?: string
   profileTitle?: string
 }
 
-export default function GitHubFeedbackModal({
+export default function FeedbackModal({
   isOpen,
   onClose,
   profileSlug,
   profileTitle,
-}: GitHubFeedbackModalProps) {
-  usePostHogModalOpen('github_feedback', isOpen, { profile_slug: profileSlug })
+}: FeedbackModalProps) {
+  usePostHogModalOpen('send_feedback', isOpen, { profile_slug: profileSlug })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
@@ -44,7 +44,7 @@ export default function GitHubFeedbackModal({
   }, [clearSuccessTimer, onClose])
 
   const handleSubmit = useCallback(
-    async (values: GitHubFeedbackFormValues): Promise<boolean> => {
+    async (values: FeedbackFormValues): Promise<boolean> => {
       setIsSubmitting(true)
       setSuccessMessage('')
       setErrorMessage('')
@@ -95,12 +95,12 @@ export default function GitHubFeedbackModal({
         className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-lg w-full max-h-[min(90vh,90dvh)] flex flex-col overflow-hidden"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="github-feedback-modal-title"
+        aria-labelledby="feedback-modal-title"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="shrink-0 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-600 px-6 py-4 flex items-center justify-between">
           <h2
-            id="github-feedback-modal-title"
+            id="feedback-modal-title"
             className="text-xl font-bold text-slate-800 dark:text-slate-100"
           >
             Send Feedback
@@ -118,7 +118,7 @@ export default function GitHubFeedbackModal({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
-          <GitHubFeedbackForm
+          <FeedbackForm
             onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
             successMessage={successMessage}
