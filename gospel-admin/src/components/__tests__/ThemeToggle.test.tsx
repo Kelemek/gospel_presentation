@@ -6,7 +6,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext'
 
 const STORAGE_KEY = 'gospel-profile-theme'
 
-function renderWithProvider(initialTheme: 'light' | 'dark' = 'light') {
+function renderWithProvider(initialTheme: 'light' | 'dark' | 'black' = 'light') {
   if (typeof window !== 'undefined') {
     window.localStorage.setItem(STORAGE_KEY, initialTheme)
   }
@@ -34,6 +34,13 @@ describe('ThemeToggle', () => {
 
   it('renders a button with accessible label for dark mode', () => {
     renderWithProvider('dark')
+    const button = screen.getByRole('button', { name: /switch to black mode/i })
+    expect(button).toBeInTheDocument()
+    expect(button).toHaveAttribute('title', 'Switch to black mode')
+  })
+
+  it('renders a button with accessible label for black mode', () => {
+    renderWithProvider('black')
     const button = screen.getByRole('button', { name: /switch to light mode/i })
     expect(button).toBeInTheDocument()
     expect(button).toHaveAttribute('title', 'Switch to light mode')
@@ -42,42 +49,30 @@ describe('ThemeToggle', () => {
   it('shows moon icon when theme is light', () => {
     renderWithProvider('light')
     const button = screen.getByRole('button', { name: /switch to dark mode/i })
-    const svg = button.querySelector('svg')
-    expect(svg).toBeInTheDocument()
-    expect(button).toHaveAttribute('aria-label', 'Switch to dark mode')
+    expect(button.querySelector('circle')).not.toBeInTheDocument()
+    expect(button.querySelector('svg')).toBeInTheDocument()
   })
 
-  it('shows sun icon when theme is dark', () => {
+  it('shows filled circle when theme is dark', () => {
     renderWithProvider('dark')
-    const button = screen.getByRole('button', { name: /switch to light mode/i })
-    const svg = button.querySelector('svg')
-    expect(svg).toBeInTheDocument()
-    expect(button).toHaveAttribute('aria-label', 'Switch to light mode')
+    const button = screen.getByRole('button', { name: /switch to black mode/i })
+    expect(button.querySelector('circle')).toBeInTheDocument()
   })
 
-  it('toggles theme when clicked and persists to localStorage', async () => {
+  it('cycles light → dark → black → light and persists to localStorage', async () => {
     const user = userEvent.setup({ delay: null })
     renderWithProvider('light')
 
-    const button = screen.getByRole('button', { name: /switch to dark mode/i })
-    await user.click(button)
+    await user.click(screen.getByRole('button', { name: /switch to dark mode/i }))
+    expect(screen.getByRole('button', { name: /switch to black mode/i })).toBeInTheDocument()
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('dark')
 
+    await user.click(screen.getByRole('button', { name: /switch to black mode/i }))
     expect(screen.getByRole('button', { name: /switch to light mode/i })).toBeInTheDocument()
-    if (typeof window !== 'undefined') {
-      expect(window.localStorage.getItem(STORAGE_KEY)).toBe('dark')
-    }
-  })
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('black')
 
-  it('toggles from dark to light when clicked', async () => {
-    const user = userEvent.setup({ delay: null })
-    renderWithProvider('dark')
-
-    const button = screen.getByRole('button', { name: /switch to light mode/i })
-    await user.click(button)
-
+    await user.click(screen.getByRole('button', { name: /switch to light mode/i }))
     expect(screen.getByRole('button', { name: /switch to dark mode/i })).toBeInTheDocument()
-    if (typeof window !== 'undefined') {
-      expect(window.localStorage.getItem(STORAGE_KEY)).toBe('light')
-    }
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('light')
   })
 })

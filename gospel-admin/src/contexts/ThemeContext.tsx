@@ -3,30 +3,29 @@
 import React, { createContext, useContext, useSyncExternalStore, useCallback, useMemo } from 'react'
 import { THEME_STORAGE_KEY } from '@/lib/theme-init-script'
 import {
+  getSystemTheme,
+  parseStoredTheme,
+  resolveTheme,
+  type Theme,
+} from '@/lib/profileTheme'
+import {
   gospelStorageRemoveSync,
   gospelStorageSetSync,
 } from '@/lib/gospelClientStorage'
 import { GOSPEL_CLIENT_STORAGE_CHANGED_EVENT } from '@/lib/gospelClientStorageEvents'
 
+export type { Theme } from '@/lib/profileTheme'
+
 const STORAGE_KEY = THEME_STORAGE_KEY
-
-export type Theme = 'light' | 'dark'
-
-function getSystemTheme(): Theme {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return 'light'
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-}
 
 function getStoredTheme(): Theme | null {
   if (typeof window === 'undefined') return null
-  const stored = localStorage.getItem(STORAGE_KEY)
-  if (stored === 'light' || stored === 'dark') return stored
-  return null
+  return parseStoredTheme(localStorage.getItem(STORAGE_KEY))
 }
 
 function getSnapshot(): Theme {
   const stored = getStoredTheme()
-  return stored ?? getSystemTheme()
+  return resolveTheme(stored, getSystemTheme())
 }
 
 function getServerSnapshot(): Theme {
@@ -40,7 +39,7 @@ function notify() {
   listeners.forEach((l) => l())
 }
 
-/** Whether the user saved light/dark in localStorage or follows system preference (no key). */
+/** Whether the user saved light/dark/black in localStorage or follows system preference (no key). */
 export type ThemePersistenceSnapshot =
   | { kind: 'explicit'; theme: Theme }
   | { kind: 'system' }

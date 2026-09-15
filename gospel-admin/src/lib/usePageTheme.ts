@@ -1,25 +1,28 @@
 'use client'
 
 import { useLayoutEffect, useSyncExternalStore } from 'react'
+import { usePathname } from 'next/navigation'
+import {
+  applyThemeToDocument,
+  getSystemTheme,
+  parseStoredTheme,
+  resolveTheme,
+  type Theme,
+} from '@/lib/profileTheme'
+import { THEME_STORAGE_KEY } from '@/lib/theme-init-script'
 
-const THEME_KEY = 'gospel-profile-theme'
+const THEME_KEY = THEME_STORAGE_KEY
 
-function getStored(): 'light' | 'dark' | null {
+function getStored(): Theme | null {
   if (typeof window === 'undefined') return null
-  const s = localStorage.getItem(THEME_KEY)
-  return s === 'light' || s === 'dark' ? s : null
+  return parseStoredTheme(localStorage.getItem(THEME_KEY))
 }
 
-function getSystem(): 'light' | 'dark' {
-  if (typeof window === 'undefined' || !window.matchMedia) return 'light'
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+function getSnapshot(): Theme {
+  return resolveTheme(getStored(), getSystemTheme())
 }
 
-function getSnapshot(): 'light' | 'dark' {
-  return getStored() ?? getSystem()
-}
-
-function getServerSnapshot(): 'light' | 'dark' {
+function getServerSnapshot(): Theme {
   return 'light'
 }
 
@@ -46,9 +49,9 @@ function notifyTheme() {
 
 /**
  * Reads theme from localStorage (gospel-profile-theme) with system fallback.
- * Use on standalone pages (e.g. /copyright, /privacy) so they show the same dark/light mode as the rest of the app.
+ * Use on standalone pages (e.g. /copyright, /privacy) so they show the same appearance as the rest of the app.
  */
-export function usePageTheme(): 'light' | 'dark' {
+export function usePageTheme(): Theme {
   return useSyncExternalStore(subscribeTheme, getSnapshot, getServerSnapshot)
 }
 
@@ -56,10 +59,10 @@ export function usePageTheme(): 'light' | 'dark' {
  * Applies the current page theme to the document (html and body).
  * Call in useLayoutEffect when theme changes so the rest of the app stays in sync.
  */
-export function useApplyPageThemeToDocument(theme: 'light' | 'dark') {
+export function useApplyPageThemeToDocument(theme: Theme) {
+  const pathname = usePathname()
+
   useLayoutEffect(() => {
-    const isDark = theme === 'dark'
-    document.documentElement.classList.toggle('dark', isDark)
-    document.body.classList.toggle('dark', isDark)
-  }, [theme])
+    applyThemeToDocument(theme, pathname)
+  }, [theme, pathname])
 }

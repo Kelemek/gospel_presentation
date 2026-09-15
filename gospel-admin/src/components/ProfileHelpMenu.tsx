@@ -97,8 +97,8 @@ export function buildProfileTutorialMenuItems(): TutorialItem[] {
     },
     {
       id: 'theme',
-      label: 'Light and dark mode',
-      description: 'Switch between light and dark appearance',
+      label: 'Light, dark, and black mode',
+      description: 'Cycle light, dark, and a near-black night look',
       run: runThemeFeatureTour,
     },
     ...headerAfterTheme,

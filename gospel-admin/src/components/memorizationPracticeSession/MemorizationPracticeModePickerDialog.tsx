@@ -109,14 +109,7 @@ export function MemorizationPracticeModePickerDialog({
               onClick={() => onSelectMode('recite')}
               className="w-full px-4 py-3 rounded-lg font-medium transition-colors cursor-pointer bg-blue-100 dark:bg-blue-900/40 hover:bg-blue-200 dark:hover:bg-blue-900/60 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700"
             >
-              <span className="inline-flex items-center justify-center gap-2">
-                Recite mode
-                <span
-                  className="text-[0.65rem] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 border border-amber-200 dark:border-amber-700"
-                >
-                  Beta
-                </span>
-              </span>
+              Recite mode
             </button>
           )}
           <button

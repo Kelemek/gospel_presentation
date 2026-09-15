@@ -1,15 +1,22 @@
 'use client'
 
 import React, { createContext, useContext, useState, useCallback, useRef, useLayoutEffect } from 'react'
+import { usePathname } from 'next/navigation'
+import { THEME_STORAGE_KEY } from '@/lib/theme-init-script'
+import {
+  getSystemTheme,
+  isAdminPathname,
+  parseStoredTheme,
+  resolveTheme,
+  themeUsesDarkClass,
+  type Theme,
+} from '@/lib/profileTheme'
 
-const THEME_STORAGE_KEY = 'gospel-profile-theme'
-
-function getTheme(): 'light' | 'dark' {
+function getModalTheme(pathname: string | null): Theme {
   if (typeof window === 'undefined') return 'light'
-  const stored = localStorage.getItem(THEME_STORAGE_KEY)
-  if (stored === 'light' || stored === 'dark') return stored
-  if (typeof window.matchMedia !== 'function') return 'light'
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  if (isAdminPathname(pathname)) return 'light'
+  const stored = parseStoredTheme(localStorage.getItem(THEME_STORAGE_KEY))
+  return resolveTheme(stored, getSystemTheme())
 }
 
 type AlertModalVariant = 'alert' | 'confirm'
@@ -50,17 +57,18 @@ function AlertModalMessage({ message }: { message: AlertModalContent }) {
 }
 
 export function AlertModalProvider({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
   const [state, setState] = useState<AlertModalState>({
     isOpen: false,
     message: '',
     variant: 'alert'
   })
-  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const [theme, setTheme] = useState<Theme>('light')
   const resolveRef = useRef<(value: boolean) => void | null>(null)
 
   useLayoutEffect(() => {
-    queueMicrotask(() => setTheme(getTheme()))
-    const onStorage = () => setTheme(getTheme())
+    queueMicrotask(() => setTheme(getModalTheme(pathname)))
+    const onStorage = () => setTheme(getModalTheme(pathname))
     window.addEventListener('storage', onStorage)
     const media = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: dark)') : null
     if (media) media.addEventListener('change', onStorage)
@@ -68,11 +76,11 @@ export function AlertModalProvider({ children }: { children: React.ReactNode }) 
       window.removeEventListener('storage', onStorage)
       if (media) media.removeEventListener('change', onStorage)
     }
-  }, [])
+  }, [pathname])
 
   useLayoutEffect(() => {
-    if (state.isOpen) queueMicrotask(() => setTheme(getTheme()))
-  }, [state.isOpen])
+    if (state.isOpen) queueMicrotask(() => setTheme(getModalTheme(pathname)))
+  }, [state.isOpen, pathname])
 
   const showAlert = useCallback((message: AlertModalContent) => {
     setState({ isOpen: true, message, variant: 'alert' })
@@ -106,7 +114,8 @@ export function AlertModalProvider({ children }: { children: React.ReactNode }) 
       {children}
       {state.isOpen && (
         <div
-          className={`gospel-modal-safe-overlay fixed inset-0 z-130 flex items-center justify-center bg-black/50 ${theme === 'dark' ? 'dark' : ''}`}
+          className={`gospel-modal-safe-overlay fixed inset-0 z-130 flex items-center justify-center bg-black/50 ${themeUsesDarkClass(theme) ? 'dark' : ''}`}
+          data-theme={theme === 'black' ? 'black' : undefined}
           role="dialog"
           aria-modal="true"
           aria-labelledby="alert-modal-title"

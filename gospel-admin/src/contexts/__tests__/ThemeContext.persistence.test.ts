@@ -16,6 +16,16 @@ describe('ThemeContext persistence snapshot', () => {
     expect(readThemePersistenceSnapshot()).toEqual({ kind: 'explicit', theme: 'dark' })
   })
 
+  it('read returns explicit black when stored', () => {
+    localStorage.setItem('gospel-profile-theme', 'black')
+    expect(readThemePersistenceSnapshot()).toEqual({ kind: 'explicit', theme: 'black' })
+  })
+
+  it('read returns explicit black when black is stored', () => {
+    localStorage.setItem('gospel-profile-theme', 'black')
+    expect(readThemePersistenceSnapshot()).toEqual({ kind: 'explicit', theme: 'black' })
+  })
+
   it('read returns system when storage key is absent', () => {
     expect(readThemePersistenceSnapshot()).toEqual({ kind: 'system' })
   })

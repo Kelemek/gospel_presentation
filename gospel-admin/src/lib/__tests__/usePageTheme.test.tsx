@@ -16,6 +16,9 @@ describe('usePageTheme', () => {
   beforeEach(() => {
     if (typeof window !== 'undefined') {
       window.localStorage.clear()
+      document.documentElement.classList.remove('dark')
+      document.body.classList.remove('dark')
+      document.documentElement.removeAttribute('data-theme')
     }
     matchMediaMock = jest.fn().mockImplementation((query: string) => ({
       matches: false,
@@ -43,11 +46,26 @@ describe('usePageTheme', () => {
     expect(screen.getByTestId('theme-value')).toHaveTextContent('light')
   })
 
+  it('returns black when localStorage has gospel-profile-theme set to black', () => {
+    window.localStorage.setItem(THEME_KEY, 'black')
+    render(<TestConsumer />)
+    expect(screen.getByTestId('theme-value')).toHaveTextContent('black')
+  })
+
   it('applies dark class to document when theme is dark', () => {
     window.localStorage.setItem(THEME_KEY, 'dark')
     render(<TestConsumer />)
     expect(document.documentElement.classList.contains('dark')).toBe(true)
     expect(document.body.classList.contains('dark')).toBe(true)
+    expect(document.documentElement.getAttribute('data-theme')).toBeNull()
+  })
+
+  it('applies dark class and data-theme=black when theme is black', () => {
+    window.localStorage.setItem(THEME_KEY, 'black')
+    render(<TestConsumer />)
+    expect(document.documentElement.classList.contains('dark')).toBe(true)
+    expect(document.body.classList.contains('dark')).toBe(true)
+    expect(document.documentElement.getAttribute('data-theme')).toBe('black')
   })
 
   it('does not apply dark class to document when theme is light', () => {

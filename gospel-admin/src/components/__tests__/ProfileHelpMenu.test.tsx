@@ -84,7 +84,7 @@ describe('buildProfileTutorialMenuItems', () => {
     })
     const labels = buildProfileTutorialMenuItems().map((i) => i.label)
     const fullIdx = labels.findIndex((l) => /^full walkthrough$/i.test(l))
-    const themeIdx = labels.findIndex((l) => /light and dark mode/i.test(l))
+    const themeIdx = labels.findIndex((l) => /light, dark, and black mode/i.test(l))
     const shareIdx = labels.findIndex((l) => /share this resource/i.test(l))
     const bookmarksIdx = labels.findIndex((l) => /using bookmarks/i.test(l))
     const highlightsIdx = labels.findIndex((l) => /^highlights$/i.test(l))
@@ -106,7 +106,7 @@ describe('buildProfileTutorialMenuItems', () => {
     })
     const labels = buildProfileTutorialMenuItems().map((i) => i.label)
     expect(labels.some((l) => /listen \(read aloud\)/i.test(l))).toBe(true)
-    const themeIdx = labels.findIndex((l) => /light and dark mode/i.test(l))
+    const themeIdx = labels.findIndex((l) => /light, dark, and black mode/i.test(l))
     const shareIdx = labels.findIndex((l) => /share this resource/i.test(l))
     const bookmarksIdx = labels.findIndex((l) => /using bookmarks/i.test(l))
     const highlightsIdx = labels.findIndex((l) => /^highlights$/i.test(l))
@@ -148,7 +148,7 @@ describe('ProfileHelpMenu', () => {
     expect(screen.getByRole('menuitem', { name: /^add custom memorization/i })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /^quick verse preview/i })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /marriage seminar resources/i })).toBeInTheDocument()
-    expect(screen.getByRole('menuitem', { name: /light and dark mode/i })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /light, dark, and black mode/i })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /Highlights Save quotes/i })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /share this resource/i })).toBeInTheDocument()
   })
@@ -304,7 +304,7 @@ describe('ProfileHelpMenu', () => {
     render(<ProfileHelpMenu />)
 
     await user.click(screen.getByRole('button', { name: /help and tutorials/i }))
-    await user.click(screen.getByRole('menuitem', { name: /light and dark mode/i }))
+    await user.click(screen.getByRole('menuitem', { name: /light, dark, and black mode/i }))
 
     await waitFor(() => {
       expect(runThemeFeatureTour).toHaveBeenCalledTimes(1)

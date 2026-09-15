@@ -39,5 +39,6 @@
   "Bug fix: Listening to a day’s Bible reading plan now moves to the next chapter the way it did before a recent timing change that could leave the next reading stuck on loading.",
   "When listening to a day’s Bible reading plan, the next chapter’s audio waits until the text is on screen before it starts.",
   "Bug fix: Listen now shows the usual loading spinner while the next verse or chapter text is loading.",
-  "Bug fix: Looking up verses with book abbreviations that end in a period, such as Phil. 4:8, now works in NIV and other translations. Error messages no longer mention ESV when another translation is selected."
+  "Bug fix: Looking up verses with book abbreviations that end in a period, such as Phil. 4:8, now works in NIV and other translations. Error messages no longer mention ESV when another translation is selected.",
+  "You can now cycle light, dark, and a near-black night look from the theme control on presentation pages (moon, filled circle, and sun icons). Your device automatic setting still only chooses light or dark. Help → Light, dark, and black mode walks through all three on the full page, then restores your previous choice."
 ]

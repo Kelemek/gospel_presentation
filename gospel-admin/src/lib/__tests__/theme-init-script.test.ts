@@ -8,4 +8,18 @@ describe('theme-init-script', () => {
     expect(script).toContain('prefers-color-scheme: dark')
     expect(script).toContain('document.documentElement.classList.toggle')
   })
+
+  it('supports black stored theme and data-theme attribute', () => {
+    const script = getThemeInitScriptContent()
+    expect(script).toContain("'black'")
+    expect(script).toContain('data-theme')
+    expect(script).toContain("setAttribute('data-theme','black')")
+  })
+
+  it('forces light document on admin paths', () => {
+    const script = getThemeInitScriptContent()
+    expect(script).toContain('/admin')
+    expect(script).toContain("removeAttribute('data-theme')")
+    expect(script).toContain("classList.remove('dark')")
+  })
 })

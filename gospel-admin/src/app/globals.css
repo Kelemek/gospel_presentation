@@ -73,6 +73,48 @@ body.dark::before {
   background: linear-gradient(to bottom right, #1e293b, #0f172a);
 }
 
+/* Black mode: near-black surfaces (dark: utilities still apply; overrides slate/gray canvas tokens) */
+html[data-theme="black"] {
+  /* Slightly lighter 400–600 so modal edges and bordered buttons read against #121212 panels */
+  --color-slate-400: #5a5a5a;
+  --color-slate-500: #484848;
+  --color-slate-600: #3a3a3a;
+  --color-slate-700: #2a2a2a;
+  --color-slate-800: #121212;
+  --color-slate-900: #050505;
+  --color-slate-950: #030303;
+  --color-gray-800: #121212;
+  --color-gray-900: #050505;
+}
+
+/* Black mode: alert / change-log panels — outer edge slightly above token default */
+html[data-theme="black"] .gospel-modal-safe-panel {
+  border-color: #454545;
+}
+
+html[data-theme="black"] body,
+html[data-theme="black"] body.dark {
+  background-color: #050505;
+}
+
+html[data-theme="black"] body::before,
+html[data-theme="black"] body.dark::before {
+  background: linear-gradient(to bottom right, #121212, #050505);
+}
+
+html[data-theme="black"] .scripture-modal-attribution {
+  background-color: #1f1f1f;
+  color: #e2e8f0;
+}
+
+html[data-theme="black"] .scripture-modal-attribution a {
+  color: #60a5fa;
+}
+
+html[data-theme="black"] .scripture-modal-attribution a:hover {
+  color: #93c5fd;
+}
+
 /* Scripture modal attribution block - dark mode via selector so it always applies when inside .dark */
 .dark .scripture-modal-attribution {
   background-color: #334155; /* slate-700 */
@@ -1652,6 +1694,47 @@ body.dark .profile-help-tour-popover.driver-popover {
   box-shadow: 0 4px 24px rgb(0 0 0 / 0.45);
 }
 
+html[data-theme="black"] .profile-help-tour-popover.driver-popover,
+body[data-theme="black"] .profile-help-tour-popover.driver-popover {
+  background-color: #121212;
+  color: rgb(241 245 249);
+  border: 1px solid #2a2a2a;
+  box-shadow: 0 4px 24px rgb(0 0 0 / 0.65);
+}
+
+html[data-theme="black"] .profile-help-tour-popover .driver-popover-title {
+  color: rgb(248 250 252);
+}
+
+html[data-theme="black"] .profile-help-tour-popover .driver-popover-description {
+  color: rgb(203 213 225);
+}
+
+html[data-theme="black"] .profile-help-tour-popover .driver-popover-progress-text {
+  color: rgb(148 163 184);
+}
+
+html[data-theme="black"] .profile-help-tour-popover .driver-popover-footer button {
+  background-color: #1f1f1f;
+  color: rgb(241 245 249);
+  border-color: #2a2a2a;
+  text-shadow: none;
+}
+
+html[data-theme="black"] .profile-help-tour-popover .driver-popover-footer button:hover,
+html[data-theme="black"] .profile-help-tour-popover .driver-popover-footer button:focus {
+  background-color: #2a2a2a;
+}
+
+html[data-theme="black"] .profile-help-tour-popover .driver-popover-close-btn {
+  color: rgb(148 163 184);
+}
+
+html[data-theme="black"] .profile-help-tour-popover .driver-popover-close-btn:hover,
+html[data-theme="black"] .profile-help-tour-popover .driver-popover-close-btn:focus {
+  color: rgb(248 250 252);
+}
+
 html.dark .profile-help-tour-popover .driver-popover-title,
 body.dark .profile-help-tour-popover .driver-popover-title {
   color: rgb(248 250 252);
@@ -1920,6 +2003,12 @@ body.dark .profile-help-tour-popover .scripture-hover-preview-tour-demo .shvp-de
 html.dark .open-item-tab-bar-scroll-shadow,
 body.dark .open-item-tab-bar-scroll-shadow {
   --open-item-tab-bar-fade-base: rgb(51 65 85); /* slate-700 */
+}
+
+html[data-theme="black"] .open-item-tab-bar-scroll-shadow,
+body[data-theme="black"] .open-item-tab-bar-scroll-shadow {
+  /* Neutral charcoal — matches black-mode tab track (slate-700 token), not blue slate-700 */
+  --open-item-tab-bar-fade-base: rgb(42 42 42);
 }
 
 .open-item-tab-bar-scroll-fade {

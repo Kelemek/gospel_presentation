@@ -1,6 +1,7 @@
 'use client'
 
 import { useTheme } from '@/contexts/ThemeContext'
+import { nextTheme } from '@/lib/profileTheme'
 
 function MoonIcon({ className }: { className?: string }) {
   return (
@@ -18,26 +19,55 @@ function SunIcon({ className }: { className?: string }) {
   )
 }
 
+function BlackModeIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <circle cx="12" cy="12" r="9" />
+    </svg>
+  )
+}
+
+function switchLabelForCurrent(theme: 'light' | 'dark' | 'black'): string {
+  switch (theme) {
+    case 'light':
+      return 'Switch to dark mode'
+    case 'dark':
+      return 'Switch to black mode'
+    case 'black':
+      return 'Switch to light mode'
+    default:
+      return 'Switch appearance'
+  }
+}
+
+function IconForCurrent(theme: 'light' | 'dark' | 'black', className: string) {
+  switch (theme) {
+    case 'light':
+      return <MoonIcon className={className} />
+    case 'dark':
+      return <BlackModeIcon className={className} />
+    case 'black':
+      return <SunIcon className={className} />
+    default:
+      return <MoonIcon className={className} />
+  }
+}
+
 export default function ThemeToggle() {
   const { theme, setTheme } = useTheme()
 
-  const isDark = theme === 'dark'
-  const label = isDark ? 'Switch to light mode' : 'Switch to dark mode'
+  const label = switchLabelForCurrent(theme)
 
   return (
     <button
       type="button"
       data-tour="theme-toggle"
-      onClick={() => setTheme(isDark ? 'light' : 'dark')}
+      onClick={() => setTheme(nextTheme(theme))}
       className="p-2 rounded-md flex items-center justify-center min-h-[36px] min-w-[36px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white transition-colors cursor-pointer"
       aria-label={label}
       title={label}
     >
-      {isDark ? (
-        <SunIcon className="w-5 h-5" />
-      ) : (
-        <MoonIcon className="w-5 h-5" />
-      )}
+      {IconForCurrent(theme, 'w-5 h-5')}
     </button>
   )
 }
