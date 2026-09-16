@@ -1468,5 +1468,10 @@
     "releasedAt": "2026-09-15",
     "committedAt": "2026-09-15T12:47:04.433Z",
     "message": "You can now cycle light, dark, and a near-black night look from the theme control on presentation pages (moon, filled circle, and sun icons). Your device automatic setting still only chooses light or dark. Help → Light, dark, and black mode walks through all three on the full page, then restores your previous choice."
+  },
+  {
+    "releasedAt": "2026-09-16",
+    "committedAt": "2026-09-16T14:25:10.519Z",
+    "message": "Bug fix: The page-turn animation on the M'Cheyne reading plan in the menu now turns the usual way, from right to left."
   }
 ]

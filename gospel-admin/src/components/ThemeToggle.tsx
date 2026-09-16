@@ -21,7 +21,15 @@ function SunIcon({ className }: { className?: string }) {
 
 function BlackModeIcon({ className }: { className?: string }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      className={className}
+      aria-hidden
+    >
       <circle cx="12" cy="12" r="9" />
     </svg>
   )

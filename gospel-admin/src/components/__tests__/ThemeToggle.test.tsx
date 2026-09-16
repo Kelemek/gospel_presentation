@@ -53,10 +53,13 @@ describe('ThemeToggle', () => {
     expect(button.querySelector('svg')).toBeInTheDocument()
   })
 
-  it('shows filled circle when theme is dark', () => {
+  it('shows outline circle when theme is dark', () => {
     renderWithProvider('dark')
     const button = screen.getByRole('button', { name: /switch to black mode/i })
+    const svg = button.querySelector('svg')
     expect(button.querySelector('circle')).toBeInTheDocument()
+    expect(svg).toHaveAttribute('fill', 'none')
+    expect(svg).toHaveAttribute('stroke', 'currentColor')
   })
 
   it('cycles light → dark → black → light and persists to localStorage', async () => {

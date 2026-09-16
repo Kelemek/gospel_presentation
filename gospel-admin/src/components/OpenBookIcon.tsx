@@ -13,7 +13,7 @@ const LEFT_PAGE_PATH =
 const RIGHT_PAGE_PATH =
   'M12 6.253C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'
 
-const LEFT_PAGE_CLOSED = `${LEFT_PAGE_PATH} L12 19.25 Z`
+const RIGHT_PAGE_CLOSED = `${RIGHT_PAGE_PATH} L12 19.25 Z`
 
 const SPINE_X = 12
 const SPINE_TOP_Y = 6.253
@@ -52,7 +52,7 @@ type TurningPageProps = {
   sheetOpacityKeyTimes: string
 }
 
-/** One sheet: fold at spine (scaleX → 0), then land on the right (scaleX → −1). */
+/** One sheet: fold at spine (scaleX → 0), then land on the left (scaleX → −1). */
 function TurningPage({
   scaleValues,
   scaleKeyTimes,
@@ -82,7 +82,7 @@ function TurningPage({
         <g transform={`translate(${-SPINE_X} ${-SPINE_Y})`}>
           <path
             className="open-book-animated-icon__sheet"
-            d={LEFT_PAGE_CLOSED}
+            d={RIGHT_PAGE_CLOSED}
             fill="currentColor"
             fillOpacity={0.14}
           />
@@ -92,7 +92,7 @@ function TurningPage({
   )
 }
 
-/** Open book: one page turns left → spine → right (M'Cheyne row). */
+/** Open book: one page turns right → spine → left (M'Cheyne row). */
 export function OpenBookIcon({ className = 'w-6 h-6 shrink-0' }: OpenBookIconProps) {
   const reduceMotion = useSyncExternalStore(
     subscribeReducedMotion,
