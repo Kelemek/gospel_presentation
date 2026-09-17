@@ -1473,5 +1473,10 @@
     "releasedAt": "2026-09-16",
     "committedAt": "2026-09-16T14:25:10.519Z",
     "message": "Bug fix: The page-turn animation on the M'Cheyne reading plan in the menu now turns the usual way, from right to left."
+  },
+  {
+    "releasedAt": "2026-09-17",
+    "committedAt": "2026-09-17T16:46:39.438Z",
+    "message": "Black mode uses a deeper near-black background and slightly darker panels while keeping text and controls easy to read."
   }
 ]

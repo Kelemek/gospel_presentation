@@ -75,35 +75,35 @@ body.dark::before {
 
 /* Black mode: near-black surfaces (dark: utilities still apply; overrides slate/gray canvas tokens) */
 html[data-theme="black"] {
-  /* Slightly lighter 400–600 so modal edges and bordered buttons read against #121212 panels */
-  --color-slate-400: #5a5a5a;
-  --color-slate-500: #484848;
-  --color-slate-600: #3a3a3a;
-  --color-slate-700: #2a2a2a;
-  --color-slate-800: #121212;
-  --color-slate-900: #050505;
-  --color-slate-950: #030303;
-  --color-gray-800: #121212;
-  --color-gray-900: #050505;
+  /* Slightly lighter 400–600 so modal edges and bordered buttons read against #0a0a0a panels */
+  --color-slate-400: #545454;
+  --color-slate-500: #424242;
+  --color-slate-600: #333333;
+  --color-slate-700: #1f1f1f;
+  --color-slate-800: #0a0a0a;
+  --color-slate-900: #000000;
+  --color-slate-950: #000000;
+  --color-gray-800: #0a0a0a;
+  --color-gray-900: #000000;
 }
 
 /* Black mode: alert / change-log panels — outer edge slightly above token default */
 html[data-theme="black"] .gospel-modal-safe-panel {
-  border-color: #454545;
+  border-color: #3a3a3a;
 }
 
 html[data-theme="black"] body,
 html[data-theme="black"] body.dark {
-  background-color: #050505;
+  background-color: #000000;
 }
 
 html[data-theme="black"] body::before,
 html[data-theme="black"] body.dark::before {
-  background: linear-gradient(to bottom right, #121212, #050505);
+  background: linear-gradient(to bottom right, #0a0a0a, #000000);
 }
 
 html[data-theme="black"] .scripture-modal-attribution {
-  background-color: #1f1f1f;
+  background-color: #161616;
   color: #e2e8f0;
 }
 
@@ -1696,9 +1696,9 @@ body.dark .profile-help-tour-popover.driver-popover {
 
 html[data-theme="black"] .profile-help-tour-popover.driver-popover,
 body[data-theme="black"] .profile-help-tour-popover.driver-popover {
-  background-color: #121212;
+  background-color: #0a0a0a;
   color: rgb(241 245 249);
-  border: 1px solid #2a2a2a;
+  border: 1px solid #1f1f1f;
   box-shadow: 0 4px 24px rgb(0 0 0 / 0.65);
 }
 
@@ -1715,15 +1715,15 @@ html[data-theme="black"] .profile-help-tour-popover .driver-popover-progress-tex
 }
 
 html[data-theme="black"] .profile-help-tour-popover .driver-popover-footer button {
-  background-color: #1f1f1f;
+  background-color: #161616;
   color: rgb(241 245 249);
-  border-color: #2a2a2a;
+  border-color: #1f1f1f;
   text-shadow: none;
 }
 
 html[data-theme="black"] .profile-help-tour-popover .driver-popover-footer button:hover,
 html[data-theme="black"] .profile-help-tour-popover .driver-popover-footer button:focus {
-  background-color: #2a2a2a;
+  background-color: #1f1f1f;
 }
 
 html[data-theme="black"] .profile-help-tour-popover .driver-popover-close-btn {
@@ -2008,7 +2008,7 @@ body.dark .open-item-tab-bar-scroll-shadow {
 html[data-theme="black"] .open-item-tab-bar-scroll-shadow,
 body[data-theme="black"] .open-item-tab-bar-scroll-shadow {
   /* Neutral charcoal — matches black-mode tab track (slate-700 token), not blue slate-700 */
-  --open-item-tab-bar-fade-base: rgb(42 42 42);
+  --open-item-tab-bar-fade-base: rgb(31 31 31);
 }
 
 .open-item-tab-bar-scroll-fade {
