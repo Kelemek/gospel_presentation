@@ -1,0 +1,32 @@
+---
+description: Before git commit, run production build when gospel-admin code changes
+alwaysApply: true
+---
+
+# Commits and production build
+
+Vercel production runs `npm run build` from `gospel-admin/` (TypeScript check + `next build`). **Tests and lint alone do not catch every build failure.**
+
+## When the user asks you to commit (or commit-and-push)
+
+After staging the intended files and **before** `git commit`:
+
+1. If the commit includes changes under `gospel-admin/` other than **only** `data/deploy-update-changelog.json` and/or `data/site-changelog.json`, run from `gospel-admin/`:
+   ```bash
+   npm run build
+   ```
+2. Fix any TypeScript or build errors; do not commit until `npm run build` exits 0.
+3. Also run tests and lint per `.cursor/rules/testing.mdc` and `.cursor/rules/linting.mdc` for session-changed files.
+
+Changelog-only commits (both JSON files only) may skip the build.
+
+## Local git hook (optional, recommended)
+
+Repo hook at [`.githooks/pre-commit`](.githooks/pre-commit) runs the same build when gospel-admin app files are staged. Enable once per clone:
+
+```bash
+git config core.hooksPath .githooks
+chmod +x .githooks/pre-commit
+```
+
+CI already runs lint + build on push to `main` ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)); the hook and agent checklist catch failures **before** push.

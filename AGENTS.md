@@ -24,6 +24,7 @@ source /home/ubuntu/.nvm/nvm.sh && cd gospel-admin && nvm use
 | Tests | `npm test` |
 | Tests (CI) | `npm run test:ci` |
 | Build | `npm run build` |
+| Verify before ship (local) | `npm run lint && npm test && npm run build` |
 | Unused code (Knip) | `npm run knip` (uses `knip.json`; optional CI check) |
 | ACBC link sync | `npm run sync-acbc-links` (`--reconcile`, `--dry-run`); `npm run add-acbc-sections` (add topic sections + reconcile). Weekly schedule: GitHub Actions `sync-acbc-external-links.yml` (secrets `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`). |
 | User-visible release note | `npm run append-release-changelog -- "Plain-language note."` — appends to **both** `data/deploy-update-changelog.json` and `data/site-changelog.json` (append-only; never trim deploy history). See `.cursor/rules/deploy-update-message.mdc`. |
@@ -41,6 +42,7 @@ source /home/ubuntu/.nvm/nvm.sh && cd gospel-admin && nvm use
 - **Deploy update notice / Help → Change log.** For user-visible releases, append the **same** plain-language note to **both** `gospel-admin/data/deploy-update-changelog.json` (What's new / native restart) and `gospel-admin/data/site-changelog.json` (Help → Change log). **Append only**—never delete older deploy entries (clients track read index from the start). Preferred: `npm run append-release-changelog -- "Your note."` from `gospel-admin/`. See `.cursor/rules/deploy-update-message.mdc`. Deploy notes ship via `GET /api/app-deploy-version`; full history via `GET /api/site-changelog`.
 - **Production git.** Vercel production builds from the **gp-cp-church/gospel_presentation** fork (Vercel team **gp-cp-churchs-projects**, project **gospel-presentation**), not **Kelemek/gospel_presentation**. Never sync that fork when pushing to `origin`. Only when the user says **push to prod** (or similar): update church `main`, then poll `gh api repos/gp-cp-church/gospel_presentation/commits/<sha>/status` (Vercel context on **that** repo only) until success or failure, and report that to the user. See `.cursor/rules/push-to-prod.mdc`.
 - **Linting.** See `.cursor/rules/linting.mdc`: before finishing, lint **every file changed in the session** (`git status` / `git diff --name-only`), run `npm run lint -- --fix` on those paths, and fix **all errors and warnings** in those files. Untouched files may still have legacy lint debt until edited.
+- **Commits.** Before `git commit` when gospel-admin app code changed, run `npm run build` from `gospel-admin/` (see `.cursor/rules/commit-and-build.mdc`). Optional hook: `git config core.hooksPath .githooks` and `chmod +x .githooks/pre-commit`.
 - **Dual lockfiles warning.** Next.js Turbopack warns about both `/workspace/package-lock.json` and `/workspace/gospel-admin/package-lock.json`. This is harmless and can be ignored.
 - **Root `package.json`** is a thin wrapper that delegates `dev`/`build`/`start` to `gospel-admin/`. Always run commands from `gospel-admin/` directly.
 - **Environment variables for dev server.** To run the dev server with live Supabase/ESV features, create `gospel-admin/.env.local` with the four required secrets. The dev server must be restarted after creating/changing this file.

@@ -10,6 +10,7 @@ alwaysApply: true
 1. **New code**: Write tests for all new code (components, hooks, utilities, API routes, pages). Place tests next to the code they cover (e.g. `__tests__/ComponentName.test.tsx` in the same directory or under `components/__tests__/`).
 2. **Changed behavior**: Update existing tests that are affected by your changes so expectations match the new behavior.
 3. **Before finishing**: Run the test suite and fix any failures. In `gospel-admin`, run `npm test` (or `npm test -- <name>` for a subset). Do not leave with failing or skipped tests unless there is an explicit, documented reason.
+4. **Before a git commit** (when the user asks you to commit): If the staged changes touch `gospel-admin/` app code (not changelog JSON only), run `npm run build` from `gospel-admin/` and fix failures before committing. See `.cursor/rules/commit-and-build.mdc`.
 
 ## Test Conventions (gospel-admin)
 

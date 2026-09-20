@@ -1,0 +1,16 @@
+#!/bin/sh
+# Run production build when gospel-admin app code is staged (matches Vercel).
+set -e
+ROOT=$(git rev-parse --show-toplevel)
+STAGED=$(git diff --cached --name-only)
+if ! echo "$STAGED" | grep -q '^gospel-admin/'; then
+  exit 0
+fi
+# Changelog-only commits under gospel-admin/data do not affect the Next.js build.
+if echo "$STAGED" | grep -vE '^gospel-admin/data/(deploy-update-changelog|site-changelog)\.json$' | grep -q '^gospel-admin/'; then
+  :
+else
+  exit 0
+fi
+echo "pre-commit: running gospel-admin production build..."
+(cd "$ROOT/gospel-admin" && npm run build)
