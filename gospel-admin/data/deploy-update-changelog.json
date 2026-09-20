@@ -41,5 +41,6 @@
   "Bug fix: Listen now shows the usual loading spinner while the next verse or chapter text is loading.",
   "Bug fix: Looking up verses with book abbreviations that end in a period, such as Phil. 4:8, now works in NIV and other translations. Error messages no longer mention ESV when another translation is selected.",
   "Bug fix: The page-turn animation on the M'Cheyne reading plan in the menu now turns the usual way, from right to left.",
-  "The header appearance menu lets you choose Light, Blossom, Dark, or Black; the button shows your current theme icon. Blossom is a soft pastel pink look with a gently shaded presentation title bar."
+  "The header appearance menu lets you choose Light, Blossom, Dark, or Black; the button shows your current theme icon. Blossom is a soft pastel pink look with a gently shaded presentation title bar.",
+  "Bookmark pin colors in the scripture reader are brighter and easier to tell apart."
 ]

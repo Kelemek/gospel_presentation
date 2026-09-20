@@ -2,13 +2,13 @@
 
 import type { VersePinColorId } from '@/lib/versePinStorage'
 
-/** Pushpin 📌 renders red by default on most platforms — tint head via CSS filter per slot. */
+/** Pushpin 📌 renders red by default — tint head via CSS filter per slot (brightness kept up so colors stay distinct). */
 const VERSE_PUSHPIN_FILTERS: Record<VersePinColorId, string> = {
-  red: 'none',
-  blue: 'hue-rotate(198deg) saturate(1.2)',
-  yellow: 'hue-rotate(48deg) saturate(1.35) brightness(1.05)',
-  green: 'hue-rotate(95deg) saturate(1.15)',
-  violet: 'hue-rotate(270deg) saturate(1.1)',
+  red: 'brightness(1.05)',
+  blue: 'hue-rotate(195deg) saturate(1.5) brightness(1.35)',
+  yellow: 'hue-rotate(48deg) saturate(1.35) brightness(1.38)',
+  green: 'hue-rotate(102deg) saturate(1.4) brightness(1.3)',
+  violet: 'hue-rotate(278deg) saturate(1.35) brightness(1.28)',
 }
 
 export function versePinEmojiFilterCss(colorId: VersePinColorId): string {

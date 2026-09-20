@@ -147,7 +147,7 @@ html[data-theme="blossom"] body::before {
 
 /* Presentation title bar only: lighter pink with a wider light-to-deep gradient */
 html[data-theme="blossom"] [data-profile-site-header] {
-  background: linear-gradient(135deg, #ec4899 0%, #db2777 42%, #9d174d 100%);
+  background: linear-gradient(135deg, #f472b6 0%, #ec4899 40%, #db2777 100%);
 }
 
 html[data-theme="blossom"] .scripture-modal-attribution {

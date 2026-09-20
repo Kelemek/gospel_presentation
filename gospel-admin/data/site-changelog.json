@@ -1473,5 +1473,10 @@
     "releasedAt": "2026-09-20",
     "committedAt": "2026-09-20T12:18:14.541Z",
     "message": "The header appearance menu lets you choose Light, Blossom, Dark, or Black; the button shows your current theme icon. Blossom is a soft pastel pink look with a gently shaded presentation title bar."
+  },
+  {
+    "releasedAt": "2026-09-20",
+    "committedAt": "2026-09-20T18:12:26.322Z",
+    "message": "Bookmark pin colors in the scripture reader are brighter and easier to tell apart."
   }
 ]
