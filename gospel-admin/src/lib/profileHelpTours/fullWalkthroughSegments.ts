@@ -155,9 +155,9 @@ export function getFullWalkthroughSegments(): FullProfileWalkthroughSegment[] {
     {
       run: runThemeFeatureTour,
       intro: {
-        title: 'Light, dark, and black mode',
+        title: 'Light, Blossom, dark, and black',
         description:
-          'Cycle light, dark, and black; this segment walks through all three looks, then restores your previous setting.',
+          'Preview dark, Blossom, and black from the appearance menu; this segment restores your previous setting when it ends.',
       },
     },
     ...getFullWalkthroughHeaderToolbarAfterThemeSegments(),

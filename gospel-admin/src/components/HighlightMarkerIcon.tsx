@@ -26,15 +26,13 @@ export interface HighlightMarkerIconProps {
 function MarkerOutlinePaths({
   neutral,
   markerFill,
-  stroke = 'css',
+  stroke = 'currentColor',
 }: {
   neutral: boolean
   markerFill: string
-  /** `css` = slate/white via globals; `color` = marker tint; `currentColor` = inherit from svg. */
-  stroke?: 'css' | 'color' | 'currentColor'
+  stroke?: 'color' | 'currentColor'
 }) {
-  const strokeValue =
-    stroke === 'currentColor' ? 'currentColor' : stroke === 'color' && !neutral ? markerFill : undefined
+  const strokeValue = stroke === 'color' && !neutral ? markerFill : 'currentColor'
 
   return (
     <>
@@ -43,7 +41,6 @@ function MarkerOutlinePaths({
         fill="none"
         stroke={strokeValue}
         strokeWidth={OUTLINE_STROKE_WIDTH}
-        className={stroke === 'css' && neutral ? 'highlight-marker-icon-neutral-outline' : undefined}
         {...roundStroke}
       />
       <path
@@ -51,7 +48,6 @@ function MarkerOutlinePaths({
         fill="none"
         stroke={strokeValue}
         strokeWidth={OUTLINE_STROKE_WIDTH}
-        className={stroke === 'css' && neutral ? 'highlight-marker-icon-pen' : undefined}
         {...roundStroke}
       />
     </>
@@ -72,7 +68,7 @@ export default function HighlightMarkerIcon({
         <MarkerOutlinePaths
           neutral={neutral}
           markerFill={markerFill}
-          stroke={neutral ? 'css' : 'color'}
+          stroke={neutral ? 'currentColor' : 'color'}
         />
       </svg>
     )

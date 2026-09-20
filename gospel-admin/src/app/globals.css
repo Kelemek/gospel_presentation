@@ -115,6 +115,54 @@ html[data-theme="black"] .scripture-modal-attribution a:hover {
   color: #93c5fd;
 }
 
+/* Blossom mode: pastel pink/lavender surfaces (no .dark class; overrides slate tokens) */
+html[data-theme="blossom"] {
+  --color-slate-50: #fdf2f8;
+  --color-slate-100: #fce7f3;
+  --color-slate-200: #fbcfe8;
+  --color-slate-300: #f9a8d4;
+  --color-slate-400: #f472b6;
+  --color-slate-500: #ec4899;
+  --color-slate-600: #db2777;
+  --color-slate-700: #be185d;
+  --color-slate-800: #9d174d;
+  --color-slate-900: #831843;
+  --color-slate-950: #500724;
+  --color-gray-800: #9d174d;
+  --color-gray-900: #831843;
+}
+
+html[data-theme="blossom"] .gospel-modal-safe-panel {
+  border-color: #f9a8d4;
+  background-color: #fdf2f8;
+}
+
+html[data-theme="blossom"] body {
+  background-color: #fdf2f8;
+}
+
+html[data-theme="blossom"] body::before {
+  background: linear-gradient(to bottom right, #fbcfe8, #e9d5ff);
+}
+
+/* Presentation title bar only: lighter pink with a wider light-to-deep gradient */
+html[data-theme="blossom"] [data-profile-site-header] {
+  background: linear-gradient(135deg, #ec4899 0%, #db2777 42%, #9d174d 100%);
+}
+
+html[data-theme="blossom"] .scripture-modal-attribution {
+  background-color: #fce7f3;
+  color: #831843;
+}
+
+html[data-theme="blossom"] .scripture-modal-attribution a {
+  color: #c026d3;
+}
+
+html[data-theme="blossom"] .scripture-modal-attribution a:hover {
+  color: #a21caf;
+}
+
 /* Scripture modal attribution block - dark mode via selector so it always applies when inside .dark */
 .dark .scripture-modal-attribution {
   background-color: #334155; /* slate-700 */
@@ -173,6 +221,11 @@ body.dark .highlight-marker-icon-colored-outline,
 html.dark .highlight-marker-icon-pen,
 body.dark .highlight-marker-icon-pen {
   stroke: #fff;
+}
+
+html[data-theme="blossom"] .highlight-marker-icon-neutral-outline,
+html[data-theme="blossom"] .highlight-marker-icon-pen {
+  stroke: #9d174d;
 }
 
 /* Scripture modal highlights (Bible Reader / passage picker). */
@@ -1735,6 +1788,47 @@ html[data-theme="black"] .profile-help-tour-popover .driver-popover-close-btn:fo
   color: rgb(248 250 252);
 }
 
+html[data-theme="blossom"] .profile-help-tour-popover.driver-popover,
+body[data-theme="blossom"] .profile-help-tour-popover.driver-popover {
+  background-color: #fdf2f8;
+  color: #831843;
+  border: 1px solid #f9a8d4;
+  box-shadow: 0 4px 24px rgb(190 24 93 / 0.15);
+}
+
+html[data-theme="blossom"] .profile-help-tour-popover .driver-popover-title {
+  color: #9d174d;
+}
+
+html[data-theme="blossom"] .profile-help-tour-popover .driver-popover-description {
+  color: #be185d;
+}
+
+html[data-theme="blossom"] .profile-help-tour-popover .driver-popover-progress-text {
+  color: #db2777;
+}
+
+html[data-theme="blossom"] .profile-help-tour-popover .driver-popover-footer button {
+  background-color: #fce7f3;
+  color: #831843;
+  border-color: #f9a8d4;
+  text-shadow: none;
+}
+
+html[data-theme="blossom"] .profile-help-tour-popover .driver-popover-footer button:hover,
+html[data-theme="blossom"] .profile-help-tour-popover .driver-popover-footer button:focus {
+  background-color: #fbcfe8;
+}
+
+html[data-theme="blossom"] .profile-help-tour-popover .driver-popover-close-btn {
+  color: #be185d;
+}
+
+html[data-theme="blossom"] .profile-help-tour-popover .driver-popover-close-btn:hover,
+html[data-theme="blossom"] .profile-help-tour-popover .driver-popover-close-btn:focus {
+  color: #9d174d;
+}
+
 html.dark .profile-help-tour-popover .driver-popover-title,
 body.dark .profile-help-tour-popover .driver-popover-title {
   color: rgb(248 250 252);
@@ -2009,6 +2103,11 @@ html[data-theme="black"] .open-item-tab-bar-scroll-shadow,
 body[data-theme="black"] .open-item-tab-bar-scroll-shadow {
   /* Neutral charcoal — matches black-mode tab track (slate-700 token), not blue slate-700 */
   --open-item-tab-bar-fade-base: rgb(31 31 31);
+}
+
+html[data-theme="blossom"] .open-item-tab-bar-scroll-shadow,
+body[data-theme="blossom"] .open-item-tab-bar-scroll-shadow {
+  --open-item-tab-bar-fade-base: rgb(252 231 243); /* blossom slate-100 token */
 }
 
 .open-item-tab-bar-scroll-fade {

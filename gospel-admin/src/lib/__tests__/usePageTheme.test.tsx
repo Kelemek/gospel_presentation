@@ -52,6 +52,20 @@ describe('usePageTheme', () => {
     expect(screen.getByTestId('theme-value')).toHaveTextContent('black')
   })
 
+  it('returns blossom when localStorage has gospel-profile-theme set to blossom', () => {
+    window.localStorage.setItem(THEME_KEY, 'blossom')
+    render(<TestConsumer />)
+    expect(screen.getByTestId('theme-value')).toHaveTextContent('blossom')
+  })
+
+  it('applies data-theme=blossom without dark class when theme is blossom', () => {
+    window.localStorage.setItem(THEME_KEY, 'blossom')
+    render(<TestConsumer />)
+    expect(document.documentElement.classList.contains('dark')).toBe(false)
+    expect(document.body.classList.contains('dark')).toBe(false)
+    expect(document.documentElement.getAttribute('data-theme')).toBe('blossom')
+  })
+
   it('applies dark class to document when theme is dark', () => {
     window.localStorage.setItem(THEME_KEY, 'dark')
     render(<TestConsumer />)

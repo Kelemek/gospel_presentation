@@ -9,11 +9,13 @@ describe('theme-init-script', () => {
     expect(script).toContain('document.documentElement.classList.toggle')
   })
 
-  it('supports black stored theme and data-theme attribute', () => {
+  it('supports black and blossom stored themes and data-theme attribute', () => {
     const script = getThemeInitScriptContent()
     expect(script).toContain("'black'")
+    expect(script).toContain("'blossom'")
     expect(script).toContain('data-theme')
     expect(script).toContain("setAttribute('data-theme','black')")
+    expect(script).toContain("setAttribute('data-theme','blossom')")
   })
 
   it('forces light document on admin paths', () => {

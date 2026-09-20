@@ -1465,18 +1465,13 @@
     "message": "Bug fix: Looking up verses with book abbreviations that end in a period, such as Phil. 4:8, now works in NIV and other translations. Error messages no longer mention ESV when another translation is selected."
   },
   {
-    "releasedAt": "2026-09-15",
-    "committedAt": "2026-09-15T12:47:04.433Z",
-    "message": "You can now cycle light, dark, and a near-black night look from the theme control on presentation pages (moon, filled circle, and sun icons). Your device automatic setting still only chooses light or dark. Help → Light, dark, and black mode walks through all three on the full page, then restores your previous choice."
-  },
-  {
     "releasedAt": "2026-09-16",
     "committedAt": "2026-09-16T14:25:10.519Z",
     "message": "Bug fix: The page-turn animation on the M'Cheyne reading plan in the menu now turns the usual way, from right to left."
   },
   {
-    "releasedAt": "2026-09-17",
-    "committedAt": "2026-09-17T16:46:39.438Z",
-    "message": "Black mode uses a deeper near-black background and slightly darker panels while keeping text and controls easy to read."
+    "releasedAt": "2026-09-20",
+    "committedAt": "2026-09-20T12:18:14.541Z",
+    "message": "The header appearance menu lets you choose Light, Blossom, Dark, or Black; the button shows your current theme icon. Blossom is a soft pastel pink look with a gently shaded presentation title bar."
   }
 ]

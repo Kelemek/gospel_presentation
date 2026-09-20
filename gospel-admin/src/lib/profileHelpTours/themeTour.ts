@@ -2,6 +2,7 @@ import {
   applyThemePersistenceSnapshot,
   readThemePersistenceSnapshot,
 } from '@/contexts/ThemeContext'
+import type { Theme } from '@/lib/profileTheme'
 import type { ProfileFeatureTourOptions } from './tourShared'
 import {
   THEME_TOGGLE,
@@ -11,11 +12,34 @@ import {
   prependSegmentIntroIfAny,
 } from './tourShared'
 
-function afterThemeToggleClick(drv: { refresh: () => void; moveNext: () => void }) {
+const THEME_PANEL = '[data-tour="theme-panel"]'
+
+function afterThemeTourStep(drv: { refresh: () => void; moveNext: () => void }) {
   window.setTimeout(() => {
     drv.refresh()
     drv.moveNext()
   }, prefersReducedMotion() ? 80 : 200)
+}
+
+function pickThemeOption(value: Theme, onDone?: () => void): void {
+  const clickOption = () => {
+    document.querySelector<HTMLElement>(`[data-theme-option="${value}"]`)?.click()
+    onDone?.()
+  }
+
+  if (document.querySelector(THEME_PANEL)) {
+    clickOption()
+    return
+  }
+
+  document.querySelector<HTMLElement>(THEME_TOGGLE)?.click()
+  window.requestAnimationFrame(() => {
+    clickOption()
+  })
+}
+
+function runThemeTourPick(value: Theme, drv: { refresh: () => void; moveNext: () => void }) {
+  pickThemeOption(value, () => afterThemeTourStep(drv))
 }
 
 export function runThemeFeatureTour(options?: ProfileFeatureTourOptions): void {
@@ -41,14 +65,13 @@ export function runThemeFeatureTour(options?: ProfileFeatureTourOptions): void {
       {
         element: THEME_TOGGLE,
         popover: {
-          title: 'Light, dark, and black mode',
+          title: 'Light, Blossom, dark, and black',
           description:
-            'Tap this control to cycle <strong>light → dark → black → light</strong>. The icon shows what comes next: <strong>moon</strong> (dark), <strong>filled circle</strong> (black), or <strong>sun</strong> (light). Your choice is saved in this browser. Your device’s automatic setting still only picks light or dark. Use <strong>Next</strong> to flip once—we will walk through all three looks, then restore your previous setting when the tour ends.',
+            'Tap this appearance icon to open the menu—it shows your current look. Choose <strong>Light</strong>, <strong>Blossom</strong> (soft pinks and lavenders), <strong>Dark</strong>, or <strong>Black</strong>—each row shows an icon and name. Your choice is saved in this browser. Your device’s automatic setting still only picks light or dark. Use <strong>Next</strong> to preview <strong>Dark</strong>, then <strong>Blossom</strong> and <strong>Black</strong>; we restore your previous setting when the tour ends.',
           side: 'bottom',
           align: 'end',
           onNextClick: (_element, _step, { driver: drv }) => {
-            document.querySelector<HTMLElement>(THEME_TOGGLE)?.click()
-            afterThemeToggleClick(drv)
+            runThemeTourPick('dark', drv)
           },
         },
       },
@@ -57,12 +80,24 @@ export function runThemeFeatureTour(options?: ProfileFeatureTourOptions): void {
         popover: {
           title: 'Second appearance',
           description:
-            'You should see a different look now. Use <strong>Next</strong> once more to preview the third mode in the cycle.',
+            'You should see a different look now. Use <strong>Next</strong> to preview <strong>Blossom</strong> from the same menu.',
           side: 'bottom',
           align: 'end',
           onNextClick: (_element, _step, { driver: drv }) => {
-            document.querySelector<HTMLElement>(THEME_TOGGLE)?.click()
-            afterThemeToggleClick(drv)
+            runThemeTourPick('blossom', drv)
+          },
+        },
+      },
+      {
+        element: THEME_TOGGLE,
+        popover: {
+          title: 'Third appearance',
+          description:
+            'Use <strong>Next</strong> once more to preview <strong>Black</strong>.',
+          side: 'bottom',
+          align: 'end',
+          onNextClick: (_element, _step, { driver: drv }) => {
+            runThemeTourPick('black', drv)
           },
         },
       },
@@ -71,7 +106,7 @@ export function runThemeFeatureTour(options?: ProfileFeatureTourOptions): void {
         popover: {
           title: 'Switch anytime',
           description:
-            'You have seen all three appearances. Tap this control whenever you want to change it. <strong>Done</strong> restores whatever you had before this tour (a saved light, dark, or black choice, or your device’s automatic setting if you had not picked one yet).',
+            'You have seen several appearances. Open this menu whenever you want to change it. <strong>Done</strong> restores whatever you had before this tour (a saved light, blossom, dark, or black choice, or your device’s automatic setting if you had not picked one yet).',
           side: 'bottom',
           align: 'end',
         },

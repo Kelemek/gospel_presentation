@@ -8,6 +8,7 @@ import {
   nextTheme,
   parseStoredTheme,
   resolveTheme,
+  themeDocumentDataTheme,
   themeUsesDarkClass,
 } from '../profileTheme'
 
@@ -19,8 +20,9 @@ describe('profileTheme', () => {
   })
 
   describe('parseStoredTheme', () => {
-    it('accepts light, dark, and black', () => {
+    it('accepts light, blossom, dark, and black', () => {
       expect(parseStoredTheme('light')).toBe('light')
+      expect(parseStoredTheme('blossom')).toBe('blossom')
       expect(parseStoredTheme('dark')).toBe('dark')
       expect(parseStoredTheme('black')).toBe('black')
     })
@@ -32,9 +34,19 @@ describe('profileTheme', () => {
     })
   })
 
+  describe('themeDocumentDataTheme', () => {
+    it('returns blossom or black only for those themes', () => {
+      expect(themeDocumentDataTheme('light')).toBeNull()
+      expect(themeDocumentDataTheme('dark')).toBeNull()
+      expect(themeDocumentDataTheme('blossom')).toBe('blossom')
+      expect(themeDocumentDataTheme('black')).toBe('black')
+    })
+  })
+
   describe('nextTheme', () => {
-    it('cycles light → dark → black → light', () => {
-      expect(nextTheme('light')).toBe('dark')
+    it('cycles light → blossom → dark → black → light', () => {
+      expect(nextTheme('light')).toBe('blossom')
+      expect(nextTheme('blossom')).toBe('dark')
       expect(nextTheme('dark')).toBe('black')
       expect(nextTheme('black')).toBe('light')
     })
@@ -43,6 +55,7 @@ describe('profileTheme', () => {
   describe('resolveTheme', () => {
     it('uses stored when present', () => {
       expect(resolveTheme('black', 'light')).toBe('black')
+      expect(resolveTheme('blossom', 'dark')).toBe('blossom')
     })
 
     it('falls back to system when stored is null', () => {
@@ -61,8 +74,9 @@ describe('profileTheme', () => {
   })
 
   describe('themeUsesDarkClass', () => {
-    it('is true for dark and black', () => {
+    it('is true for dark and black only', () => {
       expect(themeUsesDarkClass('light')).toBe(false)
+      expect(themeUsesDarkClass('blossom')).toBe(false)
       expect(themeUsesDarkClass('dark')).toBe(true)
       expect(themeUsesDarkClass('black')).toBe(true)
     })
@@ -73,6 +87,12 @@ describe('profileTheme', () => {
       applyThemeToDocument('dark', '/default')
       expect(document.documentElement.classList.contains('dark')).toBe(true)
       expect(document.documentElement.getAttribute('data-theme')).toBeNull()
+    })
+
+    it('applies data-theme=blossom without dark class', () => {
+      applyThemeToDocument('blossom', '/default')
+      expect(document.documentElement.classList.contains('dark')).toBe(false)
+      expect(document.documentElement.getAttribute('data-theme')).toBe('blossom')
     })
 
     it('applies dark class and data-theme=black for black', () => {

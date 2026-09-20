@@ -9,6 +9,7 @@ import {
   parseStoredTheme,
   resolveTheme,
   themeUsesDarkClass,
+  themeDocumentDataTheme,
   type Theme,
 } from '@/lib/profileTheme'
 
@@ -115,7 +116,7 @@ export function AlertModalProvider({ children }: { children: React.ReactNode }) 
       {state.isOpen && (
         <div
           className={`gospel-modal-safe-overlay fixed inset-0 z-130 flex items-center justify-center bg-black/50 ${themeUsesDarkClass(theme) ? 'dark' : ''}`}
-          data-theme={theme === 'black' ? 'black' : undefined}
+          data-theme={themeDocumentDataTheme(theme) ?? undefined}
           role="dialog"
           aria-modal="true"
           aria-labelledby="alert-modal-title"
