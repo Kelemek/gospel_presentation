@@ -15,11 +15,20 @@ export const THEME_CHOICES: readonly { value: Theme; label: string }[] = [
 ]
 
 export function themeChoiceLabel(theme: Theme): string {
-  for (const choice of THEME_CHOICES) {
-    if (choice.value === theme) return choice.label
+  switch (theme) {
+    case 'light':
+      return 'Light'
+    case 'blossom':
+      return 'Blossom'
+    case 'dark':
+      return 'Dark'
+    case 'black':
+      return 'Black'
+    default: {
+      const _exhaustive: never = theme
+      return _exhaustive
+    }
   }
-  const _exhaustive: never = theme
-  return _exhaustive
 }
 
 /** Values stored on `html[data-theme]`; light/dark use class only. */
