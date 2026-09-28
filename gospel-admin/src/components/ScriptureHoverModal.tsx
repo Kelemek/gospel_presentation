@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { useTranslation } from '@/contexts/TranslationContext'
 import { Capacitor } from '@capacitor/core'
 import { formatScriptureApiError } from '@/lib/format-scripture-api-error'
+import { scripturePassagePlainText } from '@/lib/scriptureWordsOfChristMarkup'
 
 interface ScriptureHoverModalProps {
   reference: string
@@ -469,7 +470,9 @@ export default function ScriptureHoverModal({ reference, children, hoverDelayMs 
                 <div className="mb-2 text-base font-medium text-slate-900 md:text-lg dark:text-slate-100">
                   {scriptureData.reference}
                 </div>
-                <div className="wrap-break-word text-base leading-relaxed md:text-lg">{scriptureData.text}</div>
+                <div className="wrap-break-word text-base leading-relaxed md:text-lg">
+                  {scripturePassagePlainText(scriptureData.text)}
+                </div>
               </div>
             ) : (
               <div className="text-base text-slate-600 md:text-lg dark:text-slate-400">

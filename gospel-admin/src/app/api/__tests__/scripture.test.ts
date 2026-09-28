@@ -1,5 +1,12 @@
+import { waitFor } from '@testing-library/react'
 import { GET } from '../scripture/route'
 import { NextRequest } from 'next/server'
+import {
+  prefixScriptureCacheText,
+  SCRIPTURE_WOC_END,
+  SCRIPTURE_WOC_START,
+  wrapScriptureWordsOfChrist,
+} from '@/lib/scriptureWordsOfChristMarkup'
 
 // Mock Supabase admin client for cache operations
 const mockSupabaseClient = {
@@ -198,6 +205,203 @@ describe('/api/scripture', () => {
 
 
 
+  it('serves legacy plain cache rows without refetching', async () => {
+    process.env.ESV_API_TOKEN = 'test-token'
+    const { fetchScripture } = require('@/lib/bible-api')
+    fetchScripture.mockClear()
+
+    mockSupabaseClient.from = jest.fn((table: string) => {
+      if (table === 'scripture_cache') {
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                gte: jest.fn().mockReturnValue({
+                  maybeSingle: jest.fn().mockResolvedValue({
+                    data: { text: 'legacy plain cache row', woc_text: null },
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          }),
+          upsert: jest.fn().mockResolvedValue({
+            data: null,
+            error: null,
+          }),
+        }
+      }
+      return {}
+    })
+
+    const req = new NextRequest('http://localhost:3000/api/scripture?reference=John+3:16')
+    const res = await GET(req as any)
+    const data = await res.json()
+    expect(res.status).toBe(200)
+    expect(data.cached).toBe(true)
+    expect(data.text).toBe('legacy plain cache row')
+    expect(fetchScripture).not.toHaveBeenCalled()
+  })
+
+  it('refetches when wocMarkup=1 but woc_text is missing', async () => {
+    process.env.ESV_API_TOKEN = 'test-token'
+    const { fetchScripture } = require('@/lib/bible-api')
+    fetchScripture.mockClear()
+
+    mockSupabaseClient.from = jest.fn((table: string) => {
+      if (table === 'scripture_cache') {
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                gte: jest.fn().mockReturnValue({
+                  maybeSingle: jest.fn().mockResolvedValue({
+                    data: { text: '[16] For God so loved', woc_text: null },
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          }),
+          upsert: jest.fn().mockResolvedValue({
+            data: null,
+            error: null,
+          }),
+        }
+      }
+      return {}
+    })
+
+    const req = new NextRequest(
+      'http://localhost:3000/api/scripture?reference=John+3:16&wocMarkup=1'
+    )
+    const res = await GET(req as any)
+    const data = await res.json()
+    expect(res.status).toBe(200)
+    expect(data.cached).toBe(false)
+    expect(fetchScripture).toHaveBeenCalled()
+  })
+
+  it('serves plain cache when woc refetch fails', async () => {
+    process.env.ESV_API_TOKEN = 'test-token'
+    const { fetchScripture } = require('@/lib/bible-api')
+    fetchScripture.mockClear()
+    fetchScripture.mockRejectedValueOnce(new Error('ESV API error: upstream down'))
+
+    mockSupabaseClient.from = jest.fn((table: string) => {
+      if (table === 'scripture_cache') {
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                gte: jest.fn().mockReturnValue({
+                  maybeSingle: jest.fn().mockResolvedValue({
+                    data: { text: '[16] For God so loved', woc_text: null },
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          }),
+          upsert: jest.fn().mockResolvedValue({ data: null, error: null }),
+        }
+      }
+      return {}
+    })
+
+    const req = new NextRequest(
+      'http://localhost:3000/api/scripture?reference=John+3:16&wocMarkup=1'
+    )
+    const res = await GET(req as any)
+    const data = await res.json()
+    expect(res.status).toBe(200)
+    expect(data.cached).toBe(true)
+    expect(data.text).toBe('[16] For God so loved')
+    expect(data.wordsOfChristText).toBeUndefined()
+    expect(fetchScripture).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns plain text from cache and wordsOfChristText when wocMarkup=1', async () => {
+    process.env.ESV_API_TOKEN = 'test-token'
+    const woc_text = `[16] ${wrapScriptureWordsOfChrist('For God so loved')}`
+    mockSupabaseClient.from = jest.fn((table: string) => {
+      if (table === 'scripture_cache') {
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                gte: jest.fn().mockReturnValue({
+                  maybeSingle: jest.fn().mockResolvedValue({
+                    data: { text: '[16] For God so loved', woc_text },
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          }),
+          upsert: jest.fn().mockResolvedValue({ data: null, error: null }),
+        }
+      }
+      return {}
+    })
+
+    const plainReq = new NextRequest('http://localhost:3000/api/scripture?reference=John+3:16')
+    const plainRes = await GET(plainReq as any)
+    const plainData = await plainRes.json()
+    expect(plainData.text).toBe('[16] For God so loved')
+    expect(plainData.text).not.toContain(SCRIPTURE_WOC_START)
+    expect(plainData.wordsOfChristText).toBeUndefined()
+
+    const markedReq = new NextRequest(
+      'http://localhost:3000/api/scripture?reference=John+3:16&wocMarkup=1'
+    )
+    const markedRes = await GET(markedReq as any)
+    const markedData = await markedRes.json()
+    expect(markedData.text).toBe('[16] For God so loved')
+    expect(markedData.wordsOfChristText).toContain(SCRIPTURE_WOC_START)
+  })
+
+  it('cleans legacy v2 markers from text column on cache hit', async () => {
+    process.env.ESV_API_TOKEN = 'test-token'
+    const legacyText = prefixScriptureCacheText(
+      `[16] ${wrapScriptureWordsOfChrist('For God so loved')}`
+    )
+    const update = jest.fn().mockReturnValue({
+      eq: jest.fn().mockReturnValue({
+        eq: jest.fn().mockResolvedValue({ error: null }),
+      }),
+    })
+    mockSupabaseClient.from = jest.fn((table: string) => {
+      if (table === 'scripture_cache') {
+        return {
+          select: jest.fn().mockReturnValue({
+            eq: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                gte: jest.fn().mockReturnValue({
+                  maybeSingle: jest.fn().mockResolvedValue({
+                    data: { text: legacyText, woc_text: null },
+                    error: null,
+                  }),
+                }),
+              }),
+            }),
+          }),
+          update,
+          upsert: jest.fn().mockResolvedValue({ data: null, error: null }),
+        }
+      }
+      return {}
+    })
+
+    const plainReq = new NextRequest('http://localhost:3000/api/scripture?reference=John+3:16')
+    const plainData = await (await GET(plainReq as any)).json()
+    expect(plainData.text).toBe('[16] For God so loved')
+    expect(plainData.text).not.toContain('@gp:scripture-cache')
+    await waitFor(() => {
+      expect(update).toHaveBeenCalledWith({ text: '[16] For God so loved' })
+    })
+  })
+
   it('returns cached ESV scripture on cache hit', async () => {
     process.env.ESV_API_TOKEN = 'test-token'
     
@@ -210,7 +414,7 @@ describe('/api/scripture', () => {
               eq: jest.fn().mockReturnValue({
                 gte: jest.fn().mockReturnValue({
                   maybeSingle: jest.fn().mockResolvedValue({
-                    data: { text: 'For God so loved the world...' },
+                    data: { text: 'For God so loved the world...', woc_text: null },
                     error: null
                   })
                 })
@@ -246,7 +450,7 @@ describe('/api/scripture', () => {
               eq: jest.fn().mockReturnValue({
                 gte: jest.fn().mockReturnValue({
                   maybeSingle: jest.fn().mockResolvedValue({
-                    data: { text: 'cached' },
+                    data: { text: 'cached', woc_text: null },
                     error: null,
                   }),
                 }),

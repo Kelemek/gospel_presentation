@@ -1478,5 +1478,10 @@
     "releasedAt": "2026-09-20",
     "committedAt": "2026-09-20T18:12:26.322Z",
     "message": "Bookmark pin colors in the scripture reader are brighter and easier to tell apart."
+  },
+  {
+    "releasedAt": "2026-09-28",
+    "committedAt": "2026-09-28T14:57:10.060Z",
+    "message": "In the scripture reader, long-press the passage to turn verse numbers and Words of Christ (red letter) on or off."
   }
 ]

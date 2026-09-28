@@ -1,5 +1,15 @@
 import { SCRIPTURE_HIGHLIGHT_MARK_CLASSES } from '@/lib/scriptureHighlightStyles'
 import type { ScriptureHighlightColorId } from '@/lib/scriptureHighlightStyles'
+import { normalizeEsvMisconvertedChapterVersePrefix } from '@/lib/esvPassageHtmlToText'
+import {
+  ensureVerseNumbersOutsideWordsOfChrist,
+  SCRIPTURE_WOC_END,
+  SCRIPTURE_WOC_START,
+  stripScriptureWordsOfChristMarkers,
+} from '@/lib/scriptureWordsOfChristMarkup'
+
+const SCRIPTURE_WOC_SPAN_OPEN =
+  '<span class="scripture-woc text-red-700 dark:text-red-400">'
 
 const SCRIPTURE_VERSE_NUMBER_CLICKABLE_CLASS =
   'scripture-verse-number cursor-pointer hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 rounded-sm'
@@ -49,7 +59,18 @@ export function isolatePsalm119AcrosticHeadings(text: string): string {
 }
 
 function prepareScripturePassageText(text: string): string {
-  return isolatePsalm119AcrosticHeadings(text)
+  return ensureVerseNumbersOutsideWordsOfChrist(
+    normalizeEsvMisconvertedChapterVersePrefix(isolatePsalm119AcrosticHeadings(text))
+  )
+}
+
+function applyWordsOfChristPlain(text: string, showWordsOfChrist: boolean): string {
+  if (!showWordsOfChrist) {
+    return stripScriptureWordsOfChristMarkers(text)
+  }
+  return text
+    .replaceAll(SCRIPTURE_WOC_START, SCRIPTURE_WOC_SPAN_OPEN)
+    .replaceAll(SCRIPTURE_WOC_END, '</span>')
 }
 
 export function verseSupHtml(n: number, showVerseNumbers: boolean, clickable = false): string {
@@ -131,7 +152,7 @@ function wrapVerseRangeInMark(
     )
   }
   const rangePattern = new RegExp(
-    `(<sup[^>]*>${verseStart}</sup>[\\s\\S]*?<sup[^>]*>${verseEnd}</sup>[^<]*?)(?=<sup[^>]*>${nextVerseAfterSelection}</sup>|$)`,
+    `(<sup[^>]*>${verseStart}</sup>[\\s\\S]*?<sup[^>]*>${verseEnd}</sup>[\\s\\S]*?)(?=<sup[^>]*>${nextVerseAfterSelection}</sup>|$)`,
     'g'
   )
   return html.replace(rangePattern, `${markOpen}$1${markClose}`)
@@ -157,16 +178,18 @@ export function formatScripturePassageHtml(
   text: string,
   options: {
     showVerseNumbers: boolean
+    showWordsOfChrist?: boolean
     savedHighlight?: ScripturePassageSavedHighlightOption
   }
 ): string {
-  let html = replaceParagraphBreaks(
-    replaceVerseMarkers(prepareScripturePassageText(text), options.showVerseNumbers)
-  )
+  const showWordsOfChrist = options.showWordsOfChrist ?? true
+  const plain = prepareScripturePassageText(text)
+  let html = replaceParagraphBreaks(replaceVerseMarkers(plain, options.showVerseNumbers))
   if (options.savedHighlight) {
     const attrs = markAttrsForHighlight(options.savedHighlight.id, options.savedHighlight.colorId)
     html = `<mark ${attrs}>${html}</mark>`
   }
+  html = applyWordsOfChristPlain(html, showWordsOfChrist)
   return wrapScriptureSelahHtml(html)
 }
 
@@ -174,6 +197,7 @@ export function formatScriptureChapterHtml(
   text: string,
   options: {
     showVerseNumbers: boolean
+    showWordsOfChrist?: boolean
     highlightVerses: number[]
     savedHighlights?: readonly ScripturePassageSavedHighlight[]
     clickableVerseNumbers?: boolean
@@ -185,9 +209,11 @@ export function formatScriptureChapterHtml(
     savedHighlights = [],
     clickableVerseNumbers = false,
   } = options
+  const showWordsOfChrist = options.showWordsOfChrist ?? true
 
+  const plain = prepareScripturePassageText(text)
   let processedText = replaceParagraphBreaks(
-    replaceVerseMarkers(prepareScripturePassageText(text), showVerseNumbers, clickableVerseNumbers)
+    replaceVerseMarkers(plain, showVerseNumbers, clickableVerseNumbers)
   )
 
   if (savedHighlights.length > 0) {
@@ -195,6 +221,7 @@ export function formatScriptureChapterHtml(
   }
 
   if (highlightVerses.length === 0) {
+    processedText = applyWordsOfChristPlain(processedText, showWordsOfChrist)
     return wrapScriptureSelahHtml(processedText)
   }
 
@@ -206,7 +233,7 @@ export function formatScriptureChapterHtml(
 
   if (isRange) {
     const rangePattern = new RegExp(
-      `(<sup[^>]*>${firstVerse}</sup>[\\s\\S]*?<sup[^>]*>${lastVerse}</sup>[^<]*?)(?=<sup[^>]*>${nextVerseAfterSelection}</sup>|$)`,
+      `(<sup[^>]*>${firstVerse}</sup>[\\s\\S]*?<sup[^>]*>${lastVerse}</sup>[\\s\\S]*?)(?=<sup[^>]*>${nextVerseAfterSelection}</sup>|$)`,
       'g'
     )
 
@@ -225,5 +252,6 @@ export function formatScriptureChapterHtml(
     )
   }
 
+  processedText = applyWordsOfChristPlain(processedText, showWordsOfChrist)
   return wrapScriptureSelahHtml(processedText)
 }

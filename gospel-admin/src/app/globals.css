@@ -163,6 +163,12 @@ html[data-theme="blossom"] .scripture-modal-attribution a:hover {
   color: #a21caf;
 }
 
+/* Blossom: passage body uses remapped slate-700 (pink); Christ words use a darker red. */
+html[data-theme="blossom"] .scripture-woc {
+  color: #7f1d1d !important;
+  font-weight: 600;
+}
+
 /* Scripture modal attribution block - dark mode via selector so it always applies when inside .dark */
 .dark .scripture-modal-attribution {
   background-color: #334155; /* slate-700 */

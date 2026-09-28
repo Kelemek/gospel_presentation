@@ -2,9 +2,18 @@ import {
   formatApiBibleJsonPassageContent,
   formatApiBiblePassageContent,
   formatApiBiblePassageText,
+  buildScriptureGetJsonBody,
+  healScriptureCacheRowIfNeeded,
   normalizeScriptureCachedText,
+  splitScripturePassageForCacheStorage,
   type ApiBibleContentNode,
 } from '@/lib/api-bible-format'
+import {
+  prefixScriptureCacheText,
+  SCRIPTURE_CACHE_VERSION_LINE,
+  SCRIPTURE_WOC_END,
+  SCRIPTURE_WOC_START,
+} from '@/lib/scriptureWordsOfChristMarkup'
 
 const romansOneParaFixture: ApiBibleContentNode[] = [
   {
@@ -45,6 +54,33 @@ const romansOneParaFixture: ApiBibleContentNode[] = [
 ]
 
 describe('formatApiBibleJsonPassageContent', () => {
+  it('wraps words-of-Christ char nodes with inline markers', () => {
+    const nodes: ApiBibleContentNode[] = [
+      {
+        name: 'para',
+        type: 'tag',
+        attrs: { style: 'p' },
+        items: [
+          {
+            name: 'verse',
+            type: 'tag',
+            attrs: { number: '16' },
+            items: [],
+          },
+          {
+            name: 'char',
+            type: 'tag',
+            attrs: { style: 'wj' },
+            items: [{ text: 'For God so loved.', type: 'text' }],
+          },
+        ],
+      },
+    ]
+    expect(formatApiBibleJsonPassageContent(nodes)).toBe(
+      `[16] ${SCRIPTURE_WOC_START}For God so loved.${SCRIPTURE_WOC_END}`
+    )
+  })
+
   it('joins API.Bible para nodes with blank lines and bracket verse markers', () => {
     expect(formatApiBibleJsonPassageContent(romansOneParaFixture)).toBe(
       '[1] Paul, a servant. [2] Promised afore.\n\n[8] First, I thank my God.'
@@ -118,6 +154,48 @@ describe('formatApiBiblePassageText', () => {
     expect(normalizeScriptureCachedText(withParagraphs)).toBe(
       '[1] Paul, a servant.\n\nGrace to you and peace.\n\n[2] which he promised'
     )
+  })
+
+  it('normalizeScriptureCachedText strips legacy version line and markers from text column', () => {
+    const body = `[16] ${SCRIPTURE_WOC_START}Hello${SCRIPTURE_WOC_END}`
+    const legacyCached = prefixScriptureCacheText(body)
+    expect(normalizeScriptureCachedText(legacyCached)).toBe('[16] Hello')
+    expect(normalizeScriptureCachedText(legacyCached)).not.toContain(SCRIPTURE_CACHE_VERSION_LINE)
+  })
+
+  it('splitScripturePassageForCacheStorage writes plain text and woc_text', () => {
+    const marked = `[1] ${SCRIPTURE_WOC_START}Hi${SCRIPTURE_WOC_END}`
+    const { text, woc_text } = splitScripturePassageForCacheStorage(marked)
+    expect(text).toBe('[1] Hi')
+    expect(woc_text).toContain(SCRIPTURE_WOC_START)
+  })
+
+  it('healScriptureCacheRowIfNeeded normalizes poisoned text column', () => {
+    const body = `[16] ${SCRIPTURE_WOC_START}Hello${SCRIPTURE_WOC_END}`
+    const legacyCached = prefixScriptureCacheText(body)
+    const { row, textChanged } = healScriptureCacheRowIfNeeded({
+      text: legacyCached,
+      woc_text: null,
+    })
+    expect(textChanged).toBe(true)
+    expect(row.text).toBe('[16] Hello')
+    expect(healScriptureCacheRowIfNeeded(row).textChanged).toBe(false)
+  })
+
+  it('buildScriptureGetJsonBody keeps text plain and adds wordsOfChristText when requested', () => {
+    const marked = `[1] ${SCRIPTURE_WOC_START}Hi${SCRIPTURE_WOC_END}`
+    const row = splitScripturePassageForCacheStorage(marked)
+    const plainOnly = buildScriptureGetJsonBody('John 3:16', 'esv', true, row, {
+      includeWordsOfChristMarkup: false,
+    })
+    expect(plainOnly.text).toBe('[1] Hi')
+    expect(plainOnly.wordsOfChristText).toBeUndefined()
+
+    const withWoc = buildScriptureGetJsonBody('John 3:16', 'esv', true, row, {
+      includeWordsOfChristMarkup: true,
+    })
+    expect(withWoc.text).toBe('[1] Hi')
+    expect(withWoc.wordsOfChristText).toContain(SCRIPTURE_WOC_START)
   })
 
   it('parses stringified API.Bible JSON passage trees', () => {

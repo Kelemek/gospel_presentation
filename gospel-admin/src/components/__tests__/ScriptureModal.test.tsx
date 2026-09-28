@@ -6,6 +6,7 @@ import ScriptureModal from '../ScriptureModal'
 import { resetDocumentScrollLockForTests } from '@/lib/documentScrollLock'
 import { DEFAULT_LONG_PRESS_MS } from '@/hooks/useLongPress'
 import { SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY } from '@/lib/scriptureVerseNumbersPreference'
+import { SCRIPTURE_SHOW_WORDS_OF_CHRIST_STORAGE_KEY } from '@/lib/scriptureWordsOfChristPreference'
 import * as TranslationContext from '@/contexts/TranslationContext'
 
 const mockShareScripturePassage = jest.fn((_options?: unknown) => Promise.resolve('shared' as const))
@@ -33,6 +34,11 @@ function fetchUrl(input: RequestInfo | URL): string {
   return typeof input === 'string' ? input : (input as Request).url
 }
 
+function scriptureApiReferenceFromFetchUrl(url: string): string | null {
+  const query = url.includes('?') ? url.slice(url.indexOf('?') + 1) : ''
+  return new URLSearchParams(query).get('reference')
+}
+
 describe('ScriptureModal Component', () => {
   const defaultProps = {
     reference: 'John 3:16',
@@ -46,6 +52,7 @@ describe('ScriptureModal Component', () => {
     jest.clearAllMocks()
     resetDocumentScrollLockForTests()
     localStorage.removeItem(SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY)
+    localStorage.removeItem(SCRIPTURE_SHOW_WORDS_OF_CHRIST_STORAGE_KEY)
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = fetchUrl(input)
       if (url.includes('/api/scripture/spurgeon-links')) {
@@ -262,12 +269,7 @@ describe('ScriptureModal Component', () => {
       if (url.includes('/api/scripture?')) {
         return Promise.resolve({
           ok: true,
-          json: () =>
-            Promise.resolve({
-              passages: [
-                'For God so loved the world that he gave his one and only Son, that whoever believes in him shall not perish but have eternal life.',
-              ],
-            }),
+          json: () => Promise.resolve({ text: 'For God so loved the world.' }),
         } as Response)
       }
       return Promise.reject(new Error(`Unexpected fetch: ${url}`))
@@ -277,9 +279,43 @@ describe('ScriptureModal Component', () => {
 
     await waitFor(() => {
       expect(
-        mockFetch.mock.calls.some((c) =>
-          String(c[0]).includes('/api/scripture?reference=John%203%3A16&translation=esv')
-        )
+        mockFetch.mock.calls.some((c) => {
+          const u = String(c[0])
+          if (!u.includes('/api/scripture?')) return false
+          const params = new URLSearchParams(u.slice(u.indexOf('?') + 1))
+          return (
+            params.get('reference') === 'John 3:16' &&
+            params.get('translation') === 'esv' &&
+            params.get('wocMarkup') === '1'
+          )
+        })
+      ).toBe(true)
+    })
+  })
+
+  it('omits wocMarkup when red letter display is off', async () => {
+    localStorage.setItem(SCRIPTURE_SHOW_WORDS_OF_CHRIST_STORAGE_KEY, 'false')
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = fetchUrl(input)
+      if (url.includes('/api/scripture?')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ text: 'Plain only.' }),
+        } as Response)
+      }
+      return Promise.reject(new Error(`Unexpected fetch: ${url}`))
+    })
+
+    renderWithTextSize(<ScriptureModal {...defaultProps} />)
+
+    await waitFor(() => {
+      expect(
+        mockFetch.mock.calls.some((c) => {
+          const u = String(c[0])
+          if (!u.includes('/api/scripture?')) return false
+          const params = new URLSearchParams(u.slice(u.indexOf('?') + 1))
+          return params.get('reference') === 'John 3:16' && params.get('wocMarkup') == null
+        })
       ).toBe(true)
     })
   })
@@ -380,7 +416,8 @@ describe('ScriptureModal Component', () => {
   it('should show error when chapter context fetch returns data.error', async () => {
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = fetchUrl(input)
-      if (url.includes('reference=Genesis%201&') && !url.includes('%3A')) {
+      const ref = scriptureApiReferenceFromFetchUrl(url)
+      if (ref === 'Genesis 1') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ error: 'Chapter not found' }),
@@ -432,7 +469,7 @@ describe('ScriptureModal Component', () => {
   it('shows chapter Listen control left of Share when chapter context is loaded', async () => {
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = fetchUrl(input)
-      if (url.includes('reference=John%203&') && !url.includes('%3A')) {
+      if (scriptureApiReferenceFromFetchUrl(url) === 'John 3') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ text: 'Full chapter text.' }),
@@ -471,7 +508,7 @@ describe('ScriptureModal Component', () => {
   it('should show error when chapter context fetch throws', async () => {
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = fetchUrl(input)
-      if (url.includes('reference=Genesis%201&') && !url.includes('%3A')) {
+      if (scriptureApiReferenceFromFetchUrl(url) === 'Genesis 1') {
         return Promise.reject(new Error('Network error'))
       }
       if (url.includes('/api/scripture?')) {
@@ -495,13 +532,14 @@ describe('ScriptureModal Component', () => {
   it('should fetch and show compare translation when Compare dropdown is selected', async () => {
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = fetchUrl(input)
-      if (url.includes('translation=kjv') && url.includes('John%203%3A16')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ text: 'Compare verse KJV' }),
-        } as Response)
-      }
       if (url.includes('/api/scripture?')) {
+        const params = new URLSearchParams(url.slice(url.indexOf('?') + 1))
+        if (params.get('translation') === 'kjv' && params.get('reference') === 'John 3:16') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ text: 'Compare verse KJV' }),
+          } as Response)
+        }
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ text: 'Main verse ESV' }),
@@ -522,13 +560,14 @@ describe('ScriptureModal Component', () => {
   it('should show compare error when compare fetch returns data.error', async () => {
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = fetchUrl(input)
-      if (url.includes('translation=kjv') && url.includes('John%203%3A16')) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ error: 'Compare translation unavailable' }),
-        } as Response)
-      }
       if (url.includes('/api/scripture?')) {
+        const params = new URLSearchParams(url.slice(url.indexOf('?') + 1))
+        if (params.get('translation') === 'kjv' && params.get('reference') === 'John 3:16') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ error: 'Compare translation unavailable' }),
+          } as Response)
+        }
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ text: 'Main' }),
@@ -785,10 +824,8 @@ describe('ScriptureModal Component', () => {
     expect(openStudy).toHaveBeenCalledWith('John 3:16')
   })
 
-  it('long press on passage text prompts to hide verse numbers and persists preference', async () => {
-    const alertMocks = getAlertModalMocks()
-    alertMocks.showConfirm.mockResolvedValue(true)
-
+  it('long press on passage text opens reader display options and toggles verse numbers', async () => {
+    const user = userEvent.setup()
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = fetchUrl(input)
       if (url.includes('/api/scripture/spurgeon-links')) {
@@ -823,15 +860,74 @@ describe('ScriptureModal Component', () => {
     jest.useRealTimers()
 
     await waitFor(() => {
-      expect(alertMocks.showConfirm).toHaveBeenCalledWith(
-        'Hide verse numbers in the scripture reader?'
-      )
+      expect(screen.getByRole('dialog', { name: 'Scripture reader display' })).toBeInTheDocument()
     })
+
+    await user.click(screen.getByLabelText('Verse numbers'))
 
     await waitFor(() => {
       expect(localStorage.getItem(SCRIPTURE_SHOW_VERSE_NUMBERS_STORAGE_KEY)).toBe('false')
       expect(passage!.querySelector('sup.hidden')).toBeTruthy()
       expect(passage!.querySelector('sup.text-blue-600')).toBeNull()
     })
+  })
+
+  it('closes reader display options when the scripture modal closes', async () => {
+    const user = userEvent.setup()
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = fetchUrl(input)
+      if (url.includes('/api/scripture/spurgeon-links')) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ items: [] }),
+        } as Response)
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ text: '[16] For God so loved the world.' }),
+      } as Response)
+    })
+
+    const { rerender } = renderWithTextSize(<ScriptureModal {...defaultProps} />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/For God so loved the world/i)).toBeInTheDocument()
+    })
+
+    const passage = document.querySelector('[data-tour="scripture-modal-verse-body"] > div')
+    expect(passage).toBeTruthy()
+
+    jest.useFakeTimers()
+    act(() => {
+      fireEvent.pointerDown(passage!, { button: 0, clientX: 100, clientY: 200 })
+    })
+    act(() => {
+      jest.advanceTimersByTime(DEFAULT_LONG_PRESS_MS)
+    })
+    jest.useRealTimers()
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: 'Scripture reader display' })).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByLabelText('Close modal'))
+
+    rerender(
+      <TextSizeProvider>
+        <ScriptureModal {...defaultProps} isOpen={false} />
+      </TextSizeProvider>
+    )
+    rerender(
+      <TextSizeProvider>
+        <ScriptureModal {...defaultProps} isOpen />
+      </TextSizeProvider>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText(/For God so loved the world/i)).toBeInTheDocument()
+    })
+    expect(
+      screen.queryByRole('dialog', { name: 'Scripture reader display' })
+    ).not.toBeInTheDocument()
   })
 })

@@ -1,4 +1,9 @@
 import {
+  SCRIPTURE_WOC_END,
+  SCRIPTURE_WOC_START,
+  wrapScriptureWordsOfChrist,
+} from '@/lib/scriptureWordsOfChristMarkup'
+import {
   formatScriptureChapterHtml,
   formatScripturePassageHtml,
   isolatePsalm119AcrosticHeadings,
@@ -85,6 +90,28 @@ describe('formatScripturePassageHtml', () => {
     expect(html).not.toContain('text-blue-600')
   })
 
+  it('renders words of Christ in red when enabled', () => {
+    const marked = `[16] ${wrapScriptureWordsOfChrist('For God so loved')}`
+    const html = formatScripturePassageHtml(marked, {
+      showVerseNumbers: true,
+      showWordsOfChrist: true,
+    })
+    expect(html).toContain('class="scripture-woc text-red-700 dark:text-red-400"')
+    expect(html).toContain('For God so loved')
+    expect(html).not.toContain(SCRIPTURE_WOC_START)
+  })
+
+  it('strips words-of-Christ markers when display is off', () => {
+    const marked = `[16] ${wrapScriptureWordsOfChrist('For God so loved')}`
+    const html = formatScripturePassageHtml(marked, {
+      showVerseNumbers: true,
+      showWordsOfChrist: false,
+    })
+    expect(html).not.toContain('scripture-woc')
+    expect(html).toContain('For God so loved')
+    expect(html).not.toContain(SCRIPTURE_WOC_END)
+  })
+
   it('wraps passage in saved highlight mark', () => {
     const html = formatScripturePassageHtml('[16] For God so loved', {
       showVerseNumbers: true,
@@ -151,6 +178,40 @@ describe('formatScriptureChapterHtml', () => {
       clickableVerseNumbers: true,
     })
     expect(html).toContain('data-scripture-verse="16"')
+  })
+
+  it('renders Matthew 2:1 style ESV text with clickable verse 1 only', () => {
+    const html = formatScriptureChapterHtml('[2] :1 Now after Jesus was born.', {
+      showVerseNumbers: true,
+      highlightVerses: [],
+      clickableVerseNumbers: true,
+    })
+    expect(html).toContain('data-scripture-verse="1"')
+    expect(html).not.toContain('data-scripture-verse="2"')
+    expect(html).not.toMatch(/\b2:1\b/)
+  })
+
+  it('renders plain 5:1 chapter opener from legacy cache as clickable verse 1', () => {
+    const html = formatScriptureChapterHtml('5:1 Seeing the crowds, he went up on the mountain.', {
+      showVerseNumbers: true,
+      highlightVerses: [],
+      clickableVerseNumbers: true,
+    })
+    expect(html).toContain('data-scripture-verse="1"')
+    expect(html).not.toMatch(/\b5:1\b/)
+  })
+
+  it('keeps verse 1 clickable when red-letter markup wrapped the verse number (chapter highlight)', () => {
+    const marked = `[1] ${SCRIPTURE_WOC_START}Blessed are the poor in spirit.${SCRIPTURE_WOC_END} [2] Next verse.`
+    const html = formatScriptureChapterHtml(marked, {
+      showVerseNumbers: true,
+      showWordsOfChrist: true,
+      highlightVerses: [1],
+      clickableVerseNumbers: true,
+    })
+    expect(html).toContain('data-scripture-verse="1"')
+    expect(html).not.toMatch(/<span class="scripture-woc[^"]*"><div id="verse-1"/)
+    expect(html.indexOf('data-scripture-verse="1"')).toBeLessThan(html.indexOf('scripture-woc'))
   })
 
   it('still highlights when verse numbers are hidden', () => {

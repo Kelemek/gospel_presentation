@@ -90,11 +90,18 @@ import {
   scriptureHighlightStorageReference,
   scriptureHighlightVerseRange,
 } from '@/lib/scriptureHighlightReference'
+import ScripturePassageReaderOptionsPanel from '@/components/ScripturePassageReaderOptionsPanel'
 import {
   readScriptureShowVerseNumbersFromStorage,
   subscribeScriptureShowVerseNumbers,
   writeScriptureShowVerseNumbersToStorage,
 } from '@/lib/scriptureVerseNumbersPreference'
+import {
+  readScriptureShowWordsOfChristFromStorage,
+  subscribeScriptureShowWordsOfChrist,
+  writeScriptureShowWordsOfChristToStorage,
+} from '@/lib/scriptureWordsOfChristPreference'
+import { passageTextForScriptureReader, scriptureApiSearchParams } from '@/lib/scriptureApiQuery'
 import {
   GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT,
   getScriptureModalTabEntry,
@@ -244,7 +251,7 @@ export default function ScriptureModal({
   const { translation, setTranslation, enabledTranslations, enabledTranslationOptions } =
     useTranslation()
   const { textSize } = useTextSize()
-  const { showAlert, showConfirm } = useAlertModal()
+  const { showAlert } = useAlertModal()
   const [chapterView, setChapterView] = useState<{ sessionKey: string; text: string } | null>(null)
   const [chapterContextError, setChapterContextError] = useState<{
     sessionKey: string
@@ -430,16 +437,26 @@ export default function ScriptureModal({
     () => true
   )
 
-  const handlePassageLongPress = useCallback(async () => {
-    const confirmed = await showConfirm(
-      showVerseNumbers
-        ? 'Hide verse numbers in the scripture reader?'
-        : 'Show verse numbers in the scripture reader?'
-    )
-    if (confirmed) {
-      writeScriptureShowVerseNumbersToStorage(!showVerseNumbers)
-    }
-  }, [showConfirm, showVerseNumbers])
+  const showWordsOfChrist = useSyncExternalStore(
+    subscribeScriptureShowWordsOfChrist,
+    readScriptureShowWordsOfChristFromStorage,
+    () => true
+  )
+  const prevShowWordsOfChristInChapterRef = useRef(showWordsOfChrist)
+
+  const [passageReaderOptionsOpen, setPassageReaderOptionsOpen] = useState(false)
+
+  const handlePassageLongPress = useCallback(() => {
+    setPassageReaderOptionsOpen(true)
+  }, [])
+
+  const scriptureApiUrl = useCallback(
+    (ref: string, trans: BibleTranslation) =>
+      `/api/scripture?${scriptureApiSearchParams(ref, trans, {
+        includeWordsOfChristMarkup: showWordsOfChrist,
+      })}`,
+    [showWordsOfChrist]
+  )
 
   const scriptureHighlightsRevision = scriptureHighlightControl?.highlightsRevision ?? 0
 
@@ -497,22 +514,30 @@ export default function ScriptureModal({
     (text: string, options?: { clickableVerseNumbers?: boolean }): string =>
       formatScriptureChapterHtml(text, {
         showVerseNumbers,
+        showWordsOfChrist,
         highlightVerses: chapterHighlightVerses,
         savedHighlights: chapterSavedHighlights,
         clickableVerseNumbers: options?.clickableVerseNumbers ?? !!onNavigateReference,
       }),
-    [chapterHighlightVerses, showVerseNumbers, chapterSavedHighlights, onNavigateReference]
+    [
+      chapterHighlightVerses,
+      showVerseNumbers,
+      showWordsOfChrist,
+      chapterSavedHighlights,
+      onNavigateReference,
+    ]
   )
 
   const formatPassageText = useCallback(
     (text: string): string =>
       formatScripturePassageHtml(text, {
         showVerseNumbers,
+        showWordsOfChrist,
         ...(verseSavedHighlight
           ? { savedHighlight: { id: verseSavedHighlight.id, colorId: verseSavedHighlight.colorId } }
           : {}),
       }),
-    [showVerseNumbers, verseSavedHighlight]
+    [showVerseNumbers, showWordsOfChrist, verseSavedHighlight]
   )
 
   /** Chapter-only tabs: per-verse marks in chapter view. Verse tabs: blue box only (no colored tint). */
@@ -815,7 +840,7 @@ export default function ScriptureModal({
 
     try {
       const response = await fetch(
-        `/api/scripture?reference=${encodeURIComponent(chapterRef)}&translation=${translation}`,
+        scriptureApiUrl(chapterRef, translation),
         { cache: 'no-store' }
       )
       const data = await response.json()
@@ -825,7 +850,7 @@ export default function ScriptureModal({
         setChapterView(null)
         setChapterContextError({ sessionKey, error: errMsg })
       } else {
-        setChapterView({ sessionKey, text: typeof data.text === 'string' ? data.text : '' })
+        setChapterView({ sessionKey, text: passageTextForScriptureReader(data) })
         setChapterContextError(null)
       }
     } catch {
@@ -837,7 +862,7 @@ export default function ScriptureModal({
     } finally {
       setContextLoading(false)
     }
-  }, [verseViewSessionKey, reference, translation])
+  }, [verseViewSessionKey, reference, translation, scriptureApiUrl])
 
   useEffect(() => {
     initialChapterViewFetchedRef.current = false
@@ -865,6 +890,25 @@ export default function ScriptureModal({
     showingContext,
     contextLoading,
     verseViewSessionKey,
+    fetchChapterContext,
+  ])
+
+  useEffect(() => {
+    prevShowWordsOfChristInChapterRef.current = showWordsOfChrist
+    // Intentionally omit showWordsOfChrist from deps: only reset tracking when the chapter session changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- WOC toggles are handled by the effect below.
+  }, [verseViewSessionKey])
+
+  useEffect(() => {
+    if (!isOpen || !showingContext || !verseViewSessionKey) return
+    if (prevShowWordsOfChristInChapterRef.current === showWordsOfChrist) return
+    prevShowWordsOfChristInChapterRef.current = showWordsOfChrist
+    void fetchChapterContext()
+  }, [
+    isOpen,
+    showingContext,
+    verseViewSessionKey,
+    showWordsOfChrist,
     fetchChapterContext,
   ])
 
@@ -1031,7 +1075,7 @@ export default function ScriptureModal({
     const abortController = new AbortController()
 
     void fetch(
-      `/api/scripture?reference=${encodeURIComponent(reference)}&translation=${translation}`,
+      scriptureApiUrl(reference, translation),
       { signal: abortController.signal, cache: 'no-store' }
     )
       .then((response) => response.json())
@@ -1042,7 +1086,7 @@ export default function ScriptureModal({
         } else {
           setScriptureResolved({
             key,
-            text: typeof data.text === 'string' ? data.text : '',
+            text: passageTextForScriptureReader(data),
             error: '',
           })
         }
@@ -1054,7 +1098,7 @@ export default function ScriptureModal({
       })
 
     return () => abortController.abort()
-  }, [scriptureFetchKey, reference, translation])
+  }, [scriptureFetchKey, reference, translation, scriptureApiUrl])
 
   useEffect(() => {
     if (!compareVerseFetchKey) return
@@ -1066,7 +1110,7 @@ export default function ScriptureModal({
     const abortController = new AbortController()
 
     void fetch(
-      `/api/scripture?reference=${encodeURIComponent(reference)}&translation=${compareTrans}`,
+      scriptureApiUrl(reference, compareTrans),
       { signal: abortController.signal, cache: 'no-store' }
     )
       .then((response) => response.json())
@@ -1077,7 +1121,7 @@ export default function ScriptureModal({
         } else {
           setCompareVerseResolved({
             key,
-            text: typeof data.text === 'string' ? data.text : '',
+            text: passageTextForScriptureReader(data),
             error: '',
           })
         }
@@ -1089,7 +1133,7 @@ export default function ScriptureModal({
       })
 
     return () => abortController.abort()
-  }, [compareVerseFetchKey, reference, activeCompareTranslation])
+  }, [compareVerseFetchKey, reference, activeCompareTranslation, scriptureApiUrl])
 
   useEffect(() => {
     if (!compareChapterFetchKey) return
@@ -1102,7 +1146,7 @@ export default function ScriptureModal({
     const chapterRef = getChapterReference(reference)
 
     void fetch(
-      `/api/scripture?reference=${encodeURIComponent(chapterRef)}&translation=${compareTrans}`,
+      scriptureApiUrl(chapterRef, compareTrans),
       { signal: abortController.signal, cache: 'no-store' }
     )
       .then((response) => response.json())
@@ -1110,14 +1154,14 @@ export default function ScriptureModal({
         if (!formatScriptureApiError(data)) {
           setCompareChapterResolved({
             key,
-            text: typeof data.text === 'string' ? data.text : '',
+            text: passageTextForScriptureReader(data),
           })
         }
       })
       .catch(() => {})
 
     return () => abortController.abort()
-  }, [compareChapterFetchKey, reference, activeCompareTranslation])
+  }, [compareChapterFetchKey, reference, activeCompareTranslation, scriptureApiUrl])
 
   const translationLabel = useMemo(() => {
     const match = enabledTranslationOptions.find((o) => o.translation_code === translation)
@@ -1212,6 +1256,7 @@ export default function ScriptureModal({
     setScriptureSearchOpen(false)
     setBibleSearchOpen(false)
     setBibleSearchSession(null)
+    setPassageReaderOptionsOpen(false)
     clearProfileResourceSearchMarks(scrollAreaRef.current)
     onClose()
   }
@@ -2022,6 +2067,15 @@ export default function ScriptureModal({
           />,
           document.body
         )}
+
+      <ScripturePassageReaderOptionsPanel
+        open={passageReaderOptionsOpen}
+        onClose={() => setPassageReaderOptionsOpen(false)}
+        showVerseNumbers={showVerseNumbers}
+        onShowVerseNumbersChange={writeScriptureShowVerseNumbersToStorage}
+        showWordsOfChrist={showWordsOfChrist}
+        onShowWordsOfChristChange={writeScriptureShowWordsOfChristToStorage}
+      />
 
       {typeof document !== 'undefined' &&
         passagePickerOpen &&

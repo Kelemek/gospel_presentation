@@ -13,6 +13,7 @@ import {
 } from '@/lib/gospelClientStorage'
 import { VERSE_MEMORIZATION_STORAGE_KEY as MEMORIZATION_KEY } from '@/lib/gospelClientStoragePolicy'
 import { idbGetItem, isIndexedDbWritable } from '@/lib/gospelClientKvStore'
+import { scripturePassagePlainText } from '@/lib/scriptureWordsOfChristMarkup'
 import { stripHtmlTags } from '@/lib/stripHtmlTags'
 import { MEMORIZATION_FULL_HIDE_ROUND } from '@/lib/memorizationPracticeUtils'
 
@@ -349,7 +350,7 @@ function persist(verses: MemorizedVerse[]): boolean {
 
 /** Plain text for memorization: strip HTML and verse number markers like [16]. */
 export function stripScriptureForMemorization(htmlOrText: string): string {
-  const plain = stripHtmlTags(htmlOrText)
+  const plain = stripHtmlTags(scripturePassagePlainText(htmlOrText))
   return plain
     .replace(/\[\d+\]\s*/g, '')
     .replace(/\s+/g, ' ')

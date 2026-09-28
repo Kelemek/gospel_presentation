@@ -6,6 +6,7 @@ import {
 import { gospelStorageGetSync, gospelStorageSetSync } from '@/lib/gospelClientStorage'
 import { parseReference } from '@/lib/parse-scripture-reference'
 import { normalizeScriptureReferenceString } from '@/lib/scriptureReferenceNormalize'
+import { scripturePassagePlainText } from '@/lib/scriptureWordsOfChristMarkup'
 
 export type DailyVersePromptKind =
   | 'verse_blank'
@@ -194,7 +195,7 @@ export function formatMaskedReference(
 
 /** Strip a leading verse marker from passage text (`[16] …` or `16 …`). */
 export function stripLeadingVerseNumberMarker(text: string): string {
-  return text
+  return scripturePassagePlainText(text)
     .trim()
     .replace(/^\[\d{1,3}\]\s*/, '')
     .replace(/^\d{1,3}\s+/, '')

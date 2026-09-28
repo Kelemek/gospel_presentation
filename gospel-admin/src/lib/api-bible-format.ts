@@ -1,3 +1,11 @@
+import { normalizeEsvMisconvertedChapterVersePrefix } from '@/lib/esvPassageHtmlToText'
+import {
+  scripturePassagePlainText,
+  stripScriptureCacheVersionPrefix,
+  stripScriptureWordsOfChristMarkers,
+  wrapScriptureWordsOfChrist,
+} from '@/lib/scriptureWordsOfChristMarkup'
+
 /**
  * Normalize API.Bible passage `content` into `[n] verse` chunks with paragraph breaks
  * so ScriptureModal's `processChapterText` can style verse numbers like ESV.
@@ -41,6 +49,16 @@ function appendApiBibleNodes(nodes: readonly ApiBibleContentNode[] | undefined, 
         out.push(`[${n.trim()}] `)
       }
       continue
+    }
+    if (node.name === 'char') {
+      const style = node.attrs?.style
+      const styleName = typeof style === 'string' ? style : Array.isArray(style) ? style[0] : ''
+      if (styleName === 'wj') {
+        const inner: string[] = []
+        appendApiBibleNodes(node.items, inner)
+        out.push(wrapScriptureWordsOfChrist(inner.join('')))
+        continue
+      }
     }
     if (node.name === 'note') {
       continue
@@ -152,11 +170,82 @@ function finishApiBiblePassageText(s: string): string {
 }
 
 /**
- * Re-run {@link finishApiBiblePassageText} on text read from `scripture_cache` so older rows
- * pick up plain-text fixes without waiting for TTL.
+ * Re-run {@link finishApiBiblePassageText} on plain `scripture_cache.text` so older rows pick up
+ * plain-text fixes without waiting for TTL (strips legacy version line / inline markers if present).
  */
 export function normalizeScriptureCachedText(text: string): string {
-  return finishApiBiblePassageText(text)
+  return scripturePlainTextFromCacheRow(text)
+}
+
+/** Plain passage body for `scripture_cache.text` (legacy poisoned rows are cleaned on read). */
+export function scripturePlainTextFromCacheRow(text: string): string {
+  return finishApiBiblePassageText(
+    normalizeEsvMisconvertedChapterVersePrefix(scripturePassagePlainText(text))
+  )
+}
+
+/** Marked passage from `scripture_cache.woc_text` when present. */
+export function scriptureWordsOfChristTextFromCacheRow(wocText: string | null | undefined): string | null {
+  if (wocText == null || !wocText.trim()) return null
+  return finishApiBiblePassageText(wocText)
+}
+
+/** Split a freshly fetched passage (with inline markers) into DB columns. */
+export function splitScripturePassageForCacheStorage(markedPassage: string): {
+  text: string
+  woc_text: string
+} {
+  const body = stripScriptureCacheVersionPrefix(markedPassage.trimStart())
+  const woc_text = finishApiBiblePassageText(body)
+  const text = finishApiBiblePassageText(stripScriptureWordsOfChristMarkers(body))
+  return { text, woc_text }
+}
+
+export type ScriptureCacheRow = {
+  text: string
+  woc_text?: string | null
+}
+
+/** Normalize legacy `scripture_cache.text` for storage when it still embeds markers or ESV chapter openers. */
+export function healScriptureCacheRowIfNeeded(row: ScriptureCacheRow): {
+  row: ScriptureCacheRow
+  textChanged: boolean
+} {
+  const healedText = scripturePlainTextFromCacheRow(row.text)
+  if (healedText === row.text) {
+    return { row, textChanged: false }
+  }
+  return { row: { ...row, text: healedText }, textChanged: true }
+}
+
+export type ScriptureGetJsonBody = {
+  reference: string
+  text: string
+  translation: string
+  cached: boolean
+  wordsOfChristText?: string
+}
+
+/** Build `GET /api/scripture` JSON; `text` is always plain for legacy clients. */
+export function buildScriptureGetJsonBody(
+  reference: string,
+  translation: string,
+  cached: boolean,
+  row: ScriptureCacheRow,
+  options: { includeWordsOfChristMarkup: boolean }
+): ScriptureGetJsonBody {
+  const text = scripturePlainTextFromCacheRow(row.text)
+  const wordsOfChristText = scriptureWordsOfChristTextFromCacheRow(row.woc_text)
+  const body: ScriptureGetJsonBody = {
+    reference,
+    text,
+    translation,
+    cached,
+  }
+  if (options.includeWordsOfChristMarkup && wordsOfChristText) {
+    body.wordsOfChristText = wordsOfChristText
+  }
+  return body
 }
 
 /** Collapse whitespace within each paragraph; keep blank-line breaks for ESV paragraph layout. */

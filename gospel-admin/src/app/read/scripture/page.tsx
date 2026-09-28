@@ -8,6 +8,7 @@ import {
   fetchScriptureForKindleRead,
   kindleReadScriptureBackHref,
 } from '@/lib/kindleReadScripture'
+import { scripturePassagePlainText } from '@/lib/scriptureWordsOfChristMarkup'
 import {
   kindleReadCardReferenceForAnchor,
   kindleReadScriptureCardNav,
@@ -105,7 +106,7 @@ export default async function KindleScriptureReadPage({ searchParams }: KindleSc
 
         {result?.ok ? (
           <>
-            <div className="kindle-read-passage">{result.text}</div>
+            <div className="kindle-read-passage">{scripturePassagePlainText(result.text)}</div>
             <div className="kindle-read-scripture-attribution">
               <ScriptureFooterAttributionParagraphs
                 enabledTranslationCodes={[translation]}

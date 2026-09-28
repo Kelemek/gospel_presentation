@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { fetchScripture } from '@/lib/bible-api'
 import type { BibleTranslation } from '@/lib/bible-translations'
 import { isBibleTranslation } from '@/lib/bible-translations'
-import { normalizeScriptureCachedText } from '@/lib/api-bible-format'
+import {
+  buildScriptureGetJsonBody,
+  healScriptureCacheRowIfNeeded,
+  splitScripturePassageForCacheStorage,
+} from '@/lib/api-bible-format'
+import { parseScriptureWocMarkupRequestParam } from '@/lib/scriptureWordsOfChristMarkup'
 import { canonicalScriptureCacheReference } from '@/lib/api-bible-passage-id'
 import { scriptureReferenceForPassageQuery } from '@/lib/parse-scripture-reference'
 import { logger } from '@/lib/logger'
@@ -47,6 +52,10 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  const includeWordsOfChristMarkup = parseScriptureWocMarkupRequestParam(
+    searchParams.get('wocMarkup')
+  )
+
   const sessionId = getSessionId(request)
   /** Provider query (e.g. `2 John 1` → `2 John 1:1-13` for one-chapter epistles); cache key must match that passage. */
   const passageQueryReference = scriptureReferenceForPassageQuery(normalizedReference)
@@ -61,13 +70,39 @@ export async function GET(request: NextRequest) {
 
     const { data: cachedData, error: cacheError } = await supabase
       .from('scripture_cache' as any)
-      .select('text')
+      .select('text, woc_text')
       .eq('reference', cacheReference)
       .eq('translation', translation)
       .gte('cached_at', cutoffDate.toISOString())
       .maybeSingle()
 
-    if (cachedData && !cacheError) {
+    const cachedRowRaw =
+      cachedData && !cacheError
+        ? (cachedData as { text: string; woc_text?: string | null })
+        : null
+    const { row: cachedRow, textChanged: cacheTextHealed } = cachedRowRaw
+      ? healScriptureCacheRowIfNeeded(cachedRowRaw)
+      : { row: null as null, textChanged: false }
+
+    if (cacheTextHealed && cachedRow) {
+      void (supabase.from('scripture_cache' as any).update as any)({
+        text: cachedRow.text,
+      })
+        .eq('reference', cacheReference)
+        .eq('translation', translation)
+        .then(({ error }: { error: { message: string } | null }) => {
+          if (error) {
+            logger.warn('Failed to heal scripture_cache.text:', error.message)
+          }
+        })
+    }
+
+    const needsWocRefetch =
+      includeWordsOfChristMarkup &&
+      cachedRow !== null &&
+      (cachedRow.woc_text == null || !String(cachedRow.woc_text).trim())
+
+    if (cachedRow !== null && !needsWocRefetch) {
       logger.debug(`✅ Cache hit: ${cacheReference} (${translation}) for request ${normalizedReference}`)
 
       logScriptureAccess({
@@ -77,29 +112,65 @@ export async function GET(request: NextRequest) {
         request,
       }).catch((err) => logger.warn('Failed to log scripture access:', err))
 
-      const cachedText = normalizeScriptureCachedText((cachedData as { text: string }).text)
-
       return NextResponse.json(
-        {
-          reference: normalizedReference,
-          text: cachedText,
+        buildScriptureGetJsonBody(
+          normalizedReference,
           translation,
-          cached: true,
-        },
+          true,
+          cachedRow,
+          { includeWordsOfChristMarkup }
+        ),
         { headers: SCRIPTURE_HTTP_HEADERS }
       )
     }
 
-    logger.debug(
-      `❌ Cache miss: ${normalizedReference} (${translation}) query=${passageQueryReference} - fetching from remote API`
-    )
-    const result = await fetchScripture(passageQueryReference, translation)
+    if (cachedRow !== null && needsWocRefetch) {
+      logger.debug(
+        `♻️ Cache hit without woc_text: ${cacheReference} (${translation}) — refetching for red letter`
+      )
+    } else {
+      logger.debug(
+        `❌ Cache miss: ${normalizedReference} (${translation}) query=${passageQueryReference} - fetching from remote API`
+      )
+    }
+
+    let result
+    try {
+      result = await fetchScripture(passageQueryReference, translation)
+    } catch (fetchError) {
+      if (needsWocRefetch && cachedRow !== null) {
+        logger.warn(
+          `WoC refetch failed for ${cacheReference} (${translation}); serving plain cache`,
+          fetchError
+        )
+        logScriptureAccess({
+          reference: normalizedReference,
+          translation,
+          sessionId,
+          request,
+        }).catch((err) => logger.warn('Failed to log scripture access:', err))
+
+        return NextResponse.json(
+          buildScriptureGetJsonBody(
+            normalizedReference,
+            translation,
+            true,
+            cachedRow,
+            { includeWordsOfChristMarkup }
+          ),
+          { headers: SCRIPTURE_HTTP_HEADERS }
+        )
+      }
+      throw fetchError
+    }
+    const cacheColumns = splitScripturePassageForCacheStorage(result.text)
 
     const { error: insertError } = await (supabase.from('scripture_cache' as any).upsert as any)(
       {
         reference: cacheReference,
         translation,
-        text: result.text,
+        text: cacheColumns.text,
+        woc_text: cacheColumns.woc_text,
         cached_at: new Date().toISOString(),
       },
       {
@@ -156,12 +227,13 @@ export async function GET(request: NextRequest) {
     }).catch((err) => logger.warn('Failed to log scripture access:', err))
 
     return NextResponse.json(
-      {
-        reference: normalizedReference,
-        text: result.text,
-        translation: result.translation,
-        cached: false,
-      },
+      buildScriptureGetJsonBody(
+        normalizedReference,
+        result.translation,
+        false,
+        cacheColumns,
+        { includeWordsOfChristMarkup }
+      ),
       { headers: SCRIPTURE_HTTP_HEADERS }
     )
   } catch (error) {

@@ -3,6 +3,7 @@
 
 import type { ApiBibleTranslation, BibleTranslation } from '@/lib/bible-translations'
 import { formatApiBiblePassageContent } from '@/lib/api-bible-format'
+import { esvPassageHtmlToScriptureText } from '@/lib/esvPassageHtmlToText'
 import { referenceToApiBiblePassageId } from '@/lib/api-bible-passage-id'
 import { logger } from '@/lib/logger'
 import { scriptureReferenceForPassageQuery } from '@/lib/parse-scripture-reference'
@@ -28,7 +29,7 @@ async function fetchFromESV(reference: string): Promise<ScriptureResult> {
   const queryReference = scriptureReferenceForPassageQuery(cleanReference)
 
   const response = await fetch(
-    `https://api.esv.org/v3/passage/text/?q=${encodeURIComponent(queryReference)}&include-headings=false&include-footnotes=false&include-verse-numbers=true&include-short-copyright=false&include-passage-references=false`,
+    `https://api.esv.org/v3/passage/html/?q=${encodeURIComponent(queryReference)}&include-headings=false&include-footnotes=false&include-verse-numbers=true&include-short-copyright=false&include-passage-references=false&include-audio-link=false`,
     {
       headers: {
         Authorization: `Token ${apiToken}`,
@@ -44,9 +45,14 @@ async function fetchFromESV(reference: string): Promise<ScriptureResult> {
   const data = await response.json()
 
   if (data.passages && data.passages.length > 0) {
+    const html = String(data.passages[0] ?? '')
+    const text = esvPassageHtmlToScriptureText(html)
+    if (!text.trim()) {
+      throw new Error('Scripture text not found')
+    }
     return {
       reference: cleanReference,
-      text: data.passages[0].trim(),
+      text,
       translation: 'esv',
     }
   }

@@ -3,12 +3,26 @@ import { act, render, screen, fireEvent, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event'
 import { TextSizeProvider } from '@/contexts/TextSizeContext'
 import ScriptureModal from '../ScriptureModal'
+import { DEFAULT_LONG_PRESS_MS } from '@/hooks/useLongPress'
+import { SCRIPTURE_SHOW_WORDS_OF_CHRIST_STORAGE_KEY } from '@/lib/scriptureWordsOfChristPreference'
 
 function renderWithTextSize(ui: ReactElement) {
   return render(<TextSizeProvider>{ui}</TextSizeProvider>)
 }
 
 const mockFetch = global.fetch as jest.MockedFunction<typeof fetch>
+
+function scriptureApiReference(url: string): string | null {
+  if (!url.includes('/api/scripture?')) return null
+  const query = url.includes('?') ? url.slice(url.indexOf('?') + 1) : ''
+  return new URLSearchParams(query).get('reference')
+}
+
+function scriptureApiTranslation(url: string): string | null {
+  if (!url.includes('/api/scripture?')) return null
+  const query = url.includes('?') ? url.slice(url.indexOf('?') + 1) : ''
+  return new URLSearchParams(query).get('translation')
+}
 
 describe('ScriptureModal additional behaviors', () => {
   const defaultProps = {
@@ -25,6 +39,7 @@ describe('ScriptureModal additional behaviors', () => {
   beforeEach(() => {
     mockFetch.mockReset()
     jest.clearAllMocks()
+    localStorage.removeItem(SCRIPTURE_SHOW_WORDS_OF_CHRIST_STORAGE_KEY)
     mockFetch.mockResolvedValue(defaultFetchSuccess)
   })
 
@@ -35,7 +50,7 @@ describe('ScriptureModal additional behaviors', () => {
   it('opens in chapter view automatically for chapter-only references', async () => {
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString()
-      if (url.includes('reference=Genesis%201&')) {
+      if (scriptureApiReference(url) === 'Genesis 1') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ text: '[1] In the beginning' }),
@@ -55,10 +70,73 @@ describe('ScriptureModal additional behaviors', () => {
     )
   })
 
+  it('refetches chapter text when red letter is toggled in chapter view', async () => {
+    const user = userEvent.setup()
+    const genesisChapterUrls: string[] = []
+
+    mockFetch.mockImplementation((input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (scriptureApiReference(url) === 'Genesis 1') {
+        genesisChapterUrls.push(url)
+        const params = new URLSearchParams(url.slice(url.indexOf('?') + 1))
+        const woc = params.get('wocMarkup') === '1'
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              text: '[1] In the beginning',
+              ...(woc ? { wordsOfChristText: '[1] marked beginning' } : {}),
+            }),
+        } as unknown as Response)
+      }
+      return Promise.resolve(defaultFetchSuccess)
+    })
+
+    renderWithTextSize(<ScriptureModal reference="Genesis 1" isOpen onClose={jest.fn()} />)
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^Verse$/i })).toBeInTheDocument()
+    )
+    await waitFor(() => expect(genesisChapterUrls.length).toBeGreaterThan(0))
+
+    const countAfterLoad = genesisChapterUrls.length
+
+    let passage: Element | null = null
+    await waitFor(() => {
+      passage = document.querySelector('[data-tour="scripture-modal-chapter-body"]')
+      expect(passage).toBeTruthy()
+    })
+
+    jest.useFakeTimers()
+    act(() => {
+      fireEvent.pointerDown(passage!, { button: 0, clientX: 100, clientY: 200 })
+    })
+    act(() => {
+      jest.advanceTimersByTime(DEFAULT_LONG_PRESS_MS)
+    })
+    jest.useRealTimers()
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: 'Scripture reader display' })).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByLabelText('Red letter'))
+
+    await waitFor(() => {
+      expect(genesisChapterUrls.length).toBeGreaterThan(countAfterLoad)
+      expect(
+        genesisChapterUrls.some((u) => {
+          const params = new URLSearchParams(u.slice(u.indexOf('?') + 1))
+          return params.get('wocMarkup') == null
+        })
+      ).toBe(true)
+    })
+  })
+
   it('keeps chapter-only scroll area at top after chapter text loads', async () => {
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString()
-      if (url.includes('reference=Ezra%202&')) {
+      if (scriptureApiReference(url) === 'Ezra 2') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ text: '[1] Now these were the people' }),
@@ -93,13 +171,14 @@ describe('ScriptureModal additional behaviors', () => {
 
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString()
-      if (url.includes('Genesis%201%3A')) {
+      const ref = scriptureApiReference(url)
+      if (ref?.startsWith('Genesis 1:')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ text: 'Initial scripture text' }),
         } as unknown as Response)
       }
-      if (url.includes('reference=Genesis%201&')) {
+      if (ref === 'Genesis 1') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -159,16 +238,17 @@ describe('ScriptureModal additional behaviors', () => {
   it('fetches chapter context and highlights verses with ids', async () => {
     const user = userEvent.setup()
 
-    /** Verse fetch uses reference like Genesis%201%3A1-2; chapter context uses Genesis 1 only (no %3A). Strict Mode runs effects twice, so queue-based mocks are wrong. */
+    /** Verse fetch uses Genesis 1:…; chapter context uses Genesis 1 only. */
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString()
-      if (url.includes('Genesis%201%3A')) {
+      const ref = scriptureApiReference(url)
+      if (ref?.startsWith('Genesis 1:')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ text: 'Initial scripture text' }),
         } as unknown as Response)
       }
-      if (url.includes('reference=Genesis%201&')) {
+      if (ref === 'Genesis 1') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ text: '[1] In the beginning\n\n[2] And then' }),
@@ -204,13 +284,14 @@ describe('ScriptureModal additional behaviors', () => {
 
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString()
-      if (url.includes('Genesis%201%3A')) {
+      const ref = scriptureApiReference(url)
+      if (ref?.startsWith('Genesis 1:')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ text: 'Initial scripture text' }),
         } as unknown as Response)
       }
-      if (url.includes('reference=Genesis%201&')) {
+      if (ref === 'Genesis 1') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ text: '[1] In the beginning\n\n[2] And then' }),
@@ -232,6 +313,14 @@ describe('ScriptureModal additional behaviors', () => {
     await user.click(screen.getByRole('button', { name: /chapter context/i }))
 
     await waitFor(() => expect(container.querySelector('#chapter-content')).toBeInTheDocument())
+
+    const verseOne = container.querySelector('[data-scripture-verse="1"]')
+    expect(verseOne).toBeTruthy()
+    await user.click(verseOne!)
+    await waitFor(() =>
+      expect(document.getElementById('scripture-chapter-verse-picker-dialog')).toBeInTheDocument()
+    )
+    await user.click(within(document.getElementById('scripture-chapter-verse-picker-dialog')!).getByRole('button', { name: 'Close' }))
 
     const verseTwo = container.querySelector('[data-scripture-verse="2"]')
     expect(verseTwo).toBeTruthy()
@@ -256,19 +345,20 @@ describe('ScriptureModal additional behaviors', () => {
 
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString()
-      if (url.includes('Genesis%201%3A')) {
+      const ref = scriptureApiReference(url)
+      if (ref?.startsWith('Genesis 1:')) {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ text: 'Initial scripture text' }),
         } as unknown as Response)
       }
-      if (url.includes('reference=Genesis%201&') && url.includes('translation=kjv')) {
+      if (ref === 'Genesis 1' && scriptureApiTranslation(url) === 'kjv') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ text: '[1] KJV beginning\n\n[2] KJV second verse' }),
         } as unknown as Response)
       }
-      if (url.includes('reference=Genesis%201&')) {
+      if (scriptureApiReference(url) === 'Genesis 1') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ text: '[1] In the beginning\n\n[2] And then' }),
@@ -389,13 +479,13 @@ describe('ScriptureModal additional behaviors', () => {
 
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString()
-      if (url.includes('reference=John%203%3A16&')) {
+      if (scriptureApiReference(url) === 'John 3:16') {
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ text: 'For God so loved' }),
         } as unknown as Response)
       }
-      if (url.includes('reference=John%203%3A17&')) {
+      if (scriptureApiReference(url) === 'John 3:17') {
         return nextFetch
       }
       return Promise.resolve(defaultFetchSuccess)
@@ -563,7 +653,7 @@ describe('ScriptureModal additional behaviors', () => {
 
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === 'string' ? input : input.toString()
-      if (url.includes('Psalm%2023%3A')) {
+      if (scriptureApiReference(url) === 'Psalm 23:4') {
         return Promise.resolve({
           ok: true,
           json: () =>
@@ -572,7 +662,7 @@ describe('ScriptureModal additional behaviors', () => {
             }),
         } as unknown as Response)
       }
-      if (url.includes('reference=Psalm%2023&')) {
+      if (scriptureApiReference(url) === 'Psalm 23') {
         return Promise.resolve({
           ok: true,
           json: () =>
