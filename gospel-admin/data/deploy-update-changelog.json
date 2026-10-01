@@ -43,5 +43,6 @@
   "Bug fix: The page-turn animation on the M'Cheyne reading plan in the menu now turns the usual way, from right to left.",
   "The header appearance menu lets you choose Light, Blossom, Dark, or Black; the button shows your current theme icon. Blossom is a soft pastel pink look with a gently shaded presentation title bar.",
   "Bookmark pin colors in the scripture reader are brighter and easier to tell apart.",
-  "In the scripture reader, long-press the passage to turn verse numbers and Words of Christ (red letter) on or off."
+  "In the scripture reader, long-press the passage to turn verse numbers and Words of Christ (red letter) on or off.",
+  "Bug fix: Listen no longer errors when you pause and play again if audio cannot load. The same message still appears when audio is unavailable."
 ]

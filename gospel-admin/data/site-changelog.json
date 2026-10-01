@@ -1483,5 +1483,10 @@
     "releasedAt": "2026-09-28",
     "committedAt": "2026-09-28T14:57:10.060Z",
     "message": "In the scripture reader, long-press the passage to turn verse numbers and Words of Christ (red letter) on or off."
+  },
+  {
+    "releasedAt": "2026-10-01",
+    "committedAt": "2026-10-01T22:38:10.186Z",
+    "message": "Bug fix: Listen no longer errors when you pause and play again if audio cannot load. The same message still appears when audio is unavailable."
   }
 ]

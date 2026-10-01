@@ -60,6 +60,7 @@ function Harness({
   onTrackIndexChange,
   playlistStartIndex,
   onAutoAdvanceAfterPlayback,
+  onPlaybackError,
   autoScroll,
 }: {
   audioUrls: string[]
@@ -69,6 +70,7 @@ function Harness({
   onTrackIndexChange?: (index: number) => void
   playlistStartIndex?: number
   onAutoAdvanceAfterPlayback?: () => boolean | void
+  onPlaybackError?: () => void
   autoScroll?: {
     scopeRef: { current: HTMLElement | null }
     scrollContainerRef: { current: HTMLElement | null }
@@ -90,6 +92,7 @@ function Harness({
     onTrackIndexChange,
     playlistStartIndex,
     onAutoAdvanceAfterPlayback,
+    onPlaybackError,
     autoScroll,
   })
   return (
@@ -175,6 +178,144 @@ describe('useChapterStreamingAudioListen', () => {
     Object.defineProperty(el, 'paused', { configurable: true, get: () => false })
     await user.click(screen.getByRole('button', { name: 'primary' }))
     expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled()
+  })
+
+  it('resumes playback when primary is clicked while paused with the same src', async () => {
+    const user = userEvent.setup()
+    const onPlaybackError = jest.fn()
+    render(<Harness audioUrls={[audioUrl]} enabled onPlaybackError={onPlaybackError} />)
+    const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    const srcAfterFirstPlay = el.src
+    expect(srcAfterFirstPlay).toContain('/api/scripture/audio')
+
+    const paused = true
+    Object.defineProperty(el, 'paused', { configurable: true, get: () => paused })
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(2)
+    expect(el.src).toBe(srcAfterFirstPlay)
+    expect(onPlaybackError).not.toHaveBeenCalled()
+  })
+
+  it('retries with a fresh src when resume play rejects with NotSupportedError', async () => {
+    const user = userEvent.setup()
+    const onPlaybackError = jest.fn()
+    const play = HTMLMediaElement.prototype.play as jest.Mock
+    play.mockResolvedValueOnce(undefined).mockRejectedValueOnce(
+      new DOMException('The element has no supported sources.', 'NotSupportedError')
+    ).mockResolvedValueOnce(undefined)
+
+    render(<Harness audioUrls={[audioUrl]} enabled onPlaybackError={onPlaybackError} />)
+    const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    expect(el.getAttribute('src')).toBeTruthy()
+
+    const paused = true
+    Object.defineProperty(el, 'paused', { configurable: true, get: () => paused })
+
+    const unhandled: PromiseRejectionEvent[] = []
+    const onUnhandled = (event: PromiseRejectionEvent) => {
+      unhandled.push(event)
+    }
+    window.addEventListener('unhandledrejection', onUnhandled)
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+    window.removeEventListener('unhandledrejection', onUnhandled)
+    expect(unhandled).toHaveLength(0)
+    expect(play).toHaveBeenCalledTimes(3)
+    expect(el.getAttribute('src')).toBeTruthy()
+    expect(onPlaybackError).not.toHaveBeenCalled()
+  })
+
+  it('keeps auto-advance after resume play fails and retry succeeds', async () => {
+    const onAutoAdvance = jest.fn(() => true)
+    const advance = () => {
+      onAutoAdvance()
+      return true
+    }
+    const play = HTMLMediaElement.prototype.play as jest.Mock
+    play
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(
+        new DOMException('The element has no supported sources.', 'NotSupportedError')
+      )
+      .mockResolvedValueOnce(undefined)
+
+    const user = userEvent.setup()
+    render(<Harness audioUrls={[audioUrl]} enabled onAutoAdvanceAfterPlayback={advance} />)
+    const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+
+    Object.defineProperty(el, 'paused', { configurable: true, get: () => false })
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+
+    const paused = true
+    Object.defineProperty(el, 'paused', { configurable: true, get: () => paused })
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      el.dispatchEvent(new Event('ended'))
+    })
+    expect(onAutoAdvance).toHaveBeenCalledTimes(1)
+  })
+
+  it('calls onPlaybackError when resume play and retry both fail', async () => {
+    const user = userEvent.setup()
+    const onPlaybackError = jest.fn()
+    const play = HTMLMediaElement.prototype.play as jest.Mock
+    play
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(
+        new DOMException('The element has no supported sources.', 'NotSupportedError')
+      )
+      .mockRejectedValueOnce(
+        new DOMException('The element has no supported sources.', 'NotSupportedError')
+      )
+
+    render(<Harness audioUrls={[audioUrl]} enabled onPlaybackError={onPlaybackError} />)
+    const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+
+    const paused = true
+    Object.defineProperty(el, 'paused', { configurable: true, get: () => paused })
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(onPlaybackError).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not surface unhandled rejection when load throws during stop', async () => {
+    const user = userEvent.setup()
+    const load = HTMLMediaElement.prototype.load as jest.Mock
+    load.mockImplementation(() => {
+      throw new Error('load failed')
+    })
+    const unhandled: PromiseRejectionEvent[] = []
+    const onUnhandled = (event: PromiseRejectionEvent) => {
+      unhandled.push(event)
+    }
+    window.addEventListener('unhandledrejection', onUnhandled)
+
+    const { rerender } = render(<Harness audioUrls={[audioUrl]} enabled />)
+    await user.click(screen.getByRole('button', { name: 'primary' }))
+    rerender(<Harness audioUrls={[audioUrl]} enabled={false} />)
+    const el = screen.getByTestId('passage-audio') as HTMLAudioElement
+    expect(el.getAttribute('src')).toBeNull()
+
+    await act(async () => {
+      await Promise.resolve()
+    })
+    window.removeEventListener('unhandledrejection', onUnhandled)
+    expect(unhandled).toHaveLength(0)
   })
 
   it('cancels speech synthesis when starting playback', async () => {

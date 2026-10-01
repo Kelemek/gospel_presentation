@@ -65,6 +65,35 @@ function audioSrcMatchesUrl(elementSrc: string, relativeUrl: string): boolean {
   }
 }
 
+const MEDIA_ERR_SRC_NOT_SUPPORTED = 4
+
+function isPlayAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError'
+}
+
+function isUnplayableMediaPlayError(error: unknown, el: HTMLMediaElement): boolean {
+  if (isPlayAbortError(error)) return false
+  if (error instanceof DOMException && error.name === 'NotSupportedError') return true
+  if (el.error?.code === MEDIA_ERR_SRC_NOT_SUPPORTED) return true
+  const message = error instanceof Error ? error.message : String(error)
+  return /no supported sources/i.test(message)
+}
+
+function clearPassageAudioSrc(el: HTMLMediaElement): void {
+  try {
+    el.removeAttribute('src')
+    el.load()
+  } catch {
+    /* jsdom HTMLMediaElement load may throw */
+  }
+}
+
+function swallowInFlightPlay(playPromise: Promise<void> | undefined): void {
+  playPromise?.catch(() => {
+    /* play() rejected after pause/stop or unplayable src */
+  })
+}
+
 export function useChapterStreamingAudioListen({
   audioUrls,
   enabled,
@@ -108,6 +137,7 @@ export function useChapterStreamingAudioListen({
   const waitForPassageReadyRef = useRef(playbackReady !== undefined)
   /** Next playlist index to play after the reader shows that chapter. */
   const pendingPlaylistIndexRef = useRef<number | null>(null)
+  const inFlightPlayPromiseRef = useRef<Promise<void> | undefined>(undefined)
 
   useLayoutEffect(() => {
     listenPlaybackRateRef.current = listenPlaybackRate
@@ -272,9 +302,14 @@ export function useChapterStreamingAudioListen({
   const stopAudio = useCallback(() => {
     const el = passageAudioRef.current
     if (el) {
-      el.pause()
-      el.removeAttribute('src')
-      el.load()
+      swallowInFlightPlay(inFlightPlayPromiseRef.current)
+      inFlightPlayPromiseRef.current = undefined
+      try {
+        el.pause()
+        clearPassageAudioSrc(el)
+      } catch {
+        /* jsdom HTMLMediaElement pause/load are not implemented */
+      }
     }
     playlistIndexRef.current = 0
     continuousPlaybackRef.current = false
@@ -323,12 +358,17 @@ export function useChapterStreamingAudioListen({
         claimExclusiveListenOwner('scripture-chapter-audio')
         el.src = urls[index]
         applyMemorizeListenPlaybackRateToMediaElement(el, listenPlaybackRateRef.current)
-        await el.play()
+        const playPromise = el.play()
+        inFlightPlayPromiseRef.current = playPromise
+        await playPromise
+        inFlightPlayPromiseRef.current = undefined
         onTrackIndexChangeRef.current?.(index)
         setPassageAudioPlaying(true)
         return true
       } catch {
+        inFlightPlayPromiseRef.current = undefined
         setPassageAudioPlaying(false)
+        clearPassageAudioSrc(el)
         return false
       }
     },
@@ -556,6 +596,12 @@ export function useChapterStreamingAudioListen({
       ? Math.min(Math.max(playlistStartIndexRef.current, 0), Math.max(urls.length - 1, 0))
       : 0
     const expectedUrl = urls[startIdx]
+    const startPlaylistPlayback = () => {
+      if (onAutoAdvanceAfterPlaybackRef.current) {
+        continuousPlaybackRef.current = true
+      }
+      void playNextInPlaylist(startIdx)
+    }
     if (
       el.paused &&
       el.getAttribute('src') &&
@@ -563,18 +609,31 @@ export function useChapterStreamingAudioListen({
       audioSrcMatchesUrl(el.src, expectedUrl) &&
       playlistIndexRef.current === startIdx
     ) {
-      void el.play().then(() => {
-        if (onAutoAdvanceAfterPlaybackRef.current) {
-          continuousPlaybackRef.current = true
-        }
-        setPassageAudioPlaying(true)
-      })
+      const playPromise = el.play()
+      inFlightPlayPromiseRef.current = playPromise
+      void playPromise
+        .then(() => {
+          inFlightPlayPromiseRef.current = undefined
+          if (onAutoAdvanceAfterPlaybackRef.current) {
+            continuousPlaybackRef.current = true
+          }
+          setPassageAudioPlaying(true)
+        })
+        .catch((error: unknown) => {
+          inFlightPlayPromiseRef.current = undefined
+          setPassageAudioPlaying(false)
+          if (isPlayAbortError(error)) {
+            return
+          }
+          if (isUnplayableMediaPlayError(error, el)) {
+            clearPassageAudioSrc(el)
+            startPlaylistPlayback()
+            return
+          }
+        })
       return
     }
-    if (onAutoAdvanceAfterPlaybackRef.current) {
-      continuousPlaybackRef.current = true
-    }
-    void playNextInPlaylist(startIdx)
+    startPlaylistPlayback()
   }, [clearPendingContinuousPlay, enabled, isPlaylist, playNextInPlaylist])
 
   const keepAudioMounted = enabled || awaitingContinuousPlay
