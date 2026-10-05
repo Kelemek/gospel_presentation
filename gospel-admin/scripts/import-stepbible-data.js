@@ -58,7 +58,7 @@ function ensureDir(dir) {
 }
 
 function parseSurface(cell) {
-  const t = cell.trim()
+  const t = cell.trim().replace(/\u00B6/g, '')
   const m = t.match(/^(.+?)\s*\(([^)]+)\)\s*$/)
   if (m) return { text: m[1].trim(), transliteration: m[2].trim() }
   return { text: t }

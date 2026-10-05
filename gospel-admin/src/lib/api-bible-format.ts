@@ -165,8 +165,12 @@ function stripHashWrappedDashes(s: string): string {
   return s.replace(/#\s*([\u2014\u2013])\s*#/g, '$1')
 }
 
+function stripPilcrowParagraphMarks(s: string): string {
+  return s.replace(/\u00B6/g, '')
+}
+
 function finishApiBiblePassageText(s: string): string {
-  return collapseWhitespace(stripHashWrappedDashes(s))
+  return collapseWhitespace(stripHashWrappedDashes(stripPilcrowParagraphMarks(s)))
 }
 
 /**

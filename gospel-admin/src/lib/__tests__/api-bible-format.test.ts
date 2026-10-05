@@ -5,6 +5,7 @@ import {
   buildScriptureGetJsonBody,
   healScriptureCacheRowIfNeeded,
   normalizeScriptureCachedText,
+  scriptureWordsOfChristTextFromCacheRow,
   splitScripturePassageForCacheStorage,
   type ApiBibleContentNode,
 } from '@/lib/api-bible-format'
@@ -91,6 +92,26 @@ describe('formatApiBibleJsonPassageContent', () => {
     expect(formatApiBiblePassageContent(romansOneParaFixture)).toBe(
       formatApiBibleJsonPassageContent(romansOneParaFixture)
     )
+  })
+
+  it('strips pilcrow paragraph marks from API.Bible text nodes', () => {
+    const nodes: ApiBibleContentNode[] = [
+      {
+        name: 'para',
+        type: 'tag',
+        attrs: { style: 'p' },
+        items: [
+          {
+            name: 'verse',
+            type: 'tag',
+            attrs: { number: '5' },
+            items: [],
+          },
+          { text: '\u00B6Blessed are the lowly', type: 'text' },
+        ],
+      },
+    ]
+    expect(formatApiBibleJsonPassageContent(nodes)).toBe('[5] Blessed are the lowly')
   })
 })
 
@@ -201,6 +222,19 @@ describe('formatApiBiblePassageText', () => {
   it('parses stringified API.Bible JSON passage trees', () => {
     expect(formatApiBiblePassageText(JSON.stringify(romansOneParaFixture))).toBe(
       '[1] Paul, a servant. [2] Promised afore.\n\n[8] First, I thank my God.'
+    )
+  })
+
+  it('normalizeScriptureCachedText strips pilcrow from cached LSB-style text', () => {
+    expect(normalizeScriptureCachedText('[5] \u00B6Blessed are the lowly')).toBe(
+      '[5] Blessed are the lowly'
+    )
+  })
+
+  it('scriptureWordsOfChristTextFromCacheRow strips pilcrow from woc_text', () => {
+    const woc = `[5] \u00B6Blessed are the lowly, for they shall inherit the earth.`
+    expect(scriptureWordsOfChristTextFromCacheRow(woc)).toBe(
+      '[5] Blessed are the lowly, for they shall inherit the earth.'
     )
   })
 })

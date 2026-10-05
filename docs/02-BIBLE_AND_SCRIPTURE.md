@@ -56,7 +56,7 @@ curl --request GET \
 
 In the JSON response, each item in `data` includes `id` (use this in URLs as `bibles/{id}/passages/...`), plus `name` and `abbreviation` / `abbreviationLocal` so you can pick the right edition. If a translation does not appear, add it to your API.Bible account/plan first, then call the endpoint again.
 
-Passage requests use USFM-style IDs (e.g. `JHN.3.16`); mapping lives in `gospel-admin/src/lib/api-bible-passage-id.ts`. Book abbreviations with a trailing period (`Phil. 4:8`, `Matt. 5:1`, `Gen. 1:1`) normalize to the same USFM ids as the period-less aliases.
+Passage requests use USFM-style IDs (e.g. `JHN.3.16`); mapping lives in `gospel-admin/src/lib/api-bible-passage-id.ts`. Book abbreviations with a trailing period (`Phil. 4:8`, `Matt. 5:1`, `Gen. 1:1`) normalize to the same USFM ids as the period-less aliases. API.Bible passage text (including **LSB**) is normalized in [`api-bible-format.ts`](../gospel-admin/src/lib/api-bible-format.ts); publisher paragraph marks (¶) are omitted from displayed scripture and from cached rows on read.
 
 ## Scripture API
 
@@ -104,6 +104,8 @@ On profile gospel pages, **ScriptureModal** includes a **Greek**, **Hebrew**, or
 **Scope:** Full Protestant canon (TAGNT + TAHOT). Verse ranges (same chapter, e.g. Romans 12:2–4) show word study for **each** verse in the range. Chapter context disables **Words**. In compare mode, **Words** still opens the same overlay above the reader (not tied to either translation column).
 
 **Verse numbering:** STEPBible sometimes tags rows with an alternate English verse in brackets (e.g. `2Co.13.13[13.14]` → stored as **2 Corinthians 13:14**). The import script maps those to ESV/modern verse numbers. After an import fix, set Vercel env `FORCE_STEPBIBLE_REIMPORT=1` once (or clear the `data/stepbible` build cache) and redeploy so production JSON is regenerated.
+
+**Surface cleanup:** Paragraph marks (¶) in STEPBible word surface forms are stripped when word study loads (`normalizeStepBibleWordFields` in [`step-bible-text.ts`](../gospel-admin/src/lib/step-bible-text.ts)) and on import (`import-stepbible-data.js`), so Greek/Hebrew chips show only the word form (e.g. `γῆν.`, not `γῆν.¶`).
 
 **Attribution:** Credit [STEP Bible](https://www.stepbible.org/) (Tyndale House, Cambridge), CC BY 4.0—see `/copyright`.
 

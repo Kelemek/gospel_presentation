@@ -14,17 +14,23 @@ export function looksLikeHebrewMorphCode(value: string): boolean {
   return /^H?[A-Z][A-Za-z0-9]*(\/[A-Z][A-Za-z0-9]*)*$/.test(s)
 }
 
+/** STEPBible surface forms sometimes include publisher paragraph marks (U+00B6). */
+function stripPilcrowFromSurface(text: string): string {
+  return text.replace(/\u00B6/g, '')
+}
+
 /**
  * Correct legacy Hebrew imports that swapped English gloss and dStrongs columns.
  * Greek rows are unchanged when fields are already in the right slots.
  */
 export function normalizeStepBibleWordFields(word: StepBibleWord): StepBibleWord {
+  const text = stripPilcrowFromSurface(word.text)
   const strongs = (word.strongs ?? '').trim()
   const gloss = (word.gloss ?? '').trim()
   if (!looksLikeStepStrongsField(strongs) && looksLikeStepStrongsField(gloss)) {
-    return { ...word, strongs: gloss, gloss: strongs || word.gloss }
+    return { ...word, text, strongs: gloss, gloss: strongs || word.gloss }
   }
-  return word
+  return text === word.text ? word : { ...word, text }
 }
 
 /** Chip label: primary Strong’s key (H430 / G3100); title keeps full STEP dStrongs when different. */
@@ -85,7 +91,7 @@ export function parseSurfaceAndTransliteration(cell: string): {
   text: string
   transliteration?: string
 } {
-  const trimmed = cell.trim()
+  const trimmed = stripPilcrowFromSurface(cell.trim())
   const m = trimmed.match(/^(.+?)\s*\(([^)]+)\)\s*$/)
   if (m) {
     return { text: m[1].trim(), transliteration: m[2].trim() }

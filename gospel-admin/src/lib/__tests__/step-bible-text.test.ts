@@ -19,6 +19,14 @@ describe('step-bible-text', () => {
     })
   })
 
+  it('parseSurfaceAndTransliteration strips pilcrow from surface cell', () => {
+    expect(parseSurfaceAndTransliteration('γῆν.\u00B6')).toEqual({ text: 'γῆν.' })
+    expect(parseSurfaceAndTransliteration('γῆν.\u00B6 (gēn)')).toEqual({
+      text: 'γῆν.',
+      transliteration: 'gēn',
+    })
+  })
+
   it('parses Strong and morph from dStrongs', () => {
     expect(parseStrongsAndMorph('G3339=V-PPM-2P')).toEqual({
       strongs: 'G3339',
@@ -79,6 +87,24 @@ describe('step-bible-text', () => {
       text: 'אַתָּה',
       strongs: '{H0859A}',
       gloss: 'you',
+    })
+  })
+
+  it('normalizeStepBibleWordFields strips pilcrow from Greek surface text', () => {
+    expect(
+      normalizeStepBibleWordFields({
+        position: 12,
+        text: 'γῆν.\u00B6',
+        strongs: 'G1093',
+        gloss: 'earth',
+        transliteration: 'gēn',
+      })
+    ).toEqual({
+      position: 12,
+      text: 'γῆν.',
+      strongs: 'G1093',
+      gloss: 'earth',
+      transliteration: 'gēn',
     })
   })
 

@@ -1488,5 +1488,10 @@
     "releasedAt": "2026-10-01",
     "committedAt": "2026-10-01T22:38:10.186Z",
     "message": "Bug fix: Listen no longer errors when you pause and play again if audio cannot load. The same message still appears when audio is unavailable."
+  },
+  {
+    "releasedAt": "2026-10-04",
+    "committedAt": "2026-10-05T01:35:28.645Z",
+    "message": "Bug fix: Paragraph marks no longer show in LSB scripture or on Greek word-study words."
   }
 ]
