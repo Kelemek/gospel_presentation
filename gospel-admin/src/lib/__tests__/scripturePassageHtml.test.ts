@@ -263,6 +263,52 @@ describe('formatScriptureChapterHtml', () => {
     expect(html).not.toMatch(/<mark[^>]*>[\s\S]*Verse fifteen/)
   })
 
+  it('injects Psalm 119 stanza headers before verses 49, 57, and 65', () => {
+    const text =
+      '[49] Remember your word to your servant.[56] This blessing has fallen to me.\n\n[57] The LORD is my portion.[64] Teach me your statutes!\n\n[65] You have dealt well with your servant.[72] The law of your mouth is better to me.'
+    const expected =
+      '<p class="scripture-psalm-119-acrostic font-semibold">Zayin</p><p><sup class="text-blue-600 font-medium">49</sup> Remember your word to your servant.<sup class="text-blue-600 font-medium">56</sup> This blessing has fallen to me.</p><p class="scripture-psalm-119-acrostic font-semibold">Heth</p><p><sup class="text-blue-600 font-medium">57</sup> The LORD is my portion.<sup class="text-blue-600 font-medium">64</sup> Teach me your statutes!</p><p class="scripture-psalm-119-acrostic font-semibold">Teth</p><p><sup class="text-blue-600 font-medium">65</sup> You have dealt well with your servant.<sup class="text-blue-600 font-medium">72</sup> The law of your mouth is better to me.</p>'
+    const passageOptions = { showVerseNumbers: true, book: 'Psalms', chapter: 119 }
+    const chapterOptions = {
+      showVerseNumbers: true,
+      highlightVerses: [] as number[],
+      book: 'Psalms',
+      chapter: 119,
+    }
+
+    expect(formatScripturePassageHtml(text, passageOptions)).toBe(expected)
+    expect(formatScriptureChapterHtml(text, chapterOptions)).toBe(expected)
+
+    const highlighted = formatScriptureChapterHtml(text, {
+      ...chapterOptions,
+      highlightVerses: [49, 72],
+    })
+    expect(highlighted).toContain(
+      '<p class="scripture-psalm-119-acrostic font-semibold">Zayin</p>'
+    )
+    expect(highlighted).toContain(
+      '<p class="scripture-psalm-119-acrostic font-semibold">Heth</p>'
+    )
+    expect(highlighted).toContain(
+      '<p class="scripture-psalm-119-acrostic font-semibold">Teth</p>'
+    )
+
+    const alreadyHeaded =
+      'Zayin\n\n[49] Remember your word to your servant.[56] This blessing has fallen to me.\n\nHeth\n\n[57] The LORD is my portion.[64] Teach me your statutes!\n\nTeth\n\n[65] You have dealt well with your servant.[72] The law of your mouth is better to me.'
+    expect(formatScripturePassageHtml(alreadyHeaded, passageOptions)).toBe(expected)
+    expect(formatScriptureChapterHtml(alreadyHeaded, chapterOptions)).toBe(expected)
+  })
+
+  it('does not inject Aleph before Psalm 23 verse 1', () => {
+    expect(
+      formatScripturePassageHtml('[1] The LORD is my shepherd.', {
+        showVerseNumbers: true,
+        book: 'Psalm',
+        chapter: 23,
+      })
+    ).toBe('<sup class="text-blue-600 font-medium">1</sup> The LORD is my shepherd.')
+  })
+
   it('keeps Selah inside a saved highlight that ends on that verse', () => {
     const psalmText =
       '[3] though the mountains tremble at its swelling. Selah [4] There is a river whose streams make glad the city of God.'

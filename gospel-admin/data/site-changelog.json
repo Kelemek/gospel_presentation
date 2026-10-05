@@ -1503,5 +1503,10 @@
     "releasedAt": "2026-10-05",
     "committedAt": "2026-10-05T12:47:36.434Z",
     "message": "The Help tutorial for reading scripture is now labeled Bible Reader, matching the menu."
+  },
+  {
+    "releasedAt": "2026-10-05",
+    "committedAt": "2026-10-05T17:09:55.204Z",
+    "message": "Bug fix: Psalm 119 again shows the Hebrew letter names (Aleph, Beth, and the rest) above each section."
   }
 ]

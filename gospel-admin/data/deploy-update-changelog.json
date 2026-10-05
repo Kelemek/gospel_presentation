@@ -47,5 +47,6 @@
   "Bug fix: Listen no longer errors when you pause and play again if audio cannot load. The same message still appears when audio is unavailable.",
   "Bug fix: Paragraph marks no longer show in LSB scripture or on Greek word-study words.",
   "The Scripture reader tutorial now shows how to use press-and-hold for verse numbers and red letter. The Reader display panel sits higher on phones.",
-  "The Help tutorial for reading scripture is now labeled Bible Reader, matching the menu."
+  "The Help tutorial for reading scripture is now labeled Bible Reader, matching the menu.",
+  "Bug fix: Psalm 119 again shows the Hebrew letter names (Aleph, Beth, and the rest) above each section."
 ]

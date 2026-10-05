@@ -522,6 +522,11 @@ export default function ScriptureModal({
     return [...new Set([...base, ...pickerVerses])].sort((a, b) => a - b)
   }, [reference, chapterVerseSelection])
 
+  const passageBookChapter = useMemo(() => {
+    const parsed = parseReference(reference)
+    return { book: parsed?.book, chapter: parsed?.chapter }
+  }, [reference])
+
   const processChapterText = useCallback(
     (text: string, options?: { clickableVerseNumbers?: boolean }): string =>
       formatScriptureChapterHtml(text, {
@@ -530,6 +535,8 @@ export default function ScriptureModal({
         highlightVerses: chapterHighlightVerses,
         savedHighlights: chapterSavedHighlights,
         clickableVerseNumbers: options?.clickableVerseNumbers ?? !!onNavigateReference,
+        book: passageBookChapter.book,
+        chapter: passageBookChapter.chapter,
       }),
     [
       chapterHighlightVerses,
@@ -537,6 +544,7 @@ export default function ScriptureModal({
       showWordsOfChrist,
       chapterSavedHighlights,
       onNavigateReference,
+      passageBookChapter,
     ]
   )
 
@@ -545,11 +553,13 @@ export default function ScriptureModal({
       formatScripturePassageHtml(text, {
         showVerseNumbers,
         showWordsOfChrist,
+        book: passageBookChapter.book,
+        chapter: passageBookChapter.chapter,
         ...(verseSavedHighlight
           ? { savedHighlight: { id: verseSavedHighlight.id, colorId: verseSavedHighlight.colorId } }
           : {}),
       }),
-    [showVerseNumbers, showWordsOfChrist, verseSavedHighlight]
+    [showVerseNumbers, showWordsOfChrist, verseSavedHighlight, passageBookChapter]
   )
 
   /** Chapter-only tabs: per-verse marks in chapter view. Verse tabs: blue box only (no colored tint). */

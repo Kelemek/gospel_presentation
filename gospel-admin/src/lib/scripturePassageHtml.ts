@@ -1,3 +1,4 @@
+import { bookNameToUsfm } from '@/lib/api-bible-passage-id'
 import { SCRIPTURE_HIGHLIGHT_MARK_CLASSES } from '@/lib/scriptureHighlightStyles'
 import type { ScriptureHighlightColorId } from '@/lib/scriptureHighlightStyles'
 import { normalizeEsvMisconvertedChapterVersePrefix } from '@/lib/esvPassageHtmlToText'
@@ -14,31 +15,40 @@ const SCRIPTURE_WOC_SPAN_OPEN =
 const SCRIPTURE_VERSE_NUMBER_CLICKABLE_CLASS =
   'scripture-verse-number cursor-pointer hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 rounded-sm'
 
-/** ESV Psalm 119 acrostic section titles (longest first for safe matching). */
-const PSALM_119_ACROSTIC_HEADINGS = [
-  'Sin and Shin',
-  'Aleph',
-  'Beth',
-  'Gimel',
-  'Daleth',
-  'He',
-  'Waw',
-  'Zayin',
-  'Heth',
-  'Teth',
-  'Yodh',
-  'Kaph',
-  'Lamedh',
-  'Mem',
-  'Nun',
-  'Samekh',
-  'Ayin',
-  'Pe',
-  'Tsadhe',
-  'Qoph',
-  'Resh',
-  'Taw',
+/** Opening verse of each Psalm 119 stanza, then the ESV Hebrew letter name. */
+const PSALM_119_STANZA_STARTS = [
+  [1, 'Aleph'],
+  [9, 'Beth'],
+  [17, 'Gimel'],
+  [25, 'Daleth'],
+  [33, 'He'],
+  [41, 'Waw'],
+  [49, 'Zayin'],
+  [57, 'Heth'],
+  [65, 'Teth'],
+  [73, 'Yodh'],
+  [81, 'Kaph'],
+  [89, 'Lamedh'],
+  [97, 'Mem'],
+  [105, 'Nun'],
+  [113, 'Samekh'],
+  [121, 'Ayin'],
+  [129, 'Pe'],
+  [137, 'Tsadhe'],
+  [145, 'Qoph'],
+  [153, 'Resh'],
+  [161, 'Sin and Shin'],
+  [169, 'Taw'],
 ] as const
+
+/** Longest first so "Sin and Shin" is matched before a shorter title. */
+const PSALM_119_ACROSTIC_HEADINGS = PSALM_119_STANZA_STARTS.map(([, heading]) => heading).sort(
+  (a, b) => b.length - a.length
+)
+
+const PSALM_119_ACROSTIC_HEADING_SET = new Set<string>(PSALM_119_ACROSTIC_HEADINGS)
+
+const PSALM_119_ACROSTIC_PARAGRAPH_CLASS = 'scripture-psalm-119-acrostic font-semibold'
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -47,21 +57,85 @@ function escapeRegExp(s: string): string {
 /**
  * Psalm 119 acrostic titles after the first often sit inline before the next verse
  * (e.g. "...heart! He [33]"). Break them onto their own paragraph like Daleth at v25.
+ * Whitespace already around the title is consumed so a second pass does not add a blank paragraph.
  */
 export function isolatePsalm119AcrosticHeadings(text: string): string {
   let out = text
   for (const heading of PSALM_119_ACROSTIC_HEADINGS) {
     const escaped = escapeRegExp(heading).replace(/ /g, '\\s+')
-    const beforeVerse = new RegExp(`(\\S)\\s+(${escaped})(?=\\s*\\[\\d{1,3}\\])`, 'g')
+    const beforeVerse = new RegExp(`(\\S)\\s+(${escaped})\\s*(?=\\[\\d{1,3}\\])`, 'g')
     out = out.replace(beforeVerse, `$1\n\n$2\n\n`)
   }
   return out.replace(/\n\n[ \t]+(?=\[\d{1,3}\])/g, '\n\n')
 }
 
-function prepareScripturePassageText(text: string): string {
+function isPsalm119(book: string | undefined, chapter: number | undefined): boolean {
+  if (chapter !== 119 || !book) return false
+  return bookNameToUsfm(book) === 'PSA'
+}
+
+function acrosticHeadingImmediatelyBefore(prefix: string, heading: string): boolean {
+  const escaped = escapeRegExp(heading).replace(/ /g, '\\s+')
+  return new RegExp(`(?:^|\\s)${escaped}\\s*$`).test(prefix)
+}
+
+/**
+ * Insert a Psalm 119 letter name on its own line before each stanza-start verse
+ * that is actually in the text. A heading already sitting immediately before that
+ * marker is left in place.
+ */
+export function injectPsalm119AcrosticHeadings(text: string): string {
+  const inserts: { index: number; heading: string }[] = []
+  for (const [verse, heading] of PSALM_119_STANZA_STARTS) {
+    const match = new RegExp(`(?<!\\d)\\[${verse}\\](?!\\d)`).exec(text)
+    if (match?.index === undefined) continue
+    if (acrosticHeadingImmediatelyBefore(text.slice(0, match.index), heading)) continue
+    inserts.push({ index: match.index, heading })
+  }
+
+  let out = text
+  for (const insert of inserts.sort((a, b) => b.index - a.index)) {
+    const prefix = out.slice(0, insert.index)
+    const rest = out.slice(insert.index)
+    const trimmedEnd = prefix.replace(/\s+$/, '')
+    const lead = trimmedEnd.length === 0 ? '' : '\n\n'
+    out = `${trimmedEnd}${lead}${insert.heading}\n\n${rest}`
+  }
+  return out
+}
+
+function tagPsalm119AcrosticHeadingParagraphs(html: string): string {
+  return html.replace(/<p>([^<]*)<\/p>/g, (full, inner: string) => {
+    const trimmed = inner.trim()
+    if (!PSALM_119_ACROSTIC_HEADING_SET.has(trimmed)) return full
+    return `<p class="${PSALM_119_ACROSTIC_PARAGRAPH_CLASS}">${trimmed}</p>`
+  })
+}
+
+function prepareScripturePassageText(
+  text: string,
+  book?: string,
+  chapter?: number
+): string {
+  const withHeadings = isPsalm119(book, chapter) ? injectPsalm119AcrosticHeadings(text) : text
   return ensureVerseNumbersOutsideWordsOfChrist(
-    normalizeEsvMisconvertedChapterVersePrefix(isolatePsalm119AcrosticHeadings(text))
+    normalizeEsvMisconvertedChapterVersePrefix(isolatePsalm119AcrosticHeadings(withHeadings))
   )
+}
+
+function renderScriptureParagraphHtml(
+  text: string,
+  showVerseNumbers: boolean,
+  book: string | undefined,
+  chapter: number | undefined,
+  clickableVerseNumbers = false
+): string {
+  const plain = prepareScripturePassageText(text, book, chapter)
+  let html = replaceParagraphBreaks(
+    replaceVerseMarkers(plain, showVerseNumbers, clickableVerseNumbers)
+  )
+  if (isPsalm119(book, chapter)) html = tagPsalm119AcrosticHeadingParagraphs(html)
+  return html
 }
 
 function applyWordsOfChristPlain(text: string, showWordsOfChrist: boolean): string {
@@ -180,11 +254,17 @@ export function formatScripturePassageHtml(
     showVerseNumbers: boolean
     showWordsOfChrist?: boolean
     savedHighlight?: ScripturePassageSavedHighlightOption
+    book?: string
+    chapter?: number
   }
 ): string {
   const showWordsOfChrist = options.showWordsOfChrist ?? true
-  const plain = prepareScripturePassageText(text)
-  let html = replaceParagraphBreaks(replaceVerseMarkers(plain, options.showVerseNumbers))
+  let html = renderScriptureParagraphHtml(
+    text,
+    options.showVerseNumbers,
+    options.book,
+    options.chapter
+  )
   if (options.savedHighlight) {
     const attrs = markAttrsForHighlight(options.savedHighlight.id, options.savedHighlight.colorId)
     html = `<mark ${attrs}>${html}</mark>`
@@ -201,6 +281,8 @@ export function formatScriptureChapterHtml(
     highlightVerses: number[]
     savedHighlights?: readonly ScripturePassageSavedHighlight[]
     clickableVerseNumbers?: boolean
+    book?: string
+    chapter?: number
   }
 ): string {
   const {
@@ -208,12 +290,17 @@ export function formatScriptureChapterHtml(
     highlightVerses,
     savedHighlights = [],
     clickableVerseNumbers = false,
+    book,
+    chapter,
   } = options
   const showWordsOfChrist = options.showWordsOfChrist ?? true
 
-  const plain = prepareScripturePassageText(text)
-  let processedText = replaceParagraphBreaks(
-    replaceVerseMarkers(plain, showVerseNumbers, clickableVerseNumbers)
+  let processedText = renderScriptureParagraphHtml(
+    text,
+    showVerseNumbers,
+    book,
+    chapter,
+    clickableVerseNumbers
   )
 
   if (savedHighlights.length > 0) {
