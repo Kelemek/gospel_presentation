@@ -8,8 +8,23 @@ import {
   resolveBibleReaderMenuTitle,
 } from '@/lib/groupPublicResourceItems'
 import { loadMemorizedVerses } from '@/lib/verseMemorizationStorage'
+import {
+  GOSPEL_SCRIPTURE_READER_OPTIONS_OPEN_EVENT,
+  GOSPEL_SCRIPTURE_READER_TOUR_SHOW_REFERENCE_EVENT,
+} from '@/lib/scriptureReaderTourEvents'
+import {
+  readScriptureShowVerseNumbersFromStorage,
+  writeScriptureShowVerseNumbersToStorage,
+} from '@/lib/scriptureVerseNumbersPreference'
+import {
+  readScriptureShowWordsOfChristFromStorage,
+  writeScriptureShowWordsOfChristToStorage,
+} from '@/lib/scriptureWordsOfChristPreference'
 import * as tourSelectors from './tourSharedSelectors'
 import { sleep } from './tourSharedDriver'
+
+/** Passage with words of Christ for the scripture reader display tour (red letter on by default). */
+export const SCRIPTURE_READER_TOUR_RED_LETTER_DEMO_REFERENCE = 'John 14:6'
 
 export async function waitUntil(
   predicate: () => boolean,
@@ -129,8 +144,115 @@ export function modalVerseBodyHasText(): boolean {
 }
 
 export function getScriptureModalReferenceFromDom(): string | null {
+  const picker = document.querySelector<HTMLElement>(tourSelectors.SCRIPTURE_MODAL_REFERENCE_PICKER)
+  if (picker) {
+    const fromLabel = picker.getAttribute('aria-label')?.replace(/\.\s*Choose another passage$/i, '').trim()
+    if (fromLabel) return fromLabel
+    const fromTitle = picker.getAttribute('title')?.replace(/\s*—\s*choose another passage$/i, '').trim()
+    if (fromTitle) return fromTitle
+  }
   const h3 = document.querySelector(`${tourSelectors.SCRIPTURE_MODAL_TOOLBAR} h3`) as HTMLElement | null
   return h3?.getAttribute('aria-label') ?? h3?.textContent?.trim() ?? null
+}
+
+export function scriptureModalVerseBodyHasRedLetterMarkup(): boolean {
+  const el = document.querySelector(tourSelectors.SCRIPTURE_MODAL_VERSE_BODY)
+  if (!el) return false
+  return el.querySelector('.scripture-woc') != null
+}
+
+export function scriptureModalVerseBodyShowsVerseNumberMarkers(): boolean {
+  const el = document.querySelector(tourSelectors.SCRIPTURE_MODAL_VERSE_BODY)
+  if (!el) return false
+  return el.querySelector('.scripture-verse-number') != null
+}
+
+export function ensureScriptureReaderOptionsOpenForTour(): void {
+  if (!scriptureReaderOptionsPanelOpen()) {
+    openScriptureReaderOptionsForTour()
+  }
+}
+
+export function scriptureReaderOptionsPanelOpen(): boolean {
+  return document.querySelector(tourSelectors.SCRIPTURE_READER_OPTIONS_PANEL) != null
+}
+
+export function navigateScriptureForTour(reference: string): void {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(
+    new CustomEvent(GOSPEL_SCRIPTURE_READER_TOUR_SHOW_REFERENCE_EVENT, {
+      detail: { reference },
+    })
+  )
+}
+
+export function openScriptureReaderOptionsForTour(): void {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event(GOSPEL_SCRIPTURE_READER_OPTIONS_OPEN_EVENT))
+}
+
+export function closeScriptureReaderOptionsForTour(): void {
+  if (typeof window === 'undefined') return
+  document
+    .querySelector<HTMLElement>('[aria-label="Close reader options"]')
+    ?.click()
+}
+
+function scriptureReaderOptionsCheckbox(
+  selector: string
+): HTMLInputElement | null {
+  const row = document.querySelector<HTMLElement>(selector)
+  return row?.querySelector<HTMLInputElement>('input[type="checkbox"]') ?? null
+}
+
+export function setScriptureReaderTourVerseNumbersChecked(checked: boolean): void {
+  const input = scriptureReaderOptionsCheckbox(tourSelectors.SCRIPTURE_READER_OPTIONS_VERSE_NUMBERS)
+  if (!input || input.checked === checked) return
+  input.click()
+}
+
+export function setScriptureReaderTourRedLetterChecked(checked: boolean): void {
+  const input = scriptureReaderOptionsCheckbox(tourSelectors.SCRIPTURE_READER_OPTIONS_RED_LETTER)
+  if (!input || input.checked === checked) return
+  input.click()
+}
+
+export type ScriptureReaderTourDisplayPrefsSnapshot = {
+  showVerseNumbers: boolean
+  showWordsOfChrist: boolean
+}
+
+export function captureScriptureReaderTourDisplayPrefs(): ScriptureReaderTourDisplayPrefsSnapshot {
+  return {
+    showVerseNumbers: readScriptureShowVerseNumbersFromStorage(),
+    showWordsOfChrist: readScriptureShowWordsOfChristFromStorage(),
+  }
+}
+
+/** Restore device reader display prefs after the Bible Reader tour demo (storage + open panel checkboxes). */
+export function restoreScriptureReaderTourDisplayPrefs(
+  snapshot: ScriptureReaderTourDisplayPrefsSnapshot | null
+): void {
+  if (!snapshot) return
+  writeScriptureShowVerseNumbersToStorage(snapshot.showVerseNumbers)
+  writeScriptureShowWordsOfChristToStorage(snapshot.showWordsOfChrist)
+  if (scriptureReaderOptionsPanelOpen()) {
+    setScriptureReaderTourVerseNumbersChecked(snapshot.showVerseNumbers)
+    setScriptureReaderTourRedLetterChecked(snapshot.showWordsOfChrist)
+  }
+}
+
+/** John 14:6 red-letter demo needs `wocMarkup` on the passage fetch. */
+export function ensureScriptureReaderTourRedLetterFetchEnabled(): void {
+  if (!readScriptureShowWordsOfChristFromStorage()) {
+    writeScriptureShowWordsOfChristToStorage(true)
+  }
+}
+
+export function scriptureModalReferenceMatchesDom(reference: string): boolean {
+  const current = getScriptureModalReferenceFromDom()
+  if (!current) return false
+  return current.trim().toLowerCase() === reference.trim().toLowerCase()
 }
 
 /** After adding (or when the verse was already saved), pick the verse row id for the memorization tour remove step. */

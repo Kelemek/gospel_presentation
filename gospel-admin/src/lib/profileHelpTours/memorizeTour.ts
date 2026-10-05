@@ -160,7 +160,7 @@ export function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTour
       element: SCRIPTURE_MODAL_CLOSE,
       popover: {
         title: 'Close the reader',
-        description: 'Use <strong>Next</strong> to close the Scripture reader and return to the page.',
+        description: 'Use <strong>Next</strong> to close Bible Reader and return to the page.',
         ...pop({ side: 'bottom', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           document.querySelector<HTMLElement>(SCRIPTURE_MODAL_CLOSE)?.click()
@@ -594,7 +594,7 @@ export function runMemorizeFeatureTourOnCurrentPage(options?: ProfileFeatureTour
       popover: {
         title: 'All set',
         description:
-          'You can add verses anytime from the Scripture reader and manage them here. **Done** closes the tour and the menu.',
+          'You can add verses anytime from Bible Reader and manage them here. **Done** closes the tour and the menu.',
         ...pop({ side: 'right', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           closeProfileSlideoutMenuIfOpen()

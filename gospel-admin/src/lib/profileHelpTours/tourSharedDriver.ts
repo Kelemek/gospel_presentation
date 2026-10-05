@@ -124,6 +124,7 @@ export function sleep(ms: number): Promise<void> {
 export function clearDriverBodyClasses(): void {
   if (typeof document === 'undefined') return
   document.body.classList.remove('driver-active', 'driver-fade', 'driver-simple')
+  setProfileHelpTourScriptureReaderDisplayDemoActive(false)
 }
 
 /**
@@ -524,6 +525,51 @@ function escapeForPopoverText(s: string): string {
 export function profileHelpRefreshDriverConfig(drv: Driver, patch: Partial<Config>): void {
   drv.setConfig({ ...drv.getConfig(), ...patch })
   window.requestAnimationFrame(() => drv.refresh())
+}
+
+/** driver.js default when `overlayOpacity` is omitted from tour config. */
+export const PROFILE_HELP_TOUR_DEFAULT_OVERLAY_OPACITY = 0.5
+
+/** Step `data` flag: no dim overlay so Reader display + passage stay visible during toggle demos. */
+export const PROFILE_HELP_TOUR_SCRIPTURE_READER_DISPLAY_DEMO_STEP = {
+  scriptureReaderDisplayDemo: true,
+} as const
+
+/** Pairs with `globals.css` — driver.js sits above z-200 Reader display unless we lift it. */
+export const PROFILE_HELP_TOUR_SCRIPTURE_READER_DISPLAY_DEMO_BODY_CLASS =
+  'profile-help-tour-scripture-reader-display-demo'
+
+export function setProfileHelpTourScriptureReaderDisplayDemoActive(active: boolean): void {
+  if (typeof document === 'undefined') return
+  document.body.classList.toggle(PROFILE_HELP_TOUR_SCRIPTURE_READER_DISPLAY_DEMO_BODY_CLASS, active)
+}
+
+export function applyProfileHelpTourOverlayDimmed(drv: Driver, captive: boolean): void {
+  setProfileHelpTourScriptureReaderDisplayDemoActive(false)
+  profileHelpRefreshDriverConfig(drv, {
+    overlayOpacity: PROFILE_HELP_TOUR_DEFAULT_OVERLAY_OPACITY,
+    overlayClickBehavior: captive ? () => {} : 'close',
+  })
+}
+
+export function applyProfileHelpTourOverlayUndimmed(drv: Driver): void {
+  setProfileHelpTourScriptureReaderDisplayDemoActive(true)
+  profileHelpRefreshDriverConfig(drv, {
+    overlayOpacity: 0,
+    overlayClickBehavior: () => {},
+  })
+}
+
+export function applyProfileHelpTourOverlayForStep(
+  drv: Driver,
+  step: DriveStep,
+  captive: boolean
+): void {
+  if (step.data?.scriptureReaderDisplayDemo === true) {
+    applyProfileHelpTourOverlayUndimmed(drv)
+  } else {
+    applyProfileHelpTourOverlayDimmed(drv, captive)
+  }
 }
 
 export function baseProfileHelpDriverConfig(options?: ProfileFeatureTourOptions): Omit<Config, 'steps'> {

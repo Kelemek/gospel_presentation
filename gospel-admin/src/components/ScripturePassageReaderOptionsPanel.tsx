@@ -16,13 +16,16 @@ function OptionRow({
   label,
   checked,
   onChange,
+  dataTour,
 }: {
   label: string
   checked: boolean
   onChange: (next: boolean) => void
+  dataTour?: string
 }) {
   return (
     <label
+      data-tour={dataTour}
       className="flex items-center justify-between gap-4 py-2.5 px-3 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700/60 cursor-pointer"
     >
       <span className="text-sm font-medium text-slate-800 dark:text-slate-100">{label}</span>
@@ -59,10 +62,13 @@ export default function ScripturePassageReaderOptionsPanel({
   if (!open || typeof document === 'undefined') return null
 
   return createPortal(
-    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4">
+    <div
+      className="scripture-reader-options-scrim fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4 pb-[max(1rem,calc(20vh+env(safe-area-inset-bottom,0px)))] sm:pb-4"
+      data-tour="scripture-reader-options-scrim"
+    >
       <button
         type="button"
-        className="absolute inset-0 bg-black/40 dark:bg-black/60"
+        className="scripture-reader-options-scrim-backdrop absolute inset-0 bg-black/40 dark:bg-black/60"
         aria-label="Close reader options"
         onClick={onClose}
       />
@@ -71,6 +77,7 @@ export default function ScripturePassageReaderOptionsPanel({
         role="dialog"
         aria-modal="true"
         aria-label="Scripture reader display"
+        data-tour="scripture-reader-options-panel"
         tabIndex={-1}
         className="relative w-full max-w-sm rounded-xl bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-slate-600 p-3 outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
       >
@@ -81,11 +88,13 @@ export default function ScripturePassageReaderOptionsPanel({
           label="Verse numbers"
           checked={showVerseNumbers}
           onChange={onShowVerseNumbersChange}
+          dataTour="scripture-reader-options-verse-numbers"
         />
         <OptionRow
           label="Red letter"
           checked={showWordsOfChrist}
           onChange={onShowWordsOfChristChange}
+          dataTour="scripture-reader-options-red-letter"
         />
       </div>
     </div>,

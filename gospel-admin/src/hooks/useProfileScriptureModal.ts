@@ -32,6 +32,10 @@ import {
 } from '@/lib/profileLastOpenResourceStorage'
 import { useProfileScriptureModalNavigation } from '@/hooks/useProfileScriptureModalNavigation'
 import { useProfileScriptureModalPinSession } from '@/hooks/useProfileScriptureModalPinSession'
+import {
+  GOSPEL_SCRIPTURE_READER_TOUR_SHOW_REFERENCE_EVENT,
+  type ScriptureReaderTourShowReferenceDetail,
+} from '@/lib/scriptureReaderTourEvents'
 
 export type UseProfileScriptureModalOptions = {
   isHydrated: boolean
@@ -280,6 +284,19 @@ export function useProfileScriptureModal({
     },
     [syncNavIndexForReference, completeDailyVerseChallengeIfMatch]
   )
+
+  useEffect(() => {
+    const onTourShowReference = (event: Event) => {
+      const detail = (event as CustomEvent<ScriptureReaderTourShowReferenceDetail>).detail
+      const ref = detail?.reference?.trim()
+      if (!ref) return
+      navigateScriptureInReader(ref)
+    }
+    window.addEventListener(GOSPEL_SCRIPTURE_READER_TOUR_SHOW_REFERENCE_EVENT, onTourShowReference)
+    return () => {
+      window.removeEventListener(GOSPEL_SCRIPTURE_READER_TOUR_SHOW_REFERENCE_EVENT, onTourShowReference)
+    }
+  }, [navigateScriptureInReader])
 
   const deepLinkTranslation = useMemo((): BibleTranslation | null => {
     if (!translationParam || !isBibleTranslation(translationParam)) return null

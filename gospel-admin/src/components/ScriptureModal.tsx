@@ -102,6 +102,7 @@ import {
   writeScriptureShowWordsOfChristToStorage,
 } from '@/lib/scriptureWordsOfChristPreference'
 import { passageTextForScriptureReader, scriptureApiSearchParams } from '@/lib/scriptureApiQuery'
+import { GOSPEL_SCRIPTURE_READER_OPTIONS_OPEN_EVENT } from '@/lib/scriptureReaderTourEvents'
 import {
   GOSPEL_PROFILE_LAST_OPEN_CHANGED_EVENT,
   getScriptureModalTabEntry,
@@ -449,6 +450,17 @@ export default function ScriptureModal({
   const handlePassageLongPress = useCallback(() => {
     setPassageReaderOptionsOpen(true)
   }, [])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const openReaderOptionsForTour = () => {
+      setPassageReaderOptionsOpen(true)
+    }
+    window.addEventListener(GOSPEL_SCRIPTURE_READER_OPTIONS_OPEN_EVENT, openReaderOptionsForTour)
+    return () => {
+      window.removeEventListener(GOSPEL_SCRIPTURE_READER_OPTIONS_OPEN_EVENT, openReaderOptionsForTour)
+    }
+  }, [isOpen])
 
   const scriptureApiUrl = useCallback(
     (ref: string, trans: BibleTranslation) =>

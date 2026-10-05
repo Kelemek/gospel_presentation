@@ -74,7 +74,7 @@ export function runAddCustomMemorizationFeatureTour(options?: ProfileFeatureTour
       popover: {
         title: '+ Add',
         description:
-          'Tap <strong>+ Add</strong> to open a picker for <strong>any</strong> book, chapter, and verse range—without opening the Scripture reader. Text is loaded in your <strong>current Bible translation</strong>. Use <strong>Next</strong> to open the picker for this tour.',
+          'Tap <strong>+ Add</strong> to open a picker for <strong>any</strong> book, chapter, and verse range—without opening Bible Reader. Text is loaded in your <strong>current Bible translation</strong>. Use <strong>Next</strong> to open the picker for this tour.',
         ...pop({ side: 'right', align: 'start' }),
         onNextClick: (_e, _s, { driver: drv }) => {
           const btn = document.querySelector<HTMLElement>(MEMORIZE_ADD_VERSE)

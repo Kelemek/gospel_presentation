@@ -1493,5 +1493,15 @@
     "releasedAt": "2026-10-04",
     "committedAt": "2026-10-05T01:35:28.645Z",
     "message": "Bug fix: Paragraph marks no longer show in LSB scripture or on Greek word-study words."
+  },
+  {
+    "releasedAt": "2026-10-05",
+    "committedAt": "2026-10-05T12:32:45.007Z",
+    "message": "The Scripture reader tutorial now shows how to use press-and-hold for verse numbers and red letter. The Reader display panel sits higher on phones."
+  },
+  {
+    "releasedAt": "2026-10-05",
+    "committedAt": "2026-10-05T12:47:36.434Z",
+    "message": "The Help tutorial for reading scripture is now labeled Bible Reader, matching the menu."
   }
 ]

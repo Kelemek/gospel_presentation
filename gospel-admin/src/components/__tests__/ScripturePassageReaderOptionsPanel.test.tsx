@@ -17,4 +17,11 @@ describe('ScripturePassageReaderOptionsPanel', () => {
     expect(dialog).toHaveAttribute('aria-modal', 'true')
     expect(dialog).toHaveFocus()
   })
+
+  it('exposes data-tour hooks for the scripture reader help tour', () => {
+    render(<ScripturePassageReaderOptionsPanel {...defaultProps} />)
+    expect(document.querySelector('[data-tour="scripture-reader-options-panel"]')).toBeTruthy()
+    expect(document.querySelector('[data-tour="scripture-reader-options-verse-numbers"]')).toBeTruthy()
+    expect(document.querySelector('[data-tour="scripture-reader-options-red-letter"]')).toBeTruthy()
+  })
 })

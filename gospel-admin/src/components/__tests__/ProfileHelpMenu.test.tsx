@@ -143,7 +143,7 @@ describe('ProfileHelpMenu', () => {
     expect(screen.getByRole('menuitem', { name: /^text size/i })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /^print version/i })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /^bible translation/i })).toBeInTheDocument()
-    expect(screen.getByRole('menuitem', { name: /^scripture reader/i })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /^bible reader/i })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /^verse memorization/i })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /^add custom memorization/i })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /^quick verse preview/i })).toBeInTheDocument()
@@ -256,7 +256,7 @@ describe('ProfileHelpMenu', () => {
     render(<ProfileHelpMenu />)
 
     await user.click(screen.getByRole('button', { name: /help and tutorials/i }))
-    await user.click(screen.getByRole('menuitem', { name: /^scripture reader/i }))
+    await user.click(screen.getByRole('menuitem', { name: /^bible reader/i }))
 
     await waitFor(() => {
       expect(runScriptureModalFeatureTour).toHaveBeenCalledTimes(1)

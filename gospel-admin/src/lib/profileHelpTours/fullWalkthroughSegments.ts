@@ -16,6 +16,7 @@ import { runTableOfContentsFeatureTour } from './tableOfContentsTour'
 import { runTextSizeFeatureTour } from './textSizeTour'
 import { runThemeFeatureTour } from './themeTour'
 import { runWordStudyFeatureTour } from './wordStudyTour'
+import { BIBLE_READER_DEFAULT_MENU_TITLE } from '@/lib/groupPublicResourceItems'
 
 type FullProfileWalkthroughSegment = {
   run: (opts?: ProfileFeatureTourOptions) => void
@@ -63,9 +64,9 @@ const FULL_WALKTHROUGH_SEGMENTS_FROM_RESOURCES: FullProfileWalkthroughSegment[] 
   {
     run: runScriptureModalFeatureTour,
     intro: {
-      title: 'Scripture reader',
+      title: BIBLE_READER_DEFAULT_MENU_TITLE,
       description:
-        'Full-screen reader: compare translations, chapter view, stepping next/previous, optional colored pins saved when you close (local only), and clearing pins from the menu.',
+        'Full-screen reader: compare translations, press-and-hold Reader display (verse numbers and red letter), chapter view, stepping next/previous, optional colored pins saved when you close (local only), and clearing pins from the menu.',
     },
   },
   {

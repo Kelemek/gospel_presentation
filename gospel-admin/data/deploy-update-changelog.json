@@ -45,5 +45,7 @@
   "Bookmark pin colors in the scripture reader are brighter and easier to tell apart.",
   "In the scripture reader, long-press the passage to turn verse numbers and Words of Christ (red letter) on or off.",
   "Bug fix: Listen no longer errors when you pause and play again if audio cannot load. The same message still appears when audio is unavailable.",
-  "Bug fix: Paragraph marks no longer show in LSB scripture or on Greek word-study words."
+  "Bug fix: Paragraph marks no longer show in LSB scripture or on Greek word-study words.",
+  "The Scripture reader tutorial now shows how to use press-and-hold for verse numbers and red letter. The Reader display panel sits higher on phones.",
+  "The Help tutorial for reading scripture is now labeled Bible Reader, matching the menu."
 ]

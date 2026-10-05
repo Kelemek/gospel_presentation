@@ -16,15 +16,34 @@ import {
   SCRIPTURE_MODAL_TOOLBAR,
   SCRIPTURE_MODAL_VERSE_BODY,
   SCRIPTURE_MODAL_VERSE_CHAPTER_TOGGLE,
+  SCRIPTURE_READER_OPTIONS_PANEL,
+  SCRIPTURE_READER_TOUR_RED_LETTER_DEMO_REFERENCE,
   SCRIPTURE_PROGRESS_UNPIN,
+  captureScriptureReaderTourDisplayPrefs,
+  closeScriptureReaderOptionsForTour,
+  ensureScriptureReaderTourRedLetterFetchEnabled,
+  getScriptureModalReferenceFromDom,
+  navigateScriptureForTour,
+  restoreScriptureReaderTourDisplayPrefs,
+  type ScriptureReaderTourDisplayPrefsSnapshot,
+  openScriptureReaderOptionsForTour,
+  scriptureModalReferenceMatchesDom,
+  ensureScriptureReaderOptionsOpenForTour,
+  scriptureModalVerseBodyHasRedLetterMarkup,
+  scriptureModalVerseBodyShowsVerseNumberMarkers,
+  scriptureReaderOptionsPanelOpen,
+  setScriptureReaderTourRedLetterChecked,
+  setScriptureReaderTourVerseNumbersChecked,
   SCRIPTURE_READER_TOUR_DEFAULT_SLUG,
   SCRIPTURE_READER_TOUR_RESUME_STORAGE_KEY,
   SCRIPTURE_VERSE_PINNED_CARD,
   ScriptureReaderTourResumePayloadV1,
   TOC_RESET_PROGRESS,
   TOC_VERSE_PINS,
+  applyProfileHelpTourOverlayForStep,
   baseProfileHelpDriverConfig,
   compareColumnsVisible,
+  PROFILE_HELP_TOUR_SCRIPTURE_READER_DISPLAY_DEMO_STEP,
   clearCompareTranslationSelectAsync,
   createProfileHelpDriver,
   isDefaultProfilePath,
@@ -36,6 +55,7 @@ import {
   prependSegmentIntroIfAny,
   selectFirstCompareTranslationOptionAsync,
   scriptureReaderTourNavigation,
+  sleep,
   waitUntil,
 } from './tourShared'
 import { getFullWalkthroughIndexAfterScriptureReader } from './fullWalkthroughSegments'
@@ -64,6 +84,27 @@ export function runScriptureModalFeatureTour(options?: ProfileFeatureTourOptions
 }
 
 export function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatureTourOptions): void {
+  let scriptureReaderTourRestoreReference: string | null = null
+  let scriptureReaderTourDisplayPrefsSnapshot: ScriptureReaderTourDisplayPrefsSnapshot | null = null
+
+  const restoreScriptureReaderTourDisplayPrefsFromSnapshot = () => {
+    restoreScriptureReaderTourDisplayPrefs(scriptureReaderTourDisplayPrefsSnapshot)
+    scriptureReaderTourDisplayPrefsSnapshot = null
+  }
+
+  const tourOptions: ProfileFeatureTourOptions = {
+    ...options,
+    onComplete: () => {
+      restoreScriptureReaderTourDisplayPrefsFromSnapshot()
+      options?.onComplete?.()
+    },
+    onAborted: () => {
+      restoreScriptureReaderTourDisplayPrefsFromSnapshot()
+      closeScriptureReaderOptionsForTour()
+      options?.onAborted?.()
+    },
+  }
+  const captive = options?.captive === true
   const narrow = isNarrowProfileHelpTourViewport()
   const pop = (
     wide: { side: Side; align: Alignment },
@@ -100,6 +141,198 @@ export function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatu
         description:
           'The verse or range appears here in the translation you chose in the menu (or the site default). Use the toolbar above to compare, switch between verse-only and full-chapter views, or move to another passage.',
         ...pop({ side: 'top', align: 'start' }),
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(SCRIPTURE_MODAL_VERSE_BODY) ?? document.querySelector(SCRIPTURE_MODAL_TOOLBAR)!,
+      popover: {
+        title: 'Words of Jesus',
+        description:
+          'Some passages include the words of Jesus in <strong>red</strong> when red letter is on. Tap <strong>Next</strong> to open a short example (John 14:6) for the display options that follow.',
+        ...pop({ side: 'top', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          scriptureReaderTourRestoreReference = getScriptureModalReferenceFromDom()
+          if (!scriptureReaderTourDisplayPrefsSnapshot) {
+            scriptureReaderTourDisplayPrefsSnapshot = captureScriptureReaderTourDisplayPrefs()
+          }
+          ensureScriptureReaderTourRedLetterFetchEnabled()
+          navigateScriptureForTour(SCRIPTURE_READER_TOUR_RED_LETTER_DEMO_REFERENCE)
+          void waitUntil(
+            () => modalVerseBodyHasText() && scriptureModalVerseBodyHasRedLetterMarkup(),
+            20000
+          ).then(() => {
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, 200)
+          })
+        },
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(SCRIPTURE_MODAL_VERSE_BODY) ?? document.querySelector(SCRIPTURE_MODAL_TOOLBAR)!,
+      popover: {
+        title: 'Press and hold the passage',
+        description:
+          'Press and hold the scripture text to open <strong>Reader display</strong>, where you can turn verse numbers and red letter on or off. Tap <strong>Next</strong> and the tour will open it for you.',
+        ...pop({ side: 'top', align: 'start' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          openScriptureReaderOptionsForTour()
+          void waitUntil(() => scriptureReaderOptionsPanelOpen(), 8000).then(() => {
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, 200)
+          })
+        },
+      },
+    },
+    {
+      data: PROFILE_HELP_TOUR_SCRIPTURE_READER_DISPLAY_DEMO_STEP,
+      element: () =>
+        document.querySelector(SCRIPTURE_READER_OPTIONS_PANEL) ??
+        document.querySelector(SCRIPTURE_MODAL_VERSE_BODY) ??
+        document.querySelector(SCRIPTURE_MODAL_TOOLBAR)!,
+      popover: {
+        title: 'Reader display',
+        description:
+          'These choices apply on this device: <strong>Verse numbers</strong> shows or hides inline markers, and <strong>Red letter</strong> highlights the words of Jesus when your translation supports it. Next you will see each turned off, then on again, while this panel stays open.',
+        ...pop({ side: 'top', align: 'center' }, { side: 'bottom', align: 'center' }),
+      },
+    },
+    {
+      data: PROFILE_HELP_TOUR_SCRIPTURE_READER_DISPLAY_DEMO_STEP,
+      element: () =>
+        document.querySelector(SCRIPTURE_MODAL_VERSE_BODY) ??
+        document.querySelector(SCRIPTURE_READER_OPTIONS_PANEL) ??
+        document.querySelector(SCRIPTURE_MODAL_TOOLBAR)!,
+      onHighlighted: (_el, _step, { driver: drv }) => {
+        void (async () => {
+          ensureScriptureReaderOptionsOpenForTour()
+          await waitUntil(() => scriptureReaderOptionsPanelOpen(), 4000)
+          setScriptureReaderTourVerseNumbersChecked(false)
+          await waitUntil(
+            () => !scriptureModalVerseBodyShowsVerseNumberMarkers() && modalVerseBodyHasText(),
+            8000
+          )
+          window.requestAnimationFrame(() => drv.refresh())
+        })()
+      },
+      popover: {
+        title: 'Verse numbers off',
+        description:
+          'Reader display stays open while the passage updates—inline verse numbers are hidden. Notice the text without <strong>[n]</strong> markers. Tap <strong>Next</strong> when you are ready to turn them back on.',
+        ...pop({ side: 'top', align: 'start' }),
+      },
+    },
+    {
+      data: PROFILE_HELP_TOUR_SCRIPTURE_READER_DISPLAY_DEMO_STEP,
+      element: () =>
+        document.querySelector(SCRIPTURE_MODAL_VERSE_BODY) ??
+        document.querySelector(SCRIPTURE_READER_OPTIONS_PANEL) ??
+        document.querySelector(SCRIPTURE_MODAL_TOOLBAR)!,
+      onHighlighted: (_el, _step, { driver: drv }) => {
+        void (async () => {
+          ensureScriptureReaderOptionsOpenForTour()
+          await waitUntil(() => scriptureReaderOptionsPanelOpen(), 4000)
+          setScriptureReaderTourVerseNumbersChecked(true)
+          await waitUntil(
+            () => scriptureModalVerseBodyShowsVerseNumberMarkers() && modalVerseBodyHasText(),
+            8000
+          )
+          await sleep(350)
+          window.requestAnimationFrame(() => drv.refresh())
+        })()
+      },
+      popover: {
+        title: 'Verse numbers on',
+        description:
+          'The tour checks <strong>Verse numbers</strong> again—the inline markers return on the passage while Reader display stays open.',
+        ...pop({ side: 'top', align: 'start' }),
+      },
+    },
+    {
+      data: PROFILE_HELP_TOUR_SCRIPTURE_READER_DISPLAY_DEMO_STEP,
+      element: () =>
+        document.querySelector(SCRIPTURE_MODAL_VERSE_BODY) ??
+        document.querySelector(SCRIPTURE_READER_OPTIONS_PANEL) ??
+        document.querySelector(SCRIPTURE_MODAL_TOOLBAR)!,
+      onHighlighted: (_el, _step, { driver: drv }) => {
+        void (async () => {
+          ensureScriptureReaderOptionsOpenForTour()
+          await waitUntil(() => scriptureReaderOptionsPanelOpen(), 4000)
+          setScriptureReaderTourRedLetterChecked(false)
+          await waitUntil(
+            () => !scriptureModalVerseBodyHasRedLetterMarkup() && modalVerseBodyHasText(),
+            18000
+          )
+          window.requestAnimationFrame(() => drv.refresh())
+        })()
+      },
+      popover: {
+        title: 'Red letter off',
+        description:
+          'With Reader display still open, red highlighting on Jesus’s words is turned off—the passage looks like plain text. Tap <strong>Next</strong> when you are ready to turn red letter back on.',
+        ...pop({ side: 'top', align: 'start' }),
+      },
+    },
+    {
+      data: PROFILE_HELP_TOUR_SCRIPTURE_READER_DISPLAY_DEMO_STEP,
+      element: () =>
+        document.querySelector(SCRIPTURE_MODAL_VERSE_BODY) ??
+        document.querySelector(SCRIPTURE_READER_OPTIONS_PANEL) ??
+        document.querySelector(SCRIPTURE_MODAL_TOOLBAR)!,
+      onHighlighted: (_el, _step, { driver: drv }) => {
+        void (async () => {
+          ensureScriptureReaderOptionsOpenForTour()
+          await waitUntil(() => scriptureReaderOptionsPanelOpen(), 4000)
+          setScriptureReaderTourRedLetterChecked(true)
+          await waitUntil(
+            () => scriptureModalVerseBodyHasRedLetterMarkup() && modalVerseBodyHasText(),
+            18000
+          )
+          await sleep(350)
+          window.requestAnimationFrame(() => drv.refresh())
+        })()
+      },
+      popover: {
+        title: 'Red letter on',
+        description:
+          'The tour checks <strong>Red letter</strong> again—Jesus’s words show in red on the passage while Reader display stays open.',
+        ...pop({ side: 'top', align: 'start' }),
+      },
+    },
+    {
+      element: () =>
+        document.querySelector(SCRIPTURE_READER_OPTIONS_PANEL) ??
+        document.querySelector(SCRIPTURE_MODAL_VERSE_BODY) ??
+        document.querySelector(SCRIPTURE_MODAL_TOOLBAR)!,
+      popover: {
+        title: 'Close display options',
+        description:
+          'Tap <strong>Next</strong> to return to the passage you opened from this page and close Reader display.',
+        ...pop({ side: 'top', align: 'center' }, { side: 'bottom', align: 'center' }),
+        onNextClick: (_e, _s, { driver: drv }) => {
+          void (async () => {
+            const restoreRef = scriptureReaderTourRestoreReference?.trim()
+            if (restoreRef) {
+              navigateScriptureForTour(restoreRef)
+              await waitUntil(
+                () => scriptureModalReferenceMatchesDom(restoreRef) && modalVerseBodyHasText(),
+                20000
+              )
+            }
+            closeScriptureReaderOptionsForTour()
+            await waitUntil(() => !scriptureReaderOptionsPanelOpen(), 6000)
+            restoreScriptureReaderTourDisplayPrefsFromSnapshot()
+            window.setTimeout(() => {
+              drv.refresh()
+              drv.moveNext()
+            }, 200)
+          })()
+        },
       },
     },
     {
@@ -425,27 +658,28 @@ export function runScriptureModalFeatureTourOnCurrentPage(options?: ProfileFeatu
   ]
 
   const d = createProfileHelpDriver({
-    ...baseProfileHelpDriverConfig(options),
+    ...baseProfileHelpDriverConfig(tourOptions),
     stagePadding: narrow ? 14 : 10,
     popoverOffset: narrow ? 26 : 10,
-    ...(narrow
-      ? {
-          onHighlighted: (element, _step, { driver: drv }) => {
-            if (element instanceof HTMLElement && element !== document.body) {
-              element.scrollIntoView({
-                block: 'center',
-                inline: 'nearest',
-                behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-              })
-            }
-            window.requestAnimationFrame(() => {
-              window.requestAnimationFrame(() => {
-                window.setTimeout(() => drv.refresh(), prefersReducedMotion() ? 0 : 140)
-              })
-            })
-          },
-        }
-      : {}),
+    onHighlightStarted: (_element, step, { driver: drv }) => {
+      applyProfileHelpTourOverlayForStep(drv, step, captive)
+    },
+    onHighlighted: (element, step, { driver: drv }) => {
+      applyProfileHelpTourOverlayForStep(drv, step, captive)
+      if (!narrow) return
+      if (element instanceof HTMLElement && element !== document.body) {
+        element.scrollIntoView({
+          block: 'center',
+          inline: 'nearest',
+          behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+        })
+      }
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          window.setTimeout(() => drv.refresh(), prefersReducedMotion() ? 0 : 140)
+        })
+      })
+    },
     showProgress: true,
     steps: prependSegmentIntroIfAny(options, steps),
   })
