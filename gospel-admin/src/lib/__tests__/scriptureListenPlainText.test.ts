@@ -96,6 +96,67 @@ describe('scriptureListenPlainText', () => {
     expect(plainOffsetAfterVisibleLineCount(scope, 99)).toBe(plainLen)
   })
 
+  it('keeps the opening hold to the first two lines when iOS drops the caret at the end of a short verse', () => {
+    document.body.innerHTML = `<div id="scope">${'a'.repeat(84)}${'b'.repeat(400)}</div>`
+    const scope = document.getElementById('scope') as HTMLElement
+    const plainLen = plainTextForScriptureListen(scope).length
+    Range.prototype.getBoundingClientRect = jest.fn(function (this: Range) {
+      const offset = this.startContainer instanceof Text ? this.startOffset : 0
+      const collapsed = this.startOffset === this.endOffset
+      if (collapsed && offset >= 72) {
+        return {
+          top: 0,
+          bottom: 0,
+          left: 0,
+          right: 0,
+          width: 0,
+          height: 0,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
+        }
+      }
+      let lineIndex = 0
+      for (const breakAt of [40, 80]) {
+        if (offset >= breakAt) lineIndex += 1
+      }
+      const top = 10 + lineIndex * 20
+      return {
+        top,
+        bottom: top + 14,
+        left: 0,
+        right: 8,
+        width: 8,
+        height: 14,
+        x: 0,
+        y: top,
+        toJSON: () => ({}),
+      }
+    })
+    expect(plainOffsetAfterVisibleLineCount(scope, 2)).toBe(79)
+    expect(computeScriptureListenAutoScrollStartDelaySec(scope, 100)).toBeCloseTo((100 * 79) / plainLen)
+    expect(computeScriptureListenAutoScrollStartDelaySec(scope, 100)).toBeLessThan(20)
+  })
+
+  it('does not hold auto-scroll for a third of the chapter when line positions cannot be measured', () => {
+    document.body.innerHTML = `<div id="scope">${'a'.repeat(500)}</div>`
+    const scope = document.getElementById('scope') as HTMLElement
+    const empty = {
+      top: 0,
+      bottom: 0,
+      left: 0,
+      right: 0,
+      width: 0,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    }
+    Range.prototype.getBoundingClientRect = jest.fn(() => empty)
+    Range.prototype.getClientRects = jest.fn(() => [] as unknown as DOMRectList)
+    expect(computeScriptureListenAutoScrollStartDelaySec(scope, 100)).toBe(0)
+  })
+
   it('computeScriptureListenAutoScrollStartDelaySec scales with duration and line content', () => {
     document.body.innerHTML = `<div id="scope">${'word '.repeat(40)}</div>`
     const scope = document.getElementById('scope') as HTMLElement
