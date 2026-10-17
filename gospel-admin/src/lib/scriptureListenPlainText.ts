@@ -141,14 +141,19 @@ export function plainOffsetAfterVisibleLineCount(
 
   let linesSeen = 1
   let lastTop = caretTopAt(0)
-  if (lastTop === null) return totalLen
+  if (lastTop === null) return 0
 
+  let lineMeasurementFailed = false
   let offset = 0
   while (offset < totalLen - 1) {
     const step = Math.min(COARSE_PLAIN_OFFSET_STEP, totalLen - 1 - offset)
     const probe = offset + step
     const top = caretTopAt(probe)
-    if (top === null) break
+    if (top === null) {
+      lineMeasurementFailed = true
+      offset = probe
+      continue
+    }
 
     if (top > lastTop + LINE_TOP_EPSILON_PX) {
       let lo = offset + 1
@@ -174,6 +179,7 @@ export function plainOffsetAfterVisibleLineCount(
     }
   }
 
+  if (lineMeasurementFailed) return 0
   return totalLen
 }
 
@@ -271,19 +277,57 @@ export function getScriptureListenCaretClientRect(
   const doc = scope.ownerDocument
   const r = doc.createRange()
   try {
-    r.setStart(rawPos.node, rawPos.offset)
-    r.collapse(true)
+    selectCaretSample(r, rawPos.node, rawPos.offset)
   } catch {
     return null
   }
+  return firstNonEmptyRangeRect(r)
+}
+
+/**
+ * iOS WebKit returns an empty box for a collapsed caret at the end of a short text node.
+ * Measuring one character still yields that line box.
+ */
+function selectCaretSample(range: Range, node: Text, offset: number): void {
+  const len = node.length
+  if (len > 0 && offset < len) {
+    range.setStart(node, offset)
+    range.setEnd(node, offset + 1)
+    return
+  }
+  if (len > 0) {
+    range.setStart(node, len - 1)
+    range.setEnd(node, len)
+    return
+  }
+  range.setStart(node, 0)
+  range.collapse(true)
+}
+
+function rangeRectHasBox(rect: DOMRect): boolean {
+  return rect.width !== 0 || rect.height !== 0
+}
+
+function firstNonEmptyRangeRect(range: Range): DOMRect | null {
   let rect: DOMRect
   try {
-    rect = r.getBoundingClientRect()
+    rect = range.getBoundingClientRect()
   } catch {
     return null
   }
-  if (rect.height === 0 && rect.width === 0) return null
-  return rect
+  if (rangeRectHasBox(rect)) return rect
+  if (typeof range.getClientRects !== 'function') return null
+  let rects: DOMRectList
+  try {
+    rects = range.getClientRects()
+  } catch {
+    return null
+  }
+  for (let i = 0; i < rects.length; i += 1) {
+    const sample = rects[i]
+    if (sample && rangeRectHasBox(sample)) return sample
+  }
+  return null
 }
 
 /** Caret viewport rect interpolated between adjacent plain offsets (smooth read-along scroll). */

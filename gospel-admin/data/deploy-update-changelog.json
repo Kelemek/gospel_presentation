@@ -48,5 +48,6 @@
   "Bug fix: Paragraph marks no longer show in LSB scripture or on Greek word-study words.",
   "The Scripture reader tutorial now shows how to use press-and-hold for verse numbers and red letter. The Reader display panel sits higher on phones.",
   "The Help tutorial for reading scripture is now labeled Bible Reader, matching the menu.",
-  "Bug fix: Psalm 119 again shows the Hebrew letter names (Aleph, Beth, and the rest) above each section."
+  "Bug fix: Psalm 119 again shows the Hebrew letter names (Aleph, Beth, and the rest) above each section.",
+  "Bug fix: On iPhone, listening to Hebrews 11 now follows the reading from the start instead of waiting until partway through the chapter."
 ]

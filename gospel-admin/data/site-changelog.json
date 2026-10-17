@@ -1508,5 +1508,10 @@
     "releasedAt": "2026-10-05",
     "committedAt": "2026-10-05T17:09:55.204Z",
     "message": "Bug fix: Psalm 119 again shows the Hebrew letter names (Aleph, Beth, and the rest) above each section."
+  },
+  {
+    "releasedAt": "2026-10-17",
+    "committedAt": "2026-10-17T12:59:46.177Z",
+    "message": "Bug fix: On iPhone, listening to Hebrews 11 now follows the reading from the start instead of waiting until partway through the chapter."
   }
 ]
