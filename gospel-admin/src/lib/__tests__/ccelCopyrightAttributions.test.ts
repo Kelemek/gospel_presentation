@@ -18,6 +18,7 @@ describe('CCEL_COPYRIGHT_ATTRIBUTIONS', () => {
       'J.C. Ryle, Thoughts for Young Men',
       'Richard Baxter, The Reformed Pastor',
       'Charles Hodge, Systematic Theology',
+      'Henry Scougal, The Life of God in the Soul of Man',
       'Charles H. Spurgeon, All of Grace',
       'Charles H. Spurgeon, Morning and Evening',
       'Charles H. Spurgeon sermons',
