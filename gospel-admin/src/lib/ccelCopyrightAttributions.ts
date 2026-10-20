@@ -83,6 +83,11 @@ export const CCEL_COPYRIGHT_ATTRIBUTIONS: readonly CcelCopyrightAttribution[] = 
     sourceHref: 'https://www.ccel.org/ccel/hodge/theology1.html',
   },
   {
+    title: 'Henry Scougal, The Life of God in the Soul of Man',
+    body: 'The underlying work is in the public domain. Text in this app was imported from the ThML edition',
+    sourceHref: 'https://www.ccel.org/ccel/scougal/life.html',
+  },
+  {
     title: 'Charles H. Spurgeon, All of Grace',
     body: 'The underlying work is in the public domain. Text in this app was imported from the ThML edition',
     sourceHref: 'https://www.ccel.org/ccel/spurgeon/grace.html',

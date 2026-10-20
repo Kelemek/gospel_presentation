@@ -1513,5 +1513,10 @@
     "releasedAt": "2026-10-17",
     "committedAt": "2026-10-17T12:59:46.177Z",
     "message": "Bug fix: On iPhone, listening to Hebrews 11 now follows the reading from the start instead of waiting until partway through the chapter."
+  },
+  {
+    "releasedAt": "2026-10-19",
+    "committedAt": "2026-10-20T02:41:39.996Z",
+    "message": "Henry Scougal's The Life of God in the Soul of Man is now available in the Books library."
   }
 ]

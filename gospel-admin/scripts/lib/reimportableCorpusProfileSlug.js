@@ -14,6 +14,7 @@ const LUTHER_BONDAGE = /^ltbw$/i
 const DEPRECATED_LUTHER = /^luthergal$/i
 const PILGRIM = /^ppgr$/i
 const ALL_OF_GRACE = /^aogr$/i
+const SCOUGAL_LIFE_OF_GOD = /^hslg$/i
 const REFORMED_PASTOR = /^bxrp$/i
 const RYLE_HOLINESS = /^jryh$/i
 const PINK_ATTRIBUTES = /^pkag$/i
@@ -36,6 +37,7 @@ function isReimportableCorpusProfileSlug(slug) {
     DEPRECATED_LUTHER.test(s) ||
     PILGRIM.test(s) ||
     ALL_OF_GRACE.test(s) ||
+    SCOUGAL_LIFE_OF_GOD.test(s) ||
     REFORMED_PASTOR.test(s) ||
     RYLE_HOLINESS.test(s) ||
     PINK_ATTRIBUTES.test(s) ||
