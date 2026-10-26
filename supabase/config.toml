@@ -1,0 +1,28 @@
+# Gospel Presentation — Supabase project mchtyihbwlzjhkcmdvib
+# Working directory for GitHub integration: repository root (.)
+
+project_id = "mchtyihbwlzjhkcmdvib"
+
+[api]
+enabled = true
+
+[db]
+# Migrations live in ./migrations relative to this config.
+
+[db.migrations]
+enabled = true
+
+[functions.backup-to-storage]
+verify_jwt = true
+
+[functions.restore-profile-from-backup]
+verify_jwt = true
+
+[functions.send-email]
+verify_jwt = true
+
+[functions.send-verification-code]
+verify_jwt = true
+
+[functions.verify-code]
+verify_jwt = true
