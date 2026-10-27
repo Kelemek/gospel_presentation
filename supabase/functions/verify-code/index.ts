@@ -2,6 +2,7 @@
 // Based on: https://github.com/Kelemek/angular_prayerapp
 // Purpose: Validate verification codes and authenticate users
 // Flow: Check code exists → Validate expiry → Mark as used → Sign in user
+// Deploy check: no behavior change. Confirms GitHub integration redeploys this function.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";

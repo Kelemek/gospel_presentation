@@ -1,0 +1,1 @@
+-- No-op: confirm GitHub integration applies database migrations. No schema or data changes.
