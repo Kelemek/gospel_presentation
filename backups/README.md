@@ -99,7 +99,7 @@ Automated backups are performed by the Supabase Edge Function `backup-to-storage
 - On **failure** only (not `warning` or `success`), the function sends email via `send-email` to users who have `role='admin'` in `user_profiles`. Warnings are stored on `backup_runs` and in Edge logs—no email.
 
 ### Backup Schedule
-- **Recommended**: Two **pg_cron** jobs (UTC — adjust for local Sunday if needed); see [`sql/migrations/20260512_backup_cron_differential.sql`](../gospel-admin/sql/migrations/20260512_backup_cron_differential.sql):
+- **Recommended**: Two **pg_cron** jobs (UTC — adjust for local Sunday if needed); see [`sql/migrations/20260512_backup_cron_differential.sql`](../supabase/archive/gospel-admin-sql/migrations/20260512_backup_cron_differential.sql):
   - **Sunday** (full): `run_backup_to_storage_job(...)` → POST **`{}`** → `daily/<date>/<run_id>/`.
   - **Monday–Saturday** (differential): `run_backup_to_storage_differential_job(...)` → POST **`{"mode":"differential"}`** → `differential/<date>/<run_id>/`. Requires at least one successful **full** backup row in `backup_runs` first; otherwise the function returns **400**.
 - **Legacy single daily job**: cron with `{}` only runs **full** backups (same as today).

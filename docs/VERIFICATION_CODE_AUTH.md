@@ -106,7 +106,7 @@ Verification code authentication allows users to log in by entering a numeric co
 Run the SQL migration to create required tables and columns:
 
 ```bash
-psql $DATABASE_URL -f gospel-admin/sql/migrations/20251223_create_verification_codes.sql
+psql $DATABASE_URL -f supabase/archive/gospel-admin-sql/migrations/20251223_create_verification_codes.sql
 ```
 
 Or use Supabase dashboard:

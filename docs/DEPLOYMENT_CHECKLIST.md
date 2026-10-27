@@ -11,7 +11,7 @@ Use this checklist to ensure all components are properly deployed and configured
 - [ ] Optional: run migration `20260516_drop_profile_access_table.sql` after deploying app/Edge changes that remove `profile_access` (drops table, auth trigger, and excludes it from `get_backup_tables()`)
 - [ ] After device sync is live: run migration `20260613_backup_exclude_device_sync_ephemeral.sql` (excludes ephemeral `pairing_sessions` / `sync_pairing_claim_rate_limits` from backups; keeps `sync_key_entries`)
 - [ ] Optional: run migration `20260515_drop_bible_verses_table.sql` only if you are removing the unused bulk-verse table (app scripture uses API.Bible + `scripture_cache`; backup verse data first if needed)
-- [ ] Run `gospel-admin/sql/increment_visit_count_no_updated_at.sql` so visit tracking does **not** bump `profiles.updated_at` (prevents false refetches on large templates like `lbst`). Verify in SQL Editor:
+- [ ] Run `supabase/archive/gospel-admin-sql/increment_visit_count_no_updated_at.sql` so visit tracking does **not** bump `profiles.updated_at` (prevents false refetches on large templates like `lbst`). Verify in SQL Editor:
 
 ```sql
 -- Should show no UPDATE of updated_at in the function body:
@@ -107,7 +107,7 @@ Expected output: 7 secrets listed
   - [ ] `supabase/deno.json`
   - [ ] `supabase/.env.example`
 - [ ] Migration file committed:
-  - [ ] `gospel-admin/sql/migrations/20251223_create_verification_codes.sql`
+  - [ ] `supabase/archive/gospel-admin-sql/migrations/20251223_create_verification_codes.sql`
 - [ ] Documentation committed:
   - [ ] `docs/VERIFICATION_CODE_AUTH.md`
   - [ ] `docs/VERIFICATION_CODE_QUICKSTART.md`
@@ -225,7 +225,7 @@ Expected output: 7 secrets listed
   - Runs daily at 3 AM UTC and on manual `workflow_dispatch`
   - Calls `cleanup_expired_verification_codes()` via Supabase RPC
   - Only removes codes expired/used **more than 24 hours ago** (audit retention)
-  - Optional: Run `gospel-admin/sql/migrations/20250301_cleanup_return_count.sql` so the workflow logs the deleted row count
+  - Optional: Run `supabase/archive/gospel-admin-sql/migrations/20250301_cleanup_return_count.sql` so the workflow logs the deleted row count
 
 ### Usage Monitoring
 - [ ] Set up query to track usage:

@@ -26,18 +26,18 @@ Inline detection ([`injectGospelInlineMarkersInHtml.ts`](../gospel-admin/src/lib
 
 The app **does not** read `bible_verses` for `/api/scripture` text. KJV, NASB, and LSB (and all other non-ESV codes) are fetched from **API.Bible** in [`gospel-admin/src/lib/bible-api.ts`](../gospel-admin/src/lib/bible-api.ts).
 
-The repo still includes Supabase scripts that can bulk-load verses into `bible_verses` (e.g. `gospel-admin/scripts/import-kjv-bible.js`, `import-nasb-bible.js`, `import-lsb-bible.js`) for **data ownership, audits, or other tooling**—not as a runtime fallback when API.Bible fails. To remove the table from hosted Postgres after you no longer need that storage, run [gospel-admin/sql/migrations/20260515_drop_bible_verses_table.sql](../gospel-admin/sql/migrations/20260515_drop_bible_verses_table.sql) (see comments in the file; export data first if you care about it).
+The repo still includes Supabase scripts that can bulk-load verses into `bible_verses` (e.g. `gospel-admin/scripts/import-kjv-bible.js`, `import-nasb-bible.js`, `import-lsb-bible.js`) for **data ownership, audits, or other tooling**—not as a runtime fallback when API.Bible fails. To remove the table from hosted Postgres after you no longer need that storage, run [supabase/archive/gospel-admin-sql/migrations/20260515_drop_bible_verses_table.sql](../supabase/archive/gospel-admin-sql/migrations/20260515_drop_bible_verses_table.sql) (see comments in the file; export data first if you care about it).
 
 ## Server scripture cache (ESV + API.Bible)
 
-ESV and every API.Bible-backed translation store responses in the `scripture_cache` table (`text` plain passage; optional `woc_text` for red-letter markup — see [20260928_scripture_cache_woc_text.sql](../gospel-admin/sql/migrations/20260928_scripture_cache_woc_text.sql)) to:
+ESV and every API.Bible-backed translation store responses in the `scripture_cache` table (`text` plain passage; optional `woc_text` for red-letter markup — see [20260928_scripture_cache_woc_text.sql](../supabase/archive/gospel-admin-sql/migrations/20260928_scripture_cache_woc_text.sql)) to:
 - Reduce API calls and costs
 - Stay within provider limits (ESV free tier: max **500 verses** in cache at once, enforced via `enforce_esv_cache_limit`; each API.Bible translation code uses `enforce_translation_cache_limit` with the same **500-verse cap per translation**)
 - Speed up repeated requests
 
 **TTL**: `ESV_CACHE_TTL_DAYS` (default 30). API.Bible rows use `API_BIBLE_CACHE_TTL_DAYS` (default **14**, per provider refresh guidance).
 
-**Setup (Supabase)**: Run [gospel-admin/sql/enable_api_bible_translations.sql](../gospel-admin/sql/enable_api_bible_translations.sql) to add `translation_settings` rows, widen `user_profiles.valid_translation`, and create `enforce_translation_cache_limit`. Enable each translation in Admin when ready.
+**Setup (Supabase)**: Run [supabase/archive/gospel-admin-sql/enable_api_bible_translations.sql](../supabase/archive/gospel-admin-sql/enable_api_bible_translations.sql) to add `translation_settings` rows, widen `user_profiles.valid_translation`, and create `enforce_translation_cache_limit`. Enable each translation in Admin when ready.
 
 **Admin UI**: On **Admin → Usage Reports** (`/admin/reports`), the **Server scripture cache** section shows per-translation reference counts and verse totals vs. the 500-verse limit for **ESV** and each enabled **API.Bible** translation, backed by `GET /api/admin/scripture-cache-stats`. The Translations dropdown links to that page for usage and cache details.
 

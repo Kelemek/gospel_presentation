@@ -101,7 +101,7 @@ npm install
 
 ### 2. **Supabase Setup**
 1. Create a project at [supabase.com](https://supabase.com)
-2. Run database migrations from `gospel-admin/sql/`:
+2. Run database migrations from `supabase/archive/gospel-admin-sql/`:
    - `add_counselee_system.sql` (core tables and RLS)
    - Other migration files as needed
 3. Get your project credentials from Settings → API
@@ -211,7 +211,7 @@ An alternative to magic link authentication using numeric codes sent via email.
 
 1. **Run database migration:**
    ```bash
-   psql $DATABASE_URL -f gospel-admin/sql/migrations/20251223_create_verification_codes.sql
+   psql $DATABASE_URL -f supabase/archive/gospel-admin-sql/migrations/20251223_create_verification_codes.sql
    ```
 
 2. **Set up Microsoft Graph API:**

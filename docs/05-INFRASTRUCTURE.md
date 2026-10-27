@@ -12,11 +12,11 @@ Complete migration from Netlify + Simple Auth to Supabase PostgreSQL with multi-
 - **profiles** - Gospel presentation resources
 - **user_answers** - Stored user responses
 - **coma_templates** - COMA method templates
-- **bible_verses** - Optional bulk verse storage (import scripts only; not used by `/api/scripture`). Drop when unused: `gospel-admin/sql/migrations/20260515_drop_bible_verses_table.sql`
+- **bible_verses** - Optional bulk verse storage (import scripts only; not used by `/api/scripture`). Drop when unused: `supabase/archive/gospel-admin-sql/migrations/20260515_drop_bible_verses_table.sql`
 - **scripture_cache** - ESV API response cache
 
 ### Row-Level Security (RLS)
-Tables use RLS appropriate to their sensitivity (see Supabase **Policies** and `gospel-admin/sql/` migrations). In general:
+Tables use RLS appropriate to their sensitivity (see Supabase **Policies** and `supabase/archive/gospel-admin-sql/` migrations). In general:
 
 - Gospel **presentation** pages can be public for many profiles (see `allow_public_all_profiles` and related migrations).
 - **Admin** operations in the app are enforced in API routes and UI by checking `user_profiles.role === 'admin'`.

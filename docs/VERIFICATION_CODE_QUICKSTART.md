@@ -18,13 +18,13 @@ This guide walks you through setting up email-based verification code authentica
 2. Select your project
 3. Go to **SQL Editor**
 4. Click **New Query**
-5. Copy contents from `gospel-admin/sql/migrations/20251223_create_verification_codes.sql`
+5. Copy contents from `supabase/archive/gospel-admin-sql/migrations/20251223_create_verification_codes.sql`
 6. Click **Run**
 7. Verify success message
 
 ### Option B: Via Command Line
 ```bash
-psql $DATABASE_URL -f gospel-admin/sql/migrations/20251223_create_verification_codes.sql
+psql $DATABASE_URL -f supabase/archive/gospel-admin-sql/migrations/20251223_create_verification_codes.sql
 ```
 
 **Verification:**
