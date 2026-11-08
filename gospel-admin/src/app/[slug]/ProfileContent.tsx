@@ -4,6 +4,7 @@ import ProfileContentFooter from '@/components/ProfileContentFooter'
 import ProfileContentLayout from '@/components/ProfileContentLayout'
 import ProfileContentModals from '@/components/ProfileContentModals'
 import PresentationFirstVisitWelcome from '@/components/PresentationFirstVisitWelcome'
+import ResourceReaderScrollToTop from '@/components/ResourceReaderScrollToTop'
 import { useProfileContentHooks } from '@/hooks/useProfileContentHooks'
 import type { ProfileContentProfileInfo } from '@/lib/profileContentTypes'
 import { GospelSection as GospelSectionType } from '@/lib/types'
@@ -44,6 +45,7 @@ function ProfileContentReady({
 
       <ProfileContentLayout {...layout} />
       <ProfileContentFooter enabledTranslationCodes={footerAttributionEnabledCodes} />
+      <ResourceReaderScrollToTop />
       <ProfileContentModals {...modals} />
     </>
   )

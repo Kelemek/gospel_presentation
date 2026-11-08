@@ -1518,5 +1518,10 @@
     "releasedAt": "2026-10-19",
     "committedAt": "2026-10-20T02:41:39.996Z",
     "message": "Henry Scougal's The Life of God in the Soul of Man is now available in the Books library."
+  },
+  {
+    "releasedAt": "2026-11-08",
+    "committedAt": "2026-11-08T22:03:33.023Z",
+    "message": "While reading a resource, a back-to-top button appears after you scroll down about one screen."
   }
 ]
