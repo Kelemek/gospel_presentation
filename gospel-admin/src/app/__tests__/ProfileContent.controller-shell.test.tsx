@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import ProfileContent from '../[slug]/ProfileContent'
 
 jest.mock('@/hooks/useProfileContentHooks', () => ({
@@ -46,6 +46,10 @@ const profileInfo = {
 }
 
 describe('ProfileContent ready shell', () => {
+  afterEach(() => {
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 })
+  })
+
   it('renders nothing when profile data is missing', () => {
     const { container } = render(
       <ProfileContent sections={undefined} profileInfo={undefined} />
@@ -78,5 +82,33 @@ describe('ProfileContent ready shell', () => {
     expect(screen.getByTestId('profile-content-layout')).toHaveTextContent('slug:default')
     expect(screen.getByTestId('profile-content-footer')).toHaveTextContent('codes:ESV,KJV')
     expect(screen.getByTestId('profile-content-modals')).toHaveTextContent('modals:default')
+    expect(screen.queryByRole('button', { name: 'Back to top' })).not.toBeInTheDocument()
+  })
+
+  it('shows the shared back-to-top control after one viewport of window scroll', () => {
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 900 })
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 })
+    jest.mocked(useProfileContentHooks).mockReturnValue({
+      footerAttributionEnabledCodes: null,
+      layout: {
+        onOpenMenuHover: jest.fn(),
+        header: { profileSlug: 'aogr' } as never,
+        main: {} as never,
+        slideout: null,
+      },
+      modals: {
+        scripture: { profileSlug: 'aogr' } as never,
+        study: {} as never,
+      },
+    })
+
+    render(<ProfileContent sections={[]} profileInfo={{ ...profileInfo, slug: 'aogr' }} />)
+
+    expect(screen.getByRole('button', { name: 'Back to top' })).toBeInTheDocument()
+
+    act(() => {
+      Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 })
+      window.dispatchEvent(new Event('scroll'))
+    })
   })
 })
