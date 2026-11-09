@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib/common.sh
+source "$SCRIPT_DIR/lib/common.sh"
+
+usage() {
+  cat <<'EOF'
+verify-gp — Gospel Presentation verification helper
+
+Usage:
+  verify-gp launch
+  verify-gp doctor
+  verify-gp automated
+  verify-gp cleanup
+  verify-gp curl --path PATH
+  verify-gp browser <subcommand> [args...]
+  verify-gp feature --id FEATURE_ID
+
+Environment:
+  VERIFY_RUN_ID   evidence subdirectory (default: UTC timestamp)
+  VERIFY_BASE_URL default http://127.0.0.1:3000
+EOF
+}
+
+cmd_launch() {
+  verify_nvm_use
+  verify_materialize_env_local
+
+  if tmux -f /exec-daemon/tmux.portal.conf has-session -t "=$VERIFY_TMUX_SESSION" 2>/dev/null; then
+    echo "verify-gp: tmux session $VERIFY_TMUX_SESSION already exists"
+  else
+    tmux -f /exec-daemon/tmux.portal.conf new-session -d -s "$VERIFY_TMUX_SESSION" -c "$VERIFY_APP_DIR" -- "${SHELL:-bash}" -lc 'source ~/.nvm/nvm.sh 2>/dev/null; nvm use; npm run dev'
+    echo "verify-gp: started $VERIFY_TMUX_SESSION in $VERIFY_APP_DIR"
+  fi
+
+  local attempts=0
+  local max=90
+  until curl -sfL -o /dev/null "$VERIFY_BASE_URL/copyright"; do
+    attempts=$((attempts + 1))
+    if [[ $attempts -ge $max ]]; then
+      echo "verify-gp: timed out waiting for dev server" >&2
+      exit 1
+    fi
+    sleep 2
+  done
+  echo "verify-gp: dev server ready at $VERIFY_BASE_URL"
+}
+
+cmd_doctor() {
+  verify_record_doctor
+  local ok=0
+
+  if tmux -f /exec-daemon/tmux.portal.conf has-session -t "=$VERIFY_TMUX_SESSION" 2>/dev/null; then
+    echo "OK tmux session $VERIFY_TMUX_SESSION"
+  else
+    echo "WARN tmux session $VERIFY_TMUX_SESSION not found"
+    ok=1
+  fi
+
+  if command -v ss >/dev/null 2>&1; then
+    if ss -ltn 2>/dev/null | grep -q ":${VERIFY_DEV_PORT} "; then
+      echo "OK port $VERIFY_DEV_PORT listening (ss)"
+    elif command -v lsof >/dev/null 2>&1; then
+      local pid
+      pid="$(lsof -ti tcp:"$VERIFY_DEV_PORT" -sTCP:LISTEN 2>/dev/null | head -1 || true)"
+      if [[ -n "$pid" ]]; then
+        echo "OK port $VERIFY_DEV_PORT listen pid=$pid"
+      else
+        echo "WARN could not confirm port $VERIFY_DEV_PORT (HTTP check is authoritative)"
+      fi
+    fi
+  fi
+
+  local status
+  status="$(curl -sL -o /dev/null -w '%{http_code}' "$VERIFY_BASE_URL/copyright" || echo 000)"
+  if [[ "$status" == "200" ]]; then
+    echo "OK GET /copyright HTTP $status"
+  else
+    echo "FAIL GET /copyright HTTP $status"
+    ok=1
+  fi
+
+  local env_file="$VERIFY_APP_DIR/.env.local"
+  if [[ -f "$env_file" ]]; then
+    echo "OK $env_file exists"
+    for key in NEXT_PUBLIC_SUPABASE_URL NEXT_PUBLIC_SUPABASE_ANON_KEY ESV_API_TOKEN; do
+      if grep -q "^${key}=" "$env_file" 2>/dev/null; then
+        echo "OK $key present in .env.local"
+      else
+        echo "WARN $key missing in .env.local"
+      fi
+    done
+  else
+    echo "WARN $env_file missing"
+  fi
+
+  {
+    echo "exit_code=$ok"
+  } >>"$VERIFY_RUN_EVIDENCE/doctor-meta.txt"
+
+  exit "$ok"
+}
+
+cmd_automated() {
+  verify_nvm_use
+  (cd "$VERIFY_APP_DIR" && npm run lint && npm test && npm run build)
+}
+
+cmd_cleanup() {
+  if tmux -f /exec-daemon/tmux.portal.conf has-session -t "=$VERIFY_TMUX_SESSION" 2>/dev/null; then
+    tmux -f /exec-daemon/tmux.portal.conf kill-session -t "$VERIFY_TMUX_SESSION"
+    echo "verify-gp: killed tmux session $VERIFY_TMUX_SESSION"
+  else
+    echo "verify-gp: no tmux session to stop"
+  fi
+  rm -f "$VERIFY_APP_DIR/.verify-dev.pid"
+}
+
+cmd_curl() {
+  local path="/"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --path) path="$2"; shift 2 ;;
+      *) echo "unknown arg: $1" >&2; exit 1 ;;
+    esac
+  done
+  local url="${VERIFY_BASE_URL%/}${path}"
+  local out="$VERIFY_RUN_EVIDENCE/curl-$(echo "$path" | tr '/?' '__').txt"
+  local status
+  status="$(curl -sSL -w $'\nHTTP_CODE:%{http_code}\n' "$url" | tee "$out" | tail -1)"
+  echo "$status"
+  if [[ "$status" != *HTTP_CODE:200* ]]; then
+  # copyright may be 200; others may differ — caller decides
+    :
+  fi
+}
+
+cmd_browser() {
+  verify_nvm_use
+  verify_ensure_playwright
+  export VERIFY_BASE_URL VERIFY_RUN_ID VERIFY_RUN_EVIDENCE
+  NODE_PATH="$VERIFY_SKILL_DIR/node_modules" node "$SCRIPT_DIR/browser.mjs" "$@"
+}
+
+cmd_feature() {
+  local id=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --id) id="$2"; shift 2 ;;
+      *) echo "unknown arg: $1" >&2; exit 1 ;;
+    esac
+  done
+  case "$id" in
+    static-copyright-page)
+      verify_nvm_use
+      verify_ensure_playwright
+      export VERIFY_BASE_URL VERIFY_RUN_ID VERIFY_RUN_EVIDENCE
+      NODE_PATH="$VERIFY_SKILL_DIR/node_modules" node "$SCRIPT_DIR/feature-static-copyright.mjs"
+      ;;
+    *)
+      echo "unknown feature id: $id" >&2
+      exit 1
+      ;;
+  esac
+}
+
+main() {
+  local sub="${1:-}"
+  shift || true
+  case "$sub" in
+    launch) cmd_launch "$@" ;;
+    doctor) cmd_doctor "$@" ;;
+    automated) cmd_automated "$@" ;;
+    cleanup) cmd_cleanup "$@" ;;
+    curl) cmd_curl "$@" ;;
+    browser) cmd_browser "$@" ;;
+    feature) cmd_feature "$@" ;;
+    -h|--help|"") usage ;;
+    *) echo "unknown command: $sub" >&2; usage; exit 1 ;;
+  esac
+}
+
+main "$@"
