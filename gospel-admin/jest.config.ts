@@ -8,7 +8,10 @@ const config: Config = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   transform: {
     // isolatedModules: faster transforms (skip type-checking per file; use `tsc` separately).
-    '^.+\\.(ts|tsx)$': ['ts-jest', { useESM: false }],
+    '^.+\\.(ts|tsx)$': [
+      'ts-jest',
+      { useESM: false, tsconfig: '<rootDir>/tsconfig.test.json' },
+    ],
   },
   moduleNameMapper: {
     '^@/components/(.*)$': '<rootDir>/src/components/$1',
