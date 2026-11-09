@@ -1,0 +1,5 @@
+run_id=proof-cb6f-20251109
+base_url=http://127.0.0.1:3000
+tmux_session=gospel-verify-dev
+2026-11-09T17:35:27Z
+exit_code=0
