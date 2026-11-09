@@ -12,6 +12,7 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --watchAll=false",
+    "typecheck:tests": "tsc -p tsconfig.test.json --noEmit",
     "backup": "node scripts/backup-database.js",
     "purge-db-backups": "node scripts/purge-db-backups-bucket.js",
     "cap:sync": "npx cap sync",
@@ -84,7 +85,7 @@
     "@tiptap/react": "^3.33.0",
     "@tiptap/starter-kit": "^3.33.0",
     "driver.js": "^1.11.0",
-    "next": "^16.2.9",
+    "next": "16.4.6",
     "posthog-js": "^1.447.5",
     "posthog-node": "^5.64.0",
     "qrcode.react": "^4.2.0",
@@ -109,7 +110,7 @@
     "@types/react-dom": "^19",
     "dotenv": "^17.4.2",
     "eslint": "^9",
-    "eslint-config-next": "^16.2.9",
+    "eslint-config-next": "16.4.6",
     "fake-indexeddb": "^6.2.5",
     "jest": "^30.4.2",
     "jest-environment-jsdom": "^30.4.1",
@@ -124,6 +125,6 @@
     "typescript": "^5"
   },
   "optionalDependencies": {
-    "@next/swc-darwin-arm64": "^16.2.9"
+    "@next/swc-darwin-arm64": "16.4.6"
   }
 }
