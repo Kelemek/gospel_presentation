@@ -22,7 +22,7 @@ Preconditions:
 
 - **HTTP smoke.** Run `verify-gp curl --path /default/`. Expect HTTP `200` and HTML containing `default` profile shell markers (main landmark, header).
 - **Browser load.** Run `verify-gp browser goto --path /default/`. Expect `document.title` non-empty and a visible `main` region.
-- **Header controls.** Run `verify-gp browser assert --role button --name "Table of Contents"`. Run `verify-gp browser assert --role button --name /help and tutorials/i`.
+- **Header controls.** Run `verify-gp browser wait-for --path /default/ --role button --name "Open menu"`. Run `verify-gp browser wait-for --path /default/ --role button --name /help and tutorials/i` (Help menu; exact name varies by platform).
 - **Proof.** Run `verify-gp browser screenshot --name default-home.png`.
 
 ## Gotchas

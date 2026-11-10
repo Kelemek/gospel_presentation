@@ -24,6 +24,15 @@ From **repo root**:
 .cursor/skills/verify-gospel-presentation/scripts/verify-gp launch
 ```
 
+For **Playwright drives** of interactive React profiles (`/default/`, `/aogr/`), `next dev` can leave the page on **Loading…** in headless Chromium. Prefer production:
+
+```bash
+.cursor/skills/verify-gospel-presentation/scripts/verify-gp launch-prod
+export VERIFY_BASE_URL=http://127.0.0.1:3001
+```
+
+Kindle `/read/` and `curl` proofs work against dev (`launch`) as well.
+
 This:
 
 1. Ensures Node 22 (`nvm use` in `gospel-admin/`).
@@ -78,12 +87,18 @@ All accept `--base-url` (default `http://127.0.0.1:3000`). Set `VERIFY_RUN_ID` (
 | Command | Purpose |
 |---|---|
 | `verify-gp curl --path /copyright` | HTTP status + excerpt |
-| `verify-gp browser goto --path /default/` | Navigate |
+| `verify-gp browser goto --path /default/` | Navigate (1280×720 viewport) |
 | `verify-gp browser screenshot --name foo.png` | PNG under `evidence/runs/<RUN_ID>/` |
-| `verify-gp browser click --role button --name "Table of Contents"` | ARIA click |
+| `verify-gp browser click --path /default/ --role button --name "Open menu"` | ARIA click (always pass `--path` for profile pages) |
+| `verify-gp browser wait-for --path /default/ --role button --name "Open menu"` | Wait until control visible |
+| `verify-gp browser scroll --path /aogr/ --y 1500` | Window scroll for scroll-to-top tests |
 | `verify-gp browser click --first data-tour scripture-card` | First matching tour selector |
-| `verify-gp browser assert --role dialog` | Fail if missing |
-| `verify-gp browser feature --id static-copyright-page` | Run built-in recipe for one feature |
+| `verify-gp browser assert --role dialog --name Close` | Visible role + optional accessible name |
+| `verify-gp feature --id slide-out-toc-menu` | Multi-step slide-out TOC recipe |
+| `verify-gp feature --id resource-scroll-to-top` | Back-to-top on `/aogr/` |
+| `verify-gp feature --id kindle-default-read` | `/default/read/` smoke |
+| `verify-gp feature --id resource-reader-back-links` | Same-page hash link click |
+| `verify-gp feature --id static-copyright-page` | Copyright page recipe |
 
 Browser commands use **Playwright** from `scripts/package.json` (`verify-gp` runs `npm install` in `scripts/` on first browser use, then `playwright install chromium`).
 
@@ -126,6 +141,11 @@ Proof standards (from create-verification-skill):
 | [`scripts/lib/common.sh`](./scripts/lib/common.sh) | Paths, `RUN_ID`, env materialization |
 | [`scripts/browser.mjs`](./scripts/browser.mjs) | Playwright driver |
 | [`scripts/feature-static-copyright.mjs`](./scripts/feature-static-copyright.mjs) | Built-in drive for `static-copyright-page` |
+| [`scripts/feature-slide-out-toc.mjs`](./scripts/feature-slide-out-toc.mjs) | Slide-out **Open menu** → TOC |
+| [`scripts/feature-resource-scroll-to-top.mjs`](./scripts/feature-resource-scroll-to-top.mjs) | **Back to top** on `/aogr/` |
+| [`scripts/feature-kindle-default-read.mjs`](./scripts/feature-kindle-default-read.mjs) | Kindle `/default/read/` |
+| [`scripts/feature-resource-back-links.mjs`](./scripts/feature-resource-back-links.mjs) | In-page hash / Back links |
+| [`scripts/browserSession.mjs`](./scripts/browserSession.mjs) | Shared Playwright session helpers |
 
 Make helpers executable: `chmod +x scripts/verify-gp`.
 

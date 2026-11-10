@@ -11,6 +11,7 @@ verify-gp — Gospel Presentation verification helper
 
 Usage:
   verify-gp launch
+  verify-gp launch-prod
   verify-gp doctor
   verify-gp automated
   verify-gp cleanup
@@ -108,13 +109,42 @@ cmd_automated() {
   (cd "$VERIFY_APP_DIR" && npm run lint && npm test && npm run build)
 }
 
-cmd_cleanup() {
-  if tmux -f /exec-daemon/tmux.portal.conf has-session -t "=$VERIFY_TMUX_SESSION" 2>/dev/null; then
-    tmux -f /exec-daemon/tmux.portal.conf kill-session -t "$VERIFY_TMUX_SESSION"
-    echo "verify-gp: killed tmux session $VERIFY_TMUX_SESSION"
-  else
-    echo "verify-gp: no tmux session to stop"
+cmd_launch_prod() {
+  verify_nvm_use
+  verify_materialize_env_local
+  local session="gospel-verify-prod"
+  local prod_url="http://127.0.0.1:${VERIFY_PROD_PORT}"
+
+  (cd "$VERIFY_APP_DIR" && npm run build)
+
+  if tmux -f /exec-daemon/tmux.portal.conf has-session -t "=$session" 2>/dev/null; then
+    tmux -f /exec-daemon/tmux.portal.conf kill-session -t "$session"
   fi
+  tmux -f /exec-daemon/tmux.portal.conf new-session -d -s "$session" -c "$VERIFY_APP_DIR" -- \
+    "${SHELL:-bash}" -lc "source ~/.nvm/nvm.sh 2>/dev/null; nvm use; PORT=${VERIFY_PROD_PORT} npm run start"
+  echo "verify-gp: started production server on $prod_url (tmux $session)"
+
+  local attempts=0
+  local max=120
+  until curl -sfL -o /dev/null "$prod_url/copyright"; do
+    attempts=$((attempts + 1))
+    if [[ $attempts -ge $max ]]; then
+      echo "verify-gp: timed out waiting for production server" >&2
+      exit 1
+    fi
+    sleep 2
+  done
+  echo "verify-gp: production ready at $prod_url"
+  echo "verify-gp: set VERIFY_BASE_URL=$prod_url for Playwright interactive recipes"
+}
+
+cmd_cleanup() {
+  for session in "$VERIFY_TMUX_SESSION" gospel-verify-prod; do
+    if tmux -f /exec-daemon/tmux.portal.conf has-session -t "=$session" 2>/dev/null; then
+      tmux -f /exec-daemon/tmux.portal.conf kill-session -t "$session"
+      echo "verify-gp: killed tmux session $session"
+    fi
+  done
   rm -f "$VERIFY_APP_DIR/.verify-dev.pid"
 }
 
@@ -159,6 +189,30 @@ cmd_feature() {
       export VERIFY_BASE_URL VERIFY_RUN_ID VERIFY_RUN_EVIDENCE
       NODE_PATH="$VERIFY_SKILL_DIR/node_modules" node "$SCRIPT_DIR/feature-static-copyright.mjs"
       ;;
+    slide-out-toc-menu)
+      verify_nvm_use
+      verify_ensure_playwright
+      export VERIFY_BASE_URL VERIFY_RUN_ID VERIFY_RUN_EVIDENCE
+      NODE_PATH="$VERIFY_SKILL_DIR/node_modules" node "$SCRIPT_DIR/feature-slide-out-toc.mjs"
+      ;;
+    resource-scroll-to-top)
+      verify_nvm_use
+      verify_ensure_playwright
+      export VERIFY_BASE_URL VERIFY_RUN_ID VERIFY_RUN_EVIDENCE
+      NODE_PATH="$VERIFY_SKILL_DIR/node_modules" node "$SCRIPT_DIR/feature-resource-scroll-to-top.mjs"
+      ;;
+    kindle-default-read)
+      verify_nvm_use
+      verify_ensure_playwright
+      export VERIFY_BASE_URL VERIFY_RUN_ID VERIFY_RUN_EVIDENCE
+      NODE_PATH="$VERIFY_SKILL_DIR/node_modules" node "$SCRIPT_DIR/feature-kindle-default-read.mjs"
+      ;;
+    resource-reader-back-links)
+      verify_nvm_use
+      verify_ensure_playwright
+      export VERIFY_BASE_URL VERIFY_RUN_ID VERIFY_RUN_EVIDENCE
+      NODE_PATH="$VERIFY_SKILL_DIR/node_modules" node "$SCRIPT_DIR/feature-resource-back-links.mjs"
+      ;;
     *)
       echo "unknown feature id: $id" >&2
       exit 1
@@ -171,6 +225,7 @@ main() {
   shift || true
   case "$sub" in
     launch) cmd_launch "$@" ;;
+    launch-prod) cmd_launch_prod "$@" ;;
     doctor) cmd_doctor "$@" ;;
     automated) cmd_automated "$@" ;;
     cleanup) cmd_cleanup "$@" ;;
