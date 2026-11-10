@@ -6,29 +6,36 @@
 
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
-import { createRequire } from 'node:module';
+import { baseUrl, evidenceDir, loadChromium } from './browserSession.mjs';
 
-const require = createRequire(import.meta.url);
+const DEFAULT_VIEWPORT = { width: 1280, height: 720 };
 
-const baseUrl = process.env.VERIFY_BASE_URL || 'http://127.0.0.1:3000';
-const evidenceDir =
-  process.env.VERIFY_RUN_EVIDENCE ||
-  path.join(process.cwd(), '.cursor/skills/verify-gospel-presentation/evidence/runs/local');
-
-async function loadPlaywright() {
-  const pw = await import('playwright');
-  return pw.chromium;
-}
-
-async function withBrowser(fn) {
-  const chromium = await loadPlaywright();
+async function withBrowser(fn, { path: gotoPath } = {}) {
+  const chromium = await loadChromium();
   const browser = await chromium.launch({ headless: true });
   try {
-    const page = await browser.newPage();
+    const page = await browser.newPage({ viewport: DEFAULT_VIEWPORT });
+    if (gotoPath != null) {
+      await page.goto(new URL(gotoPath, baseUrl).href, {
+        waitUntil: 'domcontentloaded',
+        timeout: 120_000,
+      });
+    }
     await fn(page);
   } finally {
     await browser.close();
   }
+}
+
+function roleLocator(page, role, namePattern) {
+  if (namePattern) {
+    const isRegex = namePattern.startsWith('/') && namePattern.endsWith('/');
+    const pattern = isRegex
+      ? new RegExp(namePattern.slice(1, -1), 'i')
+      : new RegExp(namePattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    return page.getByRole(role, { name: pattern });
+  }
+  return page.getByRole(role);
 }
 
 function parseArgs(argv) {
@@ -45,6 +52,8 @@ function parseArgs(argv) {
       out.firstAttr = argv[++i];
     } else if (a === '--contains-text') out.containsText = argv[++i];
     else if (a === '--role-assert') out.roleAssert = argv[++i];
+    else if (a === '--y') out.scrollY = Number(argv[++i]);
+    else if (a === '--timeout') out.timeout = Number(argv[++i]);
     else out._.push(a);
   }
   return out;
@@ -52,6 +61,7 @@ function parseArgs(argv) {
 
 const args = parseArgs(process.argv.slice(2));
 const sub = args._[0];
+const waitTimeout = args.timeout || 60_000;
 
 async function main() {
   await mkdir(evidenceDir, { recursive: true });
@@ -70,57 +80,102 @@ async function main() {
     const name = args.name || 'screen.png';
     const out = path.join(evidenceDir, name);
     const p = args.path || '/copyright';
-    await withBrowser(async (page) => {
-      await page.goto(new URL(p, baseUrl).href, {
-        waitUntil: 'networkidle',
-        timeout: 120_000,
-      });
-      await page.screenshot({ path: out, fullPage: true });
-      console.log('screenshot', out);
-    });
+    await withBrowser(
+      async (page) => {
+        await page.goto(new URL(p, baseUrl).href, {
+          waitUntil: 'networkidle',
+          timeout: 120_000,
+        });
+        await page.screenshot({ path: out, fullPage: true });
+        console.log('screenshot', out);
+      },
+      {}
+    );
+    return;
+  }
+
+  if (sub === 'wait-for') {
+    const p = args.path || '/default/';
+    await withBrowser(
+      async (page) => {
+        const pattern = args.namePattern || args.name;
+        if (args.selector) {
+          await page.locator(args.selector).first().waitFor({ state: 'visible', timeout: waitTimeout });
+        } else if (args.role) {
+          await roleLocator(page, args.role, pattern).first().waitFor({
+            state: 'visible',
+            timeout: waitTimeout,
+          });
+        } else {
+          throw new Error('wait-for requires --role or --selector');
+        }
+        console.log('wait-for ok');
+      },
+      { path: p }
+    );
+    return;
+  }
+
+  if (sub === 'scroll') {
+    const p = args.path || '/default/';
+    const y = args.scrollY ?? 1200;
+    await withBrowser(
+      async (page) => {
+        await page.evaluate((scrollY) => window.scrollTo(0, scrollY), y);
+        await page.waitForTimeout(300);
+        const pos = await page.evaluate(() => window.scrollY);
+        console.log('scroll y=', pos);
+      },
+      { path: p }
+    );
     return;
   }
 
   if (sub === 'click') {
-    await withBrowser(async (page) => {
-      const start = args.path ? new URL(args.path, baseUrl).href : baseUrl;
-      await page.goto(start, { waitUntil: 'domcontentloaded', timeout: 120_000 });
-      if (args.selector) {
-        await page.locator(args.selector).click();
-      } else if (args.firstTour && args.firstAttr) {
-        await page.locator(`[data-tour="${args.firstTour}"]`).first().click();
-      } else if (args.role) {
-        const pattern = args.namePattern || args.name;
-        const locator = pattern
-          ? page.getByRole(args.role, { name: new RegExp(pattern, 'i') })
-          : page.getByRole(args.role);
-        await locator.first().click();
-      } else {
-        throw new Error('click requires --role or --selector or --first data-tour');
-      }
-      await page.waitForTimeout(500);
-      console.log('click ok');
-    });
+    const p = args.path || '/default/';
+    await withBrowser(
+      async (page) => {
+        if (args.selector) {
+          await page.locator(args.selector).first().click({ timeout: waitTimeout });
+        } else if (args.firstTour && args.firstAttr) {
+          await page.locator(`[data-tour="${args.firstTour}"]`).first().click({ timeout: waitTimeout });
+        } else if (args.role) {
+          const pattern = args.namePattern || args.name;
+          await roleLocator(page, args.role, pattern).first().click({ timeout: waitTimeout });
+        } else {
+          throw new Error('click requires --role or --selector or --first data-tour');
+        }
+        await page.waitForTimeout(500);
+        console.log('click ok');
+      },
+      { path: p }
+    );
     return;
   }
 
   if (sub === 'assert') {
-    await withBrowser(async (page) => {
-      const start = args.path ? new URL(args.path, baseUrl).href : baseUrl;
-      await page.goto(start, { waitUntil: 'domcontentloaded', timeout: 120_000 });
-      const role = args.roleAssert || args.role || 'dialog';
-      const loc = page.getByRole(role);
-      if (args.containsText) {
-        await loc.filter({ hasText: args.containsText }).first().waitFor({ timeout: 30_000 });
-      } else {
-        await loc.first().waitFor({ timeout: 30_000 });
-      }
-      console.log('assert ok', role);
-    });
+    const p = args.path || '/default/';
+    await withBrowser(
+      async (page) => {
+        const role = args.roleAssert || args.role || 'dialog';
+        const pattern = args.namePattern || args.name;
+        const loc = roleLocator(page, role, pattern);
+        if (args.containsText) {
+          await loc.filter({ hasText: args.containsText }).first().waitFor({
+            state: 'visible',
+            timeout: waitTimeout,
+          });
+        } else {
+          await loc.first().waitFor({ state: 'visible', timeout: waitTimeout });
+        }
+        console.log('assert ok', role, pattern || '');
+      },
+      { path: p }
+    );
     return;
   }
 
-  console.error('Usage: verify-gp browser goto|screenshot|click|assert ...');
+  console.error('Usage: verify-gp browser goto|screenshot|click|assert|wait-for|scroll ...');
   process.exit(1);
 }
 

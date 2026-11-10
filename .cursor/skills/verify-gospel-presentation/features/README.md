@@ -8,6 +8,7 @@ Maintained recipes for driving **The Gospel Presentation** (`gospel-admin/`) the
 - **Node 22:** `source ~/.nvm/nvm.sh && cd gospel-admin && nvm use` (see `gospel-admin/.nvmrc`).
 - **Dev server:** `npm run dev` on **port 3000** (`http://127.0.0.1:3000`).
 - **Instance ownership:** Start the dev server in **this** verification run (tmux session `gospel-verify-dev`). Run `verify-gp doctor` before driving. Do not attach to another developer's server on port 3000.
+- **Interactive browser drives:** Run `verify-gp launch-prod` and set **`VERIFY_BASE_URL=http://127.0.0.1:3001`** (tmux `gospel-verify-prod`). Headless Playwright against `next dev` often never clears the profile **Loading…** shell; production `next start` does. Kindle/curl proofs may stay on port 3000 dev.
 - **Public profile slugs:** Prefer **`/default/`** for the main gospel presentation and committed template slugs such as **`/aogr/`** (All of Grace). **Do not** use live counselor slugs (for example profiles that increment visit counts in production analytics) unless the user explicitly requests them.
 - **Kindle read mode:** `/default/read/` and `/{slug}/read/` are kindle-oriented layouts. Treat as **smoke-only** (HTTP 200 + heading visible), not full interactive proof, unless you are explicitly testing kindle UX.
 
@@ -59,8 +60,13 @@ Each feature file has: **Sub-features**, **How to get to it (user POV)**, **Driv
 
 ## Features
 
-- [Default gospel presentation](./public-default-presentation.md) — public `/default/` reader, menu, and navigation without login.
-- [Scripture modal from a card](./scripture-modal-default.md) — open ESV text from a scripture card on `/default/`.
-- [Slide-out presentation menu](./slide-out-toc-menu.md) — Table of Contents, text size, print entry points.
-- [Static copyright & attribution](./static-copyright-page.md) — `/copyright` without backend secrets.
-- [Public book template reader](./template-book-reader.md) — committed CCEL-style template (`/aogr/`) smoke and menu.
+| Feature id (`verify-gp feature --id`) | Doc |
+|---|---|
+| `public-default-presentation` | [Default gospel presentation](./public-default-presentation.md) — `/default/` without login |
+| `scripture-modal-default` | [Scripture modal](./scripture-modal-default.md) — card → ESV dialog |
+| `slide-out-toc-menu` | [Slide-out menu & TOC](./slide-out-toc-menu.md) — **Open menu** → Table of Contents |
+| `resource-scroll-to-top` | [Back to top](./resource-scroll-to-top.md) — long book templates (`#15`) |
+| `kindle-default-read` | [Kindle `/default/read/`](./kindle-default-read.md) — server-rendered read mode |
+| `resource-reader-back-links` | [In-page hash / Back links](./resource-reader-back-links.md) — footnotes & term-map jumps |
+| `static-copyright-page` | [Copyright page](./static-copyright-page.md) — `/copyright` without secrets |
+| `template-book-reader` | [Book template](./template-book-reader.md) — `/aogr/` smoke |
