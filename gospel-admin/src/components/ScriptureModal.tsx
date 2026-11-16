@@ -597,6 +597,11 @@ export default function ScriptureModal({
 
   const chapterText = showingContext ? chapterView.text : ''
 
+  const verseChapterOpenedInChapterView = verseViewSessionKey !== null && preferChapterView
+
+  const verseChapterToggleActive =
+    verseViewSessionKey !== null && showingContext !== verseChapterOpenedInChapterView
+
   const chapterVersePickerVisible =
     showingContext &&
     isOpen &&
@@ -829,9 +834,12 @@ export default function ScriptureModal({
 
   const wordStudyToolbarLabel = wordStudyLanguageLabel ?? 'Words'
 
-  /** Active toolbar control (Chapter/Verse toggle, Words when open). */
+  /** Active toolbar control (Chapter/Verse toggle after user switched view, Words when open). */
   const scriptureToolbarActiveClass =
     'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-100 border-blue-500 dark:border-blue-400'
+
+  const scriptureToolbarInactiveClass =
+    'text-slate-700 dark:text-slate-200 border-slate-400 dark:border-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600'
 
   const compareMenuOptions = useMemo(
     () => [
@@ -1720,7 +1728,12 @@ export default function ScriptureModal({
                       ? 'Verse'
                       : 'Chapter context'
                 }
-                className={`${verseChapterToggleWidthClass} px-2 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 ${scriptureToolbarActiveClass} ${
+                aria-pressed={verseChapterToggleActive}
+                className={`${verseChapterToggleWidthClass} px-2 h-9 min-h-[36px] box-border inline-flex items-center justify-center ${scriptureToolbarControlTextClass} rounded-md transition-colors border-2 ${
+                  verseChapterToggleActive
+                    ? scriptureToolbarActiveClass
+                    : scriptureToolbarInactiveClass
+                } ${
                   !showingContext && contextLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
                 }`}
               >
