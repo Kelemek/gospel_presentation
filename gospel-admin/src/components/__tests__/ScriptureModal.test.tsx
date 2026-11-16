@@ -692,6 +692,82 @@ describe('ScriptureModal Component', () => {
     }
   })
 
+  describe('verse/chapter toggle active styling', () => {
+    const chapterPayload = { text: '[16] For God so loved the world.' }
+
+    beforeEach(() => {
+      mockFetch.mockImplementation((input: RequestInfo | URL) => {
+        const url = fetchUrl(input)
+        if (url.includes('/api/scripture/spurgeon-links')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ items: [] }),
+          } as Response)
+        }
+        if (url.includes('/api/scripture?')) {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve(chapterPayload),
+          } as Response)
+        }
+        return Promise.reject(new Error(`Unexpected fetch: ${url}`))
+      })
+    })
+
+    it('is not active when opened on a verse reference', async () => {
+      renderWithTextSize(<ScriptureModal {...defaultProps} />)
+      const toggle = await screen.findByRole('button', { name: /chapter context/i })
+      await waitFor(() => expect(toggle).toHaveTextContent('Chapter'))
+      expect(toggle).toHaveAttribute('aria-pressed', 'false')
+      expect(toggle.className).not.toMatch(/border-blue-500/)
+    })
+
+    it('is active after switching to chapter view from a verse tab', async () => {
+      const user = userEvent.setup()
+      renderWithTextSize(<ScriptureModal {...defaultProps} />)
+      const toggle = await screen.findByRole('button', { name: /chapter context/i })
+      await user.click(toggle)
+      await waitFor(() => expect(toggle).toHaveTextContent('Verse'))
+      expect(toggle).toHaveAttribute('aria-pressed', 'true')
+      expect(toggle.className).toMatch(/border-blue-500/)
+    })
+
+    it('is not active when opened in chapter view (chapter-only reference)', async () => {
+      renderWithTextSize(
+        <ScriptureModal reference="John 3" isOpen onClose={jest.fn()} profileSlug="default" />
+      )
+      const toggle = await screen.findByRole('button', { name: /^Verse$/i })
+      await waitFor(() => expect(toggle).toHaveTextContent('Verse'))
+      expect(toggle).toHaveAttribute('aria-pressed', 'false')
+      expect(toggle.className).not.toMatch(/border-blue-500/)
+    })
+
+    it('is active after switching to verse view from a chapter tab', async () => {
+      const user = userEvent.setup()
+      renderWithTextSize(
+        <ScriptureModal reference="John 3" isOpen onClose={jest.fn()} profileSlug="default" />
+      )
+      const toggle = await screen.findByRole('button', { name: /^Verse$/i })
+      await waitFor(() => expect(toggle).toHaveTextContent('Verse'))
+      await user.click(toggle)
+      await waitFor(() => expect(toggle).toHaveTextContent('Chapter'))
+      expect(toggle).toHaveAttribute('aria-pressed', 'true')
+      expect(toggle.className).toMatch(/border-blue-500/)
+    })
+
+    it('is not active again after toggling back to the opening verse view', async () => {
+      const user = userEvent.setup()
+      renderWithTextSize(<ScriptureModal {...defaultProps} />)
+      const toggle = await screen.findByRole('button', { name: /chapter context/i })
+      await user.click(toggle)
+      await waitFor(() => expect(toggle).toHaveAttribute('aria-pressed', 'true'))
+      await user.click(toggle)
+      await waitFor(() => expect(toggle).toHaveTextContent('Chapter'))
+      expect(toggle).toHaveAttribute('aria-pressed', 'false')
+      expect(toggle.className).not.toMatch(/border-blue-500/)
+    })
+  })
+
   it('enables Share after load and calls share helper with reference and translation', async () => {
     const user = userEvent.setup()
     mockFetch.mockImplementation((input: RequestInfo | URL) => {
