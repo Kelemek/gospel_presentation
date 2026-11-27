@@ -403,7 +403,6 @@ function wordsFuzzyMatch(expected: string, spoken: string): boolean {
 /** Filler words STT often inserts around scripture references. */
 const SKIP_SPOKEN_WORDS = new Set(['chapter', 'ch', 'verse', 'verses']);
 
-/** Extra fillers Whisper may insert between reference numbers (reference pass only). */
 const REFERENCE_SKIP_SPOKEN_WORDS = new Set([
   'and',
   'colon',

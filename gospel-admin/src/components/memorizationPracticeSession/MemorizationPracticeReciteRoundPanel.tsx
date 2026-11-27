@@ -60,7 +60,6 @@ export function MemorizationPracticeReciteRoundPanel({
       tokens={tokens}
       typableIndices={typableIndices}
       reference={verse.reference}
-      translation={verse.translation}
       itemId={verse.id}
       roundIndex={roundIndex}
       awaitingRoundAdvance={isRoundComplete}

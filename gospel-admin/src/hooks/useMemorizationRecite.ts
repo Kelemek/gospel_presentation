@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useRef } from 'react'
-import { isWhisperReciteSupported } from '@/lib/isWhisperReciteSupported'
+import { isReciteRecordingSupported } from '@/lib/isReciteRecordingSupported'
 
 export const RECITE_MAX_DURATION_MS = 5 * 60 * 1000
 export const RECITE_MIN_DURATION_MS = 1000
@@ -28,7 +28,7 @@ function pickRecorderMimeType(): string | undefined {
   return undefined
 }
 
-function whisperUploadFilename(blob: Blob): string {
+function reciteUploadFilename(blob: Blob): string {
   const type = blob.type.toLowerCase()
   if (type.includes('mp4') || type.includes('m4a')) return 'recording.m4a'
   if (type.includes('mpeg') || type.includes('mp3')) return 'recording.mp3'
@@ -125,7 +125,7 @@ export function useMemorizationRecite() {
 
   const startRecording = useCallback(
     async (callbacks?: ReciteRecordingCallbacks) => {
-      if (!isWhisperReciteSupported()) {
+      if (!isReciteRecordingSupported()) {
         throw new Error('Recording is not supported in this browser. Use HTTPS or try another browser.')
       }
       const startToken = ++recordingStartTokenRef.current
@@ -213,16 +213,16 @@ export function useMemorizationRecite() {
       blob: Blob
       audioSeconds: number
       memorizedItemId?: string
-      prompt?: string
+      reference?: string
     }): Promise<string> => {
       const form = new FormData()
-      form.append('audio', params.blob, whisperUploadFilename(params.blob))
+      form.append('audio', params.blob, reciteUploadFilename(params.blob))
       form.append('audio_seconds', String(params.audioSeconds))
       if (params.memorizedItemId) {
         form.append('memorized_item_id', params.memorizedItemId)
       }
-      if (params.prompt) {
-        form.append('prompt', params.prompt)
+      if (params.reference) {
+        form.append('reference', params.reference)
       }
 
       transcribeAbortRef.current = new AbortController()
@@ -233,11 +233,11 @@ export function useMemorizationRecite() {
           body: form,
           signal,
         })
-        const payload = (await response.json()) as { transcript?: string; error?: string }
+        const payload = (await response.json()) as { text?: string; error?: string }
         if (!response.ok) {
           throw new Error(payload.error ?? 'Transcription failed')
         }
-        const transcript = payload.transcript?.trim() ?? ''
+        const transcript = payload.text?.trim() ?? ''
         if (!transcript) {
           throw new Error('No speech detected in the recording.')
         }

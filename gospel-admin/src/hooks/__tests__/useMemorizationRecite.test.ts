@@ -5,8 +5,8 @@
 import { act, renderHook } from '@testing-library/react'
 import { useMemorizationRecite } from '@/hooks/useMemorizationRecite'
 
-jest.mock('@/lib/isWhisperReciteSupported', () => ({
-  isWhisperReciteSupported: jest.fn(() => true),
+jest.mock('@/lib/isReciteRecordingSupported', () => ({
+  isReciteRecordingSupported: jest.fn(() => true),
 }))
 
 class MockMediaRecorder {
@@ -43,7 +43,7 @@ describe('useMemorizationRecite', () => {
     })
     global.fetch = jest.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ transcript: 'hello world' }),
+      json: async () => ({ text: 'hello world' }),
     }) as jest.Mock
   })
 
@@ -83,7 +83,7 @@ describe('useMemorizationRecite', () => {
     await act(async () => {
       const transcript = await result.current.transcribeCapturedRecording({
         memorizedItemId: 'item-1',
-        prompt: 'hint',
+        reference: 'John 3:16',
         blob: captured!.blob,
         audioSeconds: captured!.audioSeconds,
       })
@@ -94,6 +94,10 @@ describe('useMemorizationRecite', () => {
       '/api/memorization/recite/transcribe',
       expect.objectContaining({ method: 'POST' })
     )
+    const body = (global.fetch as jest.Mock).mock.calls[0][1].body as FormData
+    expect(body.get('reference')).toBe('John 3:16')
+    expect(body.get('prompt')).toBeNull()
+    expect(body.getAll('keyterm')).toEqual([])
 
     jest.useRealTimers()
   })

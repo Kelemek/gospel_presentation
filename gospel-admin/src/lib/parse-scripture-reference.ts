@@ -57,10 +57,6 @@ export function scriptureReferenceVerseCount(reference: string): number | null {
   return hi - lo + 1
 }
 
-/**
- * Spoken form for Whisper prompts and STT hints — no colon (users say "3 16", not "3:16").
- * Example: `2 Timothy 3:16` → `2 Timothy 3 16`.
- */
 export function formatSpokenScriptureReference(reference: string): string {
   const parsed = parseReference(reference.trim())
   if (!parsed) return reference.trim()

@@ -115,7 +115,7 @@ Set both in Vercel production/preview and in `gospel-admin/.env.local` for local
 
 If these are unset, PostHog does not initialize (safe for CI and local test runs).
 
-**Memorization Recite (Whisper):** set `OPENAI_API_KEY` in Vercel and `gospel-admin/.env.local` when using **Recite** practice mode (`POST /api/memorization/recite/transcribe`). Optional for environments that do not need transcription.
+**Memorization Recite (xAI speech-to-text):** set `XAI_API_KEY` in Vercel and `gospel-admin/.env.local` when using **Recite** practice mode (`POST /api/memorization/recite/transcribe`, which calls `https://api.x.ai/v1/stt`). Optional for environments that do not need transcription. Keyterm hints are the spoken book name, the reference, and a fixed word list. Verse text is not sent.
 
 Client init uses Next.js [`instrumentation-client.ts`](../gospel-admin/instrumentation-client.ts) (supported since Next.js 15.3; not `instrumentation.ts`, which is server-only). [`PostHogProvider`](../gospel-admin/src/components/PostHogProvider.tsx) calls the same idempotent init on mount as a fallback.
 
