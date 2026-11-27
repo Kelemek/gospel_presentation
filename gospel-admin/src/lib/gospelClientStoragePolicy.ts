@@ -29,6 +29,7 @@ const SMALL_LOCAL_STORAGE_KEYS = new Set([
   'gospel-profile-text-size',
   'gospel-preferred-translation',
   'gospel-admin:memorize-listen-speed',
+  'gospel-admin:resource-listen-voice',
   'gospel-admin:profile-read-along-underline-style',
   'gospel-presentation-first-visit-welcome-v1',
   'gospel-profile-last-open-resource:v1',

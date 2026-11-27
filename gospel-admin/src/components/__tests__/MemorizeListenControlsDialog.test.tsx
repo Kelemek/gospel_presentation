@@ -244,4 +244,39 @@ describe('MemorizeListenControlsDialog', () => {
     )
     expect(screen.queryByTestId('memorize-listen-read-along-style-word')).not.toBeInTheDocument()
   })
+
+  it('shows a Grok voice menu only when resource Listen passes one', () => {
+    const picker = {
+      voices: [{ voiceId: 'eve', name: 'Eve' }],
+      value: 'device',
+      onChange: jest.fn(),
+    }
+    const { rerender } = render(<MemorizeListenControlsDialog {...baseProps} grokVoicePicker={picker} />)
+    expect(screen.queryByTestId('resource-listen-voice')).not.toBeInTheDocument()
+
+    const onChange = jest.fn()
+    rerender(
+      <MemorizeListenControlsDialog
+        open
+        onClose={jest.fn()}
+        dialogId="profile-resource-listen-controls-dialog"
+        titleId="profile-resource-listen-controls-title"
+        showRepeat={false}
+        presentation="floating"
+        onPrimaryClick={jest.fn()}
+        primaryLabel="Play"
+        primaryAriaLabel="Play"
+        primaryAriaPressed={false}
+        listenPlaybackRate={1}
+        onSelectSpeed={jest.fn()}
+        grokVoicePicker={{
+          voices: [{ voiceId: 'eve', name: 'Eve' }],
+          value: 'device',
+          onChange,
+        }}
+      />
+    )
+    fireEvent.change(screen.getByTestId('resource-listen-voice'), { target: { value: 'eve' } })
+    expect(onChange).toHaveBeenCalledWith('eve')
+  })
 })

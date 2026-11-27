@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type MutableRefObject } from 'react'
 import type { GospelSection } from '@/lib/types'
 import {
   readMemorizeListenSpeedFromStorage,
@@ -9,6 +9,7 @@ import {
 } from '@/lib/memorizeListenSpeedStorage'
 import { useExclusiveListenPreemption } from '@/hooks/useExclusiveListenPreemption'
 import { getGospelListenSpeechEngine } from '@/lib/gospelListenSpeechEngine'
+import { getGrokResourceListenPlayer } from '@/lib/grokResourceListenPlayer'
 import { useProfileListenSession } from '@/hooks/useProfileListenSession'
 
 export interface UseProfileResourceReadAloudOptions {
@@ -17,12 +18,18 @@ export interface UseProfileResourceReadAloudOptions {
   profileSlug?: string
   /** Optional alert when there is nothing to read or the anchor is missing */
   onNothingToRead?: (message: string) => void
+  resourceListenVoiceRef?: MutableRefObject<string>
+  resourceListenVoiceId?: string
+  onGrokFallback?: (message: string) => void
 }
 
 export function useProfileResourceReadAloud({
   sections,
   profileSlug,
   onNothingToRead,
+  resourceListenVoiceRef,
+  resourceListenVoiceId,
+  onGrokFallback,
 }: UseProfileResourceReadAloudOptions) {
   const [controlsOpen, setControlsOpen] = useState(false)
   const [listenPlaybackRate, setListenPlaybackRate] = useState<MemorizeListenSpeed>(() =>
@@ -36,6 +43,9 @@ export function useProfileResourceReadAloud({
     profileSlug,
     onNothingToRead,
     listenPlaybackRateRef,
+    resourceListenVoiceRef,
+    resourceListenVoiceId,
+    onGrokFallback,
   })
 
   const {
@@ -45,6 +55,7 @@ export function useProfileResourceReadAloud({
     listenButtonLabel,
     listenAriaPressed,
     restartCurrentChunkAtNewSpeed,
+    clearGrokFallback,
     restartReadAloudFromBeginning,
     startReadAloudFromHere,
     readAlongUnderlineOn,
@@ -64,6 +75,7 @@ export function useProfileResourceReadAloud({
     return () => {
       teardownReadAlong()
       getGospelListenSpeechEngine().cancel()
+      getGrokResourceListenPlayer().releaseAll()
     }
   }, [teardownReadAlong])
 
@@ -100,6 +112,8 @@ export function useProfileResourceReadAloud({
     readAloudDialogPrimaryLabel,
     readAloudDialogPrimaryAriaLabel,
     listenAriaPressed,
+    restartCurrentChunkAtNewSpeed,
+    clearGrokFallback,
     restartReadAloudFromBeginning,
     startReadAloudFromHere,
     readAlongUnderlineOn,

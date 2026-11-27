@@ -30,6 +30,12 @@ interface MemorizeListenControlsDialogPropsBase {
   onStartFromHere?: () => void | Promise<void>
   /** Profile read-aloud only: clears saved resume position and restarts from the first section (parent may confirm first). */
   onStartFromBeginning?: () => void | Promise<void>
+  /** Resource Listen only, and only when this account has Grok voice. */
+  grokVoicePicker?: {
+    voices: { voiceId: string; name: string }[]
+    value: string
+    onChange: (voiceId: string) => void
+  }
   /**
    * `modal` — centered card + dimmed backdrop (memorize practice).
    * `floating` — narrow bar near the top, no backdrop; page stays scrollable and interactive (profile read-aloud).
@@ -134,6 +140,7 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
     onReadAlongUnderlineStyle,
     onStartFromHere,
     onStartFromBeginning,
+    grokVoicePicker,
     presentation = 'modal',
   } = props
   const repeatListenOn = isRepeatVariant(props) ? props.repeatListenOn : false
@@ -339,6 +346,28 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
               />
             </div>
           )}
+          {!showRepeatControls && grokVoicePicker ? (
+            <label className="flex flex-col gap-1 text-xs font-medium text-slate-600 dark:text-slate-300">
+              Voice
+              <select
+                data-testid="resource-listen-voice"
+                value={grokVoicePicker.value}
+                onChange={(event) => grokVoicePicker.onChange(event.target.value)}
+                className="h-10 rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+              >
+                <option value="device">This device</option>
+                {grokVoicePicker.voices.map((voice) => (
+                  <option key={voice.voiceId} value={voice.voiceId}>
+                    {voice.name}
+                  </option>
+                ))}
+                {grokVoicePicker.value !== 'device' &&
+                !grokVoicePicker.voices.some((voice) => voice.voiceId === grokVoicePicker.value) ? (
+                  <option value={grokVoicePicker.value}>{grokVoicePicker.value}</option>
+                ) : null}
+              </select>
+            </label>
+          ) : null}
         </div>
       </div>
   )

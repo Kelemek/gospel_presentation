@@ -54,6 +54,13 @@ jest.mock('next/server', () => ({
     json: (data, init = {}) => ({
       json: () => Promise.resolve(data),
       status: init.status || 200,
+      headers: {
+        get: (name) => {
+          const headers = init.headers || {}
+          const key = Object.keys(headers).find((header) => header.toLowerCase() === String(name).toLowerCase())
+          return key ? headers[key] : null
+        },
+      },
     }),
   },
 }))

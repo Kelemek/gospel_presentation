@@ -1,12 +1,17 @@
 'use client'
 
-import { useCallback, type MutableRefObject } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'
 import type { GospelSection } from '@/lib/types'
 import { claimExclusiveListenOwner } from '@/lib/gospelExclusiveListen'
 import {
   getGospelListenSpeechEngine,
   isGospelListenSpeechAvailable,
 } from '@/lib/gospelListenSpeechEngine'
+import { getGrokResourceListenPlayer } from '@/lib/grokResourceListenPlayer'
+import {
+  createProfileListenPlaybackPort,
+  profileListenUsesGrok,
+} from '@/lib/profileListenPlaybackPort'
 import { useListenEnginePlayPause } from '@/hooks/useListenEnginePlayPause'
 import { useProfileListenChunkQueue } from '@/hooks/useProfileListenChunkQueue'
 import { useProfileReadAlongSession } from '@/hooks/useProfileReadAlongSession'
@@ -24,6 +29,7 @@ import {
 import { prefersReducedMotionReadAlong } from '@/lib/scrollReadAlongPlain'
 import { plainOffsetAtViewportSentenceStart } from '@/lib/profileReadingPosition'
 import { listenPlainAndChunksForScope } from '@/lib/profileListenChunkQueue'
+import { DEVICE_LISTEN_VOICE_ID } from '@/lib/resourceListenVoiceStorage'
 import {
   resolveProfileListenStartChunk,
   shouldResumeProfileListenFromLastSession,
@@ -34,6 +40,9 @@ export type UseProfileListenSessionOptions = {
   profileSlug?: string
   onNothingToRead?: (message: string) => void
   listenPlaybackRateRef: MutableRefObject<MemorizeListenSpeed>
+  resourceListenVoiceRef?: MutableRefObject<string>
+  resourceListenVoiceId?: string
+  onGrokFallback?: (message: string) => void
 }
 
 export function useProfileListenSession({
@@ -41,7 +50,40 @@ export function useProfileListenSession({
   profileSlug,
   onNothingToRead,
   listenPlaybackRateRef,
+  resourceListenVoiceRef,
+  resourceListenVoiceId,
+  onGrokFallback,
 }: UseProfileListenSessionOptions) {
+  const grokFallbackRef = useRef(false)
+  const [grokFallback, setGrokFallback] = useState(false)
+  const [trackedVoiceId, setTrackedVoiceId] = useState(resourceListenVoiceId)
+  if (resourceListenVoiceId !== trackedVoiceId) {
+    setTrackedVoiceId(resourceListenVoiceId)
+    setGrokFallback(false)
+  }
+  useLayoutEffect(() => {
+    grokFallbackRef.current = grokFallback
+  }, [grokFallback])
+  const usesGrok =
+    !!resourceListenVoiceId &&
+    resourceListenVoiceId !== DEVICE_LISTEN_VOICE_ID &&
+    !grokFallback
+  const playbackPort = useMemo(
+    () => (resourceListenVoiceRef ? createProfileListenPlaybackPort(usesGrok) : undefined),
+    [resourceListenVoiceRef, usesGrok]
+  )
+  const clearGrokFallback = useCallback(() => {
+    grokFallbackRef.current = false
+    setGrokFallback(false)
+  }, [])
+  const handleGrokFallback = useCallback(
+    (message: string) => {
+      grokFallbackRef.current = true
+      setGrokFallback(true)
+      onGrokFallback?.(message)
+    },
+    [onGrokFallback]
+  )
   const readAlong = useProfileReadAlongSession({ profileSlug })
 
   const {
@@ -63,6 +105,7 @@ export function useProfileListenSession({
     exclusiveOwner: 'profile-resource-read-aloud',
     idleLabel: 'Play',
     activeLabel: 'Pause',
+    port: playbackPort,
   })
   const {
     rateAtStartRef,
@@ -82,6 +125,9 @@ export function useProfileListenSession({
     prepareUtteranceStart,
     markUtteranceStarted,
     resetPlaybackState,
+    resourceListenVoiceRef,
+    grokFallbackRef,
+    onGrokFallback: handleGrokFallback,
   })
 
   const {
@@ -124,7 +170,8 @@ export function useProfileListenSession({
       forcedResolved?: { scope: HTMLElement; text: string },
       forcedStartPlainOffset?: number
     ) => {
-      if (typeof window === 'undefined' || !isGospelListenSpeechAvailable()) return
+      const listenReady = playbackPort?.isAvailable() ?? isGospelListenSpeechAvailable()
+      if (typeof window === 'undefined' || !listenReady) return
 
       const resolvedScroll = forcedResolved ?? resolveListenScopeAndText()
       if (!resolvedScroll) return
@@ -179,7 +226,11 @@ export function useProfileListenSession({
       scheduleReadAlongUi({ highlight: null })
       bumpCancelGeneration()
 
-      const chunkMeta = listenPlainAndChunksForScope(resolved.scope, listenTextOptionsRef.current).chunks
+      const chunkMeta = listenPlainAndChunksForScope(
+        resolved.scope,
+        listenTextOptionsRef.current,
+        profileListenUsesGrok(resourceListenVoiceRef, grokFallbackRef) ? 'grok' : 'device'
+      ).chunks
       if (chunkMeta.length === 0) return
 
       const { startChunk, startPlainOffset } = resolveProfileListenStartChunk({
@@ -211,6 +262,8 @@ export function useProfileListenSession({
       listenTextOptionsRef,
       profileSlugRef,
       resolveListenScopeAndText,
+      playbackPort,
+      resourceListenVoiceRef,
       scheduleReadAlongUi,
     ]
   )
@@ -225,6 +278,7 @@ export function useProfileListenSession({
       clearAllProfileReadAlongProgressForSlug(slug, sections)
     }
     getGospelListenSpeechEngine().cancel()
+    getGrokResourceListenPlayer().releaseAll()
     bumpCancelGeneration()
     cancelReadAlongUiScheduling()
     clearChunkQueue()
@@ -260,7 +314,8 @@ export function useProfileListenSession({
 
     const chunkMeta = listenPlainAndChunksForScope(
       resolved.scope,
-      listenTextOptionsRef.current
+      listenTextOptionsRef.current,
+      profileListenUsesGrok(resourceListenVoiceRef, grokFallbackRef) ? 'grok' : 'device'
     ).chunks
     if (chunkMeta.length === 0) return
 
@@ -270,10 +325,11 @@ export function useProfileListenSession({
       listenTextOptionsRef.current
     )
     startReadAloudSession(false, resolved, offset)
-  }, [listenTextOptionsRef, resolveListenScopeAndText, startReadAloudSession])
+  }, [listenTextOptionsRef, resolveListenScopeAndText, resourceListenVoiceRef, startReadAloudSession])
 
   const handlePrimaryClick = useCallback(() => {
-    if (typeof window === 'undefined' || !isGospelListenSpeechAvailable()) {
+    const listenReady = playbackPort?.isAvailable() ?? isGospelListenSpeechAvailable()
+    if (typeof window === 'undefined' || !listenReady) {
       onNothingToRead?.('Listen is not supported in this browser.')
       return
     }
@@ -296,6 +352,7 @@ export function useProfileListenSession({
     flushReadAlongProgressPersist,
     handleSpeakingEngineClick,
     onNothingToRead,
+    playbackPort,
     speakChunkInternalRef,
     startReadAloudSession,
     ttsActiveRef,
@@ -307,6 +364,7 @@ export function useProfileListenSession({
     flushReadAlongProgressPersist()
     clearChunkQueue()
     getGospelListenSpeechEngine().cancel()
+    getGrokResourceListenPlayer().releaseAll()
   }, [clearChunkQueue, flushReadAlongProgressPersist, stopActiveSession])
 
   return {
@@ -316,6 +374,7 @@ export function useProfileListenSession({
     listenButtonLabel,
     listenAriaPressed,
     restartCurrentChunkAtNewSpeed,
+    clearGrokFallback,
     restartReadAloudFromBeginning,
     startReadAloudFromHere,
     readAlongUnderlineOn,

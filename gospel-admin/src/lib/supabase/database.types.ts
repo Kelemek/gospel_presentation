@@ -143,6 +143,7 @@ export interface Database {
           role: UserRole
           display_name: string | null
           preferred_translation: string | null
+          grok_voice_enabled: boolean
           created_at: string
           updated_at: string
         }
@@ -151,6 +152,7 @@ export interface Database {
           role?: UserRole
           display_name?: string | null
           preferred_translation?: string | null
+          grok_voice_enabled?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -159,9 +161,11 @@ export interface Database {
           role?: UserRole
           display_name?: string | null
           preferred_translation?: string | null
+          grok_voice_enabled?: boolean
           created_at?: string
           updated_at?: string
         }
+        Relationships: []
       }
     }
     Views: {
