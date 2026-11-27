@@ -52,5 +52,8 @@
   "Bug fix: On iPhone, listening to Hebrews 11 now follows the reading from the start instead of waiting until partway through the chapter.",
   "Henry Scougal's The Life of God in the Soul of Man is now available in the Books library.",
   "While reading a resource, a back-to-top button appears after you scroll down about one screen.",
-  "Recite practice now uses updated speech transcription when you record a verse."
+  "Recite practice now uses updated speech transcription when you record a verse.",
+  "If an admin turns on Grok voice for your account, resource Listen can use that voice. If it cannot play, listening continues with this device's voice.",
+  "Resource Listen groups Grok voices and lets you preview one before you choose it.",
+  "You can preview this device's voice in the resource Listen voice menu."
 ]

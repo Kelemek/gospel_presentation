@@ -614,6 +614,9 @@ export default function AdminSettingsPage() {
                 <p className="text-slate-600 text-sm mt-2">
                   Open the user directory to invite people, assign roles, and control who can sign in to the admin area.
                 </p>
+                <p className="text-slate-600 text-sm mt-2">
+                  Grok voice for resource Listen is turned on per person in Manage users.
+                </p>
               </div>
               <div className="px-6 sm:px-8 py-6">
                 <Link

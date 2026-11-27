@@ -5,6 +5,7 @@ import type { GospelSection } from '@/lib/types'
 import {
   getGospelListenSpeechEngine,
   isGospelListenSpeechAvailable,
+  type GospelListenSpeechHandlers,
 } from '@/lib/gospelListenSpeechEngine'
 import {
   toMemorizeWebSpeechUtteranceRate,
@@ -35,6 +36,12 @@ import {
 } from '@/lib/profileListenReadAlongUi'
 import { getReadAlongBoundaryUiLagMs } from '@/lib/readAlongBoundaryUiLag'
 import { addPresentationReadCompleteSlug } from '@/lib/presentationReadCompleteStorage'
+import {
+  GROK_LISTEN_FALLBACK_NOTE,
+  shouldFallbackGrokListenToDevice,
+} from '@/lib/grokListenFallback'
+import { getGrokResourceListenPlayer } from '@/lib/grokResourceListenPlayer'
+import { profileListenUsesGrok } from '@/lib/profileListenPlaybackPort'
 import type { useProfileReadAlongSession } from '@/hooks/useProfileReadAlongSession'
 
 type ProfileReadAlongChunkQueueBindings = Pick<
@@ -63,6 +70,9 @@ export type UseProfileListenChunkQueueOptions = {
   prepareUtteranceStart: (rate: MemorizeListenSpeed) => void
   markUtteranceStarted: () => void
   resetPlaybackState: () => void
+  resourceListenVoiceRef?: MutableRefObject<string>
+  grokFallbackRef?: MutableRefObject<boolean>
+  onGrokFallback?: (message: string) => void
 }
 
 export function useProfileListenChunkQueue({
@@ -73,7 +83,15 @@ export function useProfileListenChunkQueue({
   prepareUtteranceStart,
   markUtteranceStarted,
   resetPlaybackState,
+  resourceListenVoiceRef,
+  grokFallbackRef,
+  onGrokFallback,
 }: UseProfileListenChunkQueueOptions) {
+  const deviceVoiceRef = useRef('device')
+  const voiceRef = resourceListenVoiceRef ?? deviceVoiceRef
+  const internalFallbackRef = useRef(false)
+  const fallbackRef = grokFallbackRef ?? internalFallbackRef
+  const grokFallbackNotedRef = useRef(false)
   const {
     profileSlugRef,
     readAlongScopeRef,
@@ -160,13 +178,17 @@ export function useProfileListenChunkQueue({
     ttsActiveRef.current = false
     ttsChunkIndexRef.current = 0
     resetPlaybackState()
+    getGrokResourceListenPlayer().releaseAll()
   }, [resetPlaybackState])
 
   const speakChunkInternal = useCallback(
     (chunkIndex: number) => {
-      if (typeof window === 'undefined' || !isGospelListenSpeechAvailable()) return
+      const useGrok = profileListenUsesGrok(voiceRef, fallbackRef)
+      if (typeof window === 'undefined') return
+      if (!useGrok && !isGospelListenSpeechAvailable()) return
 
-      const engine = getGospelListenSpeechEngine()
+      const deviceEngine = getGospelListenSpeechEngine()
+      const grokPlayer = getGrokResourceListenPlayer()
       const chunks = ttsChunksRef.current
       if (chunkIndex >= chunks.length) {
         const slug = profileSlugRef.current
@@ -190,7 +212,8 @@ export function useProfileListenChunkQueue({
             ? (() => {
                 const { chunks: chunkMeta } = listenPlainAndChunksForScope(
                   next.scope,
-                  listenTextOptionsRef.current
+                  listenTextOptionsRef.current,
+                  useGrok ? 'grok' : 'device'
                 )
                 return {
                   anchorId: next.anchorId,
@@ -263,7 +286,9 @@ export function useProfileListenChunkQueue({
       const utteranceRate = toMemorizeWebSpeechUtteranceRate(rate, isMemorizeIosWebHost())
       prepareUtteranceStart(rate)
 
-      engine.speak(speakChunk, utteranceRate, {
+      let fellBack = false
+      const speakingEngine = () => (fellBack || !useGrok ? deviceEngine : grokPlayer)
+      const handlers: GospelListenSpeechHandlers = {
         onstart: () => {
           markUtteranceStarted()
           const scope = readAlongScopeRef.current
@@ -297,7 +322,7 @@ export function useProfileListenChunkQueue({
         },
         onboundary: (ev) => {
           if (birthGen !== ttsCancelGenerationRef.current) return
-          if (engine.isPaused()) return
+          if (speakingEngine().isPaused()) return
           const scope = readAlongScopeRef.current
           const plainLen = readAlongPlainLenRef.current
           if (!scope || plainLen <= 0) return
@@ -308,7 +333,7 @@ export function useProfileListenChunkQueue({
           const applyBoundaryUi = () => {
             if (birthGen !== ttsCancelGenerationRef.current) return
             if (!ttsActiveRef.current) return
-            if (engine.isPaused()) return
+            if (speakingEngine().isPaused()) return
             if (ttsChunkIndexRef.current !== chunkIndex) return
 
             recordReadAlongProgress(
@@ -370,12 +395,44 @@ export function useProfileListenChunkQueue({
         },
         onerror: () => {
           if (birthGen !== ttsCancelGenerationRef.current) return
+          if (
+            !fellBack &&
+            useGrok &&
+            shouldFallbackGrokListenToDevice(
+              grokPlayer.consumeFailure(),
+              isGospelListenSpeechAvailable()
+            )
+          ) {
+            fellBack = true
+            fallbackRef.current = true
+            if (!grokFallbackNotedRef.current) {
+              grokFallbackNotedRef.current = true
+              onGrokFallback?.(GROK_LISTEN_FALLBACK_NOTE)
+            }
+            grokPlayer.releaseAll()
+            deviceEngine.speak(speakChunk, utteranceRate, handlers)
+            return
+          }
           ttsActiveRef.current = false
           ttsChunkIndexRef.current = 0
           rateAtStartRef.current = null
           clearChunkQueue()
+          grokPlayer.releaseAll()
         },
-      })
+      }
+
+      if (useGrok) {
+        grokPlayer.configure({
+          voiceId: voiceRef.current,
+          withTimestamps: readAlongUnderlineEnabledRef.current,
+        })
+        const nextSpeak = ttsChunksSpeakRef.current[chunkIndex + 1]
+        if (nextSpeak) grokPlayer.prefetch(nextSpeak)
+        grokPlayer.speak(speakChunk, rate, handlers)
+        return
+      }
+
+      deviceEngine.speak(speakChunk, utteranceRate, handlers)
     },
     [
       applyChunkQueueLayers,
@@ -397,7 +454,10 @@ export function useProfileListenChunkQueue({
       persistTimerRef,
       recordReadAlongProgress,
       scheduleReadAlongUi,
+      onGrokFallback,
       sections,
+      voiceRef,
+      fallbackRef,
     ]
   )
 
@@ -407,11 +467,17 @@ export function useProfileListenChunkQueue({
 
   const restartCurrentChunkAtNewSpeed = useCallback(() => {
     if (!ttsActiveRef.current) return
-    const engine = getGospelListenSpeechEngine()
-    if (!engine.isSpeaking() || engine.isPaused()) return
+    const grokPlayer = getGrokResourceListenPlayer()
+    const deviceEngine = getGospelListenSpeechEngine()
+    const speaking = grokPlayer.isSpeaking() || deviceEngine.isSpeaking()
+    const paused =
+      (grokPlayer.isSpeaking() && grokPlayer.isPaused()) ||
+      (deviceEngine.isSpeaking() && deviceEngine.isPaused())
+    if (!speaking || paused) return
     const i = ttsChunkIndexRef.current
     ttsCancelGenerationRef.current += 1
-    engine.cancel()
+    grokPlayer.cancel()
+    deviceEngine.cancel()
     resetPlaybackState()
     queueMicrotask(() => speakChunkInternalRef.current(i))
   }, [resetPlaybackState])

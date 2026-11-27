@@ -1528,5 +1528,20 @@
     "releasedAt": "2026-11-27",
     "committedAt": "2026-11-27T19:15:51.262Z",
     "message": "Recite practice now uses updated speech transcription when you record a verse."
+  },
+  {
+    "releasedAt": "2026-11-27",
+    "committedAt": "2026-11-27T22:52:17.515Z",
+    "message": "If an admin turns on Grok voice for your account, resource Listen can use that voice. If it cannot play, listening continues with this device's voice."
+  },
+  {
+    "releasedAt": "2026-11-27",
+    "committedAt": "2026-11-27T23:25:20.280Z",
+    "message": "Resource Listen groups Grok voices and lets you preview one before you choose it."
+  },
+  {
+    "releasedAt": "2026-11-27",
+    "committedAt": "2026-11-27T23:34:07.820Z",
+    "message": "You can preview this device's voice in the resource Listen voice menu."
   }
 ]

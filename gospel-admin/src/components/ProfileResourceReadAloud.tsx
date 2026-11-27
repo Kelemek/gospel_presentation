@@ -3,9 +3,16 @@
 import type { GospelSection } from '@/lib/types'
 import { MemorizeListenControlsDialog } from '@/components/MemorizeListenControlsDialog'
 import { useAlertModal } from '@/contexts/AlertModalContext'
+import { useGrokVoiceEnabled } from '@/hooks/useGrokVoiceEnabled'
 import { useProfileResourceReadAloud } from '@/hooks/useProfileResourceReadAloud'
 import { isProfileResourceListenControlAvailable } from '@/lib/profileListenAvailability'
-import { useCallback } from 'react'
+import type { GrokVoice } from '@/lib/grokTtsVoices'
+import {
+  DEVICE_LISTEN_VOICE_ID,
+  readResourceListenVoice,
+  writeResourceListenVoice,
+} from '@/lib/resourceListenVoiceStorage'
+import { useCallback, useLayoutEffect, useRef, useState } from 'react'
 
 const TRIGGER_CLASS =
   'p-2 rounded-md flex items-center justify-center min-h-[36px] min-w-[36px] bg-slate-200 hover:bg-slate-300 active:bg-slate-400 text-slate-800 dark:bg-slate-600 dark:hover:bg-slate-700 dark:active:bg-slate-800 dark:text-white transition-colors cursor-pointer'
@@ -20,12 +27,36 @@ interface ProfileResourceReadAloudProps {
 
 export default function ProfileResourceReadAloud({ sections, profileSlug }: ProfileResourceReadAloudProps) {
   const { showAlert, showConfirm } = useAlertModal()
+  const grokEnabled = useGrokVoiceEnabled(true)
+  const [grokVoices, setGrokVoices] = useState<GrokVoice[]>([])
+  const [chosenVoiceId, setChosenVoiceId] = useState<string | null>(null)
+  const voiceId = grokEnabled ? (chosenVoiceId ?? readResourceListenVoice()) : DEVICE_LISTEN_VOICE_ID
+  const voiceRef = useRef(voiceId)
   const onNothingToRead = useCallback(
     (message: string) => {
       showAlert(message)
     },
     [showAlert]
   )
+
+  useLayoutEffect(() => {
+    voiceRef.current = voiceId
+  }, [voiceId])
+
+  useLayoutEffect(() => {
+    if (!grokEnabled) return
+    let cancelled = false
+    void fetch('/api/read-aloud/voices')
+      .then(async (response) => {
+        if (!response.ok) return
+        const data = (await response.json()) as { voices?: GrokVoice[] }
+        if (!cancelled && Array.isArray(data.voices)) setGrokVoices(data.voices)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [grokEnabled])
 
   const {
     controlsOpen,
@@ -43,7 +74,29 @@ export default function ProfileResourceReadAloud({ sections, profileSlug }: Prof
     toggleReadAlongUnderline,
     readAlongUnderlineStyle,
     setReadAlongUnderlineStyle,
-  } = useProfileResourceReadAloud({ sections, profileSlug, onNothingToRead })
+    restartCurrentChunkAtNewSpeed,
+    clearGrokFallback,
+  } = useProfileResourceReadAloud({
+    sections,
+    profileSlug,
+    onNothingToRead,
+    resourceListenVoiceRef: voiceRef,
+    resourceListenVoiceId: voiceId,
+    onGrokFallback: onNothingToRead,
+  })
+
+  const onSelectResourceListenVoice = useCallback(
+    (nextVoiceId: string) => {
+      const known = grokVoices.some((voice) => voice.voiceId === nextVoiceId)
+      const stored = nextVoiceId === DEVICE_LISTEN_VOICE_ID || known ? nextVoiceId : DEVICE_LISTEN_VOICE_ID
+      clearGrokFallback()
+      voiceRef.current = stored
+      setChosenVoiceId(stored)
+      writeResourceListenVoice(stored)
+      restartCurrentChunkAtNewSpeed()
+    },
+    [clearGrokFallback, grokVoices, restartCurrentChunkAtNewSpeed]
+  )
 
   const confirmRestartReadAloudFromBeginning = useCallback(async () => {
     const ok = await showConfirm(
@@ -106,6 +159,15 @@ export default function ProfileResourceReadAloud({ sections, profileSlug }: Prof
         onReadAlongUnderlineStyle={setReadAlongUnderlineStyle}
         onStartFromHere={startReadAloudFromHere}
         onStartFromBeginning={confirmRestartReadAloudFromBeginning}
+        grokVoicePicker={
+          grokEnabled
+            ? {
+                voices: grokVoices,
+                value: voiceId,
+                onChange: onSelectResourceListenVoice,
+              }
+            : undefined
+        }
       />
     </>
   )

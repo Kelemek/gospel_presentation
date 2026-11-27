@@ -3,6 +3,8 @@
 import { useLayoutEffect, useRef, type MouseEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { MemorizeListenSpeedButton } from '@/components/MemorizeListenSpeedButton'
+import { ResourceListenGrokVoicePicker } from '@/components/ResourceListenGrokVoicePicker'
+import type { GrokVoice } from '@/lib/grokTtsVoices'
 import type { MemorizeListenSpeed } from '@/lib/memorizeListenSpeedStorage'
 import type { ProfileReadAlongUnderlineStyle } from '@/lib/profileReadAlongUnderlineStyleStorage'
 import { usePostHogModalOpen } from '@/hooks/usePostHogModalOpen'
@@ -30,6 +32,12 @@ interface MemorizeListenControlsDialogPropsBase {
   onStartFromHere?: () => void | Promise<void>
   /** Profile read-aloud only: clears saved resume position and restarts from the first section (parent may confirm first). */
   onStartFromBeginning?: () => void | Promise<void>
+  /** Resource Listen only, and only when this account has Grok voice. */
+  grokVoicePicker?: {
+    voices: GrokVoice[]
+    value: string
+    onChange: (voiceId: string) => void
+  }
   /**
    * `modal` — centered card + dimmed backdrop (memorize practice).
    * `floating` — narrow bar near the top, no backdrop; page stays scrollable and interactive (profile read-aloud).
@@ -134,6 +142,7 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
     onReadAlongUnderlineStyle,
     onStartFromHere,
     onStartFromBeginning,
+    grokVoicePicker,
     presentation = 'modal',
   } = props
   const repeatListenOn = isRepeatVariant(props) ? props.repeatListenOn : false
@@ -339,6 +348,13 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
               />
             </div>
           )}
+          {!showRepeatControls && grokVoicePicker ? (
+            <ResourceListenGrokVoicePicker
+              voices={grokVoicePicker.voices}
+              value={grokVoicePicker.value}
+              onChange={grokVoicePicker.onChange}
+            />
+          ) : null}
         </div>
       </div>
   )

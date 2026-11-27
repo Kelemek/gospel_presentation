@@ -10,12 +10,15 @@ import {
   subscribeGospelListenSpeechEngine,
 } from '@/lib/gospelListenSpeechEngine'
 import type { MemorizeListenSpeed } from '@/lib/memorizeListenSpeedStorage'
+import type { ListenEnginePort } from '@/lib/profileListenPlaybackPort'
 
 export type UseListenEnginePlayPauseOptions = {
   listenPlaybackRateRef: MutableRefObject<MemorizeListenSpeed>
   exclusiveOwner: GospelExclusiveListenOwner
   idleLabel: string
   activeLabel: string
+  /** Profile Listen passes this so Grok audio drives play and pause. Memorize omits it. */
+  port?: ListenEnginePort
 }
 
 /** Shared play/pause/resume UI state for profile and memorize device TTS. */
@@ -24,12 +27,15 @@ export function useListenEnginePlayPause({
   exclusiveOwner,
   idleLabel,
   activeLabel,
+  port,
 }: UseListenEnginePlayPauseOptions) {
   const engineSnapshot = useSyncExternalStore(
-    subscribeGospelListenSpeechEngine,
-    getGospelListenSpeechEngineSnapshot,
-    getGospelListenSpeechEngineServerSnapshot
+    port ? port.subscribe : subscribeGospelListenSpeechEngine,
+    port ? port.getSnapshot : getGospelListenSpeechEngineSnapshot,
+    port ? port.getServerSnapshot : getGospelListenSpeechEngineServerSnapshot
   )
+  const speechAvailable = port ? port.isAvailable : isGospelListenSpeechAvailable
+  const getEngine = port ? port.getEngine : getGospelListenSpeechEngine
 
   const rateAtStartRef = useRef<MemorizeListenSpeed | null>(null)
   const [userPaused, setUserPaused] = useState(false)
@@ -59,7 +65,7 @@ export function useListenEnginePlayPause({
       onSpeakingButNotOwned?: () => boolean
       beforeRestartOnRateChange?: () => void
     }): boolean => {
-      const engine = getGospelListenSpeechEngine()
+      const engine = getEngine()
       if (!engine.isSpeaking()) return false
 
       if (options.onSpeakingButNotOwned?.()) return true
@@ -86,12 +92,12 @@ export function useListenEnginePlayPause({
       }
       return true
     },
-    [exclusiveOwner, listenPlaybackRateRef]
+    [exclusiveOwner, getEngine, listenPlaybackRateRef]
   )
 
   const buttonLabel = useMemo(() => {
     void engineSnapshot.revision
-    if (typeof window === 'undefined' || !isGospelListenSpeechAvailable()) return idleLabel
+    if (typeof window === 'undefined' || !speechAvailable()) return idleLabel
     if (userPaused) return idleLabel
     if (postResume && engineSnapshot.speaking) return activeLabel
     if (engineSnapshot.speaking && !engineSnapshot.paused) return activeLabel
@@ -103,16 +109,17 @@ export function useListenEnginePlayPause({
     engineSnapshot.speaking,
     idleLabel,
     postResume,
+    speechAvailable,
     userPaused,
   ])
 
   const ariaPressed = useMemo(() => {
     void engineSnapshot.revision
-    if (typeof window === 'undefined' || !isGospelListenSpeechAvailable()) return false
+    if (typeof window === 'undefined' || !speechAvailable()) return false
     if (userPaused) return false
     if (postResume && engineSnapshot.speaking) return true
     return engineSnapshot.speaking && !engineSnapshot.paused
-  }, [engineSnapshot.paused, engineSnapshot.revision, engineSnapshot.speaking, postResume, userPaused])
+  }, [engineSnapshot.paused, engineSnapshot.revision, engineSnapshot.speaking, postResume, speechAvailable, userPaused])
 
   return {
     rateAtStartRef,

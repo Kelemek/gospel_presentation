@@ -117,6 +117,8 @@ If these are unset, PostHog does not initialize (safe for CI and local test runs
 
 **Memorization Recite (xAI speech-to-text):** set `XAI_API_KEY` in Vercel and `gospel-admin/.env.local` when using **Recite** practice mode (`POST /api/memorization/recite/transcribe`, which calls `https://api.x.ai/v1/stt`). Optional for environments that do not need transcription. Keyterm hints are the spoken book name, the reference, and a fixed word list. Verse text is not sent.
 
+**Resource Listen (xAI text-to-speech):** the same `XAI_API_KEY` serves Grok speech for resource profiles. `POST /api/read-aloud/tts` calls `https://api.x.ai/v1/tts`. `GET /api/read-aloud/voices` calls `https://api.x.ai/v1/tts/voices` and keeps that list in memory for 24 hours, with a static fallback list if the request fails. Both routes require a signed-in user whose `user_profiles.grok_voice_enabled` is true. Admins set that flag with `PATCH /api/admin/users/[id]/grok-voice`. The key is not sent to the browser. Apply `supabase/migrations/20261127223000_user_profiles_grok_voice.sql` so the column and the update trigger exist. The trigger rejects changes to `role` and `grok_voice_enabled` unless the caller is `service_role` or an admin.
+
 Client init uses Next.js [`instrumentation-client.ts`](../gospel-admin/instrumentation-client.ts) (supported since Next.js 15.3; not `instrumentation.ts`, which is server-only). [`PostHogProvider`](../gospel-admin/src/components/PostHogProvider.tsx) calls the same idempotent init on mount as a fallback.
 
 ### Custom events: modal opens

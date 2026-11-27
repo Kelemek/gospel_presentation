@@ -4,6 +4,10 @@ import {
   visibleListenRawText,
 } from '@/lib/profileResourceListenText'
 import {
+  splitListenRawIntoGrokChunksWithOffsets,
+  type ProfileListenChunkMode,
+} from '@/lib/grokListenChunks'
+import {
   splitListenRawIntoTtsChunksWithOffsets,
   type TtsTextChunk,
 } from '@/lib/splitTextForTtsChunks'
@@ -14,10 +18,17 @@ export const READ_ALONG_AFTER_SENTENCE_GAP_MS = 55
 /** After a listen **segment** (block boundary), brief delay before the next utterance. */
 export const READ_ALONG_AFTER_SEGMENT_GAP_MS = 95
 
-export function listenPlainAndChunksForScope(scope: HTMLElement, listenTextOptions: ProfileListenTextOptions) {
+export function listenPlainAndChunksForScope(
+  scope: HTMLElement,
+  listenTextOptions: ProfileListenTextOptions,
+  mode: ProfileListenChunkMode = 'device'
+) {
   const raw = visibleListenRawText(scope, listenTextOptions)
   const text = listenCollapsedPlainFromRaw(raw)
-  const chunks = splitListenRawIntoTtsChunksWithOffsets(raw)
+  const chunks =
+    mode === 'grok'
+      ? splitListenRawIntoGrokChunksWithOffsets(raw)
+      : splitListenRawIntoTtsChunksWithOffsets(raw)
   return { text, chunks }
 }
 
