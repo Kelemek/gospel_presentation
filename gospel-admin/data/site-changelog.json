@@ -1538,5 +1538,10 @@
     "releasedAt": "2026-11-27",
     "committedAt": "2026-11-27T23:25:20.280Z",
     "message": "Resource Listen groups Grok voices and lets you preview one before you choose it."
+  },
+  {
+    "releasedAt": "2026-11-27",
+    "committedAt": "2026-11-27T23:34:07.820Z",
+    "message": "You can preview this device's voice in the resource Listen voice menu."
   }
 ]

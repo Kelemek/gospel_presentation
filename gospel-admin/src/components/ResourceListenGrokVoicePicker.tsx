@@ -1,7 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { getGospelListenSpeechEngine } from '@/lib/gospelListenSpeechEngine'
 import { groupGrokVoices, type GrokVoice } from '@/lib/grokTtsVoices'
+import { isMemorizeIosWebHost } from '@/lib/memorizationViewportPlatform'
+import { toMemorizeWebSpeechUtteranceRate } from '@/lib/memorizeListenSpeedStorage'
 import { DEVICE_LISTEN_VOICE_ID } from '@/lib/resourceListenVoiceStorage'
 
 export const GROK_VOICE_PREVIEW_TEXT = 'The Lord is my shepherd; I shall not want.'
@@ -27,6 +30,8 @@ export interface ResourceListenGrokVoicePickerProps {
   value: string
   onChange: (voiceId: string) => void
 }
+
+const DEVICE_PREVIEW_UNAVAILABLE = 'This device cannot play a preview right now.'
 
 function previewErrorMessage(status: number): string {
   if (status === 429) return 'Preview is busy. Try again in a moment.'
@@ -56,6 +61,7 @@ export function ResourceListenGrokVoicePicker({
   const rootRef = useRef<HTMLDivElement>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const urlRef = useRef<string | null>(null)
+  const devicePreviewRef = useRef(false)
   const generationRef = useRef(0)
   const [open, setOpen] = useState(false)
   const [playingId, setPlayingId] = useState<string | null>(null)
@@ -77,11 +83,18 @@ export function ResourceListenGrokVoicePicker({
     }
   }, [])
 
+  const stopDevicePreview = useCallback(() => {
+    if (!devicePreviewRef.current) return
+    devicePreviewRef.current = false
+    getGospelListenSpeechEngine().cancel()
+  }, [])
+
   const stopPreview = useCallback(() => {
     generationRef.current += 1
     releaseAudio()
+    stopDevicePreview()
     setPlayingId(null)
-  }, [releaseAudio])
+  }, [releaseAudio, stopDevicePreview])
 
   useEffect(() => {
     return () => {
@@ -91,6 +104,10 @@ export function ResourceListenGrokVoicePicker({
       if (urlRef.current) {
         revokeUrl(urlRef.current)
         urlRef.current = null
+      }
+      if (devicePreviewRef.current) {
+        devicePreviewRef.current = false
+        getGospelListenSpeechEngine().cancel()
       }
     }
   }, [])
@@ -129,6 +146,7 @@ export function ResourceListenGrokVoicePicker({
     const generation = generationRef.current + 1
     generationRef.current = generation
     releaseAudio()
+    stopDevicePreview()
     setPlayingId(null)
     setPreviewError(null)
     try {
@@ -178,6 +196,46 @@ export function ResourceListenGrokVoicePicker({
     }
   }
 
+  const previewDevice = () => {
+    if (playingId === DEVICE_LISTEN_VOICE_ID) {
+      stopPreview()
+      return
+    }
+    const generation = generationRef.current + 1
+    generationRef.current = generation
+    releaseAudio()
+    stopDevicePreview()
+    setPlayingId(null)
+    setPreviewError(null)
+    const engine = getGospelListenSpeechEngine()
+    if (!engine.isAvailable()) {
+      setPreviewError(DEVICE_PREVIEW_UNAVAILABLE)
+      return
+    }
+    devicePreviewRef.current = true
+    setPlayingId(DEVICE_LISTEN_VOICE_ID)
+    try {
+      engine.speak(GROK_VOICE_PREVIEW_TEXT, toMemorizeWebSpeechUtteranceRate(1, isMemorizeIosWebHost()), {
+        onend: () => {
+          if (generation !== generationRef.current) return
+          devicePreviewRef.current = false
+          setPlayingId(null)
+        },
+        onerror: () => {
+          if (generation !== generationRef.current) return
+          devicePreviewRef.current = false
+          setPlayingId(null)
+          setPreviewError(previewErrorMessage(502))
+        },
+      })
+    } catch {
+      if (generation !== generationRef.current) return
+      devicePreviewRef.current = false
+      setPlayingId(null)
+      setPreviewError(previewErrorMessage(502))
+    }
+  }
+
   const renderVoice = (voice: GrokVoice) => {
     const selectedVoice = voice.voiceId === value
     const playing = playingId === voice.voiceId
@@ -193,17 +251,14 @@ export function ResourceListenGrokVoicePicker({
         >
           <span className="truncate">{voice.name}</span>
         </button>
-        <button
-          type="button"
-          data-testid={`resource-listen-voice-preview-${voice.voiceId}`}
-          className={previewButtonClass}
-          aria-label={playing ? `Stop preview of ${voice.name}` : `Preview ${voice.name}`}
-          onClick={() => {
+        <PreviewButton
+          voiceId={voice.voiceId}
+          label={voice.name}
+          playing={playing}
+          onPreview={() => {
             void preview(voice.voiceId)
           }}
-        >
-          {playing ? <StopGlyph /> : <PlayGlyph />}
-        </button>
+        />
       </div>
     )
   }
@@ -235,16 +290,24 @@ export function ResourceListenGrokVoicePicker({
           aria-label="Listen voice"
           className="flex max-h-72 flex-col gap-0.5 overflow-y-auto rounded-lg border border-slate-300 bg-white p-1 dark:border-slate-600 dark:bg-slate-800"
         >
-          <button
-            type="button"
-            role="option"
-            aria-selected={value === DEVICE_LISTEN_VOICE_ID}
-            data-testid="resource-listen-voice-option-device"
-            className={`${optionButtonClass} ${value === DEVICE_LISTEN_VOICE_ID ? selectedOptionClass : idleOptionClass}`}
-            onClick={() => choose(DEVICE_LISTEN_VOICE_ID)}
-          >
-            This device
-          </button>
+          <div className="flex items-stretch gap-1">
+            <button
+              type="button"
+              role="option"
+              aria-selected={value === DEVICE_LISTEN_VOICE_ID}
+              data-testid="resource-listen-voice-option-device"
+              className={`${optionButtonClass} ${value === DEVICE_LISTEN_VOICE_ID ? selectedOptionClass : idleOptionClass}`}
+              onClick={() => choose(DEVICE_LISTEN_VOICE_ID)}
+            >
+              This device
+            </button>
+            <PreviewButton
+              voiceId={DEVICE_LISTEN_VOICE_ID}
+              label="This device"
+              playing={playingId === DEVICE_LISTEN_VOICE_ID}
+              onPreview={previewDevice}
+            />
+          </div>
           {unmatched ? renderVoice(unmatched) : null}
           <VoiceSection title="Female" voices={groups.female} renderVoice={renderVoice} />
           <VoiceSection title="Male" voices={groups.male} renderVoice={renderVoice} />
@@ -277,6 +340,30 @@ function VoiceSection({
       </p>
       {voices.map(renderVoice)}
     </div>
+  )
+}
+
+function PreviewButton({
+  voiceId,
+  label,
+  playing,
+  onPreview,
+}: {
+  voiceId: string
+  label: string
+  playing: boolean
+  onPreview: () => void
+}) {
+  return (
+    <button
+      type="button"
+      data-testid={`resource-listen-voice-preview-${voiceId}`}
+      className={previewButtonClass}
+      aria-label={playing ? `Stop preview of ${label}` : `Preview ${label}`}
+      onClick={onPreview}
+    >
+      {playing ? <StopGlyph /> : <PlayGlyph />}
+    </button>
   )
 }
 
