@@ -50,8 +50,8 @@ describe('GET /api/read-aloud/voices', () => {
     expect(first.status).toBe(200)
     const body = await second.json()
     expect(body.voices).toEqual([
-      { voiceId: 'eve', name: 'Eve' },
-      { voiceId: 'ara', name: 'Ara' },
+      { voiceId: 'eve', name: 'Eve', gender: 'female' },
+      { voiceId: 'ara', name: 'Ara', gender: 'female' },
     ])
     expect(JSON.stringify(body)).not.toContain('super-secret-key')
     expect(global.fetch).toHaveBeenCalledTimes(1)

@@ -1,9 +1,49 @@
+export type GrokVoiceGender = 'male' | 'female'
+
 export type GrokVoice = {
   voiceId: string
   name: string
+  gender: GrokVoiceGender | null
 }
 
-export const GROK_TTS_FALLBACK_VOICES: readonly GrokVoice[] = [
+const FEMALE_VOICE_IDS = [
+  'ara',
+  'aurora',
+  'carina',
+  'celeste',
+  'eve',
+  'iris',
+  'liora',
+  'luna',
+  'ursa',
+] as const
+
+const MALE_VOICE_IDS = [
+  'altair',
+  'atlas',
+  'castor',
+  'cosmo',
+  'helios',
+  'helix',
+  'kepler',
+  'leo',
+  'lumen',
+  'lux',
+  'naksh',
+  'orion',
+  'perseus',
+  'rex',
+  'rigel',
+  'sal',
+  'sirius',
+  'zagan',
+  'zenith',
+] as const
+
+const FEMALE_VOICE_ID_SET = new Set<string>(FEMALE_VOICE_IDS)
+const MALE_VOICE_ID_SET = new Set<string>(MALE_VOICE_IDS)
+
+const FALLBACK_VOICE_ROWS: readonly { voiceId: string; name: string }[] = [
   { voiceId: 'carina', name: 'Carina' },
   { voiceId: 'zagan', name: 'Zagan' },
   { voiceId: 'helix', name: 'Helix' },
@@ -34,6 +74,53 @@ export const GROK_TTS_FALLBACK_VOICES: readonly GrokVoice[] = [
   { voiceId: 'sal', name: 'Sal' },
 ]
 
+export function genderForGrokVoiceId(voiceId: string): GrokVoiceGender | null {
+  const id = voiceId.toLowerCase()
+  if (FEMALE_VOICE_ID_SET.has(id)) return 'female'
+  if (MALE_VOICE_ID_SET.has(id)) return 'male'
+  return null
+}
+
+function genderFromPayload(value: unknown, voiceId: string): GrokVoiceGender | null {
+  if (value === 'female' || value === 'male') return value
+  return genderForGrokVoiceId(voiceId)
+}
+
+export const GROK_TTS_FALLBACK_VOICES: readonly GrokVoice[] = FALLBACK_VOICE_ROWS.map((voice) => ({
+  ...voice,
+  gender: genderForGrokVoiceId(voice.voiceId),
+}))
+
+export function groupGrokVoices(voices: readonly GrokVoice[]): {
+  female: GrokVoice[]
+  male: GrokVoice[]
+  other: GrokVoice[]
+} {
+  const female: GrokVoice[] = []
+  const male: GrokVoice[] = []
+  const other: GrokVoice[] = []
+  for (const voice of voices) {
+    const gender = voice.gender === 'female' || voice.gender === 'male' ? voice.gender : null
+    switch (gender) {
+      case 'female':
+        female.push(voice)
+        break
+      case 'male':
+        male.push(voice)
+        break
+      case null:
+        other.push(voice)
+        break
+      default: {
+        const unexpected: never = gender
+        void unexpected
+        break
+      }
+    }
+  }
+  return { female, male, other }
+}
+
 const VOICE_ID = /^[a-z0-9_-]{1,64}$/i
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000
 
@@ -52,11 +139,13 @@ export function parseGrokVoiceList(payload: unknown): GrokVoice[] | null {
     if (!row || typeof row !== 'object') continue
     const voiceId = (row as { voice_id?: unknown }).voice_id
     const name = (row as { name?: unknown }).name
+    const gender = (row as { gender?: unknown }).gender
     if (typeof voiceId !== 'string' || !isGrokVoiceId(voiceId)) continue
     const id = voiceId.toLowerCase()
     out.push({
       voiceId: id,
       name: typeof name === 'string' && name.trim() ? name.trim() : id,
+      gender: genderFromPayload(gender, id),
     })
   }
   return out.length > 0 ? out : null

@@ -247,7 +247,10 @@ describe('MemorizeListenControlsDialog', () => {
 
   it('shows a Grok voice menu only when resource Listen passes one', () => {
     const picker = {
-      voices: [{ voiceId: 'eve', name: 'Eve' }],
+      voices: [
+        { voiceId: 'eve', name: 'Eve', gender: 'female' as const },
+        { voiceId: 'leo', name: 'Leo', gender: 'male' as const },
+      ],
       value: 'device',
       onChange: jest.fn(),
     }
@@ -270,13 +273,18 @@ describe('MemorizeListenControlsDialog', () => {
         listenPlaybackRate={1}
         onSelectSpeed={jest.fn()}
         grokVoicePicker={{
-          voices: [{ voiceId: 'eve', name: 'Eve' }],
+          voices: picker.voices,
           value: 'device',
           onChange,
         }}
       />
     )
-    fireEvent.change(screen.getByTestId('resource-listen-voice'), { target: { value: 'eve' } })
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('resource-listen-voice'))
+    expect(screen.getByRole('option', { name: 'This device' })).toBeInTheDocument()
+    expect(screen.getByText('Female')).toBeInTheDocument()
+    expect(screen.getByText('Male')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('resource-listen-voice-option-eve'))
     expect(onChange).toHaveBeenCalledWith('eve')
   })
 })
