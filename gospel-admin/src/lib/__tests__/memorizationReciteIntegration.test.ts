@@ -4,7 +4,7 @@ import {
   computeReciteModeVisible,
   isReciteSupportedScriptureReference,
 } from '@/lib/memorizationReciteIntegration'
-import * as whisperSupport from '@/lib/isWhisperReciteSupported'
+import * as reciteRecording from '@/lib/isReciteRecordingSupported'
 
 describe('isReciteSupportedScriptureReference', () => {
   it('allows single verses and ranges up to the limit', () => {
@@ -24,13 +24,13 @@ describe('computeReciteModeVisible', () => {
     jest.restoreAllMocks()
   })
 
-  it('returns false when the browser cannot record for Whisper', () => {
-    jest.spyOn(whisperSupport, 'isWhisperReciteSupported').mockReturnValue(false)
+  it('returns false when the browser cannot record', () => {
+    jest.spyOn(reciteRecording, 'isReciteRecordingSupported').mockReturnValue(false)
     expect(computeReciteModeVisible({ isBibleBooks: false })).toBe(false)
   })
 
   it('returns true when browser support passes', () => {
-    jest.spyOn(whisperSupport, 'isWhisperReciteSupported').mockReturnValue(true)
+    jest.spyOn(reciteRecording, 'isReciteRecordingSupported').mockReturnValue(true)
     expect(computeReciteModeVisible({ isBibleBooks: false })).toBe(true)
     expect(computeReciteModeVisible({ isBibleBooks: true })).toBe(true)
   })
@@ -41,8 +41,8 @@ describe('computeReciteModeAvailable', () => {
     jest.restoreAllMocks()
   })
 
-  it('returns false when the browser cannot record for Whisper', () => {
-    jest.spyOn(whisperSupport, 'isWhisperReciteSupported').mockReturnValue(false)
+  it('returns false when the browser cannot record', () => {
+    jest.spyOn(reciteRecording, 'isReciteRecordingSupported').mockReturnValue(false)
     expect(
       computeReciteModeAvailable({
         isBibleBooks: false,
@@ -52,7 +52,7 @@ describe('computeReciteModeAvailable', () => {
   })
 
   it('returns true when reference and browser support pass', () => {
-    jest.spyOn(whisperSupport, 'isWhisperReciteSupported').mockReturnValue(true)
+    jest.spyOn(reciteRecording, 'isReciteRecordingSupported').mockReturnValue(true)
     expect(
       computeReciteModeAvailable({
         isBibleBooks: false,
@@ -62,7 +62,7 @@ describe('computeReciteModeAvailable', () => {
   })
 
   it('returns true for bible books items without a verse reference', () => {
-    jest.spyOn(whisperSupport, 'isWhisperReciteSupported').mockReturnValue(true)
+    jest.spyOn(reciteRecording, 'isReciteRecordingSupported').mockReturnValue(true)
     expect(
       computeReciteModeAvailable({
         isBibleBooks: true,
@@ -72,7 +72,7 @@ describe('computeReciteModeAvailable', () => {
   })
 
   it('returns false for references over the verse limit', () => {
-    jest.spyOn(whisperSupport, 'isWhisperReciteSupported').mockReturnValue(true)
+    jest.spyOn(reciteRecording, 'isReciteRecordingSupported').mockReturnValue(true)
     expect(
       computeReciteModeAvailable({
         isBibleBooks: false,

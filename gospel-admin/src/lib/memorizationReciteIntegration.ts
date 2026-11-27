@@ -1,4 +1,4 @@
-import { isWhisperReciteSupported } from '@/lib/isWhisperReciteSupported'
+import { isReciteRecordingSupported } from '@/lib/isReciteRecordingSupported'
 import { scriptureReferenceVerseCount } from '@/lib/parse-scripture-reference'
 import type { MemorizationPracticeMode } from '@/lib/verseMemorizationStorage'
 
@@ -21,7 +21,7 @@ export function isReciteSupportedScriptureReference(reference: string): boolean 
 
 export function computeReciteModeVisible(options: { isBibleBooks: boolean }): boolean {
   void options
-  return isWhisperReciteSupported()
+  return isReciteRecordingSupported()
 }
 
 export function computeReciteModeAvailable(options: {

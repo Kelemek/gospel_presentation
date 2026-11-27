@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
+import { buildReciteSttKeyterms } from '@/lib/memorizationPracticeUtils'
 
-const WHISPER_MODEL = 'whisper-1'
+const XAI_STT_URL = 'https://api.x.ai/v1/stt'
 const MAX_BYTES = 10 * 1024 * 1024
 const RECITE_MAX_AUDIO_SECONDS = 300
 const BYTES_PER_SECOND_ESTIMATE = 8000
@@ -21,19 +22,31 @@ function resolveBilledAudioSeconds(clientSeconds: number, byteSize: number): num
   return Math.min(RECITE_MAX_AUDIO_SECONDS, billable)
 }
 
+function upstreamErrorMessage(payload: unknown): string | undefined {
+  if (!payload || typeof payload !== 'object') return undefined
+  const record = payload as { error?: unknown; message?: unknown }
+  if (typeof record.message === 'string' && record.message.trim()) return record.message.trim()
+  if (typeof record.error === 'string' && record.error.trim()) return record.error.trim()
+  if (record.error && typeof record.error === 'object') {
+    const message = (record.error as { message?: unknown }).message
+    if (typeof message === 'string' && message.trim()) return message.trim()
+  }
+  return undefined
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const openaiKey = process.env.OPENAI_API_KEY
-    if (!openaiKey) {
+    const xaiKey = process.env.XAI_API_KEY?.trim()
+    if (!xaiKey) {
       return NextResponse.json(
-        { error: 'OpenAI transcription is not configured on the server.' },
+        { error: 'Speech transcription is not configured on the server.' },
         { status: 503 }
       )
     }
 
     const form = await request.formData()
     const audio = form.get('audio')
-    const prompt = String(form.get('prompt') ?? '').trim()
+    const reference = String(form.get('reference') ?? '')
     const audioSecondsRaw = Number(form.get('audio_seconds'))
     const clientAudioSeconds = Number.isFinite(audioSecondsRaw) ? Math.max(0, audioSecondsRaw) : 0
 
@@ -49,32 +62,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No audio recorded. Try again.' }, { status: 400 })
     }
 
-    const openaiForm = new FormData()
-    openaiForm.append('file', audio, audio.name || 'recording.webm')
-    openaiForm.append('model', WHISPER_MODEL)
-    openaiForm.append('language', 'en')
-    openaiForm.append('temperature', '0')
-    if (prompt) {
-      openaiForm.append('prompt', prompt.slice(0, 800))
+    const keyterms = buildReciteSttKeyterms(reference)
+    const upstream = new FormData()
+    upstream.append('language', 'en')
+    upstream.append('format', 'false')
+    for (const term of keyterms) {
+      upstream.append('keyterm', term)
     }
+    upstream.append('file', audio, audio.name || 'recording.webm')
 
-    const openaiRes = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    const xaiRes = await fetch(XAI_STT_URL, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${openaiKey}` },
-      body: openaiForm,
+      headers: { Authorization: `Bearer ${xaiKey}` },
+      body: upstream,
     })
 
-    const openaiPayload = (await openaiRes.json()) as { text?: string; error?: { message?: string } }
-    if (!openaiRes.ok) {
-      logger.error('OpenAI transcription failed:', openaiPayload)
+    const raw = await xaiRes.text()
+    let payload: { text?: string } = {}
+    if (raw) {
+      try {
+        payload = JSON.parse(raw) as { text?: string }
+      } catch {
+        logger.error('xAI transcription returned non-JSON', { status: xaiRes.status })
+        return NextResponse.json({ error: 'Transcription failed' }, { status: 502 })
+      }
+    }
+
+    if (!xaiRes.ok) {
+      logger.error('xAI transcription failed', { status: xaiRes.status, payload })
       return NextResponse.json(
-        { error: 'Transcription failed', details: openaiPayload?.error?.message },
+        { error: 'Transcription failed', details: upstreamErrorMessage(payload) },
         { status: 502 }
       )
     }
 
-    const transcript = String(openaiPayload?.text ?? '').trim()
-    if (!transcript) {
+    const text = String(payload.text ?? '').trim()
+    if (!text) {
       return NextResponse.json({ error: 'No speech detected in the recording.' }, { status: 422 })
     }
 
@@ -84,7 +107,7 @@ export async function POST(request: NextRequest) {
       audioBytes: audio.size,
     })
 
-    return NextResponse.json({ transcript })
+    return NextResponse.json({ text })
   } catch (error) {
     logger.error('Recite transcribe error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

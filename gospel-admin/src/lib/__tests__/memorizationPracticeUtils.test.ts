@@ -9,7 +9,10 @@ import {
   firstLetterGlyphOfWord,
   firstLetterOfWord,
   formatMemorizationTokensPlain,
-  formatMemorizationReciteWhisperPrompt,
+  buildReciteSttKeyterms,
+  RECITE_STT_CURATED_KEYTERMS,
+  RECITE_STT_KEYTERM_MAX_CHARS,
+  RECITE_STT_KEYTERM_MAX_COUNT,
   generateMemorizationSessionSeed,
   getTypableTokenIndices,
   getWordsForMemorization,
@@ -325,16 +328,66 @@ describe('memorizationPracticeUtils', () => {
   })
 })
 
-describe('formatMemorizationReciteWhisperPrompt', () => {
-  it('includes spoken reference and uncommon vocabulary hints without the full verse', () => {
-    const tokens = buildMemorizationTokens(
-      'A Song of Ascents. Of David. O LORD, my heart is not lifted up;',
-      'Psalm 131:1'
-    )
-    const prompt = formatMemorizationReciteWhisperPrompt(tokens, 'Psalm 131:1', 'esv')
-    expect(prompt).toContain('Contemporary English Bible recitation.')
-    expect(prompt).toContain('Psalm 131 1')
-    expect(prompt).toContain('Ascents')
-    expect(prompt).not.toContain('lifted up')
+describe('buildReciteSttKeyterms', () => {
+  const curatedLower = new Set(RECITE_STT_CURATED_KEYTERMS.map((term) => term.toLowerCase()))
+
+  it('stays within the xAI keyterm limits', () => {
+    expect(RECITE_STT_KEYTERM_MAX_COUNT).toBe(100)
+    expect(RECITE_STT_KEYTERM_MAX_CHARS).toBe(50)
+    expect(RECITE_STT_CURATED_KEYTERMS.length).toBeLessThanOrEqual(100)
+    const seen = new Set<string>()
+    for (const term of RECITE_STT_CURATED_KEYTERMS) {
+      expect(term.length).toBeGreaterThan(0)
+      expect(term.length).toBeLessThanOrEqual(RECITE_STT_KEYTERM_MAX_CHARS)
+      expect(seen.has(term.toLowerCase())).toBe(false)
+      seen.add(term.toLowerCase())
+    }
+
+    for (const reference of ['', 'Psalm 131:1', '1 Corinthians 13:4-7', 'John 3:16']) {
+      const terms = buildReciteSttKeyterms(reference)
+      expect(terms.length).toBeLessThanOrEqual(RECITE_STT_KEYTERM_MAX_COUNT)
+      for (const term of terms) {
+        expect(term.length).toBeLessThanOrEqual(RECITE_STT_KEYTERM_MAX_CHARS)
+      }
+    }
+  })
+
+  it('uses canon reference metadata and never verse words', () => {
+    const psalm = buildReciteSttKeyterms('Psalm 131:1')
+    expect(psalm.slice(0, 3)).toEqual(['Psalms', 'Psalm', 'Psalms 131 1'])
+    expect(psalm).not.toContain('lifted')
+    expect(psalm).not.toContain('heart')
+    expect(psalm.join(' ')).not.toContain('my heart is not lifted up')
+
+    const john = buildReciteSttKeyterms('John 3:16')
+    expect(john.slice(0, 2)).toEqual(['John', 'John 3 16'])
+    expect(john).not.toContain('loved')
+    expect(john).not.toContain('world')
+    expect(john.join(' ')).not.toContain('For God so loved the world')
+
+    const corinthians = buildReciteSttKeyterms('1 Corinthians 13:4-7')
+    expect(corinthians.slice(0, 3)).toEqual([
+      '1 Corinthians',
+      'First Corinthians',
+      '1 Corinthians 13 4 7',
+    ])
+  })
+
+  it('drops free text that is not a canon reference', () => {
+    const smuggled = buildReciteSttKeyterms('For God so loved the world 3:16')
+    expect(smuggled).toEqual([...RECITE_STT_CURATED_KEYTERMS])
+    expect(smuggled.join(' ')).not.toMatch(/loved|world/i)
+
+    expect(buildReciteSttKeyterms('')).toEqual([...RECITE_STT_CURATED_KEYTERMS])
+    expect(buildReciteSttKeyterms('Bible Books (OT)')).toEqual([...RECITE_STT_CURATED_KEYTERMS])
+  })
+
+  it('adds only curated terms after the reference hints', () => {
+    const terms = buildReciteSttKeyterms('John 3:16')
+    const referenceHints = terms.filter((term) => !curatedLower.has(term.toLowerCase()))
+    expect(referenceHints).toEqual(['John', 'John 3 16'])
+    expect(terms.filter((term) => curatedLower.has(term.toLowerCase()))).toEqual([
+      ...RECITE_STT_CURATED_KEYTERMS,
+    ])
   })
 })

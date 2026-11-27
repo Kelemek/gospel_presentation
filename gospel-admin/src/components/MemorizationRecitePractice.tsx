@@ -9,10 +9,8 @@ import {
   useRef,
   useState,
 } from 'react'
-import type { BibleTranslation } from '@/lib/bible-translations'
 import {
   MEMORIZATION_FULL_HIDE_ROUND,
-  formatMemorizationReciteWhisperPrompt,
   hiddenFractionForRound,
   type MemorizationToken,
 } from '@/lib/memorizationPracticeUtils'
@@ -44,7 +42,6 @@ type MemorizationRecitePracticeProps = {
   tokens: MemorizationToken[]
   typableIndices: number[]
   reference: string
-  translation: BibleTranslation
   itemId: string
   roundIndex: number
   awaitingRoundAdvance?: boolean
@@ -84,7 +81,6 @@ export const MemorizationRecitePractice = forwardRef<
     tokens,
     typableIndices,
     reference,
-    translation,
     itemId,
     roundIndex,
     awaitingRoundAdvance = false,
@@ -300,14 +296,13 @@ export const MemorizationRecitePractice = forwardRef<
     setError('')
     try {
       const alignmentReference = isBibleBooks ? '' : reference
-      const prompt = formatMemorizationReciteWhisperPrompt(tokens, alignmentReference, translation)
       const captured = await recite.stopRecordingCapture()
       if (!isStopCurrent(stopGeneration)) return
 
       setPhase('transcribing')
       const transcriptText = await recite.transcribeCapturedRecording({
         memorizedItemId: itemId,
-        prompt,
+        reference: alignmentReference,
         blob: captured.blob,
         audioSeconds: captured.audioSeconds,
       })
@@ -328,7 +323,6 @@ export const MemorizationRecitePractice = forwardRef<
     isBibleBooks,
     reference,
     tokens,
-    translation,
     recite,
     isStopCurrent,
     itemId,

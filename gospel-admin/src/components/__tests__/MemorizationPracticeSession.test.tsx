@@ -35,8 +35,8 @@ jest.mock('@/lib/memorizationViewportPlatform', () => ({
   isMemorizeIosWebHost: jest.fn(() => false),
 }))
 
-jest.mock('@/lib/isWhisperReciteSupported', () => ({
-  isWhisperReciteSupported: jest.fn(() => true),
+jest.mock('@/lib/isReciteRecordingSupported', () => ({
+  isReciteRecordingSupported: jest.fn(() => true),
 }))
 
 const mockReciteStartRecording = jest.fn()

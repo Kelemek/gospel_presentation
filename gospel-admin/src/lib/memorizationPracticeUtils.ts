@@ -1,5 +1,6 @@
-import { parseReference, formatSpokenScriptureReference } from '@/lib/parse-scripture-reference'
-import type { BibleTranslation } from '@/lib/bible-translations'
+import { bookNameToUsfm } from '@/lib/api-bible-passage-id'
+import { BIBLE_CANON_BOOKS_STATIC } from '@/lib/bibleCanonStatic'
+import { parseReference } from '@/lib/parse-scripture-reference'
 
 /** Seeded PRNG (mulberry32). */
 export function seedRandom(seed: number): () => number {
@@ -111,102 +112,159 @@ export function hiddenFractionForRound(roundIndex: number): number {
 /** How many practice rounds until 100% hidden (inclusive). */
 export const MEMORIZATION_FULL_HIDE_ROUND = 5
 
-export function reciteWhisperTranslationStylePrefix(translation: BibleTranslation): string {
-  if (translation === 'kjv') {
-    return 'King James Bible recitation.'
-  }
-  return 'Contemporary English Bible recitation.'
+/** xAI STT allows at most this many `keyterm` fields. */
+export const RECITE_STT_KEYTERM_MAX_COUNT = 100
+
+/** xAI STT allows at most this many characters in one `keyterm`. */
+export const RECITE_STT_KEYTERM_MAX_CHARS = 50
+
+const CANON_NAME_BY_USFM = new Map(
+  BIBLE_CANON_BOOKS_STATIC.map((book) => [book.id, book.name] as const)
+)
+
+const SPOKEN_BOOK_ORDINALS = ['First', 'Second', 'Third'] as const
+
+const EXTRA_SPOKEN_BOOK_NAMES: Readonly<Record<string, readonly string[]>> = {
+  PSA: ['Psalm'],
+  SNG: ['Song of Songs'],
 }
 
-const RECITE_WHISPER_HINT_STOP_WORDS = new Set([
-  'a',
-  'an',
-  'and',
-  'are',
-  'as',
-  'at',
-  'be',
-  'been',
-  'but',
-  'by',
-  'for',
-  'from',
-  'had',
-  'has',
-  'have',
-  'he',
-  'her',
-  'him',
-  'his',
-  'i',
-  'if',
-  'in',
-  'is',
-  'it',
-  'its',
-  'lord',
-  'my',
-  'not',
-  'o',
-  'of',
-  'on',
-  'or',
-  'our',
-  'she',
-  'so',
-  'that',
-  'the',
-  'their',
-  'them',
-  'they',
-  'this',
-  'to',
-  'unto',
-  'was',
-  'we',
-  'were',
-  'will',
-  'with',
-  'ye',
-  'you',
-  'your',
-])
+export const RECITE_STT_CURATED_KEYTERMS: readonly string[] = [
+  'Melchizedek',
+  'Mephibosheth',
+  'Nebuchadnezzar',
+  'Zerubbabel',
+  'Artaxerxes',
+  'Ahasuerus',
+  'Belshazzar',
+  'Belteshazzar',
+  'Epaphroditus',
+  'Maher-shalal-hash-baz',
+  'Shear-jashub',
+  'Chushan-rishathaim',
+  'Tiglath-pileser',
+  'Sanballat',
+  'Bartimaeus',
+  'Zacchaeus',
+  'Caiaphas',
+  'Onesimus',
+  'Habakkuk',
+  'Zephaniah',
+  'Methuselah',
+  'Jehoiachin',
+  'Capernaum',
+  'Gethsemane',
+  'Golgotha',
+  'Laodicea',
+  'Thessalonica',
+  'Colossae',
+  'Nicodemus',
+  'Gamaliel',
+  'Beelzebub',
+  'Armageddon',
+  'Gehazi',
+  'Naaman',
+  'Nebuzaradan',
+  'Diotrephes',
+  'Epaphras',
+  'Phinehas',
+  'Chorazin',
+  'Bethsaida',
+  'propitiation',
+  'sanctification',
+  'justification',
+  'imputation',
+  'predestination',
+  'lovingkindness',
+  'longsuffering',
+  'concupiscence',
+  'lasciviousness',
+  'shewbread',
+  'cherubim',
+  'seraphim',
+  'hallelujah',
+  'hosanna',
+  'phylacteries',
+  'forasmuch',
+  'holpen',
+  'bewray',
+  'quicken',
+  'godhead',
+  'begotten',
+  'unleavened',
+  'righteousness',
+  'atonement',
+  'redemption',
+  'reconciliation',
+  'tabernacle',
+  'passover',
+  'Ascents',
+  'whosoever',
+  'saith',
+  'verily',
+  'supplication',
+  'intercession',
+  'mediator',
+  'principalities',
+  'Mammon',
+  'publicans',
+  'Sadducees',
+  'Pharisees',
+]
 
-/**
- * Uncommon words from the passage (not the full verse) to steer Whisper spelling
- * without biasing it to insert omitted words.
- */
-export function reciteWhisperVocabularyHints(tokens: MemorizationToken[]): string {
-  const seen = new Set<string>()
-  const hints: string[] = []
-  for (const token of tokens) {
-    if (token.kind !== 'word') continue
-    const word = token.text.trim()
-    const lower = word.toLowerCase()
-    if (word.length < 5 || RECITE_WHISPER_HINT_STOP_WORDS.has(lower)) continue
-    if (seen.has(lower)) continue
-    seen.add(lower)
-    hints.push(word)
-    if (hints.length >= 10) break
-  }
-  if (hints.length === 0) return ''
-  return ` Terms include: ${hints.join(', ')}.`
+function spokenOrdinalBookName(canonName: string): string | null {
+  const match = /^([123]) (.+)$/.exec(canonName)
+  if (!match) return null
+  const ordinal = SPOKEN_BOOK_ORDINALS[Number(match[1]) - 1]
+  if (!ordinal) return null
+  return `${ordinal} ${match[2]}`
 }
 
-/**
- * Whisper prompt: translation style + spoken-style reference only (not the verse body).
- * Feeding the full verse biases Whisper to insert omitted words that appear in the prompt.
- */
-export function formatMemorizationReciteWhisperPrompt(
-  tokens: MemorizationToken[],
-  reference: string,
-  translation: BibleTranslation = 'esv'
+function spokenReferenceKeyterm(
+  canonName: string,
+  parsed: { chapter: number; verseStart: number | null; verseEnd: number | null }
 ): string {
-  const spokenRef = formatSpokenScriptureReference(reference.trim())
-  const refPart = spokenRef || reference.trim()
-  if (!refPart) return ''
-  const vocabulary = reciteWhisperVocabularyHints(tokens)
-  return `${reciteWhisperTranslationStylePrefix(translation)} ${refPart}${vocabulary}`
+  const parts = [canonName, String(parsed.chapter)]
+  if (parsed.verseStart != null) {
+    parts.push(String(parsed.verseStart))
+    if (parsed.verseEnd != null && parsed.verseEnd !== parsed.verseStart) {
+      parts.push(String(parsed.verseEnd))
+    }
+  }
+  return parts.join(' ')
+}
+
+function appendReciteSttKeyterm(out: string[], seen: Set<string>, term: string): void {
+  const trimmed = term.trim()
+  if (!trimmed || trimmed.length > RECITE_STT_KEYTERM_MAX_CHARS) return
+  if (out.length >= RECITE_STT_KEYTERM_MAX_COUNT) return
+  const key = trimmed.toLowerCase()
+  if (seen.has(key)) return
+  seen.add(key)
+  out.push(trimmed)
+}
+
+export function buildReciteSttKeyterms(reference: string): string[] {
+  const out: string[] = []
+  const seen = new Set<string>()
+  const parsed = parseReference(reference.trim())
+  if (parsed) {
+    const usfm = bookNameToUsfm(parsed.book)
+    const canonName = usfm ? CANON_NAME_BY_USFM.get(usfm) : undefined
+    if (usfm && canonName) {
+      appendReciteSttKeyterm(out, seen, canonName)
+      const ordinalName = spokenOrdinalBookName(canonName)
+      if (ordinalName) appendReciteSttKeyterm(out, seen, ordinalName)
+      for (const extra of EXTRA_SPOKEN_BOOK_NAMES[usfm] ?? []) {
+        appendReciteSttKeyterm(out, seen, extra)
+      }
+      appendReciteSttKeyterm(out, seen, spokenReferenceKeyterm(canonName, parsed))
+    }
+  }
+  for (const term of RECITE_STT_CURATED_KEYTERMS) {
+    appendReciteSttKeyterm(out, seen, term)
+  }
+  return out
 }
 
 /** One draggable unit for reorder mode (verse clauses / word groups plus reference pieces when enabled). */

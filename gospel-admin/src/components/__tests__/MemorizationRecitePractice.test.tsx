@@ -44,7 +44,6 @@ describe('MemorizationRecitePractice', () => {
         tokens={tokens}
         typableIndices={typableIndices}
         reference="John 3:16"
-        translation="esv"
         itemId="mem-1"
         roundIndex={1}
         hiddenIndices={new Set(typableIndices)}

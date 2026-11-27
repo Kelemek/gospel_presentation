@@ -1523,5 +1523,10 @@
     "releasedAt": "2026-11-08",
     "committedAt": "2026-11-08T22:03:33.023Z",
     "message": "While reading a resource, a back-to-top button appears after you scroll down about one screen."
+  },
+  {
+    "releasedAt": "2026-11-27",
+    "committedAt": "2026-11-27T19:15:51.262Z",
+    "message": "Recite practice now uses updated speech transcription when you record a verse."
   }
 ]
