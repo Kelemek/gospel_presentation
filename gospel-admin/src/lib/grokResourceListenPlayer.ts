@@ -4,9 +4,13 @@ import type { GospelListenSpeechEngine, GospelListenSpeechHandlers } from '@/lib
 import type { GrokListenFailure } from '@/lib/grokListenFallback'
 import {
   boundaryEventsFromGrokTimestamps,
+  grokSpeechEndSecFromTracks,
   type GrokAudioTimestampTracks,
   type GrokListenBoundary,
 } from '@/lib/grokListenTimestamps'
+
+/** Playback stops shortly after the last graph timestamp (skips xAI file tail silence). */
+const GROK_LISTEN_SPEECH_END_TAIL_SEC = 0.02
 
 export type GrokTtsClientPayload = {
   audio: string
@@ -17,6 +21,8 @@ export type GrokTtsClientPayload = {
 type PreparedChunk = {
   url: string
   boundaries: GrokListenBoundary[]
+  /** When set, stop playback before the MP3/MPEG file ends. */
+  speechEndSec: number | null
 }
 
 /** How many upcoming chunks to fetch and decode while the current chunk plays. */
@@ -41,7 +47,7 @@ function decodeAudio(base64: string, contentType: string): PreparedChunk {
   if (typeof URL.createObjectURL !== 'function') {
     throw new GrokListenRequestError('network')
   }
-  return { url: URL.createObjectURL(blob), boundaries: [] }
+  return { url: URL.createObjectURL(blob), boundaries: [], speechEndSec: null }
 }
 
 export async function fetchGrokTtsChunk(
@@ -78,6 +84,7 @@ export async function fetchGrokTtsChunk(
   const prepared = decodeAudio(payload.audio, payload.contentType || 'audio/mpeg')
   const tracks = payload.audioTimestamps
   prepared.boundaries = boundaryEventsFromGrokTimestamps(text, tracks)
+  prepared.speechEndSec = grokSpeechEndSecFromTracks(tracks)
   return prepared
 }
 
@@ -198,9 +205,12 @@ class GrokResourceListenPlayer implements GospelListenSpeechEngine {
         handlers.onboundary?.(boundary)
       }
     }
-    audio.ontimeupdate = emitDue
-    audio.onended = () => {
-      if (gen !== this.generation) return
+    let endedFired = false
+    const fireEnded = () => {
+      if (endedFired || gen !== this.generation) return
+      endedFired = true
+      audio.onended = null
+      audio.ontimeupdate = null
       this.revoke(prepared.url)
       this.inflight.delete(key)
       this.readyPrepared.delete(key)
@@ -209,6 +219,15 @@ class GrokResourceListenPlayer implements GospelListenSpeechEngine {
       this.paused = false
       this.publish()
       handlers.onend?.()
+    }
+    audio.onended = () => fireEnded()
+    audio.ontimeupdate = () => {
+      emitDue()
+      const endSec = prepared.speechEndSec
+      if (endSec != null && audio.currentTime >= endSec + GROK_LISTEN_SPEECH_END_TAIL_SEC) {
+        audio.pause()
+        fireEnded()
+      }
     }
     const played = audio.play()
     if (played && typeof played.then === 'function') {

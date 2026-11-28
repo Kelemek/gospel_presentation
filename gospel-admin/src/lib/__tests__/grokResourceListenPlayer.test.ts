@@ -135,6 +135,35 @@ describe('Grok resource listen player', () => {
     expect(playOrder).toEqual(['start', 'end'])
   })
 
+  it('ends early when speechEndSec is before the file end', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        audio: 'YQ==',
+        contentType: 'audio/mpeg',
+        audioTimestamps: {
+          graphChars: ['H', 'i'],
+          graphTimes: [
+            [0, 0.2],
+            [0.2, 0.5],
+          ],
+        },
+      }),
+    }) as typeof fetch
+
+    const onend = jest.fn()
+    const player = getGrokResourceListenPlayer()
+    player.configure({ voiceId: 'eve', withTimestamps: true })
+    player.speak('Hi', 1, { onend })
+    for (let i = 0; i < 10; i++) await Promise.resolve()
+
+    const audio = FakeAudio.latest!
+    audio.currentTime = 0.6
+    audio.ontimeupdate?.()
+    expect(onend).toHaveBeenCalled()
+    expect(audio.pause).toHaveBeenCalled()
+  })
+
   it('prefetchAhead requests each chunk once', async () => {
     const fetchMock = jest.fn().mockResolvedValue({
       ok: true,

@@ -1573,5 +1573,10 @@
     "releasedAt": "2026-11-28",
     "committedAt": "2026-11-28T04:47:14.278Z",
     "message": "Bug fix: Resource Listen no longer shows a read-along underline on the page; playback still auto-scrolls to follow the spoken line."
+  },
+  {
+    "releasedAt": "2026-11-28",
+    "committedAt": "2026-11-28T05:07:38.463Z",
+    "message": "Bug fix: Grok Listen now reads longer passages in one voice clip instead of pausing after every paragraph line, with less silence at the end of each clip."
   }
 ]
