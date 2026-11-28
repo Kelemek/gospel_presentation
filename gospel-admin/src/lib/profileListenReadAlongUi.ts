@@ -2,19 +2,12 @@ import {
   displayCharIndexInChunkForSpeakIndex,
   displayCharRangeInChunkForSpeakRange,
 } from '@/lib/bibleReferenceSpeechTransform'
-import type { ProfileReadAlongUnderlineStyle } from '@/lib/profileReadAlongUnderlineStyleStorage'
 import { currentWordRangeInChunk, firstWordRangeInChunk } from '@/lib/readAlongSpeechWordRange'
 import type { GospelListenSpeechBoundaryEvent } from '@/lib/gospelListenSpeechEngine'
 import { readAlongListenScrollBehavior } from '@/lib/scrollReadAlongPlain'
 
-export type ProfileListenReadAlongHighlight =
-  | { kind: 'word'; start: number; endExclusive: number }
-  | { kind: 'line'; plainCaret: number }
-
 export type ProfileListenReadAlongUiPatch = {
   scroll?: number
-  highlight?: ProfileListenReadAlongHighlight | null
-  /** Always instant for resource Listen read-along (line jump). */
   scrollBehavior?: ScrollBehavior
 }
 
@@ -24,20 +17,9 @@ export function readAlongUiOnChunkStart(options: {
   speakChunk: string
   speakMap: number[]
   plainLen: number
-  underlineEnabled: boolean
-  underlineStyle: ProfileReadAlongUnderlineStyle
   reducedMotion: boolean
 }): ProfileListenReadAlongUiPatch {
-  const {
-    chunkStart,
-    displayChunk,
-    speakChunk,
-    speakMap,
-    plainLen,
-    underlineEnabled,
-    underlineStyle,
-    reducedMotion,
-  } = options
+  const { chunkStart, displayChunk, speakChunk, speakMap, plainLen, reducedMotion } = options
 
   if (plainLen <= 0) {
     return {}
@@ -47,13 +29,6 @@ export function readAlongUiOnChunkStart(options: {
     return {
       scroll: chunkStart,
       scrollBehavior: readAlongListenScrollBehavior(),
-      highlight: underlineEnabled
-        ? {
-            kind: 'word',
-            start: chunkStart,
-            endExclusive: chunkStart + displayChunk.length,
-          }
-        : null,
     }
   }
 
@@ -72,16 +47,10 @@ export function readAlongUiOnChunkStart(options: {
   const plainWordEnd = chunkStart + dr.displayEndExclusive
   const mid = Math.floor((plainWordStart + plainWordEnd - 1) / 2)
   const plainOffset = Math.min(Math.max(0, plainLen - 1), Math.max(chunkStart, mid))
-  const lineMode = underlineStyle === 'line'
 
   return {
     scroll: plainOffset,
     scrollBehavior: readAlongListenScrollBehavior(),
-    highlight: underlineEnabled
-      ? lineMode
-        ? { kind: 'line', plainCaret: plainOffset }
-        : { kind: 'word', start: plainWordStart, endExclusive: plainWordEnd }
-      : null,
   }
 }
 
@@ -91,8 +60,6 @@ export function readAlongUiOnBoundary(options: {
   speakChunk: string
   speakMap: number[]
   plainLen: number
-  underlineEnabled: boolean
-  underlineStyle: ProfileReadAlongUnderlineStyle
   reducedMotion: boolean
   boundary: GospelListenSpeechBoundaryEvent
 }): ProfileListenReadAlongUiPatch {
@@ -102,8 +69,6 @@ export function readAlongUiOnBoundary(options: {
     speakChunk,
     speakMap,
     plainLen,
-    underlineEnabled,
-    underlineStyle,
     reducedMotion,
     boundary,
   } = options
@@ -136,36 +101,18 @@ export function readAlongUiOnBoundary(options: {
   }
 
   if (wr) {
-    const dr = displayCharRangeInChunkForSpeakRange(
-      wr.relStart,
-      wr.relEndExclusive,
-      speakMap,
-      displayChunk.length
-    )
-    const plainWordStart = chunkStart + dr.displayStart
-    const plainWordEnd = chunkStart + dr.displayEndExclusive
     const speakMid = Math.floor((wr.relStart + wr.relEndExclusive - 1) / 2)
     const dispMid = displayCharIndexInChunkForSpeakIndex(speakMid, speakMap, displayChunk.length)
     const scrollMid = Math.min(Math.max(0, plainLen - 1), chunkStart + dispMid)
-    const lineMode = underlineStyle === 'line'
     return {
       scroll: scrollMid,
-      highlight: underlineEnabled
-        ? lineMode
-          ? { kind: 'line', plainCaret: scrollMid }
-          : { kind: 'word', start: plainWordStart, endExclusive: plainWordEnd }
-        : null,
       scrollBehavior: readAlongListenScrollBehavior(),
     }
   }
 
-  const lineMode = underlineStyle === 'line'
   return {
     scroll: progressPlain,
     scrollBehavior: readAlongListenScrollBehavior(),
-    ...(underlineEnabled && lineMode
-      ? { highlight: { kind: 'line', plainCaret: progressPlain } as const }
-      : {}),
   }
 }
 
@@ -199,8 +146,6 @@ export function readAlongProgressPlainOnBoundary(options: {
 }): number {
   const patch = readAlongUiOnBoundary({
     ...options,
-    underlineEnabled: false,
-    underlineStyle: 'word',
     reducedMotion: true,
   })
   return patch.scroll ?? options.chunkStart

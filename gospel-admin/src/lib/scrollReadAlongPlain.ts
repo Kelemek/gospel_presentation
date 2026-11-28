@@ -60,7 +60,7 @@ export function prefersReducedMotionReadAlong(): boolean {
   }
 }
 
-/** Resource Listen read-along: always jump scroll (not CSS-smooth) so fixed underlines stay aligned. */
+/** Resource Listen read-along: always jump scroll (not CSS-smooth). */
 export function readAlongListenScrollBehavior(): ScrollBehavior {
   return 'instant'
 }

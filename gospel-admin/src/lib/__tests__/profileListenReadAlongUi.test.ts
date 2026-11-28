@@ -17,14 +17,14 @@ describe('profileListenReadAlongUi', () => {
       speakChunk,
       speakMap,
       plainLen: displayChunk.length,
-      underlineEnabled: true,
-      underlineStyle: 'line',
       reducedMotion: false,
     })
     expect(patch.scrollBehavior).toBe('instant')
+    expect(patch.scroll).toBeGreaterThanOrEqual(0)
+    expect(patch).not.toHaveProperty('highlight')
   })
 
-  it('builds reduced-motion chunk-start highlight for the whole chunk', () => {
+  it('reduced-motion chunk start scrolls to chunk start', () => {
     expect(
       readAlongUiOnChunkStart({
         chunkStart: 10,
@@ -32,31 +32,27 @@ describe('profileListenReadAlongUi', () => {
         speakChunk,
         speakMap,
         plainLen: 80,
-        underlineEnabled: true,
-        underlineStyle: 'word',
         reducedMotion: true,
       })
     ).toEqual({
       scroll: 10,
       scrollBehavior: 'instant',
-      highlight: { kind: 'word', start: 10, endExclusive: 10 + displayChunk.length },
     })
   })
 
-  it('builds line-mode boundary highlight at the caret', () => {
+  it('returns scroll-only boundary patches', () => {
     const patch = readAlongUiOnBoundary({
       chunkStart: 0,
       displayChunk,
       speakChunk,
       speakMap,
       plainLen: displayChunk.length,
-      underlineEnabled: true,
-      underlineStyle: 'line',
       reducedMotion: false,
       boundary: { charIndex: 8 },
     })
     expect(patch.scrollBehavior).toBe('instant')
-    expect(patch.highlight?.kind).toBe('line')
+    expect(typeof patch.scroll).toBe('number')
+    expect(patch).not.toHaveProperty('highlight')
   })
 
   it('tracks progress plain offset at first word on chunk start', () => {

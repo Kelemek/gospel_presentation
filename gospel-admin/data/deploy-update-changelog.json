@@ -60,5 +60,6 @@
   "Bug fix: Tapping the Listen voice access code field on iPhone no longer zooms the page.",
   "Bug fix: Removing Grok voice on Listen now asks for confirmation first, and the voice picker appears above the remove link.",
   "Bug fix: Resource Listen with Grok voice should flow more smoothly between lines, with less waiting between spoken passages.",
-  "Bug fix: Resource Listen with Grok voice follows the text without the short pauses between lines that smooth scrolling and chunk gaps could cause."
+  "Bug fix: Resource Listen with Grok voice follows the text without the short pauses between lines that smooth scrolling and chunk gaps could cause.",
+  "Bug fix: Resource Listen no longer shows a read-along underline on the page; playback still auto-scrolls to follow the spoken line."
 ]

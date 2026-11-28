@@ -91,13 +91,8 @@ export function useProfileListenSession({
     persistTimerRef,
     listenTextOptionsRef,
     flushReadAlongProgressPersist,
-    scheduleReadAlongUi,
     cancelReadAlongUiScheduling,
     teardownReadAlong,
-    readAlongUnderlineOn,
-    toggleReadAlongUnderline,
-    readAlongUnderlineStyle,
-    setReadAlongUnderlineStyle,
   } = readAlong
 
   const playPause = useListenEnginePlayPause({
@@ -220,7 +215,7 @@ export function useProfileListenSession({
 
       claimExclusiveListenOwner('profile-resource-read-aloud')
       cancelReadAlongUiScheduling()
-      scheduleReadAlongUi({ highlight: null })
+      cancelReadAlongUiScheduling()
       bumpCancelGeneration()
 
       const chunkMeta = listenPlainAndChunksForScope(
@@ -261,7 +256,6 @@ export function useProfileListenSession({
       resolveListenScopeAndText,
       playbackPort,
       resourceListenVoiceRef,
-      scheduleReadAlongUi,
     ]
   )
 
@@ -371,9 +365,5 @@ export function useProfileListenSession({
     clearGrokFallback,
     restartReadAloudFromBeginning,
     startReadAloudFromHere,
-    readAlongUnderlineOn,
-    toggleReadAlongUnderline,
-    readAlongUnderlineStyle,
-    setReadAlongUnderlineStyle,
   }
 }
