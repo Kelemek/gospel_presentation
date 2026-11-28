@@ -245,6 +245,37 @@ describe('MemorizeListenControlsDialog', () => {
     expect(screen.queryByTestId('memorize-listen-read-along-style-word')).not.toBeInTheDocument()
   })
 
+  it('renders Grok voice picker above Grok voice access controls', () => {
+    const picker = {
+      voices: [{ voiceId: 'eve', name: 'Eve', gender: 'female' as const }],
+      value: 'eve',
+      onChange: jest.fn(),
+    }
+    render(
+      <MemorizeListenControlsDialog
+        open
+        onClose={jest.fn()}
+        dialogId="profile-resource-listen-controls-dialog"
+        titleId="profile-resource-listen-controls-title"
+        showRepeat={false}
+        presentation="floating"
+        onPrimaryClick={jest.fn()}
+        primaryLabel="Play"
+        primaryAriaLabel="Play"
+        primaryAriaPressed={false}
+        listenPlaybackRate={1}
+        onSelectSpeed={jest.fn()}
+        grokVoicePicker={picker}
+        grokVoiceAccess={<div data-testid="grok-voice-access">Access</div>}
+      />
+    )
+    const voiceTrigger = screen.getByTestId('resource-listen-voice')
+    const access = screen.getByTestId('grok-voice-access')
+    const pickerBeforeAccess =
+      voiceTrigger.compareDocumentPosition(access) & Node.DOCUMENT_POSITION_FOLLOWING
+    expect(pickerBeforeAccess).toBeTruthy()
+  })
+
   it('shows a Grok voice menu only when resource Listen passes one', () => {
     const picker = {
       voices: [
