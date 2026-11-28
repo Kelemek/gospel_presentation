@@ -2,6 +2,7 @@
 
 import { Capacitor } from '@capacitor/core'
 import { useState } from 'react'
+import { useAlertModal } from '@/contexts/AlertModalContext'
 import {
   clearGrokVoiceToken,
   readGrokVoiceToken,
@@ -22,7 +23,11 @@ interface GrokVoiceCodeAccessProps {
   onChanged: () => void
 }
 
+const REMOVE_GROK_VOICE_CONFIRM_MESSAGE =
+  'Remove Grok voice from this device?\n\nYou will need a new access code to use Grok voice on this device again.'
+
 export function GrokVoiceCodeAccess({ onChanged }: GrokVoiceCodeAccessProps) {
+  const { showConfirm } = useAlertModal()
   const hasToken = readGrokVoiceToken() != null
   const [open, setOpen] = useState(false)
   const [code, setCode] = useState('')
@@ -76,7 +81,7 @@ export function GrokVoiceCodeAccess({ onChanged }: GrokVoiceCodeAccessProps) {
     }
   }
 
-  const remove = () => {
+  const removeFromDevice = () => {
     clearGrokVoiceToken()
     writeResourceListenVoice(DEVICE_LISTEN_VOICE_ID)
     setOpen(false)
@@ -85,9 +90,18 @@ export function GrokVoiceCodeAccess({ onChanged }: GrokVoiceCodeAccessProps) {
     onChanged()
   }
 
+  const requestRemove = async () => {
+    const confirmed = await showConfirm(REMOVE_GROK_VOICE_CONFIRM_MESSAGE, {
+      confirmLabel: 'Remove',
+      destructive: true,
+    })
+    if (!confirmed) return
+    removeFromDevice()
+  }
+
   if (hasToken) {
     return (
-      <button type="button" className={removeLinkClass} onClick={remove}>
+      <button type="button" className={removeLinkClass} onClick={() => void requestRemove()}>
         Remove Grok voice from this device
       </button>
     )

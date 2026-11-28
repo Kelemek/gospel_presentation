@@ -1553,5 +1553,10 @@
     "releasedAt": "2026-11-28",
     "committedAt": "2026-11-28T02:53:22.033Z",
     "message": "Bug fix: Tapping the Listen voice access code field on iPhone no longer zooms the page."
+  },
+  {
+    "releasedAt": "2026-11-28",
+    "committedAt": "2026-11-28T03:01:43.340Z",
+    "message": "Bug fix: Removing Grok voice on Listen now asks for confirmation first, and the voice picker appears above the remove link."
   }
 ]

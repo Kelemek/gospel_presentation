@@ -351,7 +351,6 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
               />
             </div>
           )}
-          {!showRepeatControls && grokVoiceAccess ? grokVoiceAccess : null}
           {!showRepeatControls && grokVoicePicker ? (
             <ResourceListenGrokVoicePicker
               voices={grokVoicePicker.voices}
@@ -359,6 +358,7 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
               onChange={grokVoicePicker.onChange}
             />
           ) : null}
+          {!showRepeatControls && grokVoiceAccess ? grokVoiceAccess : null}
         </div>
       </div>
   )

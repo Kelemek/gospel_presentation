@@ -374,11 +374,43 @@ describe('ProfileResourceReadAloud', () => {
     const remove = screen.getByRole('button', { name: /remove grok voice from this device/i })
     expect(remove.className.split(/\s+/)).toContain('hover:underline')
     expect(remove).not.toHaveClass('bg-white')
+    const confirmMock = getAlertModalMocks().showConfirm
+    confirmMock.mockResolvedValueOnce(true)
     fireEvent.click(remove)
+    await waitFor(() => expect(confirmMock).toHaveBeenCalledWith(expect.stringMatching(/new access code/i), expect.any(Object)))
     await waitFor(() => expect(localStorage.getItem(GROK_VOICE_TOKEN_STORAGE_KEY)).toBeNull())
     expect(readResourceListenVoice()).toBe(DEVICE_LISTEN_VOICE_ID)
     expect(screen.getByRole('button', { name: /^enter code$/i })).toBeInTheDocument()
     expect(screen.queryByTestId('resource-listen-voice')).not.toBeInTheDocument()
+  })
+
+  it('keeps Grok voice on this device when remove is cancelled', async () => {
+    localStorage.setItem(GROK_VOICE_TOKEN_STORAGE_KEY, token)
+    global.fetch = jest.fn().mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/api/read-aloud/access')) {
+        return { ok: true, status: 200, json: async () => ({ enabled: true }), clone() { return this } }
+      }
+      if (url.endsWith('/api/read-aloud/voices')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ voices: [{ voiceId: 'eve', name: 'Eve', gender: 'female' }] }),
+        }
+      }
+      return { ok: false, status: 500, json: async () => ({}) }
+    }) as typeof fetch
+
+    const confirmMock = getAlertModalMocks().showConfirm
+    confirmMock.mockResolvedValue(false)
+
+    render(<ProfileResourceReadAloud sections={sections} profileSlug="p1" />)
+    fireEvent.click(screen.getByRole('button', { name: /^listen$/i }))
+    expect(await screen.findByTestId('resource-listen-voice')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /remove grok voice from this device/i }))
+    await waitFor(() => expect(confirmMock).toHaveBeenCalled())
+    expect(localStorage.getItem(GROK_VOICE_TOKEN_STORAGE_KEY)).toBe(token)
+    expect(screen.getByTestId('resource-listen-voice')).toBeInTheDocument()
   })
 
   it('clears a rejected Grok voice token and keeps the code entry', async () => {
