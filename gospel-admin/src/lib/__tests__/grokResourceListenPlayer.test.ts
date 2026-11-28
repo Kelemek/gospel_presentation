@@ -2,7 +2,11 @@
  * @jest-environment jsdom
  */
 
-import { getGrokResourceListenPlayer, resetGrokResourceListenPlayerForTests } from '@/lib/grokResourceListenPlayer'
+import {
+  getGrokResourceListenPlayer,
+  GROK_LISTEN_WITH_TIMESTAMPS,
+  resetGrokResourceListenPlayerForTests,
+} from '@/lib/grokResourceListenPlayer'
 
 class FakeAudio {
   static instances: FakeAudio[] = []
@@ -136,7 +140,7 @@ describe('Grok resource listen player', () => {
   })
 
   it('ends early when speechEndSec is before the file end', async () => {
-    global.fetch = jest.fn().mockResolvedValue({
+    const fetchMock = jest.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
         audio: 'YQ==',
@@ -149,19 +153,45 @@ describe('Grok resource listen player', () => {
           ],
         },
       }),
-    }) as typeof fetch
+    })
+    global.fetch = fetchMock as typeof fetch
 
     const onend = jest.fn()
     const player = getGrokResourceListenPlayer()
-    player.configure({ voiceId: 'eve', withTimestamps: true })
+    expect(GROK_LISTEN_WITH_TIMESTAMPS).toBe(true)
+    player.configure({ voiceId: 'eve', withTimestamps: GROK_LISTEN_WITH_TIMESTAMPS })
     player.speak('Hi', 1, { onend })
     for (let i = 0; i < 10; i++) await Promise.resolve()
+
+    expect(JSON.parse(String(fetchMock.mock.calls[0]![1]!.body)).withTimestamps).toBe(true)
 
     const audio = FakeAudio.latest!
     audio.currentTime = 0.6
     audio.ontimeupdate?.()
     expect(onend).toHaveBeenCalled()
     expect(audio.pause).toHaveBeenCalled()
+  })
+
+  it('does not trim the clip when timestamps are absent', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        audio: 'YQ==',
+        contentType: 'audio/mpeg',
+      }),
+    }) as typeof fetch
+
+    const onend = jest.fn()
+    const player = getGrokResourceListenPlayer()
+    player.configure({ voiceId: 'eve', withTimestamps: false })
+    player.speak('Hi', 1, { onend })
+    for (let i = 0; i < 10; i++) await Promise.resolve()
+
+    const audio = FakeAudio.latest!
+    audio.currentTime = 0.6
+    audio.ontimeupdate?.()
+    expect(onend).not.toHaveBeenCalled()
+    expect(audio.pause).not.toHaveBeenCalled()
   })
 
   it('releaseAll when the Grok voice changes so stale prefetches do not pile up', async () => {

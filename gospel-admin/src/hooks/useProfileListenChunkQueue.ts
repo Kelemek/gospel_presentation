@@ -43,7 +43,11 @@ import {
   GROK_LISTEN_FALLBACK_NOTE,
   shouldFallbackGrokListenToDevice,
 } from '@/lib/grokListenFallback'
-import { getGrokResourceListenPlayer, GROK_LISTEN_PREFETCH_AHEAD } from '@/lib/grokResourceListenPlayer'
+import {
+  getGrokResourceListenPlayer,
+  GROK_LISTEN_PREFETCH_AHEAD,
+  GROK_LISTEN_WITH_TIMESTAMPS,
+} from '@/lib/grokResourceListenPlayer'
 import { profileListenUsesGrok } from '@/lib/profileListenPlaybackPort'
 import type { useProfileReadAlongSession } from '@/hooks/useProfileReadAlongSession'
 
@@ -417,7 +421,7 @@ export function useProfileListenChunkQueue({
       if (useGrok) {
         grokPlayer.configure({
           voiceId: voiceRef.current,
-          withTimestamps: false,
+          withTimestamps: GROK_LISTEN_WITH_TIMESTAMPS,
         })
         const ahead: string[] = []
         for (let j = 1; j <= GROK_LISTEN_PREFETCH_AHEAD; j++) {
@@ -493,7 +497,7 @@ export function useProfileListenChunkQueue({
         const grokPlayer = getGrokResourceListenPlayer()
         grokPlayer.configure({
           voiceId: voiceRef.current,
-          withTimestamps: false,
+          withTimestamps: GROK_LISTEN_WITH_TIMESTAMPS,
         })
         const bootstrap: string[] = []
         for (let j = 0; j <= GROK_LISTEN_PREFETCH_AHEAD; j++) {

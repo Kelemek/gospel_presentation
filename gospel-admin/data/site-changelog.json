@@ -1603,5 +1603,10 @@
     "releasedAt": "2026-11-28",
     "committedAt": "2026-11-28T06:29:50.120Z",
     "message": "Resource Listen scroll again keeps each new spoken line centered in view with one instant adjustment per line."
+  },
+  {
+    "releasedAt": "2026-11-28",
+    "committedAt": "2026-11-28T17:10:41.131Z",
+    "message": "Bug fix: Grok Listen trims the quiet ending of each voice clip again so passages flow together."
   }
 ]

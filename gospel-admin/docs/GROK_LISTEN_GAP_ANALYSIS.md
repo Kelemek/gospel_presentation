@@ -44,7 +44,7 @@ xAI returns MPEG audio longer than the last `graph_times` end. Fixture model in 
 | File duration | `mp3DurationSeconds` on decoded bytes |
 | Trailing ms | `(fileDuration − speechEnd) × 1000` |
 
-**Fix:** Stop playback at `speechEndSec + 20 ms` on `timeupdate` when timestamps are present (read-along underline on).
+**Fix:** Resource Listen always requests timestamps (`GROK_LISTEN_WITH_TIMESTAMPS`). Playback stops at `speechEndSec + 20 ms` on `timeupdate`. Times also feed line-change scroll. No underline is drawn.
 
 ## HTML Audio vs Web Audio (iOS)
 

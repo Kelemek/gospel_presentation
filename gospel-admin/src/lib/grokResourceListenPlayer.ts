@@ -28,6 +28,12 @@ type PreparedChunk = {
 /** How many upcoming chunks to fetch and decode while the current chunk plays. */
 export const GROK_LISTEN_PREFETCH_AHEAD = 2
 
+/**
+ * Resource Listen always asks xAI for word times. Those times trim clip-tail silence and
+ * drive one scroll jump when the spoken line changes. They do not draw an underline.
+ */
+export const GROK_LISTEN_WITH_TIMESTAMPS = true
+
 const GROK_LISTEN_MAX_WARM_AUDIO = GROK_LISTEN_PREFETCH_AHEAD + 1
 
 export class GrokListenRequestError extends Error {
