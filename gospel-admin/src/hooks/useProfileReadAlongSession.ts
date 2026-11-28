@@ -8,9 +8,9 @@ import {
   saveProfileReadAlongProgress,
 } from '@/lib/profileReadAlongProgressStorage'
 import {
-  resetReadAlongVerticalScrollLineState,
+  resetResourceListenWindowScrollState,
   scrollReadAlongPlainOffsetToVerticalCenter,
-  type ReadAlongVerticalScrollLineState,
+  type ResourceListenWindowScrollState,
 } from '@/lib/scrollReadAlongPlain'
 import type { ProfileListenReadAlongUiPatch } from '@/lib/profileListenReadAlongUi'
 
@@ -31,8 +31,8 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
   const lastPersistedPlainOffsetRef = useRef(0)
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const readAlongBoundaryLagSeqRef = useRef(0)
-  const readAlongScrollLineStateRef = useRef<ReadAlongVerticalScrollLineState>({
-    lastCaretLineTop: null,
+  const readAlongScrollLineStateRef = useRef<ResourceListenWindowScrollState>({
+    lastVisualLineKey: null,
   })
 
   useLayoutEffect(() => {
@@ -119,7 +119,7 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
       persistTimerRef.current = null
     }
     cancelReadAlongUiScheduling()
-    resetReadAlongVerticalScrollLineState(readAlongScrollLineStateRef.current)
+    resetResourceListenWindowScrollState(readAlongScrollLineStateRef.current)
     readAlongScopeRef.current = null
     readAlongPlainLenRef.current = 0
     readAlongAnchorIdRef.current = null
@@ -132,7 +132,7 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
     readAlongBoundaryLagSeqRef.current += 1
     flushReadAlongProgressPersist()
     cancelReadAlongUiScheduling()
-    resetReadAlongVerticalScrollLineState(readAlongScrollLineStateRef.current)
+    resetResourceListenWindowScrollState(readAlongScrollLineStateRef.current)
   }, [cancelReadAlongUiScheduling, flushReadAlongProgressPersist])
 
   return {

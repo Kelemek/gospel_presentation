@@ -37,7 +37,7 @@ describe('useProfileReadAlongSession', () => {
       12,
       expect.any(Object),
       expect.objectContaining({
-        lineScrollState: expect.objectContaining({ lastCaretLineTop: null }),
+        lineScrollState: expect.objectContaining({ lastVisualLineKey: null }),
       })
     )
   })

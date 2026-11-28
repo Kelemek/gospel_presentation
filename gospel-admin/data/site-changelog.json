@@ -1598,5 +1598,10 @@
     "releasedAt": "2026-11-28",
     "committedAt": "2026-11-28T06:18:19.938Z",
     "message": "Bug fix: Resource Listen read-along scroll keeps the spoken line centered when you move to a new line, without jumping the wrong way or on every word."
+  },
+  {
+    "releasedAt": "2026-11-28",
+    "committedAt": "2026-11-28T06:29:50.120Z",
+    "message": "Resource Listen scroll again keeps each new spoken line centered in view with one instant adjustment per line."
   }
 ]
