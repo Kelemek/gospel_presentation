@@ -10,6 +10,20 @@ describe('profileListenReadAlongUi', () => {
   const speakChunk = displayChunk
   const speakMap = Array.from({ length: speakChunk.length }, (_, i) => i)
 
+  it('uses instant scroll on chunk start while audio is playing', () => {
+    const patch = readAlongUiOnChunkStart({
+      chunkStart: 0,
+      displayChunk,
+      speakChunk,
+      speakMap,
+      plainLen: displayChunk.length,
+      underlineEnabled: true,
+      underlineStyle: 'line',
+      reducedMotion: false,
+    })
+    expect(patch.scrollBehavior).toBe('auto')
+  })
+
   it('builds reduced-motion chunk-start highlight for the whole chunk', () => {
     expect(
       readAlongUiOnChunkStart({
@@ -24,6 +38,7 @@ describe('profileListenReadAlongUi', () => {
       })
     ).toEqual({
       scroll: 10,
+      scrollBehavior: 'auto',
       highlight: { kind: 'word', start: 10, endExclusive: 10 + displayChunk.length },
     })
   })

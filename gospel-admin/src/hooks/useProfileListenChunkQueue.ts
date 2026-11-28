@@ -385,7 +385,8 @@ export function useProfileListenChunkQueue({
             displayChunk,
             nextIndex,
             chunks.length,
-            ttsPauseBeforeChunkRef.current
+            ttsPauseBeforeChunkRef.current,
+            { grok: useGrok && !fellBack }
           )
           if (gapMs > 0 && typeof window !== 'undefined') {
             window.setTimeout(runNext, gapMs)

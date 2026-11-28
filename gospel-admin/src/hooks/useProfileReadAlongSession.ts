@@ -127,10 +127,39 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
         const scope = readAlongScopeRef.current
         const plainLen = readAlongPlainLenRef.current
 
+        const highlightPending = pending.highlight
+        const applyHighlight = () => {
+          if (highlightPending === undefined) return
+          if (highlightPending === null) {
+            readAlongHighlightPaintRef.current = null
+            if (typeof document !== 'undefined') clearReadAlongDomHighlight(document)
+            return
+          }
+          if (!scope || plainLen <= 0) return
+          const h = highlightPending
+          readAlongHighlightPaintRef.current = h
+          if (h.kind === 'word' && h.endExclusive > h.start) {
+            updateReadAlongDomHighlight({
+              scope,
+              plainCollapsedLen: plainLen,
+              plainStart: h.start,
+              plainEndExclusive: h.endExclusive,
+              listenTextOptions: listenTextOptionsRef.current,
+            })
+          } else if (h.kind === 'line') {
+            updateReadAlongDomHighlightVisualLine({
+              scope,
+              plainCollapsedLen: plainLen,
+              plainCaret: h.plainCaret,
+              listenTextOptions: listenTextOptionsRef.current,
+            })
+          }
+        }
+
         if (pending.scroll !== undefined && scope && plainLen > 0) {
           const behavior: ScrollBehavior = prefersReducedMotionReadAlong()
             ? 'auto'
-            : (pending.scrollBehavior ?? 'smooth')
+            : (pending.scrollBehavior ?? 'auto')
           scrollReadAlongPlainOffsetIntoViewIfNeeded(
             scope,
             plainLen,
@@ -138,32 +167,11 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
             behavior,
             listenTextOptionsRef.current
           )
-        }
-
-        if (pending.highlight !== undefined) {
-          if (pending.highlight === null) {
-            readAlongHighlightPaintRef.current = null
-            if (typeof document !== 'undefined') clearReadAlongDomHighlight(document)
-          } else if (scope && plainLen > 0) {
-            const h = pending.highlight
-            readAlongHighlightPaintRef.current = h
-            if (h.kind === 'word' && h.endExclusive > h.start) {
-              updateReadAlongDomHighlight({
-                scope,
-                plainCollapsedLen: plainLen,
-                plainStart: h.start,
-                plainEndExclusive: h.endExclusive,
-                listenTextOptions: listenTextOptionsRef.current,
-              })
-            } else if (h.kind === 'line') {
-              updateReadAlongDomHighlightVisualLine({
-                scope,
-                plainCollapsedLen: plainLen,
-                plainCaret: h.plainCaret,
-                listenTextOptions: listenTextOptionsRef.current,
-              })
-            }
+          if (highlightPending !== undefined) {
+            requestAnimationFrame(applyHighlight)
           }
+        } else {
+          applyHighlight()
         }
       })
     },

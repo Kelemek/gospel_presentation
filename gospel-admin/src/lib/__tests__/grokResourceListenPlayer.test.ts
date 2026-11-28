@@ -107,6 +107,34 @@ describe('Grok resource listen player', () => {
     expect(onend).toHaveBeenCalled()
   })
 
+  it('speaks a prefetched chunk without waiting on the inflight promise microtask', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        audio: 'YQ==',
+        contentType: 'audio/mpeg',
+      }),
+    }) as typeof fetch
+
+    const player = getGrokResourceListenPlayer()
+    player.configure({ voiceId: 'eve', withTimestamps: false })
+    player.prefetch('Line two.')
+    for (let i = 0; i < 10; i++) await Promise.resolve()
+    expect(player.isChunkReady('Line two.')).toBe(true)
+
+    const playOrder: string[] = []
+    const onstart = jest.fn(() => playOrder.push('start'))
+    const onend = jest.fn(() => playOrder.push('end'))
+    player.speak('Line two.', 1, { onstart, onend })
+    expect(FakeAudio.latest).toBe(FakeAudio.instances[0])
+    await Promise.resolve()
+    expect(onstart).toHaveBeenCalled()
+
+    FakeAudio.latest!.onended?.()
+    expect(onend).toHaveBeenCalled()
+    expect(playOrder).toEqual(['start', 'end'])
+  })
+
   it('prefetchAhead requests each chunk once', async () => {
     const fetchMock = jest.fn().mockResolvedValue({
       ok: true,

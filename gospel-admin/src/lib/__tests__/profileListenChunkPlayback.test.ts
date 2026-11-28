@@ -40,6 +40,12 @@ describe('profileListenChunkPlayback', () => {
     expect(computeProfileListenInterChunkGapMs('No stop', 1, 2, [false, false])).toBe(0)
   })
 
+  it('uses no inter-chunk gap for Grok listen', () => {
+    expect(
+      computeProfileListenInterChunkGapMs('First sentence.', 1, 2, layers.pauseBeforeChunk, { grok: true })
+    ).toBe(0)
+  })
+
   it('resolves start chunk from saved progress', () => {
     const chunkMeta = [
       { text: 'Alpha.', plainStart: 0 },

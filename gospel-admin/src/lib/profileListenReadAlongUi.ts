@@ -44,6 +44,7 @@ export function readAlongUiOnChunkStart(options: {
   if (reducedMotion) {
     return {
       scroll: chunkStart,
+      scrollBehavior: 'auto',
       highlight: underlineEnabled
         ? {
             kind: 'word',
@@ -56,7 +57,7 @@ export function readAlongUiOnChunkStart(options: {
 
   const fw = firstWordRangeInChunk(speakChunk)
   if (!fw) {
-    return { scroll: chunkStart }
+    return { scroll: chunkStart, scrollBehavior: 'auto' }
   }
 
   const dr = displayCharRangeInChunkForSpeakRange(
@@ -73,6 +74,7 @@ export function readAlongUiOnChunkStart(options: {
 
   return {
     scroll: plainOffset,
+    scrollBehavior: 'auto',
     highlight: underlineEnabled
       ? lineMode
         ? { kind: 'line', plainCaret: plainOffset }
