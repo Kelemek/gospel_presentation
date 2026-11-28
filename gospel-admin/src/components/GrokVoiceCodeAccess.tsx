@@ -9,6 +9,9 @@ import {
 } from '@/lib/grokVoiceTokenStorage'
 import { DEVICE_LISTEN_VOICE_ID, writeResourceListenVoice } from '@/lib/resourceListenVoiceStorage'
 
+const linkClass =
+  'cursor-pointer text-sm font-medium text-slate-700 underline-offset-2 hover:underline dark:text-slate-200'
+
 const menuButtonClass =
   'w-full min-h-12.5 px-4 py-3 rounded-lg font-medium text-center text-sm sm:text-base transition-colors cursor-pointer border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 disabled:opacity-60'
 
@@ -94,7 +97,7 @@ export function GrokVoiceCodeAccess({ onChanged }: GrokVoiceCodeAccessProps) {
     <div className="flex flex-col gap-3">
       <button
         type="button"
-        className={menuButtonClass}
+        className={`${linkClass} text-left`}
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
