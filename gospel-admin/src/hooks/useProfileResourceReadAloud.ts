@@ -58,10 +58,6 @@ export function useProfileResourceReadAloud({
     clearGrokFallback,
     restartReadAloudFromBeginning,
     startReadAloudFromHere,
-    readAlongUnderlineOn,
-    toggleReadAlongUnderline,
-    readAlongUnderlineStyle,
-    setReadAlongUnderlineStyle,
   } = listenSession
 
   const stopProfileReadAloudFromExternalSource = useCallback(() => {
@@ -116,9 +112,5 @@ export function useProfileResourceReadAloud({
     clearGrokFallback,
     restartReadAloudFromBeginning,
     startReadAloudFromHere,
-    readAlongUnderlineOn,
-    toggleReadAlongUnderline,
-    readAlongUnderlineStyle,
-    setReadAlongUnderlineStyle,
   }
 }

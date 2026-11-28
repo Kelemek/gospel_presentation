@@ -94,6 +94,7 @@ class GrokResourceListenPlayer implements GospelListenSpeechEngine {
   private audio: HTMLAudioElement | null = null
   private lastFailure: GrokListenFailure = 'network'
   private inflight = new Map<string, Promise<PreparedChunk>>()
+  private readyPrepared = new Map<string, PreparedChunk>()
   private warmAudio = new Map<string, HTMLAudioElement>()
   private warmAudioOrder: string[] = []
   private revision = 0
@@ -115,6 +116,7 @@ class GrokResourceListenPlayer implements GospelListenSpeechEngine {
     if (this.inflight.has(key)) return
     const pending = fetchGrokTtsChunk(text, this.voiceId, this.withTimestamps)
       .then((prepared) => {
+        this.readyPrepared.set(key, prepared)
         this.warmDecodedChunk(key, prepared.url)
         return prepared
       })
@@ -167,6 +169,66 @@ class GrokResourceListenPlayer implements GospelListenSpeechEngine {
     }
     this.warmAudio.clear()
     this.warmAudioOrder = []
+    this.readyPrepared.clear()
+  }
+
+  /** True when fetch finished and a warmed `Audio` element is ready for this text. */
+  isChunkReady(text: string): boolean {
+    const key = this.cacheKey(text)
+    return this.readyPrepared.has(key) && this.warmAudio.has(key)
+  }
+
+  private attachPlayback(
+    gen: number,
+    audio: HTMLAudioElement,
+    prepared: PreparedChunk,
+    key: string,
+    rate: number,
+    handlers: GospelListenSpeechHandlers
+  ): void {
+    this.audio = audio
+    applyMemorizeListenPlaybackRateToMediaElement(audio, rate)
+    let nextBoundary = 0
+    const emitDue = () => {
+      if (gen !== this.generation || this.paused) return
+      while (nextBoundary < prepared.boundaries.length) {
+        const boundary = prepared.boundaries[nextBoundary]!
+        if (boundary.startSec > audio.currentTime + 0.03) break
+        nextBoundary += 1
+        handlers.onboundary?.(boundary)
+      }
+    }
+    audio.ontimeupdate = emitDue
+    audio.onended = () => {
+      if (gen !== this.generation) return
+      this.revoke(prepared.url)
+      this.inflight.delete(key)
+      this.readyPrepared.delete(key)
+      this.audio = null
+      this.active = false
+      this.paused = false
+      this.publish()
+      handlers.onend?.()
+    }
+    const played = audio.play()
+    if (played && typeof played.then === 'function') {
+      void played
+        .then(() => {
+          if (gen !== this.generation) return
+          handlers.onstart?.()
+          emitDue()
+        })
+        .catch(() => {
+          if (gen !== this.generation) return
+          this.lastFailure = 'network'
+          this.active = false
+          this.publish()
+          handlers.onerror?.()
+        })
+      return
+    }
+    handlers.onstart?.()
+    emitDue()
   }
 
   private revoke(url: string): void {
@@ -249,6 +311,14 @@ class GrokResourceListenPlayer implements GospelListenSpeechEngine {
     }
     this.prefetch(text)
     const key = this.cacheKey(text)
+    const preparedCached = this.readyPrepared.get(key)
+    const warmCached = this.warmAudio.get(key)
+    if (preparedCached && warmCached) {
+      const audio = this.takeWarmAudio(key)!
+      this.attachPlayback(gen, audio, preparedCached, key, rate, handlers)
+      return
+    }
+
     const pending = this.inflight.get(key)
     if (!pending) {
       this.active = false
@@ -261,48 +331,7 @@ class GrokResourceListenPlayer implements GospelListenSpeechEngine {
       .then((prepared) => {
         if (gen !== this.generation) return
         const audio = this.takeWarmAudio(key) ?? new Audio(prepared.url)
-        this.audio = audio
-        applyMemorizeListenPlaybackRateToMediaElement(audio, rate)
-        let nextBoundary = 0
-        const emitDue = () => {
-          if (gen !== this.generation || this.paused) return
-          while (nextBoundary < prepared.boundaries.length) {
-            const boundary = prepared.boundaries[nextBoundary]!
-            if (boundary.startSec > audio.currentTime + 0.03) break
-            nextBoundary += 1
-            handlers.onboundary?.(boundary)
-          }
-        }
-        audio.ontimeupdate = emitDue
-        audio.onended = () => {
-          if (gen !== this.generation) return
-          this.revoke(prepared.url)
-          this.inflight.delete(key)
-          this.audio = null
-          this.active = false
-          this.paused = false
-          this.publish()
-          handlers.onend?.()
-        }
-        const played = audio.play()
-        if (played && typeof played.then === 'function') {
-          void played
-            .then(() => {
-              if (gen !== this.generation) return
-              handlers.onstart?.()
-              emitDue()
-            })
-            .catch(() => {
-              if (gen !== this.generation) return
-              this.lastFailure = 'network'
-              this.active = false
-              this.publish()
-              handlers.onerror?.()
-            })
-          return
-        }
-        handlers.onstart?.()
-        emitDue()
+        this.attachPlayback(gen, audio, prepared, key, rate, handlers)
       })
       .catch((error: unknown) => {
         if (gen !== this.generation) return

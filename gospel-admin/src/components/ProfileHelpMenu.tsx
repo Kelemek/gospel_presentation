@@ -83,7 +83,7 @@ export function buildProfileTutorialMenuItems(): TutorialItem[] {
       id: 'listen',
       label: 'Listen (read aloud)',
       description:
-        'Hear this presentation read aloud from the header; section list, play/pause, speed, read-along underline, and Word or Line highlight width',
+        'Hear this presentation read aloud from the header; section list, play/pause, speed, and auto-scroll that follows the spoken line',
       run: runProfileListenFeatureTour,
     })
   }

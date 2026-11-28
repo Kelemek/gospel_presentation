@@ -17,7 +17,10 @@ import {
   clearProfileReadAlongProgress,
   saveProfileReadAlongLastSession,
 } from '@/lib/profileReadAlongProgressStorage'
-import { prefersReducedMotionReadAlong } from '@/lib/scrollReadAlongPlain'
+import {
+  prefersReducedMotionReadAlong,
+  scrollListenScopeIntoViewCenter,
+} from '@/lib/scrollReadAlongPlain'
 import {
   buildProfileListenChunkQueueLayers,
   listenPlainAndChunksForScope,
@@ -53,8 +56,6 @@ type ProfileReadAlongChunkQueueBindings = Pick<
   | 'readAlongFingerprintRef'
   | 'lastPersistedPlainOffsetRef'
   | 'persistTimerRef'
-  | 'readAlongUnderlineEnabledRef'
-  | 'readAlongUnderlineStyleRef'
   | 'readAlongBoundaryLagSeqRef'
   | 'listenTextOptionsRef'
   | 'recordReadAlongProgressPlainOffset'
@@ -100,8 +101,6 @@ export function useProfileListenChunkQueue({
     readAlongFingerprintRef,
     lastPersistedPlainOffsetRef,
     persistTimerRef,
-    readAlongUnderlineEnabledRef,
-    readAlongUnderlineStyleRef,
     readAlongBoundaryLagSeqRef,
     listenTextOptionsRef,
     recordReadAlongProgressPlainOffset,
@@ -254,10 +253,7 @@ export function useProfileListenChunkQueue({
               completion.target.fingerprint
             )
           }
-          nextScope.scope.scrollIntoView({
-            block: 'center',
-            behavior: prefersReducedMotionReadAlong() ? 'auto' : 'smooth',
-          })
+          scrollListenScopeIntoViewCenter(nextScope.scope)
           speakChunkInternalRef.current(0)
           return
         }
@@ -314,8 +310,6 @@ export function useProfileListenChunkQueue({
               speakChunk,
               speakMap,
               plainLen,
-              underlineEnabled: readAlongUnderlineEnabledRef.current,
-              underlineStyle: readAlongUnderlineStyleRef.current,
               reducedMotion,
             })
           )
@@ -353,8 +347,6 @@ export function useProfileListenChunkQueue({
                 speakChunk,
                 speakMap,
                 plainLen,
-                underlineEnabled: readAlongUnderlineEnabledRef.current,
-                underlineStyle: readAlongUnderlineStyleRef.current,
                 reducedMotion,
                 boundary: ev,
               })
@@ -385,7 +377,8 @@ export function useProfileListenChunkQueue({
             displayChunk,
             nextIndex,
             chunks.length,
-            ttsPauseBeforeChunkRef.current
+            ttsPauseBeforeChunkRef.current,
+            { grok: useGrok && !fellBack }
           )
           if (gapMs > 0 && typeof window !== 'undefined') {
             window.setTimeout(runNext, gapMs)
@@ -424,7 +417,7 @@ export function useProfileListenChunkQueue({
       if (useGrok) {
         grokPlayer.configure({
           voiceId: voiceRef.current,
-          withTimestamps: readAlongUnderlineEnabledRef.current,
+          withTimestamps: false,
         })
         const ahead: string[] = []
         for (let j = 1; j <= GROK_LISTEN_PREFETCH_AHEAD; j++) {
@@ -451,8 +444,6 @@ export function useProfileListenChunkQueue({
       readAlongBoundaryLagSeqRef,
       readAlongPlainLenRef,
       readAlongScopeRef,
-      readAlongUnderlineEnabledRef,
-      readAlongUnderlineStyleRef,
       lastPersistedPlainOffsetRef,
       listenTextOptionsRef,
       persistTimerRef,
@@ -505,7 +496,7 @@ export function useProfileListenChunkQueue({
         const grokPlayer = getGrokResourceListenPlayer()
         grokPlayer.configure({
           voiceId: voiceRef.current,
-          withTimestamps: readAlongUnderlineEnabledRef.current,
+          withTimestamps: false,
         })
         const bootstrap: string[] = []
         for (let j = 0; j <= GROK_LISTEN_PREFETCH_AHEAD; j++) {
@@ -521,7 +512,6 @@ export function useProfileListenChunkQueue({
       applyChunkQueueLayers,
       fallbackRef,
       lastPersistedPlainOffsetRef,
-      readAlongUnderlineEnabledRef,
       speakChunkInternal,
       voiceRef,
     ]

@@ -42,8 +42,12 @@ export function computeProfileListenInterChunkGapMs(
   displayChunk: string,
   nextChunkIndex: number,
   totalChunks: number,
-  pauseBeforeChunk: boolean[]
+  pauseBeforeChunk: boolean[],
+  options?: { grok?: boolean }
 ): number {
+  if (options?.grok) {
+    return 0
+  }
   const hasMore = nextChunkIndex < totalChunks
   const trimmedEnd = displayChunk.trimEnd()
   const afterFullStop = hasMore && /[.!?]['"]?$/.test(trimmedEnd)

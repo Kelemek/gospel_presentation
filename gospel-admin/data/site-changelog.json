@@ -1563,5 +1563,15 @@
     "releasedAt": "2026-11-28",
     "committedAt": "2026-11-28T03:07:24.190Z",
     "message": "Bug fix: Resource Listen with Grok voice should flow more smoothly between lines, with less waiting between spoken passages."
+  },
+  {
+    "releasedAt": "2026-11-28",
+    "committedAt": "2026-11-28T03:40:12.517Z",
+    "message": "Bug fix: Resource Listen with Grok voice follows the text without the short pauses between lines that smooth scrolling and chunk gaps could cause."
+  },
+  {
+    "releasedAt": "2026-11-28",
+    "committedAt": "2026-11-28T04:47:14.278Z",
+    "message": "Bug fix: Resource Listen no longer shows a read-along underline on the page; playback still auto-scrolls to follow the spoken line."
   }
 ]

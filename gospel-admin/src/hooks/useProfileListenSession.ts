@@ -26,7 +26,7 @@ import {
   loadProfileReadAlongProgress,
   readAlongTextFingerprint,
 } from '@/lib/profileReadAlongProgressStorage'
-import { prefersReducedMotionReadAlong } from '@/lib/scrollReadAlongPlain'
+import { scrollListenScopeIntoViewCenter } from '@/lib/scrollReadAlongPlain'
 import { plainOffsetAtViewportSentenceStart } from '@/lib/profileReadingPosition'
 import { listenPlainAndChunksForScope } from '@/lib/profileListenChunkQueue'
 import { DEVICE_LISTEN_VOICE_ID } from '@/lib/resourceListenVoiceStorage'
@@ -91,13 +91,8 @@ export function useProfileListenSession({
     persistTimerRef,
     listenTextOptionsRef,
     flushReadAlongProgressPersist,
-    scheduleReadAlongUi,
     cancelReadAlongUiScheduling,
     teardownReadAlong,
-    readAlongUnderlineOn,
-    toggleReadAlongUnderline,
-    readAlongUnderlineStyle,
-    setReadAlongUnderlineStyle,
   } = readAlong
 
   const playPause = useListenEnginePlayPause({
@@ -204,10 +199,7 @@ export function useProfileListenSession({
               })
               if (resume) {
                 resolved = { scope: el, text }
-                el.scrollIntoView({
-                  block: 'center',
-                  behavior: prefersReducedMotionReadAlong() ? 'auto' : 'smooth',
-                })
+                scrollListenScopeIntoViewCenter(el)
               }
             }
           }
@@ -223,7 +215,7 @@ export function useProfileListenSession({
 
       claimExclusiveListenOwner('profile-resource-read-aloud')
       cancelReadAlongUiScheduling()
-      scheduleReadAlongUi({ highlight: null })
+      cancelReadAlongUiScheduling()
       bumpCancelGeneration()
 
       const chunkMeta = listenPlainAndChunksForScope(
@@ -264,7 +256,6 @@ export function useProfileListenSession({
       resolveListenScopeAndText,
       playbackPort,
       resourceListenVoiceRef,
-      scheduleReadAlongUi,
     ]
   )
 
@@ -291,10 +282,7 @@ export function useProfileListenSession({
       onNothingToRead?.('There is no readable text in this profile.')
       return
     }
-    first.scope.scrollIntoView({
-      block: 'center',
-      behavior: prefersReducedMotionReadAlong() ? 'auto' : 'smooth',
-    })
+    scrollListenScopeIntoViewCenter(first.scope)
     startReadAloudSession(true, { scope: first.scope, text: first.text })
   }, [
     bumpCancelGeneration,
@@ -377,9 +365,5 @@ export function useProfileListenSession({
     clearGrokFallback,
     restartReadAloudFromBeginning,
     startReadAloudFromHere,
-    readAlongUnderlineOn,
-    toggleReadAlongUnderline,
-    readAlongUnderlineStyle,
-    setReadAlongUnderlineStyle,
   }
 }

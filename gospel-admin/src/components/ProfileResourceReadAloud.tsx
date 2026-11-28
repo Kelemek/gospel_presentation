@@ -85,10 +85,6 @@ export default function ProfileResourceReadAloud({ sections, profileSlug }: Prof
     listenAriaPressed,
     restartReadAloudFromBeginning,
     startReadAloudFromHere,
-    readAlongUnderlineOn,
-    toggleReadAlongUnderline,
-    readAlongUnderlineStyle,
-    setReadAlongUnderlineStyle,
     restartCurrentChunkAtNewSpeed,
     clearGrokFallback,
   } = useProfileResourceReadAloud({
@@ -168,10 +164,6 @@ export default function ProfileResourceReadAloud({ sections, profileSlug }: Prof
         primaryAriaPressed={listenAriaPressed}
         listenPlaybackRate={listenPlaybackRate}
         onSelectSpeed={onSelectSpeed}
-        readAlongUnderlineOn={readAlongUnderlineOn}
-        onToggleReadAlongUnderline={toggleReadAlongUnderline}
-        readAlongUnderlineStyle={readAlongUnderlineStyle}
-        onReadAlongUnderlineStyle={setReadAlongUnderlineStyle}
         onStartFromHere={startReadAloudFromHere}
         onStartFromBeginning={confirmRestartReadAloudFromBeginning}
         grokVoiceAccess={<GrokVoiceCodeAccess onChanged={onGrokVoiceChanged} />}

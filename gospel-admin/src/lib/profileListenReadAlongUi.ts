@@ -2,17 +2,12 @@ import {
   displayCharIndexInChunkForSpeakIndex,
   displayCharRangeInChunkForSpeakRange,
 } from '@/lib/bibleReferenceSpeechTransform'
-import type { ProfileReadAlongUnderlineStyle } from '@/lib/profileReadAlongUnderlineStyleStorage'
 import { currentWordRangeInChunk, firstWordRangeInChunk } from '@/lib/readAlongSpeechWordRange'
 import type { GospelListenSpeechBoundaryEvent } from '@/lib/gospelListenSpeechEngine'
-
-export type ProfileListenReadAlongHighlight =
-  | { kind: 'word'; start: number; endExclusive: number }
-  | { kind: 'line'; plainCaret: number }
+import { readAlongListenScrollBehavior } from '@/lib/scrollReadAlongPlain'
 
 export type ProfileListenReadAlongUiPatch = {
   scroll?: number
-  highlight?: ProfileListenReadAlongHighlight | null
   scrollBehavior?: ScrollBehavior
 }
 
@@ -22,20 +17,9 @@ export function readAlongUiOnChunkStart(options: {
   speakChunk: string
   speakMap: number[]
   plainLen: number
-  underlineEnabled: boolean
-  underlineStyle: ProfileReadAlongUnderlineStyle
   reducedMotion: boolean
 }): ProfileListenReadAlongUiPatch {
-  const {
-    chunkStart,
-    displayChunk,
-    speakChunk,
-    speakMap,
-    plainLen,
-    underlineEnabled,
-    underlineStyle,
-    reducedMotion,
-  } = options
+  const { chunkStart, displayChunk, speakChunk, speakMap, plainLen, reducedMotion } = options
 
   if (plainLen <= 0) {
     return {}
@@ -44,19 +28,13 @@ export function readAlongUiOnChunkStart(options: {
   if (reducedMotion) {
     return {
       scroll: chunkStart,
-      highlight: underlineEnabled
-        ? {
-            kind: 'word',
-            start: chunkStart,
-            endExclusive: chunkStart + displayChunk.length,
-          }
-        : null,
+      scrollBehavior: readAlongListenScrollBehavior(),
     }
   }
 
   const fw = firstWordRangeInChunk(speakChunk)
   if (!fw) {
-    return { scroll: chunkStart }
+    return { scroll: chunkStart, scrollBehavior: readAlongListenScrollBehavior() }
   }
 
   const dr = displayCharRangeInChunkForSpeakRange(
@@ -69,15 +47,10 @@ export function readAlongUiOnChunkStart(options: {
   const plainWordEnd = chunkStart + dr.displayEndExclusive
   const mid = Math.floor((plainWordStart + plainWordEnd - 1) / 2)
   const plainOffset = Math.min(Math.max(0, plainLen - 1), Math.max(chunkStart, mid))
-  const lineMode = underlineStyle === 'line'
 
   return {
     scroll: plainOffset,
-    highlight: underlineEnabled
-      ? lineMode
-        ? { kind: 'line', plainCaret: plainOffset }
-        : { kind: 'word', start: plainWordStart, endExclusive: plainWordEnd }
-      : null,
+    scrollBehavior: readAlongListenScrollBehavior(),
   }
 }
 
@@ -87,8 +60,6 @@ export function readAlongUiOnBoundary(options: {
   speakChunk: string
   speakMap: number[]
   plainLen: number
-  underlineEnabled: boolean
-  underlineStyle: ProfileReadAlongUnderlineStyle
   reducedMotion: boolean
   boundary: GospelListenSpeechBoundaryEvent
 }): ProfileListenReadAlongUiPatch {
@@ -98,8 +69,6 @@ export function readAlongUiOnBoundary(options: {
     speakChunk,
     speakMap,
     plainLen,
-    underlineEnabled,
-    underlineStyle,
     reducedMotion,
     boundary,
   } = options
@@ -128,40 +97,22 @@ export function readAlongUiOnBoundary(options: {
   }
 
   if (reducedMotion) {
-    return { scroll: progressPlain, scrollBehavior: 'auto' }
+    return { scroll: progressPlain, scrollBehavior: readAlongListenScrollBehavior() }
   }
 
   if (wr) {
-    const dr = displayCharRangeInChunkForSpeakRange(
-      wr.relStart,
-      wr.relEndExclusive,
-      speakMap,
-      displayChunk.length
-    )
-    const plainWordStart = chunkStart + dr.displayStart
-    const plainWordEnd = chunkStart + dr.displayEndExclusive
     const speakMid = Math.floor((wr.relStart + wr.relEndExclusive - 1) / 2)
     const dispMid = displayCharIndexInChunkForSpeakIndex(speakMid, speakMap, displayChunk.length)
     const scrollMid = Math.min(Math.max(0, plainLen - 1), chunkStart + dispMid)
-    const lineMode = underlineStyle === 'line'
     return {
       scroll: scrollMid,
-      highlight: underlineEnabled
-        ? lineMode
-          ? { kind: 'line', plainCaret: scrollMid }
-          : { kind: 'word', start: plainWordStart, endExclusive: plainWordEnd }
-        : null,
-      scrollBehavior: 'auto',
+      scrollBehavior: readAlongListenScrollBehavior(),
     }
   }
 
-  const lineMode = underlineStyle === 'line'
   return {
     scroll: progressPlain,
-    scrollBehavior: 'auto',
-    ...(underlineEnabled && lineMode
-      ? { highlight: { kind: 'line', plainCaret: progressPlain } as const }
-      : {}),
+    scrollBehavior: readAlongListenScrollBehavior(),
   }
 }
 
@@ -195,8 +146,6 @@ export function readAlongProgressPlainOnBoundary(options: {
 }): number {
   const patch = readAlongUiOnBoundary({
     ...options,
-    underlineEnabled: false,
-    underlineStyle: 'word',
     reducedMotion: true,
   })
   return patch.scroll ?? options.chunkStart

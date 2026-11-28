@@ -5,6 +5,7 @@
 import {
   clearReadAlongDomHighlight,
   READ_ALONG_HIGHLIGHT_ROOT_ID,
+  repaintReadAlongDomHighlightFromPaint,
   updateReadAlongDomHighlight,
 } from '@/lib/profileReadAlongDomHighlight'
 
@@ -73,6 +74,21 @@ describe('profileReadAlongDomHighlight', () => {
     expect(bar.style.left).toBe('10px')
     expect(bar.style.width).toBe('100px')
     expect(bar.style.height).toBe('2px')
+  })
+
+  it('repaintReadAlongDomHighlightFromPaint delegates word paint to updateReadAlongDomHighlight', () => {
+    document.body.innerHTML = '<div id="s">Hello world</div>'
+    const scope = document.getElementById('s') as HTMLElement
+    mockClientRects(new DOMRect(0, 0, 40, 14))
+
+    repaintReadAlongDomHighlightFromPaint({
+      scope,
+      plainCollapsedLen: 11,
+      paint: { kind: 'word', start: 0, endExclusive: 5 },
+    })
+
+    const root = document.getElementById(READ_ALONG_HIGHLIGHT_ROOT_ID)
+    expect(root?.children.length).toBe(1)
   })
 
   it('clearReadAlongDomHighlight removes underline segments', () => {

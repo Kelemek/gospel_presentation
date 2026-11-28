@@ -144,7 +144,7 @@ function getFullWalkthroughHeaderToolbarAfterThemeSegments(): FullProfileWalkthr
       intro: {
         title: 'Listen (read aloud)',
         description:
-          'Use the header speaker control to hear this presentation read aloud: pick a section, play or pause, adjust speed, optional read-along underline, and Word vs Line highlight width.',
+          'Use the header speaker control to hear this presentation read aloud: pick a section, play or pause, adjust speed, and auto-scroll that follows the spoken line.',
       },
     })
   }

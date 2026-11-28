@@ -45,7 +45,7 @@ export function runProfileListenFeatureTour(options?: ProfileFeatureTourOptions)
         popover: {
           title: 'Listen',
           description:
-            'Tap <strong>Listen</strong> to open read-aloud for this presentation: choose where to start in the passage list, use <strong>Play</strong> / <strong>Pause</strong>, adjust speed, and optionally use <strong>read-along</strong> (underline on the page while it speaks). After you turn read-along on, pick <strong>Word</strong> to emphasize each word as it is read, or <strong>Line</strong> to highlight a whole line at a time. Use <strong>Next</strong> to open the panel for a closer look.',
+            'Tap <strong>Listen</strong> to open read-aloud for this presentation: choose where to start in the passage list, use <strong>Play</strong> / <strong>Pause</strong>, and adjust speed. The page auto-scrolls to follow the spoken line. Use <strong>Next</strong> to open the panel for a closer look.',
           side: 'bottom',
           align: 'end',
           onNextClick: (_e, _s, { driver: drv }) => {
@@ -62,7 +62,7 @@ export function runProfileListenFeatureTour(options?: ProfileFeatureTourOptions)
         popover: {
           title: 'Read-aloud controls',
           description:
-            'Use the list to jump sections, <strong>Play</strong> to hear the current passage, and the speed control to slow down or speed up. The <strong>underline</strong> button turns read-along highlighting on or off; when it is on, tap <strong>Word</strong> or <strong>Line</strong> next to it to choose whether the highlight tracks a single word or spans the full line. When you are done, tap <strong>Close</strong> or finish this tour.',
+            'Use the list to jump sections, <strong>Play</strong> to hear the current passage, and the speed control to slow down or speed up. While it plays, the page scrolls to keep the current line in view. When you are done, tap <strong>Close</strong> or finish this tour.',
           side: 'bottom',
           align: 'center',
         },
