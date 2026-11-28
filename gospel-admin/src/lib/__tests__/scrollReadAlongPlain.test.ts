@@ -10,6 +10,7 @@ import {
   computeReadAlongWindowScrollDeltaToCenterCaret,
   computeScrollDeltaToAlignCaretTopToViewportY,
   isNewReadAlongVisualLine,
+  readAlongCaretDocumentY,
   readAlongCaretLineHeightPx,
   RESOURCE_LISTEN_CARET_CENTER_DEADBAND_PX,
   RESOURCE_LISTEN_CARET_LINE_TOP_TOLERANCE_PX,
@@ -119,6 +120,34 @@ describe('computeReadAlongWindowScrollDeltaToCenterCaret', () => {
     ).toBe(200)
   })
 
+  it('positive scroll delta moves a below-center caret toward viewport center', () => {
+    const vpH = 800
+    const target = vpH * 0.5
+    const caret = { top: 590, bottom: 612, height: 22 }
+    const delta = computeReadAlongWindowScrollDeltaToCenterCaret(caret, vpH, {
+      deadbandPx: 0,
+      maxScrollStepPx: readAlongCaretLineHeightPx(caret),
+    })
+    expect(delta).toBeGreaterThan(0)
+    const midBefore = (caret.top + caret.bottom) / 2
+    const midAfter = midBefore - delta
+    expect(Math.abs(midAfter - target)).toBeLessThan(Math.abs(midBefore - target))
+  })
+
+  it('negative scroll delta moves an above-center caret toward viewport center', () => {
+    const vpH = 800
+    const target = vpH * 0.5
+    const caret = { top: 190, bottom: 212, height: 22 }
+    const delta = computeReadAlongWindowScrollDeltaToCenterCaret(caret, vpH, {
+      deadbandPx: 0,
+      maxScrollStepPx: readAlongCaretLineHeightPx(caret),
+    })
+    expect(delta).toBeLessThan(0)
+    const midBefore = (caret.top + caret.bottom) / 2
+    const midAfter = midBefore - delta
+    expect(Math.abs(midAfter - target)).toBeLessThan(Math.abs(midBefore - target))
+  })
+
   it('returns negative delta when caret is above center', () => {
     expect(
       computeReadAlongWindowScrollDeltaToCenterCaret(
@@ -155,6 +184,14 @@ describe('computeReadAlongWindowScrollDeltaToCenterCaret', () => {
   })
 })
 
+describe('readAlongCaretDocumentY', () => {
+  it('keeps the same document Y after window scroll moves viewport coords', () => {
+    const docY = 2400
+    expect(readAlongCaretDocumentY(578, 1822)).toBe(docY)
+    expect(readAlongCaretDocumentY(556, 1844)).toBe(docY)
+  })
+})
+
 describe('isNewReadAlongVisualLine', () => {
   it('treats the first caret as a new line', () => {
     expect(isNewReadAlongVisualLine(300, null)).toBe(true)
@@ -176,6 +213,24 @@ describe('isNewReadAlongVisualLine', () => {
     expect(isNewReadAlongVisualLine(280, 300, RESOURCE_LISTEN_CARET_LINE_TOP_TOLERANCE_PX)).toBe(
       true
     )
+  })
+
+  it('does not treat post-scroll viewport shift as a new line when using document Y', () => {
+    const docLine = 2400
+    expect(isNewReadAlongVisualLine(readAlongCaretDocumentY(578, 1822), docLine)).toBe(false)
+    expect(isNewReadAlongVisualLine(readAlongCaretDocumentY(556, 1844), docLine)).toBe(false)
+    expect(isNewReadAlongVisualLine(readAlongCaretDocumentY(475, 1970), docLine + 40)).toBe(true)
+  })
+})
+
+describe('read-along line gate (viewport vs document Y)', () => {
+  it('viewport-only tracking treats the next word as a new line after scroll', () => {
+    expect(isNewReadAlongVisualLine(556, 578)).toBe(true)
+  })
+
+  it('document Y tracking keeps the same visual line after scroll', () => {
+    const docLine = readAlongCaretDocumentY(578, 1822)
+    expect(isNewReadAlongVisualLine(readAlongCaretDocumentY(556, 1844), docLine)).toBe(false)
   })
 })
 

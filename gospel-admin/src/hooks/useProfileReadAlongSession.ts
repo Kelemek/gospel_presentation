@@ -132,6 +132,7 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
     readAlongBoundaryLagSeqRef.current += 1
     flushReadAlongProgressPersist()
     cancelReadAlongUiScheduling()
+    resetReadAlongVerticalScrollLineState(readAlongScrollLineStateRef.current)
   }, [cancelReadAlongUiScheduling, flushReadAlongProgressPersist])
 
   return {

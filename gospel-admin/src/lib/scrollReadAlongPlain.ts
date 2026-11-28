@@ -95,9 +95,20 @@ export const RESOURCE_LISTEN_CARET_CENTER_DEADBAND_PX = 42
 /** Treat caret `top` within this distance as the same visual line (word-by-word on one line). */
 export const RESOURCE_LISTEN_CARET_LINE_TOP_TOLERANCE_PX = 4
 
+/** Max instant one-line steps while centering a newly reached visual line (single listen update). */
+export const RESOURCE_LISTEN_CARET_CENTER_MAX_STEPS_PER_NEW_LINE = 32
+
 export type ReadAlongVerticalScrollLineState = {
-  /** Viewport `top` of the caret line we last handled for centering scroll. */
+  /**
+   * Document Y (`getBoundingClientRect().top + window.scrollY`) for the visual line we last
+   * handled. Viewport `top` alone shifts after every scroll and breaks same-line detection.
+   */
   lastCaretLineTop: number | null
+}
+
+/** Stable line key for read-along gating (survives window scroll). */
+export function readAlongCaretDocumentY(viewportY: number, scrollY: number): number {
+  return viewportY + scrollY
 }
 
 export function resetReadAlongVerticalScrollLineState(state: ReadAlongVerticalScrollLineState): void {
@@ -191,26 +202,36 @@ export function scrollReadAlongPlainOffsetToVerticalCenter(
   if (!rect) return
 
   const lineState = options?.lineScrollState
-  const caretTop = rect.top
-  if (lineState && !isNewReadAlongVisualLine(caretTop, lineState.lastCaretLineTop)) {
+  const caretDocTop = readAlongCaretDocumentY(rect.top, win.scrollY)
+  if (lineState && !isNewReadAlongVisualLine(caretDocTop, lineState.lastCaretLineTop)) {
     return
+  }
+
+  if (lineState) {
+    lineState.lastCaretLineTop = caretDocTop
   }
 
   const vpH = win.innerHeight
   const topM = readAlongComfortTopMarginPx(win)
-  const lineHeightPx = readAlongCaretLineHeightPx(rect)
-  const delta = computeReadAlongWindowScrollDeltaToCenterCaret(rect, vpH, {
-    ...options,
-    minTargetY: topM,
-    maxScrollStepPx: lineHeightPx,
-  })
+  const centerOpts = { ...options, minTargetY: topM } as const
 
-  if (lineState) {
-    lineState.lastCaretLineTop = caretTop
+  for (let step = 0; step < RESOURCE_LISTEN_CARET_CENTER_MAX_STEPS_PER_NEW_LINE; step++) {
+    const stepRect = getCaretClientRectForReadAlongPlainOffset(
+      scope,
+      plainCollapsedLen,
+      plainOffset,
+      listenTextOptions
+    )
+    if (!stepRect) break
+
+    const lineHeightPx = readAlongCaretLineHeightPx(stepRect)
+    const delta = computeReadAlongWindowScrollDeltaToCenterCaret(stepRect, vpH, {
+      ...centerOpts,
+      maxScrollStepPx: lineHeightPx,
+    })
+    if (delta === 0) break
+    applyReadAlongWindowScrollBy(win, delta)
   }
-
-  if (delta === 0) return
-  applyReadAlongWindowScrollBy(win, delta)
 }
 
 /** Section jump during resource Listen (`block: 'center'`) without `scrollIntoView`. */

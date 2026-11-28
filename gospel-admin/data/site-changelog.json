@@ -1593,5 +1593,10 @@
     "releasedAt": "2026-11-28",
     "committedAt": "2026-11-28T06:04:36.805Z",
     "message": "Listen read-along scrolling is steadier: the page moves when you reach a new line, with smaller steps and less jitter."
+  },
+  {
+    "releasedAt": "2026-11-28",
+    "committedAt": "2026-11-28T06:18:19.938Z",
+    "message": "Bug fix: Resource Listen read-along scroll keeps the spoken line centered when you move to a new line, without jumping the wrong way or on every word."
   }
 ]

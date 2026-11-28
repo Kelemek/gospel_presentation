@@ -65,5 +65,6 @@
   "Bug fix: Grok Listen now reads longer passages in one voice clip instead of pausing after every paragraph line, with less silence at the end of each clip.",
   "Bug fix: Grok Listen keeps the line being read near the center of the screen as it moves through a passage.",
   "Bug fix: Switching Grok voice while listening no longer stalls playback or freeze the page.",
-  "Listen read-along scrolling is steadier: the page moves when you reach a new line, with smaller steps and less jitter."
+  "Listen read-along scrolling is steadier: the page moves when you reach a new line, with smaller steps and less jitter.",
+  "Bug fix: Resource Listen read-along scroll keeps the spoken line centered when you move to a new line, without jumping the wrong way or on every word."
 ]
