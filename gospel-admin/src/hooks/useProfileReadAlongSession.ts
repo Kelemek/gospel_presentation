@@ -167,12 +167,9 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
             behavior,
             listenTextOptionsRef.current
           )
-          if (highlightPending !== undefined) {
-            requestAnimationFrame(applyHighlight)
-          }
-        } else {
-          applyHighlight()
         }
+        // Paint in the same frame after instant scroll so underline rects match viewport positions.
+        applyHighlight()
       })
     },
     []
