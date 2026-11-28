@@ -9,6 +9,7 @@ import {
   resetGospelClientStorageForTests,
 } from '@/lib/gospelClientStorage'
 import { installTestLocalStorage } from '@/lib/testing/testLocalStorage'
+import { GROK_VOICE_TOKEN_STORAGE_KEY } from '@/lib/grokVoiceTokenStorage'
 import {
   GOSPEL_LOCAL_USER_DATA_KIND,
   GOSPEL_LOCAL_USER_DATA_SCHEMA_VERSION,
@@ -121,10 +122,11 @@ describe('gospelLocalUserDataBackup', () => {
     expect(map[CAPACITOR_DEPLOY_ACK_VERSION_KEY]).toBe('deploy-abc')
   })
 
-  it('collectGospelLocalUserDataForExport excludes auth, view preference, and profile cache keys', () => {
+  it('collectGospelLocalUserDataForExport excludes auth, view preference, the Grok voice token, and profile cache keys', () => {
     const s = createMemoryStorage({
       'gospel-admin-auth': '{"token":"x"}',
       'gospel-view-preference': 'card',
+      [GROK_VOICE_TOKEN_STORAGE_KEY]: 'gvt_secret',
       'gospel-profile-my-slug': '{"profile":{"slug":"my-slug"}}',
       'gospel-profile-read-along:my-slug:section-1': '{"v":1,"plainOffset":3,"fingerprint":"fp"}',
       [PROFILE_BOOKMARKS_STORAGE_KEY]: '{"v":1,"bookmarks":[]}',
@@ -132,6 +134,7 @@ describe('gospelLocalUserDataBackup', () => {
     const map = collectGospelLocalUserDataForExport(s)
     expect(map['gospel-admin-auth']).toBeUndefined()
     expect(map['gospel-view-preference']).toBeUndefined()
+    expect(map[GROK_VOICE_TOKEN_STORAGE_KEY]).toBeUndefined()
     expect(map['gospel-profile-my-slug']).toBeUndefined()
     expect(map['gospel-profile-read-along:my-slug:section-1']).toBe('{"v":1,"plainOffset":3,"fingerprint":"fp"}')
     expect(map[PROFILE_BOOKMARKS_STORAGE_KEY]).toBeDefined()

@@ -73,6 +73,7 @@ describe("AdminSettingsPage", () => {
     await waitFor(() => {
       expect(screen.getByRole("link", { name: /manage users/i })).toHaveAttribute("href", "/admin/users");
     });
+    expect(screen.getByRole("button", { name: /grok voice codes/i })).toBeInTheDocument();
   });
 
   it("does not show Manage Users link for non-admins", async () => {
@@ -84,6 +85,7 @@ describe("AdminSettingsPage", () => {
       expect(screen.getByRole("heading", { name: "Create from backup" })).toBeInTheDocument();
     });
     expect(screen.queryByRole("link", { name: /manage users/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /grok voice codes/i })).not.toBeInTheDocument();
   });
 
   it("shows Notion Feedback Settings section for admins", async () => {

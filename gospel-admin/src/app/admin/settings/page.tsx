@@ -38,6 +38,7 @@ import {
 import type { ResourceOrderCategoryChild } from "@/lib/types";
 import { restoreNewProfileFromBackupFile } from "@/lib/createProfileFromBackup";
 import { useAlertModal } from "@/contexts/AlertModalContext";
+import GrokVoiceCodesSettings from "@/components/GrokVoiceCodesSettings";
 import NotionFeedbackSettings from "@/components/NotionFeedbackSettings";
 import SecularTermMapSettings from "@/components/SecularTermMapSettings";
 
@@ -608,14 +609,12 @@ export default function AdminSettingsPage() {
         {/* Alerts */}
         <div className="space-y-6">
           {userRole === "admin" && (
+            <>
             <div className="bg-white rounded-xl shadow-md border border-slate-100 overflow-hidden">
               <div className="border-b border-slate-200 px-6 sm:px-8 py-6">
                 <h2 className="text-2xl font-bold text-slate-900">Manage users</h2>
                 <p className="text-slate-600 text-sm mt-2">
                   Open the user directory to invite people, assign roles, and control who can sign in to the admin area.
-                </p>
-                <p className="text-slate-600 text-sm mt-2">
-                  Grok voice for resource Listen is turned on per person in Manage users.
                 </p>
               </div>
               <div className="px-6 sm:px-8 py-6">
@@ -628,6 +627,8 @@ export default function AdminSettingsPage() {
                 </Link>
               </div>
             </div>
+            <GrokVoiceCodesSettings />
+            </>
           )}
 
           {error && (

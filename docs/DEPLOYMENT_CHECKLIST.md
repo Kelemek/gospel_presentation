@@ -24,9 +24,13 @@ SELECT pg_get_functiondef('public.increment_visit_count(text)'::regprocedure);
 SELECT * FROM get_backup_tables() WHERE table_name IN (
   'pairing_sessions',
   'sync_pairing_claim_rate_limits',
-  'sync_key_entries'
+  'sync_key_entries',
+  'grok_voice_codes',
+  'grok_voice_devices',
+  'grok_voice_usage',
+  'grok_voice_rate_limits'
 );
--- pairing_sessions and sync_pairing_claim_rate_limits should be absent; sync_key_entries should remain.
+-- pairing_sessions, sync_pairing_claim_rate_limits, and the four grok_voice_* tables should be absent; sync_key_entries should remain.
 ```
 
 - [ ] Optional drops (only when app no longer references them): `20260516_drop_profile_access_table.sql`, `20260515_drop_bible_verses_table.sql`

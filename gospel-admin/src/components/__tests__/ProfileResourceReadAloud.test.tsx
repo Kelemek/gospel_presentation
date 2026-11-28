@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { Capacitor } from '@capacitor/core'
 import ProfileResourceReadAloud from '@/components/ProfileResourceReadAloud'
 import { claimExclusiveListenOwner } from '@/lib/gospelExclusiveListen'
+import { GROK_VOICE_TOKEN_STORAGE_KEY } from '@/lib/grokVoiceTokenStorage'
+import { DEVICE_LISTEN_VOICE_ID, RESOURCE_LISTEN_VOICE_STORAGE_KEY, readResourceListenVoice } from '@/lib/resourceListenVoiceStorage'
 import { resetGospelListenSpeechEngineForTests } from '@/lib/gospelListenSpeechEngine'
 import type { GospelSection } from '@/lib/types'
 
@@ -21,6 +23,8 @@ function getAlertModalMocks() {
 
 describe('ProfileResourceReadAloud', () => {
   const originalUserAgent = typeof navigator !== 'undefined' ? navigator.userAgent : ''
+  const originalFetch = global.fetch
+  const token = `gvt_${'c'.repeat(43)}`
 
   const sections: GospelSection[] = [
     {
@@ -75,6 +79,7 @@ describe('ProfileResourceReadAloud', () => {
   })
 
   afterEach(() => {
+    global.fetch = originalFetch
     delete (window as unknown as { speechSynthesis?: unknown }).speechSynthesis
     Object.defineProperty(navigator, 'userAgent', {
       configurable: true,
@@ -326,5 +331,61 @@ describe('ProfileResourceReadAloud', () => {
     expect(utt.text).toBe('Second sentence.')
 
     delete (document as { caretRangeFromPoint?: unknown }).caretRangeFromPoint
+  })
+
+  it('lets someone enter a Grok voice code without signing in, then remove it', async () => {
+    global.fetch = jest.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.endsWith('/api/grok-voice/redeem')) {
+        expect(JSON.parse(String(init?.body))).toEqual({ code: 'ABCD-EFGH-JKMN', deviceLabel: 'web' })
+        return { ok: true, status: 200, json: async () => ({ token }) }
+      }
+      if (url.endsWith('/api/read-aloud/access')) {
+        return { ok: true, status: 200, json: async () => ({ enabled: true }), clone() { return this } }
+      }
+      if (url.endsWith('/api/read-aloud/voices')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ voices: [{ voiceId: 'eve', name: 'Eve', gender: 'female' }] }),
+        }
+      }
+      return { ok: false, status: 500, json: async () => ({}) }
+    }) as typeof fetch
+
+    render(<ProfileResourceReadAloud sections={sections} profileSlug="p1" />)
+    fireEvent.click(screen.getByRole('button', { name: /^listen$/i }))
+    expect(screen.queryByTestId('resource-listen-voice')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /enter grok voice code/i }))
+    fireEvent.change(screen.getByLabelText(/access code/i), { target: { value: 'ABCD-EFGH-JKMN' } })
+    fireEvent.click(screen.getByRole('button', { name: /use code/i }))
+
+    expect(await screen.findByTestId('resource-listen-voice')).toBeInTheDocument()
+    expect(localStorage.getItem(GROK_VOICE_TOKEN_STORAGE_KEY)).toBe(token)
+
+    localStorage.setItem(RESOURCE_LISTEN_VOICE_STORAGE_KEY, 'eve')
+    fireEvent.click(screen.getByRole('button', { name: /remove grok voice from this device/i }))
+    await waitFor(() => expect(localStorage.getItem(GROK_VOICE_TOKEN_STORAGE_KEY)).toBeNull())
+    expect(readResourceListenVoice()).toBe(DEVICE_LISTEN_VOICE_ID)
+    expect(screen.getByRole('button', { name: /enter grok voice code/i })).toBeInTheDocument()
+    expect(screen.queryByTestId('resource-listen-voice')).not.toBeInTheDocument()
+  })
+
+  it('clears a rejected Grok voice token and keeps the code entry', async () => {
+    localStorage.setItem(GROK_VOICE_TOKEN_STORAGE_KEY, token)
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      clone() {
+        return this
+      },
+      json: async () => ({ enabled: false, code: 'grok_token_invalid' }),
+    }) as typeof fetch
+
+    render(<ProfileResourceReadAloud sections={sections} profileSlug="p1" />)
+    await waitFor(() => expect(localStorage.getItem(GROK_VOICE_TOKEN_STORAGE_KEY)).toBeNull())
+    fireEvent.click(screen.getByRole('button', { name: /^listen$/i }))
+    expect(screen.getByRole('button', { name: /enter grok voice code/i })).toBeInTheDocument()
+    expect(screen.queryByTestId('resource-listen-voice')).not.toBeInTheDocument()
   })
 })

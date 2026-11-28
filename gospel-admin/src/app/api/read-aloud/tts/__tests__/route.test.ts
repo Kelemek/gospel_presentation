@@ -1,9 +1,22 @@
 import { NextRequest } from 'next/server'
 import { POST } from '../route'
 import { assertGrokVoiceAccess } from '@/lib/grokVoiceAccess'
+import { consumeGrokVoiceRateLimit, recordGrokVoiceUsage } from '@/lib/grokVoiceDb'
 
 jest.mock('@/lib/grokVoiceAccess', () => ({
   assertGrokVoiceAccess: jest.fn(),
+  GROK_VOICE_NO_STORE: { 'Cache-Control': 'no-store' },
+}))
+
+jest.mock('@/lib/grokVoiceDb', () => ({
+  consumeGrokVoiceRateLimit: jest.fn().mockResolvedValue({ ok: true, allowed: true }),
+  recordGrokVoiceUsage: jest.fn().mockResolvedValue({ ok: true, codeId: 'code-1', deviceId: 'device-1', chars: 2 }),
+  grokTtsDeviceBucket: (id: string) => `tts:device:${id}`,
+  grokTtsIpBucket: (ip: string) => `tts:ip:${ip}`,
+  GROK_TTS_DEVICE_MAX: 20,
+  GROK_TTS_DEVICE_WINDOW_SECONDS: 60,
+  GROK_TTS_IP_MAX: 60,
+  GROK_TTS_IP_WINDOW_SECONDS: 60,
 }))
 
 jest.mock('@/lib/logger', () => ({
@@ -11,7 +24,10 @@ jest.mock('@/lib/logger', () => ({
 }))
 
 const mockAccess = assertGrokVoiceAccess as jest.MockedFunction<typeof assertGrokVoiceAccess>
+const mockLimit = consumeGrokVoiceRateLimit as jest.MockedFunction<typeof consumeGrokVoiceRateLimit>
+const mockRecord = recordGrokVoiceUsage as jest.MockedFunction<typeof recordGrokVoiceUsage>
 const originalFetch = global.fetch
+const allowed = { ok: true as const, xaiKey: 'super-secret-key', codeId: 'code-1', deviceId: 'device-1', tokenHash: 'hash' }
 
 function post(body: unknown) {
   return POST(
@@ -25,7 +41,8 @@ function post(body: unknown) {
 describe('POST /api/read-aloud/tts', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockAccess.mockResolvedValue({ ok: true, userId: 'user-1', xaiKey: 'super-secret-key' })
+    mockAccess.mockResolvedValue(allowed)
+    mockLimit.mockResolvedValue({ ok: true, allowed: true })
     global.fetch = jest.fn() as typeof fetch
   })
 
@@ -33,11 +50,31 @@ describe('POST /api/read-aloud/tts', () => {
     global.fetch = originalFetch
   })
 
-  it('returns the access status and does not call xAI when the account cannot use Grok voice', async () => {
-    mockAccess.mockResolvedValue({ ok: false, status: 403, error: 'Grok voice is not enabled for this account.' })
+  it('returns 401 and does not call xAI when the device token is invalid', async () => {
+    mockAccess.mockResolvedValue({
+      ok: false,
+      status: 401,
+      error: 'Unauthorized',
+      code: 'grok_token_invalid',
+    })
     const response = await post({ text: 'Hello', voiceId: 'eve', withTimestamps: false })
-    expect(response.status).toBe(403)
+    expect(response.status).toBe(401)
     expect(response.headers.get('Cache-Control')).toBe('no-store')
+    const body = await response.json()
+    expect(body).toEqual({ error: 'Unauthorized', code: 'grok_token_invalid' })
+    expect(JSON.stringify(body)).not.toContain('super-secret-key')
+    expect(global.fetch).not.toHaveBeenCalled()
+  })
+
+  it('fails closed when the speech limiter cannot run and does not call xAI', async () => {
+    mockLimit.mockResolvedValueOnce({ ok: false, unavailable: true })
+    const down = await post({ text: 'Hello', voiceId: 'eve', withTimestamps: false })
+    expect(down.status).toBe(503)
+    expect(global.fetch).not.toHaveBeenCalled()
+
+    mockLimit.mockResolvedValueOnce({ ok: true, allowed: false })
+    const busy = await post({ text: 'Hello', voiceId: 'eve', withTimestamps: false })
+    expect(busy.status).toBe(429)
     expect(global.fetch).not.toHaveBeenCalled()
   })
 
@@ -86,6 +123,12 @@ describe('POST /api/read-aloud/tts', () => {
       },
     })
     expect(JSON.stringify(body)).not.toContain('super-secret-key')
+    expect(mockRecord).toHaveBeenCalledWith({
+      tokenHash: 'hash',
+      chars: 2,
+      audioSeconds: 0.2,
+      estimated: false,
+    })
     expect(global.fetch).toHaveBeenCalledWith(
       'https://api.x.ai/v1/tts',
       expect.objectContaining({

@@ -2,7 +2,7 @@
 
 ## Staff (admins)
 
-The authenticated **admin** area (`/admin`, `/admin/settings`, `/admin/users`, profile editors, template tools) is for **admin** accounts only. Admins manage users, gospel profiles, templates, and app settings. Admins turn on **Grok voice** per account from Manage users. That flag lets resource Listen use a Grok voice. It does not change the admin role.
+The authenticated **admin** area (`/admin`, `/admin/settings`, `/admin/users`, profile editors, template tools) is for **admin** accounts only. Admins manage users, gospel profiles, templates, and app settings. Admins create **Grok voice** access codes under Settings. A code lets resource Listen use a Grok voice on a device without a sign-in. It does not change the admin role.
 
 New accounts created through **Manage users** are always **`admin`** staff accounts.
 
