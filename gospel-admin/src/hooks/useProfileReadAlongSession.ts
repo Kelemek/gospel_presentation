@@ -8,8 +8,9 @@ import {
   saveProfileReadAlongProgress,
 } from '@/lib/profileReadAlongProgressStorage'
 import {
-  readAlongListenScrollBehavior,
-  scrollReadAlongPlainOffsetIntoViewIfNeeded,
+  resetResourceListenWindowScrollState,
+  scrollReadAlongPlainOffsetToVerticalCenter,
+  type ResourceListenWindowScrollState,
 } from '@/lib/scrollReadAlongPlain'
 import type { ProfileListenReadAlongUiPatch } from '@/lib/profileListenReadAlongUi'
 
@@ -30,6 +31,9 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
   const lastPersistedPlainOffsetRef = useRef(0)
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const readAlongBoundaryLagSeqRef = useRef(0)
+  const readAlongScrollLineStateRef = useRef<ResourceListenWindowScrollState>({
+    lastVisualLineKey: null,
+  })
 
   useLayoutEffect(() => {
     profileSlugRef.current = profileSlug
@@ -99,12 +103,12 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
       const plainLen = readAlongPlainLenRef.current
       if (scrollTarget === undefined || !scope || plainLen <= 0) return
 
-      scrollReadAlongPlainOffsetIntoViewIfNeeded(
+      scrollReadAlongPlainOffsetToVerticalCenter(
         scope,
         plainLen,
         scrollTarget,
-        readAlongListenScrollBehavior(),
-        listenTextOptionsRef.current
+        listenTextOptionsRef.current,
+        { lineScrollState: readAlongScrollLineStateRef.current }
       )
     })
   }, [])
@@ -115,6 +119,7 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
       persistTimerRef.current = null
     }
     cancelReadAlongUiScheduling()
+    resetResourceListenWindowScrollState(readAlongScrollLineStateRef.current)
     readAlongScopeRef.current = null
     readAlongPlainLenRef.current = 0
     readAlongAnchorIdRef.current = null
@@ -127,6 +132,7 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
     readAlongBoundaryLagSeqRef.current += 1
     flushReadAlongProgressPersist()
     cancelReadAlongUiScheduling()
+    resetResourceListenWindowScrollState(readAlongScrollLineStateRef.current)
   }, [cancelReadAlongUiScheduling, flushReadAlongProgressPersist])
 
   return {

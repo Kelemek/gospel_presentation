@@ -34,13 +34,20 @@ describe('splitListenRawIntoGrokChunksWithOffsets', () => {
     expect(chunks.every((chunk) => chunk.text.length <= GROK_LISTEN_CHUNK_MAX_CHARS)).toBe(true)
   })
 
-  it('marks the first chunk of a later block so playback can pause', () => {
+  it('packs multiple newline-separated blocks into one Grok chunk when short', () => {
     const chunks = splitListenRawIntoGrokChunksWithOffsets('First block here.\nSecond block here.')
-    expect(chunks).toHaveLength(2)
-    expect(chunks[1]).toMatchObject({
-      text: 'Second block here.',
-      pauseBefore: true,
-      plainStart: 'First block here.'.length + 1,
+    expect(chunks).toHaveLength(1)
+    expect(chunks[0]).toMatchObject({
+      text: 'First block here. Second block here.',
+      plainStart: 0,
+      pauseBefore: false,
     })
+  })
+
+  it('packs many short lines into one chunk instead of one fetch per line', () => {
+    const raw = Array.from({ length: 8 }, (_, i) => `Short line number ${i + 1} about grace.`).join('\n')
+    const chunks = splitListenRawIntoGrokChunksWithOffsets(raw)
+    expect(chunks).toHaveLength(1)
+    expect(chunks[0]!.text.length).toBeLessThanOrEqual(GROK_LISTEN_CHUNK_MAX_CHARS)
   })
 })

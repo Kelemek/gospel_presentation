@@ -6,7 +6,12 @@ import { visibleListenRawText } from '@/lib/profileResourceListenText'
 import {
   advanceScriptureListenIntegratedPlaybackTime,
   computeReadAlongVerticalScrollDeltaForComfortZone,
+  computeReadAlongWindowScrollDeltaToCenterCaret,
   computeScrollDeltaToAlignCaretTopToViewportY,
+  readAlongCaretLineHeightPx,
+  RESOURCE_LISTEN_CARET_MIN_LINE_HEIGHT_PX,
+  resourceListenVisualLineKey,
+  resourceListenWindowScrollDeltaForLine,
   computeScriptureListenProportionalScrollTop,
   applyReadAlongWindowScrollBy,
   applyReadAlongWindowScrollTop,
@@ -88,6 +93,99 @@ describe('computeScrollDeltaToAlignCaretTopToViewportY', () => {
 
   it('returns negative delta when caret is above target', () => {
     expect(computeScrollDeltaToAlignCaretTopToViewportY(50, 104)).toBe(-54)
+  })
+})
+
+describe('computeReadAlongWindowScrollDeltaToCenterCaret', () => {
+  it('returns 0 when caret midline is already at the viewport center', () => {
+    expect(
+      computeReadAlongWindowScrollDeltaToCenterCaret(
+        { top: 390, bottom: 410 },
+        800,
+        { targetFractionFromTop: 0.5, deadbandPx: 5 }
+      )
+    ).toBe(0)
+  })
+
+  it('returns positive delta when caret is below center', () => {
+    expect(
+      computeReadAlongWindowScrollDeltaToCenterCaret(
+        { top: 590, bottom: 610 },
+        800,
+        { targetFractionFromTop: 0.5, deadbandPx: 0 }
+      )
+    ).toBe(200)
+  })
+
+  it('returns negative delta when caret is above center', () => {
+    expect(
+      computeReadAlongWindowScrollDeltaToCenterCaret(
+        { top: 190, bottom: 210 },
+        800,
+        { targetFractionFromTop: 0.5, deadbandPx: 0 }
+      )
+    ).toBe(-200)
+  })
+
+})
+
+describe('resourceListenVisualLineKey', () => {
+  const caret = { top: 578, bottom: 600, height: 22 }
+
+  it('stays the same after window scroll shifts viewport top', () => {
+    const keyBefore = resourceListenVisualLineKey(caret, 1822)
+    const keyAfter = resourceListenVisualLineKey({ ...caret, top: 556 }, 1844)
+    expect(keyAfter).toBe(keyBefore)
+  })
+
+  it('changes when the caret moves to another layout line', () => {
+    const key = resourceListenVisualLineKey(caret, 0)
+    const nextLine = resourceListenVisualLineKey({ top: 630, bottom: 652, height: 22 }, 0)
+    expect(nextLine).toBeGreaterThan(key)
+  })
+})
+
+describe('resourceListenWindowScrollDeltaForLine', () => {
+  const vpH = 800
+  const caretBelow = { top: 590, bottom: 612, height: 22 }
+
+  it('returns 0 delta on the same visual line', () => {
+    const lineKey = resourceListenVisualLineKey(caretBelow, 100)
+    expect(
+      resourceListenWindowScrollDeltaForLine(caretBelow, vpH, lineKey, lineKey, {
+        targetFractionFromTop: 0.5,
+      })
+    ).toBe(0)
+  })
+
+  it('scrolls down by the full distance when a new line is below center', () => {
+    const lineKey = resourceListenVisualLineKey(caretBelow, 0)
+    expect(
+      resourceListenWindowScrollDeltaForLine(caretBelow, vpH, lineKey, null, {
+        targetFractionFromTop: 0.5,
+      })
+    ).toBe(201)
+  })
+
+  it('returns 0 for the first call on a new line already at center', () => {
+    expect(
+      resourceListenWindowScrollDeltaForLine(
+        { top: 389, bottom: 411, height: 22 },
+        vpH,
+        17,
+        null,
+        { targetFractionFromTop: 0.5 }
+      )
+    ).toBe(0)
+  })
+})
+
+describe('readAlongCaretLineHeightPx', () => {
+  it('enforces minimum fallback', () => {
+    expect(readAlongCaretLineHeightPx({ top: 0, bottom: 0, height: 0 })).toBe(
+      RESOURCE_LISTEN_CARET_MIN_LINE_HEIGHT_PX
+    )
+    expect(readAlongCaretLineHeightPx({ top: 10, bottom: 36, height: 26 })).toBe(26)
   })
 })
 

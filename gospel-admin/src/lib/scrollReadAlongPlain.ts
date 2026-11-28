@@ -83,6 +83,139 @@ export function applyReadAlongWindowScrollBy(win: Window, deltaY: number): void 
   applyReadAlongWindowScrollTop(win, win.scrollY + deltaY)
 }
 
+/** Resource Listen line follow: keep the spoken line near this fraction of the viewport height. */
+export const RESOURCE_LISTEN_CARET_CENTER_FRACTION = 0.5
+
+/** Sub-pixel jitter ignored when comparing to center (resource Listen uses `0` for full jumps). */
+export const RESOURCE_LISTEN_CARET_CENTER_DEADBAND_PX = 3
+
+export type ResourceListenWindowScrollState = {
+  /** Layout line bucket from {@link resourceListenVisualLineKey}; same key = same visual line. */
+  lastVisualLineKey: number | null
+}
+
+export function resetResourceListenWindowScrollState(state: ResourceListenWindowScrollState): void {
+  state.lastVisualLineKey = null
+}
+
+/** Fallback when the caret range has no height. */
+export const RESOURCE_LISTEN_CARET_MIN_LINE_HEIGHT_PX = 22
+
+export function readAlongCaretLineHeightPx(
+  caretRect: Pick<DOMRectReadOnly, 'top' | 'bottom' | 'height'>
+): number {
+  const fromHeight = caretRect.height
+  const fromEdges = caretRect.bottom - caretRect.top
+  const raw = fromHeight > 0 ? fromHeight : fromEdges
+  if (raw > 0) return Math.max(RESOURCE_LISTEN_CARET_MIN_LINE_HEIGHT_PX, raw)
+  return RESOURCE_LISTEN_CARET_MIN_LINE_HEIGHT_PX
+}
+
+/**
+ * Stable visual-line id for resource Listen (viewport `top` shifts after scroll; bucket document Y).
+ */
+export function resourceListenVisualLineKey(
+  caretRect: Pick<DOMRectReadOnly, 'top' | 'bottom' | 'height'>,
+  scrollY: number
+): number {
+  const lineH = readAlongCaretLineHeightPx(caretRect)
+  return Math.floor((caretRect.top + scrollY) / lineH)
+}
+
+/**
+ * Delta to scroll the window so the caret midline sits near vertical center (or a custom fraction),
+ * while respecting a minimum Y so the line stays below the sticky header band.
+ */
+export function computeReadAlongWindowScrollDeltaToCenterCaret(
+  caretRect: Pick<DOMRectReadOnly, 'top' | 'bottom' | 'height'>,
+  viewportHeight: number,
+  options?: {
+    targetFractionFromTop?: number
+    deadbandPx?: number
+    minTargetY?: number
+  }
+): number {
+  const fraction = options?.targetFractionFromTop ?? RESOURCE_LISTEN_CARET_CENTER_FRACTION
+  const deadband = options?.deadbandPx ?? RESOURCE_LISTEN_CARET_CENTER_DEADBAND_PX
+  const minTarget = options?.minTargetY ?? 0
+  const caretMid = (caretRect.top + caretRect.bottom) / 2
+  const targetY = Math.max(minTarget, viewportHeight * fraction)
+  const delta = caretMid - targetY
+  if (Math.abs(delta) <= deadband) return 0
+  return delta
+}
+
+/**
+ * Resource Listen window scroll: one instant jump toward vertical center when the caret moves to a
+ * new visual line; no scroll while the spoken position stays on the same line.
+ */
+export function resourceListenWindowScrollDeltaForLine(
+  caretRect: Pick<DOMRectReadOnly, 'top' | 'bottom' | 'height'>,
+  viewportHeight: number,
+  visualLineKey: number,
+  lastVisualLineKey: number | null,
+  options?: {
+    targetFractionFromTop?: number
+    deadbandPx?: number
+    minTargetY?: number
+  }
+): number {
+  if (lastVisualLineKey !== null && visualLineKey === lastVisualLineKey) {
+    return 0
+  }
+  return computeReadAlongWindowScrollDeltaToCenterCaret(caretRect, viewportHeight, {
+    ...options,
+    deadbandPx: options?.deadbandPx ?? 0,
+  })
+}
+
+/**
+ * Scrolls the window so the plain-text caret stays near vertical center while listening (instant jump).
+ */
+export type ScrollReadAlongPlainToVerticalCenterOptions = {
+  targetFractionFromTop?: number
+  deadbandPx?: number
+  lineScrollState?: ResourceListenWindowScrollState
+}
+
+export function scrollReadAlongPlainOffsetToVerticalCenter(
+  scope: HTMLElement,
+  plainCollapsedLen: number,
+  plainOffset: number,
+  listenTextOptions?: ProfileListenTextOptions,
+  options?: ScrollReadAlongPlainToVerticalCenterOptions
+): void {
+  if (typeof window === 'undefined') return
+  const win = scope.ownerDocument?.defaultView
+  if (!win) return
+
+  const rect = getCaretClientRectForReadAlongPlainOffset(
+    scope,
+    plainCollapsedLen,
+    plainOffset,
+    listenTextOptions
+  )
+  if (!rect) return
+
+  const lineState = options?.lineScrollState
+  const visualLineKey = resourceListenVisualLineKey(rect, win.scrollY)
+  const vpH = win.innerHeight
+  const topM = readAlongComfortTopMarginPx(win)
+  const lastKey = lineState?.lastVisualLineKey ?? null
+
+  const delta = resourceListenWindowScrollDeltaForLine(rect, vpH, visualLineKey, lastKey, {
+    ...options,
+    minTargetY: topM,
+  })
+
+  if (lineState) {
+    lineState.lastVisualLineKey = visualLineKey
+  }
+
+  if (delta === 0) return
+  applyReadAlongWindowScrollBy(win, delta)
+}
+
 /** Section jump during resource Listen (`block: 'center'`) without `scrollIntoView`. */
 export function scrollListenScopeIntoViewCenter(scope: HTMLElement): void {
   if (typeof window === 'undefined') return

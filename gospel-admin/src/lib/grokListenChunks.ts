@@ -1,3 +1,4 @@
+import { listenCollapsedPlainFromRaw } from '@/lib/profileResourceListenText'
 import type { TtsTextChunk } from '@/lib/splitTextForTtsChunks'
 
 export const GROK_LISTEN_CHUNK_MIN_CHARS = 800
@@ -68,30 +69,22 @@ function splitSegmentIntoGrokChunks(segment: string): string[] {
 }
 
 /**
- * Grok passages from the raw listen string. `plainStart` matches collapsed plain text
- * (segments joined by one space). The first chunk of each later segment sets `pauseBefore`.
+ * Grok passages from the raw listen string. Chunks are packed from **collapsed** plain text
+ * (block newlines become spaces — same space as read-along indices). Short paragraphs are
+ * merged up to {@link GROK_LISTEN_CHUNK_MAX_CHARS} so Listen does not fetch one xAI clip per line.
+ * `plainStart` is in collapsed plain coordinates; Grok playback does not insert segment gaps.
  */
 export function splitListenRawIntoGrokChunksWithOffsets(raw: string): TtsTextChunk[] {
-  const segments = raw.split('\n').map((segment) => segment.replace(/\s+/g, ' ').trim()).filter(Boolean)
+  const collapsed = listenCollapsedPlainFromRaw(raw)
+  if (!collapsed) return []
+  const parts = splitSegmentIntoGrokChunks(collapsed)
+  let cursor = 0
   const out: TtsTextChunk[] = []
-  let globalPlain = 0
-  for (let si = 0; si < segments.length; si++) {
-    const seg = segments[si]!
-    const parts = splitSegmentIntoGrokChunks(seg)
-    let cursor = 0
-    for (let pi = 0; pi < parts.length; pi++) {
-      const text = parts[pi]!
-      let idx = seg.indexOf(text, cursor)
-      if (idx < 0) idx = cursor
-      out.push({
-        text,
-        plainStart: globalPlain + idx,
-        pauseBefore: si > 0 && pi === 0,
-      })
-      cursor = idx + text.length
-    }
-    globalPlain += seg.length
-    if (si < segments.length - 1) globalPlain += 1
+  for (const text of parts) {
+    let idx = collapsed.indexOf(text, cursor)
+    if (idx < 0) idx = cursor
+    out.push({ text, plainStart: idx, pauseBefore: false })
+    cursor = idx + text.length
   }
   return out
 }

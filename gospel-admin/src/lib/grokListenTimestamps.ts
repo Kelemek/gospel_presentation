@@ -1,5 +1,6 @@
 import { displayCharIndexInChunkForSpeakIndex } from '@/lib/bibleReferenceSpeechTransform'
 import type { GospelListenSpeechBoundaryEvent } from '@/lib/gospelListenSpeechEngine'
+import { audioSecondsFromGraphTimes } from '@/lib/grokVoiceCode'
 
 export type GrokAudioTimestampTracks = {
   graphChars: string[]
@@ -15,6 +16,12 @@ export type GrokListenBoundary = GospelListenSpeechBoundaryEvent & {
  * `graph_times[i]` is the start of speak character `i`. Callers map `charIndex`
  * through `speakCharToDisplayCharIndex` for read-along on the display text.
  */
+/** Last aligned timestamp end in seconds, when xAI returns graph_times. */
+export function grokSpeechEndSecFromTracks(tracks: GrokAudioTimestampTracks | undefined): number | null {
+  if (!tracks?.graphTimes?.length) return null
+  return audioSecondsFromGraphTimes(tracks.graphTimes)
+}
+
 export function boundaryEventsFromGrokTimestamps(
   speakText: string,
   tracks: GrokAudioTimestampTracks | undefined

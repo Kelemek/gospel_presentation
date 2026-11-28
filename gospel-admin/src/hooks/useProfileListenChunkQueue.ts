@@ -43,7 +43,11 @@ import {
   GROK_LISTEN_FALLBACK_NOTE,
   shouldFallbackGrokListenToDevice,
 } from '@/lib/grokListenFallback'
-import { getGrokResourceListenPlayer, GROK_LISTEN_PREFETCH_AHEAD } from '@/lib/grokResourceListenPlayer'
+import {
+  getGrokResourceListenPlayer,
+  GROK_LISTEN_PREFETCH_AHEAD,
+  GROK_LISTEN_WITH_TIMESTAMPS,
+} from '@/lib/grokResourceListenPlayer'
 import { profileListenUsesGrok } from '@/lib/profileListenPlaybackPort'
 import type { useProfileReadAlongSession } from '@/hooks/useProfileReadAlongSession'
 
@@ -367,6 +371,7 @@ export function useProfileListenChunkQueue({
         },
         onend: () => {
           if (birthGen !== ttsCancelGenerationRef.current) return
+          if (useGrok && !fellBack && grokPlayer.isPaused()) return
           rateAtStartRef.current = null
           const nextIndex = chunkIndex + 1
           const runNext = () => {
@@ -417,7 +422,7 @@ export function useProfileListenChunkQueue({
       if (useGrok) {
         grokPlayer.configure({
           voiceId: voiceRef.current,
-          withTimestamps: false,
+          withTimestamps: GROK_LISTEN_WITH_TIMESTAMPS,
         })
         const ahead: string[] = []
         for (let j = 1; j <= GROK_LISTEN_PREFETCH_AHEAD; j++) {
@@ -465,13 +470,10 @@ export function useProfileListenChunkQueue({
     const grokPlayer = getGrokResourceListenPlayer()
     const deviceEngine = getGospelListenSpeechEngine()
     const speaking = grokPlayer.isSpeaking() || deviceEngine.isSpeaking()
-    const paused =
-      (grokPlayer.isSpeaking() && grokPlayer.isPaused()) ||
-      (deviceEngine.isSpeaking() && deviceEngine.isPaused())
-    if (!speaking || paused) return
+    if (!speaking) return
     const i = ttsChunkIndexRef.current
     ttsCancelGenerationRef.current += 1
-    grokPlayer.cancel()
+    grokPlayer.releaseAll()
     deviceEngine.cancel()
     resetPlaybackState()
     queueMicrotask(() => speakChunkInternalRef.current(i))
@@ -496,7 +498,7 @@ export function useProfileListenChunkQueue({
         const grokPlayer = getGrokResourceListenPlayer()
         grokPlayer.configure({
           voiceId: voiceRef.current,
-          withTimestamps: false,
+          withTimestamps: GROK_LISTEN_WITH_TIMESTAMPS,
         })
         const bootstrap: string[] = []
         for (let j = 0; j <= GROK_LISTEN_PREFETCH_AHEAD; j++) {
