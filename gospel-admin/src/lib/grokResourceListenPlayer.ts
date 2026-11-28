@@ -109,8 +109,19 @@ class GrokResourceListenPlayer implements GospelListenSpeechEngine {
   private listeners = new Set<() => void>()
 
   configure(options: { voiceId: string; withTimestamps: boolean }): void {
+    const voiceChanged =
+      this.voiceId !== options.voiceId || this.withTimestamps !== options.withTimestamps
     this.voiceId = options.voiceId
     this.withTimestamps = options.withTimestamps
+    if (
+      voiceChanged &&
+      (this.active ||
+        this.inflight.size > 0 ||
+        this.readyPrepared.size > 0 ||
+        this.warmAudio.size > 0)
+    ) {
+      this.releaseAll()
+    }
   }
 
   private cacheKey(text: string): string {

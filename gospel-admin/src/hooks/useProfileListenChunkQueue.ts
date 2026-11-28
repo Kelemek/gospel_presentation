@@ -465,13 +465,10 @@ export function useProfileListenChunkQueue({
     const grokPlayer = getGrokResourceListenPlayer()
     const deviceEngine = getGospelListenSpeechEngine()
     const speaking = grokPlayer.isSpeaking() || deviceEngine.isSpeaking()
-    const paused =
-      (grokPlayer.isSpeaking() && grokPlayer.isPaused()) ||
-      (deviceEngine.isSpeaking() && deviceEngine.isPaused())
-    if (!speaking || paused) return
+    if (!speaking) return
     const i = ttsChunkIndexRef.current
     ttsCancelGenerationRef.current += 1
-    grokPlayer.cancel()
+    grokPlayer.releaseAll()
     deviceEngine.cancel()
     resetPlaybackState()
     queueMicrotask(() => speakChunkInternalRef.current(i))

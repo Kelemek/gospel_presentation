@@ -164,6 +164,35 @@ describe('Grok resource listen player', () => {
     expect(audio.pause).toHaveBeenCalled()
   })
 
+  it('releaseAll when the Grok voice changes so stale prefetches do not pile up', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ audio: 'YQ==', contentType: 'audio/mpeg' }),
+    })
+    global.fetch = fetchMock as typeof fetch
+
+    const player = getGrokResourceListenPlayer()
+    player.configure({ voiceId: 'eve', withTimestamps: false })
+    player.prefetch('Same line.')
+    await Promise.resolve()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(
+      JSON.parse(String(fetchMock.mock.calls[0]![1]!.body)).voiceId
+    ).toBe('eve')
+
+    fetchMock.mockClear()
+    player.configure({ voiceId: 'leo', withTimestamps: false })
+    player.prefetch('Same line.')
+    await Promise.resolve()
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(
+      JSON.parse(String(fetchMock.mock.calls[0]![1]!.body)).voiceId
+    ).toBe('leo')
+    expect(player.isSpeaking()).toBe(false)
+  })
+
   it('prefetchAhead requests each chunk once', async () => {
     const fetchMock = jest.fn().mockResolvedValue({
       ok: true,

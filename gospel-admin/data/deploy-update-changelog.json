@@ -63,5 +63,6 @@
   "Bug fix: Resource Listen with Grok voice follows the text without the short pauses between lines that smooth scrolling and chunk gaps could cause.",
   "Bug fix: Resource Listen no longer shows a read-along underline on the page; playback still auto-scrolls to follow the spoken line.",
   "Bug fix: Grok Listen now reads longer passages in one voice clip instead of pausing after every paragraph line, with less silence at the end of each clip.",
-  "Bug fix: Grok Listen keeps the line being read near the center of the screen as it moves through a passage."
+  "Bug fix: Grok Listen keeps the line being read near the center of the screen as it moves through a passage.",
+  "Bug fix: Switching Grok voice while listening no longer stalls playback or freeze the page."
 ]
