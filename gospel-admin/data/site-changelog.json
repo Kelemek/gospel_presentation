@@ -1578,5 +1578,10 @@
     "releasedAt": "2026-11-28",
     "committedAt": "2026-11-28T05:07:38.463Z",
     "message": "Bug fix: Grok Listen now reads longer passages in one voice clip instead of pausing after every paragraph line, with less silence at the end of each clip."
+  },
+  {
+    "releasedAt": "2026-11-28",
+    "committedAt": "2026-11-28T05:24:11.369Z",
+    "message": "Bug fix: Grok Listen keeps the line being read near the center of the screen as it moves through a passage."
   }
 ]

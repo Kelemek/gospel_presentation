@@ -7,10 +7,7 @@ import {
   saveProfileReadAlongLastSession,
   saveProfileReadAlongProgress,
 } from '@/lib/profileReadAlongProgressStorage'
-import {
-  readAlongListenScrollBehavior,
-  scrollReadAlongPlainOffsetIntoViewIfNeeded,
-} from '@/lib/scrollReadAlongPlain'
+import { scrollReadAlongPlainOffsetToVerticalCenter } from '@/lib/scrollReadAlongPlain'
 import type { ProfileListenReadAlongUiPatch } from '@/lib/profileListenReadAlongUi'
 
 export type UseProfileReadAlongSessionOptions = {
@@ -99,11 +96,10 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
       const plainLen = readAlongPlainLenRef.current
       if (scrollTarget === undefined || !scope || plainLen <= 0) return
 
-      scrollReadAlongPlainOffsetIntoViewIfNeeded(
+      scrollReadAlongPlainOffsetToVerticalCenter(
         scope,
         plainLen,
         scrollTarget,
-        readAlongListenScrollBehavior(),
         listenTextOptionsRef.current
       )
     })

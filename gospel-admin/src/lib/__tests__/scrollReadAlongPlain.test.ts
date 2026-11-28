@@ -6,6 +6,7 @@ import { visibleListenRawText } from '@/lib/profileResourceListenText'
 import {
   advanceScriptureListenIntegratedPlaybackTime,
   computeReadAlongVerticalScrollDeltaForComfortZone,
+  computeReadAlongWindowScrollDeltaToCenterCaret,
   computeScrollDeltaToAlignCaretTopToViewportY,
   computeScriptureListenProportionalScrollTop,
   applyReadAlongWindowScrollBy,
@@ -88,6 +89,38 @@ describe('computeScrollDeltaToAlignCaretTopToViewportY', () => {
 
   it('returns negative delta when caret is above target', () => {
     expect(computeScrollDeltaToAlignCaretTopToViewportY(50, 104)).toBe(-54)
+  })
+})
+
+describe('computeReadAlongWindowScrollDeltaToCenterCaret', () => {
+  it('returns 0 when caret midline is already at the viewport center', () => {
+    expect(
+      computeReadAlongWindowScrollDeltaToCenterCaret(
+        { top: 390, bottom: 410 },
+        800,
+        { targetFractionFromTop: 0.5, deadbandPx: 5 }
+      )
+    ).toBe(0)
+  })
+
+  it('returns positive delta when caret is below center', () => {
+    expect(
+      computeReadAlongWindowScrollDeltaToCenterCaret(
+        { top: 590, bottom: 610 },
+        800,
+        { targetFractionFromTop: 0.5, deadbandPx: 0 }
+      )
+    ).toBe(200)
+  })
+
+  it('returns negative delta when caret is above center', () => {
+    expect(
+      computeReadAlongWindowScrollDeltaToCenterCaret(
+        { top: 190, bottom: 210 },
+        800,
+        { targetFractionFromTop: 0.5, deadbandPx: 0 }
+      )
+    ).toBe(-200)
   })
 })
 

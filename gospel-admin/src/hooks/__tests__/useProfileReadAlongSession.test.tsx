@@ -3,14 +3,14 @@
  */
 
 import { act, renderHook } from '@testing-library/react'
-import { scrollReadAlongPlainOffsetIntoViewIfNeeded } from '@/lib/scrollReadAlongPlain'
+import { scrollReadAlongPlainOffsetToVerticalCenter } from '@/lib/scrollReadAlongPlain'
 import { useProfileReadAlongSession } from '@/hooks/useProfileReadAlongSession'
 
 jest.mock('@/lib/scrollReadAlongPlain', () => {
   const actual = jest.requireActual('@/lib/scrollReadAlongPlain')
   return {
     ...actual,
-    scrollReadAlongPlainOffsetIntoViewIfNeeded: jest.fn(),
+    scrollReadAlongPlainOffsetToVerticalCenter: jest.fn(),
   }
 })
 
@@ -27,15 +27,14 @@ describe('useProfileReadAlongSession', () => {
       result.current.readAlongPlainLenRef.current = 100
       result.current.scheduleReadAlongUi({ scroll: 12 })
     })
-    expect(scrollReadAlongPlainOffsetIntoViewIfNeeded).not.toHaveBeenCalled()
+    expect(scrollReadAlongPlainOffsetToVerticalCenter).not.toHaveBeenCalled()
     await act(async () => {
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
     })
-    expect(scrollReadAlongPlainOffsetIntoViewIfNeeded).toHaveBeenCalledWith(
+    expect(scrollReadAlongPlainOffsetToVerticalCenter).toHaveBeenCalledWith(
       scope,
       100,
       12,
-      'instant',
       expect.any(Object)
     )
   })
@@ -49,6 +48,6 @@ describe('useProfileReadAlongSession', () => {
     await act(async () => {
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
     })
-    expect(scrollReadAlongPlainOffsetIntoViewIfNeeded).not.toHaveBeenCalled()
+    expect(scrollReadAlongPlainOffsetToVerticalCenter).not.toHaveBeenCalled()
   })
 })

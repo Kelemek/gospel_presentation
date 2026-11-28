@@ -50,6 +50,10 @@ xAI returns MPEG audio longer than the last `graph_times` end. Fixture model in 
 
 Current Grok path uses sequential `HTMLAudioElement` (`play()` after `onended`). Lab constants document typical iOS Safari start latency (~45 ms). **Web Audio** `AudioBufferSourceNode.start(when)` scheduled back-to-back would remove element handoff but requires decode + scheduling; not shipped in this change because chunk packing + tail trim address the reported line gaps first.
 
+## Read-along scroll (packed chunks)
+
+Larger Grok chunks mean many spoken lines advance inside one audio clip. The previous **comfort-band** scroll (`scrollReadAlongPlainOffsetIntoViewIfNeeded`) did not move the page until the caret left the band, so the active line could sit low on screen through most of a chunk. Resource Listen now uses **`scrollReadAlongPlainOffsetToVerticalCenter`** (50% viewport, instant jump) on each read-along UI update so the spoken line stays near vertical center.
+
 ## Related tests
 
 - `src/lib/__tests__/grokListenGapAnalysis.test.ts` — granularity, padding model, PCM fixture

@@ -83,6 +83,63 @@ export function applyReadAlongWindowScrollBy(win: Window, deltaY: number): void 
   applyReadAlongWindowScrollTop(win, win.scrollY + deltaY)
 }
 
+/** Resource Listen line follow: keep the spoken line near this fraction of the viewport height. */
+export const RESOURCE_LISTEN_CARET_CENTER_FRACTION = 0.5
+
+/** Ignore sub-pixel jitter when centering the read-along caret during Listen. */
+export const RESOURCE_LISTEN_CARET_CENTER_DEADBAND_PX = 20
+
+/**
+ * Delta to scroll the window so the caret midline sits near vertical center (or a custom fraction),
+ * while respecting a minimum Y so the line stays below the sticky header band.
+ */
+export function computeReadAlongWindowScrollDeltaToCenterCaret(
+  caretRect: Pick<DOMRectReadOnly, 'top' | 'bottom'>,
+  viewportHeight: number,
+  options?: { targetFractionFromTop?: number; deadbandPx?: number; minTargetY?: number }
+): number {
+  const fraction = options?.targetFractionFromTop ?? RESOURCE_LISTEN_CARET_CENTER_FRACTION
+  const deadband = options?.deadbandPx ?? RESOURCE_LISTEN_CARET_CENTER_DEADBAND_PX
+  const minTarget = options?.minTargetY ?? 0
+  const caretMid = (caretRect.top + caretRect.bottom) / 2
+  const targetY = Math.max(minTarget, viewportHeight * fraction)
+  const delta = caretMid - targetY
+  if (Math.abs(delta) <= deadband) return 0
+  return delta
+}
+
+/**
+ * Scrolls the window so the plain-text caret stays near vertical center while listening (instant jump).
+ */
+export function scrollReadAlongPlainOffsetToVerticalCenter(
+  scope: HTMLElement,
+  plainCollapsedLen: number,
+  plainOffset: number,
+  listenTextOptions?: ProfileListenTextOptions,
+  options?: { targetFractionFromTop?: number; deadbandPx?: number }
+): void {
+  if (typeof window === 'undefined') return
+  const win = scope.ownerDocument?.defaultView
+  if (!win) return
+
+  const rect = getCaretClientRectForReadAlongPlainOffset(
+    scope,
+    plainCollapsedLen,
+    plainOffset,
+    listenTextOptions
+  )
+  if (!rect) return
+
+  const vpH = win.innerHeight
+  const topM = readAlongComfortTopMarginPx(win)
+  const delta = computeReadAlongWindowScrollDeltaToCenterCaret(rect, vpH, {
+    ...options,
+    minTargetY: topM,
+  })
+  if (delta === 0) return
+  applyReadAlongWindowScrollBy(win, delta)
+}
+
 /** Section jump during resource Listen (`block: 'center'`) without `scrollIntoView`. */
 export function scrollListenScopeIntoViewCenter(scope: HTMLElement): void {
   if (typeof window === 'undefined') return
