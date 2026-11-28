@@ -58,5 +58,6 @@
   "You can preview this device's voice in the resource Listen voice menu.",
   "Listen can use a Grok voice on this device after you enter an access code. You do not need to sign in. You can remove that voice from the Listen menu.",
   "Bug fix: Tapping the Listen voice access code field on iPhone no longer zooms the page.",
-  "Bug fix: Removing Grok voice on Listen now asks for confirmation first, and the voice picker appears above the remove link."
+  "Bug fix: Removing Grok voice on Listen now asks for confirmation first, and the voice picker appears above the remove link.",
+  "Bug fix: Resource Listen with Grok voice should flow more smoothly between lines, with less waiting between spoken passages."
 ]

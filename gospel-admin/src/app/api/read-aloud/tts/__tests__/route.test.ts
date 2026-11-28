@@ -162,6 +162,29 @@ describe('POST /api/read-aloud/tts', () => {
     })
   })
 
+  it('returns audio before usage recording finishes', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: async () => ({ audio: 'AQID', content_type: 'audio/mpeg' }),
+    }) as typeof fetch
+
+    type RecordResult = Awaited<ReturnType<typeof recordGrokVoiceUsage>>
+    let resolveRecord!: (value: RecordResult) => void
+    mockRecord.mockImplementation(
+      () =>
+        new Promise<RecordResult>((resolve) => {
+          resolveRecord = resolve
+        })
+    )
+
+    const response = await post({ text: 'Hi', voiceId: 'eve', withTimestamps: false })
+    expect(response.status).toBe(200)
+    expect(mockRecord).toHaveBeenCalled()
+    resolveRecord({ ok: true, codeId: 'code-1', deviceId: 'device-1', chars: 2 })
+    await Promise.resolve()
+  })
+
   it('maps upstream 429 to 429 and other upstream failures to 502', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,

@@ -19,6 +19,11 @@ type PreparedChunk = {
   boundaries: GrokListenBoundary[]
 }
 
+/** How many upcoming chunks to fetch and decode while the current chunk plays. */
+export const GROK_LISTEN_PREFETCH_AHEAD = 2
+
+const GROK_LISTEN_MAX_WARM_AUDIO = GROK_LISTEN_PREFETCH_AHEAD + 1
+
 export class GrokListenRequestError extends Error {
   readonly failure: GrokListenFailure
 
@@ -89,6 +94,8 @@ class GrokResourceListenPlayer implements GospelListenSpeechEngine {
   private audio: HTMLAudioElement | null = null
   private lastFailure: GrokListenFailure = 'network'
   private inflight = new Map<string, Promise<PreparedChunk>>()
+  private warmAudio = new Map<string, HTMLAudioElement>()
+  private warmAudioOrder: string[] = []
   private revision = 0
   private snapshot: ListenSnapshot = SERVER_SNAPSHOT
   private listeners = new Set<() => void>()
@@ -106,11 +113,60 @@ class GrokResourceListenPlayer implements GospelListenSpeechEngine {
     if (!text || !this.voiceId) return
     const key = this.cacheKey(text)
     if (this.inflight.has(key)) return
-    const pending = fetchGrokTtsChunk(text, this.voiceId, this.withTimestamps).catch((error: unknown) => {
-      this.inflight.delete(key)
-      throw error
-    })
+    const pending = fetchGrokTtsChunk(text, this.voiceId, this.withTimestamps)
+      .then((prepared) => {
+        this.warmDecodedChunk(key, prepared.url)
+        return prepared
+      })
+      .catch((error: unknown) => {
+        this.inflight.delete(key)
+        throw error
+      })
     this.inflight.set(key, pending)
+  }
+
+  prefetchAhead(texts: readonly string[]): void {
+    for (const text of texts) {
+      if (text) this.prefetch(text)
+    }
+  }
+
+  private warmDecodedChunk(key: string, url: string): void {
+    if (this.warmAudio.has(key) || typeof Audio === 'undefined') return
+    while (this.warmAudioOrder.length >= GROK_LISTEN_MAX_WARM_AUDIO) {
+      const evictKey = this.warmAudioOrder.shift()
+      if (!evictKey) break
+      const evict = this.warmAudio.get(evictKey)
+      this.warmAudio.delete(evictKey)
+      if (!evict) continue
+      evict.onended = null
+      evict.ontimeupdate = null
+      evict.pause()
+    }
+    const audio = new Audio(url)
+    audio.preload = 'auto'
+    audio.load()
+    this.warmAudio.set(key, audio)
+    this.warmAudioOrder.push(key)
+  }
+
+  private takeWarmAudio(key: string): HTMLAudioElement | null {
+    const audio = this.warmAudio.get(key) ?? null
+    if (!audio) return null
+    this.warmAudio.delete(key)
+    const idx = this.warmAudioOrder.indexOf(key)
+    if (idx >= 0) this.warmAudioOrder.splice(idx, 1)
+    return audio
+  }
+
+  private clearWarmAudio(): void {
+    for (const audio of this.warmAudio.values()) {
+      audio.onended = null
+      audio.ontimeupdate = null
+      audio.pause()
+    }
+    this.warmAudio.clear()
+    this.warmAudioOrder = []
   }
 
   private revoke(url: string): void {
@@ -133,6 +189,7 @@ class GrokResourceListenPlayer implements GospelListenSpeechEngine {
   releaseAll(): void {
     this.generation += 1
     this.stopElement()
+    this.clearWarmAudio()
     const pending = [...this.inflight.values()]
     this.inflight.clear()
     for (const job of pending) {
@@ -203,7 +260,7 @@ class GrokResourceListenPlayer implements GospelListenSpeechEngine {
     void pending
       .then((prepared) => {
         if (gen !== this.generation) return
-        const audio = new Audio(prepared.url)
+        const audio = this.takeWarmAudio(key) ?? new Audio(prepared.url)
         this.audio = audio
         applyMemorizeListenPlaybackRateToMediaElement(audio, rate)
         let nextBoundary = 0

@@ -40,7 +40,7 @@ import {
   GROK_LISTEN_FALLBACK_NOTE,
   shouldFallbackGrokListenToDevice,
 } from '@/lib/grokListenFallback'
-import { getGrokResourceListenPlayer } from '@/lib/grokResourceListenPlayer'
+import { getGrokResourceListenPlayer, GROK_LISTEN_PREFETCH_AHEAD } from '@/lib/grokResourceListenPlayer'
 import { profileListenUsesGrok } from '@/lib/profileListenPlaybackPort'
 import type { useProfileReadAlongSession } from '@/hooks/useProfileReadAlongSession'
 
@@ -426,8 +426,12 @@ export function useProfileListenChunkQueue({
           voiceId: voiceRef.current,
           withTimestamps: readAlongUnderlineEnabledRef.current,
         })
-        const nextSpeak = ttsChunksSpeakRef.current[chunkIndex + 1]
-        if (nextSpeak) grokPlayer.prefetch(nextSpeak)
+        const ahead: string[] = []
+        for (let j = 1; j <= GROK_LISTEN_PREFETCH_AHEAD; j++) {
+          const text = ttsChunksSpeakRef.current[chunkIndex + j]
+          if (text) ahead.push(text)
+        }
+        grokPlayer.prefetchAhead(ahead)
         grokPlayer.speak(speakChunk, rate, handlers)
         return
       }
@@ -497,10 +501,30 @@ export function useProfileListenChunkQueue({
       lastPersistedPlainOffsetRef.current = startPlainOffset
       const layers = buildProfileListenChunkQueueLayers(chunkMeta)
       applyChunkQueueLayers(scope, anchorId, fingerprint, textLength, layers)
+      if (profileListenUsesGrok(voiceRef, fallbackRef)) {
+        const grokPlayer = getGrokResourceListenPlayer()
+        grokPlayer.configure({
+          voiceId: voiceRef.current,
+          withTimestamps: readAlongUnderlineEnabledRef.current,
+        })
+        const bootstrap: string[] = []
+        for (let j = 0; j <= GROK_LISTEN_PREFETCH_AHEAD; j++) {
+          const text = layers.speakChunks[startChunk + j]
+          if (text) bootstrap.push(text)
+        }
+        grokPlayer.prefetchAhead(bootstrap)
+      }
       ttsActiveRef.current = true
       speakChunkInternal(startChunk)
     },
-    [applyChunkQueueLayers, lastPersistedPlainOffsetRef, speakChunkInternal]
+    [
+      applyChunkQueueLayers,
+      fallbackRef,
+      lastPersistedPlainOffsetRef,
+      readAlongUnderlineEnabledRef,
+      speakChunkInternal,
+      voiceRef,
+    ]
   )
 
   const bumpCancelGeneration = useCallback(() => {

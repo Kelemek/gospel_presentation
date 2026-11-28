@@ -1558,5 +1558,10 @@
     "releasedAt": "2026-11-28",
     "committedAt": "2026-11-28T03:01:43.340Z",
     "message": "Bug fix: Removing Grok voice on Listen now asks for confirmation first, and the voice picker appears above the remove link."
+  },
+  {
+    "releasedAt": "2026-11-28",
+    "committedAt": "2026-11-28T03:07:24.190Z",
+    "message": "Bug fix: Resource Listen with Grok voice should flow more smoothly between lines, with less waiting between spoken passages."
   }
 ]

@@ -146,16 +146,12 @@ export async function POST(request: NextRequest) {
         return json({ error: 'Grok voice failed.' }, 502)
       }
       const audioTimestamps = normalizeTimestamps(payload.audio_timestamps)
-      await accountForSpeech(
-        access,
-        body.text.length,
-        resolveGrokAudioSeconds({
-          chars: body.text.length,
-          graphTimes: audioTimestamps?.graphTimes,
-          audioBytes: Buffer.from(payload.audio, 'base64'),
-        })
-      )
-      return json({
+      const duration = resolveGrokAudioSeconds({
+        chars: body.text.length,
+        graphTimes: audioTimestamps?.graphTimes,
+        audioBytes: Buffer.from(payload.audio, 'base64'),
+      })
+      const response = json({
         audio: payload.audio,
         contentType:
           typeof payload.content_type === 'string' && payload.content_type
@@ -163,21 +159,21 @@ export async function POST(request: NextRequest) {
             : 'audio/mpeg',
         ...(audioTimestamps ? { audioTimestamps } : {}),
       })
+      void accountForSpeech(access, body.text.length, duration)
+      return response
     }
 
     const bytes = Buffer.from(await upstream.arrayBuffer())
     if (bytes.length === 0) {
       return json({ error: 'Grok voice failed.' }, 502)
     }
-    await accountForSpeech(
-      access,
-      body.text.length,
-      resolveGrokAudioSeconds({ chars: body.text.length, audioBytes: new Uint8Array(bytes) })
-    )
-    return json({
+    const duration = resolveGrokAudioSeconds({ chars: body.text.length, audioBytes: new Uint8Array(bytes) })
+    const response = json({
       audio: bytes.toString('base64'),
       contentType: contentType || 'audio/mpeg',
     })
+    void accountForSpeech(access, body.text.length, duration)
+    return response
   } catch (error) {
     logger.error('Read-aloud TTS error:', error)
     return json({ error: 'Internal server error' }, 500)

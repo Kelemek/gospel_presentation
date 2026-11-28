@@ -5,15 +5,19 @@
 import { getGrokResourceListenPlayer, resetGrokResourceListenPlayerForTests } from '@/lib/grokResourceListenPlayer'
 
 class FakeAudio {
+  static instances: FakeAudio[] = []
   static latest: FakeAudio | null = null
   currentTime = 0
   playbackRate = 1
+  preload = ''
   ontimeupdate: (() => void) | null = null
   onended: (() => void) | null = null
   pause = jest.fn()
   play = jest.fn().mockResolvedValue(undefined)
+  load = jest.fn()
 
   constructor(public src: string) {
+    FakeAudio.instances.push(this)
     FakeAudio.latest = this
   }
 }
@@ -26,6 +30,7 @@ describe('Grok resource listen player', () => {
 
   beforeEach(() => {
     FakeAudio.latest = null
+    FakeAudio.instances = []
     resetGrokResourceListenPlayerForTests()
     URL.createObjectURL = jest.fn(() => 'blob:chunk') as typeof URL.createObjectURL
     URL.revokeObjectURL = jest.fn()
@@ -73,5 +78,50 @@ describe('Grok resource listen player', () => {
     audio!.onended?.()
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:chunk')
     expect(onend).toHaveBeenCalled()
+  })
+
+  it('prefetch decodes ahead and reuses the warmed element when the chunk plays', async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        audio: 'YQ==',
+        contentType: 'audio/mpeg',
+      }),
+    }) as typeof fetch
+
+    const player = getGrokResourceListenPlayer()
+    player.configure({ voiceId: 'eve', withTimestamps: false })
+    player.prefetch('Next line ready.')
+    for (let i = 0; i < 10; i++) await Promise.resolve()
+
+    const warmedCount = FakeAudio.instances.length
+    expect(warmedCount).toBeGreaterThanOrEqual(1)
+    expect(FakeAudio.instances[0]!.load).toHaveBeenCalled()
+
+    const onend = jest.fn()
+    player.speak('Next line ready.', 1, { onend })
+    for (let i = 0; i < 10; i++) await Promise.resolve()
+
+    expect(FakeAudio.latest).toBe(FakeAudio.instances[0])
+    FakeAudio.latest!.onended?.()
+    expect(onend).toHaveBeenCalled()
+  })
+
+  it('prefetchAhead requests each chunk once', async () => {
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ audio: 'YQ==', contentType: 'audio/mpeg' }),
+    })
+    global.fetch = fetchMock as typeof fetch
+
+    const player = getGrokResourceListenPlayer()
+    player.configure({ voiceId: 'eve', withTimestamps: false })
+    player.prefetchAhead(['Chunk one.', 'Chunk two.', 'Chunk three.'])
+    await Promise.resolve()
+
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    player.prefetchAhead(['Chunk one.', 'Chunk two.', 'Chunk three.'])
+    await Promise.resolve()
+    expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 })
