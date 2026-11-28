@@ -105,6 +105,11 @@ class GrokResourceListenPlayer implements GospelListenSpeechEngine {
   private active = false
   private paused = false
   private audio: HTMLAudioElement | null = null
+  /** Clip finished while paused; resume runs this instead of calling `play()` on a dead element. */
+  private heldAdvance: (() => void) | null = null
+  private playbackStarted = false
+  private onPlaybackStarted: (() => void) | null = null
+  private onPlaybackError: (() => void) | null = null
   private lastFailure: GrokListenFailure = 'network'
   private inflight = new Map<string, Promise<PreparedChunk>>()
   private readyPrepared = new Map<string, PreparedChunk>()
@@ -223,19 +228,29 @@ class GrokResourceListenPlayer implements GospelListenSpeechEngine {
       }
     }
     let endedFired = false
-    const fireEnded = () => {
+    const finishEnded = () => {
       if (endedFired || gen !== this.generation) return
       endedFired = true
+      this.heldAdvance = null
       audio.onended = null
       audio.ontimeupdate = null
       this.revoke(prepared.url)
       this.inflight.delete(key)
       this.readyPrepared.delete(key)
-      this.audio = null
+      if (this.audio === audio) this.audio = null
       this.active = false
       this.paused = false
       this.publish()
       handlers.onend?.()
+    }
+    const fireEnded = () => {
+      if (endedFired || gen !== this.generation) return
+      if (this.paused) {
+        audio.pause()
+        if (!this.heldAdvance) this.heldAdvance = finishEnded
+        return
+      }
+      finishEnded()
     }
     audio.onended = () => fireEnded()
     audio.ontimeupdate = () => {
@@ -246,25 +261,43 @@ class GrokResourceListenPlayer implements GospelListenSpeechEngine {
         fireEnded()
       }
     }
+    this.playbackStarted = false
+    this.onPlaybackStarted = () => {
+      handlers.onstart?.()
+      emitDue()
+    }
+    this.onPlaybackError = () => {
+      handlers.onerror?.()
+    }
+    if (this.paused) return
+    this.playAttached(gen, audio)
+  }
+
+  private playAttached(gen: number, audio: HTMLAudioElement): void {
     const played = audio.play()
+    const started = () => {
+      if (gen !== this.generation || this.paused || this.audio !== audio) {
+        audio.pause()
+        return
+      }
+      if (this.playbackStarted) return
+      this.playbackStarted = true
+      this.onPlaybackStarted?.()
+    }
     if (played && typeof played.then === 'function') {
-      void played
-        .then(() => {
-          if (gen !== this.generation) return
-          handlers.onstart?.()
-          emitDue()
-        })
-        .catch(() => {
-          if (gen !== this.generation) return
-          this.lastFailure = 'network'
-          this.active = false
-          this.publish()
-          handlers.onerror?.()
-        })
+      void played.then(started).catch(() => {
+        if (gen !== this.generation || this.paused || this.audio !== audio) {
+          audio.pause()
+          return
+        }
+        this.lastFailure = 'network'
+        this.active = false
+        this.publish()
+        this.onPlaybackError?.()
+      })
       return
     }
-    handlers.onstart?.()
-    emitDue()
+    started()
   }
 
   private revoke(url: string): void {
@@ -295,6 +328,9 @@ class GrokResourceListenPlayer implements GospelListenSpeechEngine {
     }
     this.active = false
     this.paused = false
+    this.heldAdvance = null
+    this.onPlaybackStarted = null
+    this.onPlaybackError = null
     this.publish()
   }
 
@@ -345,6 +381,7 @@ class GrokResourceListenPlayer implements GospelListenSpeechEngine {
       handlers.onend?.()
       return
     }
+    this.playbackStarted = false
     this.prefetch(text)
     const key = this.cacheKey(text)
     const preparedCached = this.readyPrepared.get(key)
@@ -382,23 +419,34 @@ class GrokResourceListenPlayer implements GospelListenSpeechEngine {
   cancel(): void {
     this.generation += 1
     this.stopElement()
+    this.heldAdvance = null
+    this.onPlaybackStarted = null
+    this.onPlaybackError = null
     this.active = false
     this.paused = false
     this.publish()
   }
 
   pause(): void {
-    if (!this.audio || !this.active || this.paused) return
-    this.audio.pause()
+    if (!this.active || this.paused) return
     this.paused = true
+    this.audio?.pause()
     this.publish()
   }
 
   resume(): void {
-    if (!this.audio || !this.paused) return
+    if (!this.active || !this.paused) return
     this.paused = false
     this.publish()
-    void this.audio.play()
+    const held = this.heldAdvance
+    if (held) {
+      this.heldAdvance = null
+      held()
+      return
+    }
+    const audio = this.audio
+    if (!audio) return
+    this.playAttached(this.generation, audio)
   }
 
   isSpeaking(): boolean {

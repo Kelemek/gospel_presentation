@@ -1608,5 +1608,10 @@
     "releasedAt": "2026-11-28",
     "committedAt": "2026-11-28T17:10:41.131Z",
     "message": "Bug fix: Grok Listen trims the quiet ending of each voice clip again so passages flow together."
+  },
+  {
+    "releasedAt": "2026-11-28",
+    "committedAt": "2026-11-28T17:24:58.680Z",
+    "message": "Bug fix: Pause stops Grok Listen right away and play continues from the same place."
   }
 ]

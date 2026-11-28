@@ -68,5 +68,6 @@
   "Listen read-along scrolling is steadier: the page moves when you reach a new line, with smaller steps and less jitter.",
   "Bug fix: Resource Listen read-along scroll keeps the spoken line centered when you move to a new line, without jumping the wrong way or on every word.",
   "Resource Listen scroll again keeps each new spoken line centered in view with one instant adjustment per line.",
-  "Bug fix: Grok Listen trims the quiet ending of each voice clip again so passages flow together."
+  "Bug fix: Grok Listen trims the quiet ending of each voice clip again so passages flow together.",
+  "Bug fix: Pause stops Grok Listen right away and play continues from the same place."
 ]

@@ -371,6 +371,7 @@ export function useProfileListenChunkQueue({
         },
         onend: () => {
           if (birthGen !== ttsCancelGenerationRef.current) return
+          if (useGrok && !fellBack && grokPlayer.isPaused()) return
           rateAtStartRef.current = null
           const nextIndex = chunkIndex + 1
           const runNext = () => {
