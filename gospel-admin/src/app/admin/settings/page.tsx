@@ -38,6 +38,7 @@ import {
 import type { ResourceOrderCategoryChild } from "@/lib/types";
 import { restoreNewProfileFromBackupFile } from "@/lib/createProfileFromBackup";
 import { useAlertModal } from "@/contexts/AlertModalContext";
+import SettingsSectionChevron from "@/components/admin/SettingsSectionChevron";
 import GrokVoiceCodesSettings from "@/components/GrokVoiceCodesSettings";
 import NotionFeedbackSettings from "@/components/NotionFeedbackSettings";
 import SecularTermMapSettings from "@/components/SecularTermMapSettings";
@@ -55,25 +56,6 @@ function GripIcon() {
   return (
     <svg className="w-4 h-4 text-slate-400 shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
       <path d="M7 2a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM7 10a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM7 18a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM13 2a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM13 10a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM13 18a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-    </svg>
-  );
-}
-
-function SettingsSectionChevron({ expanded }: { expanded: boolean }) {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={`shrink-0 text-slate-500 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
-      aria-hidden
-    >
-      <polyline points="6 9 12 15 18 9" />
     </svg>
   );
 }

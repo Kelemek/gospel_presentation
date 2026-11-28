@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
+import SettingsSectionChevron from '@/components/admin/SettingsSectionChevron'
 import { logger } from '@/lib/logger'
 import type { GrokVoiceCodeView } from '@/lib/grokVoiceDb'
 
@@ -170,9 +171,7 @@ export default function GrokVoiceCodesSettings() {
             Create a code for someone who should hear Grok voices in Listen. The code is shown once.
           </span>
         </span>
-        <span className="text-slate-500 dark:text-slate-300" aria-hidden>
-          {expanded ? '−' : '+'}
-        </span>
+        <SettingsSectionChevron expanded={expanded} />
       </button>
       {expanded ? (
         <div className="px-6 sm:px-8 py-6 border-t border-slate-200 dark:border-slate-700 flex flex-col gap-4">

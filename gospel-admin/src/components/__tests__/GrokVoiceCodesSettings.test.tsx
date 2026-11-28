@@ -75,7 +75,11 @@ describe('GrokVoiceCodesSettings', () => {
     render(<GrokVoiceCodesSettings />)
     expect(global.fetch).not.toHaveBeenCalled()
 
-    fireEvent.click(screen.getByRole('button', { name: /grok voice codes/i }))
+    const header = screen.getByRole('button', { name: /grok voice codes/i })
+    expect(header.querySelector('svg')).not.toHaveClass('rotate-180')
+    expect(header.textContent).not.toMatch(/[+\u2212]/)
+    fireEvent.click(header)
+    expect(header.querySelector('svg')).toHaveClass('rotate-180')
     expect(await screen.findByText('Sunday school')).toBeInTheDocument()
     expect(screen.getByText('1/3')).toBeInTheDocument()
     expect(screen.getByText(/\$15\.00/)).toBeInTheDocument()
