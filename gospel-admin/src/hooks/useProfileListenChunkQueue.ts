@@ -17,7 +17,10 @@ import {
   clearProfileReadAlongProgress,
   saveProfileReadAlongLastSession,
 } from '@/lib/profileReadAlongProgressStorage'
-import { prefersReducedMotionReadAlong, readAlongListenScrollBehavior } from '@/lib/scrollReadAlongPlain'
+import {
+  prefersReducedMotionReadAlong,
+  scrollListenScopeIntoViewCenter,
+} from '@/lib/scrollReadAlongPlain'
 import {
   buildProfileListenChunkQueueLayers,
   listenPlainAndChunksForScope,
@@ -254,10 +257,7 @@ export function useProfileListenChunkQueue({
               completion.target.fingerprint
             )
           }
-          nextScope.scope.scrollIntoView({
-            block: 'center',
-            behavior: readAlongListenScrollBehavior(),
-          })
+          scrollListenScopeIntoViewCenter(nextScope.scope)
           speakChunkInternalRef.current(0)
           return
         }

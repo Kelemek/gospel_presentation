@@ -8,7 +8,10 @@ import {
   computeReadAlongVerticalScrollDeltaForComfortZone,
   computeScrollDeltaToAlignCaretTopToViewportY,
   computeScriptureListenProportionalScrollTop,
+  applyReadAlongWindowScrollBy,
+  applyReadAlongWindowScrollTop,
   readAlongListenScrollBehavior,
+  scrollListenScopeIntoViewCenter,
   scriptureListenPlaybackFractionForScroll,
   computeScriptureListenTargetScrollTop,
   scrollReadAlongPlainInScrollContainerIfNeeded,
@@ -18,6 +21,58 @@ import {
 describe('readAlongListenScrollBehavior', () => {
   it('returns instant so read-along does not use CSS-smooth scrolling', () => {
     expect(readAlongListenScrollBehavior()).toBe('instant')
+  })
+})
+
+describe('applyReadAlongWindowScrollTop', () => {
+  it('calls scrollTo with instant behavior', () => {
+    const scrollTo = jest.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    applyReadAlongWindowScrollTop(window, 240)
+    expect(scrollTo).toHaveBeenCalledWith({
+      top: 240,
+      left: window.scrollX,
+      behavior: 'instant',
+    })
+    scrollTo.mockRestore()
+  })
+})
+
+describe('scrollListenScopeIntoViewCenter', () => {
+  it('centers the scope in the viewport without scrollIntoView', () => {
+    const scope = document.createElement('div')
+    document.body.appendChild(scope)
+    const scrollIntoView = jest.spyOn(scope, 'scrollIntoView')
+    const scrollTo = jest.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 })
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 100 })
+    scope.getBoundingClientRect = jest.fn(() => ({
+      top: 400,
+      bottom: 500,
+      left: 0,
+      right: 100,
+      width: 100,
+      height: 100,
+      x: 0,
+      y: 400,
+      toJSON: () => ({}),
+    }))
+    scrollListenScopeIntoViewCenter(scope)
+  // top 400 + scrollY 100; height 100; center → 400+100 - (800-100)/2 = 150
+    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 150, behavior: 'instant' }))
+    expect(scrollIntoView).not.toHaveBeenCalled()
+    scrollTo.mockRestore()
+    scrollIntoView.mockRestore()
+    scope.remove()
+  })
+})
+
+describe('applyReadAlongWindowScrollBy', () => {
+  it('applies delta via scrollTo', () => {
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 50 })
+    const scrollTo = jest.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    applyReadAlongWindowScrollBy(window, 30)
+    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ top: 80, behavior: 'instant' }))
+    scrollTo.mockRestore()
   })
 })
 

@@ -65,6 +65,35 @@ export function readAlongListenScrollBehavior(): ScrollBehavior {
   return 'instant'
 }
 
+/**
+ * Set window scroll position immediately. `scrollIntoView` and `scrollBy` with `instant` still
+ * animate on some WebKit builds; a direct `scrollTo` plus sync fixes line-follow and section jumps.
+ */
+export function applyReadAlongWindowScrollTop(win: Window, top: number): void {
+  const clamped = Math.max(0, top)
+  const left = win.scrollX
+  win.scrollTo({ top: clamped, left, behavior: readAlongListenScrollBehavior() })
+  if (Math.abs(win.scrollY - clamped) > 0.5) {
+    win.scrollTo(left, clamped)
+  }
+}
+
+export function applyReadAlongWindowScrollBy(win: Window, deltaY: number): void {
+  if (deltaY === 0) return
+  applyReadAlongWindowScrollTop(win, win.scrollY + deltaY)
+}
+
+/** Section jump during resource Listen (`block: 'center'`) without `scrollIntoView`. */
+export function scrollListenScopeIntoViewCenter(scope: HTMLElement): void {
+  if (typeof window === 'undefined') return
+  const win = scope.ownerDocument?.defaultView
+  if (!win) return
+  const rect = scope.getBoundingClientRect()
+  const viewH = win.innerHeight
+  const top = rect.top + win.scrollY - (viewH - rect.height) / 2
+  applyReadAlongWindowScrollTop(win, top)
+}
+
 function readAlongComfortTopMarginPx(win: Window): number {
   let safeTop = 0
   try {
@@ -176,6 +205,10 @@ export function scrollReadAlongPlainOffsetIntoViewIfNeeded(
   const botM = readAlongComfortBottomMarginPx(win)
   const delta = computeReadAlongVerticalScrollDeltaForComfortZone(rect, vpH, topM, botM)
   if (delta === 0) return
+  if (behavior === readAlongListenScrollBehavior()) {
+    applyReadAlongWindowScrollBy(win, delta)
+    return
+  }
   win.scrollBy({ top: delta, behavior })
 }
 

@@ -33,7 +33,6 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
   const readAlongPendingUiRef = useRef<{
     scroll?: number
     highlight?: ReadAlongHighlightPaint | null
-    scrollBehavior?: ScrollBehavior
   }>({})
   const readAlongUiRafRef = useRef(0)
   const readAlongScrollSyncRafRef = useRef(0)
@@ -172,12 +171,12 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
     (patch: {
       scroll?: number
       highlight?: ReadAlongHighlightPaint | null
+      /** Ignored: listen read-along always uses {@link readAlongListenScrollBehavior}. */
       scrollBehavior?: ScrollBehavior
     }) => {
       const acc = readAlongPendingUiRef.current
       if (patch.scroll !== undefined) acc.scroll = patch.scroll
       if (patch.highlight !== undefined) acc.highlight = patch.highlight
-      if (patch.scrollBehavior !== undefined) acc.scrollBehavior = patch.scrollBehavior
 
       if (readAlongUiRafRef.current !== 0) return
       readAlongUiRafRef.current = requestAnimationFrame(() => {

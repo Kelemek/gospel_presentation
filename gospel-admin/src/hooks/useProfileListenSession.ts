@@ -26,7 +26,7 @@ import {
   loadProfileReadAlongProgress,
   readAlongTextFingerprint,
 } from '@/lib/profileReadAlongProgressStorage'
-import { readAlongListenScrollBehavior } from '@/lib/scrollReadAlongPlain'
+import { scrollListenScopeIntoViewCenter } from '@/lib/scrollReadAlongPlain'
 import { plainOffsetAtViewportSentenceStart } from '@/lib/profileReadingPosition'
 import { listenPlainAndChunksForScope } from '@/lib/profileListenChunkQueue'
 import { DEVICE_LISTEN_VOICE_ID } from '@/lib/resourceListenVoiceStorage'
@@ -204,10 +204,7 @@ export function useProfileListenSession({
               })
               if (resume) {
                 resolved = { scope: el, text }
-                el.scrollIntoView({
-                  block: 'center',
-                  behavior: readAlongListenScrollBehavior(),
-                })
+                scrollListenScopeIntoViewCenter(el)
               }
             }
           }
@@ -291,10 +288,7 @@ export function useProfileListenSession({
       onNothingToRead?.('There is no readable text in this profile.')
       return
     }
-    first.scope.scrollIntoView({
-      block: 'center',
-      behavior: readAlongListenScrollBehavior(),
-    })
+    scrollListenScopeIntoViewCenter(first.scope)
     startReadAloudSession(true, { scope: first.scope, text: first.text })
   }, [
     bumpCancelGeneration,
