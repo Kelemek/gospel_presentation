@@ -6,7 +6,7 @@ import { logger } from '@/lib/logger'
 import type { GrokVoiceCodeView } from '@/lib/grokVoiceDb'
 
 const fieldClass =
-  'h-10 w-full rounded-md border border-slate-300 bg-white px-2 text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100'
+  'h-10 w-full rounded-md border border-slate-300 bg-white px-2 text-base sm:text-sm text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100'
 
 function statusLabel(status: GrokVoiceCodeView['status']): string {
   switch (status) {

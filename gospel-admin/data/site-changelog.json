@@ -1548,5 +1548,10 @@
     "releasedAt": "2026-11-28",
     "committedAt": "2026-11-28T02:08:28.200Z",
     "message": "Listen can use a Grok voice on this device after you enter an access code. You do not need to sign in. You can remove that voice from the Listen menu."
+  },
+  {
+    "releasedAt": "2026-11-28",
+    "committedAt": "2026-11-28T02:53:22.033Z",
+    "message": "Bug fix: Tapping the Listen voice access code field on iPhone no longer zooms the page."
   }
 ]

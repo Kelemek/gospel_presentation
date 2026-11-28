@@ -56,5 +56,6 @@
   "If an admin turns on Grok voice for your account, resource Listen can use that voice. If it cannot play, listening continues with this device's voice.",
   "Resource Listen groups Grok voices and lets you preview one before you choose it.",
   "You can preview this device's voice in the resource Listen voice menu.",
-  "Listen can use a Grok voice on this device after you enter an access code. You do not need to sign in. You can remove that voice from the Listen menu."
+  "Listen can use a Grok voice on this device after you enter an access code. You do not need to sign in. You can remove that voice from the Listen menu.",
+  "Bug fix: Tapping the Listen voice access code field on iPhone no longer zooms the page."
 ]
