@@ -5,8 +5,7 @@ import type { ProfileListenTextOptions } from '@/lib/profileHighlightVisibleText
 import { isListenOmitHeadingProfileSlug } from '@/lib/profileResourceListenText'
 import {
   clearReadAlongDomHighlight,
-  updateReadAlongDomHighlight,
-  updateReadAlongDomHighlightVisualLine,
+  repaintReadAlongDomHighlightFromPaint,
   type ReadAlongHighlightPaint,
 } from '@/lib/profileReadAlongDomHighlight'
 import {
@@ -107,6 +106,20 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
     readAlongPendingUiRef.current = {}
   }, [])
 
+  const repaintStoredReadAlongHighlight = useCallback(() => {
+    const hl = readAlongHighlightPaintRef.current
+    const scope = readAlongScopeRef.current
+    const plainLen = readAlongPlainLenRef.current
+    if (!hl || !scope || plainLen <= 0) return
+    if (hl.kind === 'word' && hl.endExclusive <= hl.start) return
+    repaintReadAlongDomHighlightFromPaint({
+      scope,
+      plainCollapsedLen: plainLen,
+      paint: hl,
+      listenTextOptions: listenTextOptionsRef.current,
+    })
+  }, [])
+
   const scheduleReadAlongUi = useCallback(
     (patch: {
       scroll?: number
@@ -128,51 +141,50 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
         const plainLen = readAlongPlainLenRef.current
 
         const highlightPending = pending.highlight
-        const applyHighlight = () => {
-          if (highlightPending === undefined) return
+        if (highlightPending !== undefined) {
           if (highlightPending === null) {
             readAlongHighlightPaintRef.current = null
             if (typeof document !== 'undefined') clearReadAlongDomHighlight(document)
-            return
-          }
-          if (!scope || plainLen <= 0) return
-          const h = highlightPending
-          readAlongHighlightPaintRef.current = h
-          if (h.kind === 'word' && h.endExclusive > h.start) {
-            updateReadAlongDomHighlight({
-              scope,
-              plainCollapsedLen: plainLen,
-              plainStart: h.start,
-              plainEndExclusive: h.endExclusive,
-              listenTextOptions: listenTextOptionsRef.current,
-            })
-          } else if (h.kind === 'line') {
-            updateReadAlongDomHighlightVisualLine({
-              scope,
-              plainCollapsedLen: plainLen,
-              plainCaret: h.plainCaret,
-              listenTextOptions: listenTextOptionsRef.current,
-            })
+          } else if (scope && plainLen > 0) {
+            readAlongHighlightPaintRef.current = highlightPending
           }
         }
 
-        if (pending.scroll !== undefined && scope && plainLen > 0) {
+        const scrollNeeded = pending.scroll !== undefined && scope && plainLen > 0
+        if (scrollNeeded) {
           const behavior: ScrollBehavior = prefersReducedMotionReadAlong()
             ? 'auto'
             : (pending.scrollBehavior ?? 'auto')
           scrollReadAlongPlainOffsetIntoViewIfNeeded(
             scope,
             plainLen,
-            pending.scroll,
+            pending.scroll!,
             behavior,
             listenTextOptionsRef.current
           )
         }
-        // Paint in the same frame after instant scroll so underline rects match viewport positions.
-        applyHighlight()
+
+        if (highlightPending === null) {
+          return
+        }
+
+        const hasPaint = Boolean(readAlongHighlightPaintRef.current && scope && plainLen > 0)
+        if (!hasPaint) {
+          return
+        }
+
+        // Fixed underline segments use viewport rects; after window scroll, repaint on the next frame
+        // so layout matches the new scroll offset (and scroll-only batches still refresh the overlay).
+        if (scrollNeeded) {
+          requestAnimationFrame(() => {
+            repaintStoredReadAlongHighlight()
+          })
+        } else if (highlightPending !== undefined) {
+          repaintStoredReadAlongHighlight()
+        }
       })
     },
-    []
+    [repaintStoredReadAlongHighlight]
   )
 
   const clearReadAlongSession = useCallback(() => {
@@ -205,37 +217,22 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
       if (raf !== 0) return
       raf = requestAnimationFrame(() => {
         raf = 0
-        const hl = readAlongHighlightPaintRef.current
-        const scope = readAlongScopeRef.current
-        const plainLen = readAlongPlainLenRef.current
-        if (!hl || !scope || plainLen <= 0) return
-        if (hl.kind === 'word' && hl.endExclusive <= hl.start) return
-        if (hl.kind === 'word') {
-          updateReadAlongDomHighlight({
-            scope,
-            plainCollapsedLen: plainLen,
-            plainStart: hl.start,
-            plainEndExclusive: hl.endExclusive,
-            listenTextOptions: listenTextOptionsRef.current,
-          })
-        } else {
-          updateReadAlongDomHighlightVisualLine({
-            scope,
-            plainCollapsedLen: plainLen,
-            plainCaret: hl.plainCaret,
-            listenTextOptions: listenTextOptionsRef.current,
-          })
-        }
+        repaintStoredReadAlongHighlight()
       })
     }
     window.addEventListener('scroll', onViewportChange, { passive: true })
     window.addEventListener('resize', onViewportChange)
+    const vv = window.visualViewport
+    vv?.addEventListener('scroll', onViewportChange)
+    vv?.addEventListener('resize', onViewportChange)
     return () => {
       window.removeEventListener('scroll', onViewportChange)
       window.removeEventListener('resize', onViewportChange)
+      vv?.removeEventListener('scroll', onViewportChange)
+      vv?.removeEventListener('resize', onViewportChange)
       if (raf !== 0) cancelAnimationFrame(raf)
     }
-  }, [])
+  }, [repaintStoredReadAlongHighlight])
 
   const toggleReadAlongUnderline = useCallback(() => {
     setReadAlongUnderlineOn((prev) => {

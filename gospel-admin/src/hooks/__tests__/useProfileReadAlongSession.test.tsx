@@ -4,10 +4,7 @@
 
 import { renderHook, act } from '@testing-library/react'
 import { useProfileReadAlongSession } from '@/hooks/useProfileReadAlongSession'
-import {
-  clearReadAlongDomHighlight,
-  updateReadAlongDomHighlight,
-} from '@/lib/profileReadAlongDomHighlight'
+import { clearReadAlongDomHighlight } from '@/lib/profileReadAlongDomHighlight'
 import { scrollReadAlongPlainOffsetIntoViewIfNeeded } from '@/lib/scrollReadAlongPlain'
 import {
   saveProfileReadAlongLastSession,
@@ -18,10 +15,36 @@ import {
   writeProfileReadAlongUnderlineStyleToStorage,
 } from '@/lib/profileReadAlongUnderlineStyleStorage'
 
+const mockUpdateReadAlongDomHighlight = jest.fn()
+const mockUpdateReadAlongDomHighlightVisualLine = jest.fn()
+const mockRepaintReadAlongDomHighlightFromPaint = jest.fn((opts) => {
+  if (opts.paint.kind === 'word' && opts.paint.endExclusive > opts.paint.start) {
+    mockUpdateReadAlongDomHighlight({
+      scope: opts.scope,
+      plainCollapsedLen: opts.plainCollapsedLen,
+      plainStart: opts.paint.start,
+      plainEndExclusive: opts.paint.endExclusive,
+      listenTextOptions: opts.listenTextOptions,
+    })
+    return
+  }
+  if (opts.paint.kind === 'line') {
+    mockUpdateReadAlongDomHighlightVisualLine({
+      scope: opts.scope,
+      plainCollapsedLen: opts.plainCollapsedLen,
+      plainCaret: opts.paint.plainCaret,
+      listenTextOptions: opts.listenTextOptions,
+    })
+  }
+})
+
 jest.mock('@/lib/profileReadAlongDomHighlight', () => ({
   clearReadAlongDomHighlight: jest.fn(),
-  updateReadAlongDomHighlight: jest.fn(),
-  updateReadAlongDomHighlightVisualLine: jest.fn(),
+  updateReadAlongDomHighlight: (...args: unknown[]) => mockUpdateReadAlongDomHighlight(...args),
+  updateReadAlongDomHighlightVisualLine: (...args: unknown[]) =>
+    mockUpdateReadAlongDomHighlightVisualLine(...args),
+  repaintReadAlongDomHighlightFromPaint: (...args: unknown[]) =>
+    mockRepaintReadAlongDomHighlightFromPaint(...args),
 }))
 
 jest.mock('@/lib/profileReadAlongProgressStorage', () => ({
@@ -95,18 +118,22 @@ describe('useProfileReadAlongSession', () => {
     expect(saveProfileReadAlongLastSession).toHaveBeenCalledWith('demo', 'section-1', 42, '42:abc')
   })
 
-  it('paints read-along highlight in the same animation frame as scroll', () => {
-    const nestedRaf = jest.fn()
+  it('defers underline repaint until after scroll when auto-scrolling', () => {
     const parentRaf = window.requestAnimationFrame
     const { result } = renderHook(() => useProfileReadAlongSession({ profileSlug: 'demo' }))
 
     document.body.innerHTML = '<div id="section-1"><p>Listen text here.</p></div>'
     const scope = document.getElementById('section-1') as HTMLElement
 
-    let rafCb: FrameRequestCallback | null = null
+    let flushCb: FrameRequestCallback | null = null
+    let followupCb: FrameRequestCallback | null = null
     const rafSpy = jest.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
-      rafCb = cb
-      return 1
+      if (flushCb === null) {
+        flushCb = cb
+        return 1
+      }
+      followupCb = cb
+      return 2
     })
 
     act(() => {
@@ -119,17 +146,11 @@ describe('useProfileReadAlongSession', () => {
       })
     })
 
-    expect(rafCb).not.toBeNull()
-    expect(updateReadAlongDomHighlight).not.toHaveBeenCalled()
-    expect(scrollReadAlongPlainOffsetIntoViewIfNeeded).not.toHaveBeenCalled()
-
-    window.requestAnimationFrame = ((cb: FrameRequestCallback) => {
-      nestedRaf(cb)
-      return 2
-    }) as typeof window.requestAnimationFrame
+    expect(flushCb).not.toBeNull()
+    expect(mockUpdateReadAlongDomHighlight).not.toHaveBeenCalled()
 
     act(() => {
-      rafCb!(0)
+      flushCb!(0)
     })
 
     expect(scrollReadAlongPlainOffsetIntoViewIfNeeded).toHaveBeenCalledWith(
@@ -139,16 +160,68 @@ describe('useProfileReadAlongSession', () => {
       'auto',
       expect.any(Object)
     )
-    expect(updateReadAlongDomHighlight).toHaveBeenCalledWith({
+    expect(followupCb).not.toBeNull()
+    expect(mockUpdateReadAlongDomHighlight).not.toHaveBeenCalled()
+
+    act(() => {
+      followupCb!(0)
+    })
+
+    expect(mockUpdateReadAlongDomHighlight).toHaveBeenCalledWith({
       scope,
       plainCollapsedLen: 18,
       plainStart: 4,
       plainEndExclusive: 8,
       listenTextOptions: expect.any(Object),
     })
-    expect(nestedRaf).not.toHaveBeenCalled()
 
     rafSpy.mockRestore()
+    window.requestAnimationFrame = parentRaf
+  })
+
+  it('repaints stored highlight after scroll-only read-along UI update', () => {
+    const parentRaf = window.requestAnimationFrame
+    const { result } = renderHook(() => useProfileReadAlongSession({ profileSlug: 'demo' }))
+
+    document.body.innerHTML = '<div id="section-1"><p>Listen text here.</p></div>'
+    const scope = document.getElementById('section-1') as HTMLElement
+
+    act(() => {
+      result.current.readAlongScopeRef.current = scope
+      result.current.readAlongPlainLenRef.current = 18
+      result.current.readAlongHighlightPaintRef.current = { kind: 'word', start: 0, endExclusive: 5 }
+    })
+
+    let flushCb: FrameRequestCallback | null = null
+    let followupCb: FrameRequestCallback | null = null
+    jest.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+      if (flushCb === null) {
+        flushCb = cb
+        return 1
+      }
+      followupCb = cb
+      return 2
+    })
+
+    act(() => {
+      result.current.scheduleReadAlongUi({ scroll: 9, scrollBehavior: 'auto' })
+    })
+
+    act(() => {
+      flushCb!(0)
+    })
+    act(() => {
+      followupCb!(0)
+    })
+
+    expect(mockUpdateReadAlongDomHighlight).toHaveBeenCalledWith({
+      scope,
+      plainCollapsedLen: 18,
+      plainStart: 0,
+      plainEndExclusive: 5,
+      listenTextOptions: expect.any(Object),
+    })
+
     window.requestAnimationFrame = parentRaf
   })
 

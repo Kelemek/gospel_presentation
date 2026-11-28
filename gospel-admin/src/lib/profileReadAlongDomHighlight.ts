@@ -175,3 +175,31 @@ export function updateReadAlongDomHighlightVisualLine(opts: {
   root.replaceChildren()
   paintUnderlineRects(doc, root, lineRects)
 }
+
+/** Re-measure underline rects from the current plain-text paint state (after scroll / resize). */
+export function repaintReadAlongDomHighlightFromPaint(opts: {
+  scope: HTMLElement
+  plainCollapsedLen: number
+  paint: ReadAlongHighlightPaint
+  listenTextOptions?: ProfileListenTextOptions
+}): void {
+  const { scope, plainCollapsedLen, paint, listenTextOptions } = opts
+  if (paint.kind === 'word' && paint.endExclusive > paint.start) {
+    updateReadAlongDomHighlight({
+      scope,
+      plainCollapsedLen,
+      plainStart: paint.start,
+      plainEndExclusive: paint.endExclusive,
+      listenTextOptions,
+    })
+    return
+  }
+  if (paint.kind === 'line') {
+    updateReadAlongDomHighlightVisualLine({
+      scope,
+      plainCollapsedLen,
+      plainCaret: paint.plainCaret,
+      listenTextOptions,
+    })
+  }
+}
