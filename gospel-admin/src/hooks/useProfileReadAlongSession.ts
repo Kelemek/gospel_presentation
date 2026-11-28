@@ -17,7 +17,10 @@ import {
   writeProfileReadAlongUnderlineStyleToStorage,
   type ProfileReadAlongUnderlineStyle,
 } from '@/lib/profileReadAlongUnderlineStyleStorage'
-import { prefersReducedMotionReadAlong, scrollReadAlongPlainOffsetIntoViewIfNeeded } from '@/lib/scrollReadAlongPlain'
+import {
+  readAlongListenScrollBehavior,
+  scrollReadAlongPlainOffsetIntoViewIfNeeded,
+} from '@/lib/scrollReadAlongPlain'
 
 export type UseProfileReadAlongSessionOptions = {
   profileSlug?: string
@@ -33,6 +36,9 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
     scrollBehavior?: ScrollBehavior
   }>({})
   const readAlongUiRafRef = useRef(0)
+  const readAlongScrollSyncRafRef = useRef(0)
+  const readAlongScrollSyncLastYRef = useRef(-1)
+  const readAlongScrollSyncStableRef = useRef(0)
 
   const profileSlugRef = useRef(profileSlug)
   const listenTextOptionsRef = useRef<ProfileListenTextOptions>({})
@@ -98,13 +104,23 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
     [scheduleReadAlongProgressPersist]
   )
 
+  const stopReadAlongHighlightScrollSync = useCallback(() => {
+    if (readAlongScrollSyncRafRef.current !== 0) {
+      cancelAnimationFrame(readAlongScrollSyncRafRef.current)
+      readAlongScrollSyncRafRef.current = 0
+    }
+    readAlongScrollSyncStableRef.current = 0
+    readAlongScrollSyncLastYRef.current = -1
+  }, [])
+
   const cancelReadAlongUiScheduling = useCallback(() => {
     if (readAlongUiRafRef.current !== 0) {
       cancelAnimationFrame(readAlongUiRafRef.current)
       readAlongUiRafRef.current = 0
     }
+    stopReadAlongHighlightScrollSync()
     readAlongPendingUiRef.current = {}
-  }, [])
+  }, [stopReadAlongHighlightScrollSync])
 
   const repaintStoredReadAlongHighlight = useCallback(() => {
     const hl = readAlongHighlightPaintRef.current
@@ -119,6 +135,38 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
       listenTextOptions: listenTextOptionsRef.current,
     })
   }, [])
+
+  const scheduleReadAlongHighlightScrollSync = useCallback(() => {
+    if (typeof window === 'undefined') return
+    if (!readAlongHighlightPaintRef.current) return
+
+    const tick = () => {
+      if (!readAlongHighlightPaintRef.current) {
+        stopReadAlongHighlightScrollSync()
+        return
+      }
+      repaintStoredReadAlongHighlight()
+      const y = window.scrollY
+      if (readAlongScrollSyncLastYRef.current === y) {
+        readAlongScrollSyncStableRef.current += 1
+        if (readAlongScrollSyncStableRef.current >= 2) {
+          stopReadAlongHighlightScrollSync()
+          return
+        }
+      } else {
+        readAlongScrollSyncLastYRef.current = y
+        readAlongScrollSyncStableRef.current = 0
+      }
+      readAlongScrollSyncRafRef.current = requestAnimationFrame(tick)
+    }
+
+    if (readAlongScrollSyncRafRef.current !== 0) {
+      cancelAnimationFrame(readAlongScrollSyncRafRef.current)
+    }
+    readAlongScrollSyncLastYRef.current = window.scrollY
+    readAlongScrollSyncStableRef.current = 0
+    readAlongScrollSyncRafRef.current = requestAnimationFrame(tick)
+  }, [repaintStoredReadAlongHighlight, stopReadAlongHighlightScrollSync])
 
   const scheduleReadAlongUi = useCallback(
     (patch: {
@@ -152,14 +200,11 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
 
         const scrollNeeded = pending.scroll !== undefined && scope && plainLen > 0
         if (scrollNeeded) {
-          const behavior: ScrollBehavior = prefersReducedMotionReadAlong()
-            ? 'auto'
-            : (pending.scrollBehavior ?? 'auto')
           scrollReadAlongPlainOffsetIntoViewIfNeeded(
             scope,
             plainLen,
             pending.scroll!,
-            behavior,
+            readAlongListenScrollBehavior(),
             listenTextOptionsRef.current
           )
         }
@@ -173,18 +218,14 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
           return
         }
 
-        // Fixed underline segments use viewport rects; after window scroll, repaint on the next frame
-        // so layout matches the new scroll offset (and scroll-only batches still refresh the overlay).
         if (scrollNeeded) {
-          requestAnimationFrame(() => {
-            repaintStoredReadAlongHighlight()
-          })
+          scheduleReadAlongHighlightScrollSync()
         } else if (highlightPending !== undefined) {
           repaintStoredReadAlongHighlight()
         }
       })
     },
-    [repaintStoredReadAlongHighlight]
+    [repaintStoredReadAlongHighlight, scheduleReadAlongHighlightScrollSync]
   )
 
   const clearReadAlongSession = useCallback(() => {
@@ -218,6 +259,7 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
       raf = requestAnimationFrame(() => {
         raf = 0
         repaintStoredReadAlongHighlight()
+        scheduleReadAlongHighlightScrollSync()
       })
     }
     window.addEventListener('scroll', onViewportChange, { passive: true })
@@ -231,8 +273,9 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
       vv?.removeEventListener('scroll', onViewportChange)
       vv?.removeEventListener('resize', onViewportChange)
       if (raf !== 0) cancelAnimationFrame(raf)
+      stopReadAlongHighlightScrollSync()
     }
-  }, [repaintStoredReadAlongHighlight])
+  }, [repaintStoredReadAlongHighlight, scheduleReadAlongHighlightScrollSync, stopReadAlongHighlightScrollSync])
 
   const toggleReadAlongUnderline = useCallback(() => {
     setReadAlongUnderlineOn((prev) => {

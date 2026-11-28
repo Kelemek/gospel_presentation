@@ -58,7 +58,7 @@ jest.mock('@/lib/profileReadAlongUnderlineStyleStorage', () => ({
 }))
 
 jest.mock('@/lib/scrollReadAlongPlain', () => ({
-  prefersReducedMotionReadAlong: jest.fn(() => false),
+  readAlongListenScrollBehavior: jest.fn(() => 'instant'),
   scrollReadAlongPlainOffsetIntoViewIfNeeded: jest.fn(),
 }))
 
@@ -118,7 +118,7 @@ describe('useProfileReadAlongSession', () => {
     expect(saveProfileReadAlongLastSession).toHaveBeenCalledWith('demo', 'section-1', 42, '42:abc')
   })
 
-  it('defers underline repaint until after scroll when auto-scrolling', () => {
+  it('uses instant scroll and starts underline resync while scrolling', () => {
     const parentRaf = window.requestAnimationFrame
     const { result } = renderHook(() => useProfileReadAlongSession({ profileSlug: 'demo' }))
 
@@ -157,7 +157,7 @@ describe('useProfileReadAlongSession', () => {
       scope,
       18,
       4,
-      'auto',
+      'instant',
       expect.any(Object)
     )
     expect(followupCb).not.toBeNull()

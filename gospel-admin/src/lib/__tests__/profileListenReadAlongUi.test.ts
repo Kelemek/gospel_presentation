@@ -21,7 +21,7 @@ describe('profileListenReadAlongUi', () => {
       underlineStyle: 'line',
       reducedMotion: false,
     })
-    expect(patch.scrollBehavior).toBe('auto')
+    expect(patch.scrollBehavior).toBe('instant')
   })
 
   it('builds reduced-motion chunk-start highlight for the whole chunk', () => {
@@ -38,7 +38,7 @@ describe('profileListenReadAlongUi', () => {
       })
     ).toEqual({
       scroll: 10,
-      scrollBehavior: 'auto',
+      scrollBehavior: 'instant',
       highlight: { kind: 'word', start: 10, endExclusive: 10 + displayChunk.length },
     })
   })
@@ -55,7 +55,7 @@ describe('profileListenReadAlongUi', () => {
       reducedMotion: false,
       boundary: { charIndex: 8 },
     })
-    expect(patch.scrollBehavior).toBe('auto')
+    expect(patch.scrollBehavior).toBe('instant')
     expect(patch.highlight?.kind).toBe('line')
   })
 

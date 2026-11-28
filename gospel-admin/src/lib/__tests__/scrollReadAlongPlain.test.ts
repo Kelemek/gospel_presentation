@@ -8,11 +8,18 @@ import {
   computeReadAlongVerticalScrollDeltaForComfortZone,
   computeScrollDeltaToAlignCaretTopToViewportY,
   computeScriptureListenProportionalScrollTop,
+  readAlongListenScrollBehavior,
   scriptureListenPlaybackFractionForScroll,
   computeScriptureListenTargetScrollTop,
   scrollReadAlongPlainInScrollContainerIfNeeded,
   walkerOffsetForReadAlongPlainOffset,
 } from '@/lib/scrollReadAlongPlain'
+
+describe('readAlongListenScrollBehavior', () => {
+  it('returns instant so read-along does not use CSS-smooth scrolling', () => {
+    expect(readAlongListenScrollBehavior()).toBe('instant')
+  })
+})
 
 describe('computeScrollDeltaToAlignCaretTopToViewportY', () => {
   it('returns 0 inside deadband', () => {

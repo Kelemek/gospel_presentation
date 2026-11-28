@@ -26,7 +26,7 @@ import {
   loadProfileReadAlongProgress,
   readAlongTextFingerprint,
 } from '@/lib/profileReadAlongProgressStorage'
-import { prefersReducedMotionReadAlong } from '@/lib/scrollReadAlongPlain'
+import { readAlongListenScrollBehavior } from '@/lib/scrollReadAlongPlain'
 import { plainOffsetAtViewportSentenceStart } from '@/lib/profileReadingPosition'
 import { listenPlainAndChunksForScope } from '@/lib/profileListenChunkQueue'
 import { DEVICE_LISTEN_VOICE_ID } from '@/lib/resourceListenVoiceStorage'
@@ -206,7 +206,7 @@ export function useProfileListenSession({
                 resolved = { scope: el, text }
                 el.scrollIntoView({
                   block: 'center',
-                  behavior: prefersReducedMotionReadAlong() ? 'auto' : 'smooth',
+                  behavior: readAlongListenScrollBehavior(),
                 })
               }
             }
@@ -293,7 +293,7 @@ export function useProfileListenSession({
     }
     first.scope.scrollIntoView({
       block: 'center',
-      behavior: prefersReducedMotionReadAlong() ? 'auto' : 'smooth',
+      behavior: readAlongListenScrollBehavior(),
     })
     startReadAloudSession(true, { scope: first.scope, text: first.text })
   }, [

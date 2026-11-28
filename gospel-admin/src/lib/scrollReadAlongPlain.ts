@@ -60,6 +60,11 @@ export function prefersReducedMotionReadAlong(): boolean {
   }
 }
 
+/** Resource Listen read-along: always jump scroll (not CSS-smooth) so fixed underlines stay aligned. */
+export function readAlongListenScrollBehavior(): ScrollBehavior {
+  return 'instant'
+}
+
 function readAlongComfortTopMarginPx(win: Window): number {
   let safeTop = 0
   try {
@@ -151,7 +156,7 @@ export function scrollReadAlongPlainOffsetIntoViewIfNeeded(
   scope: HTMLElement,
   plainCollapsedLen: number,
   plainOffset: number,
-  behavior: ScrollBehavior = 'auto',
+  behavior: ScrollBehavior = readAlongListenScrollBehavior(),
   listenTextOptions?: ProfileListenTextOptions
 ): void {
   if (typeof window === 'undefined') return

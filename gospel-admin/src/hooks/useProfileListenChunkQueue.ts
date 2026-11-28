@@ -17,7 +17,7 @@ import {
   clearProfileReadAlongProgress,
   saveProfileReadAlongLastSession,
 } from '@/lib/profileReadAlongProgressStorage'
-import { prefersReducedMotionReadAlong } from '@/lib/scrollReadAlongPlain'
+import { prefersReducedMotionReadAlong, readAlongListenScrollBehavior } from '@/lib/scrollReadAlongPlain'
 import {
   buildProfileListenChunkQueueLayers,
   listenPlainAndChunksForScope,
@@ -256,7 +256,7 @@ export function useProfileListenChunkQueue({
           }
           nextScope.scope.scrollIntoView({
             block: 'center',
-            behavior: prefersReducedMotionReadAlong() ? 'auto' : 'smooth',
+            behavior: readAlongListenScrollBehavior(),
           })
           speakChunkInternalRef.current(0)
           return

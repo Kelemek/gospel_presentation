@@ -5,6 +5,7 @@ import {
 import type { ProfileReadAlongUnderlineStyle } from '@/lib/profileReadAlongUnderlineStyleStorage'
 import { currentWordRangeInChunk, firstWordRangeInChunk } from '@/lib/readAlongSpeechWordRange'
 import type { GospelListenSpeechBoundaryEvent } from '@/lib/gospelListenSpeechEngine'
+import { readAlongListenScrollBehavior } from '@/lib/scrollReadAlongPlain'
 
 export type ProfileListenReadAlongHighlight =
   | { kind: 'word'; start: number; endExclusive: number }
@@ -13,6 +14,7 @@ export type ProfileListenReadAlongHighlight =
 export type ProfileListenReadAlongUiPatch = {
   scroll?: number
   highlight?: ProfileListenReadAlongHighlight | null
+  /** Always instant for resource Listen read-along (line jump). */
   scrollBehavior?: ScrollBehavior
 }
 
@@ -44,7 +46,7 @@ export function readAlongUiOnChunkStart(options: {
   if (reducedMotion) {
     return {
       scroll: chunkStart,
-      scrollBehavior: 'auto',
+      scrollBehavior: readAlongListenScrollBehavior(),
       highlight: underlineEnabled
         ? {
             kind: 'word',
@@ -57,7 +59,7 @@ export function readAlongUiOnChunkStart(options: {
 
   const fw = firstWordRangeInChunk(speakChunk)
   if (!fw) {
-    return { scroll: chunkStart, scrollBehavior: 'auto' }
+    return { scroll: chunkStart, scrollBehavior: readAlongListenScrollBehavior() }
   }
 
   const dr = displayCharRangeInChunkForSpeakRange(
@@ -74,7 +76,7 @@ export function readAlongUiOnChunkStart(options: {
 
   return {
     scroll: plainOffset,
-    scrollBehavior: 'auto',
+    scrollBehavior: readAlongListenScrollBehavior(),
     highlight: underlineEnabled
       ? lineMode
         ? { kind: 'line', plainCaret: plainOffset }
@@ -130,7 +132,7 @@ export function readAlongUiOnBoundary(options: {
   }
 
   if (reducedMotion) {
-    return { scroll: progressPlain, scrollBehavior: 'auto' }
+    return { scroll: progressPlain, scrollBehavior: readAlongListenScrollBehavior() }
   }
 
   if (wr) {
@@ -153,14 +155,14 @@ export function readAlongUiOnBoundary(options: {
           ? { kind: 'line', plainCaret: scrollMid }
           : { kind: 'word', start: plainWordStart, endExclusive: plainWordEnd }
         : null,
-      scrollBehavior: 'auto',
+      scrollBehavior: readAlongListenScrollBehavior(),
     }
   }
 
   const lineMode = underlineStyle === 'line'
   return {
     scroll: progressPlain,
-    scrollBehavior: 'auto',
+    scrollBehavior: readAlongListenScrollBehavior(),
     ...(underlineEnabled && lineMode
       ? { highlight: { kind: 'line', plainCaret: progressPlain } as const }
       : {}),
