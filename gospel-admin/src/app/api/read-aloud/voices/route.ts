@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server'
-import { assertGrokVoiceAccess } from '@/lib/grokVoiceAccess'
+import { NextRequest, NextResponse } from 'next/server'
+import { assertGrokVoiceAccess, GROK_VOICE_NO_STORE } from '@/lib/grokVoiceAccess'
 import {
   GROK_TTS_FALLBACK_VOICES,
   parseGrokVoiceList,
@@ -9,15 +9,16 @@ import {
 import { logger } from '@/lib/logger'
 
 const XAI_VOICES_URL = 'https://api.x.ai/v1/tts/voices'
-const NO_STORE = { 'Cache-Control': 'no-store' }
+const NO_STORE = GROK_VOICE_NO_STORE
 
 function json(body: unknown, status = 200): NextResponse {
   return NextResponse.json(body, { status, headers: NO_STORE })
 }
 
-export async function GET() {
-  const access = await assertGrokVoiceAccess()
+export async function GET(request: NextRequest) {
+  const access = await assertGrokVoiceAccess(request)
   if (!access.ok) {
+    if (access.status === 401) return json({ error: access.error, code: access.code }, 401)
     return json({ error: access.error }, access.status)
   }
 

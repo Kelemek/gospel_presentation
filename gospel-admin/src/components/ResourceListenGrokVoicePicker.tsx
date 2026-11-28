@@ -5,6 +5,7 @@ import { getGospelListenSpeechEngine } from '@/lib/gospelListenSpeechEngine'
 import { groupGrokVoices, type GrokVoice } from '@/lib/grokTtsVoices'
 import { isMemorizeIosWebHost } from '@/lib/memorizationViewportPlatform'
 import { toMemorizeWebSpeechUtteranceRate } from '@/lib/memorizeListenSpeedStorage'
+import { grokVoiceRequestHeaders, noteGrokVoiceRejection } from '@/lib/grokVoiceTokenStorage'
 import { DEVICE_LISTEN_VOICE_ID } from '@/lib/resourceListenVoiceStorage'
 
 export const GROK_VOICE_PREVIEW_TEXT = 'The Lord is my shepherd; I shall not want.'
@@ -152,7 +153,7 @@ export function ResourceListenGrokVoicePicker({
     try {
       const response = await fetch('/api/read-aloud/tts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...grokVoiceRequestHeaders() },
         body: JSON.stringify({
           text: GROK_VOICE_PREVIEW_TEXT,
           voiceId,
@@ -161,6 +162,7 @@ export function ResourceListenGrokVoicePicker({
       })
       if (generation !== generationRef.current) return
       if (!response.ok) {
+        await noteGrokVoiceRejection(response)
         setPreviewError(previewErrorMessage(response.status))
         return
       }

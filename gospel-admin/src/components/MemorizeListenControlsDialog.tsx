@@ -1,6 +1,6 @@
 'use client'
 
-import { useLayoutEffect, useRef, type MouseEvent } from 'react'
+import { useLayoutEffect, useRef, type MouseEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { MemorizeListenSpeedButton } from '@/components/MemorizeListenSpeedButton'
 import { ResourceListenGrokVoicePicker } from '@/components/ResourceListenGrokVoicePicker'
@@ -32,7 +32,9 @@ interface MemorizeListenControlsDialogPropsBase {
   onStartFromHere?: () => void | Promise<void>
   /** Profile read-aloud only: clears saved resume position and restarts from the first section (parent may confirm first). */
   onStartFromBeginning?: () => void | Promise<void>
-  /** Resource Listen only, and only when this account has Grok voice. */
+  /** Resource Listen: enter or remove a Grok voice code on this device. */
+  grokVoiceAccess?: ReactNode
+  /** Resource Listen only, and only when this device has redeemed a Grok voice code. */
   grokVoicePicker?: {
     voices: GrokVoice[]
     value: string
@@ -142,6 +144,7 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
     onReadAlongUnderlineStyle,
     onStartFromHere,
     onStartFromBeginning,
+    grokVoiceAccess,
     grokVoicePicker,
     presentation = 'modal',
   } = props
@@ -348,6 +351,7 @@ export function MemorizeListenControlsDialog(props: MemorizeListenControlsDialog
               />
             </div>
           )}
+          {!showRepeatControls && grokVoiceAccess ? grokVoiceAccess : null}
           {!showRepeatControls && grokVoicePicker ? (
             <ResourceListenGrokVoicePicker
               voices={grokVoicePicker.voices}

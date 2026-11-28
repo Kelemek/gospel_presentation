@@ -6,8 +6,13 @@ import {
   GOSPEL_SYNC_KEY_VERSIONS_KEY,
 } from '@/lib/gospelDeviceSync/constants'
 import { isProfileOfflineCacheKey } from '@/lib/gospelClientStoragePolicy'
+import { GROK_VOICE_TOKEN_STORAGE_KEY } from '@/lib/grokVoiceTokenStorage'
 
-const NEVER_SYNC_EXACT_KEYS = new Set(['gospel-admin-auth', 'gospel-view-preference'])
+const NEVER_SYNC_EXACT_KEYS = new Set([
+  'gospel-admin-auth',
+  'gospel-view-preference',
+  GROK_VOICE_TOKEN_STORAGE_KEY,
+])
 
 function shouldMarkSyncKeyDirty(key: string): boolean {
   if (isGospelSyncMetaKey(key)) return false

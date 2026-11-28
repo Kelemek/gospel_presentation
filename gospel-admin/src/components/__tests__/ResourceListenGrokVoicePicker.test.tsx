@@ -8,6 +8,7 @@ import {
   ResourceListenGrokVoicePicker,
 } from '@/components/ResourceListenGrokVoicePicker'
 import { resetGospelListenSpeechEngineForTests } from '@/lib/gospelListenSpeechEngine'
+import { GROK_VOICE_TOKEN_STORAGE_KEY } from '@/lib/grokVoiceTokenStorage'
 import type { GrokVoice } from '@/lib/grokTtsVoices'
 import { isMemorizeIosWebHost } from '@/lib/memorizationViewportPlatform'
 import { toMemorizeWebSpeechUtteranceRate } from '@/lib/memorizeListenSpeedStorage'
@@ -67,6 +68,7 @@ describe('ResourceListenGrokVoicePicker', () => {
   const originalRevoke = URL.revokeObjectURL
 
   beforeEach(() => {
+    localStorage.clear()
     FakeAudio.all = []
     global.Audio = FakeAudio as unknown as typeof Audio
     URL.createObjectURL = jest.fn(() => 'blob:preview') as typeof URL.createObjectURL
@@ -229,5 +231,33 @@ describe('ResourceListenGrokVoicePicker', () => {
     await waitFor(() => expect(FakeAudio.all).toHaveLength(1))
     unmount()
     expect(FakeAudio.all[0]!.pause).toHaveBeenCalled()
+  })
+
+  it('sends the device token with a preview and clears it when the token is rejected', async () => {
+    const token = `gvt_${'d'.repeat(43)}`
+    localStorage.setItem(GROK_VOICE_TOKEN_STORAGE_KEY, token)
+    renderPicker()
+    fireEvent.click(screen.getByTestId('resource-listen-voice-preview-eve'))
+    await waitFor(() => expect(global.fetch).toHaveBeenCalled())
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/read-aloud/tts',
+      expect.objectContaining({
+        headers: expect.objectContaining({ 'X-Grok-Voice-Token': token }),
+      })
+    )
+
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      clone() {
+        return this
+      },
+      json: async () => ({ code: 'grok_token_invalid' }),
+    }) as typeof fetch
+    fireEvent.click(screen.getByTestId('resource-listen-voice-preview-eve'))
+    await waitFor(() => expect(localStorage.getItem(GROK_VOICE_TOKEN_STORAGE_KEY)).toBeNull())
+    expect(await screen.findByTestId('resource-listen-voice-preview-error')).toHaveTextContent(
+      'Could not play that preview.'
+    )
   })
 })

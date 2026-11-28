@@ -1,3 +1,4 @@
+import { grokVoiceRequestHeaders, noteGrokVoiceRejection } from '@/lib/grokVoiceTokenStorage'
 import { applyMemorizeListenPlaybackRateToMediaElement } from '@/lib/memorizeListenSpeedStorage'
 import type { GospelListenSpeechEngine, GospelListenSpeechHandlers } from '@/lib/gospelListenSpeechEngine'
 import type { GrokListenFailure } from '@/lib/grokListenFallback'
@@ -50,13 +51,14 @@ export async function fetchGrokTtsChunk(
   try {
     response = await fetch('/api/read-aloud/tts', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...grokVoiceRequestHeaders() },
       body: JSON.stringify({ text, voiceId, withTimestamps }),
     })
   } catch {
     throw new GrokListenRequestError('network')
   }
   if (!response.ok) {
+    await noteGrokVoiceRejection(response)
     throw new GrokListenRequestError(response.status)
   }
   let payload: GrokTtsClientPayload

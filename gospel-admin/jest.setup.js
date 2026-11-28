@@ -41,6 +41,28 @@ jest.mock('next/server', () => ({
       this.method = init.method || 'GET'
       this.body = init.body
       this.headers = new Map()
+      const rawSet = Map.prototype.set
+      const rawGet = Map.prototype.get
+      this.headers.set = function (key, value) {
+        return rawSet.call(this, String(key).toLowerCase(), value)
+      }
+      this.headers.get = function (key) {
+        const value = rawGet.call(this, String(key).toLowerCase())
+        return value === undefined ? null : value
+      }
+      const raw = init.headers
+      const entries = !raw
+        ? []
+        : typeof raw.forEach === 'function'
+          ? (() => {
+              const list = []
+              raw.forEach((value, key) => list.push([key, value]))
+              return list
+            })()
+          : Object.entries(raw)
+      for (const [key, value] of entries) {
+        this.headers.set(key, value)
+      }
     }
     
     async json() {

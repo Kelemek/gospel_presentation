@@ -1543,5 +1543,10 @@
     "releasedAt": "2026-11-27",
     "committedAt": "2026-11-27T23:34:07.820Z",
     "message": "You can preview this device's voice in the resource Listen voice menu."
+  },
+  {
+    "releasedAt": "2026-11-28",
+    "committedAt": "2026-11-28T02:08:28.200Z",
+    "message": "Listen can use a Grok voice on this device after you enter an access code. You do not need to sign in. You can remove that voice from the Listen menu."
   }
 ]

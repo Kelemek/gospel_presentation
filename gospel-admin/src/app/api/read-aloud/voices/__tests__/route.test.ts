@@ -1,9 +1,11 @@
+import { NextRequest } from 'next/server'
 import { GET } from '../route'
 import { assertGrokVoiceAccess } from '@/lib/grokVoiceAccess'
 import { GROK_TTS_FALLBACK_VOICES, resetGrokVoiceListCacheForTests } from '@/lib/grokTtsVoices'
 
 jest.mock('@/lib/grokVoiceAccess', () => ({
   assertGrokVoiceAccess: jest.fn(),
+  GROK_VOICE_NO_STORE: { 'Cache-Control': 'no-store' },
 }))
 
 jest.mock('@/lib/logger', () => ({
@@ -13,11 +15,21 @@ jest.mock('@/lib/logger', () => ({
 const mockAccess = assertGrokVoiceAccess as jest.MockedFunction<typeof assertGrokVoiceAccess>
 const originalFetch = global.fetch
 
+function get() {
+  return GET(new NextRequest('http://localhost/api/read-aloud/voices'))
+}
+
 describe('GET /api/read-aloud/voices', () => {
   beforeEach(() => {
     jest.clearAllMocks()
     resetGrokVoiceListCacheForTests()
-    mockAccess.mockResolvedValue({ ok: true, userId: 'user-1', xaiKey: 'super-secret-key' })
+    mockAccess.mockResolvedValue({
+      ok: true,
+      xaiKey: 'super-secret-key',
+      codeId: 'code-1',
+      deviceId: 'device-1',
+      tokenHash: 'hash',
+    })
     global.fetch = jest.fn() as typeof fetch
   })
 
@@ -26,10 +38,18 @@ describe('GET /api/read-aloud/voices', () => {
     resetGrokVoiceListCacheForTests()
   })
 
-  it('returns 401 without calling xAI when the session is missing', async () => {
-    mockAccess.mockResolvedValue({ ok: false, status: 401, error: 'Unauthorized' })
-    const response = await GET()
+  it('returns 401 without calling xAI when the device token is invalid', async () => {
+    mockAccess.mockResolvedValue({
+      ok: false,
+      status: 401,
+      error: 'Unauthorized',
+      code: 'grok_token_invalid',
+    })
+    const response = await get()
     expect(response.status).toBe(401)
+    const body = await response.json()
+    expect(body).toEqual({ error: 'Unauthorized', code: 'grok_token_invalid' })
+    expect(JSON.stringify(body)).not.toContain('super-secret-key')
     expect(global.fetch).not.toHaveBeenCalled()
   })
 
@@ -45,8 +65,8 @@ describe('GET /api/read-aloud/voices', () => {
       }),
     }) as typeof fetch
 
-    const first = await GET()
-    const second = await GET()
+    const first = await get()
+    const second = await get()
     expect(first.status).toBe(200)
     const body = await second.json()
     expect(body.voices).toEqual([
@@ -61,15 +81,15 @@ describe('GET /api/read-aloud/voices', () => {
     )
 
     now.mockReturnValue(1_000 + 24 * 60 * 60 * 1000)
-    await GET()
+    await get()
     expect(global.fetch).toHaveBeenCalledTimes(2)
     now.mockRestore()
   })
 
   it('returns the static 28-voice list when xAI fails, without caching that fallback', async () => {
     global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 500 }) as typeof fetch
-    const first = await GET()
-    const second = await GET()
+    const first = await get()
+    const second = await get()
     const body = await first.json()
     expect(body.fallback).toBe(true)
     expect(body.voices).toHaveLength(28)

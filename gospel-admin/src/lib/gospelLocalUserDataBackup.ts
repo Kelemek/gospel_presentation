@@ -1,4 +1,5 @@
 import { Capacitor } from '@capacitor/core'
+import { GROK_VOICE_TOKEN_STORAGE_KEY } from '@/lib/grokVoiceTokenStorage'
 import { PROFILE_BOOKMARKS_STORAGE_KEY } from '@/lib/profileBookmarksStorage'
 import { PROFILE_HIGHLIGHTS_STORAGE_KEY } from '@/lib/profileHighlightsStorage'
 import { VERSE_PIN_STORAGE_KEY_PREFIX, LEGACY_SCRIPTURE_PROGRESS_KEY_PREFIX } from '@/lib/versePinStorageConstants'
@@ -68,7 +69,11 @@ const KEY_PREFIXES = [
 ] as const
 
 /** Never export or import these exact keys. */
-const BLOCKED_EXACT_KEYS = new Set<string>(['gospel-admin-auth', 'gospel-view-preference'])
+const BLOCKED_EXACT_KEYS = new Set<string>([
+  'gospel-admin-auth',
+  'gospel-view-preference',
+  GROK_VOICE_TOKEN_STORAGE_KEY,
+])
 
 export interface GospelLocalUserDataPayload {
   kind: typeof GOSPEL_LOCAL_USER_DATA_KIND

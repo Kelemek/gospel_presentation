@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
+import SettingsSectionChevron from '@/components/admin/SettingsSectionChevron'
 import { logger } from '@/lib/logger'
 
 const DEFAULT_NOTION_DATABASE_ID = '5c7d52ea-16a5-4471-914f-cac7baf28add'
@@ -180,20 +181,7 @@ export default function NotionFeedbackSettings() {
             Send Help menu feedback to the Site issues database in Notion
           </p>
         </div>
-        <svg
-          width="22"
-          height="22"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className={`shrink-0 text-slate-500 transition-transform duration-200 ${sectionExpanded ? 'rotate-180' : ''}`}
-          aria-hidden
-        >
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
+        <SettingsSectionChevron expanded={sectionExpanded} />
       </button>
 
       {sectionExpanded ? (

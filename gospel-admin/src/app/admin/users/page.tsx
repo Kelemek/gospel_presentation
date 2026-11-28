@@ -14,7 +14,6 @@ interface UserProfile {
   role: string | null
   created_at: string
   last_sign_in?: string
-  grok_voice_enabled: boolean
 }
 
 export default function UsersPage() {
@@ -82,7 +81,6 @@ export default function UsersPage() {
           role,
           created_at: profile.created_at as string,
           last_sign_in: profile.updated_at as string | undefined,
-          grok_voice_enabled: profile.grok_voice_enabled === true,
         }
       })
 
@@ -111,31 +109,6 @@ export default function UsersPage() {
       cancelled = true
     }
   }, [loadUsers, checkCurrentUserRole])
-
-  const handleToggleGrokVoice = async (userId: string, enabled: boolean) => {
-    let previous: UserProfile[] = []
-    setUsers((current) => {
-      previous = current
-      return current.map((user) =>
-        user.id === userId ? { ...user, grok_voice_enabled: enabled } : user
-      )
-    })
-    try {
-      const response = await fetch(`/api/admin/users/${userId}/grok-voice`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled }),
-      })
-      const data = (await response.json().catch(() => ({}))) as { error?: string }
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to update Grok voice')
-      }
-    } catch (err: unknown) {
-      setUsers(previous)
-      logger.error('Failed to update Grok voice:', err)
-      showAlert(`Failed to update Grok voice: ${err instanceof Error ? err.message : String(err)}`)
-    }
-  }
 
   const handlePromoteToAdmin = async (userId: string) => {
     try {
@@ -438,15 +411,6 @@ export default function UsersPage() {
                           </button>
                         )}
                       </div>
-                      <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-200">
-                        <input
-                          type="checkbox"
-                          checked={user.grok_voice_enabled}
-                          onChange={(event) => handleToggleGrokVoice(user.id, event.target.checked)}
-                          aria-label={`Grok voice for ${user.email}`}
-                        />
-                        Grok voice
-                      </label>
                       <div className="flex justify-end">
                         <button
                           type="button"
