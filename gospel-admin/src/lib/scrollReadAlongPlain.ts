@@ -86,37 +86,97 @@ export function applyReadAlongWindowScrollBy(win: Window, deltaY: number): void 
 /** Resource Listen line follow: keep the spoken line near this fraction of the viewport height. */
 export const RESOURCE_LISTEN_CARET_CENTER_FRACTION = 0.5
 
-/** Ignore sub-pixel jitter when centering the read-along caret during Listen. */
-export const RESOURCE_LISTEN_CARET_CENTER_DEADBAND_PX = 20
+/**
+ * Comfortable band around vertical center: no scroll while the spoken line sits inside it
+ * (avoids jittery nudges on every new listen chunk).
+ */
+export const RESOURCE_LISTEN_CARET_CENTER_DEADBAND_PX = 42
+
+/** Treat caret `top` within this distance as the same visual line (word-by-word on one line). */
+export const RESOURCE_LISTEN_CARET_LINE_TOP_TOLERANCE_PX = 4
+
+export type ReadAlongVerticalScrollLineState = {
+  /** Viewport `top` of the caret line we last handled for centering scroll. */
+  lastCaretLineTop: number | null
+}
+
+export function resetReadAlongVerticalScrollLineState(state: ReadAlongVerticalScrollLineState): void {
+  state.lastCaretLineTop = null
+}
+
+export function isNewReadAlongVisualLine(
+  caretTop: number,
+  lastCaretLineTop: number | null,
+  tolerancePx = RESOURCE_LISTEN_CARET_LINE_TOP_TOLERANCE_PX
+): boolean {
+  if (lastCaretLineTop === null) return true
+  return Math.abs(caretTop - lastCaretLineTop) > tolerancePx
+}
+
+/** Fallback line step when the caret rect has no usable height (collapsed range). */
+export const RESOURCE_LISTEN_CARET_MIN_LINE_HEIGHT_PX = 22
+
+export function readAlongCaretLineHeightPx(
+  caretRect: Pick<DOMRectReadOnly, 'top' | 'bottom' | 'height'>
+): number {
+  const fromHeight = caretRect.height
+  const fromEdges = caretRect.bottom - caretRect.top
+  const raw = fromHeight > 0 ? fromHeight : fromEdges
+  if (raw > 0) return Math.max(RESOURCE_LISTEN_CARET_MIN_LINE_HEIGHT_PX, raw)
+  return RESOURCE_LISTEN_CARET_MIN_LINE_HEIGHT_PX
+}
+
+/** Limit each instant scroll nudge toward the target so Listen does not jump many lines at once. */
+export function clampReadAlongScrollDeltaToOneLineStep(delta: number, lineHeightPx: number): number {
+  if (delta === 0) return 0
+  const step = Math.max(RESOURCE_LISTEN_CARET_MIN_LINE_HEIGHT_PX, lineHeightPx)
+  return Math.sign(delta) * Math.min(Math.abs(delta), step)
+}
 
 /**
  * Delta to scroll the window so the caret midline sits near vertical center (or a custom fraction),
  * while respecting a minimum Y so the line stays below the sticky header band.
  */
 export function computeReadAlongWindowScrollDeltaToCenterCaret(
-  caretRect: Pick<DOMRectReadOnly, 'top' | 'bottom'>,
+  caretRect: Pick<DOMRectReadOnly, 'top' | 'bottom' | 'height'>,
   viewportHeight: number,
-  options?: { targetFractionFromTop?: number; deadbandPx?: number; minTargetY?: number }
+  options?: {
+    targetFractionFromTop?: number
+    deadbandPx?: number
+    minTargetY?: number
+    /** When set, each adjustment moves at most one line height toward the target. */
+    maxScrollStepPx?: number
+  }
 ): number {
   const fraction = options?.targetFractionFromTop ?? RESOURCE_LISTEN_CARET_CENTER_FRACTION
   const deadband = options?.deadbandPx ?? RESOURCE_LISTEN_CARET_CENTER_DEADBAND_PX
   const minTarget = options?.minTargetY ?? 0
   const caretMid = (caretRect.top + caretRect.bottom) / 2
   const targetY = Math.max(minTarget, viewportHeight * fraction)
-  const delta = caretMid - targetY
+  let delta = caretMid - targetY
   if (Math.abs(delta) <= deadband) return 0
+  const maxStep = options?.maxScrollStepPx
+  if (maxStep !== undefined && maxStep > 0) {
+    delta = clampReadAlongScrollDeltaToOneLineStep(delta, maxStep)
+  }
   return delta
 }
 
 /**
  * Scrolls the window so the plain-text caret stays near vertical center while listening (instant jump).
  */
+export type ScrollReadAlongPlainToVerticalCenterOptions = {
+  targetFractionFromTop?: number
+  deadbandPx?: number
+  lineScrollState?: ReadAlongVerticalScrollLineState
+}
+
 export function scrollReadAlongPlainOffsetToVerticalCenter(
   scope: HTMLElement,
   plainCollapsedLen: number,
   plainOffset: number,
   listenTextOptions?: ProfileListenTextOptions,
-  options?: { targetFractionFromTop?: number; deadbandPx?: number }
+  options?: ScrollReadAlongPlainToVerticalCenterOptions
 ): void {
   if (typeof window === 'undefined') return
   const win = scope.ownerDocument?.defaultView
@@ -130,12 +190,25 @@ export function scrollReadAlongPlainOffsetToVerticalCenter(
   )
   if (!rect) return
 
+  const lineState = options?.lineScrollState
+  const caretTop = rect.top
+  if (lineState && !isNewReadAlongVisualLine(caretTop, lineState.lastCaretLineTop)) {
+    return
+  }
+
   const vpH = win.innerHeight
   const topM = readAlongComfortTopMarginPx(win)
+  const lineHeightPx = readAlongCaretLineHeightPx(rect)
   const delta = computeReadAlongWindowScrollDeltaToCenterCaret(rect, vpH, {
     ...options,
     minTargetY: topM,
+    maxScrollStepPx: lineHeightPx,
   })
+
+  if (lineState) {
+    lineState.lastCaretLineTop = caretTop
+  }
+
   if (delta === 0) return
   applyReadAlongWindowScrollBy(win, delta)
 }

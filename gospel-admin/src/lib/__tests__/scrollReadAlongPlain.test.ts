@@ -5,9 +5,15 @@
 import { visibleListenRawText } from '@/lib/profileResourceListenText'
 import {
   advanceScriptureListenIntegratedPlaybackTime,
+  clampReadAlongScrollDeltaToOneLineStep,
   computeReadAlongVerticalScrollDeltaForComfortZone,
   computeReadAlongWindowScrollDeltaToCenterCaret,
   computeScrollDeltaToAlignCaretTopToViewportY,
+  isNewReadAlongVisualLine,
+  readAlongCaretLineHeightPx,
+  RESOURCE_LISTEN_CARET_CENTER_DEADBAND_PX,
+  RESOURCE_LISTEN_CARET_LINE_TOP_TOLERANCE_PX,
+  RESOURCE_LISTEN_CARET_MIN_LINE_HEIGHT_PX,
   computeScriptureListenProportionalScrollTop,
   applyReadAlongWindowScrollBy,
   applyReadAlongWindowScrollTop,
@@ -121,6 +127,87 @@ describe('computeReadAlongWindowScrollDeltaToCenterCaret', () => {
         { targetFractionFromTop: 0.5, deadbandPx: 0 }
       )
     ).toBe(-200)
+  })
+
+  it('clamps each adjustment to one line height when maxScrollStepPx is set', () => {
+    const caret = { top: 590, bottom: 612, height: 22 }
+    expect(
+      computeReadAlongWindowScrollDeltaToCenterCaret(caret, 800, {
+        targetFractionFromTop: 0.5,
+        deadbandPx: 0,
+        maxScrollStepPx: readAlongCaretLineHeightPx(caret),
+      })
+    ).toBe(22)
+  })
+
+  it('uses minimum line height when caret height is zero', () => {
+    expect(
+      computeReadAlongWindowScrollDeltaToCenterCaret(
+        { top: 590, bottom: 590, height: 0 },
+        800,
+        {
+          targetFractionFromTop: 0.5,
+          deadbandPx: 0,
+          maxScrollStepPx: readAlongCaretLineHeightPx({ top: 590, bottom: 590, height: 0 }),
+        }
+      )
+    ).toBe(RESOURCE_LISTEN_CARET_MIN_LINE_HEIGHT_PX)
+  })
+})
+
+describe('isNewReadAlongVisualLine', () => {
+  it('treats the first caret as a new line', () => {
+    expect(isNewReadAlongVisualLine(300, null)).toBe(true)
+  })
+
+  it('returns false when caret top is within tolerance of the last line', () => {
+    expect(isNewReadAlongVisualLine(302, 300, RESOURCE_LISTEN_CARET_LINE_TOP_TOLERANCE_PX)).toBe(
+      false
+    )
+    expect(isNewReadAlongVisualLine(296, 300, RESOURCE_LISTEN_CARET_LINE_TOP_TOLERANCE_PX)).toBe(
+      false
+    )
+  })
+
+  it('returns true when caret top moved to another visual line', () => {
+    expect(isNewReadAlongVisualLine(305, 300, RESOURCE_LISTEN_CARET_LINE_TOP_TOLERANCE_PX)).toBe(
+      true
+    )
+    expect(isNewReadAlongVisualLine(280, 300, RESOURCE_LISTEN_CARET_LINE_TOP_TOLERANCE_PX)).toBe(
+      true
+    )
+  })
+})
+
+describe('RESOURCE_LISTEN_CARET_CENTER_DEADBAND_PX', () => {
+  it('uses a wide enough band to avoid jitter while still targeting center', () => {
+    expect(RESOURCE_LISTEN_CARET_CENTER_DEADBAND_PX).toBeGreaterThanOrEqual(36)
+    expect(RESOURCE_LISTEN_CARET_CENTER_DEADBAND_PX).toBeLessThanOrEqual(48)
+  })
+})
+
+describe('clampReadAlongScrollDeltaToOneLineStep', () => {
+  it('returns 0 for zero delta', () => {
+    expect(clampReadAlongScrollDeltaToOneLineStep(0, 24)).toBe(0)
+  })
+
+  it('limits positive delta to one line step', () => {
+    expect(clampReadAlongScrollDeltaToOneLineStep(200, 24)).toBe(24)
+    expect(clampReadAlongScrollDeltaToOneLineStep(10, 24)).toBe(10)
+  })
+
+  it('limits negative delta to one line step', () => {
+    expect(clampReadAlongScrollDeltaToOneLineStep(-200, 20)).toBe(-22)
+  })
+
+  it('readAlongCaretLineHeightPx enforces minimum fallback', () => {
+    expect(readAlongCaretLineHeightPx({ top: 0, bottom: 0, height: 0 })).toBe(
+      RESOURCE_LISTEN_CARET_MIN_LINE_HEIGHT_PX
+    )
+    expect(readAlongCaretLineHeightPx({ top: 10, bottom: 28, height: 18 })).toBe(
+      RESOURCE_LISTEN_CARET_MIN_LINE_HEIGHT_PX
+    )
+    expect(readAlongCaretLineHeightPx({ top: 10, bottom: 36, height: 26 })).toBe(26)
   })
 })
 

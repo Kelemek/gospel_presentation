@@ -7,7 +7,11 @@ import {
   saveProfileReadAlongLastSession,
   saveProfileReadAlongProgress,
 } from '@/lib/profileReadAlongProgressStorage'
-import { scrollReadAlongPlainOffsetToVerticalCenter } from '@/lib/scrollReadAlongPlain'
+import {
+  resetReadAlongVerticalScrollLineState,
+  scrollReadAlongPlainOffsetToVerticalCenter,
+  type ReadAlongVerticalScrollLineState,
+} from '@/lib/scrollReadAlongPlain'
 import type { ProfileListenReadAlongUiPatch } from '@/lib/profileListenReadAlongUi'
 
 export type UseProfileReadAlongSessionOptions = {
@@ -27,6 +31,9 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
   const lastPersistedPlainOffsetRef = useRef(0)
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const readAlongBoundaryLagSeqRef = useRef(0)
+  const readAlongScrollLineStateRef = useRef<ReadAlongVerticalScrollLineState>({
+    lastCaretLineTop: null,
+  })
 
   useLayoutEffect(() => {
     profileSlugRef.current = profileSlug
@@ -100,7 +107,8 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
         scope,
         plainLen,
         scrollTarget,
-        listenTextOptionsRef.current
+        listenTextOptionsRef.current,
+        { lineScrollState: readAlongScrollLineStateRef.current }
       )
     })
   }, [])
@@ -111,6 +119,7 @@ export function useProfileReadAlongSession({ profileSlug }: UseProfileReadAlongS
       persistTimerRef.current = null
     }
     cancelReadAlongUiScheduling()
+    resetReadAlongVerticalScrollLineState(readAlongScrollLineStateRef.current)
     readAlongScopeRef.current = null
     readAlongPlainLenRef.current = 0
     readAlongAnchorIdRef.current = null

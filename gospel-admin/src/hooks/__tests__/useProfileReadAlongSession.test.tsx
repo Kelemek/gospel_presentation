@@ -35,7 +35,10 @@ describe('useProfileReadAlongSession', () => {
       scope,
       100,
       12,
-      expect.any(Object)
+      expect.any(Object),
+      expect.objectContaining({
+        lineScrollState: expect.objectContaining({ lastCaretLineTop: null }),
+      })
     )
   })
 
